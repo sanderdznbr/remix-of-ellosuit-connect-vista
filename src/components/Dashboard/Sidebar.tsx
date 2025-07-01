@@ -17,7 +17,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -70,7 +69,11 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
         {!isCollapsed && (
-          <h1 className="text-xl font-bold">ellosuit</h1>
+          <img 
+            src="/lovable-uploads/78d0576b-d7ba-4f41-b1ac-30929441fa41.png" 
+            alt="Ellosuit Logo" 
+            className="h-8 w-auto"
+          />
         )}
         <Button
           variant="ghost"
@@ -102,8 +105,8 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
                     onClick={() => handleItemClick(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                       isActive 
-                        ? 'bg-white/20 text-white' 
-                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        ? 'bg-[#3200EA] text-white' 
+                        : 'text-white/80 hover:bg-[#3200EA] hover:text-white'
                     }`}
                   >
                     <Icon size={20} />
@@ -112,15 +115,12 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
                 );
               })}
             </div>
-            {sectionIndex < menuSections.length - 1 && !isCollapsed && (
-              <Separator className="mt-4 bg-white/20" />
-            )}
           </div>
         ))}
       </div>
 
       {/* User Section */}
-      <div className="p-4 border-t border-white/20">
+      <div className="p-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
             <span className="text-sm font-medium">SC</span>

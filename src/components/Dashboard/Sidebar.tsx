@@ -58,7 +58,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
   ];
 
   const handleItemClick = (itemId: string) => {
-    if (itemId === 'mail-tracking') {
+    if (itemId === 'mail-tracking' || itemId === 'campaign-mail') {
       onItemClick(itemId);
     } else {
       alert('Função em desenvolvimento');

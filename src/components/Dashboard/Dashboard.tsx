@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import MailTracking from './MailTracking';
+import CampaignMail from './CampaignMail';
 
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -19,6 +20,8 @@ const Dashboard = () => {
     switch (activeItem) {
       case 'mail-tracking':
         return <MailTracking />;
+      case 'campaign-mail':
+        return <CampaignMail />;
       default:
         return <MailTracking />;
     }

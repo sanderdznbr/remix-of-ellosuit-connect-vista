@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Send, Save, Users } from 'lucide-react';
+import { Calendar, Send, Save, Users, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,8 +48,8 @@ const CampaignCreator = () => {
       });
 
       if (status === 'active') {
-        // Aqui você pode implementar o envio da campanha
-        console.log('Enviando campanha:', data);
+        // Implementar envio da campanha
+        await sendCampaign(data.id);
       }
     } catch (error: any) {
       toast({
@@ -59,6 +59,35 @@ const CampaignCreator = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const sendCampaign = async (campaignId: string) => {
+    try {
+      // Aqui você pode implementar a lógica de envio em massa
+      // Por exemplo, buscar lista de contatos e enviar para cada um
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          campaign_id: campaignId,
+          recipient_email: 'teste@exemplo.com', // Substituir por lista real
+          subject: campaignData.subject,
+          content_html: campaignData.content_html,
+          content_text: campaignData.content_text
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Campanha enviada com sucesso!',
+        description: 'Os emails foram enviados para os destinatários.'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao enviar campanha',
+        description: error.message,
+        variant: 'destructive'
+      });
     }
   };
 
@@ -187,6 +216,63 @@ const CampaignCreator = () => {
             >
               <Send className="h-4 w-4 mr-2" />
               {campaignData.schedule_date ? 'Agendar Envio' : 'Enviar Agora'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Seção de Teste */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Teste de Envio</CardTitle>
+          <CardDescription>
+            Teste o envio de email antes de ativar a campanha
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Input
+              placeholder="seu-email@exemplo.com"
+              className="flex-1"
+              id="test-email"
+            />
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                const testEmail = (document.getElementById('test-email') as HTMLInputElement)?.value;
+                if (!testEmail) {
+                  toast({
+                    title: 'Email necessário',
+                    description: 'Digite um email para teste',
+                    variant: 'destructive'
+                  });
+                  return;
+                }
+
+                try {
+                  await supabase.functions.invoke('send-email', {
+                    body: {
+                      recipient_email: testEmail,
+                      subject: campaignData.subject || 'Teste de Email',
+                      content_html: campaignData.content_html || '<p>Este é um email de teste.</p>',
+                      content_text: campaignData.content_text || 'Este é um email de teste.'
+                    }
+                  });
+
+                  toast({
+                    title: 'Email de teste enviado!',
+                    description: `Email enviado para ${testEmail}`
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: 'Erro no teste',
+                    description: error.message,
+                    variant: 'destructive'
+                  });
+                }
+              }}
+            >
+              Enviar Teste
             </Button>
           </div>
         </CardContent>

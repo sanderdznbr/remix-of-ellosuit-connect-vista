@@ -9,7 +9,121 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      email_campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_events: {
+        Row: {
+          email_id: string
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          timestamp: string
+          user_agent: string | null
+        }
+        Insert: {
+          email_id: string
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          timestamp?: string
+          user_agent?: string | null
+        }
+        Update: {
+          email_id?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          timestamp?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emails: {
+        Row: {
+          campaign_id: string | null
+          content_html: string
+          content_text: string | null
+          id: string
+          metadata: Json | null
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string
+          status: string
+          subject: string
+          tracking_pixel_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          content_html: string
+          content_text?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string
+          status?: string
+          subject: string
+          tracking_pixel_id?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          content_html?: string
+          content_text?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string
+          status?: string
+          subject?: string
+          tracking_pixel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

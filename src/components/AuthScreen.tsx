@@ -40,6 +40,15 @@ const AuthScreen = () => {
       return false;
     }
 
+    if (!password) {
+      toast({
+        title: "Erro",
+        description: "Senha é obrigatória",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     if (isSignUp) {
       if (!username) {
         toast({
@@ -50,7 +59,7 @@ const AuthScreen = () => {
         return false;
       }
 
-      if (!password || password.length < 6) {
+      if (password.length < 6) {
         toast({
           title: "Erro",
           description: "Senha deve ter pelo menos 6 caracteres",
@@ -102,7 +111,7 @@ const AuthScreen = () => {
           });
         }
       } else {
-        const { data, error } = await signIn(email, password || 'temp');
+        const { data, error } = await signIn(email, password);
         
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
@@ -210,7 +219,7 @@ const AuthScreen = () => {
             <div className="space-y-2">
               <Input
                 type="email"
-                placeholder={isSignUp ? "Seu email" : "Email ou nome de usuário"}
+                placeholder="Seu email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
@@ -230,25 +239,23 @@ const AuthScreen = () => {
               </div>
             )}
 
-            {/* Password Input - Always show for Sign Up, conditionally for Sign In */}
-            {(isSignUp || (!isSignUp && password)) && (
-              <div className="space-y-2 relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Sua senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            )}
+            {/* Password Input */}
+            <div className="space-y-2 relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
 
             {/* Confirm Password Input - Only for Sign Up */}
             {isSignUp && (
@@ -273,7 +280,7 @@ const AuthScreen = () => {
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={!email || isLoading || (isSignUp && (!username || !password || !confirmPassword))}
+              disabled={!email || !password || isLoading || (isSignUp && (!username || !confirmPassword))}
               className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {isLoading ? (
@@ -282,7 +289,7 @@ const AuthScreen = () => {
                   <span>Carregando...</span>
                 </div>
               ) : (
-                isSignUp ? 'Registrar' : 'Continuar'
+                isSignUp ? 'Registrar' : 'Entrar'
               )}
             </Button>
 

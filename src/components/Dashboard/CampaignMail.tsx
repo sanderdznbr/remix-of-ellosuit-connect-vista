@@ -5,7 +5,8 @@ import CampaignCreator from './CampaignCreator';
 import CampaignList from './CampaignList';
 import ContactManager from './ContactManager';
 import EmailTemplates from './EmailTemplates';
-import { Plus, List, Users, FileText } from 'lucide-react';
+import EmailProviders from './EmailProviders';
+import { Plus, List, Users, FileText, Settings } from 'lucide-react';
 
 const CampaignMail = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
@@ -20,7 +21,7 @@ const CampaignMail = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <List className="h-4 w-4" />
             Campanhas
@@ -36,6 +37,10 @@ const CampaignMail = () => {
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Templates
+          </TabsTrigger>
+          <TabsTrigger value="providers" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Provedores
           </TabsTrigger>
         </TabsList>
 
@@ -53,6 +58,10 @@ const CampaignMail = () => {
 
         <TabsContent value="templates">
           <EmailTemplates />
+        </TabsContent>
+
+        <TabsContent value="providers">
+          <EmailProviders />
         </TabsContent>
       </Tabs>
     </div>

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Send, Save, Users, Plus } from 'lucide-react';
+import { Calendar, Send, Save, Users, Plus, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,13 +18,22 @@ const CampaignCreator = () => {
     content_html: '',
     content_text: '',
     schedule_date: '',
-    recipient_list: 'all'
+    recipient_list: 'all',
+    email_provider: 'resend',
+    from_email: '',
+    from_name: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleInputChange = (field: string, value: string) => {
     setCampaignData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const getProviderConfig = () => {
+    const providers = JSON.parse(localStorage.getItem('email_providers') || '[]');
+    const selectedProvider = providers.find((p: any) => p.type === campaignData.email_provider);
+    return selectedProvider?.config || {};
   };
 
   const saveCampaign = async (status: 'draft' | 'active') => {
@@ -64,6 +73,8 @@ const CampaignCreator = () => {
 
   const sendCampaign = async (campaignId: string) => {
     try {
+      const providerConfig = getProviderConfig();
+      
       // Aqui você pode implementar a lógica de envio em massa
       // Por exemplo, buscar lista de contatos e enviar para cada um
       const { data, error } = await supabase.functions.invoke('send-email', {
@@ -72,7 +83,10 @@ const CampaignCreator = () => {
           recipient_email: 'teste@exemplo.com', // Substituir por lista real
           subject: campaignData.subject,
           content_html: campaignData.content_html,
-          content_text: campaignData.content_text
+          content_text: campaignData.content_text,
+          provider: campaignData.email_provider,
+          from_email: campaignData.from_email || providerConfig.from_email,
+          from_name: campaignData.from_name || providerConfig.from_name
         }
       });
 
@@ -85,6 +99,35 @@ const CampaignCreator = () => {
     } catch (error: any) {
       toast({
         title: 'Erro ao enviar campanha',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const sendTestEmail = async (testEmail: string) => {
+    try {
+      const providerConfig = getProviderConfig();
+      
+      await supabase.functions.invoke('send-email', {
+        body: {
+          recipient_email: testEmail,
+          subject: campaignData.subject || 'Teste de Email',
+          content_html: campaignData.content_html || '<p>Este é um email de teste.</p>',
+          content_text: campaignData.content_text || 'Este é um email de teste.',
+          provider: campaignData.email_provider,
+          from_email: campaignData.from_email || providerConfig.from_email,
+          from_name: campaignData.from_name || providerConfig.from_name
+        }
+      });
+
+      toast({
+        title: 'Email de teste enviado!',
+        description: `Email enviado para ${testEmail} via ${campaignData.email_provider}`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro no teste',
         description: error.message,
         variant: 'destructive'
       });
@@ -158,6 +201,22 @@ const CampaignCreator = () => {
               </div>
 
               <div>
+                <Label htmlFor="email-provider">Provedor de Email</Label>
+                <Select
+                  value={campaignData.email_provider}
+                  onValueChange={(value) => handleInputChange('email_provider', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o provedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resend">Resend</SelectItem>
+                    <SelectItem value="gmail">Gmail API</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="schedule-date">Agendamento (Opcional)</Label>
                 <Input
                   id="schedule-date"
@@ -173,6 +232,31 @@ const CampaignCreator = () => {
                   <p className="font-medium text-blue-900">Estimativa de Alcance</p>
                   <p className="text-sm text-blue-700">~1,250 destinatários</p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sender Configuration */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Configuração do Remetente</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="from-email">Email Remetente (Opcional)</Label>
+                <Input
+                  id="from-email"
+                  placeholder="Usar configuração padrão"
+                  value={campaignData.from_email}
+                  onChange={(e) => handleInputChange('from_email', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="from-name">Nome Remetente (Opcional)</Label>
+                <Input
+                  id="from-name"
+                  placeholder="Usar configuração padrão"
+                  value={campaignData.from_name}
+                  onChange={(e) => handleInputChange('from_name', e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -226,7 +310,7 @@ const CampaignCreator = () => {
         <CardHeader>
           <CardTitle>Teste de Envio</CardTitle>
           <CardDescription>
-            Teste o envio de email antes de ativar a campanha
+            Teste o envio de email antes de ativar a campanha via {campaignData.email_provider}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -248,28 +332,7 @@ const CampaignCreator = () => {
                   });
                   return;
                 }
-
-                try {
-                  await supabase.functions.invoke('send-email', {
-                    body: {
-                      recipient_email: testEmail,
-                      subject: campaignData.subject || 'Teste de Email',
-                      content_html: campaignData.content_html || '<p>Este é um email de teste.</p>',
-                      content_text: campaignData.content_text || 'Este é um email de teste.'
-                    }
-                  });
-
-                  toast({
-                    title: 'Email de teste enviado!',
-                    description: `Email enviado para ${testEmail}`
-                  });
-                } catch (error: any) {
-                  toast({
-                    title: 'Erro no teste',
-                    description: error.message,
-                    variant: 'destructive'
-                  });
-                }
+                await sendTestEmail(testEmail);
               }}
             >
               Enviar Teste

@@ -7,7 +7,12 @@ import { Mail, Phone, Eye, EyeOff } from 'lucide-react';
 
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -16,7 +21,11 @@ const AuthScreen = () => {
     // Simulate loading
     setTimeout(() => {
       setIsLoading(false);
-      console.log(isSignUp ? 'Registrar com:' : 'Continuar com:', email);
+      if (isSignUp) {
+        console.log('Registrar com:', { username, email, whatsapp, password });
+      } else {
+        console.log('Continuar com:', email);
+      }
     }, 1500);
   };
 
@@ -26,6 +35,12 @@ const AuthScreen = () => {
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
+    // Reset form fields when switching modes
+    setEmail('');
+    setUsername('');
+    setWhatsapp('');
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
@@ -45,21 +60,88 @@ const AuthScreen = () => {
 
           {/* Form */}
           <div className="space-y-6">
+            {/* Registration Fields */}
+            {isSignUp && (
+              <>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Nome de usuário"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Email Input */}
             <div className="space-y-2">
               <Input
                 type="email"
-                placeholder="Email ou nome de usuário"
+                placeholder={isSignUp ? "Seu email" : "Email ou nome de usuário"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
               />
             </div>
 
+            {/* WhatsApp Input - Only for Sign Up */}
+            {isSignUp && (
+              <div className="space-y-2">
+                <Input
+                  type="tel"
+                  placeholder="Seu WhatsApp"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                />
+              </div>
+            )}
+
+            {/* Password Input - Only for Sign Up */}
+            {isSignUp && (
+              <>
+                <div className="space-y-2 relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Sua senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                <div className="space-y-2 relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirme sua senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </>
+            )}
+
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={!email || isLoading}
+              disabled={!email || isLoading || (isSignUp && (!username || !whatsapp || !password || !confirmPassword))}
               className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {isLoading ? (
@@ -144,12 +226,12 @@ const AuthScreen = () => {
 
       {/* Right Side - Logo Only */}
       <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden" style={{ backgroundColor: '#3600FF' }}>
-        {/* Logo Container - Centered */}
+        {/* Logo Container - Centered and 30% larger */}
         <div className="flex items-center justify-center animate-fade-in">
           <img 
             src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
             alt="ELLOSUIT Logo" 
-            className="w-48 h-auto filter brightness-0 invert"
+            className="w-62 h-auto filter brightness-0 invert"
           />
         </div>
       </div>

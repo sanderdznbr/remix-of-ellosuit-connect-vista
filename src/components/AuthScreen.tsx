@@ -1,9 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Mail, Phone, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
@@ -16,21 +19,151 @@ const AuthScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleContinue = async () => {
-    setIsLoading(true);
-    // Simulate loading
-    setTimeout(() => {
-      setIsLoading(false);
-      if (isSignUp) {
-        console.log('Registrar com:', { username, email, whatsapp, password });
-      } else {
-        console.log('Continuar com:', email);
+  const { user, signUp, signIn, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const validateForm = () => {
+    if (!email) {
+      toast({
+        title: "Erro",
+        description: "Email é obrigatório",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (isSignUp) {
+      if (!username) {
+        toast({
+          title: "Erro", 
+          description: "Nome de usuário é obrigatório",
+          variant: "destructive"
+        });
+        return false;
       }
-    }, 1500);
+
+      if (!password || password.length < 6) {
+        toast({
+          title: "Erro",
+          description: "Senha deve ter pelo menos 6 caracteres",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        toast({
+          title: "Erro",
+          description: "Senhas não coincidem",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+
+    return true;
   };
 
-  const handleSocialLogin = (provider: string) => {
-    console.log(`Continuar com ${provider}`);
+  const handleContinue = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    
+    try {
+      if (isSignUp) {
+        const { data, error } = await signUp(email, password, username);
+        
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            toast({
+              title: "Erro",
+              description: "Este email já está cadastrado. Tente fazer login.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Erro no cadastro",
+              description: error.message,
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Cadastro realizado!",
+            description: "Verifique seu email para confirmar a conta.",
+          });
+        }
+      } else {
+        const { data, error } = await signIn(email, password || 'temp');
+        
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast({
+              title: "Erro",
+              description: "Email ou senha incorretos",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Erro no login",
+              description: error.message,
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Login realizado!",
+            description: "Bem-vindo de volta!",
+          });
+          navigate('/dashboard');
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: string) => {
+    if (provider === 'Google') {
+      setIsLoading(true);
+      try {
+        const { error } = await signInWithGoogle();
+        if (error) {
+          toast({
+            title: "Erro",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao conectar com Google",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      toast({
+        title: "Em breve",
+        description: `Login com ${provider} será implementado em breve.`,
+      });
+    }
   };
 
   const toggleMode = () => {
@@ -62,17 +195,15 @@ const AuthScreen = () => {
           <div className="space-y-6">
             {/* Registration Fields */}
             {isSignUp && (
-              <>
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="Nome de usuário"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
-                  />
-                </div>
-              </>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Nome de usuário"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                />
+              </div>
             )}
 
             {/* Email Input */}
@@ -91,7 +222,7 @@ const AuthScreen = () => {
               <div className="space-y-2">
                 <Input
                   type="tel"
-                  placeholder="Seu WhatsApp"
+                  placeholder="Seu WhatsApp (opcional)"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
@@ -99,49 +230,50 @@ const AuthScreen = () => {
               </div>
             )}
 
-            {/* Password Input - Only for Sign Up */}
-            {isSignUp && (
-              <>
-                <div className="space-y-2 relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Sua senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
+            {/* Password Input - Always show for Sign Up, conditionally for Sign In */}
+            {(isSignUp || (!isSignUp && password)) && (
+              <div className="space-y-2 relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            )}
 
-                <div className="space-y-2 relative">
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirme sua senha"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </>
+            {/* Confirm Password Input - Only for Sign Up */}
+            {isSignUp && (
+              <div className="space-y-2 relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirme sua senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="h-12 px-4 pr-12 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             )}
 
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={!email || isLoading || (isSignUp && (!username || !whatsapp || !password || !confirmPassword))}
+              disabled={!email || isLoading || (isSignUp && (!username || !password || !confirmPassword))}
               className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {isLoading ? (
@@ -166,6 +298,7 @@ const AuthScreen = () => {
               <Button
                 variant="outline"
                 onClick={() => handleSocialLogin('Google')}
+                disabled={isLoading}
                 className="w-full h-12 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -180,6 +313,7 @@ const AuthScreen = () => {
               <Button
                 variant="outline"
                 onClick={() => handleSocialLogin('Apple')}
+                disabled={isLoading}
                 className="w-full h-12 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
@@ -191,6 +325,7 @@ const AuthScreen = () => {
               <Button
                 variant="outline"
                 onClick={() => handleSocialLogin('Telefone')}
+                disabled={isLoading}
                 className="w-full h-12 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
               >
                 <Phone className="w-5 h-5 mr-3" />

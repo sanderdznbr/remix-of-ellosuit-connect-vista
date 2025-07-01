@@ -41,6 +41,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
     {
       title: 'Calendar',
       items: [
+        { id: 'my-calendar', label: 'My Calendar', icon: Calendar },
         { id: 'start-meet', label: 'Start Meet', icon: Video },
         { id: 'my-meetings', label: 'My Meetings', icon: Calendar },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },

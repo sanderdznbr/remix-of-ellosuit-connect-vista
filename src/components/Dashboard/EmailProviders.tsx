@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Settings, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Mail, Settings, CheckCircle, AlertCircle, Plus, Gmail } from 'lucide-react';
 
 interface EmailProvider {
   id: string;
@@ -28,14 +29,49 @@ const EmailProviders = () => {
   });
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const { toast } = useToast();
+  const { user, session } = useAuth();
 
   useEffect(() => {
     loadProviders();
   }, []);
 
+  // Detectar se usuário voltou da autenticação Google
+  useEffect(() => {
+    if (session?.provider_token && session?.provider === 'google') {
+      checkGoogleConnection();
+    }
+  }, [session]);
+
+  const checkGoogleConnection = () => {
+    const existingProviders = JSON.parse(localStorage.getItem('email_providers') || '[]');
+    const hasGmailProvider = existingProviders.some((p: EmailProvider) => p.type === 'gmail');
+    
+    if (!hasGmailProvider && session?.user?.email) {
+      const gmailProvider: EmailProvider = {
+        id: 'gmail-connected',
+        name: 'Gmail (Conectado)',
+        type: 'gmail',
+        status: 'active',
+        config: {
+          email: session.user.email,
+          connected_at: new Date().toISOString(),
+          provider_token: session.provider_token
+        }
+      };
+
+      const updatedProviders = [...existingProviders, gmailProvider];
+      setProviders(updatedProviders);
+      localStorage.setItem('email_providers', JSON.stringify(updatedProviders));
+      
+      toast({
+        title: 'Gmail conectado com sucesso!',
+        description: `Conta ${session.user.email} foi conectada e está pronta para enviar emails.`
+      });
+    }
+  };
+
   const loadProviders = async () => {
-    // In a real app, you'd load this from a user settings table
-    // For now, we'll simulate with localStorage
+    // Load from localStorage
     const savedProviders = localStorage.getItem('email_providers');
     if (savedProviders) {
       setProviders(JSON.parse(savedProviders));
@@ -113,6 +149,16 @@ const EmailProviders = () => {
     }
   };
 
+  const disconnectGmail = () => {
+    const updatedProviders = providers.filter(p => p.type !== 'gmail');
+    saveProviders(updatedProviders);
+    
+    toast({
+      title: 'Gmail desconectado',
+      description: 'Conta Gmail foi removida dos provedores de email.'
+    });
+  };
+
   const testEmailProvider = async (providerId: string) => {
     const provider = providers.find(p => p.id === providerId);
     if (!provider) return;
@@ -127,8 +173,8 @@ const EmailProviders = () => {
           content_html: '<h1>Teste</h1><p>Este é um email de teste para verificar a configuração.</p>',
           content_text: 'Este é um email de teste para verificar a configuração.',
           provider: provider.type,
-          from_email: provider.config.from_email,
-          from_name: provider.config.from_name
+          from_email: provider.config.from_email || provider.config.email,
+          from_name: provider.config.from_name || 'Sistema'
         }
       });
 
@@ -142,6 +188,15 @@ const EmailProviders = () => {
         description: error.message,
         variant: 'destructive'
       });
+    }
+  };
+
+  const getProviderIcon = (type: string) => {
+    switch (type) {
+      case 'gmail':
+        return <Mail className="h-5 w-5 text-red-500" />;
+      default:
+        return <Mail className="h-5 w-5" />;
     }
   };
 
@@ -162,10 +217,17 @@ const EmailProviders = () => {
               {providers.map((provider) => (
                 <div key={provider.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5" />
+                    {getProviderIcon(provider.type)}
                     <div>
                       <p className="font-medium">{provider.name}</p>
-                      <p className="text-sm text-gray-600">{provider.type}</p>
+                      <p className="text-sm text-gray-600">
+                        {provider.type === 'gmail' ? provider.config.email : provider.type}
+                      </p>
+                      {provider.type === 'gmail' && provider.config.connected_at && (
+                        <p className="text-xs text-green-600">
+                          Conectado em {new Date(provider.config.connected_at).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -186,6 +248,16 @@ const EmailProviders = () => {
                     >
                       Testar
                     </Button>
+                    {provider.type === 'gmail' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={disconnectGmail}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Desconectar
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -227,14 +299,22 @@ const EmailProviders = () => {
               Conecte sua conta Google para enviar emails através do Gmail API.
               Isso oferece melhor deliverability e os emails serão enviados da sua conta.
             </p>
-            <Button 
-              onClick={connectGoogleAccount}
-              disabled={isConnectingGoogle}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {isConnectingGoogle ? 'Conectando...' : 'Conectar Conta Google'}
-            </Button>
+            
+            {providers.some(p => p.type === 'gmail') ? (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-800">Gmail conectado com sucesso!</span>
+              </div>
+            ) : (
+              <Button 
+                onClick={connectGoogleAccount}
+                disabled={isConnectingGoogle}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {isConnectingGoogle ? 'Conectando...' : 'Conectar Conta Google'}
+              </Button>
+            )}
           </div>
 
           {/* Provider Selection */}

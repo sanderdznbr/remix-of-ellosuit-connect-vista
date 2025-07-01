@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -373,7 +372,7 @@ const AuthScreen = () => {
           <img 
             src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
             alt="ELLOSUIT Logo" 
-            className="w-62 h-auto filter brightness-0 invert"
+            className="w-52 h-auto filter brightness-0 invert"
           />
         </div>
       </div>

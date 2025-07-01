@@ -1,340 +1,243 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Mail, Settings, CheckCircle, AlertCircle, Plus, Gmail } from 'lucide-react';
-
-interface EmailProvider {
-  id: string;
-  name: string;
-  type: 'resend' | 'gmail';
-  status: 'active' | 'inactive' | 'error';
-  config: any;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  Mail, 
+  Plus, 
+  CheckCircle, 
+  Settings, 
+  Trash2,
+  Calendar
+} from 'lucide-react';
 
 const EmailProviders = () => {
-  const [providers, setProviders] = useState<EmailProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<string>('resend');
-  const [resendConfig, setResendConfig] = useState({
-    from_email: '',
-    from_name: '',
-    domain: ''
-  });
-  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadProviders();
-  }, []);
-
-  // Detectar se usuário voltou da autenticação Google
-  useEffect(() => {
-    if (session?.provider_token && session?.provider === 'google') {
-      checkGoogleConnection();
+    if (user) {
+      loadConnectedAccounts();
+      checkForNewConnection();
     }
-  }, [session]);
+  }, [user]);
 
-  const checkGoogleConnection = () => {
-    const existingProviders = JSON.parse(localStorage.getItem('email_providers') || '[]');
-    const hasGmailProvider = existingProviders.some((p: EmailProvider) => p.type === 'gmail');
-    
-    if (!hasGmailProvider && session?.user?.email) {
-      const gmailProvider: EmailProvider = {
-        id: 'gmail-connected',
-        name: 'Gmail (Conectado)',
-        type: 'gmail',
-        status: 'active',
-        config: {
-          email: session.user.email,
-          connected_at: new Date().toISOString(),
-          provider_token: session.provider_token
-        }
-      };
-
-      const updatedProviders = [...existingProviders, gmailProvider];
-      setProviders(updatedProviders);
-      localStorage.setItem('email_providers', JSON.stringify(updatedProviders));
-      
-      toast({
-        title: 'Gmail conectado com sucesso!',
-        description: `Conta ${session.user.email} foi conectada e está pronta para enviar emails.`
-      });
-    }
-  };
-
-  const loadProviders = async () => {
-    // Load from localStorage
-    const savedProviders = localStorage.getItem('email_providers');
-    if (savedProviders) {
-      setProviders(JSON.parse(savedProviders));
-    } else {
-      // Default Resend provider
-      setProviders([
-        {
-          id: 'resend-default',
-          name: 'Resend (Padrão)',
-          type: 'resend',
-          status: 'active',
-          config: {
-            from_email: 'noreply@yourdomain.com',
-            from_name: 'Sistema de Email'
-          }
-        }
-      ]);
-    }
-  };
-
-  const saveProviders = (newProviders: EmailProvider[]) => {
-    setProviders(newProviders);
-    localStorage.setItem('email_providers', JSON.stringify(newProviders));
-  };
-
-  const updateResendConfig = () => {
-    const updatedProviders = providers.map(provider => {
-      if (provider.type === 'resend') {
-        return {
-          ...provider,
-          config: {
-            ...provider.config,
-            ...resendConfig
-          },
-          status: 'active' as const
-        };
-      }
-      return provider;
-    });
-
-    saveProviders(updatedProviders);
-    toast({
-      title: 'Configuração atualizada',
-      description: 'Configurações do Resend foram salvas com sucesso.'
-    });
-  };
-
-  const connectGoogleAccount = async () => {
-    setIsConnectingGoogle(true);
-    
+  const loadConnectedAccounts = async () => {
     try {
-      // Sign in with Google to get Gmail permissions
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase
+        .from('user_email_accounts')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      setConnectedAccounts(data || []);
+    } catch (error) {
+      console.error('Error loading connected accounts:', error);
+    }
+  };
+
+  const checkForNewConnection = async () => {
+    // Check if user just connected via OAuth
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      // Check if this is a new OAuth connection
+      const lastSignInVia = session.user.app_metadata?.provider;
+      
+      if (lastSignInVia === 'google') {
+        // Save the connected account info
+        await saveConnectedAccount('gmail', session.user.email);
+        
+        toast({
+          title: "Gmail conectado com sucesso!",
+          description: `Conta ${session.user.email} foi conectada.`,
+        });
+      }
+    }
+  };
+
+  const saveConnectedAccount = async (provider: string, email: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_email_accounts')
+        .upsert({
+          user_id: user?.id,
+          provider: provider,
+          email: email,
+          connected_at: new Date().toISOString(),
+          status: 'active'
+        });
+
+      if (error) throw error;
+      await loadConnectedAccounts();
+    } catch (error) {
+      console.error('Error saving connected account:', error);
+    }
+  };
+
+  const connectGmail = async () => {
+    setIsConnecting(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email',
+          scopes: 'email profile https://www.googleapis.com/auth/gmail.send',
           redirectTo: `${window.location.origin}/dashboard`
         }
       });
 
       if (error) throw error;
-
-      // The user will be redirected to Google for authentication
-      // After successful auth, they'll return to the dashboard
-      
-    } catch (error: any) {
-      console.error('Error connecting Google account:', error);
+    } catch (error) {
       toast({
-        title: 'Erro ao conectar conta Google',
-        description: error.message,
-        variant: 'destructive'
+        title: "Erro ao conectar Gmail",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive"
       });
     } finally {
-      setIsConnectingGoogle(false);
+      setIsConnecting(false);
     }
   };
 
-  const disconnectGmail = () => {
-    const updatedProviders = providers.filter(p => p.type !== 'gmail');
-    saveProviders(updatedProviders);
-    
-    toast({
-      title: 'Gmail desconectado',
-      description: 'Conta Gmail foi removida dos provedores de email.'
-    });
-  };
-
-  const testEmailProvider = async (providerId: string) => {
-    const provider = providers.find(p => p.id === providerId);
-    if (!provider) return;
-
+  const disconnectAccount = async (accountId: string) => {
     try {
-      const testEmail = 'test@example.com'; // You'd get this from user input
+      const { error } = await supabase
+        .from('user_email_accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (error) throw error;
       
-      await supabase.functions.invoke('send-email', {
-        body: {
-          recipient_email: testEmail,
-          subject: 'Teste de Configuração de Email',
-          content_html: '<h1>Teste</h1><p>Este é um email de teste para verificar a configuração.</p>',
-          content_text: 'Este é um email de teste para verificar a configuração.',
-          provider: provider.type,
-          from_email: provider.config.from_email || provider.config.email,
-          from_name: provider.config.from_name || 'Sistema'
-        }
-      });
-
+      await loadConnectedAccounts();
       toast({
-        title: 'Teste enviado!',
-        description: `Email de teste enviado via ${provider.name}`
+        title: "Conta desconectada",
+        description: "A conta foi removida com sucesso.",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: 'Erro no teste',
-        description: error.message,
-        variant: 'destructive'
+        title: "Erro ao desconectar",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive"
       });
-    }
-  };
-
-  const getProviderIcon = (type: string) => {
-    switch (type) {
-      case 'gmail':
-        return <Mail className="h-5 w-5 text-red-500" />;
-      default:
-        return <Mail className="h-5 w-5" />;
     }
   };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Provedores de Email
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Current Providers */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Provedores Configurados</h3>
-            <div className="space-y-3">
-              {providers.map((provider) => (
-                <div key={provider.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {getProviderIcon(provider.type)}
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Provedores de Email</h2>
+        <p className="text-gray-600">Conecte suas contas de email para enviar campanhas</p>
+      </div>
+
+      {/* Connected Accounts */}
+      {connectedAccounts.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Contas Conectadas</h3>
+          {connectedAccounts.map((account) => (
+            <Card key={account.id} className="border-green-200 bg-green-50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
                     <div>
-                      <p className="font-medium">{provider.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {provider.type === 'gmail' ? provider.config.email : provider.type}
-                      </p>
-                      {provider.type === 'gmail' && provider.config.connected_at && (
-                        <p className="text-xs text-green-600">
-                          Conectado em {new Date(provider.config.connected_at).toLocaleString()}
-                        </p>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{account.email}</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          {account.provider.charAt(0).toUpperCase() + account.provider.slice(1)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-1 text-sm text-gray-500">
+                        <Calendar className="h-3 w-3" />
+                        <span>Conectado em {new Date(account.connected_at).toLocaleDateString('pt-BR')}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={provider.status === 'active' ? 'default' : 'destructive'}
-                      className="flex items-center gap-1"
-                    >
-                      {provider.status === 'active' ? 
-                        <CheckCircle className="h-3 w-3" /> : 
-                        <AlertCircle className="h-3 w-3" />
-                      }
-                      {provider.status}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => testEmailProvider(provider.id)}
-                    >
-                      Testar
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4" />
                     </Button>
-                    {provider.type === 'gmail' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={disconnectGmail}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Desconectar
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => disconnectAccount(account.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-          {/* Resend Configuration */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Configurar Resend</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="from-email">Email Remetente</Label>
-                <Input
-                  id="from-email"
-                  placeholder="noreply@seudominio.com"
-                  value={resendConfig.from_email}
-                  onChange={(e) => setResendConfig(prev => ({ ...prev, from_email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="from-name">Nome Remetente</Label>
-                <Input
-                  id="from-name"
-                  placeholder="Sua Empresa"
-                  value={resendConfig.from_name}
-                  onChange={(e) => setResendConfig(prev => ({ ...prev, from_name: e.target.value }))}
-                />
-              </div>
+      {/* Available Providers */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Gmail */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+              <Mail className="h-6 w-6 text-red-600" />
             </div>
-            <Button onClick={updateResendConfig} className="mt-4">
-              Salvar Configuração Resend
-            </Button>
-          </div>
-
-          {/* Google Integration */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Integração com Google</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Conecte sua conta Google para enviar emails através do Gmail API.
-              Isso oferece melhor deliverability e os emails serão enviados da sua conta.
+            <CardTitle>Gmail</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-gray-600">
+              Conecte sua conta Gmail para enviar emails diretamente
             </p>
-            
-            {providers.some(p => p.type === 'gmail') ? (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-green-800">Gmail conectado com sucesso!</span>
-              </div>
-            ) : (
-              <Button 
-                onClick={connectGoogleAccount}
-                disabled={isConnectingGoogle}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {isConnectingGoogle ? 'Conectando...' : 'Conectar Conta Google'}
-              </Button>
-            )}
-          </div>
+            <Button 
+              onClick={connectGmail}
+              disabled={isConnecting}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {isConnecting ? 'Conectando...' : 'Conectar Gmail'}
+            </Button>
+          </CardContent>
+        </Card>
 
-          {/* Provider Selection */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Provedor Padrão</h3>
-            <Select value={selectedProvider} onValueChange={setSelectedProvider}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o provedor padrão" />
-              </SelectTrigger>
-              <SelectContent>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Outlook - Coming Soon */}
+        <Card className="opacity-50">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <Mail className="h-6 w-6 text-blue-600" />
+            </div>
+            <CardTitle>Outlook</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-gray-600">
+              Conecte sua conta Outlook/Hotmail
+            </p>
+            <Button disabled className="w-full">
+              Em breve
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Yahoo - Coming Soon */}
+        <Card className="opacity-50">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <Mail className="h-6 w-6 text-purple-600" />
+            </div>
+            <CardTitle>Yahoo</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-gray-600">
+              Conecte sua conta Yahoo Mail
+            </p>
+            <Button disabled className="w-full">
+              Em breve
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

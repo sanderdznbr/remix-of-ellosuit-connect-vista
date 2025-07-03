@@ -102,7 +102,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `${window.location.origin}/dashboard`;
+      const redirectUri = `${window.location.origin}/`;
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +

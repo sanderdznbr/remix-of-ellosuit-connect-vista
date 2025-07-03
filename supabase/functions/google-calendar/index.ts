@@ -58,7 +58,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: `${req.headers.get('origin')}/dashboard`,
+          redirect_uri: `${req.headers.get('origin')}/`,
           grant_type: 'authorization_code',
         }),
       });

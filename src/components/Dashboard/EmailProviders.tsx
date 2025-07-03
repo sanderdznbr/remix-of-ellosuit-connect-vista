@@ -30,7 +30,8 @@ const EmailProviders = () => {
 
   const loadConnectedAccounts = async () => {
     try {
-      const { data, error } = await supabase
+      // Using type assertion to work around missing types
+      const { data, error } = await (supabase as any)
         .from('user_email_accounts')
         .select('*')
         .eq('user_id', user?.id);
@@ -64,7 +65,8 @@ const EmailProviders = () => {
 
   const saveConnectedAccount = async (provider: string, email: string) => {
     try {
-      const { error } = await supabase
+      // Using type assertion to work around missing types
+      const { error } = await (supabase as any)
         .from('user_email_accounts')
         .upsert({
           user_id: user?.id,
@@ -106,7 +108,8 @@ const EmailProviders = () => {
 
   const disconnectAccount = async (accountId: string) => {
     try {
-      const { error } = await supabase
+      // Using type assertion to work around missing types
+      const { error } = await (supabase as any)
         .from('user_email_accounts')
         .delete()
         .eq('id', accountId);

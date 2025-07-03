@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,13 +36,17 @@ export const useCalendarData = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [hasCompany, setHasCompany] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
 
   // Buscar empresa do usuário
   const fetchUserCompany = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: companyUser, error } = await supabase
@@ -54,18 +57,26 @@ export const useCalendarData = () => {
 
       if (error) {
         console.log('Usuário não possui empresa ainda');
+        setHasCompany(false);
+        setLoading(false);
         return;
       }
 
       setUserCompanyId(companyUser.company_id);
+      setHasCompany(true);
     } catch (error) {
       console.error('Erro ao buscar empresa do usuário:', error);
+      setHasCompany(false);
+      setLoading(false);
     }
   };
 
   // Buscar eventos da empresa
   const fetchEvents = async () => {
-    if (!userCompanyId) return;
+    if (!userCompanyId || !hasCompany) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: calendarEvents, error } = await supabase
@@ -76,6 +87,7 @@ export const useCalendarData = () => {
 
       if (error) {
         console.error('Erro ao buscar eventos:', error);
+        setLoading(false);
         return;
       }
 
@@ -100,17 +112,19 @@ export const useCalendarData = () => {
       setUpcomingEvents(formattedEvents.filter(event => 
         new Date(event.start) >= new Date()).slice(0, 3)
       );
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao processar eventos:', error);
+      setLoading(false);
     }
   };
 
   const getEventColor = (eventType: string) => {
     switch (eventType) {
-      case 'meeting': return '#2563EB';
-      case 'appointment': return '#1D4ED8';
-      case 'reminder': return '#3B82F6';
-      default: return '#2563EB';
+      case 'meeting': return '#3B82F6';
+      case 'appointment': return '#10B981';
+      case 'reminder': return '#F59E0B';
+      default: return '#3B82F6';
     }
   };
 
@@ -149,7 +163,7 @@ export const useCalendarData = () => {
     attendees?: Json;
     isAllDay?: boolean;
   }) => {
-    if (!userCompanyId || !user) {
+    if (!userCompanyId || !user || !hasCompany) {
       toast({
         title: "Erro",
         description: "Usuário não está associado a uma empresa",
@@ -207,15 +221,18 @@ export const useCalendarData = () => {
   useEffect(() => {
     if (user) {
       fetchUserCompany();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    if (userCompanyId) {
+    if (hasCompany && userCompanyId) {
       fetchEvents();
+    } else if (!hasCompany) {
       setLoading(false);
     }
-  }, [userCompanyId]);
+  }, [userCompanyId, hasCompany]);
 
   return {
     events,
@@ -223,6 +240,7 @@ export const useCalendarData = () => {
     upcomingEvents,
     loading,
     userCompanyId,
+    hasCompany,
     createEvent,
     refreshEvents: fetchEvents
   };

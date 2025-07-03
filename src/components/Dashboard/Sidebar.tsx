@@ -28,8 +28,15 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProps) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { toast } = useToast();
+
+  // Extrair dados do usuário
+  const userEmail = user?.email || '';
+  const userMetadata = user?.user_metadata || {};
+  const username = userMetadata.username || userMetadata.company_name || userEmail.split('@')[0];
+  const displayName = username.length > 15 ? username.substring(0, 15) + '...' : username;
+  const initials = username.substring(0, 2).toUpperCase();
 
   const menuSections = [
     {
@@ -153,12 +160,12 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       <div className="p-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium">SC</span>
+            <span className="text-sm font-medium">{initials}</span>
           </div>
           {!isCollapsed && (
-            <div className="flex-1">
-              <p className="text-sm font-medium">Sander Colombes</p>
-              <p className="text-xs text-white/70">Basic Plan</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" title={username}>{displayName}</p>
+              <p className="text-xs text-white/70 truncate" title={userEmail}>{userEmail}</p>
             </div>
           )}
           <Button
@@ -166,6 +173,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
             size="icon"
             className="text-white hover:bg-white/10"
             onClick={handleLogout}
+            title="Logout"
           >
             <LogOut size={16} />
           </Button>

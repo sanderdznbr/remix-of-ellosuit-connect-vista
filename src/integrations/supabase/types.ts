@@ -315,6 +315,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      associate_existing_users_with_companies: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       is_company_admin_or_manager: {
         Args: { company_id: string; user_id: string }
         Returns: boolean

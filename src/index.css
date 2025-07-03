@@ -85,9 +85,9 @@
   }
 }
 
-/* Modern Calendar Styles */
+/* Estilos Modernos do Calendário */
 .calendar-container {
-  @apply bg-white rounded-lg;
+  @apply bg-white rounded-2xl overflow-hidden;
 }
 
 .calendar-container .fc {
@@ -95,29 +95,30 @@
 }
 
 .calendar-container .fc-header-toolbar {
-  @apply p-6 pb-4 border-b border-gray-100;
+  @apply p-8 pb-6 border-b border-gray-100;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .calendar-container .fc-toolbar-title {
-  @apply text-2xl font-semibold text-gray-900;
+  @apply text-2xl font-bold text-gray-900;
 }
 
 .calendar-container .fc-button {
-  @apply bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 rounded-lg px-4 py-2 font-medium text-sm transition-all duration-200;
+  @apply bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2 font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md;
   box-shadow: none !important;
 }
 
 .calendar-container .fc-button:focus {
-  @apply ring-2 ring-blue-500 ring-opacity-50;
-  box-shadow: none !important;
+  @apply ring-2 ring-[#3600FF] ring-opacity-50;
+  box-shadow: 0 0 0 2px rgba(54, 0, 255, 0.1) !important;
 }
 
 .calendar-container .fc-button-primary {
-  @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700;
+  @apply bg-[#3600FF] text-white border-[#3600FF] hover:bg-[#3600FF]/90 hover:border-[#3600FF]/90;
 }
 
 .calendar-container .fc-button-active {
-  @apply bg-gray-100 text-gray-900 border-gray-300;
+  @apply bg-[#3600FF] text-white border-[#3600FF] shadow-lg;
 }
 
 .calendar-container .fc-daygrid {
@@ -125,7 +126,8 @@
 }
 
 .calendar-container .fc-scrollgrid {
-  @apply border-0;
+  @apply border-0 rounded-xl overflow-hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .calendar-container .fc-col-header {
@@ -133,37 +135,50 @@
 }
 
 .calendar-container .fc-col-header-cell {
-  @apply py-3 text-center font-medium text-gray-500 text-sm uppercase tracking-wider border-0;
+  @apply py-4 text-center font-semibold text-gray-600 text-sm uppercase tracking-wider border-0;
 }
 
 .calendar-container .fc-daygrid-day {
   @apply min-h-[120px] border border-gray-100;
+  transition: all 0.2s ease;
+}
+
+.calendar-container .fc-daygrid-day:hover {
+  @apply bg-blue-50/50;
 }
 
 .calendar-container .fc-daygrid-day-top {
-  @apply p-2;
+  @apply p-3;
 }
 
 .calendar-container .fc-daygrid-day-number {
-  @apply text-sm font-medium text-gray-900 p-1 hover:bg-gray-100 rounded-md w-8 h-8 flex items-center justify-center;
+  @apply text-sm font-semibold text-gray-700 p-2 hover:bg-gray-100 rounded-lg w-8 h-8 flex items-center justify-center transition-all duration-200;
 }
 
 .calendar-container .fc-day-today {
-  @apply bg-blue-50;
+  @apply bg-[#3600FF]/5;
 }
 
 .calendar-container .fc-day-today .fc-daygrid-day-number {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
+  @apply bg-[#3600FF] text-white hover:bg-[#3600FF]/90 shadow-lg;
 }
 
 .calendar-container .fc-event {
-  @apply border-0 text-xs font-medium mb-1 mx-1;
-  border-radius: 6px !important;
-  padding: 2px 6px !important;
+  @apply border-0 text-xs font-medium mb-1 mx-2 shadow-sm;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+  background: linear-gradient(135deg, #3600FF 0%, #4f46e5 100%) !important;
+  color: white !important;
+}
+
+.calendar-container .fc-event:hover {
+  @apply shadow-md;
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
 }
 
 .calendar-container .fc-event-title {
-  @apply truncate;
+  @apply truncate font-medium;
 }
 
 .calendar-container .fc-daygrid-event-harness {
@@ -171,5 +186,35 @@
 }
 
 .calendar-container .fc-more-link {
-  @apply text-blue-600 hover:text-blue-800 text-xs font-medium;
+  @apply text-[#3600FF] hover:text-[#3600FF]/80 text-xs font-semibold px-2 py-1 rounded-md hover:bg-[#3600FF]/10 transition-all duration-200;
+}
+
+.calendar-container .fc-daygrid-body-unbalanced .fc-daygrid-day-events {
+  @apply min-h-[2rem];
+}
+
+/* Estilos para diferentes tipos de eventos */
+.calendar-container .fc-event[data-event-type="meeting"] {
+  background: linear-gradient(135deg, #3600FF 0%, #4f46e5 100%) !important;
+}
+
+.calendar-container .fc-event[data-event-type="appointment"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.calendar-container .fc-event[data-event-type="reminder"] {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+
+/* Melhorias para vista semanal e diária */
+.calendar-container .fc-timegrid-slot {
+  @apply border-gray-100;
+}
+
+.calendar-container .fc-timegrid-axis {
+  @apply border-gray-100;
+}
+
+.calendar-container .fc-timegrid-slot-label {
+  @apply text-gray-500 text-xs;
 }

@@ -24,7 +24,7 @@ export const useCalendarData = () => {
 
   const checkUserCompany = async (userId: string, retryCount = 0) => {
     try {
-      console.log('Checking company for user:', userId, 'attempt:', retryCount + 1);
+      console.log('Verificando empresa para usuário:', userId, 'tentativa:', retryCount + 1);
       
       const { data: companyUser, error } = await supabase
         .from('company_users')
@@ -40,11 +40,10 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching company user:', error);
+        console.error('Erro ao buscar empresa do usuário:', error);
         
-        // Se não encontrou empresa e ainda tem tentativas, aguardar um pouco
         if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('Company not found, retrying in 2 seconds...');
+          console.log('Empresa não encontrada, tentando novamente em 2 segundos...');
           setTimeout(() => checkUserCompany(userId, retryCount + 1), 2000);
           return;
         }
@@ -56,18 +55,18 @@ export const useCalendarData = () => {
       }
 
       if (companyUser && companyUser.company_id) {
-        console.log('User company found:', companyUser.companies);
+        console.log('Empresa do usuário encontrada:', companyUser.companies);
         setHasCompany(true);
         setCompanyId(companyUser.company_id);
         await fetchEvents(companyUser.company_id);
       } else {
-        console.log('No company association found for user');
+        console.log('Nenhuma associação de empresa encontrada para o usuário');
         setHasCompany(false);
         setCompanyId(null);
         setLoading(false);
       }
     } catch (error) {
-      console.error('Error in checkUserCompany:', error);
+      console.error('Erro em checkUserCompany:', error);
       setHasCompany(false);
       setCompanyId(null);
       setLoading(false);
@@ -76,7 +75,7 @@ export const useCalendarData = () => {
 
   const fetchEvents = async (userCompanyId: string) => {
     try {
-      console.log('Fetching events for company:', userCompanyId);
+      console.log('Buscando eventos para empresa:', userCompanyId);
       
       const { data, error } = await supabase
         .from('calendar_events')
@@ -85,7 +84,7 @@ export const useCalendarData = () => {
         .order('start_date', { ascending: true });
 
       if (error) {
-        console.error('Error fetching events:', error);
+        console.error('Erro ao buscar eventos:', error);
         toast({
           title: "Erro",
           description: "Erro ao carregar eventos do calendário",
@@ -93,7 +92,7 @@ export const useCalendarData = () => {
         });
         setEvents([]);
       } else {
-        console.log('Events loaded:', data?.length || 0);
+        console.log('Eventos carregados:', data?.length || 0);
         const formattedEvents = (data || []).map(event => ({
           id: event.id,
           title: event.title,
@@ -106,7 +105,7 @@ export const useCalendarData = () => {
         setEvents(formattedEvents);
       }
     } catch (error) {
-      console.error('Unexpected error fetching events:', error);
+      console.error('Erro inesperado ao buscar eventos:', error);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -124,6 +123,8 @@ export const useCalendarData = () => {
     }
 
     try {
+      console.log('Criando evento com dados:', eventData);
+      
       const { data, error } = await supabase
         .from('calendar_events')
         .insert({
@@ -135,6 +136,7 @@ export const useCalendarData = () => {
           company_id: companyId,
           created_by: user.id,
           meeting_link: eventData.meeting_link,
+          meeting_provider: eventData.meeting_provider,
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false
         })
@@ -142,7 +144,7 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
-        console.error('Error creating event:', error);
+        console.error('Erro ao criar evento:', error);
         toast({
           title: "Erro",
           description: "Erro ao criar evento: " + error.message,
@@ -156,10 +158,9 @@ export const useCalendarData = () => {
         description: "Evento criado com sucesso!"
       });
 
-      // Recarregar eventos
       await fetchEvents(companyId);
     } catch (error) {
-      console.error('Unexpected error creating event:', error);
+      console.error('Erro inesperado ao criar evento:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao criar evento",
@@ -170,10 +171,10 @@ export const useCalendarData = () => {
 
   useEffect(() => {
     if (user && session) {
-      console.log('User authenticated, checking company association...');
+      console.log('Usuário autenticado, verificando associação de empresa...');
       checkUserCompany(user.id);
     } else {
-      console.log('No authenticated user, resetting state');
+      console.log('Nenhum usuário autenticado, resetando estado');
       setEvents([]);
       setHasCompany(false);
       setCompanyId(null);

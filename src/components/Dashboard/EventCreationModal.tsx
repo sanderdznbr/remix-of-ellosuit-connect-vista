@@ -15,13 +15,13 @@ interface EventCreationModalProps {
   onCreateEvent: (eventData: {
     title: string;
     description?: string;
-    startDate: string;
-    endDate: string;
-    eventType: 'meeting' | 'appointment' | 'reminder';
-    meetingProvider?: 'google_meet' | 'zoom' | 'teams';
-    meetingLink?: string;
+    start_date: string;
+    end_date: string;
+    event_type: 'meeting' | 'appointment' | 'reminder';
+    meeting_provider?: 'google_meet' | 'zoom' | 'teams';
+    meeting_link?: string;
     attendees?: any[];
-    isAllDay?: boolean;
+    is_all_day?: boolean;
   }) => Promise<void>;
 }
 
@@ -42,9 +42,9 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
 
   const getEventIcon = () => {
     switch (eventType) {
-      case 'meeting': return <Video className="h-5 w-5" />;
-      case 'appointment': return <Calendar className="h-5 w-5" />;
-      case 'reminder': return <Bell className="h-5 w-5" />;
+      case 'meeting': return <Video className="h-5 w-5 text-[#3600FF]" />;
+      case 'appointment': return <Calendar className="h-5 w-5 text-[#3600FF]" />;
+      case 'reminder': return <Bell className="h-5 w-5 text-[#3600FF]" />;
     }
   };
 
@@ -52,7 +52,33 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
     switch (eventType) {
       case 'meeting': return 'Agendar Reunião Online';
       case 'appointment': return 'Agendar Compromisso';
-      case 'reminder': return 'Agendar Lembrete';
+      case 'reminder': return 'Criar Lembrete';
+    }
+  };
+
+  const getMeetingProviderLogo = (provider: string) => {
+    const logoStyle = "w-8 h-8 rounded-lg";
+    switch (provider) {
+      case 'google_meet':
+        return (
+          <div className={`${logoStyle} bg-green-500 flex items-center justify-center`}>
+            <span className="text-white font-bold text-sm">GM</span>
+          </div>
+        );
+      case 'zoom':
+        return (
+          <div className={`${logoStyle} bg-blue-500 flex items-center justify-center`}>
+            <span className="text-white font-bold text-sm">Z</span>
+          </div>
+        );
+      case 'teams':
+        return (
+          <div className={`${logoStyle} bg-purple-600 flex items-center justify-center`}>
+            <span className="text-white font-bold text-sm">T</span>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -62,26 +88,31 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
 
     setIsLoading(true);
     
-    const startDateTime = isAllDay 
-      ? selectedDate 
-      : `${selectedDate}T${startTime}:00`;
-    
-    const endDateTime = isAllDay 
-      ? selectedDate 
-      : `${selectedDate}T${endTime}:00`;
+    try {
+      const startDateTime = isAllDay 
+        ? selectedDate 
+        : `${selectedDate}T${startTime}:00`;
+      
+      const endDateTime = isAllDay 
+        ? selectedDate 
+        : `${selectedDate}T${endTime}:00`;
 
-    await onCreateEvent({
-      title,
-      description,
-      startDate: startDateTime,
-      endDate: endDateTime,
-      eventType,
-      meetingProvider: eventType === 'meeting' ? meetingProvider : undefined,
-      isAllDay
-    });
+      await onCreateEvent({
+        title,
+        description,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        event_type: eventType,
+        meeting_provider: eventType === 'meeting' ? meetingProvider : undefined,
+        is_all_day: isAllDay
+      });
 
-    setIsLoading(false);
-    handleClose();
+      handleClose();
+    } catch (error) {
+      console.error('Erro ao criar evento:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -96,102 +127,140 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
             {getEventIcon()}
             {getEventTitle()}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Título</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+              Título *
+            </Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Digite o título do evento"
               required
+              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
 
-          <div>
-            <Label htmlFor="description">Descrição</Label>
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+              Descrição
+            </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional"
+              placeholder="Descrição opcional do evento"
               rows={3}
+              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
 
-          <div>
-            <Label>Data</Label>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">Data</Label>
             <Input
               type="date"
               value={selectedDate}
               disabled
-              className="bg-gray-50"
+              className="rounded-xl bg-gray-50 border-gray-200 text-gray-600"
             />
           </div>
 
-          {!isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">Horário de Início</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="endTime">Horário de Fim</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
             <input
               type="checkbox"
               id="allDay"
               checked={isAllDay}
               onChange={(e) => setIsAllDay(e.target.checked)}
-              className="rounded"
+              className="w-4 h-4 text-[#3600FF] border-gray-300 rounded focus:ring-[#3600FF]"
             />
-            <Label htmlFor="allDay">Dia inteiro</Label>
+            <Label htmlFor="allDay" className="text-sm font-medium text-gray-700">
+              Evento de dia inteiro
+            </Label>
           </div>
 
-          {eventType === 'meeting' && (
-            <div>
-              <Label htmlFor="provider">Provedor de Reunião</Label>
-              <select
-                id="provider"
-                value={meetingProvider}
-                onChange={(e) => setMeetingProvider(e.target.value as 'google_meet' | 'zoom' | 'teams')}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value="google_meet">Google Meet</option>
-                <option value="zoom">Zoom</option>
-                <option value="teams">Microsoft Teams</option>
-              </select>
+          {!isAllDay && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime" className="text-sm font-medium text-gray-700">
+                  Horário de Início
+                </Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime" className="text-sm font-medium text-gray-700">
+                  Horário de Término
+                </Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+                />
+              </div>
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+          {eventType === 'meeting' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">
+                Plataforma de Reunião
+              </Label>
+              <div className="grid grid-cols-3 gap-3">
+                {['google_meet', 'zoom', 'teams'].map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-md ${
+                      meetingProvider === provider
+                        ? 'border-[#3600FF] bg-[#3600FF]/5 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {getMeetingProviderLogo(provider)}
+                    <span className="text-xs font-medium text-gray-700">
+                      {provider === 'google_meet' ? 'Google Meet' : 
+                       provider === 'zoom' ? 'Zoom' : 'Teams'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                * Link da reunião será gerado automaticamente após configurar as integrações
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleClose}
+              className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="rounded-xl bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6"
+            >
               {isLoading ? 'Criando...' : 'Criar Evento'}
             </Button>
           </div>

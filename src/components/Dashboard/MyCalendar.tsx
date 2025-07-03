@@ -41,7 +41,7 @@ const MyCalendar = () => {
 
   if (loading) {
     return (
-      <div className="p-8 min-h-screen bg-gray-50">
+      <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <div className="flex items-center justify-center h-96">
           <div className="text-lg text-gray-600">Carregando calendário...</div>
         </div>
@@ -51,9 +51,9 @@ const MyCalendar = () => {
 
   if (!hasCompany) {
     return (
-      <div className="p-8 min-h-screen bg-gray-50">
+      <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-4xl mx-auto">
-          <Card className="p-8 text-center">
+          <Card className="p-8 text-center shadow-lg rounded-2xl border-0">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               Bem-vindo ao Calendário
             </h2>
@@ -68,45 +68,41 @@ const MyCalendar = () => {
   }
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
+    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Calendário</h1>
             <p className="text-gray-500 mt-1">Gerencie seus eventos e compromissos</p>
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input 
-                placeholder="Search" 
-                className="pl-10 w-80"
+                placeholder="Buscar eventos..." 
+                className="pl-10 w-80 rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
               />
             </div>
             
-            {/* Add Event Button */}
             <Button 
               onClick={handleAddEvent}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2"
+              className="bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Plus className="h-4 w-4" />
-              <span>Add event</span>
+              <span>Novo Evento</span>
             </Button>
           </div>
         </div>
 
-        {/* Calendar */}
-        <Card className="shadow-sm border-0">
+        <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">
           <CardContent className="p-0">
             <div className="calendar-container">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 headerToolbar={{
-                  left: 'prev,next today',
+                  left: 'prev,next hoje',
                   center: 'title',
                   right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 }}
@@ -121,24 +117,23 @@ const MyCalendar = () => {
                 height="calc(100vh - 200px)"
                 locale="pt-br"
                 buttonText={{
-                  today: 'Today',
-                  month: 'Month view',
-                  week: 'Week view',
-                  day: 'Day view'
+                  today: 'Hoje',
+                  month: 'Mês',
+                  week: 'Semana',
+                  day: 'Dia'
                 }}
                 dayHeaderFormat={{ weekday: 'short' }}
                 eventDisplay="block"
                 eventBackgroundColor="transparent"
                 eventBorderColor="transparent"
                 eventTextColor="#374151"
-                dayCellClassNames="hover:bg-gray-50"
-                eventClassNames="rounded-md text-sm font-medium px-2 py-1 cursor-pointer hover:opacity-80 transition-opacity"
+                dayCellClassNames="hover:bg-blue-50/50 transition-colors duration-200"
+                eventClassNames="rounded-lg text-sm font-medium px-3 py-2 cursor-pointer hover:opacity-80 transition-all duration-200 shadow-sm"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Event Creation Modal */}
         <EventCreationModal
           isOpen={showEventModal}
           onClose={() => setShowEventModal(false)}

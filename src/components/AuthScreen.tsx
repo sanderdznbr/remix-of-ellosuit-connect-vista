@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Mail, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Phone, Eye, EyeOff, Building } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -58,6 +60,15 @@ const AuthScreen = () => {
         return false;
       }
 
+      if (!companyName) {
+        toast({
+          title: "Erro",
+          description: "Nome da empresa é obrigatório",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       if (password.length < 6) {
         toast({
           title: "Erro",
@@ -87,7 +98,7 @@ const AuthScreen = () => {
     
     try {
       if (isSignUp) {
-        const { data, error } = await signUp(email, password, username);
+        const { data, error } = await signUp(email, password, username, companyName);
         
         if (error) {
           if (error.message.includes('User already registered')) {
@@ -106,7 +117,7 @@ const AuthScreen = () => {
         } else {
           toast({
             title: "Cadastro realizado!",
-            description: "Verifique seu email para confirmar a conta.",
+            description: "Sua conta e empresa foram criadas. Verifique seu email para confirmar a conta.",
           });
         }
       } else {
@@ -179,6 +190,7 @@ const AuthScreen = () => {
     // Reset form fields when switching modes
     setEmail('');
     setUsername('');
+    setCompanyName('');
     setWhatsapp('');
     setPassword('');
     setConfirmPassword('');
@@ -203,15 +215,30 @@ const AuthScreen = () => {
           <div className="space-y-6">
             {/* Registration Fields */}
             {isSignUp && (
-              <div className="space-y-2">
-                <Input
-                  type="text"
-                  placeholder="Nome de usuário"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Nome de usuário"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="h-12 px-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <Input
+                      type="text"
+                      placeholder="Nome da sua empresa"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="h-12 pl-12 pr-4 text-base border-gray-200 focus:border-ellosuit-purple focus:ring-ellosuit-purple/20 transition-all duration-200"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Email Input */}
@@ -279,7 +306,7 @@ const AuthScreen = () => {
             {/* Continue Button */}
             <Button
               onClick={handleContinue}
-              disabled={!email || !password || isLoading || (isSignUp && (!username || !confirmPassword))}
+              disabled={!email || !password || isLoading || (isSignUp && (!username || !confirmPassword || !companyName))}
               className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50"
             >
               {isLoading ? (

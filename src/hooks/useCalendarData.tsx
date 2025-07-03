@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,12 +42,15 @@ export const useCalendarData = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Buscar empresa do usuário com retry
+  // Buscar empresa do usuário com retry mais inteligente
   const fetchUserCompany = async (retryCount = 0) => {
     if (!user) {
+      console.log('No user found, setting loading to false');
       setLoading(false);
       return;
     }
+
+    console.log(`Fetching company for user ${user.email}, attempt ${retryCount + 1}`);
 
     try {
       const { data: companyUser, error } = await supabase
@@ -56,22 +60,34 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
-        // Se não encontrou empresa e é a primeira tentativa, aguarda um pouco e tenta novamente
-        if (retryCount < 3) {
-          setTimeout(() => fetchUserCompany(retryCount + 1), 1000);
+        console.log('Error fetching company:', error.message);
+        
+        // Se não encontrou empresa e é uma das primeiras tentativas, aguarda e tenta novamente
+        if (retryCount < 5 && error.code === 'PGRST116') {
+          console.log(`User company not found, retrying in ${(retryCount + 1) * 1000}ms...`);
+          setTimeout(() => fetchUserCompany(retryCount + 1), (retryCount + 1) * 1000);
           return;
         }
         
-        console.log('Usuário não possui empresa ainda');
+        console.log('User has no company associated');
         setHasCompany(false);
         setLoading(false);
+        
+        if (retryCount === 0) {
+          toast({
+            title: "Empresa não encontrada",
+            description: "Sua conta não está associada a uma empresa. Entre em contato com o suporte.",
+            variant: "destructive"
+          });
+        }
         return;
       }
 
+      console.log('Found company:', companyUser.company_id);
       setUserCompanyId(companyUser.company_id);
       setHasCompany(true);
     } catch (error) {
-      console.error('Erro ao buscar empresa do usuário:', error);
+      console.error('Unexpected error fetching company:', error);
       setHasCompany(false);
       setLoading(false);
     }
@@ -79,9 +95,12 @@ export const useCalendarData = () => {
 
   const fetchEvents = async () => {
     if (!userCompanyId || !hasCompany) {
+      console.log('No company ID or no company, skipping fetch events');
       setLoading(false);
       return;
     }
+
+    console.log('Fetching events for company:', userCompanyId);
 
     try {
       const { data: calendarEvents, error } = await supabase
@@ -91,12 +110,19 @@ export const useCalendarData = () => {
         .order('start_date', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar eventos:', error);
+        console.error('Error fetching events:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar eventos do calendário",
+          variant: "destructive"
+        });
         setLoading(false);
         return;
       }
 
-      const formattedEvents: CalendarEvent[] = calendarEvents.map(event => ({
+      console.log('Fetched events:', calendarEvents?.length || 0);
+
+      const formattedEvents: CalendarEvent[] = calendarEvents?.map(event => ({
         id: event.id,
         title: event.title,
         start: event.start_date,
@@ -110,7 +136,7 @@ export const useCalendarData = () => {
           meetingLink: event.meeting_link || undefined,
           attendees: event.attendees
         }
-      }));
+      })) || [];
 
       setEvents(formattedEvents);
       calculateStats(formattedEvents);
@@ -119,7 +145,7 @@ export const useCalendarData = () => {
       );
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao processar eventos:', error);
+      console.error('Unexpected error fetching events:', error);
       setLoading(false);
     }
   };
@@ -127,7 +153,7 @@ export const useCalendarData = () => {
   const getEventColor = (eventType: string) => {
     switch (eventType) {
       case 'meeting': return '#3B82F6';
-      case 'appointment': return '#10B981';
+      case 'appointment': return '#10B981';  
       case 'reminder': return '#F59E0B';
       default: return '#3B82F6';
     }
@@ -197,7 +223,7 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
-        console.error('Erro ao criar evento:', error);
+        console.error('Error creating event:', error);
         toast({
           title: "Erro",
           description: "Erro ao criar evento",
@@ -214,7 +240,7 @@ export const useCalendarData = () => {
       // Recarregar eventos
       await fetchEvents();
     } catch (error) {
-      console.error('Erro ao criar evento:', error);
+      console.error('Unexpected error creating event:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao criar evento",
@@ -227,14 +253,17 @@ export const useCalendarData = () => {
     if (user) {
       fetchUserCompany();
     } else {
+      console.log('No user, resetting state');
       setLoading(false);
+      setHasCompany(false);
+      setUserCompanyId(null);
     }
   }, [user]);
 
   useEffect(() => {
     if (hasCompany && userCompanyId) {
       fetchEvents();
-    } else if (!hasCompany) {
+    } else if (!hasCompany && userCompanyId === null) {
       setLoading(false);
     }
   }, [userCompanyId, hasCompany]);

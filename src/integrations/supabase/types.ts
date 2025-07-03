@@ -315,7 +315,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_company_admin_or_manager: {
+        Args: { company_id: string; user_id: string }
+        Returns: boolean
+      }
+      user_belongs_to_company: {
+        Args: { company_id: string; user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       company_role: "admin" | "manager" | "employee"

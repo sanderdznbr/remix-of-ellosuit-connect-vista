@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, User, FileText, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar, Clock, MapPin, User, FileText, X, Edit, Save, CheckCircle, XCircle, Video, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -17,6 +18,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onClose,
   event
 }) => {
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [eventStatus, setEventStatus] = useState(event?.extendedProps?.status || 'scheduled');
+  const [videoUrl, setVideoUrl] = useState(event?.extendedProps?.video_url || '');
+
   if (!event) return null;
 
   const formatEventDate = (dateStr: string) => {
@@ -54,9 +60,52 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'postponed':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Concluído';
+      case 'postponed':
+        return 'Adiado';
+      case 'cancelled':
+        return 'Cancelado';
+      default:
+        return 'Agendado';
+    }
+  };
+
+  const handleSaveNotes = () => {
+    setIsEditingNotes(false);
+    // Aqui você pode implementar a lógica para salvar as observações
+    console.log('Salvando observações:', notes);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setEventStatus(newStatus);
+    // Aqui você pode implementar a lógica para atualizar o status do evento
+    console.log('Alterando status para:', newStatus);
+  };
+
+  const handleVideoUpload = () => {
+    // Aqui você pode implementar a integração com Google Drive
+    console.log('Abrindo seleção de arquivo do Google Drive');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="relative">
           {/* Header colorido baseado no tipo do evento */}
           <div className={`h-2 w-full ${
@@ -70,11 +119,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <DialogHeader className="pb-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                  <DialogTitle className="text-2xl font-bold text-gray-900 mb-3">
                     {event.title}
                   </DialogTitle>
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getEventTypeColor(event.extendedProps?.event_type)}`}>
-                    {getEventTypeLabel(event.extendedProps?.event_type)}
+                  <div className="flex items-center space-x-3">
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getEventTypeColor(event.extendedProps?.event_type)}`}>
+                      {getEventTypeLabel(event.extendedProps?.event_type)}
+                    </div>
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(eventStatus)}`}>
+                      {getStatusLabel(eventStatus)}
+                    </div>
                   </div>
                 </div>
                 <Button
@@ -146,30 +200,130 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </div>
               )}
 
-              {/* Informações do Tipo de Evento */}
-              {event.extendedProps?.event_type === 'appointment' && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Compromisso Agendado</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Este é um compromisso presencial ou evento específico agendado.
-                  </p>
+              {/* Observações da Reunião */}
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <Edit className="h-5 w-5 text-indigo-600" />
                 </div>
-              )}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900">Observações da Reunião</h3>
+                    {!isEditingNotes ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsEditingNotes(true)}
+                        className="text-indigo-600 hover:text-indigo-800"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSaveNotes}
+                        className="text-green-600 hover:text-green-800"
+                      >
+                        <Save className="h-4 w-4 mr-1" />
+                        Salvar
+                      </Button>
+                    )}
+                  </div>
+                  {isEditingNotes ? (
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Adicione suas observações sobre a reunião..."
+                      className="min-h-[100px] rounded-lg border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  ) : (
+                    <p className="text-gray-600 bg-gray-50 p-3 rounded-lg min-h-[100px]">
+                      {notes || 'Nenhuma observação adicionada ainda.'}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-              {event.extendedProps?.event_type === 'reminder' && (
-                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Clock className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">Lembrete</span>
-                  </div>
-                  <p className="text-sm text-yellow-700">
-                    Este é um lembrete para não esquecer de algo importante.
-                  </p>
+              {/* Gravação de Vídeo */}
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Video className="h-5 w-5 text-red-600" />
                 </div>
-              )}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2">Gravação da Reunião</h3>
+                  {videoUrl ? (
+                    <div className="bg-red-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-2">Gravação disponível:</p>
+                      <a
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-red-600 hover:text-red-800 underline break-all"
+                      >
+                        {videoUrl}
+                      </a>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handleVideoUpload}
+                      className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Adicionar Gravação do Google Drive
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Ações de Status */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Ações da Reunião</h3>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={eventStatus === 'completed' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleStatusChange('completed')}
+                    className={`${
+                      eventStatus === 'completed' 
+                        ? 'bg-green-600 hover:bg-green-700 text-white' 
+                        : 'border-green-200 text-green-600 hover:bg-green-50'
+                    }`}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Marcar como Concluída
+                  </Button>
+                  
+                  <Button
+                    variant={eventStatus === 'postponed' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleStatusChange('postponed')}
+                    className={`${
+                      eventStatus === 'postponed' 
+                        ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                        : 'border-orange-200 text-orange-600 hover:bg-orange-50'
+                    }`}
+                  >
+                    <Clock className="h-4 w-4 mr-1" />
+                    Marcar como Adiada
+                  </Button>
+                  
+                  <Button
+                    variant={eventStatus === 'cancelled' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleStatusChange('cancelled')}
+                    className={`${
+                      eventStatus === 'cancelled' 
+                        ? 'bg-red-600 hover:bg-red-700 text-white' 
+                        : 'border-red-200 text-red-600 hover:bg-red-50'
+                    }`}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Marcar como Cancelada
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end pt-6 border-t border-gray-100 mt-6">

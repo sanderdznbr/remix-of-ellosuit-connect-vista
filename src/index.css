@@ -156,11 +156,12 @@
 }
 
 .calendar-container .fc-day-today {
-  @apply bg-[#3600FF]/5;
+  @apply bg-gray-50/30;
 }
 
 .calendar-container .fc-day-today .fc-daygrid-day-number {
-  @apply bg-[#3600FF] text-white hover:bg-[#3600FF]/90 shadow-lg;
+  @apply bg-black text-white hover:bg-gray-800 shadow-lg rounded-full w-10 h-10 font-bold;
+  transform: scale(1.1);
 }
 
 /* Estilos melhorados para eventos */

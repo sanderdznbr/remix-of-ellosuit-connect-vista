@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Video, Calendar, Bell } from 'lucide-react';
+import { Video } from 'lucide-react';
 
 interface EventCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  eventType: 'meeting' | 'appointment' | 'reminder';
   selectedDate: string;
   onCreateEvent: (eventData: {
     title: string;
@@ -28,7 +27,6 @@ interface EventCreationModalProps {
 const EventCreationModal: React.FC<EventCreationModalProps> = ({
   isOpen,
   onClose,
-  eventType,
   selectedDate,
   onCreateEvent
 }) => {
@@ -39,22 +37,6 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   const [isAllDay, setIsAllDay] = useState(false);
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | 'teams'>('google_meet');
   const [isLoading, setIsLoading] = useState(false);
-
-  const getEventIcon = () => {
-    switch (eventType) {
-      case 'meeting': return <Video className="h-5 w-5 text-[#3600FF]" />;
-      case 'appointment': return <Calendar className="h-5 w-5 text-[#3600FF]" />;
-      case 'reminder': return <Bell className="h-5 w-5 text-[#3600FF]" />;
-    }
-  };
-
-  const getEventTitle = () => {
-    switch (eventType) {
-      case 'meeting': return 'Agendar Reunião Online';
-      case 'appointment': return 'Agendar Compromisso';
-      case 'reminder': return 'Criar Lembrete';
-    }
-  };
 
   const getMeetingProviderLogo = (provider: string) => {
     const logoStyle = "w-8 h-8 rounded-lg";
@@ -84,8 +66,12 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || isLoading) {
+      console.log('Form validation failed or already loading');
+      return;
+    }
 
+    console.log('Iniciando criação de evento de reunião...');
     setIsLoading(true);
     
     try {
@@ -97,25 +83,35 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
         ? selectedDate 
         : `${selectedDate}T${endTime}:00`;
 
-      await onCreateEvent({
+      const eventData = {
         title,
         description,
         start_date: startDateTime,
         end_date: endDateTime,
-        event_type: eventType,
-        meeting_provider: eventType === 'meeting' ? meetingProvider : undefined,
+        event_type: 'meeting' as const,
+        meeting_provider: meetingProvider,
         is_all_day: isAllDay
-      });
+      };
 
+      console.log('Dados do evento de reunião:', eventData);
+      
+      await onCreateEvent(eventData);
+      console.log('Evento de reunião criado com sucesso');
+      
       handleClose();
     } catch (error) {
-      console.error('Erro ao criar evento:', error);
+      console.error('Erro ao criar evento de reunião:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleClose = () => {
+    if (isLoading) {
+      console.log('Não é possível fechar durante o carregamento');
+      return;
+    }
+    
     setTitle('');
     setDescription('');
     setStartTime('09:00');
@@ -126,12 +122,12 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>
       <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0">
         <DialogHeader className="pb-6">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-            {getEventIcon()}
-            {getEventTitle()}
+            <Video className="h-5 w-5 text-[#3600FF]" />
+            Agendar Reunião Online
           </DialogTitle>
         </DialogHeader>
         
@@ -144,8 +140,9 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Digite o título do evento"
+              placeholder="Digite o título da reunião"
               required
+              disabled={isLoading}
               className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
@@ -158,8 +155,9 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional do evento"
+              placeholder="Descrição opcional da reunião"
               rows={3}
+              disabled={isLoading}
               className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
@@ -180,10 +178,11 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
               id="allDay"
               checked={isAllDay}
               onChange={(e) => setIsAllDay(e.target.checked)}
+              disabled={isLoading}
               className="w-4 h-4 text-[#3600FF] border-gray-300 rounded focus:ring-[#3600FF]"
             />
             <Label htmlFor="allDay" className="text-sm font-medium text-gray-700">
-              Evento de dia inteiro
+              Reunião de dia inteiro
             </Label>
           </div>
 
@@ -198,6 +197,7 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
+                  disabled={isLoading}
                   className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
                 />
               </div>
@@ -210,58 +210,59 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
+                  disabled={isLoading}
                   className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
                 />
               </div>
             </div>
           )}
 
-          {eventType === 'meeting' && (
-            <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">
-                Plataforma de Reunião
-              </Label>
-              <div className="grid grid-cols-3 gap-3">
-                {['google_meet', 'zoom', 'teams'].map((provider) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
-                    className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-md ${
-                      meetingProvider === provider
-                        ? 'border-[#3600FF] bg-[#3600FF]/5 shadow-md'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {getMeetingProviderLogo(provider)}
-                    <span className="text-xs font-medium text-gray-700">
-                      {provider === 'google_meet' ? 'Google Meet' : 
-                       provider === 'zoom' ? 'Zoom' : 'Teams'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                * Link da reunião será gerado automaticamente após configurar as integrações
-              </p>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-700">
+              Plataforma de Reunião
+            </Label>
+            <div className="grid grid-cols-3 gap-3">
+              {['google_meet', 'zoom', 'teams'].map((provider) => (
+                <button
+                  key={provider}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
+                    meetingProvider === provider
+                      ? 'border-[#3600FF] bg-[#3600FF]/5 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {getMeetingProviderLogo(provider)}
+                  <span className="text-xs font-medium text-gray-700">
+                    {provider === 'google_meet' ? 'Google Meet' : 
+                     provider === 'zoom' ? 'Zoom' : 'Teams'}
+                  </span>
+                </button>
+              ))}
             </div>
-          )}
+            <p className="text-xs text-gray-500 mt-2">
+              * Link da reunião será gerado automaticamente após configurar as integrações
+            </p>
+          </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
             <Button 
               type="button" 
               variant="outline" 
               onClick={handleClose}
-              className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+              disabled={isLoading}
+              className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancelar
             </Button>
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="rounded-xl bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6"
+              className="rounded-xl bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6 disabled:opacity-50"
             >
-              {isLoading ? 'Criando...' : 'Criar Evento'}
+              {isLoading ? 'Criando...' : 'Criar Reunião'}
             </Button>
           </div>
         </form>

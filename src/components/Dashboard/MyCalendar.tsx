@@ -8,13 +8,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Search } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
+import EventTypeSelector from './EventTypeSelector';
 import EventCreationModal from './EventCreationModal';
+import AppointmentModal from './AppointmentModal';
+import ReminderModal from './ReminderModal';
 import { Input } from '@/components/ui/input';
 
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showEventTypeSelector, setShowEventTypeSelector] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
   
   const { events, loading, hasCompany, createEvent } = useCalendarData();
@@ -22,7 +28,7 @@ const MyCalendar = () => {
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
-    setShowEventModal(true);
+    setShowEventTypeSelector(true);
   };
 
   const handleEventClick = (arg: any) => {
@@ -30,13 +36,35 @@ const MyCalendar = () => {
   };
 
   const handleCreateEvent = async (eventData: any) => {
+    console.log('Criando evento:', eventData);
     await createEvent(eventData);
   };
 
   const handleAddEvent = () => {
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
-    setShowEventModal(true);
+    setShowEventTypeSelector(true);
+  };
+
+  const handleEventTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
+    setSelectedEventType(type);
+    setShowEventTypeSelector(false);
+    
+    if (type === 'meeting') {
+      setShowEventModal(true);
+    } else if (type === 'appointment') {
+      setShowAppointmentModal(true);
+    } else if (type === 'reminder') {
+      setShowReminderModal(true);
+    }
+  };
+
+  const closeAllModals = () => {
+    setShowEventTypeSelector(false);
+    setShowEventModal(false);
+    setShowAppointmentModal(false);
+    setShowReminderModal(false);
+    setSelectedDate(null);
   };
 
   if (loading) {
@@ -134,10 +162,34 @@ const MyCalendar = () => {
           </CardContent>
         </Card>
 
+        {/* Seletor de Tipo de Evento */}
+        <EventTypeSelector
+          isOpen={showEventTypeSelector}
+          onClose={closeAllModals}
+          onSelectType={handleEventTypeSelect}
+          selectedDate={selectedDate || ''}
+        />
+
+        {/* Modal de Reunião Online */}
         <EventCreationModal
           isOpen={showEventModal}
-          onClose={() => setShowEventModal(false)}
-          eventType={selectedEventType}
+          onClose={closeAllModals}
+          selectedDate={selectedDate || ''}
+          onCreateEvent={handleCreateEvent}
+        />
+
+        {/* Modal de Compromisso */}
+        <AppointmentModal
+          isOpen={showAppointmentModal}
+          onClose={closeAllModals}
+          selectedDate={selectedDate || ''}
+          onCreateEvent={handleCreateEvent}
+        />
+
+        {/* Modal de Lembrete */}
+        <ReminderModal
+          isOpen={showReminderModal}
+          onClose={closeAllModals}
           selectedDate={selectedDate || ''}
           onCreateEvent={handleCreateEvent}
         />

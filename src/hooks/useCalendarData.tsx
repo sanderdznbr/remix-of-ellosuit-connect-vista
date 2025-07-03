@@ -41,8 +41,8 @@ export const useCalendarData = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Buscar empresa do usuário
-  const fetchUserCompany = async () => {
+  // Buscar empresa do usuário com retry
+  const fetchUserCompany = async (retryCount = 0) => {
     if (!user) {
       setLoading(false);
       return;
@@ -56,6 +56,12 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
+        // Se não encontrou empresa e é a primeira tentativa, aguarda um pouco e tenta novamente
+        if (retryCount < 3) {
+          setTimeout(() => fetchUserCompany(retryCount + 1), 1000);
+          return;
+        }
+        
         console.log('Usuário não possui empresa ainda');
         setHasCompany(false);
         setLoading(false);
@@ -71,7 +77,6 @@ export const useCalendarData = () => {
     }
   };
 
-  // Buscar eventos da empresa
   const fetchEvents = async () => {
     if (!userCompanyId || !hasCompany) {
       setLoading(false);

@@ -85,7 +85,7 @@
   }
 }
 
-/* FullCalendar Custom Styles */
+/* FullCalendar Custom Styles - Alterado para azul */
 .fullcalendar-container .fc-theme-standard .fc-scrollgrid {
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
@@ -97,18 +97,18 @@
 }
 
 .fullcalendar-container .fc-button-primary {
-  background-color: #6B46C1;
-  border-color: #6B46C1;
+  background-color: #2563EB;
+  border-color: #2563EB;
   color: white;
 }
 
 .fullcalendar-container .fc-button-primary:hover {
-  background-color: #5B21B6;
-  border-color: #5B21B6;
+  background-color: #1D4ED8;
+  border-color: #1D4ED8;
 }
 
 .fullcalendar-container .fc-button-primary:focus {
-  box-shadow: 0 0 0 0.2rem rgba(107, 70, 193, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
 .fullcalendar-container .fc-event {
@@ -137,7 +137,7 @@
 }
 
 .fullcalendar-container .fc-day-today {
-  background-color: #f0f9ff;
+  background-color: #dbeafe;
 }
 
 .fullcalendar-container .fc-daygrid-day-number {

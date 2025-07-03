@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
+import MyCalendar from './MyCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
@@ -44,6 +45,8 @@ const Dashboard = () => {
         return <MailTracking />;
       case 'campaign-mail':
         return <CampaignMail />;
+      case 'my-calendar':
+        return <MyCalendar />;
       default:
         return <MailTracking />;
     }

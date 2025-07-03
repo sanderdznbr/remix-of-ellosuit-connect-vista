@@ -17,6 +17,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -26,6 +28,9 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProps) => {
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+
   const menuSections = [
     {
       title: 'Email',
@@ -62,6 +67,30 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       onItemClick(itemId);
     } else {
       alert('Função em desenvolvimento');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await signOut();
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao fazer logout: " + error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Logout realizado com sucesso!"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao fazer logout",
+        variant: "destructive"
+      });
     }
   };
 
@@ -136,7 +165,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/10"
-            onClick={() => alert('Função em desenvolvimento')}
+            onClick={handleLogout}
           >
             <LogOut size={16} />
           </Button>

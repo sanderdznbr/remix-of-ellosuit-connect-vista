@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Video, ExternalLink } from 'lucide-react';
+import { Video, ExternalLink, AlertCircle } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,6 +90,8 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
       // If Google Meet is selected and user is connected, create Google Calendar event
       if (meetingProvider === 'google_meet' && isConnected) {
         try {
+          console.log('🔄 Criando evento no Google Calendar...');
+          
           const { data, error } = await supabase.functions.invoke('google-calendar', {
             body: {
               action: 'create_event',
@@ -102,12 +104,17 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
             }
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error('❌ Erro ao criar evento Google:', error);
+            throw error;
+          }
+          
           if (data?.meetLink) {
             meetingLink = data.meetLink;
+            console.log('✅ Link do Meet criado:', meetingLink);
           }
         } catch (error) {
-          console.error('Erro ao criar evento no Google Calendar:', error);
+          console.error('💥 Erro ao criar evento no Google Calendar:', error);
           // Continue sem o link do Meet se houver erro
         }
       }
@@ -126,7 +133,7 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
       await onCreateEvent(eventData);
       handleClose();
     } catch (error) {
-      console.error('Erro ao criar evento de reunião:', error);
+      console.error('💥 Erro ao criar evento de reunião:', error);
     } finally {
       setIsLoading(false);
     }
@@ -247,10 +254,16 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
             
             {/* Google Calendar Connection Status */}
             {meetingProvider === 'google_meet' && (
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className={`p-4 rounded-xl border-2 ${
+                isConnected 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-yellow-50 border-yellow-200'
+              }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <div className={`w-3 h-3 rounded-full ${
+                      isConnected ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}></div>
                     <span className="text-sm font-medium text-gray-700">
                       {isConnected ? 'Google Calendar Conectado' : 'Google Calendar Desconectado'}
                     </span>
@@ -260,20 +273,28 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
                       type="button"
                       size="sm"
                       onClick={connectGoogle}
-                      disabled={googleLoading}
+                      disabled={googleLoading || isLoading}
                       className="bg-[#3600FF] hover:bg-[#3600FF]/90 text-white"
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
-                      Conectar
+                      {googleLoading ? 'Conectando...' : 'Conectar'}
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {isConnected 
-                    ? 'Links do Google Meet serão criados automaticamente'
-                    : 'Conecte sua conta Google para gerar links do Meet automaticamente'
-                  }
-                </p>
+                <div className="flex items-start space-x-2 mt-2">
+                  {isConnected ? (
+                    <p className="text-xs text-green-700">
+                      ✅ Links do Google Meet serão criados automaticamente
+                    </p>
+                  ) : (
+                    <div className="flex items-start space-x-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-yellow-700">
+                        Conecte sua conta Google para gerar links do Meet automaticamente
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             

@@ -20,7 +20,91 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action, eventData, userId, accessToken } = await req.json();
+    const { action, eventData, userId, accessToken, code } = await req.json();
+
+    // Get Google credentials from environment
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+
+    if (!googleClientId || !googleClientSecret) {
+      console.error('Google credentials not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Google credentials not configured in Supabase secrets' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Action to get Google Client ID
+    if (action === 'get_client_id') {
+      return new Response(JSON.stringify({ 
+        clientId: googleClientId 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'exchange_code') {
+      // Exchange authorization code for access token
+      console.log('Exchanging code for tokens...');
+      
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code,
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          redirect_uri: `${req.headers.get('origin')}/dashboard`,
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Token exchange failed:', errorText);
+        throw new Error(`Failed to exchange code for token: ${tokenResponse.status}`);
+      }
+
+      const tokens = await tokenResponse.json();
+      console.log('Tokens received successfully');
+      
+      // Get user company
+      const { data: companyUser } = await supabaseClient
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!companyUser) {
+        throw new Error('User not associated with company');
+      }
+
+      // Store integration
+      const { error } = await supabaseClient
+        .from('meeting_integrations')
+        .upsert({
+          user_id: userId,
+          company_id: companyUser.company_id,
+          provider: 'google_meet',
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        });
+
+      if (error) {
+        console.error('Failed to store integration:', error);
+        throw error;
+      }
+
+      console.log('Integration stored successfully');
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (action === 'create_event') {
       // Create Google Calendar event
@@ -73,62 +157,6 @@ serve(async (req) => {
         googleEventId: createdEvent.id,
         meetLink: meetLink
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (action === 'exchange_code') {
-      // Exchange authorization code for access token
-      const { code } = await req.json();
-      
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code,
-          client_id: Deno.env.get('GOOGLE_CLIENT_ID') ?? '',
-          client_secret: Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '',
-          redirect_uri: `${req.headers.get('origin')}/dashboard`,
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to exchange code for token');
-      }
-
-      const tokens = await tokenResponse.json();
-      
-      // Get user company
-      const { data: companyUser } = await supabaseClient
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userId)
-        .single();
-
-      if (!companyUser) {
-        throw new Error('User not associated with company');
-      }
-
-      // Store integration
-      const { error } = await supabaseClient
-        .from('meeting_integrations')
-        .upsert({
-          user_id: userId,
-          company_id: companyUser.company_id,
-          provider: 'google_meet',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

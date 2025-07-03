@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -8,72 +8,71 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Clock, Video, Calendar, Bell } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { useCalendarData } from '@/hooks/useCalendarData';
+import EventCreationModal from './EventCreationModal';
 
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showDateActions, setShowDateActions] = useState(false);
-
-  // Eventos de exemplo
-  const events = [
-    {
-      id: '1',
-      title: 'Reunião com Cliente',
-      start: '2024-01-15T10:00:00',
-      end: '2024-01-15T11:00:00',
-      backgroundColor: '#2563EB',
-      borderColor: '#2563EB',
-    },
-    {
-      id: '2',
-      title: 'Apresentação de Projeto',
-      start: '2024-01-16T14:00:00',
-      end: '2024-01-16T15:30:00',
-      backgroundColor: '#1D4ED8',
-      borderColor: '#1D4ED8',
-    },
-    {
-      id: '3',
-      title: 'Call de Alinhamento',
-      start: '2024-01-17T09:00:00',
-      end: '2024-01-17T10:00:00',
-      backgroundColor: '#3B82F6',
-      borderColor: '#3B82F6',
-    },
-  ];
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
+  
+  const { events, stats, upcomingEvents, loading, createEvent } = useCalendarData();
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const handleDateClick = (arg: any) => {
+    const rect = arg.jsEvent.target.getBoundingClientRect();
+    setMousePosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height
+    });
+    
     setSelectedDate(arg.dateStr);
     setShowDateActions(true);
-    console.log('Data clicada:', arg.dateStr);
   };
 
   const handleEventClick = (arg: any) => {
     console.log('Evento clicado:', arg.event.title);
   };
 
-  const handleActionSelect = (action: string) => {
-    console.log('Ação selecionada:', action, 'para a data:', selectedDate);
+  const handleActionSelect = (action: 'meeting' | 'appointment' | 'reminder') => {
+    setSelectedEventType(action);
     setShowDateActions(false);
-    // Aqui você pode implementar a lógica para cada tipo de ação
+    setShowEventModal(true);
   };
 
-  const upcomingEvents = events
-    .filter(event => new Date(event.start) >= new Date())
-    .slice(0, 3)
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  const handleCreateEvent = async (eventData: any) => {
+    await createEvent(eventData);
+  };
+
+  // Fechar popover quando clicar fora
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setShowDateActions(false);
+      }
+    };
+
+    if (showDateActions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDateActions]);
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 min-h-screen">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-lg">Carregando calendário...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 min-h-screen">
@@ -122,11 +121,15 @@ const MyCalendar = () => {
       </div>
 
       {/* Popover para ações ao clicar em uma data */}
-      <Popover open={showDateActions} onOpenChange={setShowDateActions}>
-        <PopoverTrigger asChild>
-          <div className="hidden" />
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
+      {showDateActions && (
+        <div
+          ref={popoverRef}
+          className="fixed z-50 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
+          style={{
+            left: `${mousePosition.x - 160}px`,
+            top: `${mousePosition.y + 10}px`,
+          }}
+        >
           <div className="space-y-4">
             <h3 className="font-medium">O que deseja fazer em {selectedDate}?</h3>
             <div className="space-y-2">
@@ -156,8 +159,17 @@ const MyCalendar = () => {
               </Button>
             </div>
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
+
+      {/* Modal de criação de evento */}
+      <EventCreationModal
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        eventType={selectedEventType}
+        selectedDate={selectedDate || ''}
+        onCreateEvent={handleCreateEvent}
+      />
 
       {/* Stats Cards e Próximos Eventos - Parte inferior */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -168,9 +180,9 @@ const MyCalendar = () => {
             <CalendarDays className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">2</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.todayEvents}</div>
             <p className="text-xs text-muted-foreground">
-              +1 em relação a ontem
+              Eventos agendados para hoje
             </p>
           </CardContent>
         </Card>
@@ -181,9 +193,9 @@ const MyCalendar = () => {
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">12</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.weekEvents}</div>
             <p className="text-xs text-muted-foreground">
-              8 reuniões confirmadas
+              Próximos 7 dias
             </p>
           </CardContent>
         </Card>
@@ -194,9 +206,9 @@ const MyCalendar = () => {
             <CalendarDays className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">28</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.monthEvents}</div>
             <p className="text-xs text-muted-foreground">
-              5 eventos importantes
+              Próximos 30 dias
             </p>
           </CardContent>
         </Card>
@@ -213,7 +225,9 @@ const MyCalendar = () => {
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-sm">{event.title}</h4>
                     <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                      Agendado
+                      {event.extendedProps?.eventType === 'meeting' && 'Reunião'}
+                      {event.extendedProps?.eventType === 'appointment' && 'Compromisso'}
+                      {event.extendedProps?.eventType === 'reminder' && 'Lembrete'}
                     </Badge>
                   </div>
                   <div className="flex items-center text-xs text-blue-600">

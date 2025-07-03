@@ -9,6 +9,142 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      calendar_events: {
+        Row: {
+          attendees: Json | null
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          id: string
+          is_all_day: boolean | null
+          meeting_data: Json | null
+          meeting_link: string | null
+          meeting_provider:
+            | Database["public"]["Enums"]["meeting_provider"]
+            | null
+          recurrence_rule: string | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendees?: Json | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          id?: string
+          is_all_day?: boolean | null
+          meeting_data?: Json | null
+          meeting_link?: string | null
+          meeting_provider?:
+            | Database["public"]["Enums"]["meeting_provider"]
+            | null
+          recurrence_rule?: string | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: Json | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          event_type?: Database["public"]["Enums"]["event_type"]
+          id?: string
+          is_all_day?: boolean | null
+          meeting_data?: Json | null
+          meeting_link?: string | null
+          meeting_provider?:
+            | Database["public"]["Enums"]["meeting_provider"]
+            | null
+          recurrence_rule?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          domain: string | null
+          id: string
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          name: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          name?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_users: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          permissions: Json | null
+          role: Database["public"]["Enums"]["company_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["company_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["company_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_campaigns: {
         Row: {
           created_at: string
@@ -124,6 +260,56 @@ export type Database = {
           },
         ]
       }
+      meeting_integrations: {
+        Row: {
+          access_token: string | null
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          provider: Database["public"]["Enums"]["meeting_provider"]
+          provider_email: string | null
+          provider_user_id: string | null
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          provider: Database["public"]["Enums"]["meeting_provider"]
+          provider_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          provider?: Database["public"]["Enums"]["meeting_provider"]
+          provider_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_integrations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -132,7 +318,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      company_role: "admin" | "manager" | "employee"
+      event_type: "meeting" | "appointment" | "reminder"
+      meeting_provider: "google_meet" | "zoom" | "teams"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -247,6 +435,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company_role: ["admin", "manager", "employee"],
+      event_type: ["meeting", "appointment", "reminder"],
+      meeting_provider: ["google_meet", "zoom", "teams"],
+    },
   },
 } as const

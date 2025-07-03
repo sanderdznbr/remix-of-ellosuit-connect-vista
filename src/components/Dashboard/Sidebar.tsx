@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Mail, 
   Send, 
@@ -30,6 +30,7 @@ interface SidebarProps {
 const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProps) => {
   const { signOut, user } = useAuth();
   const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Extrair dados do usuário
   const userEmail = user?.email || '';
@@ -78,26 +79,41 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
   };
 
   const handleLogout = async () => {
+    // Prevenir múltiplas chamadas
+    if (isLoggingOut) {
+      console.log('⏳ Logout já em andamento, ignorando clique');
+      return;
+    }
+
+    setIsLoggingOut(true);
+    
     try {
+      console.log('👋 Iniciando logout...');
       const { error } = await signOut();
+      
       if (error) {
+        console.error('❌ Erro no logout:', error);
         toast({
           title: "Erro",
           description: "Erro ao fazer logout: " + error.message,
           variant: "destructive"
         });
       } else {
+        console.log('✅ Logout realizado com sucesso');
         toast({
           title: "Sucesso",
           description: "Logout realizado com sucesso!"
         });
       }
     } catch (error) {
+      console.error('💥 Erro inesperado no logout:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao fazer logout",
         variant: "destructive"
       });
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -171,9 +187,10 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/10"
+            className="text-white hover:bg-white/10 disabled:opacity-50"
             onClick={handleLogout}
-            title="Logout"
+            disabled={isLoggingOut}
+            title={isLoggingOut ? "Fazendo logout..." : "Logout"}
           >
             <LogOut size={16} />
           </Button>

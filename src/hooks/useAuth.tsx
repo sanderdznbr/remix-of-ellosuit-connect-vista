@@ -15,7 +15,7 @@ export const useAuth = () => {
     const updateAuthState = (session: Session | null) => {
       if (!mounted) return;
       
-      console.log('Auth state updated:', session?.user?.email);
+      console.log('🔐 Auth state updated:', session?.user?.email || 'No user');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -24,56 +24,14 @@ export const useAuth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('🔐 Auth event:', event, session?.user?.email || 'No user');
         
         if (event === 'SIGNED_OUT') {
-          // Limpar completamente o estado
+          console.log('👋 User signed out - clearing state');
           setSession(null);
           setUser(null);
           setLoading(false);
           return;
-        }
-        
-        if (event === 'SIGNED_IN' && session) {
-          // Verificar se o usuário tem empresa associada
-          try {
-            const { data: companyUser } = await supabase
-              .from('company_users')
-              .select('company_id, role')
-              .eq('user_id', session.user.id)
-              .single();
-
-            if (!companyUser) {
-              console.log('User without company detected, creating company...');
-              // Se não tem empresa, tentar criar uma baseada nos metadados
-              const userMetadata = session.user.user_metadata;
-              const companyName = userMetadata?.company_name || userMetadata?.username || session.user.email?.split('@')[0] + ' Company';
-              
-              const { data: newCompany } = await supabase
-                .from('companies')
-                .insert({
-                  name: companyName,
-                  domain: null,
-                  settings: {}
-                })
-                .select()
-                .single();
-
-              if (newCompany) {
-                await supabase
-                  .from('company_users')
-                  .insert({
-                    company_id: newCompany.id,
-                    user_id: session.user.id,
-                    role: 'admin'
-                  });
-                
-                console.log('Created company and associated user:', newCompany.name);
-              }
-            }
-          } catch (error) {
-            console.error('Error checking/creating company:', error);
-          }
         }
         
         updateAuthState(session);
@@ -85,12 +43,12 @@ export const useAuth = () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('❌ Error getting session:', error);
         }
-        console.log('Initial session loaded:', session?.user?.email);
+        console.log('🔐 Initial session loaded:', session?.user?.email || 'No session');
         updateAuthState(session);
       } catch (error) {
-        console.error('Error in getInitialSession:', error);
+        console.error('💥 Error in getInitialSession:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -108,7 +66,7 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string, username: string, companyName: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
-    console.log('Signing up:', email, 'with company:', companyName);
+    console.log('📝 Signing up:', email, 'with company:', companyName);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -122,49 +80,50 @@ export const useAuth = () => {
       }
     });
     
-    console.log('SignUp result:', data, error);
+    console.log('📝 SignUp result:', data?.user?.email || 'Failed', error?.message || 'Success');
     return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('Signing in:', email);
+    console.log('🔑 Signing in:', email);
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    console.log('SignIn result:', data?.user?.email, error);
+    console.log('🔑 SignIn result:', data?.user?.email || 'Failed', error?.message || 'Success');
     return { data, error };
   };
 
   const signOut = async () => {
-    console.log('Signing out user:', user?.email);
+    console.log('👋 Signing out user:', user?.email);
     
-    // Primeiro limpar o estado local
-    setLoading(true);
-    
-    const { error } = await supabase.auth.signOut();
-    
-    if (!error) {
-      // Forçar limpeza completa
-      setUser(null);
-      setSession(null);
-      
-      // Limpar localStorage se necessário
-      try {
-        localStorage.removeItem('supabase.auth.token');
-      } catch (e) {
-        console.warn('Could not clear localStorage:', e);
-      }
-      
-      console.log('User signed out successfully');
-    } else {
-      console.error('SignOut error:', error);
+    // Evitar múltiplas chamadas simultâneas
+    if (!user) {
+      console.log('👋 No user to sign out');
+      return { error: null };
     }
     
-    setLoading(false);
-    return { error };
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ SignOut error:', error);
+      } else {
+        console.log('✅ User signed out successfully');
+        // O estado será limpo pelo onAuthStateChange
+      }
+      
+      return { error };
+    } catch (error) {
+      console.error('💥 Unexpected signOut error:', error);
+      return { error };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signInWithGoogle = async () => {

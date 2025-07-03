@@ -24,7 +24,7 @@ export const useCalendarData = () => {
 
   const checkUserCompany = async (userId: string) => {
     try {
-      console.log('Verificando empresa para usuário:', userId);
+      console.log('🔍 Verificando empresa para usuário:', userId);
       
       const { data: companyUser, error } = await supabase
         .from('company_users')
@@ -37,43 +37,106 @@ export const useCalendarData = () => {
           )
         `)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error('Erro ao buscar empresa do usuário:', error);
-        
-        if (error.code === 'PGRST116') {
-          // No company found - this is normal for new users
-          console.log('Nenhuma empresa encontrada para o usuário');
-          setHasCompany(false);
-          setCompanyId(null);
-          setLoading(false);
-          return;
-        }
-        
-        throw error;
+        console.error('❌ Erro ao buscar empresa do usuário:', error);
+        setHasCompany(false);
+        setCompanyId(null);
+        setLoading(false);
+        return;
       }
 
       if (companyUser && companyUser.company_id) {
-        console.log('Empresa do usuário encontrada:', companyUser.companies);
+        console.log('✅ Empresa encontrada para usuário:', companyUser.companies);
         setHasCompany(true);
         setCompanyId(companyUser.company_id);
         await fetchEvents(companyUser.company_id);
       } else {
-        console.log('Nenhuma associação de empresa encontrada para o usuário');
-        setHasCompany(false);
-        setCompanyId(null);
-        setLoading(false);
+        console.log('⚠️ Nenhuma empresa encontrada - criando empresa para o usuário');
+        // Tentar criar empresa automaticamente
+        await createUserCompany(userId);
       }
     } catch (error) {
-      console.error('Erro em checkUserCompany:', error);
+      console.error('💥 Erro inesperado em checkUserCompany:', error);
+      setHasCompany(false);
+      setCompanyId(null);
+      setLoading(false);
+    }
+  };
+
+  const createUserCompany = async (userId: string) => {
+    try {
+      console.log('🏢 Criando empresa para usuário:', userId);
+      
+      // Primeiro, verificar se o usuário realmente não tem empresa
+      const { data: existingCompany } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingCompany) {
+        console.log('✅ Usuário já tem empresa:', existingCompany.company_id);
+        setHasCompany(true);
+        setCompanyId(existingCompany.company_id);
+        await fetchEvents(existingCompany.company_id);
+        return;
+      }
+
+      // Obter dados do usuário
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email || '';
+      const userMetadata = userData.user?.user_metadata || {};
+      
+      const companyName = userMetadata.company_name || 
+                         userMetadata.username || 
+                         userEmail.split('@')[0] + ' Company';
+
+      // Criar nova empresa
+      const { data: newCompany, error: companyError } = await supabase
+        .from('companies')
+        .insert({
+          name: companyName,
+          domain: null,
+          settings: {}
+        })
+        .select()
+        .single();
+
+      if (companyError) {
+        console.error('❌ Erro ao criar empresa:', companyError);
+        throw companyError;
+      }
+
+      // Associar usuário à empresa
+      const { error: associationError } = await supabase
+        .from('company_users')
+        .insert({
+          company_id: newCompany.id,
+          user_id: userId,
+          role: 'admin'
+        });
+
+      if (associationError) {
+        console.error('❌ Erro ao associar usuário à empresa:', associationError);
+        throw associationError;
+      }
+
+      console.log('✅ Empresa criada e usuário associado:', newCompany.name);
+      setHasCompany(true);
+      setCompanyId(newCompany.id);
+      await fetchEvents(newCompany.id);
+
+    } catch (error) {
+      console.error('💥 Erro ao criar empresa para usuário:', error);
       setHasCompany(false);
       setCompanyId(null);
       setLoading(false);
       
       toast({
         title: "Erro",
-        description: "Erro ao verificar empresa do usuário",
+        description: "Erro ao configurar empresa do usuário",
         variant: "destructive"
       });
     }
@@ -81,7 +144,7 @@ export const useCalendarData = () => {
 
   const fetchEvents = async (userCompanyId: string) => {
     try {
-      console.log('Buscando eventos para empresa:', userCompanyId);
+      console.log('📅 Buscando eventos para empresa:', userCompanyId);
       
       const { data, error } = await supabase
         .from('calendar_events')
@@ -90,15 +153,10 @@ export const useCalendarData = () => {
         .order('start_date', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar eventos:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar eventos do calendário",
-          variant: "destructive"
-        });
+        console.error('❌ Erro ao buscar eventos:', error);
         setEvents([]);
       } else {
-        console.log('Eventos carregados:', data?.length || 0);
+        console.log('✅ Eventos carregados:', data?.length || 0);
         const formattedEvents = (data || []).map(event => ({
           id: event.id,
           title: event.title,
@@ -111,13 +169,8 @@ export const useCalendarData = () => {
         setEvents(formattedEvents);
       }
     } catch (error) {
-      console.error('Erro inesperado ao buscar eventos:', error);
+      console.error('💥 Erro inesperado ao buscar eventos:', error);
       setEvents([]);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado ao carregar eventos",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
@@ -134,7 +187,7 @@ export const useCalendarData = () => {
     }
 
     try {
-      console.log('Criando evento com dados:', eventData);
+      console.log('📝 Criando evento:', eventData);
       
       const { data, error } = await supabase
         .from('calendar_events')
@@ -155,7 +208,7 @@ export const useCalendarData = () => {
         .single();
 
       if (error) {
-        console.error('Erro ao criar evento:', error);
+        console.error('❌ Erro ao criar evento:', error);
         toast({
           title: "Erro",
           description: "Erro ao criar evento: " + error.message,
@@ -164,6 +217,7 @@ export const useCalendarData = () => {
         return;
       }
 
+      console.log('✅ Evento criado com sucesso:', data);
       toast({
         title: "Sucesso",
         description: "Evento criado com sucesso!"
@@ -171,7 +225,7 @@ export const useCalendarData = () => {
 
       await fetchEvents(companyId);
     } catch (error) {
-      console.error('Erro inesperado ao criar evento:', error);
+      console.error('💥 Erro inesperado ao criar evento:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao criar evento",
@@ -182,10 +236,10 @@ export const useCalendarData = () => {
 
   useEffect(() => {
     if (user && session) {
-      console.log('Usuário autenticado, verificando associação de empresa...');
+      console.log('👤 Usuário autenticado, verificando empresa...');
       checkUserCompany(user.id);
     } else {
-      console.log('Nenhum usuário autenticado, resetando estado');
+      console.log('👤 Usuário não autenticado, resetando estado');
       setEvents([]);
       setHasCompany(false);
       setCompanyId(null);

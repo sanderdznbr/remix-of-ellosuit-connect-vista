@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -12,6 +11,7 @@ import EventTypeSelector from './EventTypeSelector';
 import EventCreationModal from './EventCreationModal';
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
+import EventDetailsModal from './EventDetailsModal';
 import { Input } from '@/components/ui/input';
 
 const MyCalendar = () => {
@@ -21,10 +21,43 @@ const MyCalendar = () => {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
+  const [selectedEventDetails, setSelectedEventDetails] = useState<any>(null);
   
   const { events, loading, hasCompany, createEvent } = useCalendarData();
   const calendarRef = useRef<FullCalendar>(null);
+
+  // Função para gerar cores pastéis aleatórias
+  const getPastelColor = (str: string) => {
+    const colors = [
+      'rgba(255, 182, 193, 0.8)', // Light Pink
+      'rgba(173, 216, 230, 0.8)', // Light Blue
+      'rgba(144, 238, 144, 0.8)', // Light Green
+      'rgba(255, 218, 185, 0.8)', // Peach
+      'rgba(221, 160, 221, 0.8)', // Plum
+      'rgba(255, 239, 213, 0.8)', // Papaya Whip
+      'rgba(176, 224, 230, 0.8)', // Powder Blue
+      'rgba(255, 192, 203, 0.8)', // Pink
+      'rgba(152, 251, 152, 0.8)', // Pale Green
+      'rgba(255, 228, 196, 0.8)', // Bisque
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Processar eventos com cores pastéis
+  const processedEvents = events.map(event => ({
+    ...event,
+    backgroundColor: getPastelColor(event.title + event.id),
+    borderColor: 'transparent',
+    textColor: '#374151',
+    classNames: ['custom-event']
+  }));
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
@@ -32,7 +65,9 @@ const MyCalendar = () => {
   };
 
   const handleEventClick = (arg: any) => {
-    console.log('Evento clicado:', arg.event.title);
+    console.log('Evento clicado:', arg.event);
+    setSelectedEventDetails(arg.event);
+    setShowEventDetailsModal(true);
   };
 
   const handleCreateEvent = async (eventData: any) => {
@@ -64,7 +99,9 @@ const MyCalendar = () => {
     setShowEventModal(false);
     setShowAppointmentModal(false);
     setShowReminderModal(false);
+    setShowEventDetailsModal(false);
     setSelectedDate(null);
+    setSelectedEventDetails(null);
   };
 
   if (loading) {
@@ -135,12 +172,13 @@ const MyCalendar = () => {
                   right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 }}
                 initialView={currentView}
-                events={events}
+                events={processedEvents}
                 dateClick={handleDateClick}
                 eventClick={handleEventClick}
                 selectable={true}
                 selectMirror={true}
-                dayMaxEvents={true}
+                dayMaxEvents={3}
+                moreLinkClick="popover"
                 weekends={true}
                 height="calc(100vh - 200px)"
                 locale="pt-br"
@@ -152,11 +190,10 @@ const MyCalendar = () => {
                 }}
                 dayHeaderFormat={{ weekday: 'short' }}
                 eventDisplay="block"
-                eventBackgroundColor="transparent"
-                eventBorderColor="transparent"
                 eventTextColor="#374151"
                 dayCellClassNames="hover:bg-blue-50/50 transition-colors duration-200"
-                eventClassNames="rounded-lg text-sm font-medium px-3 py-2 cursor-pointer hover:opacity-80 transition-all duration-200 shadow-sm"
+                eventClassNames="custom-event cursor-pointer"
+                moreLinkClassNames="more-link-custom"
               />
             </div>
           </CardContent>
@@ -192,6 +229,13 @@ const MyCalendar = () => {
           onClose={closeAllModals}
           selectedDate={selectedDate || ''}
           onCreateEvent={handleCreateEvent}
+        />
+
+        {/* Modal de Detalhes do Evento */}
+        <EventDetailsModal
+          isOpen={showEventDetailsModal}
+          onClose={closeAllModals}
+          event={selectedEventDetails}
         />
       </div>
     </div>

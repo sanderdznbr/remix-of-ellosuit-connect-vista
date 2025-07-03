@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface CalendarEvent {
   id: string;
@@ -16,7 +17,7 @@ export interface CalendarEvent {
     eventType: 'meeting' | 'appointment' | 'reminder';
     meetingProvider?: 'google_meet' | 'zoom' | 'teams';
     meetingLink?: string;
-    attendees?: any[];
+    attendees?: Json;
   };
 }
 
@@ -86,10 +87,10 @@ export const useCalendarData = () => {
         backgroundColor: getEventColor(event.event_type),
         borderColor: getEventColor(event.event_type),
         extendedProps: {
-          description: event.description,
+          description: event.description || undefined,
           eventType: event.event_type,
-          meetingProvider: event.meeting_provider,
-          meetingLink: event.meeting_link,
+          meetingProvider: event.meeting_provider || undefined,
+          meetingLink: event.meeting_link || undefined,
           attendees: event.attendees
         }
       }));
@@ -145,7 +146,7 @@ export const useCalendarData = () => {
     eventType: 'meeting' | 'appointment' | 'reminder';
     meetingProvider?: 'google_meet' | 'zoom' | 'teams';
     meetingLink?: string;
-    attendees?: any[];
+    attendees?: Json;
     isAllDay?: boolean;
   }) => {
     if (!userCompanyId || !user) {

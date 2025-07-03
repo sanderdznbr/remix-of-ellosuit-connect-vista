@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Video } from 'lucide-react';
+import { Video, ExternalLink } from 'lucide-react';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EventCreationModalProps {
   isOpen: boolean;
@@ -37,6 +39,8 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   const [isAllDay, setIsAllDay] = useState(false);
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | 'teams'>('google_meet');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const { isConnected, loading: googleLoading, connectGoogle } = useGoogleCalendar();
 
   const getMeetingProviderLogo = (provider: string) => {
     const logoStyle = "w-8 h-8 rounded-lg";
@@ -67,11 +71,9 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || isLoading) {
-      console.log('Form validation failed or already loading');
       return;
     }
 
-    console.log('Iniciando criação de evento de reunião...');
     setIsLoading(true);
     
     try {
@@ -83,6 +85,33 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
         ? selectedDate 
         : `${selectedDate}T${endTime}:00`;
 
+      let meetingLink = '';
+
+      // If Google Meet is selected and user is connected, create Google Calendar event
+      if (meetingProvider === 'google_meet' && isConnected) {
+        try {
+          const { data, error } = await supabase.functions.invoke('google-calendar', {
+            body: {
+              action: 'create_event',
+              eventData: {
+                title,
+                description,
+                start_date: startDateTime,
+                end_date: endDateTime,
+              }
+            }
+          });
+
+          if (error) throw error;
+          if (data?.meetLink) {
+            meetingLink = data.meetLink;
+          }
+        } catch (error) {
+          console.error('Erro ao criar evento no Google Calendar:', error);
+          // Continue sem o link do Meet se houver erro
+        }
+      }
+
       const eventData = {
         title,
         description,
@@ -90,14 +119,11 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
         end_date: endDateTime,
         event_type: 'meeting' as const,
         meeting_provider: meetingProvider,
+        meeting_link: meetingLink,
         is_all_day: isAllDay
       };
 
-      console.log('Dados do evento de reunião:', eventData);
-      
       await onCreateEvent(eventData);
-      console.log('Evento de reunião criado com sucesso');
-      
       handleClose();
     } catch (error) {
       console.error('Erro ao criar evento de reunião:', error);
@@ -107,10 +133,7 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   };
 
   const handleClose = () => {
-    if (isLoading) {
-      console.log('Não é possível fechar durante o carregamento');
-      return;
-    }
+    if (isLoading) return;
     
     setTitle('');
     setDescription('');
@@ -221,6 +244,39 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
             <Label className="text-sm font-medium text-gray-700">
               Plataforma de Reunião
             </Label>
+            
+            {/* Google Calendar Connection Status */}
+            {meetingProvider === 'google_meet' && (
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {isConnected ? 'Google Calendar Conectado' : 'Google Calendar Desconectado'}
+                    </span>
+                  </div>
+                  {!isConnected && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={connectGoogle}
+                      disabled={googleLoading}
+                      className="bg-[#3600FF] hover:bg-[#3600FF]/90 text-white"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Conectar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {isConnected 
+                    ? 'Links do Google Meet serão criados automaticamente'
+                    : 'Conecte sua conta Google para gerar links do Meet automaticamente'
+                  }
+                </p>
+              </div>
+            )}
+            
             <div className="grid grid-cols-3 gap-3">
               {['google_meet', 'zoom', 'teams'].map((provider) => (
                 <button
@@ -242,9 +298,6 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              * Link da reunião será gerado automaticamente após configurar as integrações
-            </p>
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">

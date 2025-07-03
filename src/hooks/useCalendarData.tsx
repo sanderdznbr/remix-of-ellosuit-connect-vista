@@ -22,9 +22,9 @@ export const useCalendarData = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
 
-  const checkUserCompany = async (userId: string, retryCount = 0) => {
+  const checkUserCompany = async (userId: string) => {
     try {
-      console.log('Verificando empresa para usuário:', userId, 'tentativa:', retryCount + 1);
+      console.log('Verificando empresa para usuário:', userId);
       
       const { data: companyUser, error } = await supabase
         .from('company_users')
@@ -42,16 +42,16 @@ export const useCalendarData = () => {
       if (error) {
         console.error('Erro ao buscar empresa do usuário:', error);
         
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('Empresa não encontrada, tentando novamente em 2 segundos...');
-          setTimeout(() => checkUserCompany(userId, retryCount + 1), 2000);
+        if (error.code === 'PGRST116') {
+          // No company found - this is normal for new users
+          console.log('Nenhuma empresa encontrada para o usuário');
+          setHasCompany(false);
+          setCompanyId(null);
+          setLoading(false);
           return;
         }
         
-        setHasCompany(false);
-        setCompanyId(null);
-        setLoading(false);
-        return;
+        throw error;
       }
 
       if (companyUser && companyUser.company_id) {
@@ -70,6 +70,12 @@ export const useCalendarData = () => {
       setHasCompany(false);
       setCompanyId(null);
       setLoading(false);
+      
+      toast({
+        title: "Erro",
+        description: "Erro ao verificar empresa do usuário",
+        variant: "destructive"
+      });
     }
   };
 
@@ -107,6 +113,11 @@ export const useCalendarData = () => {
     } catch (error) {
       console.error('Erro inesperado ao buscar eventos:', error);
       setEvents([]);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar eventos",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -178,7 +189,7 @@ export const useCalendarData = () => {
       setEvents([]);
       setHasCompany(false);
       setCompanyId(null);
-      setLoading(true);
+      setLoading(false);
     }
   }, [user, session]);
 

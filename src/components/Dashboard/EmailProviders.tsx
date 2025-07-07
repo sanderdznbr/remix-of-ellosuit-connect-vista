@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Mail, 
@@ -13,7 +14,8 @@ import {
   Settings, 
   Trash2,
   Calendar,
-  Loader2
+  Loader2,
+  Video
 } from 'lucide-react';
 
 const EmailProviders = () => {
@@ -21,6 +23,7 @@ const EmailProviders = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isConnected: isGoogleCalendarConnected, connectGoogle, disconnectGoogle, loading: calendarLoading } = useGoogleCalendar();
 
   useEffect(() => {
     if (user) {
@@ -44,21 +47,46 @@ const EmailProviders = () => {
   };
 
   const checkForNewConnection = async () => {
-    // Check if user just connected via OAuth
-    const { data: { session } } = await supabase.auth.getSession();
+    // Check URL parameters for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
     
-    if (session?.user) {
-      // Check if this is a new OAuth connection
-      const lastSignInVia = session.user.app_metadata?.provider;
+    if (code && state === 'gmail_auth' && user) {
+      console.log('🔄 Processando conexão OAuth Gmail...');
+      setIsConnecting(true);
       
-      if (lastSignInVia === 'google') {
-        // Save the connected account info
-        await saveConnectedAccount('gmail', session.user.email);
+      try {
+        // Exchange code for tokens
+        const { data, error } = await supabase.functions.invoke('google-calendar', {
+          body: {
+            action: 'exchange_code_gmail',
+            code: code,
+            user_id: user.id
+          }
+        });
+
+        if (error) throw error;
+
+        // Save the connected account
+        await saveConnectedAccount('gmail', user.email || '');
         
         toast({
           title: "Gmail conectado com sucesso!",
-          description: `Conta ${session.user.email} foi conectada.`,
+          description: `Conta ${user.email} foi conectada para envio de emails.`,
         });
+
+        // Clean URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error: any) {
+        console.error('Erro ao processar OAuth:', error);
+        toast({
+          title: "Erro ao conectar Gmail",
+          description: error.message || "Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsConnecting(false);
       }
     }
   };
@@ -98,22 +126,42 @@ const EmailProviders = () => {
   const connectGmail = async () => {
     setIsConnecting(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          scopes: 'email profile https://www.googleapis.com/auth/gmail.send',
-          redirectTo: `${window.location.origin}/dashboard`
-        }
+      console.log('🔗 Iniciando conexão Gmail...');
+      
+      // Get Google Client ID from edge function
+      const { data: clientData, error: clientError } = await supabase.functions.invoke('google-calendar', {
+        body: { action: 'get_client_id' }
       });
 
-      if (error) throw error;
-    } catch (error) {
+      if (clientError || !clientData?.client_id) {
+        throw new Error('Client ID não configurado');
+      }
+
+      // Redirect to Google OAuth with Gmail scopes
+      const scopes = [
+        'email',
+        'profile', 
+        'https://www.googleapis.com/auth/gmail.send'
+      ].join(' ');
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientData.client_id}&` +
+        `redirect_uri=${encodeURIComponent(window.location.origin + window.location.pathname)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent(scopes)}&` +
+        `access_type=offline&` +
+        `prompt=consent&` +
+        `state=gmail_auth`;
+
+      console.log('🔗 Redirecionando para Gmail OAuth...');
+      window.location.href = authUrl;
+    } catch (error: any) {
+      console.error('Erro ao conectar Gmail:', error);
       toast({
         title: "Erro ao conectar Gmail",
-        description: "Tente novamente em alguns instantes.",
+        description: error.message || "Tente novamente em alguns instantes.",
         variant: "destructive"
       });
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -144,11 +192,70 @@ const EmailProviders = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Provedores de Email</h2>
-        <p className="text-gray-600">Conecte suas contas de email para enviar campanhas</p>
+        <h2 className="text-2xl font-bold mb-2">Provedores e Integrações</h2>
+        <p className="text-gray-600">Conecte suas contas de email e serviços para campanhas e reuniões</p>
       </div>
 
-      {/* Connected Accounts */}
+      {/* Google Calendar Integration */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Google Calendar (Para Google Meet)</h3>
+        <Card className={`border-2 ${isGoogleCalendarConnected ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {isGoogleCalendarConnected ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Video className="h-5 w-5 text-blue-600" />
+                )}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">Google Calendar & Meet</span>
+                    <Badge variant="secondary" className={isGoogleCalendarConnected ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
+                      {isGoogleCalendarConnected ? 'Conectado' : 'Desconectado'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {isGoogleCalendarConnected 
+                      ? 'Conectado - Pode criar reuniões no Google Meet' 
+                      : 'Conecte para criar eventos e gerar links do Google Meet'
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                {isGoogleCalendarConnected ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={disconnectGoogle}
+                    disabled={calendarLoading}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    {calendarLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={connectGoogle}
+                    disabled={calendarLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
+                  >
+                    {calendarLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    {calendarLoading ? 'Conectando...' : 'Conectar'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Connected Email Accounts */}
       {connectedAccounts.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Contas Conectadas</h3>

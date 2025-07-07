@@ -20,7 +20,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action, eventData, userId, accessToken, code } = await req.json();
+    const { action, eventData, userId, accessToken, code, user_id } = await req.json();
 
     // Get Google credentials from environment
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -39,7 +39,7 @@ serve(async (req) => {
     // Action to get Google Client ID
     if (action === 'get_client_id') {
       return new Response(JSON.stringify({ 
-        clientId: googleClientId 
+        client_id: googleClientId 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -58,7 +58,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: `${req.headers.get('origin')}/`,
+          redirect_uri: `${req.headers.get('origin')}/dashboard`,
           grant_type: 'authorization_code',
         }),
       });
@@ -76,7 +76,7 @@ serve(async (req) => {
       const { data: companyUser } = await supabaseClient
         .from('company_users')
         .select('company_id')
-        .eq('user_id', userId)
+        .eq('user_id', userId || user_id)
         .single();
 
       if (!companyUser) {
@@ -87,7 +87,7 @@ serve(async (req) => {
       const { error } = await supabaseClient
         .from('meeting_integrations')
         .upsert({
-          user_id: userId,
+          user_id: userId || user_id,
           company_id: companyUser.company_id,
           provider: 'google_meet',
           access_token: tokens.access_token,
@@ -101,6 +101,77 @@ serve(async (req) => {
       }
 
       console.log('Integration stored successfully');
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'exchange_code_gmail') {
+      // Exchange authorization code for Gmail access token
+      console.log('Exchanging code for Gmail tokens...');
+      
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code,
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          redirect_uri: `${req.headers.get('origin')}/dashboard`,
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Gmail token exchange failed:', errorText);
+        throw new Error(`Failed to exchange code for Gmail token: ${tokenResponse.status}`);
+      }
+
+      const tokens = await tokenResponse.json();
+      
+      // Get user info
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`
+        }
+      });
+
+      const userInfo = await userInfoResponse.json();
+      
+      // Get user company
+      const { data: companyUser } = await supabaseClient
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user_id)
+        .single();
+
+      if (!companyUser) {
+        throw new Error('User not associated with company');
+      }
+
+      // Store Gmail integration
+      const { error } = await supabaseClient
+        .from('user_email_accounts')
+        .upsert({
+          user_id: user_id,
+          company_id: companyUser.company_id,
+          provider: 'gmail',
+          email: userInfo.email,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          provider_user_id: userInfo.id
+        });
+
+      if (error) {
+        console.error('Failed to store Gmail integration:', error);
+        throw error;
+      }
+
+      console.log('Gmail integration stored successfully');
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

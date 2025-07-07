@@ -56,10 +56,10 @@ export const useGoogleCalendar = () => {
         throw error;
       }
 
-      if (data?.clientId) {
+      if (data?.client_id) {
         console.log('✅ Client ID obtido com sucesso');
-        setGoogleClientId(data.clientId);
-        return data.clientId;
+        setGoogleClientId(data.client_id);
+        return data.client_id;
       } else {
         throw new Error('Client ID não encontrado');
       }
@@ -102,7 +102,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `${window.location.origin}/`;
+      const redirectUri = `${window.location.origin}/dashboard`;
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +

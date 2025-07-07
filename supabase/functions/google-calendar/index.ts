@@ -106,6 +106,59 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'renew_token') {
+      // Renew expired access token using refresh token
+      console.log('Renewing access token...');
+      
+      const { refreshToken, userId } = await req.json();
+      
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          refresh_token: refreshToken,
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          grant_type: 'refresh_token',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Token renewal failed:', errorText);
+        throw new Error(`Failed to renew token: ${tokenResponse.status}`);
+      }
+
+      const tokens = await tokenResponse.json();
+      console.log('Tokens renewed successfully');
+      
+      // Update the stored integration with new token
+      const { error } = await supabaseClient
+        .from('meeting_integrations')
+        .update({
+          access_token: tokens.access_token,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('provider', 'google_meet');
+
+      if (error) {
+        console.error('Failed to update integration:', error);
+        throw error;
+      }
+
+      console.log('Integration updated with new token');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        access_token: tokens.access_token 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'exchange_code_gmail') {
       // Exchange authorization code for Gmail access token
       console.log('Exchanging code for Gmail tokens...');
@@ -179,6 +232,16 @@ serve(async (req) => {
 
     if (action === 'create_event') {
       // Create Google Calendar event
+      console.log('Creating Google Calendar event with access token verification...');
+      
+      // Use the accessToken passed from the frontend
+      const tokenToUse = accessToken;
+      
+      if (!tokenToUse) {
+        console.error('No access token provided');
+        throw new Error('Access token is required for creating events');
+      }
+
       const calendarEvent = {
         summary: eventData.title,
         description: eventData.description,
@@ -201,10 +264,11 @@ serve(async (req) => {
         attendees: eventData.attendees || []
       };
 
+      console.log('Making request to Google Calendar API...');
       const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${tokenToUse}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(calendarEvent),
@@ -212,16 +276,24 @@ serve(async (req) => {
 
       if (!response.ok) {
         const error = await response.text();
-        console.error('Google Calendar API error:', error);
-        throw new Error(`Google Calendar API error: ${response.status}`);
+        console.error('Google Calendar API error:', error, 'Status:', response.status);
+        
+        if (response.status === 401) {
+          throw new Error('Access token expired or invalid. Please reconnect Google Calendar.');
+        }
+        
+        throw new Error(`Google Calendar API error: ${response.status} - ${error}`);
       }
 
       const createdEvent = await response.json();
+      console.log('Event created successfully:', createdEvent.id);
       
       // Extract Google Meet link
       const meetLink = createdEvent.conferenceData?.entryPoints?.find(
         (entry: any) => entry.entryPointType === 'video'
       )?.uri;
+
+      console.log('Meet link extracted:', meetLink);
 
       return new Response(JSON.stringify({ 
         success: true, 

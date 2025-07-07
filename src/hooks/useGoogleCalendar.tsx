@@ -185,6 +185,56 @@ export const useGoogleCalendar = () => {
     }
   };
 
+  const renewToken = async () => {
+    if (!integration?.refresh_token) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      console.log('🔄 Renovando token Google...');
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'renew_token',
+          refreshToken: integration.refresh_token,
+          userId: user?.id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        console.log('✅ Token renovado com sucesso');
+        await checkConnection(); // Recarrega a integração com o novo token
+        return data.access_token;
+      }
+
+      throw new Error('Failed to renew token');
+    } catch (error) {
+      console.error('💥 Erro ao renovar token:', error);
+      throw error;
+    }
+  };
+
+  const getValidAccessToken = async () => {
+    if (!integration) {
+      throw new Error('Google Calendar not connected');
+    }
+
+    // Verificar se o token expirou
+    const now = new Date();
+    const expiresAt = new Date(integration.expires_at);
+    
+    if (now >= expiresAt) {
+      console.log('🔄 Token expirado, renovando...');
+      return await renewToken();
+    }
+
+    return integration.access_token;
+  };
+
   const disconnectGoogle = async () => {
     if (!user || !integration) return;
 
@@ -236,6 +286,7 @@ export const useGoogleCalendar = () => {
     integration,
     connectGoogle,
     disconnectGoogle,
-    checkConnection
+    checkConnection,
+    getValidAccessToken
   };
 };

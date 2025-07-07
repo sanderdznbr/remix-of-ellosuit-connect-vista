@@ -40,7 +40,7 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | 'teams'>('google_meet');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { isConnected, loading: googleLoading, connectGoogle } = useGoogleCalendar();
+  const { isConnected, loading: googleLoading, connectGoogle, getValidAccessToken } = useGoogleCalendar();
 
   const getMeetingProviderLogo = (provider: string) => {
     const logoStyle = "w-8 h-8 rounded-lg";
@@ -92,6 +92,9 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
         try {
           console.log('🔄 Criando evento no Google Calendar...');
           
+          // Obter token válido (renovado se necessário)
+          const accessToken = await getValidAccessToken();
+          
           const { data, error } = await supabase.functions.invoke('google-calendar', {
             body: {
               action: 'create_event',
@@ -100,7 +103,8 @@ const EventCreationModal: React.FC<EventCreationModalProps> = ({
                 description,
                 start_date: startDateTime,
                 end_date: endDateTime,
-              }
+              },
+              accessToken: accessToken
             }
           });
 

@@ -12,7 +12,8 @@ import {
   CheckCircle, 
   Settings, 
   Trash2,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 
 const EmailProviders = () => {
@@ -30,8 +31,7 @@ const EmailProviders = () => {
 
   const loadConnectedAccounts = async () => {
     try {
-      // Using type assertion to work around missing types
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('user_email_accounts')
         .select('*')
         .eq('user_id', user?.id);
@@ -65,12 +65,24 @@ const EmailProviders = () => {
 
   const saveConnectedAccount = async (provider: string, email: string) => {
     try {
-      // Using type assertion to work around missing types
-      const { error } = await (supabase as any)
+      // Get user's company_id
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!companyData?.company_id) {
+        console.error('No company found for user');
+        return;
+      }
+
+      const { error } = await supabase
         .from('user_email_accounts')
         .upsert({
           user_id: user?.id,
-          provider: provider,
+          company_id: companyData.company_id,
+          provider: provider as 'gmail' | 'outlook' | 'yahoo',
           email: email,
           connected_at: new Date().toISOString(),
           status: 'active'
@@ -108,8 +120,7 @@ const EmailProviders = () => {
 
   const disconnectAccount = async (accountId: string) => {
     try {
-      // Using type assertion to work around missing types
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('user_email_accounts')
         .delete()
         .eq('id', accountId);

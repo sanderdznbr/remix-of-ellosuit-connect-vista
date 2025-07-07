@@ -539,6 +539,62 @@ export type Database = {
           },
         ]
       }
+      user_email_accounts: {
+        Row: {
+          access_token: string | null
+          company_id: string
+          connected_at: string | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          provider: Database["public"]["Enums"]["email_provider"]
+          provider_user_id: string | null
+          refresh_token: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          company_id: string
+          connected_at?: string | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          provider: Database["public"]["Enums"]["email_provider"]
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          company_id?: string
+          connected_at?: string | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          provider?: Database["public"]["Enums"]["email_provider"]
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_email_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -559,6 +615,7 @@ export type Database = {
     }
     Enums: {
       company_role: "admin" | "manager" | "employee"
+      email_provider: "gmail" | "outlook" | "yahoo"
       event_type: "meeting" | "appointment" | "reminder"
       meeting_provider: "google_meet" | "zoom" | "teams"
     }
@@ -689,6 +746,7 @@ export const Constants = {
   public: {
     Enums: {
       company_role: ["admin", "manager", "employee"],
+      email_provider: ["gmail", "outlook", "yahoo"],
       event_type: ["meeting", "appointment", "reminder"],
       meeting_provider: ["google_meet", "zoom", "teams"],
     },

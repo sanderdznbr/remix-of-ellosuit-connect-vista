@@ -5,11 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Search, MoreHorizontal, Settings, FileText } from 'lucide-react';
+import { Search, MoreHorizontal, Settings, FileText, Eye } from 'lucide-react';
 
 interface EmailTracking {
   id: string;
@@ -28,6 +30,8 @@ const MailTracking = () => {
   const [emails, setEmails] = useState<EmailTracking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(null);
+  const { toast } = useToast();
 
   const fetchEmails = async () => {
     try {
@@ -119,6 +123,60 @@ const MailTracking = () => {
     (email.recipient_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
+  const handleViewDetails = (email: EmailTracking) => {
+    setSelectedEmail(email);
+  };
+
+  const handleExportReport = () => {
+    const csvContent = [
+      ['Recipient', 'Subject', 'Sent At', 'Opens', 'Status'],
+      ...filteredEmails.map(email => [
+        email.recipient_email,
+        email.subject,
+        new Date(email.sent_at).toLocaleDateString(),
+        getOpenCount(email.email_events).toString(),
+        getOpenCount(email.email_events) > 0 ? 'Opened' : 'Sent'
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'email-tracking-report.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Relatório exportado",
+      description: "O relatório foi baixado com sucesso.",
+    });
+  };
+
+  const handleDeleteEmail = async (emailId: string) => {
+    try {
+      const { error } = await supabase
+        .from('emails')
+        .delete()
+        .eq('id', emailId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Email excluído",
+        description: "O email foi excluído com sucesso.",
+      });
+      
+      fetchEmails();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir email.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -136,10 +194,18 @@ const MailTracking = () => {
               className="pl-10 w-64"
             />
           </div>
-          <Button variant="outline" size="icon">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => toast({ title: "Configurações", description: "Funcionalidade em desenvolvimento" })}
+          >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleExportReport}
+          >
             <FileText className="h-4 w-4" />
           </Button>
         </div>
@@ -218,9 +284,19 @@ const MailTracking = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Reenviar</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewDetails(email)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toast({ title: "Reenviar", description: "Funcionalidade em desenvolvimento" })}>
+                              Reenviar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600" 
+                              onClick={() => handleDeleteEmail(email.id)}
+                            >
+                              Excluir
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -232,6 +308,61 @@ const MailTracking = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Email Details Dialog */}
+      <Dialog open={!!selectedEmail} onOpenChange={() => setSelectedEmail(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Email</DialogTitle>
+          </DialogHeader>
+          {selectedEmail && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Destinatário</label>
+                  <p className="text-sm">{selectedEmail.recipient_email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Nome</label>
+                  <p className="text-sm">{selectedEmail.recipient_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Assunto</label>
+                  <p className="text-sm">{selectedEmail.subject}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Enviado em</label>
+                  <p className="text-sm">
+                    {new Date(selectedEmail.sent_at).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-500">Eventos</label>
+                <div className="mt-2 space-y-2">
+                  {selectedEmail.email_events.length > 0 ? (
+                    selectedEmail.email_events.map((event, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <span className="text-sm font-medium">
+                          {event.event_type === 'opened' ? 'Aberto' : 
+                           event.event_type === 'clicked' ? 'Clicado' : 
+                           event.event_type}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(event.timestamp).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">Nenhum evento registrado</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

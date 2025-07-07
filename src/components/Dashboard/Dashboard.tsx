@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
+import MailProductivity from './MailProductivity';
 import MyCalendar from './MyCalendar';
 import DocumentsManager from './DocumentsManager';
 import ClientsManager from './ClientsManager';
@@ -27,6 +28,8 @@ const Dashboard = () => {
         return <MailTracking />;
       case 'campaign-mail':
         return <CampaignMail />;
+      case 'mail-productivity':
+        return <MailProductivity />;
       case 'my-calendar':
         return <MyCalendar />;
       case 'documents':

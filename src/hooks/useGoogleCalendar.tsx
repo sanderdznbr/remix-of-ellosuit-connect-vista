@@ -169,8 +169,13 @@ export const useGoogleCalendar = () => {
             description: "Google Calendar conectado com sucesso!"
           });
 
-          // Limpar parâmetros da URL
-          window.history.replaceState({}, document.title, window.location.pathname);
+          // Redirecionar para aba calendar se possível
+          const hash = window.location.hash;
+          if (hash.includes('dashboard')) {
+            window.history.replaceState({}, document.title, '/dashboard#calendar');
+          } else {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
         }
       } catch (error) {
         console.error('💥 Erro ao processar OAuth:', error);

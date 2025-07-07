@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Search } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import EventTypeSelector from './EventTypeSelector';
-import EventCreationModal from './EventCreationModal';
+import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
 import EventDetailsModal from './EventDetailsModal';
@@ -208,7 +208,7 @@ const MyCalendar = () => {
         />
 
         {/* Modal de Reunião Online */}
-        <EventCreationModal
+        <ImprovedEventModal
           isOpen={showEventModal}
           onClose={closeAllModals}
           selectedDate={selectedDate || ''}

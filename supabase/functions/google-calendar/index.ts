@@ -242,15 +242,25 @@ serve(async (req) => {
         throw new Error('Access token is required for creating events');
       }
 
+      // Processar datetime corretamente
+      const processDateTime = (dateTimeStr: string) => {
+        // Se já está no formato ISO, usar diretamente
+        if (dateTimeStr.includes('T') && dateTimeStr.length > 16) {
+          return dateTimeStr.endsWith('Z') ? dateTimeStr : dateTimeStr + '-03:00';
+        }
+        // Se é apenas data, adicionar timezone
+        return dateTimeStr + 'T00:00:00-03:00';
+      };
+
       const calendarEvent = {
         summary: eventData.title,
         description: eventData.description,
         start: {
-          dateTime: eventData.start_date,
+          dateTime: processDateTime(eventData.start_date),
           timeZone: 'America/Sao_Paulo',
         },
         end: {
-          dateTime: eventData.end_date,
+          dateTime: processDateTime(eventData.end_date),
           timeZone: 'America/Sao_Paulo',
         },
         conferenceData: {

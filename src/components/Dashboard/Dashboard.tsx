@@ -4,6 +4,9 @@ import Sidebar from './Sidebar';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
 import MyCalendar from './MyCalendar';
+import DocumentsManager from './DocumentsManager';
+import ClientsManager from './ClientsManager';
+import Analytics from './Analytics';
 import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard = () => {
@@ -26,6 +29,12 @@ const Dashboard = () => {
         return <CampaignMail />;
       case 'my-calendar':
         return <MyCalendar />;
+      case 'documents':
+        return <DocumentsManager />;
+      case 'clients':
+        return <ClientsManager />;
+      case 'analytics':
+        return <Analytics />;
       default:
         return <MailTracking />;
     }

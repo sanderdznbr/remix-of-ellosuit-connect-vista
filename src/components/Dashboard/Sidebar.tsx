@@ -71,7 +71,8 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
   ];
 
   const handleItemClick = (itemId: string) => {
-    if (itemId === 'mail-tracking' || itemId === 'campaign-mail' || itemId === 'my-calendar') {
+    if (itemId === 'mail-tracking' || itemId === 'campaign-mail' || itemId === 'my-calendar' || 
+        itemId === 'documents' || itemId === 'clients' || itemId === 'analytics') {
       onItemClick(itemId);
     } else {
       alert('Função em desenvolvimento');

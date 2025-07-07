@@ -43,34 +43,39 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="text-xl font-semibold text-gray-900 text-center">
-            Selecionar Tipo de Evento
+      <DialogContent className="sm:max-w-[520px] bg-background rounded-3xl shadow-2xl border-0 p-8">
+        <DialogHeader className="pb-8">
+          <DialogTitle className="text-2xl font-bold text-foreground text-center">
+            Criar Novo Evento
           </DialogTitle>
-          <p className="text-sm text-gray-500 text-center mt-2">
-            Escolha o tipo de evento para {new Date(selectedDate).toLocaleDateString('pt-BR')}
+          <p className="text-sm text-muted-foreground text-center mt-3">
+            Escolha o tipo de evento para {new Date(selectedDate).toLocaleDateString('pt-BR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
           </p>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           {eventTypes.map((eventType) => {
             const Icon = eventType.icon;
             return (
               <Button
                 key={eventType.type}
                 onClick={() => onSelectType(eventType.type)}
-                className={`w-full p-6 h-auto rounded-xl border-2 transition-all duration-200 hover:shadow-md ${eventType.color} text-left flex items-start space-x-4`}
+                className="w-full p-6 h-auto rounded-2xl border border-border/50 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:bg-accent/10 text-left flex items-center space-x-5 bg-background/50 backdrop-blur-sm"
                 variant="outline"
               >
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
-                  <Icon className="h-6 w-6 text-[#3600FF]" />
+                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-sm">
+                  <Icon className="h-7 w-7 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">
+                  <h3 className="font-semibold text-foreground mb-1 text-lg">
                     {eventType.title}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {eventType.description}
                   </p>
                 </div>
@@ -79,11 +84,11 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
           })}
         </div>
         
-        <div className="flex justify-end pt-4 border-t border-gray-100">
+        <div className="flex justify-center pt-6 border-t border-border/50 mt-8">
           <Button 
             onClick={onClose}
-            variant="outline"
-            className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+            variant="ghost"
+            className="rounded-2xl px-8 text-muted-foreground hover:bg-accent/50"
           >
             Cancelar
           </Button>

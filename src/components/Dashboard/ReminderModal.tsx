@@ -54,8 +54,8 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
       await onCreateEvent({
         title,
         description: `${description}${notificationText}`,
-        start_date: `${selectedDate}T${reminderTime}:00`,
-        end_date: `${selectedDate}T${reminderTime}:00`,
+        start_date: `${selectedDate}T${reminderTime}:00-03:00`,
+        end_date: `${selectedDate}T${reminderTime}:00-03:00`,
         event_type: 'reminder',
         is_all_day: false
       });

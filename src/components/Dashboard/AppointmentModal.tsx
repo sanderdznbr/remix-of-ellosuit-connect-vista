@@ -62,8 +62,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       await onCreateEvent({
         title,
         description: `${description}${contactPerson ? `\n\nContato: ${contactPerson}` : ''}${finalLocation ? `\nLocal: ${finalLocation}` : ''}`,
-        start_date: `${selectedDate}T${startTime}:00`,
-        end_date: `${selectedDate}T${endTime}:00`,
+        start_date: `${selectedDate}T${startTime}:00-03:00`,
+        end_date: `${selectedDate}T${endTime}:00-03:00`,
         event_type: 'appointment',
         is_all_day: false
       });

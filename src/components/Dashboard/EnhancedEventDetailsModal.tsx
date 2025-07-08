@@ -475,19 +475,89 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
-          <Button variant="outline" onClick={onClose}>
-            Fechar
-          </Button>
-          {meetingLink && eventStatus.status !== 'past' && (
-            <Button 
-              onClick={() => window.open(meetingLink, '_blank')}
-              className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+        <div className="flex justify-between items-center pt-6 border-t border-gray-100">
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                toast({
+                  title: "Em desenvolvimento",
+                  description: "Funcionalidade de gravação será implementada em breve"
+                });
+              }}
             >
-              <Video className="h-4 w-4 mr-2" />
-              Entrar na Reunião
+              📹 Gravação
             </Button>
-          )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveTab('notes')}
+            >
+              📝 Anotações
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-yellow-600 hover:text-yellow-700"
+              onClick={() => {
+                toast({
+                  title: "Em desenvolvimento",
+                  description: "Funcionalidade de adiamento será implementada em breve"
+                });
+              }}
+            >
+              ⏰ Adiar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700"
+              onClick={async () => {
+                if (window.confirm('Tem certeza que deseja excluir este evento?')) {
+                  try {
+                    const { error } = await supabase
+                      .from('calendar_events')
+                      .delete()
+                      .eq('id', event.id);
+                    
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Sucesso",
+                      description: "Evento excluído com sucesso"
+                    });
+                    
+                    onEventUpdate?.();
+                    onClose();
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro",
+                      description: "Erro ao excluir evento",
+                      variant: "destructive"
+                    });
+                  }
+                }
+              }}
+            >
+              🗑️ Excluir
+            </Button>
+          </div>
+          
+          <div className="flex space-x-3">
+            <Button variant="outline" onClick={onClose}>
+              Fechar
+            </Button>
+            {meetingLink && eventStatus.status !== 'past' && (
+              <Button 
+                onClick={() => window.open(meetingLink, '_blank')}
+                className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Entrar na Reunião
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

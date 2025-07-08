@@ -565,6 +565,7 @@ export type Database = {
           provider: Database["public"]["Enums"]["meeting_provider"]
           provider_email: string | null
           provider_user_id: string | null
+          redirect_uri: string | null
           refresh_token: string | null
           updated_at: string
           user_id: string
@@ -578,6 +579,7 @@ export type Database = {
           provider: Database["public"]["Enums"]["meeting_provider"]
           provider_email?: string | null
           provider_user_id?: string | null
+          redirect_uri?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id: string
@@ -591,6 +593,7 @@ export type Database = {
           provider?: Database["public"]["Enums"]["meeting_provider"]
           provider_email?: string | null
           provider_user_id?: string | null
+          redirect_uri?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id?: string

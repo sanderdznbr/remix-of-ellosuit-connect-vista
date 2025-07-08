@@ -52,6 +52,8 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [manualEmail, setManualEmail] = useState('');
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   const { isConnected, loading: googleLoading, connectGoogle, getValidAccessToken } = useGoogleCalendar();
   const { user } = useAuth();
@@ -131,8 +133,13 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     }
 
     setIsLoading(true);
+    setError(null);
     
     try {
+      // Validações preventivas
+      if (meetingProvider === 'google_meet' && isConnected && !user) {
+        throw new Error('Usuário não autenticado');
+      }
       // Usar formatação correta de data/hora
       const startDateTime = isAllDay 
         ? selectedDate 
@@ -221,9 +228,22 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
 
       await onCreateEvent(eventData);
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Erro ao criar evento de reunião:', error);
-      throw error; // Re-throw para mostrar o erro ao usuário
+      
+      let errorMessage = 'Erro inesperado ao criar reunião';
+      
+      if (error.message?.includes('Não foi possível obter access token')) {
+        errorMessage = 'Erro de autenticação. Reconecte o Google Calendar e tente novamente.';
+      } else if (error.message?.includes('edge function')) {
+        errorMessage = 'Erro no servidor. Tente novamente em alguns momentos.';
+      } else if (error.message?.includes('Usuário não autenticado')) {
+        errorMessage = 'Sessão expirada. Faça login novamente.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -240,7 +260,14 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     setMeetingProvider('google_meet');
     setSelectedClient('');
     setManualEmail('');
+    setError(null);
+    setRetryCount(0);
     onClose();
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setRetryCount(prev => prev + 1);
   };
 
   if (!isOpen) {
@@ -256,6 +283,26 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
             Agendar Reunião Online
           </DialogTitle>
         </DialogHeader>
+        
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-700">{error}</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                className="h-7 px-3 text-xs"
+              >
+                Tentar Novamente
+              </Button>
+            </div>
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-6">

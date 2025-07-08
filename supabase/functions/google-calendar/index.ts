@@ -254,10 +254,20 @@ serve(async (req) => {
       // Processar datetime corretamente - garantir formato ISO
       const processDateTime = (dateTimeStr) => {
         try {
-          const date = new Date(dateTimeStr);
+          let date;
+          if (typeof dateTimeStr === 'string' && dateTimeStr.includes('T')) {
+            // Se já tem timezone ou formato ISO, usar direto
+            date = new Date(dateTimeStr);
+          } else {
+            // Se não tem timezone, assumir que é horário local do Brasil
+            date = new Date(dateTimeStr);
+          }
+          
           if (isNaN(date.getTime())) {
             throw new Error(`Invalid date: ${dateTimeStr}`);
           }
+          
+          console.log('Processing datetime:', dateTimeStr, '-> ISO:', date.toISOString());
           return date.toISOString();
         } catch (error) {
           console.error('Error processing datetime:', dateTimeStr, error);

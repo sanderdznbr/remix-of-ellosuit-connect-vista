@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Video, ExternalLink, AlertCircle, User, Clock } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useZoomIntegration } from '@/hooks/useZoomIntegration';
-import { useTeamsIntegration } from '@/hooks/useTeamsIntegration';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -28,7 +27,7 @@ interface ImprovedEventModalProps {
     start_date: string;
     end_date: string;
     event_type: 'meeting' | 'appointment' | 'reminder';
-    meeting_provider?: 'google_meet' | 'zoom' | 'teams';
+    meeting_provider?: 'google_meet' | 'zoom';
     meeting_link?: string;
     attendees?: any[];
     is_all_day?: boolean;
@@ -48,7 +47,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | 'teams'>('google_meet');
+  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom'>('google_meet');
   const [isLoading, setIsLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>('none');
@@ -58,7 +57,6 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   
   const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
   const { isConnected: zoomConnected, loading: zoomLoading, connectZoom, getValidAccessToken: getZoomToken } = useZoomIntegration();
-  const { isConnected: teamsConnected, loading: teamsLoading, connectTeams, getValidAccessToken: getTeamsToken } = useTeamsIntegration();
   const { user } = useAuth();
 
   const loadClients = async () => {
@@ -104,12 +102,6 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
         return (
           <div className={`${logoStyle} bg-blue-500 flex items-center justify-center`}>
             <span className="text-white font-bold text-xs">Z</span>
-          </div>
-        );
-      case 'teams':
-        return (
-          <div className={`${logoStyle} bg-purple-600 flex items-center justify-center`}>
-            <span className="text-white font-bold text-xs">T</span>
           </div>
         );
       default:
@@ -206,33 +198,6 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
           console.error('💥 Erro ao criar reunião no Zoom:', error);
           throw error;
         }
-      } else if (meetingProvider === 'teams' && teamsConnected) {
-        try {
-          console.log('🔄 Criando reunião no Teams...');
-          const accessToken = await getTeamsToken();
-          
-          const { data, error } = await supabase.functions.invoke('teams-integration', {
-            body: {
-              action: 'create_meeting',
-              eventData: {
-                title,
-                description,
-                start_date: startDateTime,
-                end_date: endDateTime,
-                organizerId: user.id
-              },
-              accessToken: accessToken
-            }
-          });
-
-          if (error) throw new Error(`Erro ao criar reunião Teams: ${error.message}`);
-          if (data?.success && data?.meetingLink) {
-            meetingLink = data.meetingLink;
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar reunião no Teams:', error);
-          throw error;
-        }
       }
 
       const eventData = {
@@ -278,8 +243,6 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
         return { connected: googleConnected, loading: googleLoading, connect: connectGoogle };
       case 'zoom':
         return { connected: zoomConnected, loading: zoomLoading, connect: connectZoom };
-      case 'teams':
-        return { connected: teamsConnected, loading: teamsLoading, connect: connectTeams };
       default:
         return { connected: false, loading: false, connect: () => {} };
     }
@@ -488,13 +451,13 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
                         </p>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-3">
-                        {['google_meet', 'zoom', 'teams'].map((provider) => (
+                      <div className="grid grid-cols-2 gap-3">
+                        {['google_meet', 'zoom'].map((provider) => (
                           <button
                             key={provider}
                             type="button"
                             disabled={isLoading}
-                            onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
+                            onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom')}
                             className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                               meetingProvider === provider
                                 ? 'border-primary bg-primary/5 shadow-sm'
@@ -503,8 +466,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
                           >
                             {getMeetingProviderLogo(provider)}
                             <span className="text-sm font-medium">
-                              {provider === 'google_meet' ? 'Meet' : 
-                               provider === 'zoom' ? 'Zoom' : 'Teams'}
+                              {provider === 'google_meet' ? 'Meet' : 'Zoom'}
                             </span>
                           </button>
                         ))}

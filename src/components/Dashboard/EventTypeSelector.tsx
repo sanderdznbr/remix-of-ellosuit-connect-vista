@@ -21,7 +21,7 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
     {
       type: 'meeting' as const,
       title: 'Reunião Online',
-      description: 'Agendar uma reunião virtual com Google Meet, Zoom ou Teams',
+      description: 'Agendar uma reunião virtual com Google Meet ou Zoom',
       icon: Video,
       gradient: 'from-blue-500 to-blue-600',
       hoverGradient: 'group-hover:from-blue-600 group-hover:to-blue-700',

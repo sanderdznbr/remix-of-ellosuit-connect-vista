@@ -31,8 +31,8 @@ serve(async (req) => {
           throw new Error('ZOOM_CLIENT_ID não configurado');
         }
 
-        // Usar a URL correta do Lovable
-        const redirectUri = 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard';
+        // Usar a URL correta do ellosuit
+        const redirectUri = 'https://ellosuit.online/dashboard';
         const authUrl = `https://zoom.us/oauth/authorize?` +
           `client_id=${zoomClientId}&` +
           `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -53,7 +53,7 @@ serve(async (req) => {
           throw new Error('Credenciais Zoom não configuradas');
         }
 
-        const redirectUri = 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard';
+        const redirectUri = 'https://ellosuit.online/dashboard';
         
         const tokenResponse = await fetch('https://zoom.us/oauth/token', {
           method: 'POST',

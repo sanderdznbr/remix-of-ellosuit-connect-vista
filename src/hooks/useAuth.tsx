@@ -64,7 +64,7 @@ export const useAuth = () => {
   }, []);
 
   const signUp = async (email: string, password: string, username: string, companyName: string) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `https://ellosuit.online/dashboard`;
     
     console.log('📝 Signing up:', email, 'with company:', companyName);
     
@@ -130,7 +130,7 @@ export const useAuth = () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`
+        redirectTo: `https://ellosuit.online/dashboard`
       }
     });
     

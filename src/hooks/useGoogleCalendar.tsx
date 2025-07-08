@@ -43,15 +43,24 @@ export const useGoogleCalendar = () => {
         const expiresAt = new Date(data.expires_at);
         
         if (now >= expiresAt) {
-          console.log('⚠️ Token expirado, tentando renovar...');
+          console.log('⚠️ Token expirado, removendo integração inválida...');
           try {
-            await renewToken();
-            return; // renewToken vai chamar checkConnection novamente
-          } catch (renewError) {
-            console.error('❌ Erro ao renovar token:', renewError);
+            await supabase
+              .from('meeting_integrations')
+              .delete()
+              .eq('id', data.id);
+            
             setIsConnected(false);
             setIntegration(null);
+            
+            toast({
+              title: "Token Expirado",
+              description: "Sua conexão com Google Meet expirou. Conecte novamente.",
+              variant: "destructive"
+            });
             return;
+          } catch (deleteError) {
+            console.error('❌ Erro ao deletar integração expirada:', deleteError);
           }
         }
         
@@ -195,14 +204,25 @@ export const useGoogleCalendar = () => {
           // Limpar URL primeiro
           window.history.replaceState({}, document.title, '/dashboard');
           
-          // Verificar conexão e importar eventos
-          await checkConnection();
-          await importGoogleCalendarEvents();
+          // Aguardar um pouco para garantir que a integração foi salva
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
+          // Verificar conexão
+          await checkConnection();
+          
+          // Mostrar popup de sucesso
           toast({
-            title: "Sucesso",
-            description: "Google Meet conectado e eventos importados!"
+            title: "✅ Conexão Realizada!",
+            description: "Google Meet conectado com sucesso! Sua conta está sincronizada.",
+            duration: 5000,
           });
+          
+          // Importar eventos em background
+          try {
+            await importGoogleCalendarEvents();
+          } catch (importError) {
+            console.warn('⚠️ Erro ao importar eventos, mas conexão foi bem-sucedida:', importError);
+          }
         } else {
           throw new Error('Falha na conexão com Google Meet');
         }

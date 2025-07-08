@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useGmail } from '@/hooks/useGmail';
 import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 import MobileLayout from '@/components/Mobile/MobileLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,8 @@ import {
   X,
   Image,
   Palette,
-  Plug
+  Plug,
+  Mail
 } from 'lucide-react';
 
 const Settings = () => {
@@ -39,6 +41,13 @@ const Settings = () => {
     connectGoogle, 
     disconnectGoogle 
   } = useGoogleCalendar();
+  
+  const {
+    isConnected: gmailConnected,
+    loading: gmailLoading,
+    connectGmail,
+    disconnectGmail
+  } = useGmail();
   
   const { 
     isConnected: zoomConnected, 
@@ -85,6 +94,14 @@ const Settings = () => {
       await disconnectGoogle();
     } else {
       await connectGoogle();
+    }
+  };
+
+  const handleGmailIntegration = async () => {
+    if (gmailConnected) {
+      await disconnectGmail();
+    } else {
+      await connectGmail();
     }
   };
 
@@ -162,6 +179,31 @@ const Settings = () => {
                     disabled={googleLoading}
                   >
                     {googleLoading ? "Processando..." : (googleConnected ? "Desconectar" : "Conectar")}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Gmail */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Gmail</h3>
+                    <p className="text-sm text-gray-600">Conecte sua conta Gmail para enviar emails</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={gmailConnected ? "default" : "secondary"}>
+                    {gmailConnected ? "Conectado" : "Desconectado"}
+                  </Badge>
+                  <Button 
+                    variant={gmailConnected ? "outline" : "default"}
+                    onClick={handleGmailIntegration}
+                    disabled={gmailLoading}
+                  >
+                    {gmailLoading ? "Processando..." : (gmailConnected ? "Desconectar" : "Conectar")}
                   </Button>
                 </div>
               </div>

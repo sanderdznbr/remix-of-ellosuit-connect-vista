@@ -270,19 +270,26 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     setRetryCount(prev => prev + 1);
   };
 
+  console.log('🔍 Verificando se deve renderizar modal:', { isOpen, title, showEventModal: isOpen });
+
   if (!isOpen) {
+    console.log('❌ Modal não deve ser renderizado - isOpen é false');
     return null;
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border-0">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-            <Video className="h-5 w-5 text-primary" />
-            Agendar Reunião Online
-          </DialogTitle>
-        </DialogHeader>
+  console.log('✅ Iniciando renderização do modal');
+
+  // Fallback de emergência - se algo quebrar, sempre renderizar algo
+  try {
+    return (
+      <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border-0">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
+              <Video className="h-5 w-5 text-primary" />
+              Agendar Reunião Online
+            </DialogTitle>
+          </DialogHeader>
         
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -530,6 +537,29 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
       </DialogContent>
     </Dialog>
   );
+  } catch (renderError) {
+    console.error('💥 ERRO CRÍTICO na renderização do modal:', renderError);
+    
+    // Fallback de emergência - modal mínimo que sempre funciona
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[500px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Erro na Reunião Online</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-red-700">Ocorreu um erro inesperado. Tente novamente ou recarregue a página.</p>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={handleClose}>Fechar</Button>
+              <Button onClick={() => window.location.reload()}>Recarregar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 };
 
 export default ImprovedEventModal;

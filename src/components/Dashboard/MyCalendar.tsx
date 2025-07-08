@@ -83,17 +83,33 @@ const MyCalendar = () => {
 
   const handleEventTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
     console.log('📝 Tipo de evento selecionado:', type);
+    console.log('🔍 Estados antes da seleção:', { 
+      showEventModal, 
+      showAppointmentModal, 
+      showReminderModal,
+      selectedDate 
+    });
+    
     setSelectedEventType(type);
     setShowEventTypeSelector(false);
     
     if (type === 'meeting') {
-      console.log('🎯 Abrindo modal de reunião');
+      console.log('🎯 Abrindo modal de reunião - definindo showEventModal para true');
       setShowEventModal(true);
+      console.log('✅ showEventModal definido como true');
     } else if (type === 'appointment') {
+      console.log('📅 Abrindo modal de compromisso');
       setShowAppointmentModal(true);
     } else if (type === 'reminder') {
+      console.log('🔔 Abrindo modal de lembrete');
       setShowReminderModal(true);
     }
+    
+    console.log('🔍 Estados após a seleção:', { 
+      showEventModal: type === 'meeting' ? true : showEventModal,
+      showAppointmentModal: type === 'appointment' ? true : showAppointmentModal,
+      showReminderModal: type === 'reminder' ? true : showReminderModal
+    });
   };
 
   const closeAllModals = () => {

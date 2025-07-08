@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -42,6 +41,52 @@ export const useZoomIntegration = () => {
     }
   };
 
+  const processZoomCallback = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    
+    if (code && user) {
+      console.log('🔄 Processando callback do Zoom...');
+      setLoading(true);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('zoom-integration', {
+          body: {
+            action: 'exchange_code',
+            code: code,
+            userId: user.id
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.success) {
+          console.log('✅ Zoom conectado com sucesso');
+          await checkConnection();
+          toast({
+            title: "Sucesso",
+            description: "Zoom conectado com sucesso!"
+          });
+          
+          // Limpar URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (error: any) {
+        console.error('💥 Erro ao processar callback Zoom:', error);
+        toast({
+          title: "Erro",
+          description: `Erro ao conectar Zoom: ${error.message}`,
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const connectZoom = async () => {
     if (!user) {
       toast({
@@ -69,14 +114,13 @@ export const useZoomIntegration = () => {
         console.log('🔗 Redirecionando para Zoom OAuth...');
         window.location.href = data.authUrl;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Erro ao conectar Zoom:', error);
       toast({
         title: "Erro",
         description: `Erro ao conectar com Zoom: ${error.message}`,
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -171,6 +215,7 @@ export const useZoomIntegration = () => {
   useEffect(() => {
     if (user) {
       checkConnection();
+      processZoomCallback();
     }
   }, [user]);
 

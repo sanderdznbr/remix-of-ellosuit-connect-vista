@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Mail, 
@@ -24,6 +25,7 @@ const EmailProviders = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isConnected: isGoogleCalendarConnected, connectGoogle, disconnectGoogle, loading: calendarLoading } = useGoogleCalendar();
+  const { isConnected: isZoomConnected, connectZoom, disconnectZoom, loading: zoomLoading } = useZoomIntegration();
 
   useEffect(() => {
     if (user) {
@@ -247,6 +249,65 @@ const EmailProviders = () => {
                       <Plus className="h-4 w-4 mr-2" />
                     )}
                     {calendarLoading ? 'Conectando...' : 'Conectar'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Zoom Integration */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Zoom (Para Reuniões)</h3>
+        <Card className={`border-2 ${isZoomConnected ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {isZoomConnected ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Video className="h-5 w-5 text-blue-600" />
+                )}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">Zoom</span>
+                    <Badge variant="secondary" className={isZoomConnected ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
+                      {isZoomConnected ? 'Conectado' : 'Desconectado'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {isZoomConnected 
+                      ? 'Conectado - Pode criar reuniões no Zoom' 
+                      : 'Conecte para criar reuniões no Zoom'
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                {isZoomConnected ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={disconnectZoom}
+                    disabled={zoomLoading}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    {zoomLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={connectZoom}
+                    disabled={zoomLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
+                  >
+                    {zoomLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    {zoomLoading ? 'Conectando...' : 'Conectar'}
                   </Button>
                 )}
               </div>

@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -29,7 +28,8 @@ serve(async (req) => {
           throw new Error('ZOOM_CLIENT_ID não configurado');
         }
 
-        const redirectUri = `${req.headers.get('origin')}/dashboard`;
+        // Usar a URL correta do domínio
+        const redirectUri = `https://ellosuit.online/dashboard`;
         const authUrl = `https://zoom.us/oauth/authorize?` +
           `client_id=${zoomClientId}&` +
           `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -50,7 +50,7 @@ serve(async (req) => {
           throw new Error('Credenciais Zoom não configuradas');
         }
 
-        const redirectUri = `${req.headers.get('origin')}/dashboard`;
+        const redirectUri = `https://ellosuit.online/dashboard`;
         
         const tokenResponse = await fetch('https://zoom.us/oauth/token', {
           method: 'POST',

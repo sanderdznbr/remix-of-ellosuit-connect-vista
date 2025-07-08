@@ -5,6 +5,7 @@ import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
 import MailProductivity from './MailProductivity';
 import MyCalendar from './MyCalendar';
+import MyMeetings from './MyMeetings';
 import DocumentsManager from './DocumentsManager';
 import ClientsManager from './ClientsManager';
 import Analytics from './Analytics';
@@ -32,6 +33,8 @@ const Dashboard = () => {
         return <MailProductivity />;
       case 'my-calendar':
         return <MyCalendar />;
+      case 'my-meetings':
+        return <MyMeetings />;
       case 'documents':
         return <DocumentsManager />;
       case 'clients':

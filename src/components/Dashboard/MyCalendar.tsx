@@ -4,10 +4,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
-import EventTypeSelector from './EventTypeSelector';
+import EventDropdown from './EventDropdown';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
@@ -17,7 +16,6 @@ import { Input } from '@/components/ui/input';
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showEventTypeSelector, setShowEventTypeSelector] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -61,7 +59,6 @@ const MyCalendar = () => {
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
-    setShowEventTypeSelector(true);
   };
 
   const handleEventClick = (arg: any) => {
@@ -75,45 +72,27 @@ const MyCalendar = () => {
     await createEvent(eventData);
   };
 
-  const handleAddEvent = () => {
-    const today = new Date().toISOString().split('T')[0];
-    setSelectedDate(today);
-    setShowEventTypeSelector(true);
-  };
-
   const handleEventTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
     console.log('📝 Tipo de evento selecionado:', type);
-    console.log('🔍 Estados antes da seleção:', { 
-      showEventModal, 
-      showAppointmentModal, 
-      showReminderModal,
-      selectedDate 
-    });
     
-    setSelectedEventType(type);
-    setShowEventTypeSelector(false);
-    
-    if (type === 'meeting') {
-      console.log('🎯 Abrindo modal de reunião - definindo showEventModal para true');
-      setShowEventModal(true);
-      console.log('✅ showEventModal definido como true');
-    } else if (type === 'appointment') {
-      console.log('📅 Abrindo modal de compromisso');
-      setShowAppointmentModal(true);
-    } else if (type === 'reminder') {
-      console.log('🔔 Abrindo modal de lembrete');
-      setShowReminderModal(true);
+    // Se não há data selecionada, usar hoje
+    if (!selectedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
     }
     
-    console.log('🔍 Estados após a seleção:', { 
-      showEventModal: type === 'meeting' ? true : showEventModal,
-      showAppointmentModal: type === 'appointment' ? true : showAppointmentModal,
-      showReminderModal: type === 'reminder' ? true : showReminderModal
-    });
+    setSelectedEventType(type);
+    
+    if (type === 'meeting') {
+      setShowEventModal(true);
+    } else if (type === 'appointment') {
+      setShowAppointmentModal(true);
+    } else if (type === 'reminder') {
+      setShowReminderModal(true);
+    }
   };
 
   const closeAllModals = () => {
-    setShowEventTypeSelector(false);
     setShowEventModal(false);
     setShowAppointmentModal(false);
     setShowReminderModal(false);
@@ -168,13 +147,7 @@ const MyCalendar = () => {
               />
             </div>
             
-            <Button 
-              onClick={handleAddEvent}
-              className="bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Novo Evento</span>
-            </Button>
+            <EventDropdown onSelectType={handleEventTypeSelect} />
           </div>
         </div>
 
@@ -216,14 +189,6 @@ const MyCalendar = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Seletor de Tipo de Evento */}
-        <EventTypeSelector
-          isOpen={showEventTypeSelector}
-          onClose={closeAllModals}
-          onSelectType={handleEventTypeSelect}
-          selectedDate={selectedDate || ''}
-        />
 
         {/* Modal de Reunião Online */}
         <ImprovedEventModal

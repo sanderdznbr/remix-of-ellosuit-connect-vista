@@ -71,10 +71,25 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
   ];
 
   const handleItemClick = (itemId: string) => {
-    if (itemId === 'mail-tracking' || itemId === 'campaign-mail' || itemId === 'mail-productivity' || 
-        itemId === 'my-calendar' || itemId === 'documents' || itemId === 'clients' || itemId === 'analytics') {
+    console.log('🖱️ Item clicado na sidebar:', itemId);
+    
+    // Itens que têm páginas implementadas
+    const implementedItems = [
+      'mail-tracking', 
+      'campaign-mail', 
+      'mail-productivity', 
+      'my-calendar', 
+      'my-meetings', // Adicionado my-meetings
+      'documents', 
+      'clients', 
+      'analytics'
+    ];
+    
+    if (implementedItems.includes(itemId)) {
+      console.log('✅ Navegando para:', itemId);
       onItemClick(itemId);
     } else {
+      console.log('⚠️ Função em desenvolvimento para:', itemId);
       alert('Função em desenvolvimento');
     }
   };

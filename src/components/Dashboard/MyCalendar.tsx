@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -17,6 +16,7 @@ import { Input } from '@/components/ui/input';
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -58,10 +58,47 @@ const MyCalendar = () => {
     classNames: ['custom-event']
   }));
 
+  // Função para extrair data e hora do clique/seleção
+  const extractDateTimeFromEvent = (eventInfo: any) => {
+    console.log('📅 Evento do calendário:', eventInfo);
+    
+    let dateStr = '';
+    let timeStr = null;
+    
+    if (eventInfo.dateStr) {
+      // Clique simples - pode ser data ou datetime
+      dateStr = eventInfo.dateStr.split('T')[0]; // Extrai apenas a parte da data
+      if (eventInfo.dateStr.includes('T')) {
+        // Se tem horário, extrai ele também
+        timeStr = eventInfo.dateStr.split('T')[1].substring(0, 5); // HH:MM
+      }
+    } else if (eventInfo.start) {
+      // Seleção de intervalo - usa o início
+      const startDate = new Date(eventInfo.start);
+      dateStr = startDate.toISOString().split('T')[0];
+      timeStr = startDate.toTimeString().substring(0, 5); // HH:MM
+    }
+    
+    console.log('📅 Data extraída:', dateStr, 'Hora extraída:', timeStr);
+    return { dateStr, timeStr };
+  };
+
   const handleDateClick = (arg: any) => {
-    console.log('📅 Data clicada:', arg.dateStr);
-    setSelectedDate(arg.dateStr);
-    // Abrir modal de reunião por padrão ao clicar na data
+    console.log('📅 Data clicada:', arg);
+    const { dateStr, timeStr } = extractDateTimeFromEvent(arg);
+    
+    setSelectedDate(dateStr);
+    setSelectedTime(timeStr);
+    setSelectedEventType('meeting');
+    setShowEventModal(true);
+  };
+
+  const handleSelect = (arg: any) => {
+    console.log('📅 Seleção de horário:', arg);
+    const { dateStr, timeStr } = extractDateTimeFromEvent(arg);
+    
+    setSelectedDate(dateStr);
+    setSelectedTime(timeStr);
     setSelectedEventType('meeting');
     setShowEventModal(true);
   };
@@ -103,6 +140,7 @@ const MyCalendar = () => {
     setShowReminderModal(false);
     setShowEventDetailsModal(false);
     setSelectedDate(null);
+    setSelectedTime(null);
     setSelectedEventDetails(null);
   };
 
@@ -170,6 +208,7 @@ const MyCalendar = () => {
                 initialView={currentView}
                 events={processedEvents}
                 dateClick={handleDateClick}
+                select={handleSelect}
                 eventClick={handleEventClick}
                 selectable={true}
                 selectMirror={true}
@@ -200,6 +239,7 @@ const MyCalendar = () => {
           isOpen={showEventModal}
           onClose={closeAllModals}
           selectedDate={selectedDate || ''}
+          selectedTime={selectedTime}
           onCreateEvent={handleCreateEvent}
         />
 
@@ -208,6 +248,7 @@ const MyCalendar = () => {
           isOpen={showAppointmentModal}
           onClose={closeAllModals}
           selectedDate={selectedDate || ''}
+          selectedTime={selectedTime}
           onCreateEvent={handleCreateEvent}
         />
 
@@ -216,6 +257,7 @@ const MyCalendar = () => {
           isOpen={showReminderModal}
           onClose={closeAllModals}
           selectedDate={selectedDate || ''}
+          selectedTime={selectedTime}
           onCreateEvent={handleCreateEvent}
         />
 

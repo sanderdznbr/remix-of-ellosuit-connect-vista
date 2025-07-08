@@ -14,6 +14,8 @@ import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
 import { Input } from '@/components/ui/input';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileCalendarView from '@/components/Mobile/MobileCalendarView';
 
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
@@ -232,6 +234,13 @@ const MyCalendar = () => {
         </div>
       </div>
     );
+  }
+
+  const isMobile = useIsMobile();
+  
+  // Mobile Layout
+  if (isMobile) {
+    return <MobileCalendarView />;
   }
 
   return (

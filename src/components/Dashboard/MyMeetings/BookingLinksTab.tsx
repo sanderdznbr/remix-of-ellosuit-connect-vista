@@ -78,7 +78,7 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
   };
 
   const getPublicUrl = (slug: string) => {
-    return `${window.location.origin}/book/${slug}`;
+    return `https://ellosuit.online/book/${slug}`;
   };
 
   return (

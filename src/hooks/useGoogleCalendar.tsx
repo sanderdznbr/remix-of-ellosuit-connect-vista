@@ -13,7 +13,10 @@ export const useGoogleCalendar = () => {
   const { toast } = useToast();
 
   const checkConnection = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ Não há usuário logado');
+      return;
+    }
 
     try {
       console.log('🔍 Verificando conexão Google Calendar para usuário:', user.id);
@@ -23,23 +26,46 @@ export const useGoogleCalendar = () => {
         .select('*')
         .eq('user_id', user.id)
         .eq('provider', 'google_meet')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('❌ Erro ao verificar integração:', error);
+        setIsConnected(false);
+        setIntegration(null);
         return;
       }
 
       if (data) {
         console.log('✅ Integração Google encontrada:', data.id);
+        
+        // Verificar se o token não expirou
+        const now = new Date();
+        const expiresAt = new Date(data.expires_at);
+        
+        if (now >= expiresAt) {
+          console.log('⚠️ Token expirado, tentando renovar...');
+          try {
+            await renewToken();
+            return; // renewToken vai chamar checkConnection novamente
+          } catch (renewError) {
+            console.error('❌ Erro ao renovar token:', renewError);
+            setIsConnected(false);
+            setIntegration(null);
+            return;
+          }
+        }
+        
         setIntegration(data);
         setIsConnected(true);
       } else {
         console.log('⚠️ Nenhuma integração Google encontrada');
         setIsConnected(false);
+        setIntegration(null);
       }
     } catch (error) {
       console.error('💥 Erro ao verificar conexão Google:', error);
+      setIsConnected(false);
+      setIntegration(null);
     }
   };
 
@@ -140,6 +166,8 @@ export const useGoogleCalendar = () => {
         description: `Erro: ${error}`,
         variant: "destructive"
       });
+      // Limpar URL após erro
+      window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
@@ -157,28 +185,26 @@ export const useGoogleCalendar = () => {
         });
 
         if (error) {
-          throw error;
+          console.error('❌ Erro da Edge Function:', error);
+          throw new Error(`Erro ao conectar: ${error.message || 'Erro desconhecido'}`);
         }
 
         if (data?.success) {
           console.log('✅ OAuth processado com sucesso');
-          await checkConnection();
           
-          // Importar eventos do Google Calendar
+          // Limpar URL primeiro
+          window.history.replaceState({}, document.title, '/dashboard');
+          
+          // Verificar conexão e importar eventos
+          await checkConnection();
           await importGoogleCalendarEvents();
           
           toast({
             title: "Sucesso",
-            description: "Google Calendar conectado e eventos importados!"
+            description: "Google Meet conectado e eventos importados!"
           });
-
-          // Redirecionar para aba calendar se possível
-          const hash = window.location.hash;
-          if (hash.includes('dashboard')) {
-            window.history.replaceState({}, document.title, '/dashboard#calendar');
-          } else {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
+        } else {
+          throw new Error('Falha na conexão com Google Meet');
         }
       } catch (error) {
         console.error('💥 Erro ao processar OAuth:', error);
@@ -187,6 +213,9 @@ export const useGoogleCalendar = () => {
           description: `Erro ao conectar: ${error.message}`,
           variant: "destructive"
         });
+        
+        // Limpar URL após erro
+        window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
       }

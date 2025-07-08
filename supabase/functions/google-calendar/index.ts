@@ -25,6 +25,16 @@ serve(async (req) => {
     
     const { action, eventData, userId, accessToken, code, user_id, refreshToken } = requestBody;
 
+    if (!action) {
+      console.error('❌ No action specified in request');
+      return new Response(JSON.stringify({ 
+        error: 'Action is required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Get Google credentials from environment
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
@@ -76,13 +86,14 @@ serve(async (req) => {
       console.log('Tokens received successfully');
       
       // Get user company
-      const { data: companyUser } = await supabaseClient
+      const { data: companyUser, error: companyError } = await supabaseClient
         .from('company_users')
         .select('company_id')
         .eq('user_id', userId || user_id)
-        .single();
+        .maybeSingle();
 
-      if (!companyUser) {
+      if (companyError || !companyUser) {
+        console.error('❌ Error getting user company:', companyError);
         throw new Error('User not associated with company');
       }
 
@@ -201,13 +212,14 @@ serve(async (req) => {
       const userInfo = await userInfoResponse.json();
       
       // Get user company
-      const { data: companyUser } = await supabaseClient
+      const { data: companyUser, error: companyError } = await supabaseClient
         .from('company_users')
         .select('company_id')
         .eq('user_id', user_id)
-        .single();
+        .maybeSingle();
 
-      if (!companyUser) {
+      if (companyError || !companyUser) {
+        console.error('❌ Error getting user company for Gmail:', companyError);
         throw new Error('User not associated with company');
       }
 
@@ -386,9 +398,10 @@ serve(async (req) => {
         .from('company_users')
         .select('company_id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (companyError || !companyUser) {
+        console.error('❌ Error getting user company for import:', companyError);
         throw new Error('User not associated with company');
       }
 
@@ -401,7 +414,7 @@ serve(async (req) => {
             .select('id')
             .eq('title', event.summary || 'Evento sem título')
             .eq('start_date', event.start.dateTime || event.start.date)
-            .single();
+            .maybeSingle();
 
           if (existingEvent) {
             continue;
@@ -478,10 +491,17 @@ serve(async (req) => {
     throw new Error('Invalid action');
 
   } catch (error) {
-    console.error('Error in google-calendar function:', error);
+    console.error('💥 Error in google-calendar function:', error);
+    console.error('📋 Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
-      details: error.stack 
+      error: error.message || 'Internal server error',
+      details: error.stack,
+      timestamp: new Date().toISOString()
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

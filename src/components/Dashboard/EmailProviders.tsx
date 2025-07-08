@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useZoomIntegration } from '@/hooks/useZoomIntegration';
+// Hooks de integração de reunião removidos - agora apenas em Configurações
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Mail, 
@@ -14,9 +13,7 @@ import {
   CheckCircle, 
   Settings, 
   Trash2,
-  Calendar,
-  Loader2,
-  Video
+  Loader2
 } from 'lucide-react';
 
 const EmailProviders = () => {
@@ -24,8 +21,7 @@ const EmailProviders = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isConnected: isGoogleCalendarConnected, connectGoogle, disconnectGoogle, loading: calendarLoading } = useGoogleCalendar();
-  const { isConnected: isZoomConnected, connectZoom, disconnectZoom, loading: zoomLoading } = useZoomIntegration();
+  // Integrações de reunião movidas para Configurações
 
   useEffect(() => {
     if (user) {
@@ -194,126 +190,11 @@ const EmailProviders = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Provedores e Integrações</h2>
-        <p className="text-gray-600">Conecte suas contas de email e serviços para campanhas e reuniões</p>
-      </div>
-
-      {/* Google Calendar Integration */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Google Calendar (Para Google Meet)</h3>
-        <Card className={`border-2 ${isGoogleCalendarConnected ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {isGoogleCalendarConnected ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <Video className="h-5 w-5 text-blue-600" />
-                )}
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium">Google Calendar & Meet</span>
-                    <Badge variant="secondary" className={isGoogleCalendarConnected ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                      {isGoogleCalendarConnected ? 'Conectado' : 'Desconectado'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    {isGoogleCalendarConnected 
-                      ? 'Conectado - Pode criar reuniões no Google Meet' 
-                      : 'Conecte para criar eventos e gerar links do Google Meet'
-                    }
-                  </p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                {isGoogleCalendarConnected ? (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={disconnectGoogle}
-                    disabled={calendarLoading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    {calendarLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={connectGoogle}
-                    disabled={calendarLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    size="sm"
-                  >
-                    {calendarLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
-                    {calendarLoading ? 'Conectando...' : 'Conectar'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Zoom Integration */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Zoom (Para Reuniões)</h3>
-        <Card className={`border-2 ${isZoomConnected ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {isZoomConnected ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <Video className="h-5 w-5 text-blue-600" />
-                )}
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium">Zoom</span>
-                    <Badge variant="secondary" className={isZoomConnected ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>
-                      {isZoomConnected ? 'Conectado' : 'Desconectado'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    {isZoomConnected 
-                      ? 'Conectado - Pode criar reuniões no Zoom' 
-                      : 'Conecte para criar reuniões no Zoom'
-                    }
-                  </p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                {isZoomConnected ? (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={disconnectZoom}
-                    disabled={zoomLoading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    {zoomLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={connectZoom}
-                    disabled={zoomLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    size="sm"
-                  >
-                    {zoomLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
-                    {zoomLoading ? 'Conectando...' : 'Conectar'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <h2 className="text-2xl font-bold mb-2">Provedores de Email</h2>
+        <p className="text-gray-600">Conecte suas contas de email para envio de campanhas</p>
+        <p className="text-sm text-blue-600 mt-1">
+          💡 Para conectar Google Meet e Zoom, acesse as Configurações
+        </p>
       </div>
 
       {/* Connected Email Accounts */}
@@ -333,10 +214,10 @@ const EmailProviders = () => {
                           {account.provider.charAt(0).toUpperCase() + account.provider.slice(1)}
                         </Badge>
                       </div>
-                      <div className="flex items-center space-x-1 text-sm text-gray-500">
-                        <Calendar className="h-3 w-3" />
-                        <span>Conectado em {new Date(account.connected_at).toLocaleDateString('pt-BR')}</span>
-                      </div>
+                       <div className="flex items-center space-x-1 text-sm text-gray-500">
+                         <CheckCircle className="h-3 w-3" />
+                         <span>Conectado em {new Date(account.connected_at).toLocaleDateString('pt-BR')}</span>
+                       </div>
                     </div>
                   </div>
                   <div className="flex space-x-2">

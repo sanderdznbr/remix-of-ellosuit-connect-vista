@@ -204,7 +204,7 @@ export const useGmail = () => {
         if (data?.success) {
           console.log('✅ OAuth Gmail processado com sucesso');
           
-          // Limpar URL primeiro
+          // Limpar URL primeiro e redirecionar para o calendário
           window.history.replaceState({}, document.title, '/dashboard');
           
           // Aguardar um pouco para garantir que a conta foi salva

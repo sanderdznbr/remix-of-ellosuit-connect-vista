@@ -126,6 +126,11 @@ const Settings = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
         <p className="text-gray-600 mt-2">Gerencie suas preferências e integrações</p>
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            ✨ <strong>Central de Integrações:</strong> Conecte suas contas aqui e use em todo o sistema - calendário, campanhas e mais!
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="integrations" className="space-y-6">

@@ -31,8 +31,8 @@ serve(async (req) => {
           throw new Error('ZOOM_CLIENT_ID não configurado');
         }
 
-        // Usar a URL correta do domínio configurada no banco
-        const redirectUri = `${Deno.env.get('LOVABLE_PREVIEW_URL') || 'https://ellosuit.online'}/dashboard`;
+        // Usar a URL correta do Lovable
+        const redirectUri = 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard';
         const authUrl = `https://zoom.us/oauth/authorize?` +
           `client_id=${zoomClientId}&` +
           `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -45,7 +45,7 @@ serve(async (req) => {
       }
 
       case 'exchange_code': {
-        const { code, userId } = payload;
+        const { code, user_id } = payload;
         const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
         const zoomClientSecret = Deno.env.get('ZOOM_CLIENT_SECRET');
 
@@ -53,7 +53,7 @@ serve(async (req) => {
           throw new Error('Credenciais Zoom não configuradas');
         }
 
-        const redirectUri = `${Deno.env.get('LOVABLE_PREVIEW_URL') || 'https://ellosuit.online'}/dashboard`;
+        const redirectUri = 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard';
         
         const tokenResponse = await fetch('https://zoom.us/oauth/token', {
           method: 'POST',
@@ -89,7 +89,7 @@ serve(async (req) => {
         const { error } = await supabase
           .from('meeting_integrations')
           .upsert({
-            user_id: userId,
+            user_id: user_id,
             provider: 'zoom',
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
@@ -161,7 +161,7 @@ serve(async (req) => {
       }
 
       case 'renew_token': {
-        const { refreshToken, userId } = payload;
+        const { refreshToken, user_id } = payload;
         const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
         const zoomClientSecret = Deno.env.get('ZOOM_CLIENT_SECRET');
 
@@ -192,7 +192,7 @@ serve(async (req) => {
             refresh_token: tokenData.refresh_token || refreshToken,
             expires_at: expiresAt.toISOString()
           })
-          .eq('user_id', userId)
+          .eq('user_id', user_id)
           .eq('provider', 'zoom');
 
         if (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useZoomIntegration = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -21,10 +21,12 @@ export const useZoomIntegration = () => {
         .select('*')
         .eq('user_id', user.id)
         .eq('provider', 'zoom')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('❌ Erro ao verificar integração Zoom:', error);
+        setIsConnected(false);
+        setIntegration(null);
         return;
       }
 
@@ -55,7 +57,7 @@ export const useZoomIntegration = () => {
           body: {
             action: 'exchange_code',
             code: code,
-            userId: user.id
+            user_id: user.id
           }
         });
 
@@ -65,14 +67,22 @@ export const useZoomIntegration = () => {
 
         if (data?.success) {
           console.log('✅ Zoom conectado com sucesso');
-          await checkConnection();
-          toast({
-            title: "Sucesso",
-            description: "Zoom conectado com sucesso!"
-          });
           
-          // Limpar URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
+          // Limpar URL primeiro
+          window.history.replaceState({}, document.title, '/dashboard');
+          
+          // Aguardar um pouco para garantir que a integração foi salva
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verificar conexão
+          await checkConnection();
+          
+          // Mostrar popup de sucesso
+          toast({
+            title: "✅ Zoom Conectado!",
+            description: "Zoom foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
+            duration: 5000,
+          });
         }
       } catch (error: any) {
         console.error('💥 Erro ao processar callback Zoom:', error);
@@ -103,7 +113,7 @@ export const useZoomIntegration = () => {
       console.log('🔗 Iniciando conexão com Zoom...');
       
       const { data, error } = await supabase.functions.invoke('zoom-integration', {
-        body: { action: 'get_auth_url', userId: user.id }
+        body: { action: 'get_auth_url', user_id: user.id }
       });
 
       if (error) {
@@ -154,7 +164,7 @@ export const useZoomIntegration = () => {
         body: {
           action: 'renew_token',
           refreshToken: integration.refresh_token,
-          userId: user?.id
+          user_id: user?.id
         }
       });
 

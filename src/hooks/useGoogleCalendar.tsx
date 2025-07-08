@@ -201,7 +201,7 @@ export const useGoogleCalendar = () => {
         if (data?.success) {
           console.log('✅ OAuth processado com sucesso');
           
-          // Limpar URL primeiro
+          // Limpar URL primeiro e redirecionar para o calendário
           window.history.replaceState({}, document.title, '/dashboard');
           
           // Aguardar um pouco para garantir que a integração foi salva

@@ -21,6 +21,7 @@ interface ImprovedEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
+  selectedTime?: string | null;
   onCreateEvent: (eventData: {
     title: string;
     description?: string;
@@ -38,13 +39,14 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
+  selectedTime,
   onCreateEvent
 }) => {
   console.log('🎯 ImprovedEventModal renderizando com isOpen:', isOpen);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
+  const [startTime, setStartTime] = useState(selectedTime || '09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [isAllDay, setIsAllDay] = useState(false);
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom'>('google_meet');
@@ -58,6 +60,17 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
   const { isConnected: zoomConnected, loading: zoomLoading, connectZoom, getValidAccessToken: getZoomToken } = useZoomIntegration();
   const { user } = useAuth();
+
+  // Atualizar horário quando selectedTime mudar
+  useEffect(() => {
+    if (selectedTime) {
+      setStartTime(selectedTime);
+      // Calcular horário de término automaticamente (1 hora depois)
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const endHour = hours + 1;
+      setEndTime(`${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    }
+  }, [selectedTime]);
 
   const loadClients = async () => {
     if (!user) return;
@@ -227,7 +240,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     
     setTitle('');
     setDescription('');
-    setStartTime('09:00');
+    setStartTime(selectedTime || '09:00');
     setEndTime('10:00');
     setIsAllDay(false);
     setMeetingProvider('google_meet');

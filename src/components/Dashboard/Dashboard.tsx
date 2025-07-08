@@ -9,6 +9,7 @@ import MyMeetings from './MyMeetings';
 import DocumentsManager from './DocumentsManager';
 import ClientsManager from './ClientsManager';
 import Analytics from './Analytics';
+import StartMeet from './StartMeet';
 import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard = () => {
@@ -37,6 +38,8 @@ const Dashboard = () => {
         return <MyCalendar />;
       case 'my-meetings':
         return <MyMeetings />;
+      case 'start-meet':
+        return <StartMeet />;
       case 'documents':
         return <DocumentsManager />;
       case 'clients':

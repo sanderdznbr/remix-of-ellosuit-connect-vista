@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
+  selectedTime?: string | null;
   onCreateEvent: (eventData: any) => Promise<void>;
 }
 
@@ -18,11 +19,12 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
+  selectedTime,
   onCreateEvent
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
+  const [startTime, setStartTime] = useState(selectedTime || '09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [location, setLocation] = useState('');
   const [locationPreset, setLocationPreset] = useState('');
@@ -34,6 +36,17 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
     { value: 'escritorio', label: 'Escritório' },
     { value: 'custom', label: 'Outro local...' }
   ];
+
+  // Atualizar horário quando selectedTime mudar
+  useEffect(() => {
+    if (selectedTime) {
+      setStartTime(selectedTime);
+      // Calcular horário de término automaticamente (1 hora depois)
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const endHour = hours + 1;
+      setEndTime(`${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    }
+  }, [selectedTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +79,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const handleClose = () => {
     setTitle('');
     setDescription('');
-    setStartTime('09:00');
+    setStartTime(selectedTime || '09:00');
     setEndTime('10:00');
     setLocation('');
     setLocationPreset('');

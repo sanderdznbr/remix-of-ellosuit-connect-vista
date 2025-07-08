@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ interface ReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
+  selectedTime?: string | null;
   onCreateEvent: (eventData: any) => Promise<void>;
 }
 
@@ -18,14 +19,22 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
+  selectedTime,
   onCreateEvent
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderTime, setReminderTime] = useState(selectedTime || '09:00');
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Atualizar horário quando selectedTime mudar
+  useEffect(() => {
+    if (selectedTime) {
+      setReminderTime(selectedTime);
+    }
+  }, [selectedTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +71,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   const handleClose = () => {
     setTitle('');
     setDescription('');
-    setReminderTime('09:00');
+    setReminderTime(selectedTime || '09:00');
     setNotifyEmail(true);
     setNotifyWhatsApp(false);
     onClose();

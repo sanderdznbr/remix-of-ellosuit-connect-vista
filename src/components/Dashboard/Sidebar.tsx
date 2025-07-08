@@ -79,7 +79,8 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'campaign-mail', 
       'mail-productivity', 
       'my-calendar', 
-      'my-meetings', // Adicionado my-meetings
+      'my-meetings',
+      'start-meet', // Adicionado start-meet
       'documents', 
       'clients', 
       'analytics'

@@ -71,7 +71,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard',
+          redirect_uri: 'https://ellosuit.online/dashboard',
           grant_type: 'authorization_code',
         }),
       });
@@ -189,7 +189,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: 'https://jwddiyuezqrpuakazvgg.lovableproject.com/dashboard',
+          redirect_uri: 'https://ellosuit.online/dashboard',
           grant_type: 'authorization_code',
         }),
       });

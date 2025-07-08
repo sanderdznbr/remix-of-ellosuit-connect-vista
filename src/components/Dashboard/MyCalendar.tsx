@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -10,8 +10,10 @@ import EventDropdown from './EventDropdown';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
-import EventDetailsModal from './EventDetailsModal';
+import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
 import { Input } from '@/components/ui/input';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { supabase } from '@/integrations/supabase/client';
 
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
@@ -24,8 +26,72 @@ const MyCalendar = () => {
   const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
   const [selectedEventDetails, setSelectedEventDetails] = useState<any>(null);
   
-  const { events, loading, hasCompany, createEvent } = useCalendarData();
+  const { events, loading, hasCompany, createEvent, refreshEvents } = useCalendarData();
+  const { importGoogleCalendarEvents } = useGoogleCalendar();
   const calendarRef = useRef<FullCalendar>(null);
+
+  // Sincronização automática com Google Calendar
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        await importGoogleCalendarEvents();
+        refreshEvents();
+      } catch (error) {
+        console.log('Erro na sincronização automática:', error);
+      }
+    }, 300000); // Sincroniza a cada 5 minutos
+
+    return () => clearInterval(syncInterval);
+  }, [importGoogleCalendarEvents, refreshEvents]);
+
+  // Listener para eventos em tempo real
+  useEffect(() => {
+    const channel = supabase
+      .channel('calendar-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_events'
+        },
+        (payload) => {
+          console.log('Evento do calendário alterado:', payload);
+          refreshEvents();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'public_bookings'
+        },
+        async (payload) => {
+          console.log('Novo agendamento público:', payload);
+          
+          // Processar agendamento público
+          try {
+            await supabase.functions.invoke('google-calendar', {
+              body: {
+                action: 'process_public_booking',
+                eventData: {
+                  bookingData: payload.new
+                }
+              }
+            });
+            refreshEvents();
+          } catch (error) {
+            console.error('Erro ao processar agendamento público:', error);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refreshEvents]);
 
   // Função para gerar cores pastéis aleatórias
   const getPastelColor = (str: string) => {
@@ -66,17 +132,14 @@ const MyCalendar = () => {
     let timeStr = null;
     
     if (eventInfo.dateStr) {
-      // Clique simples - pode ser data ou datetime
-      dateStr = eventInfo.dateStr.split('T')[0]; // Extrai apenas a parte da data
+      dateStr = eventInfo.dateStr.split('T')[0];
       if (eventInfo.dateStr.includes('T')) {
-        // Se tem horário, extrai ele também
-        timeStr = eventInfo.dateStr.split('T')[1].substring(0, 5); // HH:MM
+        timeStr = eventInfo.dateStr.split('T')[1].substring(0, 5);
       }
     } else if (eventInfo.start) {
-      // Seleção de intervalo - usa o início
       const startDate = new Date(eventInfo.start);
       dateStr = startDate.toISOString().split('T')[0];
-      timeStr = startDate.toTimeString().substring(0, 5); // HH:MM
+      timeStr = startDate.toTimeString().substring(0, 5);
     }
     
     console.log('📅 Data extraída:', dateStr, 'Hora extraída:', timeStr);
@@ -117,7 +180,6 @@ const MyCalendar = () => {
   const handleEventTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
     console.log('📝 Tipo de evento selecionado:', type);
     
-    // Se não há data selecionada, usar hoje
     if (!selectedDate) {
       const today = new Date().toISOString().split('T')[0];
       setSelectedDate(today);
@@ -261,11 +323,12 @@ const MyCalendar = () => {
           onCreateEvent={handleCreateEvent}
         />
 
-        {/* Modal de Detalhes do Evento */}
-        <EventDetailsModal
+        {/* Modal de Detalhes do Evento Melhorado */}
+        <EnhancedEventDetailsModal
           isOpen={showEventDetailsModal}
           onClose={closeAllModals}
           event={selectedEventDetails}
+          onEventUpdate={refreshEvents}
         />
       </div>
     </div>

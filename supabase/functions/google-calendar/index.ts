@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -58,7 +57,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: `${req.headers.get('origin')}/dashboard`,
+          redirect_uri: 'https://ellosuit.online/dashboard',
           grant_type: 'authorization_code',
         }),
       });
@@ -172,7 +171,7 @@ serve(async (req) => {
           code,
           client_id: googleClientId,
           client_secret: googleClientSecret,
-          redirect_uri: `${req.headers.get('origin')}/dashboard`,
+          redirect_uri: 'https://ellosuit.online/dashboard',
           grant_type: 'authorization_code',
         }),
       });
@@ -232,29 +231,21 @@ serve(async (req) => {
 
     if (action === 'create_event') {
       // Create Google Calendar event
-      console.log('Creating Google Calendar event with access token verification...');
+      console.log('Creating Google Calendar event...');
       
-      // Use the accessToken passed from the frontend
-      const tokenToUse = accessToken;
-      
-      if (!tokenToUse) {
-        console.error('No access token provided');
+      if (!accessToken) {
         throw new Error('Access token is required for creating events');
       }
 
       // Processar datetime corretamente
       const processDateTime = (dateTimeStr: string) => {
-        // Se já está no formato ISO, usar diretamente
-        if (dateTimeStr.includes('T') && dateTimeStr.length > 16) {
-          return dateTimeStr.endsWith('Z') ? dateTimeStr : dateTimeStr + '-03:00';
-        }
-        // Se é apenas data, adicionar timezone
-        return dateTimeStr + 'T00:00:00-03:00';
+        const date = new Date(dateTimeStr);
+        return date.toISOString();
       };
 
       const calendarEvent = {
         summary: eventData.title,
-        description: eventData.description,
+        description: eventData.description || '',
         start: {
           dateTime: processDateTime(eventData.start_date),
           timeZone: 'America/Sao_Paulo',
@@ -271,14 +262,17 @@ serve(async (req) => {
             }
           }
         },
-        attendees: eventData.attendees || []
+        attendees: (eventData.attendees || []).map((attendee: any) => ({
+          email: attendee.email,
+          displayName: attendee.displayName || attendee.email
+        }))
       };
 
       console.log('Making request to Google Calendar API...');
       const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${tokenToUse}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(calendarEvent),
@@ -303,8 +297,6 @@ serve(async (req) => {
         (entry: any) => entry.entryPointType === 'video'
       )?.uri;
 
-      console.log('Meet link extracted:', meetLink);
-
       return new Response(JSON.stringify({ 
         success: true, 
         googleEventId: createdEvent.id,
@@ -318,14 +310,10 @@ serve(async (req) => {
       // Import Google Calendar events
       console.log('Importing Google Calendar events...');
       
-      const tokenToUse = accessToken;
-      
-      if (!tokenToUse) {
-        console.error('No access token provided for import');
+      if (!accessToken) {
         throw new Error('Access token is required for importing events');
       }
 
-      // Buscar eventos dos próximos 30 dias
       const timeMin = new Date().toISOString();
       const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       
@@ -333,7 +321,7 @@ serve(async (req) => {
         `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
         {
           headers: {
-            'Authorization': `Bearer ${tokenToUse}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           }
         }
@@ -350,7 +338,6 @@ serve(async (req) => {
       
       console.log(`Found ${events.length} events in Google Calendar`);
 
-      // Buscar company_id do usuário
       const { data: companyUser, error: companyError } = await supabaseClient
         .from('company_users')
         .select('company_id')
@@ -363,10 +350,8 @@ serve(async (req) => {
 
       let importedCount = 0;
 
-      // Importar cada evento
       for (const event of events) {
         try {
-          // Verificar se já existe
           const { data: existingEvent } = await supabaseClient
             .from('calendar_events')
             .select('id')
@@ -378,7 +363,6 @@ serve(async (req) => {
             continue;
           }
 
-          // Inserir evento
           const { error: insertError } = await supabaseClient
             .from('calendar_events')
             .insert({
@@ -408,6 +392,40 @@ serve(async (req) => {
         imported: importedCount,
         total: events.length
       }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Ação para processar agendamentos públicos
+    if (action === 'process_public_booking') {
+      const { bookingData } = eventData;
+      
+      console.log('Processing public booking:', bookingData);
+      
+      // Criar evento no calendário do usuário
+      const { error: eventError } = await supabaseClient
+        .from('calendar_events')
+        .insert({
+          title: `Reunião com ${bookingData.client_name}`,
+          description: `Reunião agendada publicamente\nCliente: ${bookingData.client_name}\nEmail: ${bookingData.client_email}\nTelefone: ${bookingData.client_phone || 'Não informado'}\nObservações: ${bookingData.notes || 'Nenhuma'}`,
+          start_date: `${bookingData.booking_date}T${bookingData.booking_time}:00-03:00`,
+          end_date: `${bookingData.booking_date}T${String(parseInt(bookingData.booking_time.split(':')[0]) + 1).padStart(2, '0')}:${bookingData.booking_time.split(':')[1]}:00-03:00`,
+          event_type: 'appointment',
+          company_id: bookingData.company_id,
+          created_by: bookingData.user_id,
+          attendees: [{
+            email: bookingData.client_email,
+            displayName: bookingData.client_name
+          }],
+          is_all_day: false
+        });
+
+      if (eventError) {
+        console.error('Error creating calendar event:', eventError);
+        throw eventError;
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

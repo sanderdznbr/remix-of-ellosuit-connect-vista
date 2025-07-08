@@ -39,7 +39,7 @@ const MobileBottomNavigation: React.FC<MobileBottomNavigationProps> = ({
     { 
       id: 'analytics', 
       icon: BarChart3, 
-      label: 'Analytics',
+      label: 'Análises',
       color: 'text-red-500'
     },
   ];

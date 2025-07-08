@@ -131,14 +131,14 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
 
 const MobileMenuContent = () => {
   const menuItems = [
-    { icon: '📧', title: 'Email Tracking', description: 'Rastreamento de emails' },
+    { icon: '📧', title: 'Rastreamento', description: 'Rastreamento de emails' },
     { icon: '📊', title: 'Campanhas', description: 'Gerenciar campanhas de email' },
     { icon: '⚡', title: 'Produtividade', description: 'Métricas e produtividade' },
     { icon: '📅', title: 'Calendário', description: 'Agenda e eventos' },
     { icon: '🤝', title: 'Reuniões', description: 'Gerenciar reuniões' },
     { icon: '📄', title: 'Documentos', description: 'Arquivos e documentos' },
     { icon: '👥', title: 'Clientes', description: 'Base de clientes' },
-    { icon: '📈', title: 'Analytics', description: 'Relatórios e métricas' },
+    { icon: '📈', title: 'Análises', description: 'Relatórios e métricas' },
   ];
 
   return (

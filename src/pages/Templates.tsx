@@ -15,7 +15,7 @@ const Templates = () => {
   if (isMobile) {
     return (
       <MobileLayout 
-        title="Templates" 
+        title="Modelos" 
         activeItem="templates" 
         onItemClick={() => {}}
       >

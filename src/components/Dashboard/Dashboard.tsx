@@ -10,6 +10,7 @@ import DocumentsManager from './DocumentsManager';
 import ClientsManager from './ClientsManager';
 import Analytics from './Analytics';
 import StartMeet from './StartMeet';
+import EmailTemplates from './EmailTemplates';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileLayout from '@/components/Mobile/MobileLayout';
@@ -31,11 +32,13 @@ const Dashboard = () => {
   const getPageTitle = () => {
     switch (activeItem) {
       case 'mail-tracking':
-        return 'Email Tracking';
+        return 'Rastreamento de Email';
       case 'campaign-mail':
         return 'Campanhas';
       case 'mail-productivity':
         return 'Produtividade';
+      case 'templates':
+        return 'Modelos';
       case 'my-calendar':
         return 'Calendário';
       case 'my-meetings':
@@ -47,7 +50,7 @@ const Dashboard = () => {
       case 'clients':
         return 'Clientes';
       case 'analytics':
-        return 'Analytics';
+        return 'Análises';
       default:
         return 'Dashboard';
     }
@@ -62,6 +65,8 @@ const Dashboard = () => {
         return <CampaignMail />;
       case 'mail-productivity':
         return <MailProductivity />;
+      case 'templates':
+        return <EmailTemplates />;
       case 'my-calendar':
         return <MyCalendar />;
       case 'my-meetings':

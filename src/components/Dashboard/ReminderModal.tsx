@@ -42,8 +42,9 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   }, [selectedTime]);
 
   const formatDateTimeToLocal = (date: string, time: string) => {
-    const localDate = new Date(`${date}T${time}:00`);
-    return localDate.toISOString();
+    // Criar datetime com timezone brasileiro explícito
+    const dateTimeStr = `${date}T${time}:00-03:00`;
+    return dateTimeStr;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

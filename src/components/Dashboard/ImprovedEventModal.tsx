@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Video, ExternalLink, AlertCircle, User, Clock } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useZoomIntegration } from '@/hooks/useZoomIntegration';
+import { useTeamsIntegration } from '@/hooks/useTeamsIntegration';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -53,19 +55,11 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   const [manualEmail, setManualEmail] = useState('');
   const [clientsLoading, setClientsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   
-  const { isConnected, loading: googleLoading, connectGoogle, getValidAccessToken } = useGoogleCalendar();
+  const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
+  const { isConnected: zoomConnected, loading: zoomLoading, connectZoom, getValidAccessToken: getZoomToken } = useZoomIntegration();
+  const { isConnected: teamsConnected, loading: teamsLoading, connectTeams, getValidAccessToken: getTeamsToken } = useTeamsIntegration();
   const { user } = useAuth();
-  
-  console.log('🔍 Estado dos hooks:', { isConnected, googleLoading, user: !!user });
-
-  // Carregar clientes
-  useEffect(() => {
-    if (isOpen && user) {
-      loadClients();
-    }
-  }, [isOpen, user]);
 
   const loadClients = async () => {
     if (!user) return;
@@ -92,11 +86,8 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   };
 
   const formatDateTimeToLocal = (date: string, time: string) => {
-    // Criar datetime no formato correto para timezone brasileiro
     const dateTimeStr = `${date}T${time}:00`;
     console.log('🕒 Formatando datetime:', { date, time, dateTimeStr });
-    
-    // Retornar no formato que a edge function espera
     return dateTimeStr;
   };
 
@@ -126,21 +117,20 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isOpen && user) {
+      loadClients();
+    }
+  }, [isOpen, user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || isLoading) {
-      return;
-    }
+    if (!title.trim() || isLoading) return;
 
     setIsLoading(true);
     setError(null);
     
     try {
-      // Validações preventivas
-      if (meetingProvider === 'google_meet' && isConnected && !user) {
-        throw new Error('Usuário não autenticado');
-      }
-      // Usar formatação correta de data/hora
       const startDateTime = isAllDay 
         ? selectedDate 
         : formatDateTimeToLocal(selectedDate, startTime);
@@ -162,22 +152,11 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
         attendees.push({ email: manualEmail });
       }
 
-      // Se Google Meet está selecionado e usuário está conectado
-      if (meetingProvider === 'google_meet' && isConnected) {
+      // Criar meeting baseado no provider selecionado
+      if (meetingProvider === 'google_meet' && googleConnected) {
         try {
-          console.log('🔄 Criando evento no Google Calendar...', {
-            title,
-            startDateTime,
-            endDateTime,
-            attendees
-          });
-          
-          const accessToken = await getValidAccessToken();
-          console.log('🔑 Token obtido:', accessToken ? 'SIM' : 'NÃO');
-          
-          if (!accessToken) {
-            throw new Error('Não foi possível obter access token válido');
-          }
+          console.log('🔄 Criando evento no Google Calendar...');
+          const accessToken = await getGoogleToken();
           
           const { data, error } = await supabase.functions.invoke('google-calendar', {
             body: {
@@ -193,24 +172,66 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
             }
           });
 
-          console.log('📡 Resposta da edge function:', { data, error });
-
-          if (error) {
-            console.error('❌ Erro ao criar evento Google:', error);
-            throw new Error(`Erro da edge function: ${error.message}`);
-          }
-          
+          if (error) throw new Error(`Erro da edge function: ${error.message}`);
           if (data?.success && data?.meetLink) {
             meetingLink = data.meetLink;
-            console.log('✅ Link do Meet criado:', meetingLink);
-          } else if (data?.success) {
-            console.warn('⚠️ Evento criado mas sem link do Meet na resposta');
-          } else {
-            throw new Error('Resposta inválida da edge function');
           }
         } catch (error) {
           console.error('💥 Erro ao criar evento no Google Calendar:', error);
-          throw error; // Re-throw para o usuário ver o erro
+          throw error;
+        }
+      } else if (meetingProvider === 'zoom' && zoomConnected) {
+        try {
+          console.log('🔄 Criando reunião no Zoom...');
+          const accessToken = await getZoomToken();
+          
+          const { data, error } = await supabase.functions.invoke('zoom-integration', {
+            body: {
+              action: 'create_meeting',
+              eventData: {
+                title,
+                description,
+                start_date: startDateTime,
+                end_date: endDateTime
+              },
+              accessToken: accessToken
+            }
+          });
+
+          if (error) throw new Error(`Erro ao criar reunião Zoom: ${error.message}`);
+          if (data?.success && data?.meetingLink) {
+            meetingLink = data.meetingLink;
+          }
+        } catch (error) {
+          console.error('💥 Erro ao criar reunião no Zoom:', error);
+          throw error;
+        }
+      } else if (meetingProvider === 'teams' && teamsConnected) {
+        try {
+          console.log('🔄 Criando reunião no Teams...');
+          const accessToken = await getTeamsToken();
+          
+          const { data, error } = await supabase.functions.invoke('teams-integration', {
+            body: {
+              action: 'create_meeting',
+              eventData: {
+                title,
+                description,
+                start_date: startDateTime,
+                end_date: endDateTime,
+                organizerId: user.id
+              },
+              accessToken: accessToken
+            }
+          });
+
+          if (error) throw new Error(`Erro ao criar reunião Teams: ${error.message}`);
+          if (data?.success && data?.meetingLink) {
+            meetingLink = data.meetingLink;
+          }
+        } catch (error) {
+          console.error('💥 Erro ao criar reunião no Teams:', error);
+          throw error;
         }
       }
 
@@ -230,20 +251,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
       handleClose();
     } catch (error: any) {
       console.error('💥 Erro ao criar evento de reunião:', error);
-      
-      let errorMessage = 'Erro inesperado ao criar reunião';
-      
-      if (error.message?.includes('Não foi possível obter access token')) {
-        errorMessage = 'Erro de autenticação. Reconecte o Google Calendar e tente novamente.';
-      } else if (error.message?.includes('edge function')) {
-        errorMessage = 'Erro no servidor. Tente novamente em alguns momentos.';
-      } else if (error.message?.includes('Usuário não autenticado')) {
-        errorMessage = 'Sessão expirada. Faça login novamente.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setError(errorMessage);
+      setError(error.message || 'Erro inesperado ao criar reunião');
     } finally {
       setIsLoading(false);
     }
@@ -261,305 +269,276 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     setSelectedClient('none');
     setManualEmail('');
     setError(null);
-    setRetryCount(0);
     onClose();
   };
 
-  const handleRetry = () => {
-    setError(null);
-    setRetryCount(prev => prev + 1);
+  const getConnectionStatus = () => {
+    switch (meetingProvider) {
+      case 'google_meet':
+        return { connected: googleConnected, loading: googleLoading, connect: connectGoogle };
+      case 'zoom':
+        return { connected: zoomConnected, loading: zoomLoading, connect: connectZoom };
+      case 'teams':
+        return { connected: teamsConnected, loading: teamsLoading, connect: connectTeams };
+      default:
+        return { connected: false, loading: false, connect: () => {} };
+    }
   };
 
-  console.log('🔍 Verificando se deve renderizar modal:', { isOpen, title, showEventModal: isOpen });
+  if (!isOpen) return null;
 
-  if (!isOpen) {
-    console.log('❌ Modal não deve ser renderizado - isOpen é false');
-    return null;
-  }
+  const { connected, loading, connect } = getConnectionStatus();
 
-  console.log('✅ Iniciando renderização do modal');
-
-  // Fallback de emergência - se algo quebrar, sempre renderizar algo
-  try {
-    return (
-      <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border-0">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-              <Video className="h-5 w-5 text-primary" />
+  return (
+    <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>
+      <DialogContent className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl shadow-2xl border-0 overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          <DialogHeader className="p-8 pb-6 border-b border-gray-100">
+            <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+              <Video className="h-6 w-6 text-primary" />
               Agendar Reunião Online
             </DialogTitle>
           </DialogHeader>
         
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-700">{error}</span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                className="h-7 px-3 text-xs"
-              >
-                Tentar Novamente
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-6">
-            {/* Coluna Esquerda */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium">
-                  Título *
-                </Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Digite o título da reunião"
-                  required
-                  disabled={isLoading}
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">
-                  Descrição
-                </Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descrição opcional da reunião"
-                  rows={3}
-                  disabled={isLoading}
-                  className="rounded-xl resize-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Data</Label>
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  disabled
-                  className="rounded-xl bg-muted"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 bg-muted rounded-xl">
-                  <input
-                    type="checkbox"
-                    id="allDay"
-                    checked={isAllDay}
-                    onChange={(e) => setIsAllDay(e.target.checked)}
-                    disabled={isLoading}
-                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                  />
-                  <Label htmlFor="allDay" className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Reunião de dia inteiro
-                  </Label>
-                </div>
-
-                {!isAllDay && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="startTime" className="text-sm font-medium">
-                        Início
-                      </Label>
-                      <Input
-                        id="startTime"
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        disabled={isLoading}
-                        className="rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="endTime" className="text-sm font-medium">
-                        Término
-                      </Label>
-                      <Input
-                        id="endTime"
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        disabled={isLoading}
-                        className="rounded-xl"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Coluna Direita */}
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Participantes
-                </Label>
-                
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Selecionar Cliente
-                    </Label>
-                    <Select value={selectedClient} onValueChange={setSelectedClient} disabled={isLoading || clientsLoading}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder={clientsLoading ? "Carregando..." : "Escolha um cliente"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum cliente</SelectItem>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name} ({client.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="text-center text-xs text-muted-foreground">ou</div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Email Manual
-                    </Label>
-                    <Input
-                      type="email"
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                      placeholder="email@exemplo.com"
-                      disabled={isLoading || (selectedClient !== '' && selectedClient !== 'none')}
-                      className="rounded-xl"
-                    />
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-8">
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-red-700">{error}</span>
                   </div>
                 </div>
-              </div>
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Coluna Esquerda */}
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-sm font-medium">
+                        Título *
+                      </Label>
+                      <Input
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Digite o título da reunião"
+                        required
+                        disabled={isLoading}
+                        className="rounded-xl h-12"
+                      />
+                    </div>
 
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">
-                  Plataforma de Reunião
-                </Label>
-                
-                {meetingProvider === 'google_meet' && (
-                  <div className={`p-3 rounded-xl border-2 ${
-                    isConnected 
-                      ? 'bg-green-50 border-green-200' 
-                      : 'bg-yellow-50 border-yellow-200'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          isConnected ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <span className="text-xs font-medium">
-                          {isConnected ? 'Conectado' : 'Desconectado'}
-                        </span>
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-sm font-medium">
+                        Descrição
+                      </Label>
+                      <Textarea
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Descrição opcional da reunião"
+                        rows={3}
+                        disabled={isLoading}
+                        className="rounded-xl resize-none"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Data</Label>
+                      <Input
+                        type="date"
+                        value={selectedDate}
+                        disabled
+                        className="rounded-xl bg-muted h-12"
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3 p-4 bg-muted/50 rounded-xl">
+                        <input
+                          type="checkbox"
+                          id="allDay"
+                          checked={isAllDay}
+                          onChange={(e) => setIsAllDay(e.target.checked)}
+                          disabled={isLoading}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <Label htmlFor="allDay" className="text-sm font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Reunião de dia inteiro
+                        </Label>
                       </div>
-                      {!isConnected && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={connectGoogle}
-                          disabled={googleLoading || isLoading}
-                          className="h-7 px-3 text-xs"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          {googleLoading ? 'Conectando...' : 'Conectar'}
-                        </Button>
+
+                      {!isAllDay && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="startTime" className="text-sm font-medium">
+                              Início
+                            </Label>
+                            <Input
+                              id="startTime"
+                              type="time"
+                              value={startTime}
+                              onChange={(e) => setStartTime(e.target.value)}
+                              disabled={isLoading}
+                              className="rounded-xl h-12"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="endTime" className="text-sm font-medium">
+                              Término
+                            </Label>
+                            <Input
+                              id="endTime"
+                              type="time"
+                              value={endTime}
+                              onChange={(e) => setEndTime(e.target.value)}
+                              disabled={isLoading}
+                              className="rounded-xl h-12"
+                            />
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {isConnected ? '✅ Links do Meet serão criados automaticamente' : 
-                       '⚠️ Conecte para gerar links automaticamente'}
-                    </p>
                   </div>
-                )}
-                
-                <div className="grid grid-cols-3 gap-2">
-                  {['google_meet', 'zoom', 'teams'].map((provider) => (
-                    <button
-                      key={provider}
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
-                      className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                        meetingProvider === provider
-                          ? 'border-primary bg-primary/5 shadow-sm'
-                          : 'border-border hover:border-muted-foreground'
-                      }`}
-                    >
-                      {getMeetingProviderLogo(provider)}
-                      <span className="text-xs font-medium">
-                        {provider === 'google_meet' ? 'Meet' : 
-                         provider === 'zoom' ? 'Zoom' : 'Teams'}
-                      </span>
-                    </button>
-                  ))}
+
+                  {/* Coluna Direita */}
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Participantes
+                      </Label>
+                      
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground">
+                            Selecionar Cliente
+                          </Label>
+                          <Select value={selectedClient} onValueChange={setSelectedClient} disabled={isLoading || clientsLoading}>
+                            <SelectTrigger className="rounded-xl h-12">
+                              <SelectValue placeholder={clientsLoading ? "Carregando..." : "Escolha um cliente"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum cliente</SelectItem>
+                              {clients.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name} ({client.email})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="text-center text-xs text-muted-foreground">ou</div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground">
+                            Email Manual
+                          </Label>
+                          <Input
+                            type="email"
+                            value={manualEmail}
+                            onChange={(e) => setManualEmail(e.target.value)}
+                            placeholder="email@exemplo.com"
+                            disabled={isLoading || (selectedClient !== '' && selectedClient !== 'none')}
+                            className="rounded-xl h-12"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium">
+                        Plataforma de Reunião
+                      </Label>
+                      
+                      <div className={`p-4 rounded-xl border-2 ${
+                        connected 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              connected ? 'bg-green-500' : 'bg-yellow-500'
+                            }`}></div>
+                            <span className="text-sm font-medium">
+                              {connected ? 'Conectado' : 'Desconectado'}
+                            </span>
+                          </div>
+                          {!connected && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={connect}
+                              disabled={loading || isLoading}
+                              className="h-8 px-3 text-xs"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              {loading ? 'Conectando...' : 'Conectar'}
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {connected ? '✅ Links de reunião serão criados automaticamente' : 
+                           '⚠️ Conecte para gerar links automaticamente'}
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3">
+                        {['google_meet', 'zoom', 'teams'].map((provider) => (
+                          <button
+                            key={provider}
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom' | 'teams')}
+                            className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                              meetingProvider === provider
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-border hover:border-muted-foreground'
+                            }`}
+                          >
+                            {getMeetingProviderLogo(provider)}
+                            <span className="text-sm font-medium">
+                              {provider === 'google_meet' ? 'Meet' : 
+                               provider === 'zoom' ? 'Zoom' : 'Teams'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex justify-end space-x-3 p-8 pt-6 border-t border-gray-100 bg-gray-50/50">
             <Button 
               type="button" 
               variant="outline" 
               onClick={handleClose}
               disabled={isLoading}
-              className="rounded-xl"
+              className="rounded-xl px-6 h-12"
             >
               Cancelar
             </Button>
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="rounded-xl px-6"
+              onClick={handleSubmit}
+              className="rounded-xl px-8 h-12"
             >
               {isLoading ? 'Criando...' : 'Criar Reunião'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
-  } catch (renderError) {
-    console.error('💥 ERRO CRÍTICO na renderização do modal:', renderError);
-    
-    // Fallback de emergência - modal mínimo que sempre funciona
-    return (
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-[500px] bg-white">
-          <DialogHeader>
-            <DialogTitle>Erro na Reunião Online</DialogTitle>
-          </DialogHeader>
-          <div className="p-4 space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded p-3">
-              <p className="text-red-700">Ocorreu um erro inesperado. Tente novamente ou recarregue a página.</p>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={handleClose}>Fechar</Button>
-              <Button onClick={() => window.location.reload()}>Recarregar</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 };
 
 export default ImprovedEventModal;

@@ -1,0 +1,206 @@
+
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { action, ...payload } = await req.json();
+    console.log('🎯 Zoom Integration Action:', action);
+
+    switch (action) {
+      case 'get_auth_url': {
+        const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
+        if (!zoomClientId) {
+          throw new Error('ZOOM_CLIENT_ID não configurado');
+        }
+
+        const redirectUri = `${req.headers.get('origin')}/dashboard`;
+        const authUrl = `https://zoom.us/oauth/authorize?` +
+          `client_id=${zoomClientId}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `response_type=code&` +
+          `scope=meeting:write`;
+
+        return new Response(JSON.stringify({ authUrl }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'exchange_code': {
+        const { code, userId } = payload;
+        const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
+        const zoomClientSecret = Deno.env.get('ZOOM_CLIENT_SECRET');
+
+        if (!zoomClientId || !zoomClientSecret) {
+          throw new Error('Credenciais Zoom não configuradas');
+        }
+
+        const redirectUri = `${req.headers.get('origin')}/dashboard`;
+        
+        const tokenResponse = await fetch('https://zoom.us/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${zoomClientId}:${zoomClientSecret}`)}`
+          },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: redirectUri
+          })
+        });
+
+        const tokenData = await tokenResponse.json();
+        
+        if (!tokenResponse.ok) {
+          throw new Error(`Erro ao obter token: ${tokenData.error}`);
+        }
+
+        // Obter informações do usuário
+        const userResponse = await fetch('https://api.zoom.us/v2/users/me', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`
+          }
+        });
+
+        const userData = await userResponse.json();
+
+        // Salvar integração
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        
+        const { error } = await supabase
+          .from('meeting_integrations')
+          .upsert({
+            user_id: userId,
+            provider: 'zoom',
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: expiresAt.toISOString(),
+            provider_user_id: userData.id,
+            provider_email: userData.email
+          }, {
+            onConflict: 'user_id,provider'
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'create_meeting': {
+        const { accessToken, eventData } = payload;
+        
+        const meetingData = {
+          topic: eventData.title,
+          type: 2, // Scheduled meeting
+          start_time: eventData.start_date,
+          duration: 60, // default 60 minutes
+          agenda: eventData.description || '',
+          settings: {
+            join_before_host: true,
+            mute_participants_upon_entry: true
+          }
+        };
+
+        const response = await fetch('https://api.zoom.us/v2/users/me/meetings', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(meetingData)
+        });
+
+        const meeting = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(`Erro ao criar reunião Zoom: ${meeting.message}`);
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          meetingLink: meeting.join_url,
+          meetingId: meeting.id
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'renew_token': {
+        const { refreshToken, userId } = payload;
+        const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
+        const zoomClientSecret = Deno.env.get('ZOOM_CLIENT_SECRET');
+
+        const tokenResponse = await fetch('https://zoom.us/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${zoomClientId}:${zoomClientSecret}`)}`
+          },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken
+          })
+        });
+
+        const tokenData = await tokenResponse.json();
+        
+        if (!tokenResponse.ok) {
+          throw new Error(`Erro ao renovar token: ${tokenData.error}`);
+        }
+
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        
+        const { error } = await supabase
+          .from('meeting_integrations')
+          .update({
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token || refreshToken,
+            expires_at: expiresAt.toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('provider', 'zoom');
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          access_token: tokenData.access_token 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      default:
+        throw new Error(`Ação não suportada: ${action}`);
+    }
+
+  } catch (error) {
+    console.error('💥 Erro na integração Zoom:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+});

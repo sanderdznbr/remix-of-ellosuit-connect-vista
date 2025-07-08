@@ -5,9 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, Clock, User, Mail, Phone, MessageSquare, CheckCircle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as CalendarIcon, Clock, User, Mail, Phone, MessageSquare, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const BookingPage = () => {
   const { slug } = useParams();
@@ -16,7 +20,7 @@ const BookingPage = () => {
   
   const [bookingLink, setBookingLink] = useState<any>(null);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [formData, setFormData] = useState({
     client_name: '',
@@ -69,8 +73,9 @@ const BookingPage = () => {
     if (!selectedDate || !bookingLink) return;
 
     try {
-      const selectedDateObj = new Date(selectedDate);
+      const selectedDateObj = selectedDate;
       const dayOfWeek = selectedDateObj.getDay();
+      const dateString = format(selectedDateObj, 'yyyy-MM-dd');
 
       // Buscar horários de disponibilidade para o dia da semana
       const { data: schedules, error: scheduleError } = await supabase
@@ -87,7 +92,7 @@ const BookingPage = () => {
         .from('public_bookings')
         .select('booking_time')
         .eq('user_id', bookingLink.user_id)
-        .eq('booking_date', selectedDate)
+        .eq('booking_date', dateString)
         .eq('status', 'confirmed');
 
       if (bookingError) throw bookingError;
@@ -133,6 +138,8 @@ const BookingPage = () => {
 
     setSubmitting(true);
     try {
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      
       // Criar agendamento
       const { error } = await supabase
         .from('public_bookings')
@@ -140,7 +147,7 @@ const BookingPage = () => {
           booking_link_id: bookingLink.id,
           user_id: bookingLink.user_id,
           company_id: bookingLink.company_id,
-          booking_date: selectedDate,
+          booking_date: dateString,
           booking_time: selectedTime,
           client_name: formData.client_name,
           client_email: formData.client_email,
@@ -169,31 +176,18 @@ const BookingPage = () => {
     }
   };
 
-  // Gerar opções de data (próximos 30 dias, excluindo weekends se necessário)
-  const getDateOptions = () => {
-    const options = [];
+  // Função para desabilitar datas não disponíveis
+  const isDateDisabled = (date: Date) => {
+    // Não permitir datas passadas
     const today = new Date();
-    
-    for (let i = 1; i <= 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      
-      // Skip weekends se não houver horários disponíveis
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Pular domingo e sábado por enquanto
-      
-      options.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('pt-BR', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })
-      });
-    }
-    
-    return options;
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return true;
+
+    // Verificar se o dia da semana tem horários disponíveis
+    const dayOfWeek = date.getDay();
+    // Por enquanto, vamos permitir apenas segunda a sexta (1-5)
+    // Você pode ajustar isso baseado nos dados de availability_schedules
+    return dayOfWeek === 0 || dayOfWeek === 6; // Desabilitar domingo e sábado
   };
 
   if (loading) {
@@ -228,7 +222,7 @@ const BookingPage = () => {
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Agendamento Confirmado!</h2>
             <p className="text-gray-600 mb-4">
-              Seu agendamento para {new Date(selectedDate).toLocaleDateString('pt-BR')} às {selectedTime} foi confirmado.
+              Seu agendamento para {selectedDate ? format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : ''} às {selectedTime} foi confirmado.
             </p>
             <p className="text-sm text-gray-500">
               Em breve você receberá um email de confirmação com todos os detalhes.
@@ -263,30 +257,28 @@ const BookingPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {/* Seleção de Data */}
+              {/* Calendário para seleção de data */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data *
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  Selecione uma data *
                 </label>
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Selecione uma data</option>
-                  {getDateOptions().map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={isDateDisabled}
+                    locale={ptBR}
+                    className={cn("rounded-md border bg-white shadow-sm pointer-events-auto")}
+                  />
+                </div>
               </div>
 
               {/* Horários Disponíveis */}
               {selectedDate && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Horários disponíveis
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Horários disponíveis para {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {availableSlots.length > 0 ? (
@@ -294,17 +286,17 @@ const BookingPage = () => {
                         <button
                           key={slot.time}
                           onClick={() => setSelectedTime(slot.time)}
-                          className={`p-2 text-sm rounded-lg border transition-colors ${
+                          className={`p-3 text-sm rounded-lg border transition-colors ${
                             selectedTime === slot.time
                               ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500 hover:bg-blue-50'
                           }`}
                         >
                           {slot.time}
                         </button>
                       ))
                     ) : (
-                      <p className="col-span-3 text-center text-gray-500 py-4">
+                      <p className="col-span-3 text-center text-gray-500 py-8">
                         Nenhum horário disponível para esta data
                       </p>
                     )}

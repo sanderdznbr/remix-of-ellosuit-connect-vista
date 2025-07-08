@@ -84,7 +84,9 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'start-meet',
       'documents', 
       'clients', 
-      'analytics'
+      'analytics',
+      'settings',
+      'team'
     ];
     
     if (implementedItems.includes(itemId)) {

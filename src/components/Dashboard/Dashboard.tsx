@@ -11,6 +11,8 @@ import ClientsManager from './ClientsManager';
 import Analytics from './Analytics';
 import StartMeet from './StartMeet';
 import EmailTemplates from './EmailTemplates';
+import Settings from '../../pages/Settings';
+import Team from '../../pages/Team';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileLayout from '@/components/Mobile/MobileLayout';
@@ -51,6 +53,10 @@ const Dashboard = () => {
         return 'Clientes';
       case 'analytics':
         return 'Análises';
+      case 'settings':
+        return 'Configurações';
+      case 'team':
+        return 'Equipe';
       default:
         return 'Dashboard';
     }
@@ -79,6 +85,10 @@ const Dashboard = () => {
         return <ClientsManager />;
       case 'analytics':
         return <Analytics />;
+      case 'settings':
+        return <Settings />;
+      case 'team':
+        return <Team />;
       default:
         return <MailTracking />;
     }

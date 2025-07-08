@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -231,27 +232,47 @@ serve(async (req) => {
 
     if (action === 'create_event') {
       // Create Google Calendar event
-      console.log('Creating Google Calendar event...');
+      console.log('Creating Google Calendar event...', eventData);
       
       if (!accessToken) {
+        console.error('Access token is required for creating events');
         throw new Error('Access token is required for creating events');
       }
 
-      // Processar datetime corretamente
-      const processDateTime = (dateTimeStr: string) => {
-        const date = new Date(dateTimeStr);
-        return date.toISOString();
+      // Validate eventData
+      if (!eventData || !eventData.title || !eventData.start_date || !eventData.end_date) {
+        console.error('Invalid event data:', eventData);
+        throw new Error('Missing required event data (title, start_date, end_date)');
+      }
+
+      // Processar datetime corretamente - garantir formato ISO
+      const processDateTime = (dateTimeStr) => {
+        try {
+          const date = new Date(dateTimeStr);
+          if (isNaN(date.getTime())) {
+            throw new Error(`Invalid date: ${dateTimeStr}`);
+          }
+          return date.toISOString();
+        } catch (error) {
+          console.error('Error processing datetime:', dateTimeStr, error);
+          throw new Error(`Invalid datetime format: ${dateTimeStr}`);
+        }
       };
+
+      const startDateTime = processDateTime(eventData.start_date);
+      const endDateTime = processDateTime(eventData.end_date);
+
+      console.log('Processed dates:', { startDateTime, endDateTime });
 
       const calendarEvent = {
         summary: eventData.title,
         description: eventData.description || '',
         start: {
-          dateTime: processDateTime(eventData.start_date),
+          dateTime: startDateTime,
           timeZone: 'America/Sao_Paulo',
         },
         end: {
-          dateTime: processDateTime(eventData.end_date),
+          dateTime: endDateTime,
           timeZone: 'America/Sao_Paulo',
         },
         conferenceData: {
@@ -262,11 +283,13 @@ serve(async (req) => {
             }
           }
         },
-        attendees: (eventData.attendees || []).map((attendee: any) => ({
+        attendees: (eventData.attendees || []).map((attendee) => ({
           email: attendee.email,
           displayName: attendee.displayName || attendee.email
         }))
       };
+
+      console.log('Calendar event payload:', JSON.stringify(calendarEvent, null, 2));
 
       console.log('Making request to Google Calendar API...');
       const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
@@ -278,29 +301,34 @@ serve(async (req) => {
         body: JSON.stringify(calendarEvent),
       });
 
+      const responseText = await response.text();
+      console.log('Google Calendar API response status:', response.status);
+      console.log('Google Calendar API response:', responseText);
+
       if (!response.ok) {
-        const error = await response.text();
-        console.error('Google Calendar API error:', error, 'Status:', response.status);
+        console.error('Google Calendar API error:', responseText, 'Status:', response.status);
         
         if (response.status === 401) {
           throw new Error('Access token expired or invalid. Please reconnect Google Calendar.');
         }
         
-        throw new Error(`Google Calendar API error: ${response.status} - ${error}`);
+        throw new Error(`Google Calendar API error: ${response.status} - ${responseText}`);
       }
 
-      const createdEvent = await response.json();
+      const createdEvent = JSON.parse(responseText);
       console.log('Event created successfully:', createdEvent.id);
       
       // Extract Google Meet link
       const meetLink = createdEvent.conferenceData?.entryPoints?.find(
-        (entry: any) => entry.entryPointType === 'video'
+        (entry) => entry.entryPointType === 'video'
       )?.uri;
+
+      console.log('Google Meet link:', meetLink);
 
       return new Response(JSON.stringify({ 
         success: true, 
         googleEventId: createdEvent.id,
-        meetLink: meetLink
+        meetLink: meetLink || null
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -373,7 +401,7 @@ serve(async (req) => {
               event_type: 'meeting',
               company_id: companyUser.company_id,
               created_by: userId,
-              meeting_link: event.conferenceData?.entryPoints?.find((entry: any) => entry.entryPointType === 'video')?.uri || null,
+              meeting_link: event.conferenceData?.entryPoints?.find((entry) => entry.entryPointType === 'video')?.uri || null,
               meeting_provider: event.conferenceData ? 'google_meet' : null,
               is_all_day: !event.start.dateTime,
               attendees: event.attendees || []
@@ -430,11 +458,15 @@ serve(async (req) => {
       });
     }
 
+    console.error('Invalid action:', action);
     throw new Error('Invalid action');
 
   } catch (error) {
     console.error('Error in google-calendar function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -276,6 +276,57 @@ export const useGoogleCalendar = () => {
     return integration.access_token;
   };
 
+  const createGoogleMeetEvent = async (eventData: any) => {
+    if (!integration) {
+      throw new Error('Google Calendar not connected');
+    }
+
+    try {
+      console.log('🔄 Criando evento Google Meet com dados:', eventData);
+      
+      const accessToken = await getValidAccessToken();
+      
+      // Garantir que os dados estão no formato correto
+      const processedEventData = {
+        title: eventData.title || 'Nova Reunião',
+        description: eventData.description || '',
+        start_date: eventData.start_date,
+        end_date: eventData.end_date,
+        attendees: eventData.attendees || []
+      };
+
+      console.log('📝 Dados processados para o evento:', processedEventData);
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'create_event',
+          eventData: processedEventData,
+          accessToken: accessToken
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erro da edge function:', error);
+        throw new Error(`Erro ao criar evento: ${error.message}`);
+      }
+
+      if (data?.success) {
+        console.log('✅ Evento criado com sucesso:', data);
+        return {
+          success: true,
+          googleEventId: data.googleEventId,
+          meetLink: data.meetLink
+        };
+      } else {
+        console.error('❌ Resposta inesperada da edge function:', data);
+        throw new Error('Falha ao criar evento no Google Calendar');
+      }
+    } catch (error) {
+      console.error('💥 Erro ao criar evento Google Meet:', error);
+      throw error;
+    }
+  };
+
   const disconnectGoogle = async () => {
     if (!user || !integration) return;
 
@@ -329,6 +380,7 @@ export const useGoogleCalendar = () => {
     disconnectGoogle,
     checkConnection,
     getValidAccessToken,
+    createGoogleMeetEvent,
     importGoogleCalendarEvents
   };
 };

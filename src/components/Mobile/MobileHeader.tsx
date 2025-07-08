@@ -36,7 +36,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   return (
     <>
       {/* Header Principal */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 safe-area-pt md:hidden">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Lado Esquerdo */}
           <div className="flex items-center space-x-3">
@@ -113,7 +113,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
 
         {/* Barra de Pesquisa */}
         {isSearchOpen && (
-          <div className="px-4 pb-3 animate-fade-in">
+          <div className="px-4 pb-3 animate-in slide-in-from-top-2 duration-200">
             <Input
               placeholder="Buscar..."
               className="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white"

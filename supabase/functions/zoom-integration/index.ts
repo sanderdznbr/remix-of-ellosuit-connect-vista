@@ -18,7 +18,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action, ...payload } = await req.json();
+    const requestBody = await req.json();
+    console.log('📨 Zoom request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { action, ...payload } = requestBody;
     console.log('🎯 Zoom Integration Action:', action);
 
     switch (action) {
@@ -108,6 +111,18 @@ serve(async (req) => {
 
       case 'create_meeting': {
         const { accessToken, eventData } = payload;
+        
+        console.log('🔍 Creating Zoom meeting with:', { accessToken: accessToken ? 'present' : 'missing', eventData });
+        
+        if (!accessToken) {
+          console.error('❌ Access token missing for Zoom meeting creation');
+          throw new Error('Access token is required for creating Zoom meetings');
+        }
+        
+        if (!eventData || !eventData.title || !eventData.start_date) {
+          console.error('❌ Invalid event data:', eventData);
+          throw new Error('Missing required event data (title, start_date)');
+        }
         
         const meetingData = {
           topic: eventData.title,

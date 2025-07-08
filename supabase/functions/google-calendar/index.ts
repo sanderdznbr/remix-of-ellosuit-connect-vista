@@ -20,7 +20,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action, eventData, userId, accessToken, code, user_id } = await req.json();
+    const requestBody = await req.json();
+    console.log('📨 Request body received:', JSON.stringify(requestBody, null, 2));
+    
+    const { action, eventData, userId, accessToken, code, user_id, refreshToken } = requestBody;
 
     // Get Google credentials from environment
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -110,7 +113,10 @@ serve(async (req) => {
       // Renew expired access token using refresh token
       console.log('Renewing access token...');
       
-      const { refreshToken, userId } = await req.json();
+      if (!refreshToken || !userId) {
+        console.error('Missing refreshToken or userId for token renewal');
+        throw new Error('Missing refreshToken or userId for token renewal');
+      }
       
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',

@@ -44,15 +44,17 @@ const BookingPage = () => {
     try {
       const { data, error } = await supabase
         .from('public_booking_links')
-        .select(`
-          *,
-          availability_schedules (*)
-        `)
+        .select('*')
         .eq('link_slug', slug)
         .eq('is_active', true)
         .single();
 
       if (error) throw error;
+      
+      // Check if link has expired
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        throw new Error('Link expirado');
+      }
       
       setBookingLink(data);
     } catch (error) {

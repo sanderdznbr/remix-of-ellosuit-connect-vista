@@ -162,7 +162,11 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
           });
           
           const accessToken = await getValidAccessToken();
-          console.log('🔑 Token obtido, chamando edge function...');
+          console.log('🔑 Token obtido:', accessToken ? 'SIM' : 'NÃO');
+          
+          if (!accessToken) {
+            throw new Error('Não foi possível obter access token válido');
+          }
           
           const { data, error } = await supabase.functions.invoke('google-calendar', {
             body: {
@@ -182,17 +186,20 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
 
           if (error) {
             console.error('❌ Erro ao criar evento Google:', error);
-            throw error;
+            throw new Error(`Erro da edge function: ${error.message}`);
           }
           
-          if (data?.meetLink) {
+          if (data?.success && data?.meetLink) {
             meetingLink = data.meetLink;
             console.log('✅ Link do Meet criado:', meetingLink);
-          } else {
+          } else if (data?.success) {
             console.warn('⚠️ Evento criado mas sem link do Meet na resposta');
+          } else {
+            throw new Error('Resposta inválida da edge function');
           }
         } catch (error) {
           console.error('💥 Erro ao criar evento no Google Calendar:', error);
+          throw error; // Re-throw para o usuário ver o erro
         }
       }
 
@@ -212,6 +219,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
       handleClose();
     } catch (error) {
       console.error('💥 Erro ao criar evento de reunião:', error);
+      throw error; // Re-throw para mostrar o erro ao usuário
     } finally {
       setIsLoading(false);
     }

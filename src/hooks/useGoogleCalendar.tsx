@@ -164,9 +164,12 @@ export const useGoogleCalendar = () => {
           console.log('✅ OAuth processado com sucesso');
           await checkConnection();
           
+          // Importar eventos do Google Calendar
+          await importGoogleCalendarEvents();
+          
           toast({
             title: "Sucesso",
-            description: "Google Calendar conectado com sucesso!"
+            description: "Google Calendar conectado e eventos importados!"
           });
 
           // Redirecionar para aba calendar se possível
@@ -187,6 +190,39 @@ export const useGoogleCalendar = () => {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const importGoogleCalendarEvents = async () => {
+    if (!integration) return;
+
+    try {
+      console.log('📅 Importando eventos do Google Calendar...');
+      
+      const accessToken = await getValidAccessToken();
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'import_events',
+          accessToken: accessToken,
+          userId: user?.id
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erro ao importar eventos:', error);
+        return;
+      }
+
+      if (data?.success) {
+        console.log('✅ Eventos importados com sucesso:', data.imported);
+        toast({
+          title: "Eventos Importados",
+          description: `${data.imported || 0} eventos foram importados do Google Calendar`
+        });
+      }
+    } catch (error) {
+      console.error('💥 Erro ao importar eventos:', error);
     }
   };
 
@@ -292,6 +328,7 @@ export const useGoogleCalendar = () => {
     connectGoogle,
     disconnectGoogle,
     checkConnection,
-    getValidAccessToken
+    getValidAccessToken,
+    importGoogleCalendarEvents
   };
 };

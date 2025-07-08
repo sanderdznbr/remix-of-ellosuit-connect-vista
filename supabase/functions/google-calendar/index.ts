@@ -314,6 +314,104 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'import_events') {
+      // Import Google Calendar events
+      console.log('Importing Google Calendar events...');
+      
+      const tokenToUse = accessToken;
+      
+      if (!tokenToUse) {
+        console.error('No access token provided for import');
+        throw new Error('Access token is required for importing events');
+      }
+
+      // Buscar eventos dos próximos 30 dias
+      const timeMin = new Date().toISOString();
+      const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+        {
+          headers: {
+            'Authorization': `Bearer ${tokenToUse}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Google Calendar API error during import:', error);
+        throw new Error(`Failed to fetch events: ${response.status} - ${error}`);
+      }
+
+      const data = await response.json();
+      const events = data.items || [];
+      
+      console.log(`Found ${events.length} events in Google Calendar`);
+
+      // Buscar company_id do usuário
+      const { data: companyUser, error: companyError } = await supabaseClient
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (companyError || !companyUser) {
+        throw new Error('User not associated with company');
+      }
+
+      let importedCount = 0;
+
+      // Importar cada evento
+      for (const event of events) {
+        try {
+          // Verificar se já existe
+          const { data: existingEvent } = await supabaseClient
+            .from('calendar_events')
+            .select('id')
+            .eq('title', event.summary || 'Evento sem título')
+            .eq('start_date', event.start.dateTime || event.start.date)
+            .single();
+
+          if (existingEvent) {
+            continue;
+          }
+
+          // Inserir evento
+          const { error: insertError } = await supabaseClient
+            .from('calendar_events')
+            .insert({
+              title: event.summary || 'Evento sem título',
+              description: event.description || '',
+              start_date: event.start.dateTime || event.start.date,
+              end_date: event.end.dateTime || event.end.date,
+              event_type: 'meeting',
+              company_id: companyUser.company_id,
+              created_by: userId,
+              meeting_link: event.conferenceData?.entryPoints?.find((entry: any) => entry.entryPointType === 'video')?.uri || null,
+              meeting_provider: event.conferenceData ? 'google_meet' : null,
+              is_all_day: !event.start.dateTime,
+              attendees: event.attendees || []
+            });
+
+          if (!insertError) {
+            importedCount++;
+          }
+        } catch (eventError) {
+          console.error(`Error importing event ${event.summary}:`, eventError);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        imported: importedCount,
+        total: events.length
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     throw new Error('Invalid action');
 
   } catch (error) {

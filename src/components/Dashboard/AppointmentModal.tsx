@@ -54,9 +54,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   }, [selectedTime]);
 
   const formatDateTimeToLocal = (date: string, time: string) => {
-    // Criar datetime com timezone brasileiro explícito
-    const dateTimeStr = `${date}T${time}:00-03:00`;
-    return dateTimeStr;
+    const localDate = new Date(`${date}T${time}:00`);
+    return localDate.toISOString();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -97,10 +97,10 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   };
 
   const formatDateTimeToLocal = (date: string, time: string) => {
-    // Criar datetime com timezone brasileiro explícito
-    const dateTimeStr = `${date}T${time}:00-03:00`;
-    console.log('🕒 Formatando datetime com timezone brasileiro:', { date, time, dateTimeStr });
-    return dateTimeStr;
+    // Criar data no timezone local do Brasil
+    const localDate = new Date(`${date}T${time}:00`);
+    console.log('🕒 Formatando datetime local:', { date, time, localDate });
+    return localDate.toISOString();
   };
 
   const getMeetingProviderLogo = (provider: string) => {

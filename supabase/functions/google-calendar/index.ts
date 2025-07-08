@@ -251,30 +251,23 @@ serve(async (req) => {
         throw new Error('Missing required event data (title, start_date, end_date)');
       }
 
-      // Processar datetime corretamente - manter timezone brasileiro
+      // Processar datetime corretamente - garantir formato ISO
       const processDateTime = (dateTimeStr) => {
         try {
           let date;
-          
-          // Se já é uma string ISO com timezone
           if (typeof dateTimeStr === 'string' && dateTimeStr.includes('T')) {
-            if (dateTimeStr.includes('Z') || dateTimeStr.includes('+') || dateTimeStr.includes('-')) {
-              // Já tem timezone, usar direto
-              date = new Date(dateTimeStr);
-            } else {
-              // Não tem timezone, assumir que é horário local brasileiro (UTC-3)
-              date = new Date(dateTimeStr + '-03:00');
-            }
+            // Se já tem timezone ou formato ISO, usar direto
+            date = new Date(dateTimeStr);
           } else {
-            // Formato sem timezone, assumir Brasil
-            date = new Date(dateTimeStr + '-03:00');
+            // Se não tem timezone, assumir que é horário local do Brasil
+            date = new Date(dateTimeStr);
           }
           
           if (isNaN(date.getTime())) {
             throw new Error(`Invalid date: ${dateTimeStr}`);
           }
           
-          console.log('Processing datetime:', dateTimeStr, '-> Date object:', date, '-> ISO:', date.toISOString());
+          console.log('Processing datetime:', dateTimeStr, '-> ISO:', date.toISOString());
           return date.toISOString();
         } catch (error) {
           console.error('Error processing datetime:', dateTimeStr, error);

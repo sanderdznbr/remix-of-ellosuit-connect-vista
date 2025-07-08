@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -58,7 +59,11 @@ const MyCalendar = () => {
   }));
 
   const handleDateClick = (arg: any) => {
+    console.log('📅 Data clicada:', arg.dateStr);
     setSelectedDate(arg.dateStr);
+    // Abrir modal de reunião por padrão ao clicar na data
+    setSelectedEventType('meeting');
+    setShowEventModal(true);
   };
 
   const handleEventClick = (arg: any) => {

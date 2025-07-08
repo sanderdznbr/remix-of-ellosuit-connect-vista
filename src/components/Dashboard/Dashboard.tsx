@@ -20,10 +20,12 @@ const Dashboard = () => {
   };
 
   const handleItemClick = (item: string) => {
+    console.log('🔄 Mudando para item:', item);
     setActiveItem(item);
   };
 
   const renderContent = () => {
+    console.log('📋 Renderizando conteúdo para:', activeItem);
     switch (activeItem) {
       case 'mail-tracking':
         return <MailTracking />;

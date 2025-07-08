@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useGmail = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -216,7 +216,7 @@ export const useGmail = () => {
           // Mostrar popup de sucesso
           toast({
             title: "✅ Gmail Conectado!",
-            description: "Sua conta Gmail foi conectada com sucesso! Agora você pode enviar emails.",
+            description: "Gmail foi conectado com sucesso! Agora você pode enviar emails diretamente da plataforma.",
             duration: 5000,
           });
         } else {

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useGoogleCalendar = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -189,7 +189,7 @@ export const useGoogleCalendar = () => {
           body: {
             action: 'exchange_code',
             code: code,
-            userId: user.id
+            user_id: user.id
           }
         });
 
@@ -212,8 +212,8 @@ export const useGoogleCalendar = () => {
           
           // Mostrar popup de sucesso
           toast({
-            title: "✅ Conexão Realizada!",
-            description: "Google Meet conectado com sucesso! Sua conta está sincronizada.",
+            title: "✅ Google Meet Conectado!",
+            description: "Google Meet foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
             duration: 5000,
           });
           

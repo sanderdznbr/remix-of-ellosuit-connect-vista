@@ -17,7 +17,7 @@ import MobileLayout from '@/components/Mobile/MobileLayout';
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeItem, setActiveItem] = useState('mail-tracking');
-  const isMobile = useIsMobile();
+  const { isMobile, isLoading } = useIsMobile();
 
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -78,6 +78,18 @@ const Dashboard = () => {
         return <MailTracking />;
     }
   };
+
+  // Show loading while determining device type
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Mobile Layout
   if (isMobile) {

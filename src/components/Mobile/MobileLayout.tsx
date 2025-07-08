@@ -22,7 +22,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   showAddButton = false,
   onAddClick
 }) => {
-  const isMobile = useIsMobile();
+  const { isMobile } = useIsMobile();
 
   if (!isMobile) {
     return <>{children}</>;

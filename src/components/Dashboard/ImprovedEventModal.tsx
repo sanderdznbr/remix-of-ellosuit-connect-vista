@@ -49,7 +49,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | 'teams'>('google_meet');
   const [isLoading, setIsLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [selectedClient, setSelectedClient] = useState<string>('none');
   const [manualEmail, setManualEmail] = useState('');
   const [clientsLoading, setClientsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +153,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
       let attendees: any[] = [];
 
       // Preparar lista de participantes
-      if (selectedClient) {
+      if (selectedClient && selectedClient !== 'none') {
         const client = clients.find(c => c.id === selectedClient);
         if (client) {
           attendees.push({ email: client.email, displayName: client.name });
@@ -258,7 +258,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     setEndTime('10:00');
     setIsAllDay(false);
     setMeetingProvider('google_meet');
-    setSelectedClient('');
+    setSelectedClient('none');
     setManualEmail('');
     setError(null);
     setRetryCount(0);
@@ -422,7 +422,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
                         <SelectValue placeholder={clientsLoading ? "Carregando..." : "Escolha um cliente"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum cliente</SelectItem>
+                        <SelectItem value="none">Nenhum cliente</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name} ({client.email})
@@ -443,7 +443,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
                       value={manualEmail}
                       onChange={(e) => setManualEmail(e.target.value)}
                       placeholder="email@exemplo.com"
-                      disabled={isLoading || !!selectedClient}
+                      disabled={isLoading || (selectedClient !== '' && selectedClient !== 'none')}
                       className="rounded-xl"
                     />
                   </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 import MobileLayout from '@/components/Mobile/MobileLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,13 +32,23 @@ const Settings = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
+  // Hooks de integração
+  const { 
+    isConnected: googleConnected, 
+    loading: googleLoading, 
+    connectGoogle, 
+    disconnectGoogle 
+  } = useGoogleCalendar();
+  
+  const { 
+    isConnected: zoomConnected, 
+    loading: zoomLoading, 
+    connectZoom, 
+    disconnectZoom 
+  } = useZoomIntegration();
+  
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [brandLogo, setBrandLogo] = useState<string>('');
-  const [integrations, setIntegrations] = useState({
-    google_meet: false,
-    zoom: false,
-    calendly: false
-  });
 
   if (!user) {
     return null;
@@ -68,15 +80,27 @@ const Settings = () => {
     }
   };
 
-  const handleIntegrationToggle = (integration: string) => {
-    setIntegrations(prev => ({
-      ...prev,
-      [integration]: !prev[integration as keyof typeof prev]
-    }));
-    
+  const handleGoogleIntegration = async () => {
+    if (googleConnected) {
+      await disconnectGoogle();
+    } else {
+      await connectGoogle();
+    }
+  };
+
+  const handleZoomIntegration = async () => {
+    if (zoomConnected) {
+      await disconnectZoom();
+    } else {
+      await connectZoom();
+    }
+  };
+
+  const handleCalendlyIntegration = () => {
     toast({
-      title: "Integração atualizada",
-      description: `${integration.replace('_', ' ')} foi ${!integrations[integration as keyof typeof integrations] ? 'conectado' : 'desconectado'}`
+      title: "Em breve",
+      description: "Integração com Calendly será implementada em breve",
+      variant: "default"
     });
   };
 
@@ -129,14 +153,15 @@ const Settings = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={integrations.google_meet ? "default" : "secondary"}>
-                    {integrations.google_meet ? "Conectado" : "Desconectado"}
+                  <Badge variant={googleConnected ? "default" : "secondary"}>
+                    {googleConnected ? "Conectado" : "Desconectado"}
                   </Badge>
                   <Button 
-                    variant={integrations.google_meet ? "outline" : "default"}
-                    onClick={() => handleIntegrationToggle('google_meet')}
+                    variant={googleConnected ? "outline" : "default"}
+                    onClick={handleGoogleIntegration}
+                    disabled={googleLoading}
                   >
-                    {integrations.google_meet ? "Desconectar" : "Conectar"}
+                    {googleLoading ? "Processando..." : (googleConnected ? "Desconectar" : "Conectar")}
                   </Button>
                 </div>
               </div>
@@ -153,14 +178,15 @@ const Settings = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={integrations.zoom ? "default" : "secondary"}>
-                    {integrations.zoom ? "Conectado" : "Desconectado"}
+                  <Badge variant={zoomConnected ? "default" : "secondary"}>
+                    {zoomConnected ? "Conectado" : "Desconectado"}
                   </Badge>
                   <Button 
-                    variant={integrations.zoom ? "outline" : "default"}
-                    onClick={() => handleIntegrationToggle('zoom')}
+                    variant={zoomConnected ? "outline" : "default"}
+                    onClick={handleZoomIntegration}
+                    disabled={zoomLoading}
                   >
-                    {integrations.zoom ? "Desconectar" : "Conectar"}
+                    {zoomLoading ? "Processando..." : (zoomConnected ? "Desconectar" : "Conectar")}
                   </Button>
                 </div>
               </div>
@@ -177,14 +203,15 @@ const Settings = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={integrations.calendly ? "default" : "secondary"}>
-                    {integrations.calendly ? "Conectado" : "Desconectado"}
+                  <Badge variant="secondary">
+                    Em breve
                   </Badge>
                   <Button 
-                    variant={integrations.calendly ? "outline" : "default"}
-                    onClick={() => handleIntegrationToggle('calendly')}
+                    variant="outline"
+                    onClick={handleCalendlyIntegration}
+                    disabled
                   >
-                    {integrations.calendly ? "Desconectar" : "Conectar"}
+                    Em breve
                   </Button>
                 </div>
               </div>

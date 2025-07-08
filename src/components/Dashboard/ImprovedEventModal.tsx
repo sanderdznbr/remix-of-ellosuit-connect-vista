@@ -39,6 +39,8 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   selectedDate,
   onCreateEvent
 }) => {
+  console.log('🎯 ImprovedEventModal renderizando com isOpen:', isOpen);
+  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('09:00');
@@ -53,6 +55,8 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   
   const { isConnected, loading: googleLoading, connectGoogle, getValidAccessToken } = useGoogleCalendar();
   const { user } = useAuth();
+  
+  console.log('🔍 Estado dos hooks:', { isConnected, googleLoading, user: !!user });
 
   // Carregar clientes
   useEffect(() => {
@@ -238,6 +242,10 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
     setManualEmail('');
     onClose();
   };
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={!isLoading ? handleClose : undefined}>

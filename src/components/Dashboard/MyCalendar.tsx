@@ -82,10 +82,12 @@ const MyCalendar = () => {
   };
 
   const handleEventTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
+    console.log('📝 Tipo de evento selecionado:', type);
     setSelectedEventType(type);
     setShowEventTypeSelector(false);
     
     if (type === 'meeting') {
+      console.log('🎯 Abrindo modal de reunião');
       setShowEventModal(true);
     } else if (type === 'appointment') {
       setShowAppointmentModal(true);

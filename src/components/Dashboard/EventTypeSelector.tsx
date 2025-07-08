@@ -23,40 +23,34 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
       title: 'Reunião Online',
       description: 'Agendar uma reunião virtual com Google Meet ou Zoom',
       icon: Video,
-      gradient: 'from-blue-500 to-blue-600',
-      hoverGradient: 'group-hover:from-blue-600 group-hover:to-blue-700',
-      accentColor: 'blue'
+      color: 'blue'
     },
     {
       type: 'appointment' as const,
       title: 'Agendar Compromisso',
       description: 'Marcar um compromisso presencial ou visita',
       icon: Calendar,
-      gradient: 'from-green-500 to-green-600',
-      hoverGradient: 'group-hover:from-green-600 group-hover:to-green-700',
-      accentColor: 'green'
+      color: 'green'
     },
     {
       type: 'reminder' as const,
       title: 'Criar Lembrete',
       description: 'Definir um lembrete com notificações por email ou WhatsApp',
       icon: Bell,
-      gradient: 'from-orange-500 to-orange-600',
-      hoverGradient: 'group-hover:from-orange-600 group-hover:to-orange-700',
-      accentColor: 'orange'
+      color: 'orange'
     }
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-2xl h-auto bg-white rounded-3xl shadow-2xl border-0 p-0 overflow-hidden">
-        <div className="p-8">
-          <DialogHeader className="mb-8">
-            <DialogTitle className="text-3xl font-bold text-gray-900 text-center mb-4">
+      <DialogContent className="max-w-md w-full mx-4 max-h-[85vh] bg-white rounded-2xl shadow-xl border-0 p-0 overflow-hidden">
+        <div className="p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-2xl font-bold text-gray-900 text-center mb-2">
               Criar Novo Evento
             </DialogTitle>
-            <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600 text-center leading-relaxed">
+            <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-3"></div>
+            <p className="text-sm text-gray-600 text-center">
               Escolha o tipo de evento para{' '}
               <span className="font-semibold text-gray-800">
                 {new Date(selectedDate).toLocaleDateString('pt-BR', { 
@@ -69,34 +63,31 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
             </p>
           </DialogHeader>
         
-          <div className="space-y-5 mb-8">
+          <div className="space-y-3 mb-6">
             {eventTypes.map((eventType) => {
               const Icon = eventType.icon;
               return (
                 <Button
                   key={eventType.type}
                   onClick={() => onSelectType(eventType.type)}
-                  className={`w-full p-7 h-auto rounded-2xl border-2 border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:bg-${eventType.accentColor}-50 hover:border-${eventType.accentColor}-200 text-left flex items-start space-x-6 bg-white group relative overflow-hidden`}
+                  className="w-full p-4 h-auto rounded-xl border border-gray-200 transition-all duration-200 hover:shadow-md hover:scale-[1.02] text-left flex items-center space-x-4 bg-white hover:bg-gray-50 group"
                   variant="outline"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-gray-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className={`flex-shrink-0 w-18 h-18 rounded-2xl bg-gradient-to-br ${eventType.gradient} ${eventType.hoverGradient} flex items-center justify-center shadow-lg transition-all duration-300 relative z-10`}>
-                    <Icon className="h-9 w-9 text-white" />
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-${eventType.color}-100 flex items-center justify-center group-hover:bg-${eventType.color}-200 transition-colors`}>
+                    <Icon className={`h-6 w-6 text-${eventType.color}-600`} />
                   </div>
-                  <div className="flex-1 min-w-0 pt-2 relative z-10">
-                    <h3 className={`font-bold text-gray-900 mb-3 text-xl group-hover:text-${eventType.accentColor}-700 transition-colors`}>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 mb-1 text-base">
                       {eventType.title}
                     </h3>
-                    <p className="text-base text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
+                    <p className="text-sm text-gray-600 leading-relaxed">
                       {eventType.description}
                     </p>
                   </div>
-                  <div className="flex-shrink-0 mt-6 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 relative z-10">
-                    <div className={`w-10 h-10 rounded-full bg-${eventType.accentColor}-100 flex items-center justify-center`}>
-                      <svg className={`w-5 h-5 text-${eventType.accentColor}-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </Button>
               );
@@ -106,7 +97,7 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
           <Button 
             onClick={onClose}
             variant="ghost"
-            className="w-full rounded-2xl text-gray-500 hover:bg-gray-100 h-14 text-lg font-medium transition-all duration-200"
+            className="w-full rounded-xl text-gray-500 hover:bg-gray-100 h-12 text-base font-medium transition-all duration-200"
           >
             Cancelar
           </Button>

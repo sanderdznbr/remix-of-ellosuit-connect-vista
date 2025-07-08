@@ -53,11 +53,11 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-md mx-4 p-0 bg-white border border-gray-200 shadow-xl rounded-2xl overflow-hidden">
+      <DialogContent className="max-w-sm w-[90vw] max-h-[85vh] mx-auto p-0 bg-white border border-gray-200 shadow-2xl rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="px-6 py-6 text-center border-b border-gray-100">
           <DialogHeader className="space-y-3">
-            <div className="w-12 h-12 mx-auto bg-blue-50 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 mx-auto bg-[#3600FF]/10 rounded-full flex items-center justify-center">
               <Calendar className="h-6 w-6 text-[#3600FF]" />
             </div>
             <div>
@@ -86,7 +86,7 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
                   <div className="flex items-center space-x-4 w-full">
                     {/* Icon */}
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-blue-50 group-hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors duration-200">
+                      <div className="w-10 h-10 bg-[#3600FF]/10 group-hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors duration-200">
                         <Icon className="h-5 w-5 text-[#3600FF] group-hover:text-white transition-colors duration-200" />
                       </div>
                     </div>

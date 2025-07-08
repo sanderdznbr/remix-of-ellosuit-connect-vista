@@ -192,10 +192,12 @@ const BookingPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50/30 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando informações do agendamento...</p>
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+          <p className="text-gray-600 font-light">Carregando informações do agendamento...</p>
         </div>
       </div>
     );
@@ -203,11 +205,14 @@ const BookingPage = () => {
 
   if (!bookingLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <Card className="max-w-md mx-auto shadow-xl">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Link não encontrado</h2>
-            <p className="text-gray-600">Este link de agendamento não existe ou foi desativado.</p>
+      <div className="min-h-screen bg-gray-50/30 flex items-center justify-center px-4">
+        <Card className="max-w-md mx-auto shadow-sm border-0 bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden">
+          <CardContent className="p-12 text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CalendarIcon className="h-10 w-10 text-gray-400" />
+            </div>
+            <h2 className="text-2xl font-light text-gray-900 mb-4">Link não encontrado</h2>
+            <p className="text-gray-600 leading-relaxed">Este link de agendamento não existe ou foi desativado.</p>
           </CardContent>
         </Card>
       </div>
@@ -216,12 +221,14 @@ const BookingPage = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <Card className="max-w-md mx-auto shadow-xl">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Agendamento Confirmado!</h2>
-            <p className="text-gray-600 mb-4">
+      <div className="min-h-screen bg-gray-50/30 flex items-center justify-center px-4">
+        <Card className="max-w-md mx-auto shadow-sm border-0 bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden">
+          <CardContent className="p-12 text-center">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-light text-gray-900 mb-4">Agendamento Confirmado!</h2>
+            <p className="text-gray-600 mb-4 leading-relaxed">
               Seu agendamento para {selectedDate ? format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : ''} às {selectedTime} foi confirmado.
             </p>
             <p className="text-sm text-gray-500">
@@ -234,156 +241,192 @@ const BookingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{bookingLink.title}</h1>
-          <div className="flex items-center justify-center space-x-2 text-gray-600">
-            <Clock className="h-5 w-5" />
-            <span>{bookingLink.duration_minutes} minutos</span>
+    <div className="min-h-screen bg-gray-50/30 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-light text-gray-900 mb-3">{bookingLink.title}</h1>
+          <div className="flex items-center justify-center space-x-2 text-gray-500 mb-2">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm">{bookingLink.duration_minutes} minutos</span>
           </div>
           {bookingLink.description && (
-            <p className="text-gray-600 mt-4 max-w-2xl mx-auto">{bookingLink.description}</p>
+            <p className="text-gray-600 text-sm max-w-md mx-auto leading-relaxed">{bookingLink.description}</p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Seleção de Data e Hora */}
-          <Card className="shadow-xl border-0 rounded-2xl">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-2xl">
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-6 w-6" />
-                <span>Selecione uma data</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              {/* Calendário para seleção de data */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Selecione uma data *
-                </label>
-                <div className="flex justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          {/* Calendar Section - Takes 3 columns */}
+          <div className="lg:col-span-3">
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm rounded-3xl overflow-hidden">
+              <CardHeader className="bg-white border-b border-gray-100 px-8 py-6">
+                <CardTitle className="text-lg font-medium text-gray-900 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center">
+                    <CalendarIcon className="h-4 w-4 text-blue-600" />
+                  </div>
+                  Selecione uma data
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="flex justify-center mb-8">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     disabled={isDateDisabled}
                     locale={ptBR}
-                    className={cn("rounded-md border bg-white shadow-sm pointer-events-auto")}
+                    className={cn("rounded-2xl border-0 bg-transparent pointer-events-auto")}
+                    classNames={{
+                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                      month: "space-y-4",
+                      caption: "flex justify-center pt-1 relative items-center mb-4",
+                      caption_label: "text-lg font-medium text-gray-900",
+                      nav: "space-x-1 flex items-center",
+                      nav_button: "h-8 w-8 bg-transparent hover:bg-gray-100 rounded-full flex items-center justify-center transition-colors",
+                      nav_button_previous: "absolute left-1",
+                      nav_button_next: "absolute right-1",
+                      table: "w-full border-collapse space-y-1",
+                      head_row: "flex mb-2",
+                      head_cell: "text-gray-500 rounded-lg w-10 font-normal text-sm flex items-center justify-center",
+                      row: "flex w-full mt-2",
+                      cell: "h-10 w-10 text-center text-sm relative p-0 [&:has([aria-selected])]:bg-blue-50 [&:has([aria-selected])]:rounded-xl first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                      day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-100 hover:rounded-xl transition-all duration-200",
+                      day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white rounded-xl",
+                      day_today: "bg-gray-100 text-gray-900 rounded-xl",
+                      day_outside: "text-gray-400 opacity-40",
+                      day_disabled: "text-gray-400 opacity-40 cursor-not-allowed",
+                      day_range_middle: "aria-selected:bg-blue-50 aria-selected:text-blue-900",
+                      day_hidden: "invisible",
+                    }}
                   />
                 </div>
-              </div>
 
-              {/* Horários Disponíveis */}
-              {selectedDate && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Horários disponíveis para {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {availableSlots.length > 0 ? (
-                      availableSlots.map((slot) => (
-                        <button
-                          key={slot.time}
-                          onClick={() => setSelectedTime(slot.time)}
-                          className={`p-3 text-sm rounded-lg border transition-colors ${
-                            selectedTime === slot.time
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500 hover:bg-blue-50'
-                          }`}
-                        >
-                          {slot.time}
-                        </button>
-                      ))
-                    ) : (
-                      <p className="col-span-3 text-center text-gray-500 py-8">
-                        Nenhum horário disponível para esta data
+                {/* Time Slots */}
+                {selectedDate && (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">
+                        Horários disponíveis
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
                       </p>
-                    )}
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      {availableSlots.length > 0 ? (
+                        availableSlots.map((slot) => (
+                          <button
+                            key={slot.time}
+                            onClick={() => setSelectedTime(slot.time)}
+                            className={`p-4 text-sm font-medium rounded-2xl border-2 transition-all duration-200 ${
+                              selectedTime === slot.time
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/25'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-md'
+                            }`}
+                          >
+                            {slot.time}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="col-span-3 text-center py-12">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Clock className="h-6 w-6 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 text-sm">
+                            Nenhum horário disponível para esta data
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Dados do Cliente */}
-          <Card className="shadow-xl border-0 rounded-2xl">
-            <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-2xl">
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-6 w-6" />
-                <span>Seus dados</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome completo *
-                </label>
-                <Input
-                  value={formData.client_name}
-                  onChange={(e) => setFormData({...formData, client_name: e.target.value})}
-                  placeholder="Seu nome completo"
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <Input
-                  type="email"
-                  value={formData.client_email}
-                  onChange={(e) => setFormData({...formData, client_email: e.target.value})}
-                  placeholder="seu@email.com"
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Telefone
-                </label>
-                <Input
-                  value={formData.client_phone}
-                  onChange={(e) => setFormData({...formData, client_phone: e.target.value})}
-                  placeholder="(11) 99999-9999"
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Observações
-                </label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                  placeholder="Alguma informação adicional..."
-                  rows={3}
-                  className="rounded-xl resize-none"
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || !selectedDate || !selectedTime}
-                className="w-full h-12 text-lg font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-              >
-                {submitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Confirmando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Confirmar Agendamento
-                  </>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Form Section - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm rounded-3xl overflow-hidden">
+              <CardHeader className="bg-white border-b border-gray-100 px-8 py-6">
+                <CardTitle className="text-lg font-medium text-gray-900 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-50 rounded-full flex items-center justify-center">
+                    <User className="h-4 w-4 text-purple-600" />
+                  </div>
+                  Seus dados
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome completo *
+                  </label>
+                  <Input
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({...formData, client_name: e.target.value})}
+                    placeholder="Seu nome completo"
+                    className="rounded-2xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 h-12"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <Input
+                    type="email"
+                    value={formData.client_email}
+                    onChange={(e) => setFormData({...formData, client_email: e.target.value})}
+                    placeholder="seu@email.com"
+                    className="rounded-2xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 h-12"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Telefone
+                  </label>
+                  <Input
+                    value={formData.client_phone}
+                    onChange={(e) => setFormData({...formData, client_phone: e.target.value})}
+                    placeholder="(11) 99999-9999"
+                    className="rounded-2xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 h-12"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Observações
+                  </label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    placeholder="Alguma informação adicional..."
+                    rows={3}
+                    className="rounded-2xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 resize-none"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting || !selectedDate || !selectedTime}
+                  className="w-full h-14 text-base font-medium rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/25 transition-all duration-200"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                      Confirmando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5 mr-3" />
+                      Confirmar Agendamento
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -9,28 +9,89 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Edge function atualizada - 2025-01-09 17:30 - Forçar redeploy com secrets
+  console.log('🚀 Google Calendar Edge Function iniciada');
+  console.log('📍 Method:', req.method);
+  console.log('📍 URL:', req.url);
+  console.log('📍 Headers:', Object.fromEntries(req.headers.entries()));
+  
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Verificar variáveis de ambiente essenciais
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
+    
+    console.log('🔧 Verificando variáveis de ambiente:', {
+      supabaseUrl: supabaseUrl ? 'OK' : 'FALTANDO',
+      serviceKey: supabaseServiceKey ? 'OK' : 'FALTANDO',
+      googleClientId: googleClientId ? 'OK' : 'FALTANDO',
+      googleClientSecret: googleClientSecret ? 'OK' : 'FALTANDO'
+    });
 
-    const requestBody = await req.json();
-    console.log('📨 Request body:', JSON.stringify(requestBody, null, 2));
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Variáveis de ambiente do Supabase faltando');
+      return new Response(JSON.stringify({ 
+        error: 'Configuração do servidor incompleta',
+        details: 'Supabase credentials missing'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    if (!googleClientId || !googleClientSecret) {
+      console.error('❌ Credenciais Google faltando');
+      return new Response(JSON.stringify({ 
+        error: 'Google credentials not configured',
+        details: 'GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client criado');
+
+    // Parse request body com timeout
+    let requestBody;
+    try {
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10s timeout
+      
+      requestBody = await req.json();
+      clearTimeout(timeoutId);
+      console.log('📨 Request body recebido:', JSON.stringify(requestBody, null, 2));
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear request body:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        details: parseError.message
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
     
     const { action, ...payload } = requestBody;
     console.log('🎯 Action:', action);
-    
-    // Log para verificar se a função está sendo executada com as secrets corretas
-    console.log('🔍 Verificando secrets no início da função:', {
-      GOOGLE_CLIENT_ID: Deno.env.get('GOOGLE_CLIENT_ID') ? 'CONFIGURADO' : 'NÃO CONFIGURADO',
-      GOOGLE_CLIENT_SECRET: Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'CONFIGURADO' : 'NÃO CONFIGURADO'
-    });
+    console.log('📋 Payload:', JSON.stringify(payload, null, 2));
+
+    if (!action) {
+      console.error('❌ Action não especificada');
+      return new Response(JSON.stringify({ 
+        error: 'Action not specified' 
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
 
     switch (action) {
       case 'get_client_id': {
@@ -81,6 +142,13 @@ serve(async (req) => {
           throw new Error('Credenciais Google não configuradas');
         }
         
+        console.log('📡 Fazendo request para Google token API...');
+        const tokenController = new AbortController();
+        const tokenTimeout = setTimeout(() => {
+          console.error('⏰ Timeout na requisição do token');
+          tokenController.abort();
+        }, 15000); // 15s timeout
+
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: {
@@ -93,7 +161,10 @@ serve(async (req) => {
             grant_type: 'authorization_code',
             redirect_uri: redirectUri,
           }),
+          signal: tokenController.signal,
         });
+
+        clearTimeout(tokenTimeout);
 
         const tokenData = await tokenResponse.json();
         console.log('📡 Resposta do token:', { 
@@ -329,8 +400,37 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Erro na edge function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    console.error('💥 Stack trace:', error.stack);
+    console.error('💥 Error name:', error.name);
+    console.error('💥 Error message:', error.message);
+    
+    // Determinar status code baseado no tipo de erro
+    let statusCode = 500;
+    let errorMessage = error.message;
+    
+    if (error.name === 'AbortError') {
+      statusCode = 408; // Request Timeout
+      errorMessage = 'Request timeout - operação demorou muito para completar';
+    } else if (error.message.includes('JWT')) {
+      statusCode = 401; // Unauthorized
+      errorMessage = 'Erro de autenticação JWT';
+    } else if (error.message.includes('não configurado') || error.message.includes('not configured')) {
+      statusCode = 500; // Server configuration error
+      errorMessage = 'Erro de configuração do servidor';
+    } else if (error.message.includes('Invalid JSON') || error.message.includes('Action not specified')) {
+      statusCode = 400; // Bad Request
+    } else if (error.message.includes('não encontrado') || error.message.includes('não associado')) {
+      statusCode = 404; // Not Found
+      errorMessage = 'Recurso não encontrado';
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      stack: error.stack?.split('\n').slice(0, 5) // Primeiras 5 linhas do stack
+    }), {
+      status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }

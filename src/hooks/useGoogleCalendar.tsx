@@ -167,6 +167,16 @@ export const useGoogleCalendar = () => {
     const state = urlParams.get('state');
     const error = urlParams.get('error');
 
+    console.log('🔄 processOAuthCallback executado:', {
+      hasCode: !!code,
+      hasState: !!state,
+      hasError: !!error,
+      hasUser: !!user,
+      state: state,
+      userDetails: user ? { id: user.id, email: user.email } : null,
+      currentUrl: window.location.href
+    });
+
     if (error) {
       console.error('❌ Erro OAuth Google Meet:', error);
       
@@ -187,7 +197,50 @@ export const useGoogleCalendar = () => {
       return;
     }
 
-    if (code && state === 'google_calendar_auth' && user) {
+    // Verificar se há code e state, mesmo sem user ainda carregado
+    if (code && state === 'google_calendar_auth') {
+      console.log('✅ Code e state válidos encontrados:', { 
+        codePrefix: code.substring(0, 20) + '...', 
+        state,
+        userLoaded: !!user 
+      });
+      
+      // Se user não está carregado ainda, aguardar um pouco
+      if (!user) {
+        console.log('⏳ User não carregado, aguardando...');
+        // Aguardar user carregar (máximo 10 segundos)
+        let attempts = 0;
+        const maxAttempts = 50; // 10 segundos (200ms * 50)
+        
+        const waitForUser = async () => {
+          while (!user && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+            console.log(`⏳ Tentativa ${attempts}/${maxAttempts} aguardando user...`);
+          }
+          
+          if (!user) {
+            console.error('❌ Timeout aguardando user');
+            throw new Error('Usuário não foi carregado. Tente fazer login novamente.');
+          }
+          
+          console.log('✅ User carregado após aguardar:', user.id);
+          return user;
+        };
+        
+        try {
+          await waitForUser();
+        } catch (error) {
+          toast({
+            title: "Erro",
+            description: error.message,
+            variant: "destructive"
+          });
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+      }
+      
       console.log('🔄 Processando código OAuth...', { code, state, userId: user.id });
       setLoading(true);
       

@@ -241,7 +241,12 @@ export const useGoogleCalendar = () => {
         }
       }
       
-      console.log('🔄 Processando código OAuth...', { code, state, userId: user.id });
+      console.log('🔄 Processando código OAuth...', { 
+        codePrefix: code.substring(0, 20) + '...', 
+        state,
+        userId: user?.id || 'AGUARDANDO USER' 
+      });
+      
       setLoading(true);
       
       try {
@@ -249,14 +254,14 @@ export const useGoogleCalendar = () => {
         console.log('📡 Payload enviado:', {
           action: 'exchange_code',
           code: code.substring(0, 20) + '...',
-          user_id: user.id
+          user_id: user?.id || 'AGUARDANDO USER'
         });
         
         const { data, error } = await supabase.functions.invoke('google-calendar', {
           body: {
             action: 'exchange_code',
             code: code,
-            user_id: user.id
+            user_id: user?.id
           }
         });
 
@@ -281,7 +286,7 @@ export const useGoogleCalendar = () => {
         if (data?.success) {
           console.log('✅ OAuth processado com sucesso');
           
-          // Limpar URL primeiro e redirecionar para o calendário
+          // Limpar URL primeiro
           window.history.replaceState({}, document.title, '/dashboard');
           
           // Aguardar um pouco para garantir que a integração foi salva
@@ -304,18 +309,19 @@ export const useGoogleCalendar = () => {
             console.warn('⚠️ Erro ao importar eventos, mas conexão foi bem-sucedida:', importError);
           }
         } else {
+          console.error('❌ Resposta inesperada da edge function:', data);
           throw new Error('Falha na conexão com Google Meet');
         }
       } catch (error) {
         console.error('💥 Erro ao processar OAuth:', error);
         toast({
-          title: "Erro",
-          description: `Erro ao conectar: ${error.message}`,
+          title: "Erro ao Conectar",
+          description: `Erro ao conectar: ${error.message}. Abra o console para mais detalhes.`,
           variant: "destructive"
         });
         
-        // Limpar URL após erro
-        window.history.replaceState({}, document.title, '/dashboard');
+        // Não limpar URL em caso de erro para poder debugar
+        // window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
       }
@@ -528,10 +534,27 @@ export const useGoogleCalendar = () => {
   };
 
   useEffect(() => {
+    console.log('🔄 useGoogleCalendar useEffect executado:', {
+      hasUser: !!user,
+      userDetails: user ? { id: user.id, email: user.email } : null,
+      currentUrl: window.location.href,
+      hasCode: window.location.search.includes('code='),
+      hasState: window.location.search.includes('state='),
+      searchParams: window.location.search
+    });
+    
     if (user) {
+      console.log('✅ User disponível, executando funções...');
       checkConnection();
       getGoogleClientId();
       processOAuthCallback();
+    } else {
+      console.log('⚠️ User não disponível ainda, aguardando...');
+      // Processar callback mesmo sem user se há code na URL
+      if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+        console.log('🔄 Code encontrado na URL, processando callback mesmo sem user...');
+        processOAuthCallback();
+      }
     }
   }, [user]);
 

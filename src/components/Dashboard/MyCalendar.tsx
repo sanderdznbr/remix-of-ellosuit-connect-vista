@@ -14,8 +14,6 @@ import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
 import { Input } from '@/components/ui/input';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from '@/hooks/use-mobile';
-import MobileCalendarView from '@/components/Mobile/MobileCalendarView';
 
 const MyCalendar = () => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
@@ -28,8 +26,6 @@ const MyCalendar = () => {
   const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
   const [selectedEventDetails, setSelectedEventDetails] = useState<any>(null);
   
-  // Hooks devem sempre estar no topo do componente
-  const { isMobile, isLoading } = useIsMobile();
   const { events, loading, hasCompany, createEvent, refreshEvents } = useCalendarData();
   const { importGoogleCalendarEvents } = useGoogleCalendar();
   const calendarRef = useRef<FullCalendar>(null);
@@ -236,23 +232,6 @@ const MyCalendar = () => {
         </div>
       </div>
     );
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando calendário...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Mobile Layout
-  if (isMobile) {
-    return <MobileCalendarView />;
   }
 
   return (

@@ -59,7 +59,6 @@ export type Database = {
           description: string | null
           end_date: string
           event_type: Database["public"]["Enums"]["event_type"]
-          google_event_id: string | null
           id: string
           is_all_day: boolean | null
           meeting_data: Json | null
@@ -69,7 +68,6 @@ export type Database = {
             | null
           recurrence_rule: string | null
           start_date: string
-          sync_status: string | null
           title: string
           updated_at: string
         }
@@ -81,7 +79,6 @@ export type Database = {
           description?: string | null
           end_date: string
           event_type: Database["public"]["Enums"]["event_type"]
-          google_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
           meeting_data?: Json | null
@@ -91,7 +88,6 @@ export type Database = {
             | null
           recurrence_rule?: string | null
           start_date: string
-          sync_status?: string | null
           title: string
           updated_at?: string
         }
@@ -103,7 +99,6 @@ export type Database = {
           description?: string | null
           end_date?: string
           event_type?: Database["public"]["Enums"]["event_type"]
-          google_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
           meeting_data?: Json | null
@@ -113,7 +108,6 @@ export type Database = {
             | null
           recurrence_rule?: string | null
           start_date?: string
-          sync_status?: string | null
           title?: string
           updated_at?: string
         }
@@ -481,48 +475,6 @@ export type Database = {
           },
         ]
       }
-      email_templates: {
-        Row: {
-          category: string
-          company_id: string
-          created_at: string
-          description: string | null
-          html_content: string
-          id: string
-          is_active: boolean
-          name: string
-          preview_text: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          category?: string
-          company_id: string
-          created_at?: string
-          description?: string | null
-          html_content: string
-          id?: string
-          is_active?: boolean
-          name: string
-          preview_text?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          category?: string
-          company_id?: string
-          created_at?: string
-          description?: string | null
-          html_content?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          preview_text?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       emails: {
         Row: {
           campaign_id: string | null
@@ -613,7 +565,6 @@ export type Database = {
           provider: Database["public"]["Enums"]["meeting_provider"]
           provider_email: string | null
           provider_user_id: string | null
-          redirect_uri: string | null
           refresh_token: string | null
           updated_at: string
           user_id: string
@@ -627,7 +578,6 @@ export type Database = {
           provider: Database["public"]["Enums"]["meeting_provider"]
           provider_email?: string | null
           provider_user_id?: string | null
-          redirect_uri?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id: string
@@ -641,7 +591,6 @@ export type Database = {
           provider?: Database["public"]["Enums"]["meeting_provider"]
           provider_email?: string | null
           provider_user_id?: string | null
-          redirect_uri?: string | null
           refresh_token?: string | null
           updated_at?: string
           user_id?: string
@@ -663,7 +612,6 @@ export type Database = {
           created_at: string
           description: string | null
           duration_minutes: number
-          expires_at: string | null
           id: string
           is_active: boolean
           link_slug: string
@@ -677,7 +625,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number
-          expires_at?: string | null
           id?: string
           is_active?: boolean
           link_slug: string
@@ -691,7 +638,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number
-          expires_at?: string | null
           id?: string
           is_active?: boolean
           link_slug?: string

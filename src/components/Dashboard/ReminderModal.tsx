@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Bell, Mail, MessageCircle, ExternalLink, AlertCircle } from 'lucide-react';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { Bell, Mail, MessageCircle } from 'lucide-react';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -30,9 +28,6 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
 
   // Atualizar horário quando selectedTime mudar
   useEffect(() => {
@@ -41,17 +36,11 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
     }
   }, [selectedTime]);
 
-  const formatDateTimeToLocal = (date: string, time: string) => {
-    const localDate = new Date(`${date}T${time}:00`);
-    return localDate.toISOString();
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     setIsLoading(true);
-    setError(null);
     
     try {
       const notifications = [];
@@ -62,56 +51,18 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
         ? `\n\nNotificações: ${notifications.join(', ')}`
         : '';
 
-      const startDateTime = formatDateTimeToLocal(selectedDate, reminderTime);
-      const endDateTime = formatDateTimeToLocal(selectedDate, reminderTime);
-
-      let meetingLink = '';
-      
-      // Criar evento no Google Calendar se conectado (mas oculto)
-      if (googleConnected) {
-        try {
-          console.log('🔄 Criando lembrete no Google Calendar...');
-          const accessToken = await getGoogleToken();
-          
-          const { data, error } = await supabase.functions.invoke('google-calendar', {
-            body: {
-              action: 'create_event',
-              eventData: {
-                title,
-                description: `${description}${notificationText}`,
-                start_date: startDateTime,
-                end_date: endDateTime,
-                attendees: []
-              },
-              accessToken: accessToken
-            }
-          });
-
-          if (error) console.error('Erro ao criar no Google Calendar:', error);
-          if (data?.success && data?.meetLink) {
-            meetingLink = data.meetLink;
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar lembrete no Google Calendar:', error);
-          // Não falha se o Google Calendar der erro
-        }
-      }
-
       await onCreateEvent({
         title,
         description: `${description}${notificationText}`,
-        start_date: startDateTime,
-        end_date: endDateTime,
+        start_date: `${selectedDate}T${reminderTime}:00`,
+        end_date: `${selectedDate}T${reminderTime}:00`,
         event_type: 'reminder',
-        meeting_link: meetingLink,
-        meeting_provider: meetingLink ? 'google_meet' : null,
         is_all_day: false
       });
 
       handleClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao criar lembrete:', error);
-      setError(error.message || 'Erro inesperado ao criar lembrete');
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +74,6 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
     setReminderTime(selectedTime || '09:00');
     setNotifyEmail(true);
     setNotifyWhatsApp(false);
-    setError(null);
     onClose();
   };
 
@@ -134,22 +84,8 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
             <Bell className="h-5 w-5 text-[#3600FF]" />
             Criar Lembrete
-            {googleConnected && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                Sincronizado com Google
-              </span>
-            )}
           </DialogTitle>
         </DialogHeader>
-        
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-700">{error}</span>
-            </div>
-          </div>
-        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -244,30 +180,6 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
               * Notificações por WhatsApp requerem configuração adicional
             </p>
           </div>
-
-          {!googleConnected && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <span className="text-sm font-medium">Google Calendar desconectado</span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={connectGoogle}
-                  disabled={googleLoading || isLoading}
-                  className="h-8 px-3 text-xs"
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  {googleLoading ? 'Conectando...' : 'Conectar'}
-                </Button>
-              </div>
-              <p className="text-xs text-yellow-700 mt-2">
-                Conecte para sincronizar automaticamente com seu Google Calendar
-              </p>
-            </div>
-          )}
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
             <Button 

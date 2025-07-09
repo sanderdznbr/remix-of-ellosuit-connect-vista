@@ -22,9 +22,7 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
     link_slug: '',
     duration_minutes: 30,
     buffer_minutes: 15,
-    is_active: true,
-    expires_at: '',
-    never_expires: false
+    is_active: true
   });
   
   const { createBookingLink } = useMyMeetings();
@@ -59,13 +57,7 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
       return;
     }
 
-    const linkData = {
-      ...newLink,
-      expires_at: newLink.never_expires ? null : (newLink.expires_at || null)
-    };
-    delete linkData.never_expires;
-
-    await createBookingLink(linkData);
+    await createBookingLink(newLink);
     setIsAddingLink(false);
     setNewLink({
       title: '',
@@ -73,9 +65,7 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
       link_slug: '',
       duration_minutes: 30,
       buffer_minutes: 15,
-      is_active: true,
-      expires_at: '',
-      never_expires: false
+      is_active: true
     });
   };
 
@@ -170,48 +160,21 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="expiration">Expiração do Link</Label>
-                <div className="space-y-3 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={newLink.never_expires}
-                      onCheckedChange={(checked) => setNewLink({...newLink, never_expires: checked, expires_at: ''})}
-                    />
-                    <Label>Link nunca expira</Label>
-                  </div>
-                  {!newLink.never_expires && (
-                    <div>
-                      <Label htmlFor="expires_at">Data de Expiração</Label>
-                      <Input
-                        id="expires_at"
-                        type="datetime-local"
-                        value={newLink.expires_at}
-                        onChange={(e) => setNewLink({...newLink, expires_at: e.target.value})}
-                        min={new Date().toISOString().slice(0, 16)}
-                      />
-                    </div>
-                  )}
-                </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={newLink.is_active}
+                  onCheckedChange={(checked) => setNewLink({...newLink, is_active: checked})}
+                />
+                <Label>Link ativo</Label>
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={newLink.is_active}
-                    onCheckedChange={(checked) => setNewLink({...newLink, is_active: checked})}
-                  />
-                  <Label>Link ativo</Label>
-                </div>
-                <div className="flex space-x-2">
-                  <Button variant="outline" onClick={() => setIsAddingLink(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCreateLink} className="bg-[#3600FF] hover:bg-[#3600FF]/90">
-                    Criar Link
-                  </Button>
-                </div>
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={() => setIsAddingLink(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateLink} className="bg-[#3600FF] hover:bg-[#3600FF]/90">
+                  Criar Link
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -249,18 +212,6 @@ const BookingLinksTab: React.FC<BookingLinksTabProps> = ({ bookingLinks }) => {
                         <span>{link.duration_minutes} min</span>
                         <span>•</span>
                         <span>Buffer: {link.buffer_minutes} min</span>
-                        {link.expires_at && (
-                          <>
-                            <span>•</span>
-                            <span>Expira: {new Date(link.expires_at).toLocaleDateString('pt-BR')}</span>
-                          </>
-                        )}
-                        {!link.expires_at && (
-                          <>
-                            <span>•</span>
-                            <span className="text-green-600">Nunca expira</span>
-                          </>
-                        )}
                       </div>
                       <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between">

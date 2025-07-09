@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ const StartMeet = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   
-  const { isConnected: googleConnected, loading: googleLoading, connectGoogle, createGoogleMeetEvent, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
+  const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
   const { isConnected: zoomConnected, loading: zoomLoading, connectZoom, getValidAccessToken: getZoomToken } = useZoomIntegration();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -106,18 +107,25 @@ const StartMeet = () => {
       if (meetingProvider === 'google_meet' && googleConnected) {
         try {
           console.log('🔄 Criando reunião no Google Meet...');
+          const accessToken = await getGoogleToken();
           
-          const result = await createGoogleMeetEvent({
-            title,
-            description,
-            start_date: startDateTime,
-            end_date: endDateTime,
-            attendees
+          const { data, error } = await supabase.functions.invoke('google-calendar', {
+            body: {
+              action: 'create_event',
+              eventData: {
+                title,
+                description,
+                start_date: startDateTime,
+                end_date: endDateTime,
+                attendees
+              },
+              accessToken: accessToken
+            }
           });
 
-          if (result?.success && result?.meetLink) {
-            meetingLink = result.meetLink;
-            console.log('✅ Google Meet link criado:', meetingLink);
+          if (error) throw new Error(`Erro da edge function: ${error.message}`);
+          if (data?.success && data?.meetLink) {
+            meetingLink = data.meetLink;
           }
         } catch (error) {
           console.error('💥 Erro ao criar reunião no Google Meet:', error);

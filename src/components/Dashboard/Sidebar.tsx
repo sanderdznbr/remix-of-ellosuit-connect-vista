@@ -43,29 +43,29 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
     {
       title: 'Email',
       items: [
-        { id: 'mail-tracking', label: 'Rastreamento', icon: Mail },
-        { id: 'campaign-mail', label: 'Campanhas', icon: Send },
-        { id: 'mail-productivity', label: 'Produtividade', icon: TrendingUp },
-        { id: 'templates', label: 'Modelos', icon: FileText },
-        { id: 'clients', label: 'Clientes', icon: Users },
-        { id: 'documents', label: 'Documentos', icon: FolderOpen },
+        { id: 'mail-tracking', label: 'Mail Tracking', icon: Mail },
+        { id: 'campaign-mail', label: 'Campaign Mail', icon: Send },
+        { id: 'mail-productivity', label: 'Mail Productivity', icon: TrendingUp },
+        { id: 'templates', label: 'Templates', icon: FileText },
+        { id: 'clients', label: 'Clients', icon: Users },
+        { id: 'documents', label: 'Documents', icon: FolderOpen },
       ]
     },
     {
-      title: 'Agenda',
+      title: 'Calendar',
       items: [
-        { id: 'my-calendar', label: 'Meu Calendário', icon: Calendar },
-        { id: 'start-meet', label: 'Iniciar Meet', icon: Video },
-        { id: 'my-meetings', label: 'Minhas Reuniões', icon: Calendar },
-        { id: 'analytics', label: 'Análises', icon: BarChart3 },
+        { id: 'my-calendar', label: 'My Calendar', icon: Calendar },
+        { id: 'start-meet', label: 'Start Meet', icon: Video },
+        { id: 'my-meetings', label: 'My Meetings', icon: Calendar },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
       ]
     },
     {
-      title: 'Configurações',
+      title: 'Configuration',
       items: [
-        { id: 'team', label: 'Equipe', icon: Users },
-        { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
-        { id: 'settings', label: 'Configurações', icon: Settings },
+        { id: 'team', label: 'Team', icon: Users },
+        { id: 'whatsapp-api', label: 'Whatsapp API', icon: MessageCircle },
+        { id: 'settings', label: 'Settings', icon: Settings },
       ]
     }
   ];
@@ -78,15 +78,12 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'mail-tracking', 
       'campaign-mail', 
       'mail-productivity', 
-      'templates',
       'my-calendar', 
       'my-meetings',
-      'start-meet',
+      'start-meet', // Adicionado start-meet
       'documents', 
       'clients', 
-      'analytics',
-      'settings',
-      'team'
+      'analytics'
     ];
     
     if (implementedItems.includes(itemId)) {

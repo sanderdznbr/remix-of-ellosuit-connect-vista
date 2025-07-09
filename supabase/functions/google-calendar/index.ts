@@ -35,8 +35,8 @@ serve(async (req) => {
     switch (action) {
       case 'get_client_id': {
         console.log('🔍 Obtendo Client ID...');
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
         
         console.log('🔧 Status das secrets:', {
           clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
@@ -68,8 +68,8 @@ serve(async (req) => {
           redirectUri 
         });
         
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
 
         console.log('🔧 Verificando credenciais no exchange_code:', {
           clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
@@ -238,8 +238,8 @@ serve(async (req) => {
         const { refreshToken, userId } = payload;
         console.log('🔄 Renovando token para usuário:', userId);
         
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
 
         if (!googleClientId || !googleClientSecret) {
           console.error('❌ Credenciais Google não configuradas para renovação');

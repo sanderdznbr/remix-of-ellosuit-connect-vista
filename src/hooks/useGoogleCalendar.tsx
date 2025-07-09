@@ -20,6 +20,7 @@ export const useGoogleCalendar = () => {
 
     try {
       console.log('🔍 Verificando conexão Google Calendar para usuário:', user.id);
+      console.log('🔍 User object completo:', user);
       
       const { data, error } = await supabase
         .from('meeting_integrations')
@@ -36,9 +37,28 @@ export const useGoogleCalendar = () => {
       }
 
       if (data) {
-        console.log('✅ Integração Google encontrada:', data.id);
-        setIntegration(data);
-        setIsConnected(true);
+        console.log('✅ Integração Google encontrada:', data);
+        console.log('🕐 Token expira em:', data.expires_at);
+        console.log('🕐 Agora é:', new Date().toISOString());
+        
+        // Verificar se o token está expirado
+        const now = new Date();
+        const expiresAt = new Date(data.expires_at);
+        
+        if (now >= expiresAt) {
+          console.log('⚠️ Token expirado, tentando renovar...');
+          try {
+            await renewTokenAndUpdateState(data);
+          } catch (error) {
+            console.error('❌ Erro ao renovar token:', error);
+            setIsConnected(false);
+            setIntegration(null);
+            return;
+          }
+        } else {
+          setIntegration(data);
+          setIsConnected(true);
+        }
       } else {
         console.log('⚠️ Nenhuma integração Google encontrada');
         setIsConnected(false);
@@ -262,6 +282,40 @@ export const useGoogleCalendar = () => {
       }
     } catch (error) {
       console.error('💥 Erro ao importar eventos:', error);
+    }
+  };
+
+  const renewTokenAndUpdateState = async (integrationData: any) => {
+    if (!integrationData?.refresh_token) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      console.log('🔄 Renovando token Google...');
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'renew_token',
+          refreshToken: integrationData.refresh_token,
+          userId: user?.id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        console.log('✅ Token renovado com sucesso');
+        // Recarregar a integração atualizada
+        await checkConnection();
+        return data.access_token;
+      }
+
+      throw new Error('Failed to renew token');
+    } catch (error) {
+      console.error('💥 Erro ao renovar token:', error);
+      throw error;
     }
   };
 

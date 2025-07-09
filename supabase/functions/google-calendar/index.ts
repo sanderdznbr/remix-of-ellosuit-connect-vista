@@ -208,29 +208,45 @@ serve(async (req) => {
 
       case 'renew_token': {
         const { refreshToken, userId } = payload;
+        console.log('🔄 Renovando token para usuário:', userId);
+        
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
 
+        if (!googleClientId || !googleClientSecret) {
+          console.error('❌ Credenciais Google não configuradas para renovação');
+          throw new Error('Credenciais Google não configuradas');
+        }
+
+        console.log('📡 Fazendo request para renovar token...');
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams({
-            client_id: googleClientId!,
-            client_secret: googleClientSecret!,
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
             refresh_token: refreshToken,
             grant_type: 'refresh_token',
           }),
         });
 
         const tokenData = await tokenResponse.json();
+        console.log('📡 Resposta renovação token:', { 
+          ok: tokenResponse.ok, 
+          status: tokenResponse.status,
+          hasAccessToken: !!tokenData.access_token,
+          error: tokenData.error 
+        });
         
         if (!tokenResponse.ok) {
-          throw new Error(`Erro ao renovar token: ${tokenData.error}`);
+          console.error('❌ Erro ao renovar token:', tokenData);
+          throw new Error(`Erro ao renovar token: ${tokenData.error || 'Erro desconhecido'}`);
         }
 
         const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        console.log('🕐 Novo token expira em:', expiresAt.toISOString());
         
         const { error } = await supabase
           .from('meeting_integrations')
@@ -243,9 +259,11 @@ serve(async (req) => {
           .eq('provider', 'google_meet');
 
         if (error) {
+          console.error('❌ Erro ao salvar token renovado:', error);
           throw error;
         }
 
+        console.log('✅ Token renovado e salvo com sucesso');
         return new Response(JSON.stringify({ 
           success: true, 
           access_token: tokenData.access_token 

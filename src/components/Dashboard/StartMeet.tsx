@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Video, Users, Clock, Calendar, ExternalLink, AlertCircle } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useZoomIntegration } from '@/hooks/useZoomIntegration';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ interface Client {
 const StartMeet = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom'>('google_meet');
+  const [meetingProvider, setMeetingProvider] = useState<'google_meet'>('google_meet');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [manualEmails, setManualEmails] = useState('');
   const [duration, setDuration] = useState('60');
@@ -30,7 +30,6 @@ const StartMeet = () => {
   const [clientsLoading, setClientsLoading] = useState(false);
   
   const { isConnected: googleConnected, loading: googleLoading, connectGoogle, createGoogleMeetEvent, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
-  const { isConnected: zoomConnected, loading: zoomLoading, connectZoom, getValidAccessToken: getZoomToken } = useZoomIntegration();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -123,32 +122,6 @@ const StartMeet = () => {
           console.error('💥 Erro ao criar reunião no Google Meet:', error);
           throw error;
         }
-      } else if (meetingProvider === 'zoom' && zoomConnected) {
-        try {
-          console.log('🔄 Criando reunião no Zoom...');
-          const accessToken = await getZoomToken();
-          
-          const { data, error } = await supabase.functions.invoke('zoom-integration', {
-            body: {
-              action: 'create_meeting',
-              eventData: {
-                title,
-                description,
-                start_date: startDateTime,
-                end_date: endDateTime
-              },
-              accessToken: accessToken
-            }
-          });
-
-          if (error) throw new Error(`Erro ao criar reunião Zoom: ${error.message}`);
-          if (data?.success && data?.meetingLink) {
-            meetingLink = data.meetingLink;
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar reunião no Zoom:', error);
-          throw error;
-        }
       }
 
       // Salvar no calendário local
@@ -211,8 +184,6 @@ const StartMeet = () => {
     switch (meetingProvider) {
       case 'google_meet':
         return { connected: googleConnected, loading: googleLoading, connect: connectGoogle };
-      case 'zoom':
-        return { connected: zoomConnected, loading: zoomLoading, connect: connectZoom };
       default:
         return { connected: false, loading: false, connect: () => {} };
     }
@@ -319,31 +290,22 @@ const StartMeet = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  {['google_meet', 'zoom'].map((provider) => (
-                    <button
-                      key={provider}
-                      type="button"
-                      disabled={isLoading}
-                      onClick={() => setMeetingProvider(provider as 'google_meet' | 'zoom')}
-                      className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                        meetingProvider === provider
-                          ? 'border-primary bg-primary/5 shadow-sm'
-                          : 'border-border hover:border-muted-foreground'
-                      }`}
-                    >
-                      <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
-                        provider === 'google_meet' ? 'bg-green-500' : 'bg-blue-500'
-                      }`}>
-                        <span className="text-white font-bold text-xs">
-                          {provider === 'google_meet' ? 'GM' : 'Z'}
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {provider === 'google_meet' ? 'Meet' : 'Zoom'}
-                      </span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => setMeetingProvider('google_meet')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                      meetingProvider === 'google_meet'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border hover:border-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center bg-green-500">
+                      <span className="text-white font-bold text-xs">GM</span>
+                    </div>
+                    <span className="text-sm font-medium">Google Meet</span>
+                  </button>
                 </div>
               </div>
             </CardContent>
@@ -435,7 +397,7 @@ const StartMeet = () => {
                     <div className="flex items-center space-x-2">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                       <span className="text-sm text-yellow-700">
-                        Conecte-se ao {meetingProvider === 'google_meet' ? 'Google Meet' : 'Zoom'} para criar reuniões
+                        Conecte-se ao Google Meet para criar reuniões
                       </span>
                     </div>
                   </div>

@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useGmail } from '@/hooks/useGmail';
-import { useZoomIntegration } from '@/hooks/useZoomIntegration';
+
 import MobileLayout from '@/components/Mobile/MobileLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,12 +49,6 @@ const Settings = () => {
     disconnectGmail
   } = useGmail();
   
-  const { 
-    isConnected: zoomConnected, 
-    loading: zoomLoading, 
-    connectZoom, 
-    disconnectZoom 
-  } = useZoomIntegration();
   
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [brandLogo, setBrandLogo] = useState<string>('');
@@ -105,13 +99,6 @@ const Settings = () => {
     }
   };
 
-  const handleZoomIntegration = async () => {
-    if (zoomConnected) {
-      await disconnectZoom();
-    } else {
-      await connectZoom();
-    }
-  };
 
   const handleCalendlyIntegration = () => {
     toast({
@@ -213,30 +200,6 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Zoom */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Video className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Zoom</h3>
-                    <p className="text-sm text-gray-600">Integração com Zoom Meetings</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={zoomConnected ? "default" : "secondary"}>
-                    {zoomConnected ? "Conectado" : "Desconectado"}
-                  </Badge>
-                  <Button 
-                    variant={zoomConnected ? "outline" : "default"}
-                    onClick={handleZoomIntegration}
-                    disabled={zoomLoading}
-                  >
-                    {zoomLoading ? "Processando..." : (zoomConnected ? "Desconectar" : "Conectar")}
-                  </Button>
-                </div>
-              </div>
 
               {/* Calendly */}
               <div className="flex items-center justify-between p-4 border rounded-lg">

@@ -83,6 +83,17 @@ serve(async (req) => {
 
         const userData = await userResponse.json();
 
+        // Obter company_id do usuário
+        const { data: companyData } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user_id)
+          .single();
+
+        if (!companyData?.company_id) {
+          throw new Error('Usuário não está associado a uma empresa');
+        }
+
         // Salvar integração
         const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
         
@@ -90,6 +101,7 @@ serve(async (req) => {
           .from('meeting_integrations')
           .upsert({
             user_id: user_id,
+            company_id: companyData.company_id,
             provider: 'zoom',
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,

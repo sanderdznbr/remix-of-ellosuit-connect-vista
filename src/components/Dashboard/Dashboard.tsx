@@ -13,6 +13,7 @@ import StartMeet from './StartMeet';
 import EmailTemplates from './EmailTemplates';
 import Settings from '../../pages/Settings';
 import Team from '../../pages/Team';
+import TestGoogleSecrets from '@/components/TestGoogleSecrets';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileLayout from '@/components/Mobile/MobileLayout';
@@ -57,6 +58,8 @@ const Dashboard = () => {
         return 'Configurações';
       case 'team':
         return 'Equipe';
+      case 'test-secrets':
+        return 'Teste Secrets';
       default:
         return 'Dashboard';
     }
@@ -89,6 +92,8 @@ const Dashboard = () => {
         return <Settings />;
       case 'team':
         return <Team />;
+      case 'test-secrets':
+        return <TestGoogleSecrets />;
       default:
         return <MailTracking />;
     }

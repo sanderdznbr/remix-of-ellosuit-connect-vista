@@ -66,6 +66,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
         { id: 'team', label: 'Equipe', icon: Users },
         { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
         { id: 'settings', label: 'Configurações', icon: Settings },
+        { id: 'test-secrets', label: '🔍 Teste Secrets', icon: Settings },
       ]
     }
   ];
@@ -86,7 +87,8 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'clients', 
       'analytics',
       'settings',
-      'team'
+      'team',
+      'test-secrets'
     ];
     
     if (implementedItems.includes(itemId)) {

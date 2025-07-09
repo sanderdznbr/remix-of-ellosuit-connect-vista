@@ -32,12 +32,13 @@ serve(async (req) => {
         }
 
         // Usar a URL correta do ellosuit
-        const redirectUri = 'https://ellosuit.online/dashboard';
+        const redirectUri = 'https://www.ellosuit.online/dashboard';
         const authUrl = `https://zoom.us/oauth/authorize?` +
           `client_id=${zoomClientId}&` +
           `redirect_uri=${encodeURIComponent(redirectUri)}&` +
           `response_type=code&` +
-          `scope=meeting:write`;
+          `scope=meeting:write&` +
+          `state=zoom_auth`;
 
         return new Response(JSON.stringify({ authUrl }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -46,14 +47,17 @@ serve(async (req) => {
 
       case 'exchange_code': {
         const { code, user_id } = payload;
+        console.log('🔄 Processando exchange_code para Zoom...', { code: code ? 'presente' : 'ausente', user_id });
+        
         const zoomClientId = Deno.env.get('ZOOM_CLIENT_ID');
         const zoomClientSecret = Deno.env.get('ZOOM_CLIENT_SECRET');
 
         if (!zoomClientId || !zoomClientSecret) {
+          console.error('❌ Credenciais Zoom não configuradas');
           throw new Error('Credenciais Zoom não configuradas');
         }
 
-        const redirectUri = 'https://ellosuit.online/dashboard';
+        const redirectUri = 'https://www.ellosuit.online/dashboard';
         
         const tokenResponse = await fetch('https://zoom.us/oauth/token', {
           method: 'POST',
@@ -69,9 +73,16 @@ serve(async (req) => {
         });
 
         const tokenData = await tokenResponse.json();
+        console.log('📡 Resposta do token Zoom:', { 
+          ok: tokenResponse.ok, 
+          status: tokenResponse.status,
+          hasAccessToken: !!tokenData.access_token,
+          error: tokenData.error 
+        });
         
         if (!tokenResponse.ok) {
-          throw new Error(`Erro ao obter token: ${tokenData.error}`);
+          console.error('❌ Erro ao obter token Zoom:', tokenData);
+          throw new Error(`Erro ao obter token: ${tokenData.error || 'Erro desconhecido'}`);
         }
 
         // Obter informações do usuário
@@ -82,6 +93,16 @@ serve(async (req) => {
         });
 
         const userData = await userResponse.json();
+        console.log('👤 Dados do usuário Zoom:', { 
+          id: userData.id, 
+          email: userData.email,
+          status: userResponse.status 
+        });
+
+        if (!userResponse.ok) {
+          console.error('❌ Erro ao obter dados do usuário Zoom:', userData);
+          throw new Error('Erro ao obter dados do usuário Zoom');
+        }
 
         // Obter company_id do usuário
         const { data: companyData } = await supabase
@@ -91,8 +112,11 @@ serve(async (req) => {
           .single();
 
         if (!companyData?.company_id) {
+          console.error('❌ Usuário não associado a empresa:', { user_id });
           throw new Error('Usuário não está associado a uma empresa');
         }
+
+        console.log('🏢 Company ID encontrado:', companyData.company_id);
 
         // Salvar integração
         const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
@@ -113,9 +137,11 @@ serve(async (req) => {
           });
 
         if (error) {
+          console.error('❌ Erro ao salvar integração Zoom:', error);
           throw error;
         }
 
+        console.log('✅ Integração Zoom salva com sucesso');
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });

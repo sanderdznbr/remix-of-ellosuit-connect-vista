@@ -47,8 +47,29 @@ export const useZoomIntegration = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const state = urlParams.get('state');
+    const error = urlParams.get('error');
+
+    if (error) {
+      console.error('❌ Erro OAuth Zoom:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Zoom.';
+      } else if (error.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração: Adicione https://www.ellosuit.online/dashboard nas "Redirect URLs" do Zoom Marketplace.';
+      }
+      
+      toast({
+        title: "Erro de Autorização Zoom",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      // Limpar URL após erro
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
     
-    if (code && user) {
+    if (code && state === 'zoom_auth' && user) {
       console.log('🔄 Processando callback do Zoom...');
       setLoading(true);
       
@@ -83,6 +104,8 @@ export const useZoomIntegration = () => {
             description: "Zoom foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
             duration: 5000,
           });
+        } else {
+          throw new Error('Falha na conexão com Zoom');
         }
       } catch (error: any) {
         console.error('💥 Erro ao processar callback Zoom:', error);
@@ -91,6 +114,9 @@ export const useZoomIntegration = () => {
           description: `Erro ao conectar Zoom: ${error.message}`,
           variant: "destructive"
         });
+        
+        // Limpar URL após erro
+        window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
       }

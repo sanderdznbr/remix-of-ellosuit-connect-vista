@@ -208,24 +208,41 @@ export const useGoogleCalendar = () => {
       // Se user não está carregado ainda, aguardar um pouco
       if (!user) {
         console.log('⏳ User não carregado, aguardando...');
-        // Aguardar user carregar (máximo 10 segundos)
+        // Aguardar user carregar (máximo 30 segundos)
         let attempts = 0;
-        const maxAttempts = 50; // 10 segundos (200ms * 50)
+        const maxAttempts = 150; // 30 segundos (200ms * 150)
         
         const waitForUser = async () => {
           while (!user && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 200));
             attempts++;
             console.log(`⏳ Tentativa ${attempts}/${maxAttempts} aguardando user...`);
+            
+            // Tentar obter user da sessão atual
+            if (attempts % 10 === 0) { // A cada 2 segundos
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                  console.log('✅ User obtido da sessão durante espera');
+                  return session.user;
+                }
+              } catch (err) {
+                console.log('⚠️ Erro ao verificar sessão durante espera:', err);
+              }
+            }
           }
           
-          if (!user) {
-            console.error('❌ Timeout aguardando user');
+          // Uma última tentativa de obter o user
+          const { data: { session } } = await supabase.auth.getSession();
+          const finalUser = user || session?.user;
+          
+          if (!finalUser) {
+            console.error('❌ Timeout aguardando user após 30 segundos');
             throw new Error('Usuário não foi carregado. Tente fazer login novamente.');
           }
           
-          console.log('✅ User carregado após aguardar:', user.id);
-          return user;
+          console.log('✅ User carregado após aguardar:', finalUser.id);
+          return finalUser;
         };
         
         try {
@@ -241,10 +258,19 @@ export const useGoogleCalendar = () => {
         }
       }
       
+      // Obter user atual (pode ter sido carregado durante a espera)
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = user || session?.user;
+      
+      if (!currentUser) {
+        console.error('❌ Usuário ainda não disponível após espera');
+        throw new Error('Usuário não está autenticado. Faça login novamente.');
+      }
+      
       console.log('🔄 Processando código OAuth...', { 
         codePrefix: code.substring(0, 20) + '...', 
         state,
-        userId: user?.id || 'AGUARDANDO USER' 
+        userId: currentUser.id 
       });
       
       setLoading(true);
@@ -254,7 +280,7 @@ export const useGoogleCalendar = () => {
         console.log('📡 Payload enviado:', {
           action: 'exchange_code',
           code: code.substring(0, 20) + '...',
-          user_id: user?.id
+          user_id: currentUser.id
         });
         
         // Implementar retry logic para melhor confiabilidade
@@ -269,7 +295,7 @@ export const useGoogleCalendar = () => {
               body: {
                 action: 'exchange_code',
                 code: code,
-                user_id: user?.id
+                user_id: currentUser.id
               }
             });
 

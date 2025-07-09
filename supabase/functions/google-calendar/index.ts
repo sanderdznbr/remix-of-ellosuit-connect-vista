@@ -157,9 +157,10 @@ serve(async (req) => {
         }
         
         // Verificar se as credenciais parecem válidas
-        if (!googleClientId.endsWith('.apps.googleusercontent.com')) {
-          console.error('❌ Client ID não parece válido (deve terminar com .apps.googleusercontent.com)');
-          throw new Error('Client ID inválido');
+        if (!googleClientId.includes('apps.googleusercontent.com')) {
+          console.error('❌ Client ID não parece válido (deve conter apps.googleusercontent.com)');
+          console.error('❌ Client ID atual:', googleClientId);
+          throw new Error(`Client ID inválido: ${googleClientId}`);
         }
         
         const tokenPayload = {
@@ -180,9 +181,9 @@ serve(async (req) => {
         
         const tokenController = new AbortController();
         const tokenTimeout = setTimeout(() => {
-          console.error('⏰ Timeout na requisição do token');
+          console.error('⏰ Timeout na requisição do token após 30s');
           tokenController.abort();
-        }, 15000); // 15s timeout
+        }, 30000); // 30s timeout
 
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
@@ -233,42 +234,68 @@ serve(async (req) => {
         }
 
         // Obter informações do usuário
+        console.log('👤 Obtendo dados do usuário do Google...');
+        const userController = new AbortController();
+        const userTimeout = setTimeout(() => {
+          console.error('⏰ Timeout na requisição de dados do usuário após 15s');
+          userController.abort();
+        }, 15000);
+
         const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
           },
+          signal: userController.signal,
         });
 
+        clearTimeout(userTimeout);
         const userData = await userResponse.json();
         console.log('👤 Dados do usuário:', { 
           id: userData.id, 
           email: userData.email,
-          status: userResponse.status 
+          status: userResponse.status,
+          fullUserData: userData
         });
 
         if (!userResponse.ok) {
           console.error('❌ Erro ao obter dados do usuário:', userData);
-          throw new Error('Erro ao obter dados do usuário');
+          throw new Error(`Erro ao obter dados do usuário: ${userData.error?.message || userResponse.statusText}`);
         }
 
         // Obter company_id do usuário
-        const { data: companyData } = await supabase
+        console.log('🏢 Buscando company_id para user_id:', user_id);
+        const { data: companyData, error: companyError } = await supabase
           .from('company_users')
           .select('company_id')
           .eq('user_id', user_id)
           .single();
 
+        if (companyError) {
+          console.error('❌ Erro ao buscar company_id:', companyError);
+          throw new Error(`Erro ao buscar dados da empresa: ${companyError.message}`);
+        }
+
         if (!companyData?.company_id) {
-          console.error('❌ Usuário não associado a empresa:', { user_id });
+          console.error('❌ Usuário não associado a empresa:', { user_id, companyData });
           throw new Error('Usuário não está associado a uma empresa');
         }
 
         console.log('🏢 Company ID encontrado:', companyData.company_id);
 
         // Salvar integração
-        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000);
+        console.log('💾 Salvando integração:', {
+          user_id,
+          company_id: companyData.company_id,
+          provider: 'google_meet',
+          hasAccessToken: !!tokenData.access_token,
+          hasRefreshToken: !!tokenData.refresh_token,
+          expiresAt: expiresAt.toISOString(),
+          provider_user_id: userData.id,
+          provider_email: userData.email
+        });
         
-        const { error } = await supabase
+        const { error: saveError } = await supabase
           .from('meeting_integrations')
           .upsert({
             user_id: user_id,
@@ -283,9 +310,9 @@ serve(async (req) => {
             onConflict: 'user_id,provider'
           });
 
-        if (error) {
-          console.error('❌ Erro ao salvar integração:', error);
-          throw error;
+        if (saveError) {
+          console.error('❌ Erro ao salvar integração:', saveError);
+          throw new Error(`Erro ao salvar integração: ${saveError.message}`);
         }
 
         console.log('✅ Integração salva com sucesso');

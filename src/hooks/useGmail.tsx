@@ -140,7 +140,7 @@ export const useGmail = () => {
         'https://www.googleapis.com/auth/userinfo.profile'
       ].join(' ');
 
-      const redirectUri = `https://ellosuit.online/dashboard`;
+      const redirectUri = `https://www.ellosuit.online/dashboard`;
       
       console.log('📝 Configuração OAuth Gmail:', {
         clientId: clientId,

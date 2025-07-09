@@ -27,7 +27,7 @@ export const GoogleAuthInstructions = ({ isVisible, onClose }: GoogleAuthInstruc
         <div className="bg-white p-3 rounded border border-orange-200">
           <strong>URL para adicionar:</strong>
           <code className="block mt-1 p-2 bg-gray-100 rounded text-sm">
-            https://ellosuit.online/dashboard
+            https://www.ellosuit.online/dashboard
           </code>
         </div>
 

@@ -137,7 +137,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `https://ellosuit.online/dashboard`;
+      const redirectUri = `https://www.ellosuit.online/dashboard`;
       
       console.log('📝 Configuração OAuth:', {
         clientId: clientId,

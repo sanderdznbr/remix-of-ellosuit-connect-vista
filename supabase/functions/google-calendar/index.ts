@@ -41,7 +41,12 @@ serve(async (req) => {
 
       case 'exchange_code': {
         const { code, user_id } = payload;
-        console.log('🔄 Processando exchange_code...', { code: code ? 'presente' : 'ausente', user_id });
+        const redirectUri = 'https://www.ellosuit.online/dashboard';
+        console.log('🔄 Processando exchange_code...', { 
+          code: code ? 'presente' : 'ausente', 
+          user_id,
+          redirectUri 
+        });
         
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
@@ -51,7 +56,7 @@ serve(async (req) => {
           throw new Error('Credenciais Google não configuradas');
         }
 
-        const redirectUri = 'https://ellosuit.online/dashboard';
+        const redirectUri = 'https://www.ellosuit.online/dashboard';
         
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',

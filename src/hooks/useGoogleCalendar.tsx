@@ -193,6 +193,12 @@ export const useGoogleCalendar = () => {
       
       try {
         console.log('📡 Chamando google-calendar edge function...');
+        console.log('📡 Payload enviado:', {
+          action: 'exchange_code',
+          code: code.substring(0, 20) + '...',
+          user_id: user.id
+        });
+        
         const { data, error } = await supabase.functions.invoke('google-calendar', {
           body: {
             action: 'exchange_code',
@@ -201,10 +207,21 @@ export const useGoogleCalendar = () => {
           }
         });
 
-        console.log('📡 Resposta da edge function:', { data, error });
+        console.log('📡 Resposta completa da edge function:', { 
+          data, 
+          error,
+          hasData: !!data,
+          hasError: !!error,
+          errorMessage: error?.message
+        });
 
         if (error) {
-          console.error('❌ Erro da Edge Function:', error);
+          console.error('❌ Erro detalhado da Edge Function:', {
+            error: error,
+            message: error.message,
+            details: error.details,
+            stack: error.stack
+          });
           throw new Error(`Erro ao conectar: ${error.message || 'Erro desconhecido'}`);
         }
 

@@ -123,18 +123,32 @@ serve(async (req) => {
       case 'exchange_code': {
         const { code, user_id } = payload;
         const redirectUri = 'https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard';
+        
         console.log('🔄 Processando exchange_code...', { 
-          code: code ? 'presente' : 'ausente', 
+          code: code ? `presente (${code.substring(0, 20)}...)` : 'AUSENTE', 
           user_id,
           redirectUri 
         });
+        
+        // Validação de entrada
+        if (!code) {
+          console.error('❌ Código de autorização não fornecido');
+          throw new Error('Código de autorização é obrigatório');
+        }
+        
+        if (!user_id) {
+          console.error('❌ User ID não fornecido');
+          throw new Error('User ID é obrigatório');
+        }
         
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
 
         console.log('🔧 Verificando credenciais no exchange_code:', {
           clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
-          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
+          clientSecret: googleClientSecret ? `Configurado (${googleClientSecret.substring(0, 10)}...)` : 'NÃO CONFIGURADO',
+          clientIdLength: googleClientId?.length || 0,
+          clientSecretLength: googleClientSecret?.length || 0
         });
 
         if (!googleClientId || !googleClientSecret) {
@@ -142,7 +156,28 @@ serve(async (req) => {
           throw new Error('Credenciais Google não configuradas');
         }
         
-        console.log('📡 Fazendo request para Google token API...');
+        // Verificar se as credenciais parecem válidas
+        if (!googleClientId.endsWith('.apps.googleusercontent.com')) {
+          console.error('❌ Client ID não parece válido (deve terminar com .apps.googleusercontent.com)');
+          throw new Error('Client ID inválido');
+        }
+        
+        const tokenPayload = {
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          code: code,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+        };
+        
+        console.log('📡 Fazendo request para Google token API...', {
+          url: 'https://oauth2.googleapis.com/token',
+          method: 'POST',
+          clientIdUsed: googleClientId.substring(0, 20) + '...',
+          codeUsed: code.substring(0, 20) + '...',
+          redirectUri: redirectUri
+        });
+        
         const tokenController = new AbortController();
         const tokenTimeout = setTimeout(() => {
           console.error('⏰ Timeout na requisição do token');
@@ -154,29 +189,47 @@ serve(async (req) => {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            code: code,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUri,
-          }),
+          body: new URLSearchParams(tokenPayload),
           signal: tokenController.signal,
         });
 
         clearTimeout(tokenTimeout);
 
         const tokenData = await tokenResponse.json();
-        console.log('📡 Resposta do token:', { 
+        console.log('📡 Resposta completa do token:', { 
           ok: tokenResponse.ok, 
           status: tokenResponse.status,
+          statusText: tokenResponse.statusText,
           hasAccessToken: !!tokenData.access_token,
-          error: tokenData.error 
+          hasRefreshToken: !!tokenData.refresh_token,
+          expiresIn: tokenData.expires_in,
+          error: tokenData.error,
+          errorDescription: tokenData.error_description,
+          fullResponse: tokenData
         });
         
         if (!tokenResponse.ok) {
-          console.error('❌ Erro ao obter token:', tokenData);
-          throw new Error(`Erro ao obter token: ${tokenData.error || 'Erro desconhecido'}`);
+          console.error('❌ Erro detalhado ao obter token:', {
+            status: tokenResponse.status,
+            statusText: tokenResponse.statusText,
+            error: tokenData.error,
+            errorDescription: tokenData.error_description,
+            fullTokenData: tokenData
+          });
+          
+          // Mensagens de erro mais específicas
+          let errorMessage = 'Erro ao obter token do Google';
+          if (tokenData.error === 'invalid_grant') {
+            errorMessage = 'Código de autorização inválido ou expirado. Tente conectar novamente.';
+          } else if (tokenData.error === 'invalid_client') {
+            errorMessage = 'Credenciais Google inválidas. Verifique o Client ID e Client Secret.';
+          } else if (tokenData.error === 'redirect_uri_mismatch') {
+            errorMessage = 'Redirect URI não configurado corretamente no Google Console.';
+          } else if (tokenData.error_description) {
+            errorMessage = `Erro Google: ${tokenData.error_description}`;
+          }
+          
+          throw new Error(errorMessage);
         }
 
         // Obter informações do usuário

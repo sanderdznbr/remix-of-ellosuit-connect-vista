@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Edge function atualizada - 2025-01-09 17:30 - Forçar redeploy com secrets
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,16 +25,35 @@ serve(async (req) => {
     
     const { action, ...payload } = requestBody;
     console.log('🎯 Action:', action);
+    
+    // Log para verificar se a função está sendo executada com as secrets corretas
+    console.log('🔍 Verificando secrets no início da função:', {
+      GOOGLE_CLIENT_ID: Deno.env.get('GOOGLE_CLIENT_ID') ? 'CONFIGURADO' : 'NÃO CONFIGURADO',
+      GOOGLE_CLIENT_SECRET: Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'CONFIGURADO' : 'NÃO CONFIGURADO'
+    });
 
     switch (action) {
       case 'get_client_id': {
+        console.log('🔍 Obtendo Client ID...');
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        
+        console.log('🔧 Status das secrets:', {
+          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
+          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
+        });
         
         if (!googleClientId) {
-          console.error('❌ GOOGLE_CLIENT_ID não configurado');
-          throw new Error('GOOGLE_CLIENT_ID não configurado');
+          console.error('❌ GOOGLE_CLIENT_ID não encontrado nas secrets');
+          throw new Error('Google Client ID não configurado');
         }
         
+        if (!googleClientSecret) {
+          console.error('❌ GOOGLE_CLIENT_SECRET não encontrado nas secrets');
+          throw new Error('Google Client Secret não configurado');
+        }
+        
+        console.log('✅ Ambas as credenciais encontradas com sucesso');
         return new Response(JSON.stringify({ client_id: googleClientId }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -51,12 +71,15 @@ serve(async (req) => {
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
 
+        console.log('🔧 Verificando credenciais no exchange_code:', {
+          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
+          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
+        });
+
         if (!googleClientId || !googleClientSecret) {
-          console.error('❌ Credenciais Google não configuradas');
+          console.error('❌ Credenciais Google não configuradas no exchange_code');
           throw new Error('Credenciais Google não configuradas');
         }
-
-        const redirectUri = 'https://www.ellosuit.online/dashboard';
         
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',

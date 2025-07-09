@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useZoomIntegration = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -21,10 +21,12 @@ export const useZoomIntegration = () => {
         .select('*')
         .eq('user_id', user.id)
         .eq('provider', 'zoom')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('❌ Erro ao verificar integração Zoom:', error);
+        setIsConnected(false);
+        setIntegration(null);
         return;
       }
 
@@ -45,8 +47,29 @@ export const useZoomIntegration = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const state = urlParams.get('state');
+    const error = urlParams.get('error');
+
+    if (error) {
+      console.error('❌ Erro OAuth Zoom:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Zoom.';
+      } else if (error.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração: Adicione https://www.ellosuit.online/dashboard nas "Redirect URLs" do Zoom Marketplace.';
+      }
+      
+      toast({
+        title: "Erro de Autorização Zoom",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      // Limpar URL após erro
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
     
-    if (code && user) {
+    if (code && state === 'zoom_auth' && user) {
       console.log('🔄 Processando callback do Zoom...');
       setLoading(true);
       
@@ -55,7 +78,7 @@ export const useZoomIntegration = () => {
           body: {
             action: 'exchange_code',
             code: code,
-            userId: user.id
+            user_id: user.id
           }
         });
 
@@ -65,14 +88,24 @@ export const useZoomIntegration = () => {
 
         if (data?.success) {
           console.log('✅ Zoom conectado com sucesso');
-          await checkConnection();
-          toast({
-            title: "Sucesso",
-            description: "Zoom conectado com sucesso!"
-          });
           
-          // Limpar URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
+          // Limpar URL primeiro
+          window.history.replaceState({}, document.title, '/dashboard');
+          
+          // Aguardar um pouco para garantir que a integração foi salva
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verificar conexão
+          await checkConnection();
+          
+          // Mostrar popup de sucesso
+          toast({
+            title: "✅ Zoom Conectado!",
+            description: "Zoom foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
+            duration: 5000,
+          });
+        } else {
+          throw new Error('Falha na conexão com Zoom');
         }
       } catch (error: any) {
         console.error('💥 Erro ao processar callback Zoom:', error);
@@ -81,6 +114,9 @@ export const useZoomIntegration = () => {
           description: `Erro ao conectar Zoom: ${error.message}`,
           variant: "destructive"
         });
+        
+        // Limpar URL após erro
+        window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
       }
@@ -103,7 +139,7 @@ export const useZoomIntegration = () => {
       console.log('🔗 Iniciando conexão com Zoom...');
       
       const { data, error } = await supabase.functions.invoke('zoom-integration', {
-        body: { action: 'get_auth_url', userId: user.id }
+        body: { action: 'get_auth_url', user_id: user.id }
       });
 
       if (error) {
@@ -154,7 +190,7 @@ export const useZoomIntegration = () => {
         body: {
           action: 'renew_token',
           refreshToken: integration.refresh_token,
-          userId: user?.id
+          user_id: user?.id
         }
       });
 

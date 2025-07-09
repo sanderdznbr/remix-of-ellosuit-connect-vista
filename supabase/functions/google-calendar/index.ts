@@ -1,5 +1,7 @@
+
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,436 +9,429 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('🚀 Google Calendar Edge Function iniciada');
+  console.log('📍 Method:', req.method);
+  console.log('📍 URL:', req.url);
+  console.log('📍 Headers:', Object.fromEntries(req.headers.entries()));
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Verificar variáveis de ambiente essenciais
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
+    
+    console.log('🔧 Verificando variáveis de ambiente:', {
+      supabaseUrl: supabaseUrl ? 'OK' : 'FALTANDO',
+      serviceKey: supabaseServiceKey ? 'OK' : 'FALTANDO',
+      googleClientId: googleClientId ? 'OK' : 'FALTANDO',
+      googleClientSecret: googleClientSecret ? 'OK' : 'FALTANDO'
+    });
 
-    const { action, eventData, userId, accessToken, code, user_id } = await req.json();
-
-    // Get Google credentials from environment
-    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Variáveis de ambiente do Supabase faltando');
+      return new Response(JSON.stringify({ 
+        error: 'Configuração do servidor incompleta',
+        details: 'Supabase credentials missing'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
 
     if (!googleClientId || !googleClientSecret) {
-      console.error('Google credentials not configured');
+      console.error('❌ Credenciais Google faltando');
       return new Response(JSON.stringify({ 
-        error: 'Google credentials not configured in Supabase secrets' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        error: 'Google credentials not configured',
+        details: 'GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
 
-    // Action to get Google Client ID
-    if (action === 'get_client_id') {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client criado');
+
+    // Parse request body com timeout
+    let requestBody;
+    try {
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10s timeout
+      
+      requestBody = await req.json();
+      clearTimeout(timeoutId);
+      console.log('📨 Request body recebido:', JSON.stringify(requestBody, null, 2));
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear request body:', parseError);
       return new Response(JSON.stringify({ 
-        client_id: googleClientId 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        error: 'Invalid JSON in request body',
+        details: parseError.message
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
+    
+    const { action, ...payload } = requestBody;
+    console.log('🎯 Action:', action);
+    console.log('📋 Payload:', JSON.stringify(payload, null, 2));
 
-    if (action === 'exchange_code') {
-      // Exchange authorization code for access token
-      console.log('Exchanging code for tokens...');
-      
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code,
-          client_id: googleClientId,
-          client_secret: googleClientSecret,
-          redirect_uri: 'https://ellosuit.online/dashboard',
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error('Token exchange failed:', errorText);
-        throw new Error(`Failed to exchange code for token: ${tokenResponse.status}`);
-      }
-
-      const tokens = await tokenResponse.json();
-      console.log('Tokens received successfully');
-      
-      // Get user company
-      const { data: companyUser } = await supabaseClient
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userId || user_id)
-        .single();
-
-      if (!companyUser) {
-        throw new Error('User not associated with company');
-      }
-
-      // Store integration
-      const { error } = await supabaseClient
-        .from('meeting_integrations')
-        .upsert({
-          user_id: userId || user_id,
-          company_id: companyUser.company_id,
-          provider: 'google_meet',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-        });
-
-      if (error) {
-        console.error('Failed to store integration:', error);
-        throw error;
-      }
-
-      console.log('Integration stored successfully');
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (action === 'renew_token') {
-      // Renew expired access token using refresh token
-      console.log('Renewing access token...');
-      
-      const { refreshToken, userId } = await req.json();
-      
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: googleClientId,
-          client_secret: googleClientSecret,
-          grant_type: 'refresh_token',
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error('Token renewal failed:', errorText);
-        throw new Error(`Failed to renew token: ${tokenResponse.status}`);
-      }
-
-      const tokens = await tokenResponse.json();
-      console.log('Tokens renewed successfully');
-      
-      // Update the stored integration with new token
-      const { error } = await supabaseClient
-        .from('meeting_integrations')
-        .update({
-          access_token: tokens.access_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .eq('provider', 'google_meet');
-
-      if (error) {
-        console.error('Failed to update integration:', error);
-        throw error;
-      }
-
-      console.log('Integration updated with new token');
+    if (!action) {
+      console.error('❌ Action não especificada');
       return new Response(JSON.stringify({ 
-        success: true, 
-        access_token: tokens.access_token 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        error: 'Action not specified' 
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
 
-    if (action === 'exchange_code_gmail') {
-      // Exchange authorization code for Gmail access token
-      console.log('Exchanging code for Gmail tokens...');
-      
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code,
-          client_id: googleClientId,
-          client_secret: googleClientSecret,
-          redirect_uri: 'https://ellosuit.online/dashboard',
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error('Gmail token exchange failed:', errorText);
-        throw new Error(`Failed to exchange code for Gmail token: ${tokenResponse.status}`);
-      }
-
-      const tokens = await tokenResponse.json();
-      
-      // Get user info
-      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${tokens.access_token}`
-        }
-      });
-
-      const userInfo = await userInfoResponse.json();
-      
-      // Get user company
-      const { data: companyUser } = await supabaseClient
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user_id)
-        .single();
-
-      if (!companyUser) {
-        throw new Error('User not associated with company');
-      }
-
-      // Store Gmail integration
-      const { error } = await supabaseClient
-        .from('user_email_accounts')
-        .upsert({
-          user_id: user_id,
-          company_id: companyUser.company_id,
-          provider: 'gmail',
-          email: userInfo.email,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-          provider_user_id: userInfo.id
-        });
-
-      if (error) {
-        console.error('Failed to store Gmail integration:', error);
-        throw error;
-      }
-
-      console.log('Gmail integration stored successfully');
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (action === 'create_event') {
-      // Create Google Calendar event
-      console.log('Creating Google Calendar event...');
-      
-      if (!accessToken) {
-        throw new Error('Access token is required for creating events');
-      }
-
-      // Processar datetime corretamente
-      const processDateTime = (dateTimeStr: string) => {
-        const date = new Date(dateTimeStr);
-        return date.toISOString();
-      };
-
-      const calendarEvent = {
-        summary: eventData.title,
-        description: eventData.description || '',
-        start: {
-          dateTime: processDateTime(eventData.start_date),
-          timeZone: 'America/Sao_Paulo',
-        },
-        end: {
-          dateTime: processDateTime(eventData.end_date),
-          timeZone: 'America/Sao_Paulo',
-        },
-        conferenceData: {
-          createRequest: {
-            requestId: `meet-${Date.now()}`,
-            conferenceSolutionKey: {
-              type: 'hangoutsMeet'
-            }
-          }
-        },
-        attendees: (eventData.attendees || []).map((attendee: any) => ({
-          email: attendee.email,
-          displayName: attendee.displayName || attendee.email
-        }))
-      };
-
-      console.log('Making request to Google Calendar API...');
-      const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(calendarEvent),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('Google Calendar API error:', error, 'Status:', response.status);
+    switch (action) {
+      case 'get_client_id': {
+        console.log('🔍 Obtendo Client ID...');
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
         
-        if (response.status === 401) {
-          throw new Error('Access token expired or invalid. Please reconnect Google Calendar.');
+        console.log('🔧 Status das secrets:', {
+          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
+          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
+        });
+        
+        if (!googleClientId) {
+          console.error('❌ GOOGLE_CLIENT_ID não encontrado nas secrets');
+          throw new Error('Google Client ID não configurado');
         }
         
-        throw new Error(`Google Calendar API error: ${response.status} - ${error}`);
+        if (!googleClientSecret) {
+          console.error('❌ GOOGLE_CLIENT_SECRET não encontrado nas secrets');
+          throw new Error('Google Client Secret não configurado');
+        }
+        
+        console.log('✅ Ambas as credenciais encontradas com sucesso');
+        return new Response(JSON.stringify({ client_id: googleClientId }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
-      const createdEvent = await response.json();
-      console.log('Event created successfully:', createdEvent.id);
-      
-      // Extract Google Meet link
-      const meetLink = createdEvent.conferenceData?.entryPoints?.find(
-        (entry: any) => entry.entryPointType === 'video'
-      )?.uri;
+      case 'exchange_code': {
+        const { code, user_id } = payload;
+        const redirectUri = 'https://www.ellosuit.online/dashboard';
+        console.log('🔄 Processando exchange_code...', { 
+          code: code ? 'presente' : 'ausente', 
+          user_id,
+          redirectUri 
+        });
+        
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        googleEventId: createdEvent.id,
-        meetLink: meetLink
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+        console.log('🔧 Verificando credenciais no exchange_code:', {
+          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
+          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
+        });
 
-    if (action === 'import_events') {
-      // Import Google Calendar events
-      console.log('Importing Google Calendar events...');
-      
-      if (!accessToken) {
-        throw new Error('Access token is required for importing events');
+        if (!googleClientId || !googleClientSecret) {
+          console.error('❌ Credenciais Google não configuradas no exchange_code');
+          throw new Error('Credenciais Google não configuradas');
+        }
+        
+        console.log('📡 Fazendo request para Google token API...');
+        const tokenController = new AbortController();
+        const tokenTimeout = setTimeout(() => {
+          console.error('⏰ Timeout na requisição do token');
+          tokenController.abort();
+        }, 15000); // 15s timeout
+
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            code: code,
+            grant_type: 'authorization_code',
+            redirect_uri: redirectUri,
+          }),
+          signal: tokenController.signal,
+        });
+
+        clearTimeout(tokenTimeout);
+
+        const tokenData = await tokenResponse.json();
+        console.log('📡 Resposta do token:', { 
+          ok: tokenResponse.ok, 
+          status: tokenResponse.status,
+          hasAccessToken: !!tokenData.access_token,
+          error: tokenData.error 
+        });
+        
+        if (!tokenResponse.ok) {
+          console.error('❌ Erro ao obter token:', tokenData);
+          throw new Error(`Erro ao obter token: ${tokenData.error || 'Erro desconhecido'}`);
+        }
+
+        // Obter informações do usuário
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+
+        const userData = await userResponse.json();
+        console.log('👤 Dados do usuário:', { 
+          id: userData.id, 
+          email: userData.email,
+          status: userResponse.status 
+        });
+
+        if (!userResponse.ok) {
+          console.error('❌ Erro ao obter dados do usuário:', userData);
+          throw new Error('Erro ao obter dados do usuário');
+        }
+
+        // Obter company_id do usuário
+        const { data: companyData } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user_id)
+          .single();
+
+        if (!companyData?.company_id) {
+          console.error('❌ Usuário não associado a empresa:', { user_id });
+          throw new Error('Usuário não está associado a uma empresa');
+        }
+
+        console.log('🏢 Company ID encontrado:', companyData.company_id);
+
+        // Salvar integração
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        
+        const { error } = await supabase
+          .from('meeting_integrations')
+          .upsert({
+            user_id: user_id,
+            company_id: companyData.company_id,
+            provider: 'google_meet',
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: expiresAt.toISOString(),
+            provider_user_id: userData.id,
+            provider_email: userData.email
+          }, {
+            onConflict: 'user_id,provider'
+          });
+
+        if (error) {
+          console.error('❌ Erro ao salvar integração:', error);
+          throw error;
+        }
+
+        console.log('✅ Integração salva com sucesso');
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
-      const timeMin = new Date().toISOString();
-      const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
-        {
+      case 'create_event': {
+        const { eventData, accessToken } = payload;
+        
+        console.log('🔍 Creating Google Meet event with:', { accessToken: accessToken ? 'present' : 'missing', eventData });
+        
+        if (!accessToken) {
+          console.error('❌ Access token missing for Google Calendar event creation');
+          throw new Error('Access token is required for creating Google Calendar events');
+        }
+        
+        if (!eventData || !eventData.title || !eventData.start_date) {
+          console.error('❌ Invalid event data:', eventData);
+          throw new Error('Missing required event data (title, start_date)');
+        }
+        
+        const calendarEvent = {
+          summary: eventData.title,
+          description: eventData.description || '',
+          start: {
+            dateTime: eventData.start_date,
+            timeZone: 'America/Sao_Paulo',
+          },
+          end: {
+            dateTime: eventData.end_date || new Date(new Date(eventData.start_date).getTime() + 60 * 60 * 1000).toISOString(),
+            timeZone: 'America/Sao_Paulo',
+          },
+          conferenceData: {
+            createRequest: {
+              requestId: crypto.randomUUID(),
+            },
+          },
+          attendees: eventData.attendees?.map((attendee: any) => ({
+            email: attendee.email,
+            displayName: attendee.displayName || attendee.name,
+          })) || [],
+        };
+
+        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('Google Calendar API error during import:', error);
-        throw new Error(`Failed to fetch events: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      const events = data.items || [];
-      
-      console.log(`Found ${events.length} events in Google Calendar`);
-
-      const { data: companyUser, error: companyError } = await supabaseClient
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userId)
-        .single();
-
-      if (companyError || !companyUser) {
-        throw new Error('User not associated with company');
-      }
-
-      let importedCount = 0;
-
-      for (const event of events) {
-        try {
-          const { data: existingEvent } = await supabaseClient
-            .from('calendar_events')
-            .select('id')
-            .eq('title', event.summary || 'Evento sem título')
-            .eq('start_date', event.start.dateTime || event.start.date)
-            .single();
-
-          if (existingEvent) {
-            continue;
-          }
-
-          const { error: insertError } = await supabaseClient
-            .from('calendar_events')
-            .insert({
-              title: event.summary || 'Evento sem título',
-              description: event.description || '',
-              start_date: event.start.dateTime || event.start.date,
-              end_date: event.end.dateTime || event.end.date,
-              event_type: 'meeting',
-              company_id: companyUser.company_id,
-              created_by: userId,
-              meeting_link: event.conferenceData?.entryPoints?.find((entry: any) => entry.entryPointType === 'video')?.uri || null,
-              meeting_provider: event.conferenceData ? 'google_meet' : null,
-              is_all_day: !event.start.dateTime,
-              attendees: event.attendees || []
-            });
-
-          if (!insertError) {
-            importedCount++;
-          }
-        } catch (eventError) {
-          console.error(`Error importing event ${event.summary}:`, eventError);
-        }
-      }
-
-      return new Response(JSON.stringify({
-        success: true,
-        imported: importedCount,
-        total: events.length
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Ação para processar agendamentos públicos
-    if (action === 'process_public_booking') {
-      const { bookingData } = eventData;
-      
-      console.log('Processing public booking:', bookingData);
-      
-      // Criar evento no calendário do usuário
-      const { error: eventError } = await supabaseClient
-        .from('calendar_events')
-        .insert({
-          title: `Reunião com ${bookingData.client_name}`,
-          description: `Reunião agendada publicamente\nCliente: ${bookingData.client_name}\nEmail: ${bookingData.client_email}\nTelefone: ${bookingData.client_phone || 'Não informado'}\nObservações: ${bookingData.notes || 'Nenhuma'}`,
-          start_date: `${bookingData.booking_date}T${bookingData.booking_time}:00-03:00`,
-          end_date: `${bookingData.booking_date}T${String(parseInt(bookingData.booking_time.split(':')[0]) + 1).padStart(2, '0')}:${bookingData.booking_time.split(':')[1]}:00-03:00`,
-          event_type: 'appointment',
-          company_id: bookingData.company_id,
-          created_by: bookingData.user_id,
-          attendees: [{
-            email: bookingData.client_email,
-            displayName: bookingData.client_name
-          }],
-          is_all_day: false
+          },
+          body: JSON.stringify(calendarEvent),
         });
 
-      if (eventError) {
-        console.error('Error creating calendar event:', eventError);
-        throw eventError;
+        const event = await response.json();
+        
+        if (!response.ok) {
+          console.error('❌ Erro ao criar evento:', event);
+          throw new Error(`Erro ao criar evento: ${event.error?.message || 'Erro desconhecido'}`);
+        }
+
+        const meetLink = event.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri;
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          googleEventId: event.id,
+          meetLink: meetLink || event.htmlLink 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      case 'renew_token': {
+        const { refreshToken, userId } = payload;
+        console.log('🔄 Renovando token para usuário:', userId);
+        
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
+
+        if (!googleClientId || !googleClientSecret) {
+          console.error('❌ Credenciais Google não configuradas para renovação');
+          throw new Error('Credenciais Google não configuradas');
+        }
+
+        console.log('📡 Fazendo request para renovar token...');
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        const tokenData = await tokenResponse.json();
+        console.log('📡 Resposta renovação token:', { 
+          ok: tokenResponse.ok, 
+          status: tokenResponse.status,
+          hasAccessToken: !!tokenData.access_token,
+          error: tokenData.error 
+        });
+        
+        if (!tokenResponse.ok) {
+          console.error('❌ Erro ao renovar token:', tokenData);
+          throw new Error(`Erro ao renovar token: ${tokenData.error || 'Erro desconhecido'}`);
+        }
+
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+        console.log('🕐 Novo token expira em:', expiresAt.toISOString());
+        
+        const { error } = await supabase
+          .from('meeting_integrations')
+          .update({
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token || refreshToken,
+            expires_at: expiresAt.toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('provider', 'google_meet');
+
+        if (error) {
+          console.error('❌ Erro ao salvar token renovado:', error);
+          throw error;
+        }
+
+        console.log('✅ Token renovado e salvo com sucesso');
+        return new Response(JSON.stringify({ 
+          success: true, 
+          access_token: tokenData.access_token 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'import_events': {
+        const { accessToken, userId } = payload;
+        
+        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(`Erro ao importar eventos: ${data.error?.message}`);
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          imported: data.items?.length || 0 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      default:
+        throw new Error(`Ação não suportada: ${action}`);
     }
 
-    throw new Error('Invalid action');
-
   } catch (error) {
-    console.error('Error in google-calendar function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error('💥 Erro na edge function:', error);
+    console.error('💥 Stack trace:', error.stack);
+    console.error('💥 Error name:', error.name);
+    console.error('💥 Error message:', error.message);
+    
+    // Determinar status code baseado no tipo de erro
+    let statusCode = 500;
+    let errorMessage = error.message;
+    
+    if (error.name === 'AbortError') {
+      statusCode = 408; // Request Timeout
+      errorMessage = 'Request timeout - operação demorou muito para completar';
+    } else if (error.message.includes('JWT')) {
+      statusCode = 401; // Unauthorized
+      errorMessage = 'Erro de autenticação JWT';
+    } else if (error.message.includes('não configurado') || error.message.includes('not configured')) {
+      statusCode = 500; // Server configuration error
+      errorMessage = 'Erro de configuração do servidor';
+    } else if (error.message.includes('Invalid JSON') || error.message.includes('Action not specified')) {
+      statusCode = 400; // Bad Request
+    } else if (error.message.includes('não encontrado') || error.message.includes('não associado')) {
+      statusCode = 404; // Not Found
+      errorMessage = 'Recurso não encontrado';
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      stack: error.stack?.split('\n').slice(0, 5) // Primeiras 5 linhas do stack
+    }), {
+      status: statusCode,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });

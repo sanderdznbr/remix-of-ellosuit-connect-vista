@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useGoogleCalendar = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -13,33 +13,61 @@ export const useGoogleCalendar = () => {
   const { toast } = useToast();
 
   const checkConnection = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ Não há usuário logado');
+      return;
+    }
 
     try {
       console.log('🔍 Verificando conexão Google Calendar para usuário:', user.id);
+      console.log('🔍 User object completo:', user);
       
       const { data, error } = await supabase
         .from('meeting_integrations')
         .select('*')
         .eq('user_id', user.id)
         .eq('provider', 'google_meet')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('❌ Erro ao verificar integração:', error);
+        setIsConnected(false);
+        setIntegration(null);
         return;
       }
 
       if (data) {
-        console.log('✅ Integração Google encontrada:', data.id);
-        setIntegration(data);
-        setIsConnected(true);
+        console.log('✅ Integração Google encontrada:', data);
+        console.log('🕐 Token expira em:', data.expires_at);
+        console.log('🕐 Agora é:', new Date().toISOString());
+        
+        // Verificar se o token está expirado
+        const now = new Date();
+        const expiresAt = new Date(data.expires_at);
+        
+        if (now >= expiresAt) {
+          console.log('⚠️ Token expirado, tentando renovar...');
+          try {
+            await renewTokenAndUpdateState(data);
+          } catch (error) {
+            console.error('❌ Erro ao renovar token:', error);
+            setIsConnected(false);
+            setIntegration(null);
+            return;
+          }
+        } else {
+          setIntegration(data);
+          setIsConnected(true);
+        }
       } else {
         console.log('⚠️ Nenhuma integração Google encontrada');
         setIsConnected(false);
+        setIntegration(null);
       }
     } catch (error) {
       console.error('💥 Erro ao verificar conexão Google:', error);
+      setIsConnected(false);
+      setIntegration(null);
     }
   };
 
@@ -102,7 +130,13 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `${window.location.origin}/dashboard`;
+      const redirectUri = `https://www.ellosuit.online/dashboard`;
+      
+      console.log('📝 Configuração OAuth:', {
+        clientId: clientId.substring(0, 20) + '...',
+        redirectUri: redirectUri,
+        scopes: scopes
+      });
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +
@@ -113,7 +147,7 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=google_calendar_auth`;
 
-      console.log('🔗 Redirecionando para:', authUrl);
+      console.log('🔗 URL de autorização Google Meet:', authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('💥 Erro ao conectar Google:', error);
@@ -134,51 +168,73 @@ export const useGoogleCalendar = () => {
     const error = urlParams.get('error');
 
     if (error) {
-      console.error('❌ Erro OAuth:', error);
+      console.error('❌ Erro OAuth Google Meet:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
+      } else if (error.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração: Adicione https://www.ellosuit.online/dashboard nas "Authorized redirect URIs" do Google Console.';
+      }
+      
       toast({
-        title: "Erro de Autorização",
-        description: `Erro: ${error}`,
+        title: "Erro de Autorização Google Meet",
+        description: errorMessage,
         variant: "destructive"
       });
+      // Limpar URL após erro
+      window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
     if (code && state === 'google_calendar_auth' && user) {
-      console.log('🔄 Processando código OAuth...');
+      console.log('🔄 Processando código OAuth...', { code, state, userId: user.id });
       setLoading(true);
       
       try {
+        console.log('📡 Chamando google-calendar edge function...');
         const { data, error } = await supabase.functions.invoke('google-calendar', {
           body: {
             action: 'exchange_code',
             code: code,
-            userId: user.id
+            user_id: user.id
           }
         });
 
+        console.log('📡 Resposta da edge function:', { data, error });
+
         if (error) {
-          throw error;
+          console.error('❌ Erro da Edge Function:', error);
+          throw new Error(`Erro ao conectar: ${error.message || 'Erro desconhecido'}`);
         }
 
         if (data?.success) {
           console.log('✅ OAuth processado com sucesso');
+          
+          // Limpar URL primeiro e redirecionar para o calendário
+          window.history.replaceState({}, document.title, '/dashboard');
+          
+          // Aguardar um pouco para garantir que a integração foi salva
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verificar conexão
           await checkConnection();
           
-          // Importar eventos do Google Calendar
-          await importGoogleCalendarEvents();
-          
+          // Mostrar popup de sucesso
           toast({
-            title: "Sucesso",
-            description: "Google Calendar conectado e eventos importados!"
+            title: "✅ Google Meet Conectado!",
+            description: "Google Meet foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
+            duration: 5000,
           });
-
-          // Redirecionar para aba calendar se possível
-          const hash = window.location.hash;
-          if (hash.includes('dashboard')) {
-            window.history.replaceState({}, document.title, '/dashboard#calendar');
-          } else {
-            window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Importar eventos em background
+          try {
+            await importGoogleCalendarEvents();
+          } catch (importError) {
+            console.warn('⚠️ Erro ao importar eventos, mas conexão foi bem-sucedida:', importError);
           }
+        } else {
+          throw new Error('Falha na conexão com Google Meet');
         }
       } catch (error) {
         console.error('💥 Erro ao processar OAuth:', error);
@@ -187,6 +243,9 @@ export const useGoogleCalendar = () => {
           description: `Erro ao conectar: ${error.message}`,
           variant: "destructive"
         });
+        
+        // Limpar URL após erro
+        window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
       }
@@ -223,6 +282,40 @@ export const useGoogleCalendar = () => {
       }
     } catch (error) {
       console.error('💥 Erro ao importar eventos:', error);
+    }
+  };
+
+  const renewTokenAndUpdateState = async (integrationData: any) => {
+    if (!integrationData?.refresh_token) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      console.log('🔄 Renovando token Google...');
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'renew_token',
+          refreshToken: integrationData.refresh_token,
+          userId: user?.id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        console.log('✅ Token renovado com sucesso');
+        // Recarregar a integração atualizada
+        await checkConnection();
+        return data.access_token;
+      }
+
+      throw new Error('Failed to renew token');
+    } catch (error) {
+      console.error('💥 Erro ao renovar token:', error);
+      throw error;
     }
   };
 
@@ -274,6 +367,57 @@ export const useGoogleCalendar = () => {
     }
 
     return integration.access_token;
+  };
+
+  const createGoogleMeetEvent = async (eventData: any) => {
+    if (!integration) {
+      throw new Error('Google Calendar not connected');
+    }
+
+    try {
+      console.log('🔄 Criando evento Google Meet com dados:', eventData);
+      
+      const accessToken = await getValidAccessToken();
+      
+      // Garantir que os dados estão no formato correto
+      const processedEventData = {
+        title: eventData.title || 'Nova Reunião',
+        description: eventData.description || '',
+        start_date: eventData.start_date,
+        end_date: eventData.end_date,
+        attendees: eventData.attendees || []
+      };
+
+      console.log('📝 Dados processados para o evento:', processedEventData);
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'create_event',
+          eventData: processedEventData,
+          accessToken: accessToken
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erro da edge function:', error);
+        throw new Error(`Erro ao criar evento: ${error.message}`);
+      }
+
+      if (data?.success) {
+        console.log('✅ Evento criado com sucesso:', data);
+        return {
+          success: true,
+          googleEventId: data.googleEventId,
+          meetLink: data.meetLink
+        };
+      } else {
+        console.error('❌ Resposta inesperada da edge function:', data);
+        throw new Error('Falha ao criar evento no Google Calendar');
+      }
+    } catch (error) {
+      console.error('💥 Erro ao criar evento Google Meet:', error);
+      throw error;
+    }
   };
 
   const disconnectGoogle = async () => {
@@ -329,6 +473,7 @@ export const useGoogleCalendar = () => {
     disconnectGoogle,
     checkConnection,
     getValidAccessToken,
+    createGoogleMeetEvent,
     importGoogleCalendarEvents
   };
 };

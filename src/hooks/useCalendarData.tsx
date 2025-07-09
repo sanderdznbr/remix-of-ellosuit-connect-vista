@@ -164,7 +164,16 @@ export const useCalendarData = () => {
           end: event.end_date,
           description: event.description,
           event_type: event.event_type,
-          meeting_link: event.meeting_link
+          meeting_link: event.meeting_link,
+          extendedProps: {
+            description: event.description,
+            event_type: event.event_type,
+            meeting_link: event.meeting_link,
+            attendees: event.attendees,
+            meeting_provider: event.meeting_provider,
+            is_all_day: event.is_all_day,
+            meeting_data: event.meeting_data
+          }
         }));
         setEvents(formattedEvents);
       }

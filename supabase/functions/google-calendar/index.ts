@@ -62,6 +62,11 @@ serve(async (req) => {
       // Exchange authorization code for access token
       console.log('Exchanging code for tokens...');
       
+      console.log('🔐 Trocando código por tokens...', { 
+        code: code?.substring(0, 10) + '...',
+        redirectUri: 'https://ellosuit.online/dashboard'
+      });
+      
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
@@ -78,12 +83,17 @@ serve(async (req) => {
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
-        console.error('Token exchange failed:', errorText);
-        throw new Error(`Failed to exchange code for token: ${tokenResponse.status}`);
+        console.error('❌ Falha na troca de tokens:', errorText, 'Status:', tokenResponse.status);
+        
+        if (errorText.includes('redirect_uri_mismatch')) {
+          throw new Error('Erro de configuração: A URL https://ellosuit.online/dashboard não está autorizada no Google Console. Adicione-a nas "Authorized redirect URIs".');
+        }
+        
+        throw new Error(`Falha na autenticação Google: ${tokenResponse.status} - ${errorText}`);
       }
 
       const tokens = await tokenResponse.json();
-      console.log('Tokens received successfully');
+      console.log('✅ Tokens recebidos com sucesso para Google Meet');
       
       // Get user company
       const { data: companyUser, error: companyError } = await supabaseClient
@@ -118,8 +128,11 @@ serve(async (req) => {
         throw error;
       }
 
-      console.log('Integration stored successfully');
-      return new Response(JSON.stringify({ success: true }), {
+      console.log('✅ Integração Google Meet salva com sucesso');
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'Google Meet conectado com sucesso'
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

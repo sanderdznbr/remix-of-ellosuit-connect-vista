@@ -142,6 +142,12 @@ export const useGmail = () => {
 
       const redirectUri = `https://ellosuit.online/dashboard`;
       
+      console.log('📝 Configuração OAuth Gmail:', {
+        clientId: clientId,
+        redirectUri: redirectUri,
+        scopes: scopes
+      });
+      
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -151,7 +157,7 @@ export const useGmail = () => {
         `prompt=consent&` +
         `state=gmail_auth`;
 
-      console.log('🔗 Redirecionando para Gmail OAuth:', authUrl);
+      console.log('🔗 URL de autorização Gmail:', authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('💥 Erro ao conectar Gmail:', error);
@@ -173,9 +179,17 @@ export const useGmail = () => {
 
     if (error) {
       console.error('❌ Erro OAuth Gmail:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Gmail.';
+      } else if (error.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração: Adicione https://ellosuit.online/dashboard nas "Authorized redirect URIs" do Google Console.';
+      }
+      
       toast({
-        title: "Erro de Autorização",
-        description: `Erro: ${error}`,
+        title: "Erro de Autorização Gmail",
+        description: errorMessage,
         variant: "destructive"
       });
       // Limpar URL após erro

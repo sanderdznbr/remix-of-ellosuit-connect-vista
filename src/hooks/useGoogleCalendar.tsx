@@ -139,6 +139,12 @@ export const useGoogleCalendar = () => {
 
       const redirectUri = `https://ellosuit.online/dashboard`;
       
+      console.log('📝 Configuração OAuth:', {
+        clientId: clientId,
+        redirectUri: redirectUri,
+        scopes: scopes
+      });
+      
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -148,7 +154,7 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=google_calendar_auth`;
 
-      console.log('🔗 Redirecionando para:', authUrl);
+      console.log('🔗 URL de autorização Google Meet:', authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('💥 Erro ao conectar Google:', error);
@@ -169,10 +175,18 @@ export const useGoogleCalendar = () => {
     const error = urlParams.get('error');
 
     if (error) {
-      console.error('❌ Erro OAuth:', error);
+      console.error('❌ Erro OAuth Google Meet:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
+      } else if (error.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração: Adicione https://ellosuit.online/dashboard nas "Authorized redirect URIs" do Google Console.';
+      }
+      
       toast({
-        title: "Erro de Autorização",
-        description: `Erro: ${error}`,
+        title: "Erro de Autorização Google Meet",
+        description: errorMessage,
         variant: "destructive"
       });
       // Limpar URL após erro

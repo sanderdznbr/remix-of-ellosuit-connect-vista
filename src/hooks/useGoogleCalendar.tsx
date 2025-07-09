@@ -181,10 +181,11 @@ export const useGoogleCalendar = () => {
     }
 
     if (code && state === 'google_calendar_auth' && user) {
-      console.log('🔄 Processando código OAuth...');
+      console.log('🔄 Processando código OAuth...', { code, state, userId: user.id });
       setLoading(true);
       
       try {
+        console.log('📡 Chamando google-calendar edge function...');
         const { data, error } = await supabase.functions.invoke('google-calendar', {
           body: {
             action: 'exchange_code',
@@ -192,6 +193,8 @@ export const useGoogleCalendar = () => {
             user_id: user.id
           }
         });
+
+        console.log('📡 Resposta da edge function:', { data, error });
 
         if (error) {
           console.error('❌ Erro da Edge Function:', error);

@@ -90,7 +90,7 @@ serve(async (req) => {
         .from('company_users')
         .select('company_id')
         .eq('user_id', userId || user_id)
-        .maybeSingle();
+        .single();
 
       if (companyError || !companyUser) {
         console.error('❌ Error getting user company:', companyError);
@@ -98,6 +98,8 @@ serve(async (req) => {
       }
 
       // Store integration
+      console.log('🔄 Saving integration for user:', userId || user_id, 'company:', companyUser.company_id);
+      
       const { error } = await supabaseClient
         .from('meeting_integrations')
         .upsert({
@@ -107,10 +109,12 @@ serve(async (req) => {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
           expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        }, {
+          onConflict: 'user_id,provider'
         });
 
       if (error) {
-        console.error('Failed to store integration:', error);
+        console.error('❌ Failed to store integration:', error);
         throw error;
       }
 
@@ -216,7 +220,7 @@ serve(async (req) => {
         .from('company_users')
         .select('company_id')
         .eq('user_id', user_id)
-        .maybeSingle();
+        .single();
 
       if (companyError || !companyUser) {
         console.error('❌ Error getting user company for Gmail:', companyError);

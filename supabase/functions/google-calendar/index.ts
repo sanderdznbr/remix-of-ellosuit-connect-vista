@@ -122,7 +122,7 @@ serve(async (req) => {
 
       case 'exchange_code': {
         const { code, user_id } = payload;
-        const redirectUri = 'https://www.ellosuit.online/dashboard';
+        const redirectUri = 'https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard';
         console.log('🔄 Processando exchange_code...', { 
           code: code ? 'presente' : 'ausente', 
           user_id,

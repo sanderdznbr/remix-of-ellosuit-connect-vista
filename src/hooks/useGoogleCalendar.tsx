@@ -130,7 +130,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `https://www.ellosuit.online/dashboard`;
+      const redirectUri = `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard`;
       
       console.log('📝 Configuração OAuth:', {
         clientId: clientId.substring(0, 20) + '...',
@@ -174,7 +174,7 @@ export const useGoogleCalendar = () => {
       if (error === 'access_denied') {
         errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
       } else if (error.includes('redirect_uri_mismatch')) {
-        errorMessage = 'Erro de configuração: Adicione https://www.ellosuit.online/dashboard nas "Authorized redirect URIs" do Google Console.';
+        errorMessage = 'Erro de configuração: Adicione https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard nas "Authorized redirect URIs" do Google Console.';
       }
       
       toast({

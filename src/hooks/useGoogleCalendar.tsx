@@ -37,33 +37,6 @@ export const useGoogleCalendar = () => {
 
       if (data) {
         console.log('✅ Integração Google encontrada:', data.id);
-        
-        // Verificar se o token não expirou
-        const now = new Date();
-        const expiresAt = new Date(data.expires_at);
-        
-        if (now >= expiresAt) {
-          console.log('⚠️ Token expirado, removendo integração inválida...');
-          try {
-            await supabase
-              .from('meeting_integrations')
-              .delete()
-              .eq('id', data.id);
-            
-            setIsConnected(false);
-            setIntegration(null);
-            
-            toast({
-              title: "Token Expirado",
-              description: "Sua conexão com Google Meet expirou. Conecte novamente.",
-              variant: "destructive"
-            });
-            return;
-          } catch (deleteError) {
-            console.error('❌ Erro ao deletar integração expirada:', deleteError);
-          }
-        }
-        
         setIntegration(data);
         setIsConnected(true);
       } else {
@@ -137,7 +110,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `https://www.ellosuit.online/dashboard`;
+      const redirectUri = `https://ellosuit.online/dashboard`;
       
       console.log('📝 Configuração OAuth:', {
         clientId: clientId,

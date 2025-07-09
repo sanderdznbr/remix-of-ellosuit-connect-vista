@@ -1,3 +1,4 @@
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info } from "lucide-react";
@@ -21,13 +22,13 @@ export const GoogleAuthInstructions = ({ isVisible, onClose }: GoogleAuthInstruc
       </AlertTitle>
       <AlertDescription className="mt-2 space-y-3">
         <p>
-          Para conectar o Google Meet/Gmail, você precisa adicionar a URL de redirecionamento no Google Console:
+          Para conectar o Google Meet, você precisa adicionar a URL de redirecionamento no Google Console:
         </p>
         
         <div className="bg-white p-3 rounded border border-orange-200">
           <strong>URL para adicionar:</strong>
           <code className="block mt-1 p-2 bg-gray-100 rounded text-sm">
-            https://www.ellosuit.online/dashboard
+            https://ellosuit.online/dashboard
           </code>
         </div>
 

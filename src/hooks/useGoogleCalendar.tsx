@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -133,7 +134,8 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      const redirectUri = `${window.location.origin}/`;
+      // CORREÇÃO: Usar URL atual como redirect_uri
+      const redirectUri = window.location.origin + window.location.pathname;
       
       console.log('📝 Configuração OAuth:', {
         clientId: clientId.substring(0, 20) + '...',
@@ -164,89 +166,6 @@ export const useGoogleCalendar = () => {
     }
   };
 
-  // Função para processar código OAuth
-  const processOAuthCallback = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const error = urlParams.get('error');
-
-    console.log('🔄 Processando OAuth callback:', {
-      hasCode: !!code,
-      hasState: !!state,
-      hasError: !!error,
-      hasUser: !!user,
-      authLoading,
-      state
-    });
-
-    if (error) {
-      console.error('❌ Erro OAuth Google Meet:', error);
-      
-      let errorMessage = `Erro: ${error}`;
-      if (error === 'access_denied') {
-        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
-      }
-      
-      toast({
-        title: "Erro de Autorização Google Meet",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      
-      // Limpar URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
-    if (code && state === 'google_calendar_auth') {
-      console.log('✅ Code e state válidos encontrados');
-      
-      // Se não há usuário, aguardar um pouco
-      if (!user || authLoading) {
-        console.log('⏳ Usuário ainda carregando, aguardando...');
-        setProcessingOAuth(true);
-        
-        // Aguardar usuário carregar com timeout
-        let attempts = 0;
-        const maxAttempts = 20; // 10 segundos
-        
-        const waitForUser = () => {
-          setTimeout(() => {
-            attempts++;
-            console.log(`🔄 Tentativa ${attempts}/${maxAttempts} - Aguardando usuário...`);
-            
-            if (user && !authLoading) {
-              console.log('✅ Usuário carregado, processando OAuth...');
-              processGoogleOAuthCode(code, user.id);
-            } else if (attempts < maxAttempts) {
-              waitForUser();
-            } else {
-              console.log('⚠️ Timeout aguardando usuário, salvando código...');
-              localStorage.setItem('google_oauth_code', code);
-              localStorage.setItem('google_oauth_state', state);
-              
-              toast({
-                title: "Processando...",
-                description: "Aguarde enquanto processamos sua autenticação...",
-                duration: 5000,
-              });
-              
-              setProcessingOAuth(false);
-              window.history.replaceState({}, document.title, window.location.pathname);
-            }
-          }, 500);
-        };
-        
-        waitForUser();
-        return;
-      }
-      
-      // Processar OAuth imediatamente se usuário está disponível
-      await processGoogleOAuthCode(code, user.id);
-    }
-  };
-
   // Função para processar código OAuth com usuário disponível
   const processGoogleOAuthCode = async (code: string, userId: string) => {
     console.log('🔄 Processando código OAuth para usuário:', userId);
@@ -274,10 +193,9 @@ export const useGoogleCalendar = () => {
       if (data?.success) {
         console.log('✅ OAuth processado com sucesso!');
         
-        // Limpar localStorage e URL
-        localStorage.removeItem('google_oauth_code');
-        localStorage.removeItem('google_oauth_state');
-        window.history.replaceState({}, document.title, window.location.pathname);
+        // Limpar URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
         
         // Aguardar um momento e verificar conexão
         setTimeout(async () => {
@@ -313,10 +231,9 @@ export const useGoogleCalendar = () => {
         duration: 8000
       });
       
-      // Limpar dados em caso de erro
-      localStorage.removeItem('google_oauth_code');
-      localStorage.removeItem('google_oauth_state');
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Limpar URL em caso de erro
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     } finally {
       setLoading(false);
       setProcessingOAuth(false);
@@ -452,17 +369,6 @@ export const useGoogleCalendar = () => {
     }
   };
 
-  // Processar código OAuth salvo no localStorage
-  const processSavedOAuthCode = async () => {
-    const savedCode = localStorage.getItem('google_oauth_code');
-    const savedState = localStorage.getItem('google_oauth_state');
-    
-    if (savedCode && savedState === 'google_calendar_auth' && user && !authLoading) {
-      console.log('🔄 Processando código OAuth salvo após login...');
-      await processGoogleOAuthCode(savedCode, user.id);
-    }
-  };
-
   // Função para importar eventos do Google Calendar
   const importGoogleCalendarEvents = async () => {
     if (!integration) {
@@ -494,49 +400,106 @@ export const useGoogleCalendar = () => {
       }
     } catch (error) {
       console.error('💥 Erro ao importar eventos do Google Calendar:', error);
-      // Não mostrar toast de erro aqui para não spam o usuário
       return [];
     }
   };
 
-  // useEffect principal
+  // useEffect principal para detectar OAuth callback e inicializar
   useEffect(() => {
     console.log('🔄 useGoogleCalendar useEffect executado:', {
       hasUser: !!user,
       authLoading,
       currentUrl: window.location.href,
-      hasOAuthCallback: window.location.search.includes('code=') && window.location.search.includes('state=google_calendar_auth')
+      search: window.location.search
     });
     
-    // Processar OAuth callback se presente
+    // Verificar se há código OAuth na URL
     const urlParams = new URLSearchParams(window.location.search);
-    const hasOAuthCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
     
-    if (hasOAuthCallback) {
-      console.log('🔄 OAuth callback detectado, processando...');
-      processOAuthCallback();
+    console.log('🔍 Parâmetros da URL:', { 
+      hasCode: !!code, 
+      hasState: !!state, 
+      state, 
+      hasError: !!error,
+      error 
+    });
+
+    // Se há erro OAuth
+    if (error) {
+      console.error('❌ Erro OAuth Google Meet:', error);
+      
+      let errorMessage = `Erro: ${error}`;
+      if (error === 'access_denied') {
+        errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
+      }
+      
+      toast({
+        title: "Erro de Autorização Google Meet",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      
+      // Limpar URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // Se há código OAuth
+    if (code && state === 'google_calendar_auth') {
+      console.log('✅ Código OAuth detectado, processando...');
+      setProcessingOAuth(true);
+      
+      if (user && !authLoading) {
+        console.log('✅ Usuário disponível, processando OAuth imediatamente...');
+        processGoogleOAuthCode(code, user.id);
+      } else {
+        console.log('⏳ Aguardando usuário carregar...');
+        // Aguardar usuário carregar
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        const waitForUser = () => {
+          setTimeout(() => {
+            attempts++;
+            console.log(`🔄 Tentativa ${attempts}/${maxAttempts} - Aguardando usuário...`);
+            
+            if (user && !authLoading) {
+              console.log('✅ Usuário carregado, processando OAuth...');
+              processGoogleOAuthCode(code, user.id);
+            } else if (attempts < maxAttempts) {
+              waitForUser();
+            } else {
+              console.log('⚠️ Timeout aguardando usuário');
+              setProcessingOAuth(false);
+              toast({
+                title: "Erro",
+                description: "Timeout aguardando autenticação do usuário",
+                variant: "destructive"
+              });
+              
+              // Limpar URL
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }, 500);
+        };
+        
+        waitForUser();
+      }
       return;
     }
     
-    // Se não há callback OAuth, executar funções normais
-    if (!authLoading) {
-      if (user) {
-        console.log('✅ User disponível, executando inicialização...');
-        
-        // Verificar código OAuth salvo
-        processSavedOAuthCode();
-        
-        // Verificar conexão existente
-        checkConnection();
-        
-        // Obter Client ID
-        getGoogleClientId();
-        
-      } else {
-        console.log('⚠️ User não disponível, limpando estado...');
-        setIsConnected(false);
-        setIntegration(null);
-      }
+    // Inicialização normal (sem OAuth callback)
+    if (!authLoading && user) {
+      console.log('✅ Inicialização normal - verificando conexão existente...');
+      checkConnection();
+      getGoogleClientId();
+    } else if (!authLoading && !user) {
+      console.log('⚠️ Usuário não autenticado');
+      setIsConnected(false);
+      setIntegration(null);
     }
   }, [user, authLoading]);
 

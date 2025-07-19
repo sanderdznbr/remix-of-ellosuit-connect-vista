@@ -104,15 +104,10 @@ serve(async (req) => {
 
       case 'exchange_code': {
         const { code, user_id } = payload;
-        // CORREÇÃO PRINCIPAL: Usar redirect URI correto baseado na origin
-        const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
-        const redirectUri = `${origin}/`;
         
         console.log('🔄 Processando exchange_code...', { 
           code: code ? `presente (${code.substring(0, 20)}...)` : 'AUSENTE', 
-          user_id,
-          redirectUri,
-          origin
+          user_id
         });
         
         // Validação rigorosa
@@ -130,6 +125,17 @@ serve(async (req) => {
           console.error('❌ Credenciais Google não configuradas no exchange_code');
           throw new Error('Credenciais Google não configuradas');
         }
+        
+        // CORREÇÃO: Usar redirect_uri dinâmico baseado no origin da requisição
+        const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
+        let redirectUri = `${origin}/dashboard`;
+        
+        // Se não conseguir detectar o origin, usar fallback padrão
+        if (!origin) {
+          redirectUri = 'https://ellosuit.online/dashboard';
+        }
+        
+        console.log('🔗 Redirect URI detectado:', redirectUri);
         
         const tokenPayload = {
           client_id: googleClientId,
@@ -155,7 +161,8 @@ serve(async (req) => {
           status: tokenResponse.status,
           hasAccessToken: !!tokenData.access_token,
           hasRefreshToken: !!tokenData.refresh_token,
-          error: tokenData.error
+          error: tokenData.error,
+          errorDescription: tokenData.error_description
         });
         
         if (!tokenResponse.ok) {
@@ -167,7 +174,7 @@ serve(async (req) => {
           } else if (tokenData.error === 'invalid_client') {
             errorMessage = 'Credenciais Google inválidas. Verifique o Client ID e Client Secret.';
           } else if (tokenData.error === 'redirect_uri_mismatch') {
-            errorMessage = 'Redirect URI não configurado corretamente no Google Console.';
+            errorMessage = `Redirect URI não configurado corretamente no Google Console. URI usado: ${redirectUri}`;
           }
           
           throw new Error(errorMessage);

@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import BookingPage from "./pages/BookingPage";
 import Templates from "./pages/Templates";
-import Settings from "./pages/Settings";
 import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -43,14 +42,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Templates />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
                 </ProtectedRoute>
               } 
             />

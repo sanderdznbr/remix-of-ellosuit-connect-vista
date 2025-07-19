@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -12,12 +13,13 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  // Função para obter URL base consistente
+  // Função para obter URL base consistente - SEMPRE sem www
   const getBaseUrl = () => {
-    // Para produção, usar sempre sem www para consistência
-    if (window.location.hostname === 'www.ellosuit.online') {
+    // Para produção, SEMPRE usar sem www independente da URL atual
+    if (window.location.hostname === 'www.ellosuit.online' || window.location.hostname === 'ellosuit.online') {
       return 'https://ellosuit.online';
     }
+    // Para desenvolvimento local
     return window.location.origin;
   };
 
@@ -142,7 +144,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // Usar URL base consistente + /dashboard
+      // Usar URL base consistente SEMPRE sem www + /dashboard
       const baseUrl = getBaseUrl();
       const redirectUri = `${baseUrl}/dashboard`;
       
@@ -150,7 +152,8 @@ export const useGoogleCalendar = () => {
         clientId: clientId.substring(0, 20) + '...',
         redirectUri: redirectUri,
         scopes: scopes,
-        baseUrl: baseUrl
+        baseUrl: baseUrl,
+        currentHostname: window.location.hostname
       });
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -164,6 +167,7 @@ export const useGoogleCalendar = () => {
 
       console.log('🔗 Redirecionando para autorização Google...');
       console.log('🔗 Auth URL:', authUrl);
+      console.log('🔗 Redirect URI final:', redirectUri);
       window.location.href = authUrl;
     } catch (error) {
       console.error('💥 Erro ao conectar Google:', error);
@@ -423,6 +427,7 @@ export const useGoogleCalendar = () => {
       hasUser: !!user,
       authLoading,
       currentUrl: window.location.href,
+      hostname: window.location.hostname,
       search: window.location.search
     });
     

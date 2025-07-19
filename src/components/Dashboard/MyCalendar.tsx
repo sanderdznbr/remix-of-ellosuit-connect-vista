@@ -29,7 +29,6 @@ const MyCalendar = () => {
   const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder'>('meeting');
   const [selectedEventDetails, setSelectedEventDetails] = useState<any>(null);
   
-  // Hooks devem sempre estar no topo do componente
   const { isMobile, isLoading } = useIsMobile();
   const { events, loading, hasCompany, createEvent, refreshEvents } = useCalendarData();
   const { 
@@ -39,6 +38,7 @@ const MyCalendar = () => {
     error: googleError,
     connectGoogle, 
     disconnectGoogle,
+    checkConnection,
     importGoogleCalendarEvents 
   } = useGoogleCalendar();
   const calendarRef = useRef<FullCalendar>(null);
@@ -221,6 +221,11 @@ const MyCalendar = () => {
     setSelectedEventDetails(null);
   };
 
+  // Retry handler for Google connection
+  const handleGoogleRetry = () => {
+    checkConnection();
+  };
+
   if (loading) {
     return (
       <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -249,7 +254,6 @@ const MyCalendar = () => {
     );
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -261,7 +265,6 @@ const MyCalendar = () => {
     );
   }
   
-  // Mobile Layout
   if (isMobile) {
     return <MobileCalendarView />;
   }
@@ -288,7 +291,6 @@ const MyCalendar = () => {
           </div>
         </div>
 
-        {/* Google Meet Integration Card */}
         <GoogleMeetConnectionStatus
           isConnected={googleConnected}
           loading={googleLoading}
@@ -296,6 +298,7 @@ const MyCalendar = () => {
           error={googleError}
           onConnect={connectGoogle}
           onDisconnect={disconnectGoogle}
+          onRetry={handleGoogleRetry}
         />
 
         <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">

@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface GoogleMeetConnectionStatusProps {
   isConnected: boolean;
@@ -12,6 +12,7 @@ interface GoogleMeetConnectionStatusProps {
   error: string | null;
   onConnect: () => void;
   onDisconnect: () => void;
+  onRetry?: () => void;
 }
 
 const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
@@ -20,7 +21,8 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
   processingOAuth,
   error,
   onConnect,
-  onDisconnect
+  onDisconnect,
+  onRetry
 }) => {
   const getStatusInfo = () => {
     if (processingOAuth) {
@@ -49,7 +51,7 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
       return {
         icon: <AlertCircle className="w-6 h-6 text-red-600" />,
         title: 'Google Meet',
-        message: `Erro: ${error}`,
+        message: error,
         bgColor: 'from-red-50 to-pink-50',
         textColor: 'text-red-700',
         badge: { variant: 'destructive' as const, text: 'Erro' }
@@ -81,7 +83,7 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
   const canInteract = !loading && !processingOAuth;
 
   return (
-    <Card className={`shadow-lg border-0 rounded-2xl bg-gradient-to-r ${statusInfo.bgColor}`}>
+    <Card className={`shadow-lg border-0 rounded-2xl bg-gradient-to-r ${statusInfo.bgColor} transition-all duration-200`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -90,7 +92,7 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">{statusInfo.title}</h3>
-              <p className={`text-sm ${statusInfo.textColor}`}>
+              <p className={`text-sm ${statusInfo.textColor} max-w-md`}>
                 {statusInfo.message}
               </p>
             </div>
@@ -101,7 +103,19 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
               {statusInfo.badge.text}
             </Badge>
             
-            {canInteract && (
+            {error && onRetry && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={onRetry}
+                className="min-w-[100px]"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar Novamente
+              </Button>
+            )}
+            
+            {canInteract && !error && (
               <Button 
                 variant={isConnected ? "outline" : "default"}
                 onClick={isConnected ? onDisconnect : onConnect}
@@ -127,17 +141,6 @@ const GoogleMeetConnectionStatus: React.FC<GoogleMeetConnectionStatusProps> = ({
               <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
               <span className="text-sm text-blue-700">
                 Finalizando conexão com Google Meet...
-              </span>
-            </div>
-          </div>
-        )}
-        
-        {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <span className="text-sm text-red-700">
-                {error}
               </span>
             </div>
           </div>

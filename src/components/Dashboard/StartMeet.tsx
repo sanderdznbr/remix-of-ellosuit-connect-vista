@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +35,7 @@ const StartMeet = () => {
     error: googleError,
     connectGoogle, 
     disconnectGoogle,
+    checkConnection,
     createGoogleMeetEvent 
   } = useGoogleCalendar();
   const { user } = useAuth();
@@ -101,7 +101,6 @@ const StartMeet = () => {
 
       let attendees: any[] = [];
 
-      // Preparar lista de participantes
       selectedClients.forEach(clientId => {
         const client = clients.find(c => c.id === clientId);
         if (client) {
@@ -109,7 +108,6 @@ const StartMeet = () => {
         }
       });
 
-      // Adicionar emails manuais
       if (manualEmails.trim()) {
         const emails = manualEmails.split(',').map(email => email.trim()).filter(email => email);
         emails.forEach(email => {
@@ -117,8 +115,6 @@ const StartMeet = () => {
         });
       }
 
-      console.log('🔄 Criando reunião no Google Meet...');
-      
       const result = await createGoogleMeetEvent({
         title,
         description,
@@ -128,9 +124,6 @@ const StartMeet = () => {
       });
 
       if (result?.success && result?.meetLink) {
-        console.log('✅ Google Meet link criado:', result.meetLink);
-
-        // Salvar no calendário local
         const { data: companyUser } = await supabase
           .from('company_users')
           .select('company_id')
@@ -160,11 +153,9 @@ const StartMeet = () => {
           description: "Reunião criada com sucesso! Link copiado para área de transferência.",
         });
 
-        // Copiar link para área de transferência e abrir
         navigator.clipboard.writeText(result.meetLink);
         window.open(result.meetLink, '_blank');
 
-        // Limpar formulário
         setTitle('');
         setDescription('');
         setSelectedClients([]);
@@ -184,6 +175,10 @@ const StartMeet = () => {
     }
   };
 
+  const handleGoogleRetry = () => {
+    checkConnection();
+  };
+
   const canStartMeeting = googleConnected && !googleLoading && !processingOAuth && !isLoading;
 
   return (
@@ -196,7 +191,6 @@ const StartMeet = () => {
           </div>
         </div>
 
-        {/* Google Meet Connection Status */}
         <GoogleMeetConnectionStatus
           isConnected={googleConnected}
           loading={googleLoading}
@@ -204,10 +198,10 @@ const StartMeet = () => {
           error={googleError}
           onConnect={connectGoogle}
           onDisconnect={disconnectGoogle}
+          onRetry={handleGoogleRetry}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Formulário Principal */}
           <Card className="shadow-xl border-0 rounded-2xl">
             <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white rounded-t-2xl">
               <CardTitle className="flex items-center space-x-2">
@@ -265,7 +259,6 @@ const StartMeet = () => {
             </CardContent>
           </Card>
 
-          {/* Participantes */}
           <Card className="shadow-xl border-0 rounded-2xl">
             <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-2xl">
               <CardTitle className="flex items-center space-x-2">

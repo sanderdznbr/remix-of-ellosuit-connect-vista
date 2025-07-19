@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Video, Users, Clock, Calendar, ExternalLink, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Video, Users, Clock, Loader2, AlertCircle } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-
+import GoogleMeetConnectionStatus from './GoogleMeetConnectionStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +22,6 @@ interface Client {
 const StartMeet = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet'>('google_meet');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [manualEmails, setManualEmails] = useState('');
   const [duration, setDuration] = useState('60');
@@ -33,7 +33,9 @@ const StartMeet = () => {
     isConnected: googleConnected, 
     loading: googleLoading, 
     processingOAuth,
+    error: googleError,
     connectGoogle, 
+    disconnectGoogle,
     createGoogleMeetEvent 
   } = useGoogleCalendar();
   const { user } = useAuth();
@@ -79,6 +81,15 @@ const StartMeet = () => {
       return;
     }
 
+    if (!googleConnected) {
+      toast({
+        title: "Google Meet não conectado",
+        description: "Conecte-se ao Google Meet para criar reuniões",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -88,7 +99,6 @@ const StartMeet = () => {
       const startDateTime = now.toISOString();
       const endDateTime = endTime.toISOString();
 
-      let meetingLink = '';
       let attendees: any[] = [];
 
       // Preparar lista de participantes
@@ -107,77 +117,65 @@ const StartMeet = () => {
         });
       }
 
-      // Criar meeting baseado no provider selecionado
-      if (meetingProvider === 'google_meet' && googleConnected) {
-        try {
-          console.log('🔄 Criando reunião no Google Meet...');
-          
-          const result = await createGoogleMeetEvent({
-            title,
-            description,
-            start_date: startDateTime,
-            end_date: endDateTime,
-            attendees
-          });
-
-          if (result?.success && result?.meetLink) {
-            meetingLink = result.meetLink;
-            console.log('✅ Google Meet link criado:', meetingLink);
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar reunião no Google Meet:', error);
-          throw error;
-        }
-      }
-
-      // Salvar no calendário local
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user!.id)
-        .single();
-
-      if (companyUser) {
-        await supabase
-          .from('calendar_events')
-          .insert({
-            title,
-            description,
-            start_date: startDateTime,
-            end_date: endDateTime,
-            event_type: 'meeting',
-            meeting_provider: meetingProvider,
-            meeting_link: meetingLink,
-            attendees,
-            created_by: user!.id,
-            company_id: companyUser.company_id,
-            is_all_day: false
-          });
-      }
-
-      toast({
-        title: "Sucesso",
-        description: meetingLink ? "Reunião criada! Link copiado para área de transferência." : "Reunião criada com sucesso!",
+      console.log('🔄 Criando reunião no Google Meet...');
+      
+      const result = await createGoogleMeetEvent({
+        title,
+        description,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        attendees
       });
 
-      // Copiar link para área de transferência se disponível
-      if (meetingLink) {
-        navigator.clipboard.writeText(meetingLink);
-        // Abrir link da reunião
-        window.open(meetingLink, '_blank');
-      }
+      if (result?.success && result?.meetLink) {
+        console.log('✅ Google Meet link criado:', result.meetLink);
 
-      // Limpar formulário
-      setTitle('');
-      setDescription('');
-      setSelectedClients([]);
-      setManualEmails('');
-      setDuration('60');
+        // Salvar no calendário local
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user!.id)
+          .single();
+
+        if (companyUser) {
+          await supabase
+            .from('calendar_events')
+            .insert({
+              title,
+              description,
+              start_date: startDateTime,
+              end_date: endDateTime,
+              event_type: 'meeting',
+              meeting_provider: 'google_meet',
+              meeting_link: result.meetLink,
+              attendees,
+              created_by: user!.id,
+              company_id: companyUser.company_id,
+              is_all_day: false
+            });
+        }
+
+        toast({
+          title: "✅ Reunião Criada!",
+          description: "Reunião criada com sucesso! Link copiado para área de transferência.",
+        });
+
+        // Copiar link para área de transferência e abrir
+        navigator.clipboard.writeText(result.meetLink);
+        window.open(result.meetLink, '_blank');
+
+        // Limpar formulário
+        setTitle('');
+        setDescription('');
+        setSelectedClients([]);
+        setManualEmails('');
+        setDuration('60');
+      }
 
     } catch (error: any) {
       console.error('💥 Erro ao iniciar reunião:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro ao Criar Reunião",
         description: error.message || 'Erro inesperado ao criar reunião',
         variant: "destructive"
       });
@@ -186,47 +184,7 @@ const StartMeet = () => {
     }
   };
 
-  const getConnectionStatus = () => {
-    if (processingOAuth) {
-      return { 
-        connected: false, 
-        loading: true, 
-        connect: () => {},
-        status: 'processing',
-        message: 'Processando conexão...'
-      };
-    }
-    
-    if (googleLoading) {
-      return { 
-        connected: false, 
-        loading: true, 
-        connect: () => {},
-        status: 'loading',
-        message: 'Carregando...'
-      };
-    }
-    
-    if (googleConnected) {
-      return { 
-        connected: true, 
-        loading: false, 
-        connect: connectGoogle,
-        status: 'connected',
-        message: 'Conectado'
-      };
-    }
-    
-    return { 
-      connected: false, 
-      loading: false, 
-      connect: connectGoogle,
-      status: 'disconnected',
-      message: 'Desconectado'
-    };
-  };
-
-  const { connected, loading, connect, status, message } = getConnectionStatus();
+  const canStartMeeting = googleConnected && !googleLoading && !processingOAuth && !isLoading;
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -237,6 +195,16 @@ const StartMeet = () => {
             <p className="text-gray-500 mt-1">Inicie uma reunião rapidamente</p>
           </div>
         </div>
+
+        {/* Google Meet Connection Status */}
+        <GoogleMeetConnectionStatus
+          isConnected={googleConnected}
+          loading={googleLoading}
+          processingOAuth={processingOAuth}
+          error={googleError}
+          onConnect={connectGoogle}
+          onDisconnect={disconnectGoogle}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Formulário Principal */}
@@ -258,6 +226,7 @@ const StartMeet = () => {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Digite o título da reunião"
                   className="rounded-xl h-12"
+                  disabled={!canStartMeeting}
                 />
               </div>
 
@@ -272,6 +241,7 @@ const StartMeet = () => {
                   placeholder="Descrição da reunião"
                   rows={3}
                   className="rounded-xl resize-none"
+                  disabled={!canStartMeeting}
                 />
               </div>
 
@@ -280,7 +250,7 @@ const StartMeet = () => {
                   <Clock className="h-4 w-4" />
                   Duração
                 </Label>
-                <Select value={duration} onValueChange={setDuration}>
+                <Select value={duration} onValueChange={setDuration} disabled={!canStartMeeting}>
                   <SelectTrigger className="rounded-xl h-12">
                     <SelectValue />
                   </SelectTrigger>
@@ -292,72 +262,10 @@ const StartMeet = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">
-                  Plataforma de Reunião
-                </Label>
-                
-                {/* Status da Conexão */}
-                <div className={`p-4 rounded-xl border-2 ${
-                  status === 'connected' 
-                    ? 'bg-green-50 border-green-200' 
-                    : status === 'processing'
-                    ? 'bg-blue-50 border-blue-200'
-                    : status === 'loading'
-                    ? 'bg-yellow-50 border-yellow-200'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm">
-                        {status === 'processing' ? (
-                          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                        ) : status === 'connected' ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : status === 'loading' ? (
-                          <Loader2 className="w-5 h-5 animate-spin text-yellow-600" />
-                        ) : (
-                          <Video className="w-5 h-5 text-gray-600" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Google Meet</h3>
-                        <p className={`text-sm ${
-                          status === 'connected' ? 'text-green-700' :
-                          status === 'processing' ? 'text-blue-700' :
-                          status === 'loading' ? 'text-yellow-700' :
-                          'text-gray-600'
-                        }`}>
-                          {message}
-                        </p>
-                      </div>
-                    </div>
-                    {!connected && !loading && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={connect}
-                        disabled={loading || isLoading}
-                        className="h-8 px-3 text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Conectar
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {status === 'processing' && (
-                    <div className="mt-3 text-xs text-blue-600">
-                      Finalizando conexão com Google Meet...
-                    </div>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
 
-          {/* ... keep existing code (participantes section) the same ... */}
+          {/* Participantes */}
           <Card className="shadow-xl border-0 rounded-2xl">
             <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-2xl">
               <CardTitle className="flex items-center space-x-2">
@@ -388,6 +296,7 @@ const StartMeet = () => {
                                 setSelectedClients(selectedClients.filter(id => id !== client.id));
                               }
                             }}
+                            disabled={!canStartMeeting}
                             className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                           />
                           <Label htmlFor={`client-${client.id}`} className="text-sm">
@@ -412,6 +321,7 @@ const StartMeet = () => {
                     placeholder="email1@exemplo.com, email2@exemplo.com"
                     rows={3}
                     className="rounded-xl resize-none"
+                    disabled={!canStartMeeting}
                   />
                   <p className="text-xs text-gray-500">
                     Separe múltiplos emails com vírgula
@@ -422,8 +332,8 @@ const StartMeet = () => {
               <div className="pt-6 border-t">
                 <Button
                   onClick={handleStartMeeting}
-                  disabled={isLoading || !connected || processingOAuth}
-                  className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90"
+                  disabled={!canStartMeeting}
+                  className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90 disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
@@ -438,18 +348,7 @@ const StartMeet = () => {
                   )}
                 </Button>
                 
-                {status === 'processing' && (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                      <span className="text-sm text-blue-700">
-                        Processando conexão com Google Meet...
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                {!connected && status !== 'processing' && (
+                {!googleConnected && !processingOAuth && (
                   <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
                     <div className="flex items-center space-x-2">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />

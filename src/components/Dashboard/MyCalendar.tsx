@@ -4,15 +4,14 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, Video, ExternalLink, CheckCircle, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import EventDropdown from './EventDropdown';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
 import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
+import GoogleMeetConnectionStatus from './GoogleMeetConnectionStatus';
 import { Input } from '@/components/ui/input';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +36,7 @@ const MyCalendar = () => {
     isConnected: googleConnected, 
     loading: googleLoading, 
     processingOAuth,
+    error: googleError,
     connectGoogle, 
     disconnectGoogle,
     importGoogleCalendarEvents 
@@ -88,12 +88,12 @@ const MyCalendar = () => {
           // Processar agendamento público
           try {
             await supabase.functions.invoke('google-calendar', {
-              body: {
+              body: JSON.stringify({
                 action: 'process_public_booking',
                 eventData: {
                   bookingData: payload.new
                 }
-              }
+              })
             });
             refreshEvents();
           } catch (error) {
@@ -221,14 +221,6 @@ const MyCalendar = () => {
     setSelectedEventDetails(null);
   };
 
-  const handleGoogleIntegration = async () => {
-    if (googleConnected) {
-      await disconnectGoogle();
-    } else {
-      await connectGoogle();
-    }
-  };
-
   if (loading) {
     return (
       <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -297,71 +289,14 @@ const MyCalendar = () => {
         </div>
 
         {/* Google Meet Integration Card */}
-        <Card className="shadow-lg border-0 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm">
-                  {processingOAuth ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                  ) : googleConnected ? (
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <Video className="w-6 h-6 text-blue-600" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Google Meet</h3>
-                  <p className={`text-sm ${
-                    processingOAuth ? 'text-blue-700' :
-                    googleConnected ? 'text-green-700' : 'text-gray-600'
-                  }`}>
-                    {processingOAuth ? 'Processando conexão...' :
-                     googleConnected ? 'Conectado - Reuniões automáticas ativadas' : 
-                     'Conecte para criar reuniões automaticamente'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Badge variant={googleConnected ? "default" : "secondary"}>
-                  {googleConnected ? "Conectado" : "Desconectado"}
-                </Badge>
-                <Button 
-                  variant={googleConnected ? "outline" : "default"}
-                  onClick={handleGoogleIntegration}
-                  disabled={googleLoading || processingOAuth}
-                  className="min-w-[120px]"
-                >
-                  {googleLoading || processingOAuth ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processando...
-                    </>
-                  ) : googleConnected ? (
-                    "Desconectar"
-                  ) : (
-                    <>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Conectar
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-            
-            {processingOAuth && (
-              <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-xl">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                  <span className="text-sm text-blue-700">
-                    Finalizando conexão com Google Meet...
-                  </span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <GoogleMeetConnectionStatus
+          isConnected={googleConnected}
+          loading={googleLoading}
+          processingOAuth={processingOAuth}
+          error={googleError}
+          onConnect={connectGoogle}
+          onDisconnect={disconnectGoogle}
+        />
 
         <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">
           <CardContent className="p-0">

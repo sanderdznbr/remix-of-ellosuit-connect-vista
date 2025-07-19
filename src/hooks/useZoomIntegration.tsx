@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -49,6 +50,11 @@ export const useZoomIntegration = () => {
     const state = urlParams.get('state');
     const error = urlParams.get('error');
 
+    // Only process if this is a Zoom callback
+    if (!state || !state.startsWith('zoom_auth_')) {
+      return;
+    }
+
     if (error) {
       console.error('❌ Erro OAuth Zoom:', error);
       
@@ -64,12 +70,26 @@ export const useZoomIntegration = () => {
         description: errorMessage,
         variant: "destructive"
       });
+      
       // Limpar URL após erro
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
     
-    if (code && state === 'zoom_auth' && user) {
+    if (code && user) {
+      // Extract user_id from state for security validation
+      const expectedState = `zoom_auth_${user.id}`;
+      if (state !== expectedState) {
+        console.error('❌ State mismatch - possível ataque CSRF');
+        toast({
+          title: "Erro de Segurança",
+          description: "Estado OAuth inválido. Tente novamente.",
+          variant: "destructive"
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
       console.log('🔄 Processando callback do Zoom...');
       setLoading(true);
       
@@ -105,7 +125,7 @@ export const useZoomIntegration = () => {
             duration: 5000,
           });
         } else {
-          throw new Error('Falha na conexão com Zoom');
+          throw new Error(data?.error || 'Falha na conexão com Zoom');
         }
       } catch (error: any) {
         console.error('💥 Erro ao processar callback Zoom:', error);
@@ -139,7 +159,10 @@ export const useZoomIntegration = () => {
       console.log('🔗 Iniciando conexão com Zoom...');
       
       const { data, error } = await supabase.functions.invoke('zoom-integration', {
-        body: { action: 'get_auth_url', user_id: user.id }
+        body: { 
+          action: 'get_auth_url', 
+          user_id: user.id 
+        }
       });
 
       if (error) {
@@ -149,6 +172,8 @@ export const useZoomIntegration = () => {
       if (data?.authUrl) {
         console.log('🔗 Redirecionando para Zoom OAuth...');
         window.location.href = data.authUrl;
+      } else {
+        throw new Error('URL de autorização não recebida');
       }
     } catch (error: any) {
       console.error('💥 Erro ao conectar Zoom:', error);

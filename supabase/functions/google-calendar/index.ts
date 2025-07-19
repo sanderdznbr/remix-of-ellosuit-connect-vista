@@ -8,6 +8,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Timeout utilities
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms)
+    )
+  ]);
+};
+
 serve(async (req) => {
   console.log('🚀 Google Calendar Function:', req.method, req.url);
   
@@ -61,43 +71,76 @@ serve(async (req) => {
 
         console.log('🔄 Exchanging code for user:', user_id);
         
+        // CRITICAL FIX: Use exact redirect URI
         const redirectUri = 'https://ellosuit.online/dashboard';
+        console.log('🔗 Using redirect URI:', redirectUri);
         
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            code: code,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUri,
-          }),
+        const tokenParams = new URLSearchParams({
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          code: code,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
         });
+
+        console.log('📤 Token request params:', {
+          client_id: googleClientId.substring(0, 20) + '...',
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+          code: code.substring(0, 10) + '...'
+        });
+
+        const tokenResponse = await withTimeout(
+          fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: tokenParams,
+          }),
+          15000 // 15 second timeout
+        );
 
         const tokenData = await tokenResponse.json();
         
         if (!tokenResponse.ok) {
-          console.error('❌ Token exchange failed:', tokenData);
-          throw new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`);
+          console.error('❌ Token exchange failed:', {
+            status: tokenResponse.status,
+            statusText: tokenResponse.statusText,
+            error: tokenData
+          });
+          
+          let errorMessage = `Token exchange failed: ${tokenData.error_description || tokenData.error || 'Unknown error'}`;
+          
+          if (tokenData.error === 'redirect_uri_mismatch') {
+            errorMessage = 'Redirect URI mismatch. Verifique se no Google Cloud Console está configurado: https://ellosuit.online/dashboard';
+          } else if (tokenData.error === 'invalid_grant') {
+            errorMessage = 'Código de autorização expirado ou inválido. Tente conectar novamente.';
+          }
+          
+          throw new Error(errorMessage);
         }
 
         console.log('✅ Token obtained successfully');
 
-        // Get user info
-        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: {
-            'Authorization': `Bearer ${tokenData.access_token}`,
-          },
-        });
+        // Get user info with timeout
+        const userResponse = await withTimeout(
+          fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+          }),
+          10000
+        );
 
         const userData = await userResponse.json();
         
         if (!userResponse.ok) {
-          throw new Error('Failed to get user info');
+          console.error('❌ User info failed:', userData);
+          throw new Error('Failed to get user info from Google');
         }
+
+        console.log('👤 User info obtained:', { email: userData.email, id: userData.id });
 
         // Get company_id
         const { data: companyData, error: companyError } = await supabase
@@ -107,24 +150,31 @@ serve(async (req) => {
           .single();
 
         if (companyError || !companyData?.company_id) {
+          console.error('❌ Company lookup failed:', companyError);
           throw new Error('User not associated with a company');
         }
 
-        // Save integration
+        console.log('🏢 Company found:', companyData.company_id);
+
+        // Save integration with proper error handling
         const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000);
         
+        const integrationData = {
+          user_id: user_id,
+          company_id: companyData.company_id,
+          provider: 'google_meet',
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          expires_at: expiresAt.toISOString(),
+          provider_user_id: userData.id,
+          provider_email: userData.email
+        };
+
+        console.log('💾 Saving integration data...');
+
         const { data: saveData, error: saveError } = await supabase
           .from('meeting_integrations')
-          .upsert({
-            user_id: user_id,
-            company_id: companyData.company_id,
-            provider: 'google_meet',
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-            expires_at: expiresAt.toISOString(),
-            provider_user_id: userData.id,
-            provider_email: userData.email
-          }, {
+          .upsert(integrationData, {
             onConflict: 'user_id,provider'
           })
           .select()
@@ -135,7 +185,7 @@ serve(async (req) => {
           throw new Error(`Failed to save integration: ${saveError.message}`);
         }
 
-        console.log('✅ Integration saved successfully');
+        console.log('✅ Integration saved successfully:', saveData.id);
         
         return new Response(JSON.stringify({ 
           success: true,
@@ -175,14 +225,17 @@ serve(async (req) => {
           })) || [],
         };
 
-        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(calendarEvent),
-        });
+        const response = await withTimeout(
+          fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(calendarEvent),
+          }),
+          15000
+        );
 
         const event = await response.json();
         
@@ -209,22 +262,26 @@ serve(async (req) => {
           throw new Error('Refresh token and user ID are required');
         }
 
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token',
+        const tokenResponse = await withTimeout(
+          fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              refresh_token: refreshToken,
+              grant_type: 'refresh_token',
+            }),
           }),
-        });
+          10000
+        );
 
         const tokenData = await tokenResponse.json();
         
         if (!tokenResponse.ok) {
+          console.error('❌ Token renewal failed:', tokenData);
           throw new Error(`Failed to renew token: ${tokenData.error || 'Unknown error'}`);
         }
 

@@ -20,11 +20,14 @@ interface GoogleCalendarState {
   error: string | null;
 }
 
-// Cache para evitar múltiplas chamadas
-const cache = {
+// Global cache and debounce management
+const globalState = {
   clientId: null as string | null,
   lastCheck: 0,
-  checkInterval: 30000, // 30 segundos
+  checkInterval: 30000, // 30 seconds
+  isProcessing: false,
+  hasProcessedOAuth: false,
+  processingTimeout: null as NodeJS.Timeout | null,
 };
 
 export const useGoogleCalendar = () => {
@@ -39,55 +42,61 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const isProcessingRef = useRef(false);
-  const hasProcessedOAuthRef = useRef(false);
+  const debounceRef = useRef<NodeJS.Timeout>();
+  const mountedRef = useRef(true);
 
-  // Função para atualizar estado de forma segura
+  // Safe state update
   const updateState = useCallback((updates: Partial<GoogleCalendarState>) => {
+    if (!mountedRef.current) return;
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Cache do Client ID
+  // Debounced function calls
+  const debounce = useCallback((fn: Function, delay: number) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(fn, delay);
+  }, []);
+
+  // Get Google Client ID with cache
   const getGoogleClientId = useCallback(async (): Promise<string | null> => {
-    if (cache.clientId) return cache.clientId;
+    if (globalState.clientId) return globalState.clientId;
 
     try {
-      console.log('🔑 Fetching Google Client ID...');
-      
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: JSON.stringify({ action: 'get_client_id' })
       });
 
-      if (error) {
-        throw new Error(`Failed to get Client ID: ${error.message}`);
-      }
-
+      if (error) throw error;
       if (data?.client_id) {
-        cache.clientId = data.client_id;
+        globalState.clientId = data.client_id;
         return data.client_id;
       }
-
       throw new Error('Client ID not found');
     } catch (error) {
-      console.error('💥 Error getting Client ID:', error);
+      console.error('❌ Error getting Client ID:', error);
       return null;
     }
   }, []);
 
-  // Verificar conexão com cache
+  // Check connection with debounce and cache
   const checkConnection = useCallback(async (force = false) => {
-    if (!user || (!force && state.loading)) return;
+    if (!user || authLoading) return;
+    
+    // Prevent multiple simultaneous calls
+    if (globalState.isProcessing && !force) return;
     
     // Cache check
     const now = Date.now();
-    if (!force && (now - cache.lastCheck) < cache.checkInterval && state.integration) {
+    if (!force && (now - globalState.lastCheck) < globalState.checkInterval && state.integration) {
       return;
     }
 
+    globalState.isProcessing = true;
+    updateState({ loading: true, error: null });
+    
     try {
-      console.log('🔍 Checking connection...');
-      updateState({ loading: true, error: null });
-      
       const { data, error } = await supabase
         .from('meeting_integrations')
         .select('*')
@@ -95,14 +104,12 @@ export const useGoogleCalendar = () => {
         .eq('provider', 'google_meet')
         .maybeSingle();
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      cache.lastCheck = now;
+      globalState.lastCheck = now;
 
       if (data) {
-        // Verificar se token está expirado
+        // Check if token is expired
         const expiresAt = new Date(data.expires_at);
         const isExpired = new Date() >= expiresAt;
         
@@ -125,36 +132,40 @@ export const useGoogleCalendar = () => {
         });
       }
     } catch (error) {
-      console.error('💥 Error checking connection:', error);
+      console.error('❌ Error checking connection:', error);
       updateState({ 
         isConnected: false, 
         integration: null, 
         loading: false,
         error: error.message 
       });
+    } finally {
+      globalState.isProcessing = false;
     }
-  }, [user, state.loading, updateState]);
+  }, [user, authLoading, updateState]);
 
-  // Conectar com Google
+  // Connect to Google with improved error handling
   const connectGoogle = useCallback(async () => {
-    if (!user || isProcessingRef.current) return;
+    if (!user || globalState.isProcessing) return;
 
-    isProcessingRef.current = true;
+    globalState.isProcessing = true;
     updateState({ loading: true, error: null });
     
     try {
-      console.log('🔗 Starting Google connection...');
-      
       const clientId = await getGoogleClientId();
       if (!clientId) {
         throw new Error('Failed to get Google Client ID');
       }
 
       const scopes = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'openid',
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
+      // CRITICAL FIX: Use exact redirect URI
       const redirectUri = 'https://ellosuit.online/dashboard';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -166,27 +177,35 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=google_meet_auth`;
 
-      console.log('🔗 Redirecting to Google OAuth...');
+      console.log('🔗 Redirecting to Google OAuth with URI:', redirectUri);
       window.location.href = authUrl;
     } catch (error) {
-      console.error('💥 Error connecting:', error);
+      console.error('❌ Error connecting:', error);
       updateState({ loading: false, error: error.message });
       toast({
         title: "Erro de Conexão",
         description: `Falha ao conectar com Google: ${error.message}`,
         variant: "destructive"
       });
-    } finally {
-      isProcessingRef.current = false;
+      globalState.isProcessing = false;
     }
   }, [user, getGoogleClientId, updateState, toast]);
 
-  // Processar código OAuth
+  // Process OAuth code with timeout and single execution
   const processGoogleOAuthCode = useCallback(async (code: string, userId: string) => {
-    if (hasProcessedOAuthRef.current) return;
+    if (globalState.hasProcessedOAuth) return;
 
-    hasProcessedOAuthRef.current = true;
-    console.log('🔄 Processing OAuth code...');
+    globalState.hasProcessedOAuth = true;
+    globalState.isProcessing = true;
+    
+    // Set timeout to reset processing state
+    if (globalState.processingTimeout) {
+      clearTimeout(globalState.processingTimeout);
+    }
+    globalState.processingTimeout = setTimeout(() => {
+      globalState.hasProcessedOAuth = false;
+      globalState.isProcessing = false;
+    }, 30000); // 30 seconds timeout
     
     updateState({ loading: true, processingOAuth: true, error: null });
     
@@ -206,11 +225,12 @@ export const useGoogleCalendar = () => {
       if (data?.success) {
         console.log('✅ OAuth processed successfully!');
         
-        // Limpar URL
+        // Clear URL
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Limpar cache e verificar conexão
-        cache.lastCheck = 0;
+        // Clear cache and check connection
+        globalState.lastCheck = 0;
+        
         setTimeout(() => {
           checkConnection(true);
           toast({
@@ -225,10 +245,12 @@ export const useGoogleCalendar = () => {
       }
       
     } catch (error) {
-      console.error('💥 OAuth error:', error);
+      console.error('❌ OAuth error:', error);
       
       let errorMessage = 'Falha ao conectar com Google Meet';
-      if (error.message.includes('invalid_grant')) {
+      if (error.message.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração. Verifique se no Google Cloud Console está configurado: https://ellosuit.online/dashboard';
+      } else if (error.message.includes('invalid_grant')) {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       }
       
@@ -240,15 +262,18 @@ export const useGoogleCalendar = () => {
         duration: 8000
       });
       
-      // Limpar URL
+      // Clear URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } finally {
       updateState({ loading: false, processingOAuth: false });
-      hasProcessedOAuthRef.current = false;
+      globalState.isProcessing = false;
+      if (globalState.processingTimeout) {
+        clearTimeout(globalState.processingTimeout);
+      }
     }
   }, [updateState, checkConnection, toast]);
 
-  // Renovar token
+  // Renew token
   const renewToken = useCallback(async (refreshToken: string) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -268,12 +293,12 @@ export const useGoogleCalendar = () => {
       console.log('✅ Token renewed successfully');
       return data.access_token;
     } catch (error) {
-      console.error('💥 Token renewal error:', error);
+      console.error('❌ Token renewal error:', error);
       throw error;
     }
   }, [user]);
 
-  // Obter access token válido
+  // Get valid access token
   const getValidAccessToken = useCallback(async () => {
     if (!state.integration) {
       throw new Error('Google Calendar not connected');
@@ -289,7 +314,7 @@ export const useGoogleCalendar = () => {
     return state.integration.access_token;
   }, [state.integration, renewToken]);
 
-  // Criar evento Google Meet
+  // Create Google Meet event
   const createGoogleMeetEvent = useCallback(async (eventData: any) => {
     if (!state.integration) {
       throw new Error('Google Calendar not connected');
@@ -322,12 +347,12 @@ export const useGoogleCalendar = () => {
         meetLink: data.meetLink
       };
     } catch (error) {
-      console.error('💥 Error creating event:', error);
+      console.error('❌ Error creating event:', error);
       throw error;
     }
   }, [state.integration, getValidAccessToken]);
 
-  // Desconectar Google
+  // Disconnect Google
   const disconnectGoogle = useCallback(async () => {
     if (!user || !state.integration) return;
 
@@ -341,9 +366,9 @@ export const useGoogleCalendar = () => {
 
       if (error) throw error;
 
-      // Limpar cache
-      cache.clientId = null;
-      cache.lastCheck = 0;
+      // Clear cache
+      globalState.clientId = null;
+      globalState.lastCheck = 0;
 
       updateState({ 
         isConnected: false, 
@@ -357,7 +382,7 @@ export const useGoogleCalendar = () => {
         description: "Google Calendar desconectado com sucesso"
       });
     } catch (error) {
-      console.error('💥 Error disconnecting:', error);
+      console.error('❌ Error disconnecting:', error);
       updateState({ loading: false, error: error.message });
       toast({
         title: "Erro",
@@ -367,20 +392,20 @@ export const useGoogleCalendar = () => {
     }
   }, [user, state.integration, updateState, toast]);
 
-  // Placeholder para importar eventos
+  // Import Google Calendar events (placeholder)
   const importGoogleCalendarEvents = useCallback(async () => {
     return [];
   }, []);
 
-  // Effect principal
+  // Main effect for initialization and OAuth processing
   useEffect(() => {
-    // Verificar OAuth callback
+    // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const urlState = urlParams.get('state');
     const error = urlParams.get('error');
     
-    // Tratar erro OAuth
+    // Handle OAuth error
     if (error) {
       console.error('❌ OAuth error:', error);
       let errorMessage = `OAuth Error: ${error}`;
@@ -398,26 +423,35 @@ export const useGoogleCalendar = () => {
       return;
     }
 
-    // Processar código OAuth
-    if (code && urlState === 'google_meet_auth' && !hasProcessedOAuthRef.current) {
+    // Process OAuth code
+    if (code && urlState === 'google_meet_auth' && !globalState.hasProcessedOAuth) {
       if (user && !authLoading) {
         processGoogleOAuthCode(code, user.id);
       }
       return;
     }
     
-    // Inicialização normal
-    if (!authLoading && user) {
-      checkConnection();
-      getGoogleClientId();
+    // Normal initialization with debounce
+    if (!authLoading && user && !globalState.isProcessing) {
+      debounce(() => {
+        checkConnection();
+        getGoogleClientId();
+      }, 500);
     }
-  }, [user, authLoading, checkConnection, getGoogleClientId, processGoogleOAuthCode, toast]);
+  }, [user, authLoading, checkConnection, getGoogleClientId, processGoogleOAuthCode, toast, debounce]);
 
-  // Cleanup
+  // Cleanup effect
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      isProcessingRef.current = false;
-      hasProcessedOAuthRef.current = false;
+      mountedRef.current = false;
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      if (globalState.processingTimeout) {
+        clearTimeout(globalState.processingTimeout);
+        globalState.processingTimeout = null;
+      }
     };
   }, []);
 

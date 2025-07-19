@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -91,7 +90,7 @@ export const useGoogleCalendar = () => {
       console.log('🔑 Buscando Google Client ID...');
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: { action: 'get_client_id' }
+        body: JSON.stringify({ action: 'get_client_id' })
       });
 
       if (error) {
@@ -192,17 +191,18 @@ export const useGoogleCalendar = () => {
       console.log('📡 Chamando google-calendar edge function...');
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: {
+        body: JSON.stringify({
           action: 'exchange_code',
           code: code,
           user_id: userId
-        }
+        })
       });
 
       console.log('📡 Resposta da edge function:', { data, error });
 
       if (error) {
-        throw new Error(`Edge Function Error: ${error.message || error}`);
+        console.error('❌ Edge function error:', error);
+        throw new Error(`Edge Function Error: ${error.message || JSON.stringify(error)}`);
       }
 
       if (data?.success) {
@@ -224,6 +224,7 @@ export const useGoogleCalendar = () => {
         }, 1000);
         
       } else {
+        console.error('❌ Dados inesperados da edge function:', data);
         throw new Error(data?.error || 'Resposta inesperada da edge function');
       }
       
@@ -265,11 +266,11 @@ export const useGoogleCalendar = () => {
       console.log('🔄 Renovando token...');
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: {
+        body: JSON.stringify({
           action: 'renew_token',
           refreshToken: refreshToken,
           userId: user.id
-        }
+        })
       });
 
       if (error) throw error;
@@ -315,7 +316,7 @@ export const useGoogleCalendar = () => {
       const accessToken = await getValidAccessToken();
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: {
+        body: JSON.stringify({
           action: 'create_event',
           eventData: {
             title: eventData.title || 'Nova Reunião',
@@ -325,7 +326,7 @@ export const useGoogleCalendar = () => {
             attendees: eventData.attendees || []
           },
           accessToken: accessToken
-        }
+        })
       });
 
       if (error) {
@@ -399,10 +400,10 @@ export const useGoogleCalendar = () => {
       const accessToken = await getValidAccessToken();
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: {
+        body: JSON.stringify({
           action: 'import_events',
           accessToken: accessToken
-        }
+        })
       });
 
       if (error) {

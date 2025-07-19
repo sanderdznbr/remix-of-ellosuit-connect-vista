@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -60,8 +61,15 @@ serve(async (req) => {
     // Parse request body
     let requestBody;
     try {
-      requestBody = await req.json();
-      console.log('📨 Request body recebido:', JSON.stringify(requestBody, null, 2));
+      const rawBody = await req.text();
+      console.log('📨 Raw request body:', rawBody);
+      
+      if (!rawBody || rawBody.trim() === '') {
+        throw new Error('Empty request body');
+      }
+      
+      requestBody = JSON.parse(rawBody);
+      console.log('📨 Request body parsed:', JSON.stringify(requestBody, null, 2));
     } catch (parseError) {
       console.error('❌ Erro ao parsear request body:', parseError);
       return new Response(JSON.stringify({ 
@@ -139,6 +147,12 @@ serve(async (req) => {
         };
         
         console.log('📡 Fazendo request para Google token API...');
+        console.log('📡 Token payload (sem secrets):', {
+          client_id: googleClientId.substring(0, 20) + '...',
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+          code: code.substring(0, 20) + '...'
+        });
         
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
@@ -385,6 +399,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Erro na edge function:', error);
+    console.error('💥 Stack trace:', error.stack);
     
     let statusCode = 500;
     let errorMessage = error.message;
@@ -398,13 +413,14 @@ serve(async (req) => {
     } else if (error.message.includes('não configurado') || error.message.includes('not configured')) {
       statusCode = 500;
       errorMessage = 'Erro de configuração do servidor';
-    } else if (error.message.includes('Invalid JSON') || error.message.includes('Action not specified')) {
+    } else if (error.message.includes('Invalid JSON') || error.message.includes('Action not specified') || error.message.includes('Empty request body')) {
       statusCode = 400;
     }
     
     return new Response(JSON.stringify({ 
       error: errorMessage,
       details: error.message,
+      stack: error.stack,
       timestamp: new Date().toISOString()
     }), {
       status: statusCode,

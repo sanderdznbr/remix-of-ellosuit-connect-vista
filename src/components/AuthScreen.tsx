@@ -27,9 +27,33 @@ const AuthScreen = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
+      // Verificar se há OAuth callback pendente para processar
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
+      
+      if (hasGoogleCallback) {
+        console.log('🔄 OAuth callback detectado, processando após login...');
+        // O hook useGoogleCalendar irá processar automaticamente
+      }
+      
       navigate('/dashboard');
     }
   }, [user, navigate]);
+
+  // Verificar se há OAuth callback na URL quando a página carrega
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
+    
+    if (hasGoogleCallback && !user) {
+      console.log('🔄 OAuth callback detectado, mas usuário não logado');
+      toast({
+        title: "Conectando Google Meet",
+        description: "Por favor, faça login primeiro para completar a conexão com Google Meet",
+        duration: 5000,
+      });
+    }
+  }, [user, toast]);
 
   const validateForm = () => {
     if (!email) {
@@ -98,6 +122,8 @@ const AuthScreen = () => {
     
     try {
       if (isSignUp) {
+        const redirectUrl = `${window.location.origin}/`;
+        
         const { data, error } = await signUp(email, password, username, companyName);
         
         if (error) {
@@ -142,7 +168,7 @@ const AuthScreen = () => {
             title: "Login realizado!",
             description: "Bem-vindo de volta!",
           });
-          navigate('/dashboard');
+          // O redirect será feito pelo useEffect que monitora o user
         }
       }
     } catch (error) {

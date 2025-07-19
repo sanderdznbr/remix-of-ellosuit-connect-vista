@@ -1,5 +1,5 @@
 
-project_id = "jwddiyuezqrpuakazvgg"
+project_id = "84320702-4971-42e0-bb91-6756570feabc"
 
 [api]
 enabled = true
@@ -8,49 +8,27 @@ schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
-[db]
-port = 54322
-
-[studio]
-enabled = true
-port = 54323
-
-[inbucket]
-enabled = true
-port = 54324
-smtp_port = 54325
-pop3_port = 54326
-
-[storage]
-enabled = true
-port = 54325
-file_size_limit = "50MiB"
-
 [auth]
 enabled = true
-port = 54326
+port = 54320
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 refresh_token_rotation_enabled = true
-security_update_enabled = true
-
-[functions.google-calendar]
-verify_jwt = false
-
-[functions.zoom-integration]
-verify_jwt = false
+refresh_token_reuse_interval = 10
+enable_signup = true
 
 [functions.send-email]
-verify_jwt = true
+verify_jwt = false
 
 [functions.track-email-open]
 verify_jwt = false
 
-[functions.test-google-secrets]
-verify_jwt = true
+[functions.google-calendar]
+verify_jwt = false
 
-[edge_runtime]
+[db]
 enabled = true
-port = 54327
-inspector_port = 54328
+port = 54322
+shadow_port = 54320
+major_version = 15

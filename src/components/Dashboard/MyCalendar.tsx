@@ -4,7 +4,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Search, Video, ExternalLink, CheckCircle, Loader2 } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import EventDropdown from './EventDropdown';
 import ImprovedEventModal from './ImprovedEventModal';
@@ -31,22 +33,31 @@ const MyCalendar = () => {
   // Hooks devem sempre estar no topo do componente
   const { isMobile, isLoading } = useIsMobile();
   const { events, loading, hasCompany, createEvent, refreshEvents } = useCalendarData();
-  const { importGoogleCalendarEvents } = useGoogleCalendar();
+  const { 
+    isConnected: googleConnected, 
+    loading: googleLoading, 
+    processingOAuth,
+    connectGoogle, 
+    disconnectGoogle,
+    importGoogleCalendarEvents 
+  } = useGoogleCalendar();
   const calendarRef = useRef<FullCalendar>(null);
 
   // Sincronização automática com Google Calendar
   useEffect(() => {
     const syncInterval = setInterval(async () => {
       try {
-        await importGoogleCalendarEvents();
-        refreshEvents();
+        if (googleConnected) {
+          await importGoogleCalendarEvents();
+          refreshEvents();
+        }
       } catch (error) {
         console.log('Erro na sincronização automática:', error);
       }
     }, 300000); // Sincroniza a cada 5 minutos
 
     return () => clearInterval(syncInterval);
-  }, [importGoogleCalendarEvents, refreshEvents]);
+  }, [googleConnected, importGoogleCalendarEvents, refreshEvents]);
 
   // Listener para eventos em tempo real
   useEffect(() => {
@@ -210,6 +221,14 @@ const MyCalendar = () => {
     setSelectedEventDetails(null);
   };
 
+  const handleGoogleIntegration = async () => {
+    if (googleConnected) {
+      await disconnectGoogle();
+    } else {
+      await connectGoogle();
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -277,6 +296,73 @@ const MyCalendar = () => {
           </div>
         </div>
 
+        {/* Google Meet Integration Card */}
+        <Card className="shadow-lg border-0 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm">
+                  {processingOAuth ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  ) : googleConnected ? (
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <Video className="w-6 h-6 text-blue-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Google Meet</h3>
+                  <p className={`text-sm ${
+                    processingOAuth ? 'text-blue-700' :
+                    googleConnected ? 'text-green-700' : 'text-gray-600'
+                  }`}>
+                    {processingOAuth ? 'Processando conexão...' :
+                     googleConnected ? 'Conectado - Reuniões automáticas ativadas' : 
+                     'Conecte para criar reuniões automaticamente'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Badge variant={googleConnected ? "default" : "secondary"}>
+                  {googleConnected ? "Conectado" : "Desconectado"}
+                </Badge>
+                <Button 
+                  variant={googleConnected ? "outline" : "default"}
+                  onClick={handleGoogleIntegration}
+                  disabled={googleLoading || processingOAuth}
+                  className="min-w-[120px]"
+                >
+                  {googleLoading || processingOAuth ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : googleConnected ? (
+                    "Desconectar"
+                  ) : (
+                    <>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Conectar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            {processingOAuth && (
+              <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-xl">
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                  <span className="text-sm text-blue-700">
+                    Finalizando conexão com Google Meet...
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="shadow-xl border-0 rounded-2xl overflow-hidden">
           <CardContent className="p-0">
             <div className="calendar-container">
@@ -298,7 +384,7 @@ const MyCalendar = () => {
                 dayMaxEvents={3}
                 moreLinkClick="popover"
                 weekends={true}
-                height="calc(100vh - 200px)"
+                height="calc(100vh - 300px)"
                 locale="pt-br"
                 buttonText={{
                   today: 'Hoje',

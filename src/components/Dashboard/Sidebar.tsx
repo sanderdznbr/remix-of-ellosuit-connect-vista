@@ -10,7 +10,6 @@ import {
   Calendar,
   Video,
   BarChart3,
-  Settings,
   MessageCircle,
   ChevronLeft,
   ChevronRight,
@@ -61,12 +60,10 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       ]
     },
     {
-      title: 'Configurações',
+      title: 'Sistema',
       items: [
         { id: 'team', label: 'Equipe', icon: Users },
         { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
-        { id: 'settings', label: 'Configurações', icon: Settings },
-        { id: 'test-secrets', label: '🔍 Teste Secrets', icon: Settings },
       ]
     }
   ];
@@ -86,9 +83,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'documents', 
       'clients', 
       'analytics',
-      'settings',
-      'team',
-      'test-secrets'
+      'team'
     ];
     
     if (implementedItems.includes(itemId)) {

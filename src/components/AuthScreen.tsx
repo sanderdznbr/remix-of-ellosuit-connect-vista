@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,48 +24,27 @@ const AuthScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Melhorado: useEffect para redirect com melhor tratamento OAuth
+  // useEffect para redirect - SIMPLIFICADO
   useEffect(() => {
     if (user) {
-      console.log('🔄 Usuário autenticado, verificando OAuth callback...');
+      console.log('🔄 Usuário autenticado, redirecionando para dashboard...');
       
-      // Verificar se há OAuth callback pendente
+      // Verificar se há OAuth callback
       const urlParams = new URLSearchParams(window.location.search);
       const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
       
       if (hasGoogleCallback) {
-        console.log('🔄 OAuth callback detectado após login, processando...');
-        toast({
-          title: "Processando Google Meet",
-          description: "Finalizando conexão com Google Meet...",
-          duration: 3000,
-        });
-        
-        // Aguardar um pouco para garantir que os hooks estão sincronizados
+        console.log('🔄 OAuth callback detectado, aguardando processamento...');
+        // Aguardar um pouco para o hook processar
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
       } else {
-        // Redirect normal
+        // Redirect normal imediato
         navigate('/dashboard');
       }
     }
-  }, [user, navigate, toast]);
-
-  // Melhorado: useEffect para detectar OAuth callback sem usuário
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
-    
-    if (hasGoogleCallback && !user) {
-      console.log('🔄 OAuth callback detectado, mas usuário não logado');
-      toast({
-        title: "Conectando Google Meet",
-        description: "Por favor, faça login para completar a conexão com Google Meet",
-        duration: 5000,
-      });
-    }
-  }, [user, toast]);
+  }, [user, navigate]);
 
   const validateForm = () => {
     if (!email) {
@@ -179,7 +159,6 @@ const AuthScreen = () => {
             title: "Login realizado!",
             description: "Bem-vindo de volta!",
           });
-          // O redirect será feito pelo useEffect que monitora o user
         }
       }
     } catch (error) {

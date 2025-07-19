@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Video, Users, Clock, Calendar, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
+import { Video, Users, Clock, Calendar, ExternalLink, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -187,19 +187,46 @@ const StartMeet = () => {
   };
 
   const getConnectionStatus = () => {
-    switch (meetingProvider) {
-      case 'google_meet':
-        return { 
-          connected: googleConnected, 
-          loading: googleLoading || processingOAuth, 
-          connect: connectGoogle 
-        };
-      default:
-        return { connected: false, loading: false, connect: () => {} };
+    if (processingOAuth) {
+      return { 
+        connected: false, 
+        loading: true, 
+        connect: () => {},
+        status: 'processing',
+        message: 'Processando conexão...'
+      };
     }
+    
+    if (googleLoading) {
+      return { 
+        connected: false, 
+        loading: true, 
+        connect: () => {},
+        status: 'loading',
+        message: 'Carregando...'
+      };
+    }
+    
+    if (googleConnected) {
+      return { 
+        connected: true, 
+        loading: false, 
+        connect: connectGoogle,
+        status: 'connected',
+        message: 'Conectado'
+      };
+    }
+    
+    return { 
+      connected: false, 
+      loading: false, 
+      connect: connectGoogle,
+      status: 'disconnected',
+      message: 'Desconectado'
+    };
   };
 
-  const { connected, loading, connect } = getConnectionStatus();
+  const { connected, loading, connect, status, message } = getConnectionStatus();
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -271,27 +298,42 @@ const StartMeet = () => {
                   Plataforma de Reunião
                 </Label>
                 
+                {/* Status da Conexão */}
                 <div className={`p-4 rounded-xl border-2 ${
-                  connected 
+                  status === 'connected' 
                     ? 'bg-green-50 border-green-200' 
-                    : processingOAuth
+                    : status === 'processing'
                     ? 'bg-blue-50 border-blue-200'
-                    : 'bg-yellow-50 border-yellow-200'
+                    : status === 'loading'
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {processingOAuth ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
-                      ) : (
-                        <div className={`w-3 h-3 rounded-full ${
-                          connected ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                      )}
-                      <span className="text-sm font-medium">
-                        {processingOAuth ? 'Processando...' : (connected ? 'Conectado' : 'Desconectado')}
-                      </span>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm">
+                        {status === 'processing' ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                        ) : status === 'connected' ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : status === 'loading' ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-yellow-600" />
+                        ) : (
+                          <Video className="w-5 h-5 text-gray-600" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Google Meet</h3>
+                        <p className={`text-sm ${
+                          status === 'connected' ? 'text-green-700' :
+                          status === 'processing' ? 'text-blue-700' :
+                          status === 'loading' ? 'text-yellow-700' :
+                          'text-gray-600'
+                        }`}>
+                          {message}
+                        </p>
+                      </div>
                     </div>
-                    {!connected && !processingOAuth && (
+                    {!connected && !loading && (
                       <Button
                         type="button"
                         size="sm"
@@ -300,39 +342,22 @@ const StartMeet = () => {
                         className="h-8 px-3 text-xs"
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
-                        {loading ? 'Conectando...' : 'Conectar'}
+                        Conectar
                       </Button>
                     )}
                   </div>
                   
-                  {processingOAuth && (
-                    <div className="mt-2 text-xs text-blue-600">
+                  {status === 'processing' && (
+                    <div className="mt-3 text-xs text-blue-600">
                       Finalizando conexão com Google Meet...
                     </div>
                   )}
-                </div>
-                
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => setMeetingProvider('google_meet')}
-                    className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                      meetingProvider === 'google_meet'
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-border hover:border-muted-foreground'
-                    }`}
-                  >
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center bg-green-500">
-                      <span className="text-white font-bold text-xs">GM</span>
-                    </div>
-                    <span className="text-sm font-medium">Google Meet</span>
-                  </button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* ... keep existing code (participantes section) the same ... */}
           <Card className="shadow-xl border-0 rounded-2xl">
             <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-2xl">
               <CardTitle className="flex items-center space-x-2">
@@ -413,7 +438,7 @@ const StartMeet = () => {
                   )}
                 </Button>
                 
-                {processingOAuth && (
+                {status === 'processing' && (
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                     <div className="flex items-center space-x-2">
                       <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
@@ -424,7 +449,7 @@ const StartMeet = () => {
                   </div>
                 )}
                 
-                {!connected && !processingOAuth && (
+                {!connected && status !== 'processing' && (
                   <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
                     <div className="flex items-center space-x-2">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />

@@ -12,7 +12,6 @@ serve(async (req) => {
   console.log('🚀 Google Calendar Edge Function iniciada');
   console.log('📍 Method:', req.method);
   console.log('📍 URL:', req.url);
-  console.log('📍 Headers:', Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -59,14 +58,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     console.log('✅ Supabase client criado');
 
-    // Parse request body com timeout
+    // Parse request body
     let requestBody;
     try {
-      const timeoutController = new AbortController();
-      const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10s timeout
-      
       requestBody = await req.json();
-      clearTimeout(timeoutId);
       console.log('📨 Request body recebido:', JSON.stringify(requestBody, null, 2));
     } catch (parseError) {
       console.error('❌ Erro ao parsear request body:', parseError);
@@ -81,7 +76,6 @@ serve(async (req) => {
     
     const { action, ...payload } = requestBody;
     console.log('🎯 Action:', action);
-    console.log('📋 Payload:', JSON.stringify(payload, null, 2));
 
     if (!action) {
       console.error('❌ Action não especificada');
@@ -96,25 +90,13 @@ serve(async (req) => {
     switch (action) {
       case 'get_client_id': {
         console.log('🔍 Obtendo Client ID...');
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
         
-        console.log('🔧 Status das secrets:', {
-          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
-          clientSecret: googleClientSecret ? 'Configurado' : 'NÃO CONFIGURADO'
-        });
-        
-        if (!googleClientId) {
-          console.error('❌ GOOGLE_CLIENT_ID não encontrado nas secrets');
-          throw new Error('Google Client ID não configurado');
+        if (!googleClientId || !googleClientSecret) {
+          console.error('❌ Credenciais Google não configuradas');
+          throw new Error('Google credentials not configured');
         }
         
-        if (!googleClientSecret) {
-          console.error('❌ GOOGLE_CLIENT_SECRET não encontrado nas secrets');
-          throw new Error('Google Client Secret não configurado');
-        }
-        
-        console.log('✅ Ambas as credenciais encontradas com sucesso');
+        console.log('✅ Credenciais encontradas com sucesso');
         return new Response(JSON.stringify({ client_id: googleClientId }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -122,15 +104,18 @@ serve(async (req) => {
 
       case 'exchange_code': {
         const { code, user_id } = payload;
-        const redirectUri = 'https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard';
+        // CORREÇÃO PRINCIPAL: Usar redirect URI correto baseado na origin
+        const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
+        const redirectUri = `${origin}/`;
         
         console.log('🔄 Processando exchange_code...', { 
           code: code ? `presente (${code.substring(0, 20)}...)` : 'AUSENTE', 
           user_id,
-          redirectUri 
+          redirectUri,
+          origin
         });
         
-        // Validação de entrada
+        // Validação rigorosa
         if (!code) {
           console.error('❌ Código de autorização não fornecido');
           throw new Error('Código de autorização é obrigatório');
@@ -140,27 +125,10 @@ serve(async (req) => {
           console.error('❌ User ID não fornecido');
           throw new Error('User ID é obrigatório');
         }
-        
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
-
-        console.log('🔧 Verificando credenciais no exchange_code:', {
-          clientId: googleClientId ? `Configurado (${googleClientId.substring(0, 20)}...)` : 'NÃO CONFIGURADO',
-          clientSecret: googleClientSecret ? `Configurado (${googleClientSecret.substring(0, 10)}...)` : 'NÃO CONFIGURADO',
-          clientIdLength: googleClientId?.length || 0,
-          clientSecretLength: googleClientSecret?.length || 0
-        });
 
         if (!googleClientId || !googleClientSecret) {
           console.error('❌ Credenciais Google não configuradas no exchange_code');
           throw new Error('Credenciais Google não configuradas');
-        }
-        
-        // Verificar se as credenciais parecem válidas
-        if (!googleClientId.includes('apps.googleusercontent.com')) {
-          console.error('❌ Client ID não parece válido (deve conter apps.googleusercontent.com)');
-          console.error('❌ Client ID atual:', googleClientId);
-          throw new Error(`Client ID inválido: ${googleClientId}`);
         }
         
         const tokenPayload = {
@@ -171,54 +139,28 @@ serve(async (req) => {
           redirect_uri: redirectUri,
         };
         
-        console.log('📡 Fazendo request para Google token API...', {
-          url: 'https://oauth2.googleapis.com/token',
-          method: 'POST',
-          clientIdUsed: googleClientId.substring(0, 20) + '...',
-          codeUsed: code.substring(0, 20) + '...',
-          redirectUri: redirectUri
-        });
+        console.log('📡 Fazendo request para Google token API...');
         
-        const tokenController = new AbortController();
-        const tokenTimeout = setTimeout(() => {
-          console.error('⏰ Timeout na requisição do token após 30s');
-          tokenController.abort();
-        }, 30000); // 30s timeout
-
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams(tokenPayload),
-          signal: tokenController.signal,
         });
 
-        clearTimeout(tokenTimeout);
-
         const tokenData = await tokenResponse.json();
-        console.log('📡 Resposta completa do token:', { 
+        console.log('📡 Resposta do token:', { 
           ok: tokenResponse.ok, 
           status: tokenResponse.status,
-          statusText: tokenResponse.statusText,
           hasAccessToken: !!tokenData.access_token,
           hasRefreshToken: !!tokenData.refresh_token,
-          expiresIn: tokenData.expires_in,
-          error: tokenData.error,
-          errorDescription: tokenData.error_description,
-          fullResponse: tokenData
+          error: tokenData.error
         });
         
         if (!tokenResponse.ok) {
-          console.error('❌ Erro detalhado ao obter token:', {
-            status: tokenResponse.status,
-            statusText: tokenResponse.statusText,
-            error: tokenData.error,
-            errorDescription: tokenData.error_description,
-            fullTokenData: tokenData
-          });
+          console.error('❌ Erro detalhado ao obter token:', tokenData);
           
-          // Mensagens de erro mais específicas
           let errorMessage = 'Erro ao obter token do Google';
           if (tokenData.error === 'invalid_grant') {
             errorMessage = 'Código de autorização inválido ou expirado. Tente conectar novamente.';
@@ -226,8 +168,6 @@ serve(async (req) => {
             errorMessage = 'Credenciais Google inválidas. Verifique o Client ID e Client Secret.';
           } else if (tokenData.error === 'redirect_uri_mismatch') {
             errorMessage = 'Redirect URI não configurado corretamente no Google Console.';
-          } else if (tokenData.error_description) {
-            errorMessage = `Erro Google: ${tokenData.error_description}`;
           }
           
           throw new Error(errorMessage);
@@ -235,26 +175,17 @@ serve(async (req) => {
 
         // Obter informações do usuário
         console.log('👤 Obtendo dados do usuário do Google...');
-        const userController = new AbortController();
-        const userTimeout = setTimeout(() => {
-          console.error('⏰ Timeout na requisição de dados do usuário após 15s');
-          userController.abort();
-        }, 15000);
-
         const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
           },
-          signal: userController.signal,
         });
 
-        clearTimeout(userTimeout);
         const userData = await userResponse.json();
         console.log('👤 Dados do usuário:', { 
           id: userData.id, 
           email: userData.email,
-          status: userResponse.status,
-          fullUserData: userData
+          status: userResponse.status
         });
 
         if (!userResponse.ok) {
@@ -282,8 +213,21 @@ serve(async (req) => {
 
         console.log('🏢 Company ID encontrado:', companyData.company_id);
 
-        // Salvar integração
+        // Calcular data de expiração
         const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000);
+        
+        // Dados para salvar na integração
+        const integrationData = {
+          user_id: user_id,
+          company_id: companyData.company_id,
+          provider: 'google_meet',
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          expires_at: expiresAt.toISOString(),
+          provider_user_id: userData.id,
+          provider_email: userData.email
+        };
+
         console.log('💾 Salvando integração:', {
           user_id,
           company_id: companyData.company_id,
@@ -295,28 +239,27 @@ serve(async (req) => {
           provider_email: userData.email
         });
         
-        const { error: saveError } = await supabase
+        // Salvar integração com upsert mais robusto
+        const { data: saveData, error: saveError } = await supabase
           .from('meeting_integrations')
-          .upsert({
-            user_id: user_id,
-            company_id: companyData.company_id,
-            provider: 'google_meet',
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-            expires_at: expiresAt.toISOString(),
-            provider_user_id: userData.id,
-            provider_email: userData.email
-          }, {
+          .upsert(integrationData, {
             onConflict: 'user_id,provider'
-          });
+          })
+          .select()
+          .single();
 
         if (saveError) {
           console.error('❌ Erro ao salvar integração:', saveError);
           throw new Error(`Erro ao salvar integração: ${saveError.message}`);
         }
 
-        console.log('✅ Integração salva com sucesso');
-        return new Response(JSON.stringify({ success: true }), {
+        console.log('✅ Integração salva com sucesso:', saveData);
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          integration_id: saveData?.id,
+          message: 'Google Meet conectado com sucesso!'
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -324,15 +267,13 @@ serve(async (req) => {
       case 'create_event': {
         const { eventData, accessToken } = payload;
         
-        console.log('🔍 Creating Google Meet event with:', { accessToken: accessToken ? 'present' : 'missing', eventData });
+        console.log('🔍 Creating Google Meet event');
         
         if (!accessToken) {
-          console.error('❌ Access token missing for Google Calendar event creation');
           throw new Error('Access token is required for creating Google Calendar events');
         }
         
         if (!eventData || !eventData.title || !eventData.start_date) {
-          console.error('❌ Invalid event data:', eventData);
           throw new Error('Missing required event data (title, start_date)');
         }
         
@@ -389,15 +330,10 @@ serve(async (req) => {
         const { refreshToken, userId } = payload;
         console.log('🔄 Renovando token para usuário:', userId);
         
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID')?.trim();
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')?.trim();
-
         if (!googleClientId || !googleClientSecret) {
-          console.error('❌ Credenciais Google não configuradas para renovação');
           throw new Error('Credenciais Google não configuradas');
         }
 
-        console.log('📡 Fazendo request para renovar token...');
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: {
@@ -412,12 +348,6 @@ serve(async (req) => {
         });
 
         const tokenData = await tokenResponse.json();
-        console.log('📡 Resposta renovação token:', { 
-          ok: tokenResponse.ok, 
-          status: tokenResponse.status,
-          hasAccessToken: !!tokenData.access_token,
-          error: tokenData.error 
-        });
         
         if (!tokenResponse.ok) {
           console.error('❌ Erro ao renovar token:', tokenData);
@@ -425,7 +355,6 @@ serve(async (req) => {
         }
 
         const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-        console.log('🕐 Novo token expira em:', expiresAt.toISOString());
         
         const { error } = await supabase
           .from('meeting_integrations')
@@ -442,33 +371,9 @@ serve(async (req) => {
           throw error;
         }
 
-        console.log('✅ Token renovado e salvo com sucesso');
         return new Response(JSON.stringify({ 
           success: true, 
           access_token: tokenData.access_token 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      case 'import_events': {
-        const { accessToken, userId } = payload;
-        
-        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(`Erro ao importar eventos: ${data.error?.message}`);
-        }
-
-        return new Response(JSON.stringify({ 
-          success: true, 
-          imported: data.items?.length || 0 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -480,35 +385,27 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Erro na edge function:', error);
-    console.error('💥 Stack trace:', error.stack);
-    console.error('💥 Error name:', error.name);
-    console.error('💥 Error message:', error.message);
     
-    // Determinar status code baseado no tipo de erro
     let statusCode = 500;
     let errorMessage = error.message;
     
     if (error.name === 'AbortError') {
-      statusCode = 408; // Request Timeout
+      statusCode = 408;
       errorMessage = 'Request timeout - operação demorou muito para completar';
     } else if (error.message.includes('JWT')) {
-      statusCode = 401; // Unauthorized
+      statusCode = 401;
       errorMessage = 'Erro de autenticação JWT';
     } else if (error.message.includes('não configurado') || error.message.includes('not configured')) {
-      statusCode = 500; // Server configuration error
+      statusCode = 500;
       errorMessage = 'Erro de configuração do servidor';
     } else if (error.message.includes('Invalid JSON') || error.message.includes('Action not specified')) {
-      statusCode = 400; // Bad Request
-    } else if (error.message.includes('não encontrado') || error.message.includes('não associado')) {
-      statusCode = 404; // Not Found
-      errorMessage = 'Recurso não encontrado';
+      statusCode = 400;
     }
     
     return new Response(JSON.stringify({ 
       error: errorMessage,
       details: error.message,
-      timestamp: new Date().toISOString(),
-      stack: error.stack?.split('\n').slice(0, 5) // Primeiras 5 linhas do stack
+      timestamp: new Date().toISOString()
     }), {
       status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

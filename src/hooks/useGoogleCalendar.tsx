@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -26,7 +27,7 @@ const globalState = {
   checkInterval: 30000, // 30 seconds
   isProcessing: false,
   hasProcessedOAuth: false,
-  processingTimeout: null as NodeJS.Timeout | null,
+  processingTimeout: null as number | null,
 };
 
 export const useGoogleCalendar = () => {
@@ -41,7 +42,7 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<number>();
   const mountedRef = useRef(true);
 
   // Safe state update
@@ -55,7 +56,7 @@ export const useGoogleCalendar = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    debounceRef.current = setTimeout(fn, delay);
+    debounceRef.current = window.setTimeout(fn, delay);
   }, []);
 
   // Get Google Client ID with cache
@@ -223,7 +224,7 @@ export const useGoogleCalendar = () => {
     if (globalState.processingTimeout) {
       clearTimeout(globalState.processingTimeout);
     }
-    globalState.processingTimeout = setTimeout(() => {
+    globalState.processingTimeout = window.setTimeout(() => {
       globalState.hasProcessedOAuth = false;
       globalState.isProcessing = false;
     }, 30000); // 30 seconds timeout

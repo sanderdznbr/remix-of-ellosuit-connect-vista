@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -464,6 +463,42 @@ export const useGoogleCalendar = () => {
     }
   };
 
+  // Função para importar eventos do Google Calendar
+  const importGoogleCalendarEvents = async () => {
+    if (!integration) {
+      console.log('⚠️ Google Calendar não conectado');
+      return;
+    }
+
+    try {
+      console.log('📥 Importando eventos do Google Calendar...');
+      
+      const accessToken = await getValidAccessToken();
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'import_events',
+          accessToken: accessToken
+        }
+      });
+
+      if (error) {
+        throw new Error(`Erro ao importar eventos: ${error.message}`);
+      }
+
+      if (data?.success) {
+        console.log('✅ Eventos importados com sucesso');
+        return data.events || [];
+      } else {
+        throw new Error('Falha ao importar eventos do Google Calendar');
+      }
+    } catch (error) {
+      console.error('💥 Erro ao importar eventos do Google Calendar:', error);
+      // Não mostrar toast de erro aqui para não spam o usuário
+      return [];
+    }
+  };
+
   // useEffect principal
   useEffect(() => {
     console.log('🔄 useGoogleCalendar useEffect executado:', {
@@ -514,6 +549,7 @@ export const useGoogleCalendar = () => {
     disconnectGoogle,
     checkConnection,
     getValidAccessToken,
-    createGoogleMeetEvent
+    createGoogleMeetEvent,
+    importGoogleCalendarEvents
   };
 };

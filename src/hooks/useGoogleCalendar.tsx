@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -175,7 +174,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // CRITICAL: Use the EXACT same redirect URI that Google expects
+      // Use the EXACT same redirect URI that Google expects
       const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -185,15 +184,14 @@ export const useGoogleCalendar = () => {
         `response_type=code&` +
         `access_type=offline&` +
         `prompt=consent&` +
-        `state=google_meet_auth`;
+        `state=${user.id}`;
 
       console.log('🔗 OAuth Configuration:');
       console.log('  - Client ID:', clientId.substring(0, 20) + '...');
-      console.log('  - Redirect URI (MUST match Google Console EXACTLY):', redirectUri);
-      console.log('  - Scopes:', scopes);
+      console.log('  - Redirect URI:', redirectUri);
+      console.log('  - User ID in state:', user.id);
       console.log('🔗 Redirecting to Google OAuth...');
       
-      // Add a helpful message to the user
       toast({
         title: "Redirecionando para Google",
         description: "Você será redirecionado para autorizar o acesso ao Google Calendar...",
@@ -479,10 +477,10 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
 
-    // Process OAuth code
-    if (code && urlState === 'google_meet_auth' && !globalState.hasProcessedOAuth) {
+    // Process OAuth code with user ID
+    if (code && urlState && !globalState.hasProcessedOAuth) {
       if (user && !authLoading) {
-        processGoogleOAuthCode(code, user.id);
+        processGoogleOAuthCode(code, urlState);
       }
       return;
     }

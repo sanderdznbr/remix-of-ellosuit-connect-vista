@@ -88,7 +88,7 @@ serve(async (req) => {
         // Calculate expiration timestamp
         const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-        // Save to meeting_integrations table using upsert to handle duplicates
+        // Save to meeting_integrations table
         const { error: insertError } = await supabase
           .from('meeting_integrations')
           .upsert({
@@ -112,62 +112,6 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           success: true,
           message: 'Google Meet connected successfully'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Handle renew_token action
-      if (body.action === 'renew_token') {
-        const { refreshToken, userId } = body;
-        console.log('🔄 Renewing access token for user:', userId);
-
-        if (!refreshToken || !userId) {
-          throw new Error('Refresh token or user ID missing');
-        }
-
-        const renewResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token'
-          })
-        });
-
-        const renewData = await renewResponse.json();
-
-        if (!renewResponse.ok) {
-          console.error('❌ Token renewal error:', renewData);
-          throw new Error(`Token renewal failed: ${renewData.error}`);
-        }
-
-        // Update the access token in database
-        const expiresAt = new Date(Date.now() + renewData.expires_in * 1000).toISOString();
-        
-        const { error: updateError } = await supabase
-          .from('meeting_integrations')
-          .update({
-            access_token: renewData.access_token,
-            expires_at: expiresAt
-          })
-          .eq('user_id', userId)
-          .eq('provider', 'google_meet');
-
-        if (updateError) {
-          console.error('❌ Error updating token:', updateError);
-          throw new Error(`Failed to update token: ${updateError.message}`);
-        }
-
-        console.log('✅ Token renewed successfully');
-
-        return new Response(JSON.stringify({
-          success: true,
-          access_token: renewData.access_token
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -243,7 +187,7 @@ serve(async (req) => {
       });
     }
 
-    // Handle GET requests (OAuth callback)
+    // Handle GET requests (OAuth callback) - simplified version
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
@@ -271,7 +215,6 @@ serve(async (req) => {
       });
     }
 
-    // Validate state parameter for security
     if (!state) {
       console.error('❌ No state parameter in callback');
       return new Response(null, {

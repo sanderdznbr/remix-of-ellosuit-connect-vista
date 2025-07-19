@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,7 +26,7 @@ const globalState = {
   checkInterval: 30000, // 30 seconds
   isProcessing: false,
   hasProcessedOAuth: false,
-  processingTimeout: null as number | null,
+  processingTimeout: null as NodeJS.Timeout | null,
 };
 
 export const useGoogleCalendar = () => {
@@ -42,7 +41,7 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const debounceRef = useRef<number>();
+  const debounceRef = useRef<NodeJS.Timeout>();
   const mountedRef = useRef(true);
 
   // Safe state update
@@ -56,7 +55,7 @@ export const useGoogleCalendar = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    debounceRef.current = window.setTimeout(fn, delay);
+    debounceRef.current = setTimeout(fn, delay);
   }, []);
 
   // Get Google Client ID with cache
@@ -153,7 +152,7 @@ export const useGoogleCalendar = () => {
     }
   }, [user, authLoading, updateState]);
 
-  // Connect to Google with improved error handling
+  // Connect to Google with improved error handling and EXACT redirect URI
   const connectGoogle = useCallback(async () => {
     if (!user || globalState.isProcessing) return;
 
@@ -175,7 +174,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // CORRECTED: Use the API callback URL
+      // CRITICAL: Use the EXACT same redirect URI that Google expects
       const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -189,9 +188,16 @@ export const useGoogleCalendar = () => {
 
       console.log('🔗 OAuth Configuration:');
       console.log('  - Client ID:', clientId.substring(0, 20) + '...');
-      console.log('  - Redirect URI:', redirectUri);
+      console.log('  - Redirect URI (MUST match Google Console EXACTLY):', redirectUri);
       console.log('  - Scopes:', scopes);
       console.log('🔗 Redirecting to Google OAuth...');
+      
+      // Add a helpful message to the user
+      toast({
+        title: "Redirecionando para Google",
+        description: "Você será redirecionado para autorizar o acesso ao Google Calendar...",
+        duration: 3000,
+      });
       
       window.location.href = authUrl;
     } catch (error) {
@@ -217,7 +223,7 @@ export const useGoogleCalendar = () => {
     if (globalState.processingTimeout) {
       clearTimeout(globalState.processingTimeout);
     }
-    globalState.processingTimeout = window.setTimeout(() => {
+    globalState.processingTimeout = setTimeout(() => {
       globalState.hasProcessedOAuth = false;
       globalState.isProcessing = false;
     }, 30000); // 30 seconds timeout
@@ -266,13 +272,20 @@ export const useGoogleCalendar = () => {
       
       let errorMessage = 'Falha ao conectar com Google Meet';
       if (error.message.includes('redirect_uri_mismatch')) {
-        errorMessage = `Erro de configuração. Configure no Google Cloud Console:
-        
-Authorized JavaScript origins:
+        errorMessage = `❌ ERRO DE CONFIGURAÇÃO - redirect_uri_mismatch
+
+Configure no Google Cloud Console EXATAMENTE:
+
+✅ Authorized JavaScript origins:
 https://ellosuit.online
 
-Authorized redirect URIs:
-https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar`;
+✅ Authorized redirect URIs:
+https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
+
+⚠️ IMPORTANTE: 
+- Copie as URLs EXATAMENTE como mostrado
+- Aguarde até 5 minutos após salvar
+- Certifique-se de não ter espaços extras`;
       } else if (error.message.includes('invalid_grant')) {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       }

@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -72,9 +71,16 @@ serve(async (req) => {
 
         console.log('🔄 Exchanging code for user:', user_id);
         
-        // CRITICAL FIX: Use the API callback URL
+        // Use a more specific redirect URI - EXACT match required by Google
         const redirectUri = `${supabaseUrl}/functions/v1/google-calendar`;
         console.log('🔗 Using redirect URI:', redirectUri);
+        console.log('🔗 Expected redirect URI should be EXACTLY:', redirectUri);
+        
+        // Validate that the redirect URI is exactly what we expect
+        if (!redirectUri.endsWith('/functions/v1/google-calendar')) {
+          console.error('❌ Invalid redirect URI format:', redirectUri);
+          throw new Error('Invalid redirect URI configuration');
+        }
         
         const tokenParams = new URLSearchParams({
           client_id: googleClientId,
@@ -84,10 +90,11 @@ serve(async (req) => {
           redirect_uri: redirectUri,
         });
 
-        console.log('📤 Token exchange request:');
-        console.log('  - Client ID:', googleClientId.substring(0, 20) + '...');
-        console.log('  - Redirect URI:', redirectUri);
+        console.log('📤 Token exchange request details:');
+        console.log('  - Client ID (first 20 chars):', googleClientId.substring(0, 20) + '...');
+        console.log('  - Redirect URI (MUST match Google Console):', redirectUri);
         console.log('  - Code length:', code.length);
+        console.log('  - Full redirect URI for Google Console:', redirectUri);
 
         const tokenResponse = await withTimeout(
           fetch('https://oauth2.googleapis.com/token', {
@@ -97,7 +104,7 @@ serve(async (req) => {
             },
             body: tokenParams,
           }),
-          15000 // 15 second timeout
+          15000
         );
 
         const tokenData = await tokenResponse.json();
@@ -106,21 +113,32 @@ serve(async (req) => {
           console.error('❌ Token exchange failed:', {
             status: tokenResponse.status,
             statusText: tokenResponse.statusText,
-            error: tokenData
+            error: tokenData,
+            usedRedirectUri: redirectUri
           });
           
           let errorMessage = `Token exchange failed: ${tokenData.error_description || tokenData.error || 'Unknown error'}`;
           
           if (tokenData.error === 'redirect_uri_mismatch') {
-            errorMessage = `Erro de configuração OAuth. Configure no Google Cloud Console:
+            errorMessage = `🚨 ERRO DE CONFIGURAÇÃO OAUTH - redirect_uri_mismatch
 
-Authorized JavaScript origins:
-https://ellosuit.online
+A URL de redirecionamento não está configurada corretamente no Google Cloud Console.
 
-Authorized redirect URIs:
-${redirectUri}
+✅ CONFIGURAÇÃO NECESSÁRIA:
 
-Verifique se as URLs estão EXATAMENTE como mostrado acima.`;
+1. Authorized JavaScript origins:
+   https://ellosuit.online
+
+2. Authorized redirect URIs (COPIE EXATAMENTE):
+   ${redirectUri}
+
+⚠️ IMPORTANTE: 
+- A URL deve ser copiada EXATAMENTE como mostrado acima
+- Não pode ter espaços extras ou caracteres diferentes
+- Deve terminar com "/google-calendar" (sem barra final)
+- Aguarde até 5 minutos após salvar as configurações no Google
+
+🔧 URL atual sendo usada: ${redirectUri}`;
           } else if (tokenData.error === 'invalid_grant') {
             errorMessage = 'Código de autorização expirado ou inválido. Tente conectar novamente.';
           }

@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -71,8 +70,8 @@ serve(async (req) => {
 
         console.log('🔄 Exchanging code for user:', user_id);
         
-        // CRITICAL FIX: Use exact redirect URI
-        const redirectUri = 'https://ellosuit.online/dashboard';
+        // CRITICAL FIX: Use the API callback URL
+        const redirectUri = `${supabaseUrl}/functions/v1/google-calendar`;
         console.log('🔗 Using redirect URI:', redirectUri);
         
         const tokenParams = new URLSearchParams({
@@ -113,7 +112,7 @@ serve(async (req) => {
           let errorMessage = `Token exchange failed: ${tokenData.error_description || tokenData.error || 'Unknown error'}`;
           
           if (tokenData.error === 'redirect_uri_mismatch') {
-            errorMessage = 'Redirect URI mismatch. Verifique se no Google Cloud Console está configurado: https://ellosuit.online/dashboard';
+            errorMessage = `Redirect URI mismatch. Configure no Google Cloud Console: ${redirectUri}`;
           } else if (tokenData.error === 'invalid_grant') {
             errorMessage = 'Código de autorização expirado ou inválido. Tente conectar novamente.';
           }
@@ -187,12 +186,13 @@ serve(async (req) => {
 
         console.log('✅ Integration saved successfully:', saveData.id);
         
-        return new Response(JSON.stringify({ 
-          success: true,
-          integration_id: saveData?.id,
-          message: 'Google Meet connected successfully!'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        // Redirect back to dashboard after successful connection
+        return new Response(null, {
+          status: 302,
+          headers: {
+            ...corsHeaders,
+            'Location': 'https://ellosuit.online/dashboard?google_connected=true'
+          }
         });
       }
 

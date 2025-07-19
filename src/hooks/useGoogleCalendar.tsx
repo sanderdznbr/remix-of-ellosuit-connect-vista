@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,7 +26,7 @@ const globalState = {
   checkInterval: 30000, // 30 seconds
   isProcessing: false,
   hasProcessedOAuth: false,
-  processingTimeout: null as NodeJS.Timeout | null,
+  processingTimeout: null as ReturnType<typeof setTimeout> | null,
 };
 
 export const useGoogleCalendar = () => {
@@ -42,7 +41,7 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
 
   // Safe state update
@@ -165,8 +164,8 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // CRITICAL FIX: Use exact redirect URI
-      const redirectUri = 'https://ellosuit.online/dashboard';
+      // CORRECTED: Use the API callback URL instead of dashboard
+      const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
@@ -177,7 +176,7 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=google_meet_auth`;
 
-      console.log('🔗 Redirecting to Google OAuth with URI:', redirectUri);
+      console.log('🔗 Redirecting to Google OAuth with API callback URI:', redirectUri);
       window.location.href = authUrl;
     } catch (error) {
       console.error('❌ Error connecting:', error);
@@ -249,7 +248,7 @@ export const useGoogleCalendar = () => {
       
       let errorMessage = 'Falha ao conectar com Google Meet';
       if (error.message.includes('redirect_uri_mismatch')) {
-        errorMessage = 'Erro de configuração. Verifique se no Google Cloud Console está configurado: https://ellosuit.online/dashboard';
+        errorMessage = 'Erro de configuração. Verifique se no Google Cloud Console está configurado: https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       } else if (error.message.includes('invalid_grant')) {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       }

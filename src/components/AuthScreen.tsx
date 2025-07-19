@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,23 +23,35 @@ const AuthScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
+  // Melhorado: useEffect para redirect com melhor tratamento OAuth
   useEffect(() => {
     if (user) {
-      // Verificar se há OAuth callback pendente para processar
+      console.log('🔄 Usuário autenticado, verificando OAuth callback...');
+      
+      // Verificar se há OAuth callback pendente
       const urlParams = new URLSearchParams(window.location.search);
       const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
       
       if (hasGoogleCallback) {
-        console.log('🔄 OAuth callback detectado, processando após login...');
-        // O hook useGoogleCalendar irá processar automaticamente
+        console.log('🔄 OAuth callback detectado após login, processando...');
+        toast({
+          title: "Processando Google Meet",
+          description: "Finalizando conexão com Google Meet...",
+          duration: 3000,
+        });
+        
+        // Aguardar um pouco para garantir que os hooks estão sincronizados
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        // Redirect normal
+        navigate('/dashboard');
       }
-      
-      navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, toast]);
 
-  // Verificar se há OAuth callback na URL quando a página carrega
+  // Melhorado: useEffect para detectar OAuth callback sem usuário
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
@@ -49,7 +60,7 @@ const AuthScreen = () => {
       console.log('🔄 OAuth callback detectado, mas usuário não logado');
       toast({
         title: "Conectando Google Meet",
-        description: "Por favor, faça login primeiro para completar a conexão com Google Meet",
+        description: "Por favor, faça login para completar a conexão com Google Meet",
         duration: 5000,
       });
     }

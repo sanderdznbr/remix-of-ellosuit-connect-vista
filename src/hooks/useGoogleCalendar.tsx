@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -9,7 +8,8 @@ export const useGoogleCalendar = () => {
   const [loading, setLoading] = useState(false);
   const [integration, setIntegration] = useState<any>(null);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [processingOAuth, setProcessingOAuth] = useState(false);
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const checkConnection = async () => {
@@ -114,14 +114,12 @@ export const useGoogleCalendar = () => {
     try {
       console.log('🔗 Iniciando conexão com Google Calendar...');
       
-      // Obter Client ID da edge function
       const clientId = googleClientId || await getGoogleClientId();
       
       if (!clientId) {
         throw new Error('Não foi possível obter o Google Client ID');
       }
 
-      // Redirect to Google OAuth with calendar scopes - CORRIGIDO PARA USAR "/"
       const scopes = [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events'
@@ -158,6 +156,26 @@ export const useGoogleCalendar = () => {
     }
   };
 
+  // Nova função para aguardar usuário com retry
+  const waitForUser = async (maxAttempts = 10, delay = 500): Promise<boolean> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`🔄 Tentativa ${attempt}/${maxAttempts} - Aguardando usuário...`);
+      
+      if (user && !authLoading) {
+        console.log('✅ Usuário encontrado:', user.email);
+        return true;
+      }
+      
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    console.log('❌ Timeout aguardando usuário');
+    return false;
+  };
+
+  // Função melhorada para processar OAuth callback
   const processOAuthCallback = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
@@ -169,6 +187,7 @@ export const useGoogleCalendar = () => {
       hasState: !!state,
       hasError: !!error,
       hasUser: !!user,
+      authLoading,
       state: state,
       userDetails: user ? { id: user.id, email: user.email } : null,
       currentUrl: window.location.href
@@ -181,7 +200,7 @@ export const useGoogleCalendar = () => {
       if (error === 'access_denied') {
         errorMessage = 'Acesso negado. Você precisa autorizar o aplicativo para conectar o Google Meet.';
       } else if (error.includes('redirect_uri_mismatch')) {
-        errorMessage = 'Erro de configuração: Adicione https://www.ellosuit.online/ nas "Authorized redirect URIs" do Google Console.';
+        errorMessage = 'Erro de configuração: Adicione a URL correta nas "Authorized redirect URIs" do Google Console.';
       }
       
       toast({
@@ -189,37 +208,46 @@ export const useGoogleCalendar = () => {
         description: errorMessage,
         variant: "destructive"
       });
-      // Limpar URL após erro
+      
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
-    // Verificar se há code e state válidos
     if (code && state === 'google_calendar_auth') {
       console.log('✅ Code e state válidos encontrados:', { 
         codePrefix: code.substring(0, 20) + '...', 
         state,
-        userLoaded: !!user 
+        userLoaded: !!user,
+        authLoading
       });
       
-      // Se não há user, salvar código para processar após login
-      if (!user) {
-        console.log('⏳ Salvando código OAuth para processar após login...');
-        localStorage.setItem('google_oauth_code', code);
-        localStorage.setItem('google_oauth_state', state);
+      // Aguardar usuário estar carregado com retry logic
+      if (!user || authLoading) {
+        console.log('⏳ Usuário não carregado, aguardando...');
+        setProcessingOAuth(true);
         
-        toast({
-          title: "Processando...",
-          description: "Faça login primeiro para completar a conexão com Google Meet",
-          duration: 5000
-        });
+        const userAvailable = await waitForUser();
         
-        // Limpar URL mas manter código salvo
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return;
+        if (!userAvailable) {
+          console.log('⚠️ Salvando código OAuth para processar após login...');
+          localStorage.setItem('google_oauth_code', code);
+          localStorage.setItem('google_oauth_state', state);
+          
+          toast({
+            title: "Processando...",
+            description: "Por favor, aguarde enquanto processamos sua autenticação...",
+            duration: 5000
+          });
+          
+          setProcessingOAuth(false);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
       }
       
-      await processGoogleOAuthCode(code, user.id);
+      // Processar OAuth com usuário disponível
+      await processGoogleOAuthCode(code, user!.id);
+      setProcessingOAuth(false);
     }
   };
 
@@ -234,7 +262,6 @@ export const useGoogleCalendar = () => {
     try {
       console.log('📡 Chamando google-calendar edge function...');
       
-      // Implementar retry logic para melhor confiabilidade
       const maxRetries = 3;
       let lastError;
       
@@ -265,27 +292,21 @@ export const useGoogleCalendar = () => {
           if (data?.success) {
             console.log('✅ OAuth processado com sucesso na tentativa', attempt);
             
-            // Limpar código salvo
             localStorage.removeItem('google_oauth_code');
             localStorage.removeItem('google_oauth_state');
             
-            // Limpar URL
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Aguardar salvamento na base de dados
             await new Promise(resolve => setTimeout(resolve, 1500));
             
-            // Verificar se a integração foi salva corretamente
             await checkConnection();
             
-            // Mostrar toast de sucesso
             toast({
               title: "✅ Google Meet Conectado!",
               description: "Google Meet foi conectado com sucesso! Agora você pode criar reuniões automaticamente.",
               duration: 5000,
             });
             
-            // Importar eventos em background (não crítico)
             try {
               await importGoogleCalendarEvents();
               console.log('📅 Eventos importados com sucesso');
@@ -293,7 +314,7 @@ export const useGoogleCalendar = () => {
               console.warn('⚠️ Erro ao importar eventos (não crítico):', importError);
             }
             
-            return; // Sucesso - sair do loop de retry
+            return;
             
           } else {
             throw new Error(data?.error || 'Resposta inesperada da edge function');
@@ -303,22 +324,19 @@ export const useGoogleCalendar = () => {
           console.error(`❌ Erro na tentativa ${attempt}:`, attemptError);
           lastError = attemptError;
           
-          // Se não é a última tentativa, aguardar antes de tentar novamente
           if (attempt < maxRetries) {
-            const waitTime = attempt * 2000; // 2s, 4s, 6s...
+            const waitTime = attempt * 2000;
             console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
         }
       }
       
-      // Se chegou aqui, todas as tentativas falharam
       throw lastError || new Error('Falha em todas as tentativas de conexão');
       
     } catch (error) {
       console.error('💥 Erro final no processamento OAuth:', error);
       
-      // Determinar mensagem de erro mais específica
       let errorMessage = 'Erro desconhecido ao conectar';
       let actionMessage = 'Tente novamente ou verifique sua conexão.';
       
@@ -345,11 +363,9 @@ export const useGoogleCalendar = () => {
         duration: 8000
       });
       
-      // Limpar códigos salvos em caso de erro
       localStorage.removeItem('google_oauth_code');
       localStorage.removeItem('google_oauth_state');
       
-      // Limpar URL para permitir nova tentativa
       window.history.replaceState({}, document.title, window.location.pathname);
     } finally {
       setLoading(false);
@@ -411,7 +427,6 @@ export const useGoogleCalendar = () => {
 
       if (data?.success) {
         console.log('✅ Token renovado com sucesso');
-        // Recarregar a integração atualizada
         await checkConnection();
         return data.access_token;
       }
@@ -445,7 +460,7 @@ export const useGoogleCalendar = () => {
 
       if (data?.success) {
         console.log('✅ Token renovado com sucesso');
-        await checkConnection(); // Recarrega a integração com o novo token
+        await checkConnection();
         return data.access_token;
       }
 
@@ -461,7 +476,6 @@ export const useGoogleCalendar = () => {
       throw new Error('Google Calendar not connected');
     }
 
-    // Verificar se o token expirou
     const now = new Date();
     const expiresAt = new Date(integration.expires_at);
     
@@ -483,7 +497,6 @@ export const useGoogleCalendar = () => {
       
       const accessToken = await getValidAccessToken();
       
-      // Garantir que os dados estão no formato correto
       const processedEventData = {
         title: eventData.title || 'Nova Reunião',
         description: eventData.description || '',
@@ -561,9 +574,31 @@ export const useGoogleCalendar = () => {
     }
   };
 
+  // Função para processar código OAuth salvo
+  const processSavedOAuthCode = async () => {
+    const savedCode = localStorage.getItem('google_oauth_code');
+    const savedState = localStorage.getItem('google_oauth_state');
+    
+    if (savedCode && savedState === 'google_calendar_auth' && user && !authLoading) {
+      console.log('🔄 Processando código OAuth salvo após login...');
+      setProcessingOAuth(true);
+      
+      try {
+        await processGoogleOAuthCode(savedCode, user.id);
+        console.log('✅ Código OAuth salvo processado com sucesso');
+      } catch (error) {
+        console.error('❌ Erro ao processar código OAuth salvo:', error);
+      } finally {
+        setProcessingOAuth(false);
+      }
+    }
+  };
+
+  // useEffect principal com lógica melhorada
   useEffect(() => {
     console.log('🔄 useGoogleCalendar useEffect executado:', {
       hasUser: !!user,
+      authLoading,
       userDetails: user ? { id: user.id, email: user.email } : null,
       currentUrl: window.location.href,
       hasCode: window.location.search.includes('code='),
@@ -571,39 +606,45 @@ export const useGoogleCalendar = () => {
       searchParams: window.location.search
     });
     
-    // Sempre verificar OAuth callback se há code na URL
+    // Sempre verificar OAuth callback primeiro
     const urlParams = new URLSearchParams(window.location.search);
     const hasOAuthCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
     
     if (hasOAuthCallback) {
       console.log('🔄 OAuth callback detectado, processando...');
       processOAuthCallback();
+      return; // Não executar outras ações durante processamento OAuth
     }
     
-    // Verificar se há código salvo para processar após login
-    if (user && !hasOAuthCallback) {
-      const savedCode = localStorage.getItem('google_oauth_code');
-      const savedState = localStorage.getItem('google_oauth_state');
-      
-      if (savedCode && savedState === 'google_calendar_auth') {
-        console.log('🔄 Processando código OAuth salvo após login...');
-        processGoogleOAuthCode(savedCode, user.id);
+    // Se não há callback OAuth, processar normalmente
+    if (!authLoading) {
+      if (user) {
+        console.log('✅ User disponível, executando funções de inicialização...');
+        
+        // Verificar código OAuth salvo
+        processSavedOAuthCode();
+        
+        // Verificar conexão existente
+        checkConnection();
+        
+        // Obter Client ID
+        getGoogleClientId();
+        
+      } else {
+        console.log('⚠️ User não disponível, limpando estado...');
+        setIsConnected(false);
+        setIntegration(null);
       }
-    }
-    
-    if (user) {
-      console.log('✅ User disponível, executando funções de inicialização...');
-      checkConnection();
-      getGoogleClientId();
     } else {
-      console.log('⚠️ User não disponível ainda, aguardando...');
+      console.log('⏳ Aguardando carregamento de autenticação...');
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   return {
     isConnected,
-    loading,
+    loading: loading || processingOAuth,
     integration,
+    processingOAuth,
     connectGoogle,
     disconnectGoogle,
     checkConnection,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -12,6 +11,15 @@ export const useGoogleCalendar = () => {
   const [processingOAuth, setProcessingOAuth] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  // Função para obter URL base consistente
+  const getBaseUrl = () => {
+    // Para produção, usar sempre sem www para consistência
+    if (window.location.hostname === 'www.ellosuit.online') {
+      return 'https://ellosuit.online';
+    }
+    return window.location.origin;
+  };
 
   // Função para verificar conexão
   const checkConnection = async () => {
@@ -134,13 +142,15 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // CORREÇÃO: Usar URL atual como redirect_uri
-      const redirectUri = window.location.origin + window.location.pathname;
+      // Usar URL base consistente + /dashboard
+      const baseUrl = getBaseUrl();
+      const redirectUri = `${baseUrl}/dashboard`;
       
       console.log('📝 Configuração OAuth:', {
         clientId: clientId.substring(0, 20) + '...',
         redirectUri: redirectUri,
-        scopes: scopes
+        scopes: scopes,
+        baseUrl: baseUrl
       });
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -153,6 +163,7 @@ export const useGoogleCalendar = () => {
         `state=google_calendar_auth`;
 
       console.log('🔗 Redirecionando para autorização Google...');
+      console.log('🔗 Auth URL:', authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('💥 Erro ao conectar Google:', error);
@@ -220,6 +231,8 @@ export const useGoogleCalendar = () => {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       } else if (error.message.includes('invalid_client')) {
         errorMessage = 'Configuração Google inválida. Verifique as credenciais.';
+      } else if (error.message.includes('redirect_uri_mismatch')) {
+        errorMessage = 'Erro de configuração do redirect URI. Verifique as configurações no Google Console.';
       } else {
         errorMessage = error.message;
       }

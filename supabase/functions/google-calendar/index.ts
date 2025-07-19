@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -126,16 +125,10 @@ serve(async (req) => {
           throw new Error('Credenciais Google não configuradas');
         }
         
-        // CORREÇÃO: Usar redirect_uri dinâmico baseado no origin da requisição
-        const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
-        let redirectUri = `${origin}/dashboard`;
+        // Usar sempre https://ellosuit.online/dashboard como redirect_uri (sem www)
+        const redirectUri = 'https://ellosuit.online/dashboard';
         
-        // Se não conseguir detectar o origin, usar fallback padrão
-        if (!origin) {
-          redirectUri = 'https://ellosuit.online/dashboard';
-        }
-        
-        console.log('🔗 Redirect URI detectado:', redirectUri);
+        console.log('🔗 Redirect URI usado:', redirectUri);
         
         const tokenPayload = {
           client_id: googleClientId,
@@ -174,7 +167,7 @@ serve(async (req) => {
           } else if (tokenData.error === 'invalid_client') {
             errorMessage = 'Credenciais Google inválidas. Verifique o Client ID e Client Secret.';
           } else if (tokenData.error === 'redirect_uri_mismatch') {
-            errorMessage = `Redirect URI não configurado corretamente no Google Console. URI usado: ${redirectUri}`;
+            errorMessage = `Redirect URI não configurado corretamente no Google Console. URI usado: ${redirectUri}. Adicione este URI exato no Google Console.`;
           }
           
           throw new Error(errorMessage);

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
@@ -53,6 +54,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'get_client_id': {
+        console.log('🔑 Returning Google Client ID');
         return new Response(JSON.stringify({ 
           client_id: googleClientId,
           success: true 
@@ -82,12 +84,10 @@ serve(async (req) => {
           redirect_uri: redirectUri,
         });
 
-        console.log('📤 Token request params:', {
-          client_id: googleClientId.substring(0, 20) + '...',
-          redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
-          code: code.substring(0, 10) + '...'
-        });
+        console.log('📤 Token exchange request:');
+        console.log('  - Client ID:', googleClientId.substring(0, 20) + '...');
+        console.log('  - Redirect URI:', redirectUri);
+        console.log('  - Code length:', code.length);
 
         const tokenResponse = await withTimeout(
           fetch('https://oauth2.googleapis.com/token', {
@@ -112,7 +112,15 @@ serve(async (req) => {
           let errorMessage = `Token exchange failed: ${tokenData.error_description || tokenData.error || 'Unknown error'}`;
           
           if (tokenData.error === 'redirect_uri_mismatch') {
-            errorMessage = `Redirect URI mismatch. Configure no Google Cloud Console: ${redirectUri}`;
+            errorMessage = `Erro de configuração OAuth. Configure no Google Cloud Console:
+
+Authorized JavaScript origins:
+https://ellosuit.online
+
+Authorized redirect URIs:
+${redirectUri}
+
+Verifique se as URLs estão EXATAMENTE como mostrado acima.`;
           } else if (tokenData.error === 'invalid_grant') {
             errorMessage = 'Código de autorização expirado ou inválido. Tente conectar novamente.';
           }

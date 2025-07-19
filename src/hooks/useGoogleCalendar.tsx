@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -26,7 +27,7 @@ const globalState = {
   checkInterval: 30000, // 30 seconds
   isProcessing: false,
   hasProcessedOAuth: false,
-  processingTimeout: null as ReturnType<typeof setTimeout> | null,
+  processingTimeout: null as number | null,
 };
 
 export const useGoogleCalendar = () => {
@@ -41,7 +42,7 @@ export const useGoogleCalendar = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<number>();
   const mountedRef = useRef(true);
 
   // Safe state update
@@ -55,7 +56,7 @@ export const useGoogleCalendar = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    debounceRef.current = setTimeout(fn, delay);
+    debounceRef.current = window.setTimeout(fn, delay);
   }, []);
 
   // Get Google Client ID with cache
@@ -63,16 +64,22 @@ export const useGoogleCalendar = () => {
     if (globalState.clientId) return globalState.clientId;
 
     try {
+      console.log('🔍 Fetching Google Client ID...');
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: JSON.stringify({ action: 'get_client_id' })
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching Client ID:', error);
+        throw error;
+      }
+      
       if (data?.client_id) {
         globalState.clientId = data.client_id;
+        console.log('✅ Client ID obtained successfully');
         return data.client_id;
       }
-      throw new Error('Client ID not found');
+      throw new Error('Client ID not found in response');
     } catch (error) {
       console.error('❌ Error getting Client ID:', error);
       return null;
@@ -96,6 +103,7 @@ export const useGoogleCalendar = () => {
     updateState({ loading: true, error: null });
     
     try {
+      console.log('🔍 Checking Google Meet connection...');
       const { data, error } = await supabase
         .from('meeting_integrations')
         .select('*')
@@ -118,12 +126,14 @@ export const useGoogleCalendar = () => {
           return;
         }
         
+        console.log('✅ Google Meet is connected');
         updateState({ 
           integration: data, 
           isConnected: true, 
           loading: false 
         });
       } else {
+        console.log('ℹ️ Google Meet not connected');
         updateState({ 
           isConnected: false, 
           integration: null, 
@@ -151,6 +161,7 @@ export const useGoogleCalendar = () => {
     updateState({ loading: true, error: null });
     
     try {
+      console.log('🚀 Starting Google OAuth connection...');
       const clientId = await getGoogleClientId();
       if (!clientId) {
         throw new Error('Failed to get Google Client ID');
@@ -164,7 +175,7 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // CORRECTED: Use the API callback URL instead of dashboard
+      // CORRECTED: Use the API callback URL
       const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -176,7 +187,12 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=google_meet_auth`;
 
-      console.log('🔗 Redirecting to Google OAuth with API callback URI:', redirectUri);
+      console.log('🔗 OAuth Configuration:');
+      console.log('  - Client ID:', clientId.substring(0, 20) + '...');
+      console.log('  - Redirect URI:', redirectUri);
+      console.log('  - Scopes:', scopes);
+      console.log('🔗 Redirecting to Google OAuth...');
+      
       window.location.href = authUrl;
     } catch (error) {
       console.error('❌ Error connecting:', error);
@@ -201,7 +217,7 @@ export const useGoogleCalendar = () => {
     if (globalState.processingTimeout) {
       clearTimeout(globalState.processingTimeout);
     }
-    globalState.processingTimeout = setTimeout(() => {
+    globalState.processingTimeout = window.setTimeout(() => {
       globalState.hasProcessedOAuth = false;
       globalState.isProcessing = false;
     }, 30000); // 30 seconds timeout
@@ -209,6 +225,7 @@ export const useGoogleCalendar = () => {
     updateState({ loading: true, processingOAuth: true, error: null });
     
     try {
+      console.log('🔄 Processing OAuth code...');
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: JSON.stringify({
           action: 'exchange_code',
@@ -218,6 +235,7 @@ export const useGoogleCalendar = () => {
       });
 
       if (error) {
+        console.error('❌ OAuth exchange error:', error);
         throw new Error(`OAuth Error: ${error.message}`);
       }
 
@@ -248,7 +266,13 @@ export const useGoogleCalendar = () => {
       
       let errorMessage = 'Falha ao conectar com Google Meet';
       if (error.message.includes('redirect_uri_mismatch')) {
-        errorMessage = 'Erro de configuração. Verifique se no Google Cloud Console está configurado: https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
+        errorMessage = `Erro de configuração. Configure no Google Cloud Console:
+        
+Authorized JavaScript origins:
+https://ellosuit.online
+
+Authorized redirect URIs:
+https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar`;
       } else if (error.message.includes('invalid_grant')) {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       }
@@ -258,7 +282,7 @@ export const useGoogleCalendar = () => {
         title: "❌ Falha na Conexão",
         description: errorMessage,
         variant: "destructive",
-        duration: 8000
+        duration: 10000
       });
       
       // Clear URL
@@ -277,6 +301,7 @@ export const useGoogleCalendar = () => {
     if (!user) throw new Error('User not authenticated');
 
     try {
+      console.log('🔄 Renewing access token...');
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: JSON.stringify({
           action: 'renew_token',
@@ -320,6 +345,7 @@ export const useGoogleCalendar = () => {
     }
 
     try {
+      console.log('📅 Creating Google Meet event...');
       const accessToken = await getValidAccessToken();
       
       const { data, error } = await supabase.functions.invoke('google-calendar', {
@@ -340,6 +366,7 @@ export const useGoogleCalendar = () => {
         throw new Error(error?.message || 'Failed to create event');
       }
 
+      console.log('✅ Google Meet event created successfully');
       return {
         success: true,
         googleEventId: data.googleEventId,
@@ -358,6 +385,7 @@ export const useGoogleCalendar = () => {
     updateState({ loading: true });
     
     try {
+      console.log('🔌 Disconnecting Google Meet...');
       const { error } = await supabase
         .from('meeting_integrations')
         .delete()
@@ -376,6 +404,7 @@ export const useGoogleCalendar = () => {
         error: null 
       });
       
+      console.log('✅ Google Meet disconnected successfully');
       toast({
         title: "Sucesso",
         description: "Google Calendar desconectado com sucesso"
@@ -403,6 +432,20 @@ export const useGoogleCalendar = () => {
     const code = urlParams.get('code');
     const urlState = urlParams.get('state');
     const error = urlParams.get('error');
+    const googleConnected = urlParams.get('google_connected');
+    
+    // Handle success redirect from OAuth
+    if (googleConnected === 'true') {
+      console.log('✅ Returning from successful OAuth');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      checkConnection(true);
+      toast({
+        title: "✅ Google Meet Conectado!",
+        description: "Google Meet foi conectado com sucesso!",
+        duration: 5000,
+      });
+      return;
+    }
     
     // Handle OAuth error
     if (error) {

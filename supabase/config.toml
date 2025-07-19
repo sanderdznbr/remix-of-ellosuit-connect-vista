@@ -25,7 +25,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.google-calendar]
-verify_jwt = true
+verify_jwt = false
 
 [db]
 enabled = true

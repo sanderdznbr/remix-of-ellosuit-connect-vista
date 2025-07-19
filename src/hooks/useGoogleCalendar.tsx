@@ -152,7 +152,7 @@ export const useGoogleCalendar = () => {
     }
   }, [user, authLoading, updateState]);
 
-  // Connect to Google with improved error handling and EXACT redirect URI
+  // Connect to Google with improved error handling and user ID in state
   const connectGoogle = useCallback(async () => {
     if (!user || globalState.isProcessing) return;
 
@@ -177,6 +177,7 @@ export const useGoogleCalendar = () => {
       // Use the EXACT same redirect URI that Google expects
       const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
+      // Use actual user ID in state for security validation
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -211,9 +212,21 @@ export const useGoogleCalendar = () => {
     }
   }, [user, getGoogleClientId, updateState, toast]);
 
-  // Process OAuth code with timeout and single execution
+  // Process OAuth code with improved state validation
   const processGoogleOAuthCode = useCallback(async (code: string, userId: string) => {
     if (globalState.hasProcessedOAuth) return;
+
+    // Validate that the state matches the current user
+    if (userId !== user?.id) {
+      console.error('❌ State validation failed: user ID mismatch');
+      toast({
+        title: "❌ Erro de Segurança",
+        description: "Estado OAuth inválido. Tente conectar novamente.",
+        variant: "destructive"
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
 
     globalState.hasProcessedOAuth = true;
     globalState.isProcessing = true;
@@ -230,7 +243,7 @@ export const useGoogleCalendar = () => {
     updateState({ loading: true, processingOAuth: true, error: null });
     
     try {
-      console.log('🔄 Processing OAuth code...');
+      console.log('🔄 Processing OAuth code for user:', userId);
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: JSON.stringify({
           action: 'exchange_code',
@@ -306,7 +319,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
         clearTimeout(globalState.processingTimeout);
       }
     }
-  }, [updateState, checkConnection, toast]);
+  }, [user, updateState, checkConnection, toast]);
 
   // Renew token
   const renewToken = useCallback(async (refreshToken: string) => {
@@ -465,6 +478,8 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       let errorMessage = `OAuth Error: ${error}`;
       if (error === 'access_denied') {
         errorMessage = 'Acesso negado. Você precisa autorizar a aplicação para conectar o Google Meet.';
+      } else if (error === 'invalid_state') {
+        errorMessage = 'Estado de segurança inválido. Tente conectar novamente.';
       }
       
       toast({
@@ -477,7 +492,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
 
-    // Process OAuth code with user ID
+    // Process OAuth code with user ID validation
     if (code && urlState && !globalState.hasProcessedOAuth) {
       if (user && !authLoading) {
         processGoogleOAuthCode(code, urlState);

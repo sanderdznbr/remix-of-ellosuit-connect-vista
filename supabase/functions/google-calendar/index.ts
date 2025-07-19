@@ -115,6 +115,68 @@ serve(async (req) => {
         });
       }
 
+      // Handle create_event action
+      if (body.action === 'create_event') {
+        const { eventData, accessToken } = body;
+        console.log('📅 Creating Google Calendar event...');
+
+        if (!accessToken || !eventData) {
+          throw new Error('Access token or event data missing');
+        }
+
+        const calendarEvent = {
+          summary: eventData.title,
+          description: eventData.description,
+          start: {
+            dateTime: eventData.start_date,
+            timeZone: 'UTC'
+          },
+          end: {
+            dateTime: eventData.end_date,
+            timeZone: 'UTC'
+          },
+          conferenceData: {
+            createRequest: {
+              requestId: `meet-${Date.now()}`,
+              conferenceSolutionKey: {
+                type: 'hangoutsMeet'
+              }
+            }
+          },
+          attendees: eventData.attendees || []
+        };
+
+        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(calendarEvent)
+        });
+
+        const eventResult = await response.json();
+
+        if (!response.ok) {
+          console.error('❌ Google Calendar API error:', eventResult);
+          throw new Error(`Calendar API error: ${eventResult.error?.message || 'Unknown error'}`);
+        }
+
+        const meetLink = eventResult.conferenceData?.entryPoints?.find(
+          (entry: any) => entry.entryPointType === 'video'
+        )?.uri;
+
+        console.log('✅ Google Calendar event created with Meet link');
+
+        return new Response(JSON.stringify({
+          success: true,
+          googleEventId: eventResult.id,
+          meetLink: meetLink
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       return new Response(JSON.stringify({
         error: 'Unknown action'
       }), {
@@ -151,11 +213,22 @@ serve(async (req) => {
       });
     }
 
-    // Redirect back to dashboard with code for frontend processing
+    // Validate state parameter for security
+    if (!state) {
+      console.error('❌ No state parameter in callback');
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': `https://ellosuit.online/dashboard?error=invalid_state`
+        }
+      });
+    }
+
+    // Redirect back to dashboard with code and state for frontend processing
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://ellosuit.online/dashboard?code=${code}&state=${state || 'google_meet_auth'}`
+        'Location': `https://ellosuit.online/dashboard?code=${code}&state=${state}`
       }
     });
 

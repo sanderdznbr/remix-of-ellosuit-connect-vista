@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -140,7 +139,7 @@ export const useGoogleCalendar = () => {
           loading: false 
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error checking connection:', error);
       updateState({ 
         isConnected: false, 
@@ -201,7 +200,7 @@ export const useGoogleCalendar = () => {
       });
       
       window.location.href = authUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error connecting:', error);
       updateState({ loading: false, error: error.message });
       toast({
@@ -280,7 +279,7 @@ export const useGoogleCalendar = () => {
         throw new Error(data?.error || 'Resposta inesperada do servidor');
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ OAuth error:', error);
       
       let errorMessage = 'Falha ao conectar com Google Meet';
@@ -342,7 +341,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
 
       console.log('✅ Token renewed successfully');
       return data.access_token;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Token renewal error:', error);
       throw error;
     }
@@ -398,7 +397,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
         googleEventId: data.googleEventId,
         meetLink: data.meetLink
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error creating event:', error);
       throw error;
     }
@@ -435,7 +434,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
         title: "Sucesso",
         description: "Google Calendar desconectado com sucesso"
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error disconnecting:', error);
       updateState({ loading: false, error: error.message });
       toast({

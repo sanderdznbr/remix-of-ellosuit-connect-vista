@@ -187,10 +187,10 @@ serve(async (req) => {
       });
     }
 
-    // Handle GET requests (OAuth callback) - simplified version
+    // Handle GET requests (OAuth callback)
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
+    const state = url.searchParams.get('state'); // Este é o user_id
     const error = url.searchParams.get('error');
 
     console.log('🔗 OAuth callback received:', { code: !!code, state, error });
@@ -205,22 +205,12 @@ serve(async (req) => {
       });
     }
 
-    if (!code) {
-      console.error('❌ No code in callback');
+    if (!code || !state) {
+      console.error('❌ No code or state in callback');
       return new Response(null, {
         status: 302,
         headers: {
           'Location': `https://ellosuit.online/dashboard?error=no_code`
-        }
-      });
-    }
-
-    if (!state) {
-      console.error('❌ No state parameter in callback');
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': `https://ellosuit.online/dashboard?error=invalid_state`
         }
       });
     }

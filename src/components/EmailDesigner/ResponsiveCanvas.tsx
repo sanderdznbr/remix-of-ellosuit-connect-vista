@@ -1,16 +1,15 @@
-
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Copy, Move } from 'lucide-react';
-import { AdvancedDesignElement } from './AdvancedEmailDesigner';
+import { DesignElement } from './types';
 
 interface ResponsiveCanvasProps {
-  elements: AdvancedDesignElement[];
-  selectedElement: AdvancedDesignElement | null;
-  onSelectElement: (element: AdvancedDesignElement | null) => void;
-  onUpdateElement: (elementId: string, updates: Partial<AdvancedDesignElement>) => void;
+  elements: DesignElement[];
+  selectedElement: DesignElement | null;
+  onSelectElement: (element: DesignElement | null) => void;
+  onUpdateElement: (elementId: string, updates: Partial<DesignElement>) => void;
   onDeleteElement: (elementId: string) => void;
   viewMode: 'desktop' | 'tablet' | 'mobile';
   showGrid: boolean;
@@ -35,7 +34,7 @@ export const ResponsiveCanvas: React.FC<ResponsiveCanvasProps> = ({
     }
   };
 
-  const renderElement = (element: AdvancedDesignElement) => {
+  const renderElement = (element: DesignElement) => {
     if (element.visible === false) return null;
 
     const isSelected = selectedElement?.id === element.id;

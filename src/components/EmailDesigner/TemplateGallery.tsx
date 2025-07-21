@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Eye, Download } from 'lucide-react';
-import { AdvancedDesignElement } from './AdvancedEmailDesigner';
+import { DesignElement } from './types';
 
 interface Template {
   id: string;
   name: string;
   category: string;
   preview: string;
-  elements: AdvancedDesignElement[];
+  elements: DesignElement[];
 }
 
 interface TemplateGalleryProps {

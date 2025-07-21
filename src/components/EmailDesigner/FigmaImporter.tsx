@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +11,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { AdvancedDesignElement } from './AdvancedEmailDesigner';
+import { DesignElement } from './types';
 
 interface FigmaImporterProps {
-  onImportDesign: (elements: AdvancedDesignElement[]) => void;
+  onImportDesign: (elements: DesignElement[]) => void;
 }
 
 export const FigmaImporter: React.FC<FigmaImporterProps> = ({ onImportDesign }) => {
@@ -126,13 +125,13 @@ export const FigmaImporter: React.FC<FigmaImporterProps> = ({ onImportDesign }) 
     }
   };
 
-  const convertFigmaToElements = (figmaNode: any): AdvancedDesignElement[] => {
-    const elements: AdvancedDesignElement[] = [];
+  const convertFigmaToElements = (figmaNode: any): DesignElement[] => {
+    const elements: DesignElement[] = [];
 
     const processNode = (node: any, parentX = 0, parentY = 0) => {
       if (!node) return;
 
-      const element: AdvancedDesignElement = {
+      const element: DesignElement = {
         id: `figma-${node.id}`,
         type: mapFigmaTypeToElementType(node.type),
         content: node.characters || node.name || '',
@@ -165,7 +164,7 @@ export const FigmaImporter: React.FC<FigmaImporterProps> = ({ onImportDesign }) 
     return elements;
   };
 
-  const mapFigmaTypeToElementType = (figmaType: string): AdvancedDesignElement['type'] => {
+  const mapFigmaTypeToElementType = (figmaType: string): DesignElement['type'] => {
     switch (figmaType) {
       case 'TEXT': return 'text';
       case 'RECTANGLE': return 'container';

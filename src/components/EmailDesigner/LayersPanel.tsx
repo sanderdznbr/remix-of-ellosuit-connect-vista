@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +8,13 @@ import {
   ChevronDown, ChevronRight, MoreHorizontal
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AdvancedDesignElement } from './AdvancedEmailDesigner';
+import { DesignElement } from './types';
 
 interface LayersPanelProps {
-  elements: AdvancedDesignElement[];
-  selectedElement: AdvancedDesignElement | null;
-  onSelectElement: (element: AdvancedDesignElement | null) => void;
-  onUpdateElement: (elementId: string, updates: Partial<AdvancedDesignElement>) => void;
+  elements: DesignElement[];
+  selectedElement: DesignElement | null;
+  onSelectElement: (element: DesignElement | null) => void;
+  onUpdateElement: (elementId: string, updates: Partial<DesignElement>) => void;
   onDeleteElement: (elementId: string) => void;
   onDuplicateElement: (elementId: string) => void;
 }
@@ -72,7 +71,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
     }
   };
 
-  const renderLayer = (element: AdvancedDesignElement, depth = 0) => {
+  const renderLayer = (element: DesignElement, depth = 0) => {
     const isSelected = selectedElement?.id === element.id;
     const isExpanded = expandedElements.has(element.id);
     const hasChildren = element.children && element.children.length > 0;

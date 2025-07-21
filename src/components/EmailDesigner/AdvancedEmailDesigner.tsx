@@ -19,7 +19,10 @@ import { TemplateGallery } from './TemplateGallery';
 import { FigmaImporter } from './FigmaImporter';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
 import { useToast } from '@/hooks/use-toast';
-import { DesignElement } from './ElementsPalette';
+import { DesignElement } from './types';
+
+// Export the type for other components
+export type AdvancedDesignElement = DesignElement;
 
 interface AdvancedEmailDesignerProps {
   onBack: () => void;

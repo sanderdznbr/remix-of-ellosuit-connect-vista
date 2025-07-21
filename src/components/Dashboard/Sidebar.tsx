@@ -13,7 +13,8 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -63,6 +64,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       title: 'Sistema',
       items: [
         { id: 'team', label: 'Equipe', icon: Users },
+        { id: 'settings', label: 'Configurações', icon: Settings },
         { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
       ]
     }
@@ -83,7 +85,8 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'documents', 
       'clients', 
       'analytics',
-      'team'
+      'team',
+      'settings'
     ];
     
     if (implementedItems.includes(itemId)) {

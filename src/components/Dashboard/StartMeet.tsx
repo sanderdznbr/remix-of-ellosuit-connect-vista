@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Video, Users, Clock, Loader2, AlertCircle } from 'lucide-react';
+import { Video, Users, Clock, Loader2, AlertCircle, Settings as SettingsIcon } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import GoogleMeetConnectionStatus from './GoogleMeetConnectionStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,11 @@ interface Client {
   email: string;
 }
 
-const StartMeet = () => {
+interface StartMeetProps {
+  onNavigate?: (page: string) => void;
+}
+
+const StartMeet = ({ onNavigate }: StartMeetProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -32,10 +36,6 @@ const StartMeet = () => {
     isConnected: googleConnected, 
     loading: googleLoading, 
     processingOAuth,
-    error: googleError,
-    connectGoogle, 
-    disconnectGoogle,
-    checkConnection,
     createGoogleMeetEvent 
   } = useGoogleCalendar();
   const { user } = useAuth();
@@ -175,8 +175,10 @@ const StartMeet = () => {
     }
   };
 
-  const handleGoogleRetry = () => {
-    checkConnection();
+  const handleGoToSettings = () => {
+    if (onNavigate) {
+      onNavigate('settings');
+    }
   };
 
   const canStartMeeting = googleConnected && !googleLoading && !processingOAuth && !isLoading;
@@ -191,15 +193,28 @@ const StartMeet = () => {
           </div>
         </div>
 
-        <GoogleMeetConnectionStatus
-          isConnected={googleConnected}
-          loading={googleLoading}
-          processingOAuth={processingOAuth}
-          error={googleError}
-          onConnect={connectGoogle}
-          onDisconnect={disconnectGoogle}
-          onRetry={handleGoogleRetry}
-        />
+        {!googleConnected && !processingOAuth && (
+          <Card className="border-2 border-orange-200 bg-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <AlertCircle className="h-6 w-6 text-orange-600" />
+                  <div>
+                    <h3 className="font-semibold text-orange-900">Google Meet não conectado</h3>
+                    <p className="text-orange-700">Conecte-se ao Google Meet para criar reuniões automaticamente</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleGoToSettings}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  <SettingsIcon className="h-4 w-4 mr-2" />
+                  Realizar Conexão
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="shadow-xl border-0 rounded-2xl">
@@ -340,17 +355,6 @@ const StartMeet = () => {
                     </>
                   )}
                 </Button>
-                
-                {!googleConnected && !processingOAuth && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm text-yellow-700">
-                        Conecte-se ao Google Meet para criar reuniões
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

@@ -11,6 +11,7 @@ import ClientsManager from './ClientsManager';
 import Analytics from './Analytics';
 import StartMeet from './StartMeet';
 import EmailTemplates from './EmailTemplates';
+import Settings from './Settings';
 import Team from '../../pages/Team';
 import TestGoogleSecrets from '@/components/TestGoogleSecrets';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +56,8 @@ const Dashboard = () => {
         return 'Análises';
       case 'team':
         return 'Equipe';
+      case 'settings':
+        return 'Configurações';
       case 'test-secrets':
         return 'Teste Secrets';
       default:
@@ -74,11 +77,11 @@ const Dashboard = () => {
       case 'templates':
         return <EmailTemplates />;
       case 'my-calendar':
-        return <MyCalendar />;
+        return <MyCalendar onNavigate={handleItemClick} />;
       case 'my-meetings':
         return <MyMeetings />;
       case 'start-meet':
-        return <StartMeet />;
+        return <StartMeet onNavigate={handleItemClick} />;
       case 'documents':
         return <DocumentsManager />;
       case 'clients':
@@ -87,6 +90,8 @@ const Dashboard = () => {
         return <Analytics />;
       case 'team':
         return <Team />;
+      case 'settings':
+        return <Settings />;
       case 'test-secrets':
         return <TestGoogleSecrets />;
       default:

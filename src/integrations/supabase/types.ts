@@ -443,6 +443,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_designs: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          design_data: Json
+          id: string
+          is_published: boolean
+          name: string
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          design_data?: Json
+          id?: string
+          is_published?: boolean
+          name: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          design_data?: Json
+          id?: string
+          is_published?: boolean
+          name?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_events: {
         Row: {
           email_id: string

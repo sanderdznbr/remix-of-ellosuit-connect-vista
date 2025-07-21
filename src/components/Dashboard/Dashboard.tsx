@@ -24,7 +24,7 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeItem) {
       case 'home':
-        return <Home />;
+        return <Home onNavigate={setActiveItem} />;
       case 'calendar':
         return <MyCalendar />;
       case 'clients':
@@ -44,12 +44,12 @@ const Dashboard = () => {
       case 'settings':
         return <Settings />;
       default:
-        return <Home />;
+        return <Home onNavigate={setActiveItem} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 w-full">
       <Sidebar activeItem={activeItem} onItemClick={setActiveItem} />
       <main className="flex-1 overflow-auto">
         {renderContent()}

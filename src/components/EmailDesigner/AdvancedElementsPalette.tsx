@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Type, Image, Mouse, Minus, Space, Layout, 
-  Header, Footer, Grid3X3, Container, Quote,
+  Navigation, SquareStack, Grid3X3, Container, Quote,
   Star, Heart, MapPin, Phone, Mail, Calendar
 } from 'lucide-react';
 
@@ -25,8 +25,8 @@ const elementCategories = [
     elements: [
       { id: 'container', label: 'Container', icon: Container, type: 'container', description: 'Container flexível' },
       { id: 'grid', label: 'Grid', icon: Grid3X3, type: 'grid', description: 'Layout em grade' },
-      { id: 'header', label: 'Cabeçalho', icon: Header, type: 'header', description: 'Seção de cabeçalho' },
-      { id: 'footer', label: 'Rodapé', icon: Footer, type: 'footer', description: 'Seção de rodapé' },
+      { id: 'header', label: 'Cabeçalho', icon: Navigation, type: 'header', description: 'Seção de cabeçalho' },
+      { id: 'footer', label: 'Rodapé', icon: SquareStack, type: 'footer', description: 'Seção de rodapé' },
     ]
   },
   {

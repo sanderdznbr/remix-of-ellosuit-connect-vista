@@ -61,19 +61,12 @@ export const FigmaImporter: React.FC<FigmaImporterProps> = ({ onImportDesign }) 
 
   const checkConnection = async () => {
     try {
-      // Check if user has Figma integration
-      const { data, error } = await supabase
-        .from('figma_integrations')
-        .select('*')
-        .single();
-
-      if (data && !error) {
-        setIsConnected(true);
-        toast({
-          title: "Sucesso",
-          description: "Conectado ao Figma com sucesso!"
-        });
-      }
+      // Simulate checking connection for now since table doesn't exist yet
+      // This would normally check a figma_integrations table
+      console.log('Checking Figma connection...');
+      
+      // For now, just set as not connected until table is created
+      setIsConnected(false);
     } catch (error) {
       console.error('Connection check error:', error);
     }

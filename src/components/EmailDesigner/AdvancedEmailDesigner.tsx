@@ -21,6 +21,9 @@ import { useEmailDesigns } from '@/hooks/useEmailDesigns';
 import { useToast } from '@/hooks/use-toast';
 import { DesignElement } from './types';
 
+// Export the type for other components
+export type AdvancedDesignElement = DesignElement;
+
 interface AdvancedEmailDesignerProps {
   onBack: () => void;
   existingDesign?: any;
@@ -280,7 +283,7 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
       case 'header':
         return `<header style="${styles}">${element.content}</header>`;
       case 'footer':
-        return `<footer style="${styles}">${element.content}</footer >`;
+        return `<footer style="${styles}">${element.content}</footer>`;
       default:
         return `<div style="${styles}">${element.content || ''}</div>`;
     }

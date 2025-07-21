@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
-import { DesignElement } from './types';
+import { DesignElement } from './EmailDesigner';
 
 interface DesignCanvasProps {
   elements: DesignElement[];

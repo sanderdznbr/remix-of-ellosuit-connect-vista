@@ -8,16 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { HexColorPicker } from 'react-colorful';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { DesignElement } from './types';
+import { DesignElement } from './EmailDesigner';
 
 interface PropertiesPanelProps {
   selectedElement: DesignElement | null;
-  onUpdateElement: (elementId: string, updates: Partial<DesignElement>) => void;
+  onUpdateStyles: (elementId: string, styles: Partial<DesignElement['styles']>) => void;
+  onUpdateContent: (elementId: string, content: string) => void;
 }
 
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selectedElement,
-  onUpdateElement,
+  onUpdateStyles,
+  onUpdateContent,
 }) => {
   if (!selectedElement) {
     return (
@@ -35,13 +37,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   }
 
   const updateStyle = (key: string, value: string) => {
-    onUpdateElement(selectedElement.id, { 
-      styles: { ...selectedElement.styles, [key]: value } 
-    });
-  };
-
-  const updateContent = (content: string) => {
-    onUpdateElement(selectedElement.id, { content });
+    onUpdateStyles(selectedElement.id, { [key]: value });
   };
 
   const ColorPicker = ({ label, value, onChange }: { label: string; value: string; onChange: (color: string) => void }) => (
@@ -79,7 +75,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             <Textarea
               id="content"
               value={selectedElement.content || ''}
-              onChange={(e) => updateContent(e.target.value)}
+              onChange={(e) => onUpdateContent(selectedElement.id, e.target.value)}
               rows={3}
             />
           </div>
@@ -91,7 +87,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             <Input
               id="src"
               value={selectedElement.content || ''}
-              onChange={(e) => updateContent(e.target.value)}
+              onChange={(e) => onUpdateContent(selectedElement.id, e.target.value)}
               placeholder="https://..."
             />
           </div>

@@ -177,6 +177,64 @@ serve(async (req) => {
         });
       }
 
+      // Handle token renewal
+      if (body.action === 'renew_token') {
+        const { refreshToken, userId } = body;
+        console.log('🔄 Renewing token for user:', userId);
+
+        if (!refreshToken || !userId) {
+          throw new Error('Refresh token or user ID missing');
+        }
+
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+          })
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+          console.error('❌ Token renewal error:', tokenData);
+          throw new Error(`Token renewal failed: ${tokenData.error}`);
+        }
+
+        // Calculate new expiration
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+
+        // Update the integration with new token
+        const { error: updateError } = await supabase
+          .from('meeting_integrations')
+          .update({
+            access_token: tokenData.access_token,
+            expires_at: expiresAt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('provider', 'google_meet');
+
+        if (updateError) {
+          console.error('❌ Error updating token:', updateError);
+          throw new Error(`Failed to update token: ${updateError.message}`);
+        }
+
+        console.log('✅ Token renewed successfully');
+
+        return new Response(JSON.stringify({
+          success: true,
+          access_token: tokenData.access_token
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       return new Response(JSON.stringify({
         error: 'Unknown action'
       }), {

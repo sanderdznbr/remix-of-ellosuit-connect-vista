@@ -53,74 +53,76 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm w-[90vw] max-h-[85vh] mx-auto p-0 bg-white border border-gray-200 shadow-2xl rounded-2xl overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-6 text-center border-b border-gray-100">
-          <DialogHeader className="space-y-3">
-            <div className="w-12 h-12 mx-auto bg-[#3600FF]/10 rounded-full flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-[#3600FF]" />
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-semibold text-gray-900 mb-1">
-                Criar Novo Evento
-              </DialogTitle>
-              <p className="text-sm text-gray-600">
-                {formatDate(selectedDate)}
-              </p>
-            </div>
-          </DialogHeader>
-        </div>
+      <DialogContent className="w-full max-w-md mx-auto my-6 max-h-[80vh] bg-white border border-gray-200 shadow-2xl rounded-3xl overflow-hidden">
+        <div className="flex flex-col max-h-[80vh]">
+          {/* Header */}
+          <div className="px-6 py-6 text-center border-b border-gray-100 flex-shrink-0">
+            <DialogHeader className="space-y-3">
+              <div className="w-12 h-12 mx-auto bg-[#3600FF]/10 rounded-full flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-[#3600FF]" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900 mb-1">
+                  Criar Novo Evento
+                </DialogTitle>
+                <p className="text-sm text-gray-600">
+                  {formatDate(selectedDate)}
+                </p>
+              </div>
+            </DialogHeader>
+          </div>
 
-        {/* Content */}
-        <div className="px-6 py-4">
-          <div className="space-y-3">
-            {eventTypes.map((eventType) => {
-              const Icon = eventType.icon;
-              return (
-                <Button
-                  key={eventType.type}
-                  onClick={() => onSelectType(eventType.type)}
-                  variant="ghost"
-                  className="w-full p-4 h-auto rounded-xl border border-gray-200 bg-white hover:bg-[#3600FF] hover:border-[#3600FF] text-left group transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-4 w-full">
-                    {/* Icon */}
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-[#3600FF]/10 group-hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors duration-200">
-                        <Icon className="h-5 w-5 text-[#3600FF] group-hover:text-white transition-colors duration-200" />
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              {eventTypes.map((eventType) => {
+                const Icon = eventType.icon;
+                return (
+                  <Button
+                    key={eventType.type}
+                    onClick={() => onSelectType(eventType.type)}
+                    variant="ghost"
+                    className="w-full p-4 h-auto rounded-2xl border border-gray-200 bg-white hover:bg-[#3600FF] hover:border-[#3600FF] text-left group transition-all duration-200"
+                  >
+                    <div className="flex items-center space-x-4 w-full">
+                      {/* Icon */}
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-[#3600FF]/10 group-hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors duration-200">
+                          <Icon className="h-5 w-5 text-[#3600FF] group-hover:text-white transition-colors duration-200" />
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 group-hover:text-white mb-1 transition-colors duration-200">
+                          {eventType.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 group-hover:text-white/80 transition-colors duration-200">
+                          {eventType.description}
+                        </p>
+                      </div>
+                      
+                      {/* Arrow */}
+                      <div className="flex-shrink-0">
+                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
                       </div>
                     </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 group-hover:text-white mb-1 transition-colors duration-200">
-                        {eventType.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 group-hover:text-white/80 transition-colors duration-200">
-                        {eventType.description}
-                      </p>
-                    </div>
-                    
-                    {/* Arrow */}
-                    <div className="flex-shrink-0">
-                      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="px-6 pb-6">
-          <Button 
-            onClick={onClose}
-            variant="ghost"
-            className="w-full h-10 rounded-lg text-gray-600 hover:bg-gray-50 font-medium transition-colors duration-200"
-          >
-            Cancelar
-          </Button>
+          {/* Footer */}
+          <div className="px-6 pb-6 pt-4 flex-shrink-0">
+            <Button 
+              onClick={onClose}
+              variant="ghost"
+              className="w-full h-10 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors duration-200"
+            >
+              Cancelar
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

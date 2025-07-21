@@ -6,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Calendar, Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -237,57 +237,9 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Meu Calendário</h1>
           <p className="text-gray-600">Gerencie seus eventos, reuniões e compromissos</p>
-          
-          {/* Status da conexão com Google */}
-          <div className="flex items-center mt-2 space-x-2">
-            {isGoogleConnected ? (
-              <>
-                <Wifi className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-600">Google Calendar conectado</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-500">Google Calendar desconectado</span>
-              </>
-            )}
-          </div>
         </div>
         
         <div className="flex space-x-3">
-          {/* Botão de conectar/importar Google */}
-          {!isGoogleConnected ? (
-            <Button 
-              onClick={connectGoogle}
-              disabled={googleLoading}
-              variant="outline"
-              className="border-blue-500 text-blue-600 hover:bg-blue-50"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              {googleLoading ? 'Conectando...' : 'Conectar Google'}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleImportGoogleEvents}
-              disabled={isImporting}
-              variant="outline"
-              className="border-blue-500 text-blue-600 hover:bg-blue-50"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isImporting ? 'animate-spin' : ''}`} />
-              {isImporting ? 'Sincronizando...' : 'Sincronizar Google'}
-            </Button>
-          )}
-          
-          <Button 
-            onClick={refreshEvents}
-            disabled={isLoadingEvents}
-            variant="outline"
-            className="border-gray-300"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingEvents ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          
           <Button 
             onClick={() => setShowTypeSelector(true)}
             className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl"
@@ -297,67 +249,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </Button>
         </div>
       </div>
-
-      {/* Estatísticas detalhadas para debug */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-blue-600 mr-3" />
-            <div>
-              <p className="text-sm text-blue-600 font-medium">Eventos Carregados</p>
-              <p className="text-2xl font-bold text-blue-700">{events.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-purple-600 mr-3" />
-            <div>
-              <p className="text-sm text-purple-600 font-medium">No Calendário</p>
-              <p className="text-2xl font-bold text-purple-700">{calendarEvents.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-          <div className="flex items-center">
-            <Wifi className="h-8 w-8 text-green-600 mr-3" />
-            <div>
-              <p className="text-sm text-green-600 font-medium">Google Calendar</p>
-              <p className="text-lg font-bold text-green-700">
-                {isGoogleConnected ? 'Conectado' : 'Desconectado'}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
-          <div className="flex items-center">
-            <RefreshCw className="h-8 w-8 text-gray-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Status</p>
-              <p className="text-lg font-bold text-gray-700">
-                {isLoadingEvents ? 'Carregando...' : 'Pronto'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Lista de eventos para debug (remover em produção) */}
-      {process.env.NODE_ENV === 'development' && events.length > 0 && (
-        <div className="bg-gray-100 p-4 rounded-lg mb-4">
-          <h3 className="font-bold mb-2">Debug - Eventos Carregados:</h3>
-          <div className="text-sm space-y-1 max-h-32 overflow-y-auto">
-            {events.map((event, index) => (
-              <div key={event.id} className="border-b pb-1">
-                <strong>{index + 1}.</strong> {event.title} - {event.start_date || event.start} ({event.event_type})
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <Card className="shadow-lg border-0 rounded-3xl overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white rounded-t-3xl">

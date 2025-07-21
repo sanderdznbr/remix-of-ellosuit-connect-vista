@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, Users, Video, ExternalLink, AlertCircle, FileText, MessageSquare, Upload, Tag } from 'lucide-react';
+import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { format, isPast, isBefore, addHours } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface EnhancedEventDetailsModalProps {
   isOpen: boolean;
@@ -27,132 +28,32 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    title: '',
-    description: '',
-    notes: '',
-    stage: 'inicial',
-    tags: ''
-  });
-  const [interactions, setInteractions] = useState<any[]>([]);
-  const [newInteraction, setNewInteraction] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editData, setEditData] = useState({
+    notes: '',
+    recording_link: '',
+    status: 'pending'
+  });
+  const [rescheduleData, setRescheduleData] = useState({
+    newDate: '',
+    newStartTime: '',
+    newEndTime: ''
+  });
+  const [showReschedule, setShowReschedule] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
 
   React.useEffect(() => {
     if (event && isOpen) {
+      const meetingData = event.extendedProps?.meeting_data || {};
       setEditData({
-        title: event.title || '',
-        description: event.extendedProps?.description || '',
-        notes: event.extendedProps?.notes || '',
-        stage: event.extendedProps?.stage || 'inicial',
-        tags: event.extendedProps?.tags?.join(', ') || ''
+        notes: meetingData.notes || '',
+        recording_link: meetingData.recording_link || '',
+        status: meetingData.status || 'pending'
       });
-      loadInteractions();
     }
   }, [event, isOpen]);
-
-  const loadInteractions = async () => {
-    if (!event?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('client_interactions')
-        .select('*')
-        .eq('client_id', event.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setInteractions(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar interações:', error);
-    }
-  };
-
-  const handleSaveChanges = async () => {
-    if (!event?.id || !user) return;
-    
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('calendar_events')
-        .update({
-          title: editData.title,
-          description: editData.description,
-          meeting_data: {
-            notes: editData.notes,
-            stage: editData.stage,
-            tags: editData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-          }
-        })
-        .eq('id', event.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Evento atualizado com sucesso!"
-      });
-
-      setIsEditing(false);
-      onEventUpdate?.();
-    } catch (error: any) {
-      console.error('Erro ao salvar alterações:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao salvar alterações",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddInteraction = async () => {
-    if (!newInteraction.trim() || !event?.id || !user) return;
-
-    setIsLoading(true);
-    try {
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!companyUser) throw new Error('Usuário não associado a uma empresa');
-
-      const { error } = await supabase
-        .from('client_interactions')
-        .insert({
-          client_id: event.id,
-          company_id: companyUser.company_id,
-          created_by: user.id,
-          interaction_type: 'note',
-          description: newInteraction
-        });
-
-      if (error) throw error;
-
-      setNewInteraction('');
-      await loadInteractions();
-      
-      toast({
-        title: "Sucesso",
-        description: "Interação adicionada com sucesso!"
-      });
-    } catch (error: any) {
-      console.error('Erro ao adicionar interação:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao adicionar interação",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   if (!event) return null;
 
@@ -203,36 +104,185 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const StatusIcon = eventStatus.icon;
   const eventData = event.extendedProps || {};
   const meetingLink = eventData.meeting_link;
+  const eventStartDate = new Date(event.start);
+  const eventEndDate = new Date(event.end);
+  const canReschedule = !isPast(eventStartDate);
 
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
     return {
-      date: date.toLocaleDateString('pt-BR'),
-      time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      date: format(date, 'dd/MM/yyyy', { locale: ptBR }),
+      time: format(date, 'HH:mm', { locale: ptBR })
     };
   };
 
   const startDateTime = formatDateTime(event.start);
   const endDateTime = formatDateTime(event.end);
 
+  const handleSaveNotes = async () => {
+    if (!event?.id || !user) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({
+          meeting_data: {
+            ...eventData.meeting_data,
+            notes: editData.notes,
+            recording_link: editData.recording_link,
+            status: editData.status,
+            updated_at: new Date().toISOString()
+          }
+        })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Informações da reunião atualizadas com sucesso!"
+      });
+
+      setIsEditing(false);
+      onEventUpdate?.();
+    } catch (error: any) {
+      console.error('Erro ao salvar:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar informações",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRescheduleEvent = async () => {
+    if (!event?.id || !user || !rescheduleData.newDate || !rescheduleData.newStartTime || !rescheduleData.newEndTime) return;
+
+    setIsLoading(true);
+    try {
+      const newStartDateTime = new Date(`${rescheduleData.newDate}T${rescheduleData.newStartTime}`);
+      const newEndDateTime = new Date(`${rescheduleData.newDate}T${rescheduleData.newEndTime}`);
+
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({
+          start_date: newStartDateTime.toISOString(),
+          end_date: newEndDateTime.toISOString(),
+          meeting_data: {
+            ...eventData.meeting_data,
+            rescheduled: true,
+            original_date: event.start,
+            updated_at: new Date().toISOString()
+          }
+        })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Reunião reagendada com sucesso!"
+      });
+
+      setShowReschedule(false);
+      onEventUpdate?.();
+      onClose();
+    } catch (error: any) {
+      console.error('Erro ao reagendar:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao reagendar reunião",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMarkAsCompleted = async () => {
+    await updateEventStatus('completed', 'Reunião marcada como concluída');
+  };
+
+  const handleMarkAsPostponed = async () => {
+    await updateEventStatus('postponed', 'Reunião marcada como adiada');
+  };
+
+  const updateEventStatus = async (status: string, successMessage: string) => {
+    if (!event?.id || !user) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({
+          meeting_data: {
+            ...eventData.meeting_data,
+            status: status,
+            updated_at: new Date().toISOString()
+          }
+        })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: successMessage
+      });
+
+      onEventUpdate?.();
+      onClose();
+    } catch (error: any) {
+      console.error('Erro ao atualizar status:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar status",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'postponed':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Concluída';
+      case 'postponed':
+        return 'Adiada';
+      case 'cancelled':
+        return 'Cancelada';
+      default:
+        return 'Pendente';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border-0">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border-0">
         <DialogHeader className="pb-4 border-b border-gray-100">
           <div className="flex items-start justify-between">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <DialogTitle className="text-xl font-semibold text-gray-900 pr-8">
-                {isEditing ? (
-                  <Input
-                    value={editData.title}
-                    onChange={(e) => setEditData({...editData, title: e.target.value})}
-                    className="text-xl font-semibold"
-                  />
-                ) : (
-                  event.title
-                )}
+                {event.title}
               </DialogTitle>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap gap-2">
                 <Badge className="bg-blue-100 text-blue-800">
                   {eventData.event_type === 'meeting' ? 'Reunião' : 
                    eventData.event_type === 'appointment' ? 'Compromisso' : 'Lembrete'}
@@ -241,40 +291,21 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                   <StatusIcon className="h-3 w-3 mr-1" />
                   {eventStatus.text}
                 </Badge>
-                {eventData.stage && (
-                  <Badge variant="outline">
-                    {eventData.stage}
+                {editData.status && (
+                  <Badge className={getStatusColor(editData.status)}>
+                    {getStatusLabel(editData.status)}
                   </Badge>
                 )}
               </div>
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-              >
-                {isEditing ? 'Cancelar' : 'Editar'}
-              </Button>
-              {isEditing && (
-                <Button
-                  size="sm"
-                  onClick={handleSaveChanges}
-                  disabled={isLoading}
-                >
-                  Salvar
-                </Button>
-              )}
             </div>
           </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="notes">Anotações</TabsTrigger>
-            <TabsTrigger value="history">Histórico</TabsTrigger>
-            <TabsTrigger value="files">Arquivos</TabsTrigger>
+            <TabsTrigger value="actions">Ações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-6 mt-6">
@@ -286,28 +317,26 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                 <p className="text-sm text-gray-600">
                   {startDateTime.date} das {startDateTime.time} às {endDateTime.time}
                 </p>
-              </div>
-            </div>
-
-            {/* Descrição */}
-            <div className="flex items-start space-x-3">
-              <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Descrição</p>
-                {isEditing ? (
-                  <Textarea
-                    value={editData.description}
-                    onChange={(e) => setEditData({...editData, description: e.target.value})}
-                    className="mt-1"
-                    rows={3}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {editData.description || 'Nenhuma descrição'}
+                {startDateTime.date !== endDateTime.date && (
+                  <p className="text-sm text-gray-500">
+                    Termina em {endDateTime.date}
                   </p>
                 )}
               </div>
             </div>
+
+            {/* Descrição */}
+            {eventData.description && (
+              <div className="flex items-start space-x-3">
+                <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div>
+                  <p className="font-medium text-gray-900">Descrição</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {eventData.description}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Link da Reunião */}
             {meetingLink && (
@@ -322,66 +351,39 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                       variant="outline"
                       onClick={() => window.open(meetingLink, '_blank')}
                       className="h-8 px-3 text-xs"
+                      disabled={eventStatus.status === 'past'}
                     >
                       <ExternalLink className="h-3 w-3 mr-1" />
-                      Abrir
+                      {eventStatus.status === 'past' ? 'Expirado' : 'Abrir'}
                     </Button>
                   </div>
+                  {eventStatus.status === 'past' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      O link pode não estar mais ativo após o término da reunião
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Participantes */}
-            {eventData.attendees?.length > 0 && (
+            {/* Gravação da Reunião */}
+            {editData.recording_link && (
               <div className="flex items-start space-x-3">
-                <Users className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="font-medium text-gray-900">Participantes</p>
-                  <div className="space-y-1 mt-1">
-                    {eventData.attendees.map((attendee: any, index: number) => (
-                      <p key={index} className="text-sm text-gray-600">
-                        {attendee.displayName ? `${attendee.displayName} (${attendee.email})` : attendee.email}
-                      </p>
-                    ))}
+                <Video className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">Gravação da Reunião</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-sm text-blue-600 break-all">{editData.recording_link}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(editData.recording_link, '_blank')}
+                      className="h-8 px-3 text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Assistir
+                    </Button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Etapa do Projeto */}
-            {isEditing && (
-              <div className="flex items-start space-x-3">
-                <Tag className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">Etapa do Projeto</p>
-                  <Select value={editData.stage} onValueChange={(value) => setEditData({...editData, stage: value})}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="inicial">Inicial</SelectItem>
-                      <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                      <SelectItem value="revisao">Revisão</SelectItem>
-                      <SelectItem value="finalizado">Finalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {isEditing && (
-              <div className="flex items-start space-x-3">
-                <Tag className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">Tags</p>
-                  <Input
-                    value={editData.tags}
-                    onChange={(e) => setEditData({...editData, tags: e.target.value})}
-                    placeholder="tag1, tag2, tag3"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Separe as tags com vírgula</p>
                 </div>
               </div>
             )}
@@ -389,175 +391,170 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
           <TabsContent value="notes" className="space-y-4 mt-6">
             <div className="space-y-4">
-              <div>
-                <p className="font-medium text-gray-900 mb-2">Anotações do Evento</p>
-                {isEditing ? (
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-gray-900">Anotações da Reunião</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(!isEditing)}
+                >
+                  {isEditing ? <X className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
+                  {isEditing ? 'Cancelar' : 'Editar'}
+                </Button>
+              </div>
+
+              {isEditing ? (
+                <div className="space-y-4">
                   <Textarea
                     value={editData.notes}
                     onChange={(e) => setEditData({...editData, notes: e.target.value})}
                     rows={4}
-                    placeholder="Adicione suas anotações aqui..."
+                    placeholder="Adicione suas anotações da reunião..."
+                    className="resize-none"
                   />
-                ) : (
-                  <div className="bg-gray-50 p-4 rounded-xl">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {editData.notes || 'Nenhuma anotação ainda'}
-                    </p>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Link da Gravação (Google Drive)
+                    </label>
+                    <Input
+                      value={editData.recording_link}
+                      onChange={(e) => setEditData({...editData, recording_link: e.target.value})}
+                      placeholder="Cole o link do Google Drive aqui..."
+                      type="url"
+                    />
                   </div>
-                )}
-              </div>
+
+                  <Button
+                    onClick={handleSaveNotes}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {editData.notes || 'Nenhuma anotação ainda. Clique em "Editar" para adicionar.'}
+                  </p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-4 mt-6">
-            <div className="space-y-4">
-              <div>
-                <p className="font-medium text-gray-900 mb-2">Nova Interação</p>
+          <TabsContent value="actions" className="space-y-4 mt-6">
+            {showReschedule ? (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-xl">
+                <h4 className="font-medium text-blue-900">Reagendar Reunião</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Nova Data</label>
+                    <Input
+                      type="date"
+                      value={rescheduleData.newDate}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newDate: e.target.value})}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Horário Início</label>
+                    <Input
+                      type="time"
+                      value={rescheduleData.newStartTime}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newStartTime: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Horário Fim</label>
+                    <Input
+                      type="time"
+                      value={rescheduleData.newEndTime}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newEndTime: e.target.value})}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex space-x-2">
-                  <Textarea
-                    value={newInteraction}
-                    onChange={(e) => setNewInteraction(e.target.value)}
-                    placeholder="Adicione uma nova interação..."
-                    rows={2}
-                    className="flex-1"
-                  />
                   <Button
-                    onClick={handleAddInteraction}
-                    disabled={!newInteraction.trim() || isLoading}
-                    size="sm"
+                    onClick={handleRescheduleEvent}
+                    disabled={isLoading || !rescheduleData.newDate || !rescheduleData.newStartTime || !rescheduleData.newEndTime}
+                    className="flex-1"
                   >
-                    <MessageSquare className="h-4 w-4 mr-1" />
-                    Adicionar
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Confirmar Reagendamento
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReschedule(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
                   </Button>
                 </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {canReschedule && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReschedule(true)}
+                    className="flex items-center justify-center"
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Reagendar
+                  </Button>
+                )}
 
-              <div>
-                <p className="font-medium text-gray-900 mb-2">Histórico de Interações</p>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {interactions.length > 0 ? (
-                    interactions.map((interaction) => (
-                      <div key={interaction.id} className="bg-gray-50 p-3 rounded-xl">
-                        <div className="flex justify-between items-start mb-1">
-                          <Badge variant="outline" className="text-xs">
-                            {interaction.interaction_type}
-                          </Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(interaction.created_at).toLocaleDateString('pt-BR')} às{' '}
-                            {new Date(interaction.created_at).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700">{interaction.description}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      Nenhuma interação registrada ainda
-                    </p>
-                  )}
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleMarkAsCompleted}
+                  className="flex items-center justify-center text-green-600 hover:text-green-700"
+                  disabled={isLoading}
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Marcar como Concluída
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleMarkAsPostponed}
+                  className="flex items-center justify-center text-yellow-600 hover:text-yellow-700"
+                  disabled={isLoading}
+                >
+                  <Pause className="h-4 w-4 mr-2" />
+                  Marcar como Adiada
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setActiveTab('notes')}
+                  className="flex items-center justify-center"
+                >
+                  <Link className="h-4 w-4 mr-2" />
+                  Adicionar Gravação
+                </Button>
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="files" className="space-y-4 mt-6">
-            <div className="text-center py-8">
-              <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">Funcionalidade de arquivos em desenvolvimento</p>
-              <Button variant="outline" disabled>
-                <Upload className="h-4 w-4 mr-2" />
-                Fazer Upload
-              </Button>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
 
         <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toast({
-                  title: "Em desenvolvimento",
-                  description: "Funcionalidade de gravação será implementada em breve"
-                });
-              }}
-            >
-              📹 Gravação
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveTab('notes')}
-            >
-              📝 Anotações
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-yellow-600 hover:text-yellow-700"
-              onClick={() => {
-                toast({
-                  title: "Em desenvolvimento",
-                  description: "Funcionalidade de adiamento será implementada em breve"
-                });
-              }}
-            >
-              ⏰ Adiar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 hover:text-red-700"
-              onClick={async () => {
-                if (window.confirm('Tem certeza que deseja excluir este evento?')) {
-                  try {
-                    const { error } = await supabase
-                      .from('calendar_events')
-                      .delete()
-                      .eq('id', event.id);
-                    
-                    if (error) throw error;
-                    
-                    toast({
-                      title: "Sucesso",
-                      description: "Evento excluído com sucesso"
-                    });
-                    
-                    onEventUpdate?.();
-                    onClose();
-                  } catch (error: any) {
-                    toast({
-                      title: "Erro",
-                      description: "Erro ao excluir evento",
-                      variant: "destructive"
-                    });
-                  }
-                }
-              }}
-            >
-              🗑️ Excluir
-            </Button>
-          </div>
+          <Button variant="outline" onClick={onClose}>
+            Fechar
+          </Button>
           
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={onClose}>
-              Fechar
+          {meetingLink && eventStatus.status !== 'past' && (
+            <Button 
+              onClick={() => window.open(meetingLink, '_blank')}
+              className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+            >
+              <Video className="h-4 w-4 mr-2" />
+              Entrar na Reunião
             </Button>
-            {meetingLink && eventStatus.status !== 'past' && (
-              <Button 
-                onClick={() => window.open(meetingLink, '_blank')}
-                className="bg-[#3600FF] hover:bg-[#3600FF]/90"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                Entrar na Reunião
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

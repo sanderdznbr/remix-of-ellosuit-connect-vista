@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Plus } from 'lucide-react';
 import ImprovedEventModal from './ImprovedEventModal';
 import EventDetailsModal from './EventDetailsModal';
+import EventTypeSelector from './EventTypeSelector';
 import { useCalendarData } from '@/hooks/useCalendarData';
 
 interface MyCalendarProps {
@@ -18,15 +19,17 @@ interface MyCalendarProps {
 const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder' | null>(null);
   const [currentView, setCurrentView] = useState('dayGridMonth');
 
-  const { events, loading, refreshEvents } = useCalendarData();
+  const { events, loading, createEvent, refreshEvents } = useCalendarData();
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
-    setShowEventModal(true);
+    setShowTypeSelector(true);
   };
 
   const handleEventClick = (clickInfo: any) => {
@@ -39,6 +42,12 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       extendedProps: eventData.extendedProps
     });
     setShowDetailsModal(true);
+  };
+
+  const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
+    setSelectedEventType(type);
+    setShowTypeSelector(false);
+    setShowEventModal(true);
   };
 
   const formatEventsForCalendar = (events: any[]) => {
@@ -85,16 +94,16 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           <p className="text-gray-600">Gerencie seus eventos, reuniões e compromissos</p>
         </div>
         <Button 
-          onClick={() => setShowEventModal(true)}
-          className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+          onClick={() => setShowTypeSelector(true)}
+          className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Evento
         </Button>
       </div>
 
-      <Card className="shadow-lg border-0">
-        <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white">
+      <Card className="shadow-lg border-0 rounded-3xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white rounded-t-3xl">
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="h-6 w-6" />
             <span>Calendário</span>
@@ -130,18 +139,25 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </CardContent>
       </Card>
 
+      <EventTypeSelector
+        isOpen={showTypeSelector}
+        onClose={() => {
+          setShowTypeSelector(false);
+          setSelectedDate(null);
+        }}
+        onSelectType={handleTypeSelect}
+        selectedDate={selectedDate || ''}
+      />
+
       <ImprovedEventModal
         isOpen={showEventModal}
         onClose={() => {
           setShowEventModal(false);
           setSelectedDate(null);
+          setSelectedEventType(null);
         }}
         selectedDate={selectedDate}
-        onSuccess={() => {
-          refreshEvents();
-          setShowEventModal(false);
-          setSelectedDate(null);
-        }}
+        onCreateEvent={createEvent}
         onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
       />
 

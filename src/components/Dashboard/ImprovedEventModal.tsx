@@ -20,7 +20,7 @@ interface Client {
 interface ImprovedEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedDate: string;
+  selectedDate: string | null;
   selectedTime?: string | null;
   onCreateEvent: (eventData: {
     title: string;
@@ -33,6 +33,7 @@ interface ImprovedEventModalProps {
     attendees?: any[];
     is_all_day?: boolean;
   }) => Promise<void>;
+  onNavigateToSettings?: () => void;
 }
 
 const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
@@ -40,7 +41,8 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
   onClose,
   selectedDate,
   selectedTime,
-  onCreateEvent
+  onCreateEvent,
+  onNavigateToSettings
 }) => {
   console.log('🎯 ImprovedEventModal renderizando com isOpen:', isOpen);
   
@@ -131,7 +133,7 @@ const ImprovedEventModal: React.FC<ImprovedEventModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || isLoading) return;
+    if (!title.trim() || isLoading || !selectedDate) return;
 
     setIsLoading(true);
     setError(null);

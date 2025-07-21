@@ -478,12 +478,12 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       console.log('📅 Importing Google Calendar events...');
       const accessToken = await getValidAccessToken();
       
-      // Buscar eventos dos próximos 30 dias
+      // Buscar eventos dos próximos 90 dias para garantir mais dados
       const timeMin = new Date().toISOString();
-      const timeMax = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString();
+      const timeMax = new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString();
       
       const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=250`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -493,36 +493,59 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       );
 
       if (!response.ok) {
-        throw new Error(`Google Calendar API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Google Calendar API error:', response.status, errorText);
+        throw new Error(`Google Calendar API error: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ Google Calendar events fetched:', data.items?.length || 0);
+      console.log('✅ Google Calendar API response:', data);
       
-      // Processar e salvar eventos no Supabase
       if (data.items && data.items.length > 0) {
+        console.log('📅 Processing Google Calendar events:', data.items.length);
+        
         const eventsToSave = data.items
-          .filter((event: any) => event.summary) // Filtrar eventos sem título
-          .map((event: any) => ({
-            title: event.summary,
-            description: event.description || '',
-            start_date: event.start?.dateTime || event.start?.date,
-            end_date: event.end?.dateTime || event.end?.date,
-            event_type: event.conferenceData?.entryPoints?.some((ep: any) => ep.entryPointType === 'video') 
-              ? 'meeting' : 'appointment',
-            meeting_link: event.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri,
-            meeting_provider: 'google_meet',
-            attendees: event.attendees?.map((att: any) => att.email) || [],
-            is_all_day: !event.start?.dateTime,
-            google_event_id: event.id,
-            source: 'google'
-          }));
+          .filter((event: any) => {
+            // Filtrar eventos válidos
+            return event.summary && event.id && (event.start?.dateTime || event.start?.date);
+          })
+          .map((event: any) => {
+            // Detectar se é um evento do Google Meet
+            const hasMeetLink = event.conferenceData?.entryPoints?.some((ep: any) => ep.entryPointType === 'video');
+            const meetLink = event.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri;
+            
+            // Detectar se é um evento de dia inteiro
+            const isAllDay = !event.start?.dateTime;
+            
+            // Garantir que as datas estejam no formato correto
+            let startDate = event.start?.dateTime || event.start?.date;
+            let endDate = event.end?.dateTime || event.end?.date;
+            
+            // Se for evento de dia inteiro, ajustar as datas
+            if (isAllDay) {
+              startDate = new Date(startDate + 'T00:00:00').toISOString();
+              endDate = new Date(endDate + 'T23:59:59').toISOString();
+            }
 
-        // Salvar no banco via hook useCalendarData seria ideal
-        // Por agora, retornamos os eventos para serem processados
+            return {
+              title: event.summary,
+              description: event.description || '',
+              start_date: startDate,
+              end_date: endDate,
+              event_type: hasMeetLink ? 'meeting' : 'appointment',
+              meeting_link: meetLink,
+              meeting_provider: 'google_meet',
+              attendees: event.attendees?.map((att: any) => att.email).filter(Boolean) || [],
+              is_all_day: isAllDay,
+              google_event_id: event.id
+            };
+          });
+
+        console.log('✅ Events processed for saving:', eventsToSave.length);
         return eventsToSave;
       }
 
+      console.log('ℹ️ No events found in Google Calendar');
       return [];
     } catch (error) {
       console.error('❌ Error importing Google Calendar events:', error);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -11,6 +12,8 @@ interface CalendarEvent {
   description?: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
+  google_event_id?: string;
+  source?: string;
 }
 
 export const useCalendarData = () => {
@@ -18,7 +21,6 @@ export const useCalendarData = () => {
   const [loading, setLoading] = useState(true);
   const [hasCompany, setHasCompany] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
   const { user, session } = useAuth();
   const { toast } = useToast();
 
@@ -54,7 +56,6 @@ export const useCalendarData = () => {
         await fetchEvents(companyUser.company_id);
       } else {
         console.log('⚠️ Nenhuma empresa encontrada - criando empresa para o usuário');
-        // Tentar criar empresa automaticamente
         await createUserCompany(userId);
       }
     } catch (error) {
@@ -69,7 +70,6 @@ export const useCalendarData = () => {
     try {
       console.log('🏢 Criando empresa para usuário:', userId);
       
-      // Primeiro, verificar se o usuário realmente não tem empresa
       const { data: existingCompany } = await supabase
         .from('company_users')
         .select('company_id')
@@ -84,7 +84,6 @@ export const useCalendarData = () => {
         return;
       }
 
-      // Obter dados do usuário
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
       const userMetadata = userData.user?.user_metadata || {};
@@ -93,7 +92,6 @@ export const useCalendarData = () => {
                          userMetadata.username || 
                          userEmail.split('@')[0] + ' Company';
 
-      // Criar nova empresa
       const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert({
@@ -109,7 +107,6 @@ export const useCalendarData = () => {
         throw companyError;
       }
 
-      // Associar usuário à empresa
       const { error: associationError } = await supabase
         .from('company_users')
         .insert({
@@ -167,6 +164,8 @@ export const useCalendarData = () => {
           meeting_link: event.meeting_link,
           start_date: event.start_date,
           end_date: event.end_date,
+          google_event_id: event.google_event_id,
+          source: event.google_event_id ? 'google' : 'local',
           extendedProps: {
             description: event.description,
             event_type: event.event_type,
@@ -179,9 +178,7 @@ export const useCalendarData = () => {
           }
         }));
         
-        // Combinar eventos locais com eventos do Google (se houver)
-        const allEvents = [...formattedEvents, ...googleEvents];
-        setEvents(allEvents);
+        setEvents(formattedEvents);
       }
     } catch (error) {
       console.error('💥 Erro inesperado ao buscar eventos:', error);
@@ -192,12 +189,15 @@ export const useCalendarData = () => {
   };
 
   const saveGoogleEvents = async (googleEventsList: any[]) => {
-    if (!companyId || !user || googleEventsList.length === 0) return;
+    if (!companyId || !user || googleEventsList.length === 0) {
+      console.log('⚠️ Não foi possível salvar eventos do Google - dados insuficientes');
+      return;
+    }
 
     try {
-      console.log('💾 Salvando eventos do Google Calendar...');
+      console.log('💾 Salvando eventos do Google Calendar...', googleEventsList.length);
       
-      // Verificar quais eventos já existem
+      // Verificar quais eventos já existem pelo google_event_id
       const { data: existingEvents } = await supabase
         .from('calendar_events')
         .select('google_event_id')
@@ -213,19 +213,30 @@ export const useCalendarData = () => {
 
       if (newEvents.length > 0) {
         const eventsToInsert = newEvents.map(event => ({
-          ...event,
+          title: event.title,
+          description: event.description || '',
+          start_date: event.start_date,
+          end_date: event.end_date,
+          event_type: event.event_type || 'meeting',
+          meeting_link: event.meeting_link,
+          meeting_provider: event.meeting_provider || 'google_meet',
+          attendees: event.attendees || [],
+          is_all_day: event.is_all_day || false,
+          google_event_id: event.google_event_id,
           company_id: companyId,
           created_by: user.id
         }));
 
-        const { error } = await supabase
+        const { data: insertedEvents, error } = await supabase
           .from('calendar_events')
-          .insert(eventsToInsert);
+          .insert(eventsToInsert)
+          .select();
 
         if (error) {
           console.error('❌ Erro ao salvar eventos do Google:', error);
+          throw error;
         } else {
-          console.log('✅ Eventos do Google salvos:', newEvents.length);
+          console.log('✅ Eventos do Google salvos com sucesso:', insertedEvents?.length || 0);
           // Recarregar eventos após salvar
           await fetchEvents(companyId);
         }
@@ -234,6 +245,7 @@ export const useCalendarData = () => {
       }
     } catch (error) {
       console.error('💥 Erro ao salvar eventos do Google:', error);
+      throw error;
     }
   };
 
@@ -315,7 +327,6 @@ export const useCalendarData = () => {
     companyId,
     createEvent,
     refreshEvents: () => companyId && fetchEvents(companyId),
-    saveGoogleEvents,
-    setGoogleEvents
+    saveGoogleEvents
   };
 };

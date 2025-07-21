@@ -29,9 +29,9 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [currentView, setCurrentView] = useState('dayGridMonth');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-  const { events, loading, createEvent, refreshEvents } = useCalendarData();
+  const { events, loading, createEvent, refreshEvents, saveGoogleEvents } = useCalendarData();
   const { 
     isConnected: isGoogleConnected, 
     loading: googleLoading, 
@@ -52,32 +52,44 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       return;
     }
 
-    setIsRefreshing(true);
+    setIsImporting(true);
     try {
       console.log('🔄 Importando eventos do Google Calendar...');
-      await importGoogleCalendarEvents();
-      await refreshEvents();
+      const googleEvents = await importGoogleCalendarEvents();
       
-      toast({
-        title: "✅ Eventos importados",
-        description: "Eventos do Google Calendar foram importados com sucesso!",
-        duration: 3000
-      });
+      if (googleEvents && googleEvents.length > 0) {
+        console.log('💾 Salvando eventos do Google no banco:', googleEvents.length);
+        await saveGoogleEvents(googleEvents);
+        await refreshEvents();
+        
+        toast({
+          title: "✅ Eventos importados",
+          description: `${googleEvents.length} eventos do Google Calendar foram importados com sucesso!`,
+          duration: 3000
+        });
+      } else {
+        toast({
+          title: "ℹ️ Nenhum evento encontrado",
+          description: "Não foram encontrados eventos no Google Calendar para os próximos 30 dias",
+          duration: 3000
+        });
+      }
     } catch (error) {
       console.error('❌ Erro ao importar eventos:', error);
       toast({
         title: "Erro ao importar",
-        description: "Falha ao importar eventos do Google Calendar",
+        description: "Falha ao importar eventos do Google Calendar: " + error.message,
         variant: "destructive"
       });
     } finally {
-      setIsRefreshing(false);
+      setIsImporting(false);
     }
   };
 
   // Auto-importar eventos quando conectar ao Google
   useEffect(() => {
-    if (isGoogleConnected && !googleLoading) {
+    if (isGoogleConnected && !googleLoading && !isImporting) {
+      console.log('🔄 Auto-importando eventos do Google Calendar...');
       handleImportGoogleEvents();
     }
   }, [isGoogleConnected, googleLoading]);
@@ -134,7 +146,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         meetingProvider: event.meeting_provider,
         attendees: event.attendees,
         isAllDay: event.is_all_day,
-        source: event.source || 'local' // Identificar origem do evento
+        source: event.source || (event.google_event_id ? 'google' : 'local')
       }
     }));
   };
@@ -150,13 +162,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       case 'task':
         return '#EF4444';
       case 'google_meet':
-        return '#4285F4'; // Cor específica para eventos do Google
+        return '#4285F4';
       default:
         return '#6B7280';
     }
   };
 
   const calendarEvents = formatEventsForCalendar(events);
+  const isLoadingEvents = loading || isImporting;
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
@@ -191,17 +204,17 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               className="border-blue-500 text-blue-600 hover:bg-blue-50"
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Conectar Google
+              {googleLoading ? 'Conectando...' : 'Conectar Google'}
             </Button>
           ) : (
             <Button 
               onClick={handleImportGoogleEvents}
-              disabled={isRefreshing}
+              disabled={isImporting}
               variant="outline"
               className="border-blue-500 text-blue-600 hover:bg-blue-50"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Importando...' : 'Atualizar'}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isImporting ? 'animate-spin' : ''}`} />
+              {isImporting ? 'Importando...' : 'Sincronizar Google'}
             </Button>
           )}
           
@@ -245,7 +258,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
             <div>
               <p className="text-sm text-purple-600 font-medium">Status</p>
               <p className="text-lg font-bold text-purple-700">
-                {loading || isRefreshing ? 'Carregando...' : 'Atualizado'}
+                {isLoadingEvents ? 'Carregando...' : 'Atualizado'}
               </p>
             </div>
           </div>
@@ -257,7 +270,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="h-6 w-6" />
             <span>Calendário</span>
-            {(loading || isRefreshing) && (
+            {isLoadingEvents && (
               <RefreshCw className="h-4 w-4 animate-spin ml-auto" />
             )}
           </CardTitle>
@@ -284,14 +297,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               locale="pt-br"
               eventDisplay="block"
               eventTextColor="#ffffff"
-              loading={loading || isRefreshing}
               viewDidMount={(view) => {
                 setCurrentView(view.view.type);
               }}
               eventDidMount={(info) => {
-                // Adicionar tooltip para eventos do Google
-                if (info.event.extendedProps.source === 'google') {
+                const source = info.event.extendedProps.source;
+                if (source === 'google') {
                   info.el.title = `${info.event.title} (Google Calendar)`;
+                  info.el.style.borderLeft = '4px solid #4285F4';
                 }
               }}
             />
@@ -299,6 +312,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </CardContent>
       </Card>
 
+      {/* Modais */}
       <EventTypeSelector
         isOpen={showTypeSelector}
         onClose={() => {

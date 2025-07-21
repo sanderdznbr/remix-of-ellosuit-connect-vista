@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -12,24 +11,51 @@ interface GoogleIntegration {
   provider_email: string;
 }
 
+interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+  };
+  attendees?: Array<{
+    email: string;
+    displayName?: string;
+  }>;
+  conferenceData?: {
+    entryPoints?: Array<{
+      entryPointType: string;
+      uri: string;
+    }>;
+  };
+}
+
 interface GoogleCalendarState {
   isConnected: boolean;
   loading: boolean;
   processingOAuth: boolean;
   integration: GoogleIntegration | null;
   error: string | null;
+  events: GoogleCalendarEvent[];
 }
 
 // Global cache and debounce management
 const globalState = {
   clientId: null as string | null,
   lastCheck: 0,
-  checkInterval: 5000, // Reduzido para 5 segundos
+  checkInterval: 5000,
   isProcessing: false,
   hasProcessedOAuth: false,
   processingTimeout: null as number | null,
   cachedConnection: null as boolean | null,
   cachedIntegration: null as GoogleIntegration | null,
+  cachedEvents: null as GoogleCalendarEvent[] | null,
+  lastEventsFetch: 0,
 };
 
 export const useGoogleCalendar = () => {
@@ -38,7 +64,8 @@ export const useGoogleCalendar = () => {
     loading: false,
     processingOAuth: false,
     integration: globalState.cachedIntegration,
-    error: null
+    error: null,
+    events: globalState.cachedEvents || []
   });
   
   const { user, loading: authLoading } = useAuth();
@@ -53,7 +80,7 @@ export const useGoogleCalendar = () => {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Debounced function calls - reduzido o delay
+  // Debounced function calls
   const debounce = useCallback((fn: Function, delay: number = 100) => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -88,16 +115,61 @@ export const useGoogleCalendar = () => {
     }
   }, []);
 
+  // Fetch Google Calendar events
+  const fetchGoogleCalendarEvents = useCallback(async (): Promise<GoogleCalendarEvent[]> => {
+    if (!state.integration) {
+      console.log('⚠️ No Google integration found');
+      return [];
+    }
+
+    // Check cache
+    const now = Date.now();
+    if (globalState.cachedEvents && (now - globalState.lastEventsFetch) < 60000) { // 1 minute cache
+      return globalState.cachedEvents;
+    }
+
+    try {
+      console.log('📅 Fetching Google Calendar events...');
+      const accessToken = await getValidAccessToken();
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: JSON.stringify({
+          action: 'fetch_events',
+          accessToken: accessToken
+        })
+      });
+
+      if (error) {
+        console.error('❌ Error fetching events:', error);
+        throw error;
+      }
+
+      if (data?.success && data?.events) {
+        console.log('✅ Google Calendar events fetched:', data.events.length);
+        globalState.cachedEvents = data.events;
+        globalState.lastEventsFetch = now;
+        updateState({ events: data.events });
+        return data.events;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('❌ Error fetching Google Calendar events:', error);
+      return [];
+    }
+  }, [state.integration]);
+
   // Check connection with improved caching and faster response
   const checkConnection = useCallback(async (force = false) => {
     if (!user || authLoading) return;
     
-    // Retornar cache imediatamente se disponível e recente
+    // Return cache immediately if available and recent
     const now = Date.now();
     if (!force && globalState.cachedConnection !== null && (now - globalState.lastCheck) < globalState.checkInterval) {
       updateState({ 
         isConnected: globalState.cachedConnection,
         integration: globalState.cachedIntegration,
+        events: globalState.cachedEvents || [],
         loading: false 
       });
       return;
@@ -141,13 +213,20 @@ export const useGoogleCalendar = () => {
           isConnected: true, 
           loading: false 
         });
+
+        // Fetch events if connected
+        if (data.access_token) {
+          debounce(() => fetchGoogleCalendarEvents(), 500);
+        }
       } else {
         console.log('ℹ️ Google Meet not connected');
         globalState.cachedConnection = false;
         globalState.cachedIntegration = null;
+        globalState.cachedEvents = [];
         updateState({ 
           isConnected: false, 
           integration: null, 
+          events: [],
           loading: false 
         });
       }
@@ -155,16 +234,18 @@ export const useGoogleCalendar = () => {
       console.error('❌ Error checking connection:', error);
       globalState.cachedConnection = false;
       globalState.cachedIntegration = null;
+      globalState.cachedEvents = [];
       updateState({ 
         isConnected: false, 
         integration: null, 
+        events: [],
         loading: false,
         error: error.message 
       });
     } finally {
       globalState.isProcessing = false;
     }
-  }, [user, authLoading, updateState]);
+  }, [user, authLoading, updateState, fetchGoogleCalendarEvents, debounce]);
 
   // Connect to Google with improved error handling and user ID in state
   const connectGoogle = useCallback(async () => {
@@ -188,10 +269,8 @@ export const useGoogleCalendar = () => {
         'https://www.googleapis.com/auth/calendar.events'
       ].join(' ');
 
-      // Use the EXACT same redirect URI that Google expects
       const redirectUri = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar';
       
-      // Use actual user ID in state for security validation
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -201,10 +280,6 @@ export const useGoogleCalendar = () => {
         `prompt=consent&` +
         `state=${user.id}`;
 
-      console.log('🔗 OAuth Configuration:');
-      console.log('  - Client ID:', clientId.substring(0, 20) + '...');
-      console.log('  - Redirect URI:', redirectUri);
-      console.log('  - User ID in state:', user.id);
       console.log('🔗 Redirecting to Google OAuth...');
       
       toast({
@@ -226,11 +301,9 @@ export const useGoogleCalendar = () => {
     }
   }, [user, getGoogleClientId, updateState, toast]);
 
-  // Process OAuth code with improved state validation
   const processGoogleOAuthCode = useCallback(async (code: string, userId: string) => {
     if (globalState.hasProcessedOAuth) return;
 
-    // Validate that the state matches the current user
     if (userId !== user?.id) {
       console.error('❌ State validation failed: user ID mismatch');
       toast({
@@ -245,14 +318,13 @@ export const useGoogleCalendar = () => {
     globalState.hasProcessedOAuth = true;
     globalState.isProcessing = true;
     
-    // Set timeout to reset processing state
     if (globalState.processingTimeout) {
       clearTimeout(globalState.processingTimeout);
     }
     globalState.processingTimeout = window.setTimeout(() => {
       globalState.hasProcessedOAuth = false;
       globalState.isProcessing = false;
-    }, 30000); // 30 seconds timeout
+    }, 30000);
     
     updateState({ loading: true, processingOAuth: true, error: null });
     
@@ -274,13 +346,12 @@ export const useGoogleCalendar = () => {
       if (data?.success) {
         console.log('✅ OAuth processed successfully!');
         
-        // Clear URL
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Clear cache and check connection
         globalState.lastCheck = 0;
         globalState.cachedConnection = null;
         globalState.cachedIntegration = null;
+        globalState.cachedEvents = null;
         
         setTimeout(() => {
           checkConnection(true);
@@ -289,7 +360,7 @@ export const useGoogleCalendar = () => {
             description: "Google Meet foi conectado com sucesso!",
             duration: 5000,
           });
-        }, 500); // Reduzido o delay
+        }, 500);
         
       } else {
         throw new Error(data?.error || 'Resposta inesperada do servidor');
@@ -300,20 +371,7 @@ export const useGoogleCalendar = () => {
       
       let errorMessage = 'Falha ao conectar com Google Meet';
       if (error.message.includes('redirect_uri_mismatch')) {
-        errorMessage = `❌ ERRO DE CONFIGURAÇÃO - redirect_uri_mismatch
-
-Configure no Google Cloud Console EXATAMENTE:
-
-✅ Authorized JavaScript origins:
-https://ellosuit.online
-
-✅ Authorized redirect URIs:
-https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
-
-⚠️ IMPORTANTE: 
-- Copie as URLs EXATAMENTE como mostrado
-- Aguarde até 5 minutos após salvar
-- Certifique-se de não ter espaços extras`;
+        errorMessage = `❌ ERRO DE CONFIGURAÇÃO - redirect_uri_mismatch`;
       } else if (error.message.includes('invalid_grant')) {
         errorMessage = 'Código de autorização expirado. Tente conectar novamente.';
       }
@@ -326,7 +384,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
         duration: 10000
       });
       
-      // Clear URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } finally {
       updateState({ loading: false, processingOAuth: false });
@@ -337,7 +394,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [user, updateState, checkConnection, toast]);
 
-  // Renew token
   const renewToken = useCallback(async (refreshToken: string) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -357,9 +413,9 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
 
       console.log('✅ Token renewed successfully');
       
-      // Clear cache to force refresh
       globalState.cachedConnection = null;
       globalState.cachedIntegration = null;
+      globalState.cachedEvents = null;
       globalState.lastCheck = 0;
       
       return data.access_token;
@@ -369,7 +425,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [user]);
 
-  // Get valid access token
   const getValidAccessToken = useCallback(async () => {
     if (!state.integration) {
       throw new Error('Google Calendar not connected');
@@ -385,7 +440,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     return state.integration.access_token;
   }, [state.integration, renewToken]);
 
-  // Create Google Meet event
   const createGoogleMeetEvent = useCallback(async (eventData: any) => {
     if (!state.integration) {
       throw new Error('Google Calendar not connected');
@@ -414,6 +468,13 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       }
 
       console.log('✅ Google Meet event created successfully');
+      
+      // Refresh events after creating
+      setTimeout(() => {
+        globalState.cachedEvents = null;
+        fetchGoogleCalendarEvents();
+      }, 1000);
+      
       return {
         success: true,
         googleEventId: data.googleEventId,
@@ -423,9 +484,8 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       console.error('❌ Error creating event:', error);
       throw error;
     }
-  }, [state.integration, getValidAccessToken]);
+  }, [state.integration, getValidAccessToken, fetchGoogleCalendarEvents]);
 
-  // Disconnect Google
   const disconnectGoogle = useCallback(async () => {
     if (!user || !state.integration) return;
 
@@ -440,15 +500,16 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
 
       if (error) throw error;
 
-      // Clear cache
       globalState.clientId = null;
       globalState.lastCheck = 0;
       globalState.cachedConnection = false;
       globalState.cachedIntegration = null;
+      globalState.cachedEvents = [];
 
       updateState({ 
         isConnected: false, 
         integration: null, 
+        events: [],
         loading: false,
         error: null 
       });
@@ -469,21 +530,18 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [user, state.integration, updateState, toast]);
 
-  // Import Google Calendar events (placeholder)
   const importGoogleCalendarEvents = useCallback(async () => {
-    return [];
-  }, []);
+    return await fetchGoogleCalendarEvents();
+  }, [fetchGoogleCalendarEvents]);
 
-  // Main effect for initialization and OAuth processing - otimizado
+  // Main effect for initialization and OAuth processing
   useEffect(() => {
-    // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const urlState = urlParams.get('state');
     const error = urlParams.get('error');
     const googleConnected = urlParams.get('google_connected');
     
-    // Handle success redirect from OAuth
     if (googleConnected === 'true') {
       console.log('✅ Returning from successful OAuth');
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -496,7 +554,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
     
-    // Handle OAuth error
     if (error) {
       console.error('❌ OAuth error:', error);
       let errorMessage = `OAuth Error: ${error}`;
@@ -516,7 +573,6 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
 
-    // Process OAuth code with user ID validation
     if (code && urlState && !globalState.hasProcessedOAuth) {
       if (user && !authLoading) {
         processGoogleOAuthCode(code, urlState);
@@ -524,18 +580,16 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
     
-    // Normal initialization - mais rápido
     if (!authLoading && user && !globalState.isProcessing) {
-      // Se temos cache, usar imediatamente
       if (globalState.cachedConnection !== null) {
         updateState({
           isConnected: globalState.cachedConnection,
           integration: globalState.cachedIntegration,
+          events: globalState.cachedEvents || [],
           loading: false
         });
       }
       
-      // Verificar conexão com delay menor
       debounce(() => {
         checkConnection();
         getGoogleClientId();
@@ -564,11 +618,13 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     integration: state.integration,
     processingOAuth: state.processingOAuth,
     error: state.error,
+    events: state.events,
     connectGoogle,
     disconnectGoogle,
     checkConnection: () => checkConnection(true),
     getValidAccessToken,
     createGoogleMeetEvent,
-    importGoogleCalendarEvents
+    importGoogleCalendarEvents,
+    fetchGoogleCalendarEvents
   };
 };

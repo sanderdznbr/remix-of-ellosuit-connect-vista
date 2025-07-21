@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { useGoogleCalendar } from './useGoogleCalendar';
 
 interface CalendarEvent {
   id: string;
@@ -12,6 +13,8 @@ interface CalendarEvent {
   description?: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
+  source?: 'local' | 'google';
+  google_event_id?: string;
 }
 
 export const useCalendarData = () => {
@@ -21,6 +24,11 @@ export const useCalendarData = () => {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const { user, session } = useAuth();
   const { toast } = useToast();
+  const { 
+    events: googleEvents, 
+    isConnected: googleConnected, 
+    fetchGoogleCalendarEvents 
+  } = useGoogleCalendar();
 
   const checkUserCompany = async (userId: string) => {
     try {
@@ -54,7 +62,6 @@ export const useCalendarData = () => {
         await fetchEvents(companyUser.company_id);
       } else {
         console.log('⚠️ Nenhuma empresa encontrada - criando empresa para o usuário');
-        // Tentar criar empresa automaticamente
         await createUserCompany(userId);
       }
     } catch (error) {
@@ -69,7 +76,6 @@ export const useCalendarData = () => {
     try {
       console.log('🏢 Criando empresa para usuário:', userId);
       
-      // Primeiro, verificar se o usuário realmente não tem empresa
       const { data: existingCompany } = await supabase
         .from('company_users')
         .select('company_id')
@@ -84,7 +90,6 @@ export const useCalendarData = () => {
         return;
       }
 
-      // Obter dados do usuário
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
       const userMetadata = userData.user?.user_metadata || {};
@@ -93,7 +98,6 @@ export const useCalendarData = () => {
                          userMetadata.username || 
                          userEmail.split('@')[0] + ' Company';
 
-      // Criar nova empresa
       const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert({
@@ -109,7 +113,6 @@ export const useCalendarData = () => {
         throw companyError;
       }
 
-      // Associar usuário à empresa
       const { error: associationError } = await supabase
         .from('company_users')
         .insert({
@@ -142,41 +145,85 @@ export const useCalendarData = () => {
     }
   };
 
+  const formatGoogleEvent = (googleEvent: any): CalendarEvent => {
+    const startTime = googleEvent.start?.dateTime || googleEvent.start?.date;
+    const endTime = googleEvent.end?.dateTime || googleEvent.end?.date;
+    
+    // If it's a date-only event, add time to make it compatible
+    const formatDateTime = (dateStr: string) => {
+      if (!dateStr.includes('T')) {
+        return `${dateStr}T09:00:00Z`; // Default to 9 AM for all-day events
+      }
+      return dateStr;
+    };
+
+    const meetLink = googleEvent.conferenceData?.entryPoints?.find(
+      (entry: any) => entry.entryPointType === 'video'
+    )?.uri;
+
+    return {
+      id: `google-${googleEvent.id}`,
+      title: googleEvent.summary || 'Evento do Google Calendar',
+      start: formatDateTime(startTime),
+      end: formatDateTime(endTime),
+      description: googleEvent.description || '',
+      event_type: meetLink ? 'meeting' : 'appointment',
+      meeting_link: meetLink,
+      source: 'google',
+      google_event_id: googleEvent.id
+    };
+  };
+
   const fetchEvents = async (userCompanyId: string) => {
     try {
       console.log('📅 Buscando eventos para empresa:', userCompanyId);
       
-      const { data, error } = await supabase
+      // Fetch local events
+      const { data: localEvents, error } = await supabase
         .from('calendar_events')
         .select('*')
         .eq('company_id', userCompanyId)
         .order('start_date', { ascending: true });
 
       if (error) {
-        console.error('❌ Erro ao buscar eventos:', error);
-        setEvents([]);
-      } else {
-        console.log('✅ Eventos carregados:', data?.length || 0);
-        const formattedEvents = (data || []).map(event => ({
-          id: event.id,
-          title: event.title,
-          start: event.start_date,
-          end: event.end_date,
+        console.error('❌ Erro ao buscar eventos locais:', error);
+      }
+
+      const formattedLocalEvents = (localEvents || []).map(event => ({
+        id: event.id,
+        title: event.title,
+        start: event.start_date,
+        end: event.end_date,
+        description: event.description,
+        event_type: event.event_type,
+        meeting_link: event.meeting_link,
+        source: 'local' as const,
+        extendedProps: {
           description: event.description,
           event_type: event.event_type,
           meeting_link: event.meeting_link,
-          extendedProps: {
-            description: event.description,
-            event_type: event.event_type,
-            meeting_link: event.meeting_link,
-            attendees: event.attendees,
-            meeting_provider: event.meeting_provider,
-            is_all_day: event.is_all_day,
-            meeting_data: event.meeting_data
-          }
-        }));
-        setEvents(formattedEvents);
-      }
+          attendees: event.attendees,
+          meeting_provider: event.meeting_provider,
+          is_all_day: event.is_all_day,
+          meeting_data: event.meeting_data
+        }
+      }));
+
+      // Format Google events if connected
+      const formattedGoogleEvents = googleConnected 
+        ? googleEvents.map(formatGoogleEvent)
+        : [];
+
+      // Merge and sort all events
+      const allEvents = [...formattedLocalEvents, ...formattedGoogleEvents];
+      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+      console.log('✅ Total eventos carregados:', allEvents.length, {
+        local: formattedLocalEvents.length,
+        google: formattedGoogleEvents.length
+      });
+
+      setEvents(allEvents);
     } catch (error) {
       console.error('💥 Erro inesperado ao buscar eventos:', error);
       setEvents([]);
@@ -243,6 +290,14 @@ export const useCalendarData = () => {
     }
   };
 
+  // Effect to re-fetch events when Google events change
+  useEffect(() => {
+    if (companyId && googleEvents.length >= 0) {
+      console.log('🔄 Google events changed, refreshing calendar...');
+      fetchEvents(companyId);
+    }
+  }, [googleEvents, companyId]);
+
   useEffect(() => {
     if (user && session) {
       console.log('👤 Usuário autenticado, verificando empresa...');
@@ -262,6 +317,8 @@ export const useCalendarData = () => {
     hasCompany,
     companyId,
     createEvent,
-    refreshEvents: () => companyId && fetchEvents(companyId)
+    refreshEvents: () => companyId && fetchEvents(companyId),
+    googleConnected,
+    googleEventsCount: googleEvents.length
   };
 };

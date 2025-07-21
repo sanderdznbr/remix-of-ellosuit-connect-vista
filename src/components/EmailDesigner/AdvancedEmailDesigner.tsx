@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -20,25 +19,11 @@ import { TemplateGallery } from './TemplateGallery';
 import { FigmaImporter } from './FigmaImporter';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
 import { useToast } from '@/hooks/use-toast';
+import { DesignElement } from './ElementsPalette';
 
 interface AdvancedEmailDesignerProps {
   onBack: () => void;
   existingDesign?: any;
-}
-
-export interface AdvancedDesignElement {
-  id: string;
-  type: 'text' | 'image' | 'button' | 'divider' | 'spacer' | 'container' | 'header' | 'footer' | 'grid';
-  content?: string;
-  children?: AdvancedDesignElement[];
-  styles: {
-    [key: string]: any;
-  };
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  locked?: boolean;
-  visible?: boolean;
-  name?: string;
 }
 
 const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({ 
@@ -46,40 +31,26 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
   existingDesign 
 }) => {
   const [designName, setDesignName] = useState(existingDesign?.name || 'Novo Design');
-  const [elements, setElements] = useState<AdvancedDesignElement[]>(
+  const [elements, setElements] = useState<DesignElement[]>(
     existingDesign?.design_data?.elements || []
   );
-  const [selectedElement, setSelectedElement] = useState<AdvancedDesignElement | null>(null);
+  const [selectedElement, setSelectedElement] = useState<DesignElement | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [activeTab, setActiveTab] = useState('design');
-  const [history, setHistory] = useState<AdvancedDesignElement[][]>([[]]);
+  const [history, setHistory] = useState<DesignElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [showGrid, setShowGrid] = useState(true);
   
   const { createDesign, updateDesign } = useEmailDesigns();
   const { toast } = useToast();
 
-  const addToHistory = useCallback((newElements: AdvancedDesignElement[]) => {
+  const addToHistory = useCallback((newElements: DesignElement[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push([...newElements]);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
-
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setElements([...history[historyIndex - 1]]);
-    }
-  }, [history, historyIndex]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setElements([...history[historyIndex + 1]]);
-    }
   }, [history, historyIndex]);
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -93,7 +64,7 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
     if (!over) return;
 
     if (active.data.current?.type === 'palette-item' && over.id === 'canvas') {
-      const newElement: AdvancedDesignElement = {
+      const newElement: DesignElement = {
         id: `element-${Date.now()}`,
         type: active.data.current.elementType,
         content: getDefaultContent(active.data.current.elementType),
@@ -172,11 +143,25 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
     }
   };
 
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setElements([...history[historyIndex - 1]]);
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setElements([...history[historyIndex + 1]]);
+    }
+  }, [history, historyIndex]);
+
   const duplicateElement = (elementId: string) => {
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
 
-    const newElement: AdvancedDesignElement = {
+    const newElement: DesignElement = {
       ...element,
       id: `element-${Date.now()}`,
       position: { 
@@ -198,7 +183,7 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
     setSelectedElement(null);
   };
 
-  const updateElement = (elementId: string, updates: Partial<AdvancedDesignElement>) => {
+  const updateElement = (elementId: string, updates: Partial<DesignElement>) => {
     const newElements = elements.map(el => 
       el.id === elementId ? { ...el, ...updates } : el
     );
@@ -280,7 +265,7 @@ const AdvancedEmailDesigner: React.FC<AdvancedEmailDesignerProps> = ({
     `;
   };
 
-  const renderElementToHTML = (element: AdvancedDesignElement): string => {
+  const renderElementToHTML = (element: DesignElement): string => {
     const styles = Object.entries(element.styles)
       .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
       .join('; ');

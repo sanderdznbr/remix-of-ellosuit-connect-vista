@@ -115,6 +115,42 @@ serve(async (req) => {
         });
       }
 
+      // Handle fetch_events action
+      if (body.action === 'fetch_events') {
+        const { accessToken, timeMin, timeMax } = body;
+        console.log('📅 Fetching Google Calendar events...');
+
+        if (!accessToken) {
+          throw new Error('Access token missing');
+        }
+
+        const timeMinParam = timeMin || new Date().toISOString();
+        const timeMaxParam = timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
+
+        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMinParam}&timeMax=${timeMaxParam}&singleEvents=true&orderBy=startTime`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const eventsData = await response.json();
+
+        if (!response.ok) {
+          console.error('❌ Google Calendar API error:', eventsData);
+          throw new Error(`Calendar API error: ${eventsData.error?.message || 'Unknown error'}`);
+        }
+
+        console.log('✅ Google Calendar events fetched successfully');
+
+        return new Response(JSON.stringify({
+          success: true,
+          events: eventsData.items || []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       // Handle create_event action
       if (body.action === 'create_event') {
         const { eventData, accessToken } = body;

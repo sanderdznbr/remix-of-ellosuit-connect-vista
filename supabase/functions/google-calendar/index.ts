@@ -40,6 +40,27 @@ serve(async (req) => {
         });
       }
 
+      // Get auth URL
+      if (body.action === 'get_auth_url') {
+        console.log('🔗 Generating Google OAuth URL');
+        
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+          `client_id=${googleClientId}&` +
+          `redirect_uri=${encodeURIComponent(`${supabaseUrl}/functions/v1/google-calendar`)}&` +
+          `response_type=code&` +
+          `scope=${encodeURIComponent('https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email')}&` +
+          `state=google_calendar_auth&` +
+          `access_type=offline&` +
+          `prompt=consent`;
+
+        return new Response(JSON.stringify({
+          authUrl,
+          success: true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       // Process OAuth code exchange
       if (body.action === 'exchange_code') {
         const { code, user_id } = body;
@@ -110,6 +131,121 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           success: true,
           message: 'Google Meet connected successfully'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle list_events action
+      if (body.action === 'list_events') {
+        const { timeMin, timeMax } = body;
+        console.log('📅 Listing Google Calendar events...');
+
+        // Get authorization header to extract user token
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader) {
+          throw new Error('Authorization header missing');
+        }
+
+        // Get user from JWT token
+        const { data: { user }, error: userError } = await supabase.auth.getUser(
+          authHeader.replace('Bearer ', '')
+        );
+
+        if (userError || !user) {
+          throw new Error('User not authenticated');
+        }
+
+        // Get user's Google integration
+        const { data: integration, error: integrationError } = await supabase
+          .from('meeting_integrations')
+          .select('access_token, refresh_token, expires_at')
+          .eq('user_id', user.id)
+          .eq('provider', 'google_meet')
+          .single();
+
+        if (integrationError || !integration) {
+          throw new Error('Google Calendar integration not found');
+        }
+
+        let accessToken = integration.access_token;
+
+        // Check if token is expired and refresh if needed
+        const expiresAt = new Date(integration.expires_at);
+        const now = new Date();
+        
+        if (now >= expiresAt && integration.refresh_token) {
+          console.log('🔄 Token expired, refreshing...');
+          
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              refresh_token: integration.refresh_token,
+              grant_type: 'refresh_token'
+            })
+          });
+
+          const tokenData = await tokenResponse.json();
+
+          if (!tokenResponse.ok) {
+            console.error('❌ Token refresh error:', tokenData);
+            throw new Error(`Token refresh failed: ${tokenData.error}`);
+          }
+
+          accessToken = tokenData.access_token;
+
+          // Update token in database
+          const newExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+          await supabase
+            .from('meeting_integrations')
+            .update({
+              access_token: accessToken,
+              expires_at: newExpiresAt,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .eq('provider', 'google_meet');
+
+          console.log('✅ Token refreshed successfully');
+        }
+
+        // Fetch events from Google Calendar
+        const calendarUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+        calendarUrl.searchParams.set('maxResults', '2500');
+        calendarUrl.searchParams.set('singleEvents', 'true');
+        calendarUrl.searchParams.set('orderBy', 'startTime');
+        
+        if (timeMin) {
+          calendarUrl.searchParams.set('timeMin', timeMin);
+        }
+        if (timeMax) {
+          calendarUrl.searchParams.set('timeMax', timeMax);
+        }
+
+        const eventsResponse = await fetch(calendarUrl.toString(), {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const eventsData = await eventsResponse.json();
+
+        if (!eventsResponse.ok) {
+          console.error('❌ Google Calendar API error:', eventsData);
+          throw new Error(`Calendar API error: ${eventsData.error?.message || 'Unknown error'}`);
+        }
+
+        console.log(`✅ Successfully fetched ${eventsData.items?.length || 0} events from Google Calendar`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          events: eventsData.items || []
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });

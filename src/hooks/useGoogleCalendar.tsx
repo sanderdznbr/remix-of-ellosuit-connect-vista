@@ -209,11 +209,13 @@ export const useGoogleCalendar = () => {
         body: {
           action: 'create_event',
           accessToken: integration.access_token,
-          title,
-          description,
-          start_date,
-          end_date,
-          attendees
+          eventData: {
+            title,
+            description,
+            start_date,
+            end_date,
+            attendees
+          }
         }
       });
 
@@ -223,7 +225,7 @@ export const useGoogleCalendar = () => {
 
       return {
         success: true,
-        meetLink: data.hangoutLink,
+        meetLink: data.meetLink,
         googleEventId: data.googleEventId
       };
     } catch (error) {
@@ -243,8 +245,8 @@ export const useGoogleCalendar = () => {
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: {
           action: 'delete_event',
-          accessToken: integration.access_token,
-          eventId: googleEventId
+          googleEventId: googleEventId,
+          userId: user?.id
         }
       });
 

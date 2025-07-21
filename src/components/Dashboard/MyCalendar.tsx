@@ -23,7 +23,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [currentView, setCurrentView] = useState('dayGridMonth');
 
-  const { events, loading, refetchEvents } = useCalendarData();
+  const { events, loading, refreshEvents } = useCalendarData();
   const { isConnected: googleConnected } = useGoogleCalendar();
 
   const handleDateClick = (arg: any) => {
@@ -154,7 +154,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               locale="pt-br"
               eventDisplay="block"
               eventTextColor="#ffffff"
-              loading={loading}
               viewDidMount={(view) => {
                 setCurrentView(view.view.type);
               }}
@@ -171,7 +170,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         }}
         selectedDate={selectedDate}
         onEventCreated={() => {
-          refetchEvents();
+          refreshEvents();
           setShowEventModal(false);
           setSelectedDate(null);
         }}
@@ -186,12 +185,12 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         }}
         event={selectedEvent}
         onEventUpdated={() => {
-          refetchEvents();
+          refreshEvents();
           setShowDetailsModal(false);
           setSelectedEvent(null);
         }}
         onEventDeleted={() => {
-          refetchEvents();
+          refreshEvents();
           setShowDetailsModal(false);
           setSelectedEvent(null);
         }}

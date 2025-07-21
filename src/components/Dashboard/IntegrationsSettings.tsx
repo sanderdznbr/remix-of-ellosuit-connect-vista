@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw, Plug } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 

@@ -1,94 +1,49 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, Palette } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface ColorPickerProps {
-  value: string;
-  onChange: (color: string) => void;
-  label?: string;
+  selectedColor: string;
+  onColorChange: (color: string) => void;
+  onClose: () => void;
 }
 
-const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, label = "Cor do evento" }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const predefinedColors = [
-    { name: 'Azul', value: '#3600FF' },
-    { name: 'Verde', value: '#10B981' },
-    { name: 'Amarelo', value: '#F59E0B' },
-    { name: 'Vermelho', value: '#EF4444' },
-    { name: 'Roxo', value: '#8B5CF6' },
-    { name: 'Rosa', value: '#EC4899' },
-    { name: 'Laranja', value: '#F97316' },
-    { name: 'Cinza', value: '#6B7280' },
-    { name: 'Índigo', value: '#6366F1' },
-    { name: 'Teal', value: '#14B8A6' },
-    { name: 'Lime', value: '#84CC16' },
-    { name: 'Ciano', value: '#06B6D4' },
+const ColorPicker = ({ selectedColor, onColorChange, onClose }: ColorPickerProps) => {
+  const colors = [
+    '#3600FF', // Roxo padrão
+    '#10B981', // Verde
+    '#F59E0B', // Amarelo/Laranja
+    '#EF4444', // Vermelho
+    '#8B5CF6', // Roxo claro
+    '#06B6D4', // Azul claro
+    '#84CC16', // Verde lima
+    '#F97316', // Laranja
+    '#EC4899', // Rosa
+    '#6B7280', // Cinza
+    '#1F2937', // Cinza escuro
+    '#059669'  // Verde escuro
   ];
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-start h-10"
-          >
-            <div className="flex items-center space-x-2">
-              <div
-                className="w-4 h-4 rounded-full border border-gray-300"
-                style={{ backgroundColor: value }}
-              />
-              <span className="text-sm">
-                {predefinedColors.find(c => c.value === value)?.name || 'Cor personalizada'}
-              </span>
-              <Palette className="h-4 w-4 ml-auto" />
-            </div>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 p-3">
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Cores pré-definidas</h4>
-              <div className="grid grid-cols-4 gap-2">
-                {predefinedColors.map((color) => (
-                  <button
-                    key={color.value}
-                    className={cn(
-                      "w-8 h-8 rounded-lg border-2 relative transition-all hover:scale-110",
-                      value === color.value ? "border-gray-900" : "border-gray-200"
-                    )}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => {
-                      onChange(color.value);
-                      setIsOpen(false);
-                    }}
-                    title={color.name}
-                  >
-                    {value === color.value && (
-                      <Check className="h-4 w-4 text-white absolute inset-0 m-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium mb-2">Cor personalizada</h4>
-              <input
-                type="color"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full h-8 rounded border border-gray-200 cursor-pointer"
-              />
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+    <div className="p-4 border rounded-lg bg-white shadow-lg">
+      <h4 className="text-sm font-medium mb-3">Escolher Cor</h4>
+      <div className="grid grid-cols-6 gap-2 mb-4">
+        {colors.map((color) => (
+          <button
+            key={color}
+            className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
+              selectedColor === color ? 'border-gray-800 ring-2 ring-offset-2 ring-gray-400' : 'border-gray-300'
+            }`}
+            style={{ backgroundColor: color }}
+            onClick={() => onColorChange(color)}
+          />
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={onClose}>
+          Fechar
+        </Button>
+      </div>
     </div>
   );
 };

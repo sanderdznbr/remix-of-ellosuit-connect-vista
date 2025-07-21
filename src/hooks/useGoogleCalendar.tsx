@@ -593,16 +593,8 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
 
     try {
-      console.log('🔄 Starting full Google Calendar synchronization...');
+      console.log('🔄 Starting FULL Google Calendar synchronization...');
       
-      // Importar todos os eventos do Google Calendar
-      const googleEvents = await importGoogleCalendarEvents();
-      
-      if (googleEvents.length === 0) {
-        console.log('ℹ️ No events to synchronize from Google Calendar');
-        return { synchronized: 0, created: 0, updated: 0 };
-      }
-
       // Buscar a empresa do usuário
       const { data: companyUser } = await supabase
         .from('company_users')
@@ -614,71 +606,129 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
         throw new Error('User company not found');
       }
 
-      let created = 0;
-      let updated = 0;
+      // IMPORTANTE: LIMPAR TODOS OS EVENTOS GOOGLE EXISTENTES PARA SINCRONIZAR COMPLETAMENTE
+      console.log('🗑️ Removing existing Google Calendar events to perform full sync...');
+      const { error: deleteError } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('company_id', companyUser.company_id)
+        .not('google_event_id', 'is', null);
 
-      // Processar cada evento do Google Calendar
-      for (const googleEvent of googleEvents) {
-        try {
-          // Verificar se já existe um evento com este google_event_id
-          const { data: existingEvent } = await supabase
-            .from('calendar_events')
-            .select('id')
-            .eq('google_event_id', googleEvent.google_event_id)
-            .eq('company_id', companyUser.company_id)
-            .maybeSingle();
+      if (deleteError) {
+        console.error('❌ Error removing existing Google events:', deleteError);
+      } else {
+        console.log('✅ Existing Google events removed for full resync');
+      }
 
-          if (existingEvent) {
-            // Atualizar evento existente
-            const { error: updateError } = await supabase
-              .from('calendar_events')
-              .update({
-                title: googleEvent.title,
-                description: googleEvent.description,
-                start_date: googleEvent.start_date,
-                end_date: googleEvent.end_date,
-                event_type: googleEvent.event_type,
-                meeting_link: googleEvent.meeting_link,
-                meeting_provider: googleEvent.meeting_provider,
-                attendees: googleEvent.attendees,
-                is_all_day: googleEvent.is_all_day
-              })
-              .eq('id', existingEvent.id);
+      // Buscar TODOS os eventos do Google Calendar (passados e futuros)
+      const accessToken = await getValidAccessToken();
+      
+      // Buscar eventos dos últimos 6 meses e próximos 6 meses
+      const timeMin = new Date(Date.now() - (180 * 24 * 60 * 60 * 1000)).toISOString();
+      const timeMax = new Date(Date.now() + (180 * 24 * 60 * 60 * 1000)).toISOString();
+      
+      console.log('📅 Fetching ALL Google Calendar events from', timeMin, 'to', timeMax);
+      
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500&showDeleted=false`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
-            if (!updateError) {
-              updated++;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Google Calendar API error:', response.status, errorText);
+        throw new Error(`Google Calendar API error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Google Calendar API response:', data.items?.length || 0, 'events found');
+      
+      if (data.items && data.items.length > 0) {
+        console.log('📅 Processing ALL Google Calendar events:', data.items.length);
+        
+        let created = 0;
+
+        // Processar cada evento do Google Calendar
+        for (const event of data.items) {
+          try {
+            // Verificar se o evento é válido
+            if (!event.summary || !event.id || (!event.start?.dateTime && !event.start?.date)) {
+              continue;
             }
-          } else {
-            // Criar novo evento
+
+            // Detectar se é um evento do Google Meet
+            const hasMeetLink = event.conferenceData?.entryPoints?.some((ep: any) => ep.entryPointType === 'video');
+            const meetLink = event.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri;
+            
+            // Detectar se é um evento de dia inteiro
+            const isAllDay = !event.start?.dateTime;
+            
+            // Garantir que as datas estejam no formato correto
+            let startDate = event.start?.dateTime || event.start?.date;
+            let endDate = event.end?.dateTime || event.end?.date;
+            
+            // Se for evento de dia inteiro, ajustar as datas
+            if (isAllDay) {
+              startDate = new Date(startDate + 'T00:00:00').toISOString();
+              endDate = new Date(endDate + 'T23:59:59').toISOString();
+            }
+
+            const eventData = {
+              title: event.summary,
+              description: event.description || '',
+              start_date: startDate,
+              end_date: endDate,
+              event_type: hasMeetLink ? 'meeting' : 'appointment',
+              meeting_link: meetLink,
+              meeting_provider: hasMeetLink ? 'google_meet' : null,
+              attendees: event.attendees?.map((att: any) => att.email).filter(Boolean) || [],
+              is_all_day: isAllDay,
+              google_event_id: event.id,
+              company_id: companyUser.company_id,
+              created_by: user.id,
+              color: hasMeetLink ? '#4285F4' : '#10B981' // Azul Google para Meet, verde para outros
+            };
+
+            // Criar evento
             const { error: insertError } = await supabase
               .from('calendar_events')
-              .insert({
-                ...googleEvent,
-                company_id: companyUser.company_id,
-                created_by: user.id
-              });
+              .insert(eventData);
 
             if (!insertError) {
               created++;
+            } else {
+              console.error('❌ Error inserting event:', event.summary, insertError);
             }
+          } catch (eventError) {
+            console.error('❌ Error processing event:', event.summary, eventError);
           }
-        } catch (eventError) {
-          console.error('❌ Error processing event:', googleEvent.title, eventError);
         }
+
+        console.log(`✅ FULL Synchronization complete: ${created} events imported from Google Calendar`);
+        
+        return {
+          synchronized: data.items.length,
+          created,
+          updated: 0
+        };
       }
 
-      console.log(`✅ Synchronization complete: ${created} created, ${updated} updated`);
-      
+      console.log('ℹ️ No events found in Google Calendar');
       return {
-        synchronized: googleEvents.length,
-        created,
-        updated
+        synchronized: 0,
+        created: 0,
+        updated: 0
       };
     } catch (error) {
-      console.error('❌ Error synchronizing Google Calendar events:', error);
+      console.error('❌ Error in FULL synchronization:', error);
       throw error;
     }
-  }, [state.integration, user, importGoogleCalendarEvents]);
+  }, [state.integration, user, getValidAccessToken]);
 
   // Main effect for initialization and OAuth processing - otimizado
   useEffect(() => {

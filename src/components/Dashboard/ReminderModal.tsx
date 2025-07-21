@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Bell, Mail, MessageCircle, ExternalLink, AlertCircle } from 'lucide-react';
+import { Bell, Mail, MessageCircle, AlertCircle } from 'lucide-react';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,7 +32,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { isConnected: googleConnected, loading: googleLoading, connectGoogle, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
+  const { isConnected: googleConnected, loading: googleLoading, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
 
   // Atualizar horário quando selectedTime mudar
   useEffect(() => {
@@ -244,30 +244,6 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
               * Notificações por WhatsApp requerem configuração adicional
             </p>
           </div>
-
-          {!googleConnected && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <span className="text-sm font-medium">Google Calendar desconectado</span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={connectGoogle}
-                  disabled={googleLoading || isLoading}
-                  className="h-8 px-3 text-xs"
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  {googleLoading ? 'Conectando...' : 'Conectar'}
-                </Button>
-              </div>
-              <p className="text-xs text-yellow-700 mt-2">
-                Conecte para sincronizar automaticamente com seu Google Calendar
-              </p>
-            </div>
-          )}
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
             <Button 

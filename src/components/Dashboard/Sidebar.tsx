@@ -1,84 +1,231 @@
 
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import {
-  Home, Calendar, Users, Mail, BarChart3, Settings, 
-  Video, FileText, Megaphone, Layout, PlusCircle
+import React, { useState } from 'react';
+import { 
+  Mail, 
+  Send, 
+  TrendingUp, 
+  FileText, 
+  Users, 
+  FolderOpen,
+  Calendar,
+  Video,
+  BarChart3,
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Settings,
+  Home
 } from 'lucide-react';
-import { UserProfile } from './UserProfile';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface SidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
   activeItem: string;
   onItemClick: (item: string) => void;
 }
 
-const menuItems = [
-  { id: 'home', label: 'Início', icon: Home },
-  { id: 'calendar', label: 'Calendário', icon: Calendar },
-  { id: 'clients', label: 'Clientes', icon: Users },
-  { id: 'email', label: 'E-mails', icon: Mail },
-  { id: 'campaigns', label: 'Campanhas', icon: Megaphone },
-  { id: 'templates', label: 'Modelos', icon: Layout },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'documents', label: 'Documentos', icon: FileText },
-  { id: 'start-meet', label: 'Iniciar Meet', icon: Video },
-  { id: 'settings', label: 'Configurações', icon: Settings },
-];
+const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProps) => {
+  const { signOut, user } = useAuth();
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
+  // Extrair dados do usuário
+  const userEmail = user?.email || '';
+  const userMetadata = user?.user_metadata || {};
+  const username = userMetadata.username || userMetadata.company_name || userEmail.split('@')[0];
+  const displayName = username.length > 15 ? username.substring(0, 15) + '...' : username;
+  const initials = username.substring(0, 2).toUpperCase();
+
+  const menuSections = [
+    {
+      title: 'Dashboard',
+      items: [
+        { id: 'home', label: 'Início', icon: Home },
+      ]
+    },
+    {
+      title: 'Email',
+      items: [
+        { id: 'mail-tracking', label: 'Rastreamento', icon: Mail },
+        { id: 'campaign-mail', label: 'Campanhas', icon: Send },
+        { id: 'mail-productivity', label: 'Produtividade', icon: TrendingUp },
+        { id: 'templates', label: 'Modelos', icon: FileText },
+        { id: 'clients', label: 'Clientes', icon: Users },
+        { id: 'documents', label: 'Documentos', icon: FolderOpen },
+      ]
+    },
+    {
+      title: 'Agenda',
+      items: [
+        { id: 'my-calendar', label: 'Meu Calendário', icon: Calendar },
+        { id: 'start-meet', label: 'Iniciar Meet', icon: Video },
+        { id: 'my-meetings', label: 'Minhas Reuniões', icon: Calendar },
+        { id: 'analytics', label: 'Análises', icon: BarChart3 },
+      ]
+    },
+    {
+      title: 'Sistema',
+      items: [
+        { id: 'settings', label: 'Configurações', icon: Settings },
+        { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
+      ]
+    }
+  ];
+
+  const handleItemClick = (itemId: string) => {
+    console.log('🖱️ Item clicado na sidebar:', itemId);
+    
+    // Itens que têm páginas implementadas
+    const implementedItems = [
+      'home',
+      'mail-tracking', 
+      'campaign-mail', 
+      'mail-productivity', 
+      'templates',
+      'my-calendar', 
+      'my-meetings',
+      'start-meet',
+      'documents', 
+      'clients', 
+      'analytics',
+      'settings'
+    ];
+    
+    if (implementedItems.includes(itemId)) {
+      console.log('✅ Navegando para:', itemId);
+      onItemClick(itemId);
+    } else {
+      console.log('⚠️ Função em desenvolvimento para:', itemId);
+      toast({
+        title: "Em desenvolvimento",
+        description: "Esta funcionalidade está sendo desenvolvida",
+        variant: "default"
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    // Prevenir múltiplas chamadas
+    if (isLoggingOut) {
+      console.log('⏳ Logout já em andamento, ignorando clique');
+      return;
+    }
+
+    setIsLoggingOut(true);
+    
+    try {
+      console.log('👋 Iniciando logout...');
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error('❌ Erro no logout:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao fazer logout: " + error.message,
+          variant: "destructive"
+        });
+      } else {
+        console.log('✅ Logout realizado com sucesso');
+        toast({
+          title: "Sucesso",
+          description: "Logout realizado com sucesso!"
+        });
+      }
+    } catch (error) {
+      console.error('💥 Erro inesperado no logout:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao fazer logout",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
-    <div className="bg-white h-screen w-64 min-w-[16rem] max-w-[16rem] flex flex-col flex-shrink-0 border-r border-gray-200">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">ElloSuit</h1>
+    <div className={`bg-[#3600FF] text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen flex flex-col`}>
+      {/* Header */}
+      <div className="p-4 flex items-center justify-between">
+        {!isCollapsed && (
+          <img 
+            src="/lovable-uploads/78d0576b-d7ba-4f41-b1ac-30929441fa41.png" 
+            alt="Ellosuit Logo" 
+            className="h-8 w-auto"
+          />
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          className="text-white hover:bg-white/10"
+        >
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </Button>
       </div>
 
-      {/* Menu Items */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-3">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onItemClick(item.id)}
-                className={`
-                  w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg
-                  transition-colors duration-200
-                  ${activeItem === item.id
-                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
-                <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Quick Actions */}
-        <div className="mt-8 px-3">
-          <div className="border-t border-gray-200 pt-4">
-            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Ações Rápidas
-            </h3>
-            <div className="mt-2 space-y-1">
-              <button
-                onClick={() => onItemClick('templates')}
-                className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
-              >
-                <PlusCircle className="mr-3 h-4 w-4" />
-                <span>Novo Modelo</span>
-              </button>
+      {/* Menu Sections */}
+      <div className="flex-1 px-2">
+        {menuSections.map((section, sectionIndex) => (
+          <div key={section.title} className="mb-6">
+            {!isCollapsed && (
+              <h3 className="text-sm font-medium text-white/70 mb-3 px-3">
+                {section.title}
+              </h3>
+            )}
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeItem === item.id;
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleItemClick(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                      isActive 
+                        ? 'bg-[#3200EA] text-white' 
+                        : 'text-white/80 hover:bg-[#3200EA] hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    {!isCollapsed && <span className="text-sm">{item.label}</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* User Profile */}
-      <UserProfile />
+      {/* User Section */}
+      <div className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+            <span className="text-sm font-medium">{initials}</span>
+          </div>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" title={username}>{displayName}</p>
+              <p className="text-xs text-white/70 truncate" title={userEmail}>{userEmail}</p>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10 disabled:opacity-50"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            title={isLoggingOut ? "Fazendo logout..." : "Logout"}
+          >
+            <LogOut size={16} />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

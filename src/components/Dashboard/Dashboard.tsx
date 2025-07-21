@@ -1,59 +1,147 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import Sidebar from './Sidebar';
 import Home from './Home';
+import MailTracking from './MailTracking';
+import CampaignMail from './CampaignMail';
+import MailProductivity from './MailProductivity';
 import MyCalendar from './MyCalendar';
-import ClientsManager from './ClientsManager';
-import EmailList from './EmailList';
-import Analytics from './Analytics';
-import Settings from './Settings';
-import StartMeet from './StartMeet';
+import MyMeetings from './MyMeetings';
 import DocumentsManager from './DocumentsManager';
-import CampaignList from './CampaignList';
-import AdvancedTemplates from '@/pages/AdvancedTemplates';
+import ClientsManager from './ClientsManager';
+import Analytics from './Analytics';
+import StartMeet from './StartMeet';
+import EmailTemplates from './EmailTemplates';
+import Settings from './Settings';
+import TestGoogleSecrets from '@/components/TestGoogleSecrets';
+import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileLayout from '@/components/Mobile/MobileLayout';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeItem, setActiveItem] = useState('home');
+  const { isMobile, isLoading } = useIsMobile();
 
-  if (!user) {
-    return null;
-  }
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
 
-  const renderContent = () => {
+  const handleItemClick = (item: string) => {
+    console.log('🔄 Mudando para item:', item);
+    setActiveItem(item);
+  };
+
+  const getPageTitle = () => {
     switch (activeItem) {
       case 'home':
-        return <Home onNavigate={setActiveItem} />;
-      case 'calendar':
-        return <MyCalendar />;
-      case 'clients':
-        return <ClientsManager />;
-      case 'email':
-        return <EmailList />;
-      case 'campaigns':
-        return <CampaignList />;
+        return 'Início';
+      case 'mail-tracking':
+        return 'Rastreamento de Email';
+      case 'campaign-mail':
+        return 'Campanhas';
+      case 'mail-productivity':
+        return 'Produtividade';
       case 'templates':
-        return <AdvancedTemplates />;
-      case 'analytics':
-        return <Analytics />;
-      case 'documents':
-        return <DocumentsManager />;
+        return 'Modelos';
+      case 'my-calendar':
+        return 'Calendário';
+      case 'my-meetings':
+        return 'Reuniões';
       case 'start-meet':
-        return <StartMeet />;
+        return 'Iniciar Meet';
+      case 'documents':
+        return 'Documentos';
+      case 'clients':
+        return 'Clientes';
+      case 'analytics':
+        return 'Análises';
       case 'settings':
-        return <Settings />;
+        return 'Configurações';
+      case 'test-secrets':
+        return 'Teste Secrets';
       default:
-        return <Home onNavigate={setActiveItem} />;
+        return 'Dashboard';
     }
   };
 
-  return (
-    <div className="flex h-screen bg-gray-50 w-full">
-      <Sidebar activeItem={activeItem} onItemClick={setActiveItem} />
-      <main className="flex-1 overflow-auto">
+  const renderContent = () => {
+    console.log('📋 Renderizando conteúdo para:', activeItem);
+    switch (activeItem) {
+      case 'home':
+        return <Home onNavigate={handleItemClick} />;
+      case 'mail-tracking':
+        return <MailTracking />;
+      case 'campaign-mail':
+        return <CampaignMail />;
+      case 'mail-productivity':
+        return <MailProductivity />;
+      case 'templates':
+        return <EmailTemplates />;
+      case 'my-calendar':
+        return <MyCalendar onNavigate={handleItemClick} />;
+      case 'my-meetings':
+        return <MyMeetings />;
+      case 'start-meet':
+        return <StartMeet onNavigate={handleItemClick} />;
+      case 'documents':
+        return <DocumentsManager />;
+      case 'clients':
+        return <ClientsManager />;
+      case 'analytics':
+        return <Analytics />;
+      case 'settings':
+        return <Settings />;
+      case 'test-secrets':
+        return <TestGoogleSecrets />;
+      default:
+        return <Home onNavigate={handleItemClick} />;
+    }
+  };
+
+  // Show loading while determining device type
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <MobileLayout
+        title={getPageTitle()}
+        activeItem={activeItem}
+        onItemClick={handleItemClick}
+        showSearch={['mail-tracking', 'clients', 'documents'].includes(activeItem)}
+        showAddButton={['my-calendar', 'clients', 'documents'].includes(activeItem)}
+        onAddClick={() => {
+          // Handle add button click based on current page
+          console.log('Add button clicked for:', activeItem);
+        }}
+      >
         {renderContent()}
-      </main>
+      </MobileLayout>
+    );
+  }
+
+  // Desktop Layout
+  return (
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <Sidebar 
+        isCollapsed={sidebarCollapsed}
+        onToggle={handleSidebarToggle}
+        activeItem={activeItem}
+        onItemClick={handleItemClick}
+      />
+      <div className="flex-1">
+        {renderContent()}
+      </div>
     </div>
   );
 };

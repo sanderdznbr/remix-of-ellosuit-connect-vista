@@ -43,7 +43,7 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl p-8 bg-white border-none shadow-xl rounded-2xl" hideCloseButton>
+      <DialogContent className="w-full max-w-4xl p-8 bg-white border-none shadow-xl rounded-2xl">
         {/* Close button */}
         <button
           onClick={onClose}

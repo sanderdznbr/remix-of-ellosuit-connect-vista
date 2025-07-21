@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Plus } from 'lucide-react';
 import ImprovedEventModal from './ImprovedEventModal';
+import AppointmentModal from './AppointmentModal';
+import ReminderModal from './ReminderModal';
 import EventDetailsModal from './EventDetailsModal';
 import EventTypeSelector from './EventTypeSelector';
 import { useCalendarData } from '@/hooks/useCalendarData';
@@ -17,11 +19,12 @@ interface MyCalendarProps {
 
 const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [selectedEventType, setSelectedEventType] = useState<'meeting' | 'appointment' | 'reminder' | null>(null);
   const [currentView, setCurrentView] = useState('dayGridMonth');
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
@@ -44,9 +47,23 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
-    setSelectedEventType(type);
     setShowTypeSelector(false);
-    setShowEventModal(true);
+    
+    if (type === 'meeting') {
+      setShowEventModal(true);
+    } else if (type === 'appointment') {
+      setShowAppointmentModal(true);
+    } else if (type === 'reminder') {
+      setShowReminderModal(true);
+    }
+  };
+
+  const handleCloseAllModals = () => {
+    setShowEventModal(false);
+    setShowAppointmentModal(false);
+    setShowReminderModal(false);
+    setShowTypeSelector(false);
+    setSelectedDate(null);
   };
 
   const formatEventsForCalendar = (events: any[]) => {
@@ -150,14 +167,24 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
       <ImprovedEventModal
         isOpen={showEventModal}
-        onClose={() => {
-          setShowEventModal(false);
-          setSelectedDate(null);
-          setSelectedEventType(null);
-        }}
+        onClose={handleCloseAllModals}
         selectedDate={selectedDate}
         onCreateEvent={createEvent}
         onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
+      />
+
+      <AppointmentModal
+        isOpen={showAppointmentModal}
+        onClose={handleCloseAllModals}
+        selectedDate={selectedDate || ''}
+        onCreateEvent={createEvent}
+      />
+
+      <ReminderModal
+        isOpen={showReminderModal}
+        onClose={handleCloseAllModals}
+        selectedDate={selectedDate || ''}
+        onCreateEvent={createEvent}
       />
 
       <EventDetailsModal

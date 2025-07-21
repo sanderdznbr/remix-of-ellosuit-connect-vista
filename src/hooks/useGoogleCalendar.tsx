@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -469,10 +468,67 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [user, state.integration, updateState, toast]);
 
-  // Import Google Calendar events (placeholder)
+  // Import Google Calendar events - implementação melhorada
   const importGoogleCalendarEvents = useCallback(async () => {
-    return [];
-  }, []);
+    if (!state.integration) {
+      throw new Error('Google Calendar not connected');
+    }
+
+    try {
+      console.log('📅 Importing Google Calendar events...');
+      const accessToken = await getValidAccessToken();
+      
+      // Buscar eventos dos próximos 30 dias
+      const timeMin = new Date().toISOString();
+      const timeMax = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString();
+      
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Google Calendar API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Google Calendar events fetched:', data.items?.length || 0);
+      
+      // Processar e salvar eventos no Supabase
+      if (data.items && data.items.length > 0) {
+        const eventsToSave = data.items
+          .filter((event: any) => event.summary) // Filtrar eventos sem título
+          .map((event: any) => ({
+            title: event.summary,
+            description: event.description || '',
+            start_date: event.start?.dateTime || event.start?.date,
+            end_date: event.end?.dateTime || event.end?.date,
+            event_type: event.conferenceData?.entryPoints?.some((ep: any) => ep.entryPointType === 'video') 
+              ? 'meeting' : 'appointment',
+            meeting_link: event.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri,
+            meeting_provider: 'google_meet',
+            attendees: event.attendees?.map((att: any) => att.email) || [],
+            is_all_day: !event.start?.dateTime,
+            google_event_id: event.id,
+            source: 'google'
+          }));
+
+        // Salvar no banco via hook useCalendarData seria ideal
+        // Por agora, retornamos os eventos para serem processados
+        return eventsToSave;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('❌ Error importing Google Calendar events:', error);
+      throw error;
+    }
+  }, [state.integration, getValidAccessToken]);
 
   // Main effect for initialization and OAuth processing - otimizado
   useEffect(() => {

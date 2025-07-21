@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -19,6 +18,7 @@ export const useCalendarData = () => {
   const [loading, setLoading] = useState(true);
   const [hasCompany, setHasCompany] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
   const { user, session } = useAuth();
   const { toast } = useToast();
 
@@ -165,6 +165,8 @@ export const useCalendarData = () => {
           description: event.description,
           event_type: event.event_type,
           meeting_link: event.meeting_link,
+          start_date: event.start_date,
+          end_date: event.end_date,
           extendedProps: {
             description: event.description,
             event_type: event.event_type,
@@ -172,16 +174,66 @@ export const useCalendarData = () => {
             attendees: event.attendees,
             meeting_provider: event.meeting_provider,
             is_all_day: event.is_all_day,
-            meeting_data: event.meeting_data
+            meeting_data: event.meeting_data,
+            source: event.google_event_id ? 'google' : 'local'
           }
         }));
-        setEvents(formattedEvents);
+        
+        // Combinar eventos locais com eventos do Google (se houver)
+        const allEvents = [...formattedEvents, ...googleEvents];
+        setEvents(allEvents);
       }
     } catch (error) {
       console.error('💥 Erro inesperado ao buscar eventos:', error);
       setEvents([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveGoogleEvents = async (googleEventsList: any[]) => {
+    if (!companyId || !user || googleEventsList.length === 0) return;
+
+    try {
+      console.log('💾 Salvando eventos do Google Calendar...');
+      
+      // Verificar quais eventos já existem
+      const { data: existingEvents } = await supabase
+        .from('calendar_events')
+        .select('google_event_id')
+        .eq('company_id', companyId)
+        .not('google_event_id', 'is', null);
+
+      const existingIds = new Set(existingEvents?.map(e => e.google_event_id) || []);
+      
+      // Filtrar apenas eventos novos
+      const newEvents = googleEventsList.filter(event => 
+        event.google_event_id && !existingIds.has(event.google_event_id)
+      );
+
+      if (newEvents.length > 0) {
+        const eventsToInsert = newEvents.map(event => ({
+          ...event,
+          company_id: companyId,
+          created_by: user.id
+        }));
+
+        const { error } = await supabase
+          .from('calendar_events')
+          .insert(eventsToInsert);
+
+        if (error) {
+          console.error('❌ Erro ao salvar eventos do Google:', error);
+        } else {
+          console.log('✅ Eventos do Google salvos:', newEvents.length);
+          // Recarregar eventos após salvar
+          await fetchEvents(companyId);
+        }
+      } else {
+        console.log('ℹ️ Nenhum evento novo do Google para salvar');
+      }
+    } catch (error) {
+      console.error('💥 Erro ao salvar eventos do Google:', error);
     }
   };
 
@@ -262,6 +314,8 @@ export const useCalendarData = () => {
     hasCompany,
     companyId,
     createEvent,
-    refreshEvents: () => companyId && fetchEvents(companyId)
+    refreshEvents: () => companyId && fetchEvents(companyId),
+    saveGoogleEvents,
+    setGoogleEvents
   };
 };

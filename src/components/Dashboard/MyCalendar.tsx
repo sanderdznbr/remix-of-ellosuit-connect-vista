@@ -13,6 +13,7 @@ import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
 import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
 import EventTypeSelector from './EventTypeSelector';
+import EventClusterModal from './EventClusterModal';
 import { useCalendarData } from '@/hooks/useCalendarData';
 
 interface MyCalendarProps {
@@ -25,8 +26,10 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [showClusterModal, setShowClusterModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [clusterEvents, setClusterEvents] = useState<any[]>([]);
   const [currentView, setCurrentView] = useState('dayGridMonth');
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
@@ -48,6 +51,20 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       extendedProps: eventData.extendedProps
     });
     setShowDetailsModal(true);
+  };
+
+  const handleMoreClick = (info: any) => {
+    const dayEvents = info.allSegs.map((seg: any) => ({
+      id: seg.event.id,
+      title: seg.event.title,
+      start: seg.event.start,
+      end: seg.event.end,
+      extendedProps: seg.event.extendedProps
+    }));
+    
+    setClusterEvents(dayEvents);
+    setSelectedDate(info.date.toISOString().split('T')[0]);
+    setShowClusterModal(true);
   };
 
   const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
@@ -87,7 +104,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         backgroundColor: getEventColor(event.event_type),
         borderColor: getEventColor(event.event_type),
         textColor: '#ffffff',
-        classNames: ['calendar-event'],
+        classNames: ['modern-event'],
         extendedProps: {
           description: event.description || '',
           event_type: event.event_type || 'meeting',
@@ -97,7 +114,10 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           is_all_day: event.is_all_day || false,
           source: event.source || (event.google_event_id ? 'google' : 'local'),
           google_event_id: event.google_event_id,
-          meeting_data: event.meeting_data || {}
+          meeting_data: event.meeting_data || {},
+          meeting_status: event.meeting_status,
+          meeting_notes: event.meeting_notes,
+          recording_link: event.recording_link
         }
       };
     }).filter(event => event !== null);
@@ -164,10 +184,11 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               events={calendarEvents}
               dateClick={handleDateClick}
               eventClick={handleEventClick}
+              moreLinkClick={handleMoreClick}
               editable={true}
               selectable={true}
               selectMirror={true}
-              dayMaxEvents={true}
+              dayMaxEvents={4}
               weekends={true}
               locale="pt-br"
               eventDisplay="block"
@@ -177,13 +198,21 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               }}
               eventContent={(eventInfo) => {
                 return (
-                  <div className="p-1">
-                    <div className="font-medium text-xs truncate">
+                  <div className="modern-event-content">
+                    <div className="event-title">
                       {eventInfo.event.title}
                     </div>
                     {eventInfo.event.extendedProps.source === 'google' && (
-                      <div className="text-xs opacity-75">Google</div>
+                      <div className="event-source">Google</div>
                     )}
+                  </div>
+                );
+              }}
+              moreLinkContent={(args) => {
+                return (
+                  <div className="more-events-link">
+                    <Plus className="h-3 w-3" />
+                    <span>{args.num} mais</span>
                   </div>
                 );
               }}
@@ -233,6 +262,21 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         }}
         event={selectedEvent}
         onEventUpdate={refreshEvents}
+      />
+
+      <EventClusterModal
+        isOpen={showClusterModal}
+        onClose={() => {
+          setShowClusterModal(false);
+          setClusterEvents([]);
+        }}
+        events={clusterEvents}
+        date={selectedDate || ''}
+        onEventClick={(event) => {
+          setSelectedEvent(event);
+          setShowClusterModal(false);
+          setShowDetailsModal(true);
+        }}
       />
     </div>
   );

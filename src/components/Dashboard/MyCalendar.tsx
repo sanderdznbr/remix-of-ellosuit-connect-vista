@@ -41,9 +41,20 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   
   const { toast } = useToast();
 
-  console.log('📅 MyCalendar - eventos carregados:', events);
-  console.log('📅 MyCalendar - loading:', loading);
-  console.log('📅 MyCalendar - isGoogleConnected:', isGoogleConnected);
+  console.log('📅 MyCalendar - Estado atual:', {
+    events: events.length,
+    loading,
+    isGoogleConnected,
+    googleLoading
+  });
+
+  console.log('📅 MyCalendar - Eventos detalhados:', events.map(e => ({
+    id: e.id,
+    title: e.title,
+    start: e.start,
+    end: e.end,
+    type: e.event_type
+  })));
 
   // Importar eventos do Google Calendar
   const handleImportGoogleEvents = async () => {
@@ -138,70 +149,86 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const formatEventsForCalendar = (events: any[]) => {
-    console.log('🔄 Formatando eventos para o calendário:', events);
+    console.log('🔄 Formatando eventos para o calendário:', events.length, 'eventos');
     
-    const formattedEvents = events.map(event => {
-      // Garantir que temos datas válidas
-      const startDate = event.start_date || event.start;
-      const endDate = event.end_date || event.end;
-      
-      console.log('📅 Formatando evento:', {
+    const formattedEvents = events.map((event, index) => {
+      // Debug detalhado de cada evento
+      console.log(`📅 Evento ${index + 1} - Original:`, {
         id: event.id,
         title: event.title,
-        start: startDate,
-        end: endDate,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        start: event.start,
+        end: event.end,
         type: event.event_type
       });
 
-      return {
+      // Usar start_date/end_date se disponível, caso contrário usar start/end
+      const startDate = event.start_date || event.start;
+      const endDate = event.end_date || event.end;
+      
+      if (!startDate) {
+        console.warn(`⚠️ Evento ${event.id} sem data de início válida`);
+        return null;
+      }
+
+      const formattedEvent = {
         id: event.id,
-        title: event.title,
+        title: event.title || 'Evento sem título',
         start: startDate,
-        end: endDate,
+        end: endDate || startDate,
         backgroundColor: getEventColor(event.event_type),
         borderColor: getEventColor(event.event_type),
         textColor: '#ffffff',
+        classNames: ['calendar-event'],
         extendedProps: {
-          description: event.description,
-          eventType: event.event_type,
+          description: event.description || '',
+          eventType: event.event_type || 'meeting',
           meetingLink: event.meeting_link,
           meetingProvider: event.meeting_provider,
-          attendees: event.attendees,
-          isAllDay: event.is_all_day,
-          source: event.source || (event.google_event_id ? 'google' : 'local')
+          attendees: event.attendees || [],
+          isAllDay: event.is_all_day || false,
+          source: event.source || (event.google_event_id ? 'google' : 'local'),
+          googleEventId: event.google_event_id
         }
       };
+      
+      console.log(`✅ Evento ${index + 1} - Formatado:`, formattedEvent);
+      return formattedEvent;
+    }).filter(event => event !== null); // Remove eventos inválidos
+    
+    console.log('📊 Resumo da formatação:', {
+      eventosOriginais: events.length,
+      eventosFormatados: formattedEvents.length,
+      eventosInvalidos: events.length - formattedEvents.length
     });
     
-    console.log('✅ Eventos formatados:', formattedEvents);
     return formattedEvents;
   };
 
   const getEventColor = (eventType: string) => {
-    switch (eventType) {
-      case 'meeting':
-        return '#3600FF';
-      case 'appointment':
-        return '#10B981';
-      case 'reminder':
-        return '#F59E0B';
-      case 'task':
-        return '#EF4444';
-      case 'google_meet':
-        return '#4285F4';
-      default:
-        return '#6B7280';
-    }
+    const colors = {
+      'meeting': '#3600FF',
+      'appointment': '#10B981',
+      'reminder': '#F59E0B',
+      'task': '#EF4444',
+      'google_meet': '#4285F4'
+    };
+    return colors[eventType] || '#6B7280';
   };
 
   const calendarEvents = formatEventsForCalendar(events);
   const isLoadingEvents = loading || isImporting;
 
-  console.log('📊 Status do calendário:', {
-    totalEvents: events.length,
-    formattedEvents: calendarEvents.length,
+  console.log('📊 Status final do calendário:', {
+    totalEventosCarregados: events.length,
+    eventosFormatadosParaCalendario: calendarEvents.length,
     isLoading: isLoadingEvents,
-    isGoogleConnected
+    isGoogleConnected,
+    estadoCompleto: {
+      events,
+      calendarEvents
+    }
   });
 
   return (
@@ -271,14 +298,24 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
       </div>
 
-      {/* Estatísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Estatísticas detalhadas para debug */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
           <div className="flex items-center">
             <Calendar className="h-8 w-8 text-blue-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600 font-medium">Total de Eventos</p>
+              <p className="text-sm text-blue-600 font-medium">Eventos Carregados</p>
               <p className="text-2xl font-bold text-blue-700">{events.length}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+          <div className="flex items-center">
+            <Calendar className="h-8 w-8 text-purple-600 mr-3" />
+            <div>
+              <p className="text-sm text-purple-600 font-medium">No Calendário</p>
+              <p className="text-2xl font-bold text-purple-700">{calendarEvents.length}</p>
             </div>
           </div>
         </div>
@@ -295,27 +332,30 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </div>
         </div>
         
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200">
           <div className="flex items-center">
-            <RefreshCw className="h-8 w-8 text-purple-600 mr-3" />
+            <RefreshCw className="h-8 w-8 text-gray-600 mr-3" />
             <div>
-              <p className="text-sm text-purple-600 font-medium">Status</p>
-              <p className="text-lg font-bold text-purple-700">
-                {isLoadingEvents ? 'Carregando...' : 'Atualizado'}
+              <p className="text-sm text-gray-600 font-medium">Status</p>
+              <p className="text-lg font-bold text-gray-700">
+                {isLoadingEvents ? 'Carregando...' : 'Pronto'}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Debug info - remover em produção */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-gray-100 p-4 rounded-lg text-sm">
-          <strong>Debug Info:</strong><br />
-          Total eventos: {events.length}<br />
-          Eventos formatados: {calendarEvents.length}<br />
-          Loading: {loading ? 'Sim' : 'Não'}<br />
-          Google conectado: {isGoogleConnected ? 'Sim' : 'Não'}
+      {/* Lista de eventos para debug (remover em produção) */}
+      {process.env.NODE_ENV === 'development' && events.length > 0 && (
+        <div className="bg-gray-100 p-4 rounded-lg mb-4">
+          <h3 className="font-bold mb-2">Debug - Eventos Carregados:</h3>
+          <div className="text-sm space-y-1 max-h-32 overflow-y-auto">
+            {events.map((event, index) => (
+              <div key={event.id} className="border-b pb-1">
+                <strong>{index + 1}.</strong> {event.title} - {event.start_date || event.start} ({event.event_type})
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -330,6 +370,15 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
+          {/* Exibir mensagem se não há eventos */}
+          {!isLoadingEvents && calendarEvents.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Nenhum evento encontrado</p>
+              <p className="text-sm">Crie seu primeiro evento ou conecte ao Google Calendar</p>
+            </div>
+          )}
+          
           <div className="calendar-container">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -360,6 +409,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                   info.el.title = `${info.event.title} (Google Calendar)`;
                   info.el.style.borderLeft = '4px solid #4285F4';
                 }
+                
+                // Debug: log quando evento é montado
+                console.log('🎨 Evento montado no calendário:', {
+                  id: info.event.id,
+                  title: info.event.title,
+                  start: info.event.start,
+                  end: info.event.end
+                });
               }}
               eventContent={(eventInfo) => {
                 return (
@@ -372,6 +429,9 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                     )}
                   </div>
                 );
+              }}
+              loading={(isLoading) => {
+                console.log('📅 FullCalendar loading state:', isLoading);
               }}
             />
           </div>

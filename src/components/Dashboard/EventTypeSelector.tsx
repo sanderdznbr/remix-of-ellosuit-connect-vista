@@ -21,7 +21,6 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
     {
       type: 'meeting' as const,
       title: 'Reunião Online',
-      description: 'Agendar uma reunião virtual com Google Meet ou Zoom',
       icon: Video,
       color: 'bg-blue-500',
       hoverColor: 'hover:bg-blue-500',
@@ -29,7 +28,6 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
     {
       type: 'appointment' as const,
       title: 'Compromisso Presencial',
-      description: 'Marcar um compromisso presencial ou visita',
       icon: Calendar,
       color: 'bg-green-500',
       hoverColor: 'hover:bg-green-500',
@@ -37,7 +35,6 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
     {
       type: 'reminder' as const,
       title: 'Lembrete',
-      description: 'Definir um lembrete com notificações',
       icon: Bell,
       color: 'bg-yellow-500',
       hoverColor: 'hover:bg-yellow-500',
@@ -46,11 +43,11 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl p-8 bg-white border-none shadow-xl rounded-2xl">
+      <DialogContent className="w-full max-w-4xl p-8 bg-white border-none shadow-xl rounded-2xl" hideCloseButton>
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
         >
           <X className="h-5 w-5 text-gray-500" />
         </button>
@@ -76,11 +73,6 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 group-hover:text-white transition-colors duration-300">
                     {eventType.title}
                   </h3>
-                  
-                  {/* Description */}
-                  <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300 leading-relaxed">
-                    {eventType.description}
-                  </p>
                 </div>
               </Button>
             );

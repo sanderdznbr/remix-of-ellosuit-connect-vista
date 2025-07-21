@@ -41,6 +41,10 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   
   const { toast } = useToast();
 
+  console.log('📅 MyCalendar - eventos carregados:', events);
+  console.log('📅 MyCalendar - loading:', loading);
+  console.log('📅 MyCalendar - isGoogleConnected:', isGoogleConnected);
+
   // Importar eventos do Google Calendar
   const handleImportGoogleEvents = async () => {
     if (!isGoogleConnected) {
@@ -70,7 +74,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       } else {
         toast({
           title: "ℹ️ Nenhum evento encontrado",
-          description: "Não foram encontrados eventos no Google Calendar para os próximos 30 dias",
+          description: "Não foram encontrados novos eventos no Google Calendar",
           duration: 3000
         });
       }
@@ -88,7 +92,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   // Auto-importar eventos quando conectar ao Google
   useEffect(() => {
-    if (isGoogleConnected && !googleLoading && !isImporting) {
+    if (isGoogleConnected && !googleLoading && !isImporting && events.length === 0) {
       console.log('🔄 Auto-importando eventos do Google Calendar...');
       handleImportGoogleEvents();
     }
@@ -101,6 +105,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const handleEventClick = (clickInfo: any) => {
     const eventData = clickInfo.event;
+    console.log('🎯 Evento clicado:', eventData);
+    
     setSelectedEvent({
       id: eventData.id,
       title: eventData.title,
@@ -132,23 +138,43 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const formatEventsForCalendar = (events: any[]) => {
-    return events.map(event => ({
-      id: event.id,
-      title: event.title,
-      start: event.start_date || event.start,
-      end: event.end_date || event.end,
-      backgroundColor: getEventColor(event.event_type),
-      borderColor: getEventColor(event.event_type),
-      extendedProps: {
-        description: event.description,
-        eventType: event.event_type,
-        meetingLink: event.meeting_link,
-        meetingProvider: event.meeting_provider,
-        attendees: event.attendees,
-        isAllDay: event.is_all_day,
-        source: event.source || (event.google_event_id ? 'google' : 'local')
-      }
-    }));
+    console.log('🔄 Formatando eventos para o calendário:', events);
+    
+    const formattedEvents = events.map(event => {
+      // Garantir que temos datas válidas
+      const startDate = event.start_date || event.start;
+      const endDate = event.end_date || event.end;
+      
+      console.log('📅 Formatando evento:', {
+        id: event.id,
+        title: event.title,
+        start: startDate,
+        end: endDate,
+        type: event.event_type
+      });
+
+      return {
+        id: event.id,
+        title: event.title,
+        start: startDate,
+        end: endDate,
+        backgroundColor: getEventColor(event.event_type),
+        borderColor: getEventColor(event.event_type),
+        textColor: '#ffffff',
+        extendedProps: {
+          description: event.description,
+          eventType: event.event_type,
+          meetingLink: event.meeting_link,
+          meetingProvider: event.meeting_provider,
+          attendees: event.attendees,
+          isAllDay: event.is_all_day,
+          source: event.source || (event.google_event_id ? 'google' : 'local')
+        }
+      };
+    });
+    
+    console.log('✅ Eventos formatados:', formattedEvents);
+    return formattedEvents;
   };
 
   const getEventColor = (eventType: string) => {
@@ -170,6 +196,13 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const calendarEvents = formatEventsForCalendar(events);
   const isLoadingEvents = loading || isImporting;
+
+  console.log('📊 Status do calendário:', {
+    totalEvents: events.length,
+    formattedEvents: calendarEvents.length,
+    isLoading: isLoadingEvents,
+    isGoogleConnected
+  });
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
@@ -214,9 +247,19 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               className="border-blue-500 text-blue-600 hover:bg-blue-50"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isImporting ? 'animate-spin' : ''}`} />
-              {isImporting ? 'Importando...' : 'Sincronizar Google'}
+              {isImporting ? 'Sincronizando...' : 'Sincronizar Google'}
             </Button>
           )}
+          
+          <Button 
+            onClick={refreshEvents}
+            disabled={isLoadingEvents}
+            variant="outline"
+            className="border-gray-300"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingEvents ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
           
           <Button 
             onClick={() => setShowTypeSelector(true)}
@@ -265,6 +308,17 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
       </div>
 
+      {/* Debug info - remover em produção */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-gray-100 p-4 rounded-lg text-sm">
+          <strong>Debug Info:</strong><br />
+          Total eventos: {events.length}<br />
+          Eventos formatados: {calendarEvents.length}<br />
+          Loading: {loading ? 'Sim' : 'Não'}<br />
+          Google conectado: {isGoogleConnected ? 'Sim' : 'Não'}
+        </div>
+      )}
+
       <Card className="shadow-lg border-0 rounded-3xl overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white rounded-t-3xl">
           <CardTitle className="flex items-center space-x-2">
@@ -306,6 +360,18 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                   info.el.title = `${info.event.title} (Google Calendar)`;
                   info.el.style.borderLeft = '4px solid #4285F4';
                 }
+              }}
+              eventContent={(eventInfo) => {
+                return (
+                  <div className="p-1">
+                    <div className="font-medium text-xs truncate">
+                      {eventInfo.event.title}
+                    </div>
+                    {eventInfo.event.extendedProps.source === 'google' && (
+                      <div className="text-xs opacity-75">Google</div>
+                    )}
+                  </div>
+                );
               }}
             />
           </div>

@@ -9,6 +9,8 @@ interface CalendarEvent {
   title: string;
   start: string;
   end: string;
+  start_date: string;
+  end_date: string;
   description?: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
@@ -153,17 +155,17 @@ export const useCalendarData = () => {
         console.error('❌ Erro ao buscar eventos:', error);
         setEvents([]);
       } else {
-        console.log('✅ Eventos carregados:', data?.length || 0);
+        console.log('✅ Eventos brutos do banco:', data);
         const formattedEvents = (data || []).map(event => ({
           id: event.id,
           title: event.title,
           start: event.start_date,
           end: event.end_date,
+          start_date: event.start_date,
+          end_date: event.end_date,
           description: event.description,
           event_type: event.event_type,
           meeting_link: event.meeting_link,
-          start_date: event.start_date,
-          end_date: event.end_date,
           google_event_id: event.google_event_id,
           source: event.google_event_id ? 'google' : 'local',
           extendedProps: {
@@ -178,6 +180,7 @@ export const useCalendarData = () => {
           }
         }));
         
+        console.log('✅ Eventos formatados para exibição:', formattedEvents);
         setEvents(formattedEvents);
       }
     } catch (error) {
@@ -211,6 +214,12 @@ export const useCalendarData = () => {
         event.google_event_id && !existingIds.has(event.google_event_id)
       );
 
+      console.log('📊 Análise de eventos:', {
+        total: googleEventsList.length,
+        existentes: existingIds.size,
+        novos: newEvents.length
+      });
+
       if (newEvents.length > 0) {
         const eventsToInsert = newEvents.map(event => ({
           title: event.title,
@@ -226,6 +235,8 @@ export const useCalendarData = () => {
           company_id: companyId,
           created_by: user.id
         }));
+
+        console.log('📥 Inserindo eventos no banco:', eventsToInsert);
 
         const { data: insertedEvents, error } = await supabase
           .from('calendar_events')

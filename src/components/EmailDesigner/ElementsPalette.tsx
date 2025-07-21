@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,6 @@ import {
   Type, Image, Mouse, Minus, Space, Layout, 
   Navigation, SquareStack, Grid3X3, Container
 } from 'lucide-react';
-import { DesignElement } from './types';
 
 const elementCategories = [
   {
@@ -81,7 +81,6 @@ const DraggableElement: React.FC<DraggableElementProps> = ({
   );
 };
 
-export { DesignElement };
 export const ElementsPalette: React.FC = () => {
   return (
     <ScrollArea className="h-full">

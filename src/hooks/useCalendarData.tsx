@@ -28,6 +28,23 @@ export const useCalendarData = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
 
+  // Função para converter attendees de jsonb para string[]
+  const parseAttendees = (attendees: any): string[] => {
+    if (!attendees) return [];
+    if (Array.isArray(attendees)) {
+      return attendees.filter(item => typeof item === 'string');
+    }
+    if (typeof attendees === 'string') {
+      try {
+        const parsed = JSON.parse(attendees);
+        return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const checkUserCompany = async (userId: string) => {
     try {
       console.log('🔍 Verificando empresa para usuário:', userId);
@@ -147,7 +164,6 @@ export const useCalendarData = () => {
     try {
       console.log('📅 Buscando TODOS os eventos para empresa:', userCompanyId);
       
-      // Buscar TODOS os eventos sem filtros de data para debug
       const { data, error, count } = await supabase
         .from('calendar_events')
         .select('*', { count: 'exact' })
@@ -171,14 +187,15 @@ export const useCalendarData = () => {
 
       console.log('📅 Eventos brutos do banco:', data);
 
-      // Formatação mais cuidadosa dos eventos
-      const formattedEvents = data.map((event, index) => {
+      // Formatação mais cuidadosa dos eventos com conversão de tipos
+      const formattedEvents: CalendarEvent[] = data.map((event, index) => {
         console.log(`🔄 Formatando evento ${index + 1}:`, {
           id: event.id,
           title: event.title,
           start_date: event.start_date,
           end_date: event.end_date,
-          event_type: event.event_type
+          event_type: event.event_type,
+          attendees: event.attendees
         });
 
         // Garantir que as datas estão no formato correto
@@ -193,7 +210,10 @@ export const useCalendarData = () => {
           endDate = endDate + 'Z';
         }
 
-        const formattedEvent = {
+        // Converter attendees de jsonb para string[]
+        const attendeesList = parseAttendees(event.attendees);
+
+        const formattedEvent: CalendarEvent = {
           id: event.id,
           title: event.title || 'Evento sem título',
           start: startDate,
@@ -205,19 +225,9 @@ export const useCalendarData = () => {
           meeting_link: event.meeting_link,
           google_event_id: event.google_event_id,
           source: event.google_event_id ? 'google' : 'local',
-          attendees: event.attendees || [],
+          attendees: attendeesList,
           meeting_provider: event.meeting_provider,
-          is_all_day: event.is_all_day || false,
-          extendedProps: {
-            description: event.description || '',
-            event_type: event.event_type || 'meeting',
-            meeting_link: event.meeting_link,
-            attendees: event.attendees || [],
-            meeting_provider: event.meeting_provider,
-            is_all_day: event.is_all_day || false,
-            meeting_data: event.meeting_data || {},
-            source: event.google_event_id ? 'google' : 'local'
-          }
+          is_all_day: event.is_all_day || false
         };
 
         console.log(`✅ Evento ${index + 1} formatado:`, formattedEvent);
@@ -275,7 +285,7 @@ export const useCalendarData = () => {
           event_type: event.event_type || 'meeting',
           meeting_link: event.meeting_link,
           meeting_provider: event.meeting_provider || 'google_meet',
-          attendees: event.attendees || [],
+          attendees: parseAttendees(event.attendees),
           is_all_day: event.is_all_day || false,
           google_event_id: event.google_event_id,
           company_id: companyId,
@@ -439,70 +449,6 @@ export const useCalendarData = () => {
       }
     },
     refreshEvents: () => companyId && fetchEvents(companyId),
-    saveGoogleEvents: async (googleEventsList: any[]) => {
-      if (!companyId || !user || googleEventsList.length === 0) {
-        console.log('⚠️ Não foi possível salvar eventos do Google - dados insuficientes');
-        return;
-      }
-
-      try {
-        console.log('💾 Salvando eventos do Google Calendar...', googleEventsList.length);
-        
-        const { data: existingEvents } = await supabase
-          .from('calendar_events')
-          .select('google_event_id')
-          .eq('company_id', companyId)
-          .not('google_event_id', 'is', null);
-
-        const existingIds = new Set(existingEvents?.map(e => e.google_event_id) || []);
-        
-        const newEvents = googleEventsList.filter(event => 
-          event.google_event_id && !existingIds.has(event.google_event_id)
-        );
-
-        console.log('📊 Análise de eventos:', {
-          total: googleEventsList.length,
-          existentes: existingIds.size,
-          novos: newEvents.length
-        });
-
-        if (newEvents.length > 0) {
-          const eventsToInsert = newEvents.map(event => ({
-            title: event.title,
-            description: event.description || '',
-            start_date: event.start_date,
-            end_date: event.end_date,
-            event_type: event.event_type || 'meeting',
-            meeting_link: event.meeting_link,
-            meeting_provider: event.meeting_provider || 'google_meet',
-            attendees: event.attendees || [],
-            is_all_day: event.is_all_day || false,
-            google_event_id: event.google_event_id,
-            company_id: companyId,
-            created_by: user.id
-          }));
-
-          console.log('📥 Inserindo eventos no banco:', eventsToInsert);
-
-          const { data: insertedEvents, error } = await supabase
-            .from('calendar_events')
-            .insert(eventsToInsert)
-            .select();
-
-          if (error) {
-            console.error('❌ Erro ao salvar eventos do Google:', error);
-            throw error;
-          } else {
-            console.log('✅ Eventos do Google salvos com sucesso:', insertedEvents?.length || 0);
-            await fetchEvents(companyId);
-          }
-        } else {
-          console.log('ℹ️ Nenhum evento novo do Google para salvar');
-        }
-      } catch (error) {
-        console.error('💥 Erro ao salvar eventos do Google:', error);
-        throw error;
-      }
-    }
+    saveGoogleEvents
   };
 };

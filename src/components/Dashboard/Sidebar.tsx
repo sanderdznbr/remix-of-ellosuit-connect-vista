@@ -1,232 +1,202 @@
 
-import React, { useState } from 'react';
-import { 
-  Mail, 
-  Send, 
-  TrendingUp, 
-  FileText, 
-  Users, 
-  FolderOpen,
-  Calendar,
-  Video,
-  BarChart3,
-  MessageCircle,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  Settings,
-  Home
-} from 'lucide-react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Home, 
+  Calendar,
+  Users,
+  Mail,
+  FileText,
+  PieChart,
+  Settings,
+  Phone,
+  Palette,
+  Sparkles,
+  Zap,
+  MessageSquare,
+  Folder,
+  Send
+} from 'lucide-react';
 
 interface SidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
   activeItem: string;
   onItemClick: (item: string) => void;
 }
 
-const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProps) => {
-  const { signOut, user } = useAuth();
-  const { toast } = useToast();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // Extrair dados do usuário
-  const userEmail = user?.email || '';
-  const userMetadata = user?.user_metadata || {};
-  const username = userMetadata.username || userMetadata.company_name || userEmail.split('@')[0];
-  const displayName = username.length > 15 ? username.substring(0, 15) + '...' : username;
-  const initials = username.substring(0, 2).toUpperCase();
-
-  const menuSections = [
-    {
-      title: 'Dashboard',
-      items: [
-        { id: 'home', label: 'Início', icon: Home },
-      ]
+const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
+  const navigationItems = [
+    { 
+      id: 'home', 
+      label: 'Início', 
+      icon: Home,
+      description: 'Dashboard principal'
     },
-    {
-      title: 'Email',
-      items: [
-        { id: 'mail-tracking', label: 'Rastreamento', icon: Mail },
-        { id: 'campaign-mail', label: 'Campanhas', icon: Send },
-        { id: 'mail-productivity', label: 'Produtividade', icon: TrendingUp },
-        { id: 'templates', label: 'Modelos', icon: FileText },
-        { id: 'clients', label: 'Clientes', icon: Users },
-        { id: 'documents', label: 'Documentos', icon: FolderOpen },
-      ]
+    { 
+      id: 'calendar', 
+      label: 'Agenda', 
+      icon: Calendar,
+      badge: '3',
+      description: 'Eventos e reuniões'
     },
-    {
-      title: 'Agenda',
-      items: [
-        { id: 'my-calendar', label: 'Meu Calendário', icon: Calendar },
-        { id: 'start-meet', label: 'Iniciar Meet', icon: Video },
-        { id: 'my-meetings', label: 'Minhas Reuniões', icon: Calendar },
-        { id: 'analytics', label: 'Análises', icon: BarChart3 },
-      ]
+    { 
+      id: 'clients', 
+      label: 'Clientes', 
+      icon: Users,
+      description: 'Gestão de clientes'
     },
-    {
-      title: 'Sistema',
-      items: [
-        { id: 'settings', label: 'Configurações', icon: Settings },
-        { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
-      ]
+    { 
+      id: 'campaigns', 
+      label: 'Campanhas', 
+      icon: Send,
+      description: 'Email marketing'
+    },
+    { 
+      id: 'email', 
+      label: 'Emails', 
+      icon: Mail,
+      badge: '12',
+      description: 'Caixa de entrada'
+    },
+    { 
+      id: 'templates', 
+      label: 'Design Studio', 
+      icon: Palette,
+      badge: 'NEW',
+      description: 'Editor visual avançado',
+      highlight: true
+    },
+    { 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: PieChart,
+      description: 'Relatórios e métricas'
+    },
+    { 
+      id: 'documents', 
+      label: 'Documentos', 
+      icon: Folder,
+      description: 'Gestão de arquivos'
+    },
+    { 
+      id: 'ai-chat', 
+      label: 'AI Assistant', 
+      icon: Zap,
+      badge: 'BETA',
+      description: 'Assistente inteligente'
+    },
+    { 
+      id: 'start-meet', 
+      label: 'Reuniões', 
+      icon: Phone,
+      description: 'Zoom e Google Meet'
+    },
+    { 
+      id: 'settings', 
+      label: 'Configurações', 
+      icon: Settings,
+      description: 'Preferências do sistema'
     }
   ];
 
-  const handleItemClick = (itemId: string) => {
-    console.log('🖱️ Item clicado na sidebar:', itemId);
-    
-    // Itens que têm páginas implementadas
-    const implementedItems = [
-      'home',
-      'mail-tracking', 
-      'campaign-mail', 
-      'mail-productivity', 
-      'templates',
-      'my-calendar', 
-      'my-meetings',
-      'start-meet',
-      'documents', 
-      'clients', 
-      'analytics',
-      'settings'
-    ];
-    
-    if (implementedItems.includes(itemId)) {
-      console.log('✅ Navegando para:', itemId);
-      onItemClick(itemId);
-    } else {
-      console.log('⚠️ Função em desenvolvimento para:', itemId);
-      toast({
-        title: "Em desenvolvimento",
-        description: "Esta funcionalidade está sendo desenvolvida",
-        variant: "default"
-      });
-    }
-  };
-
-  const handleLogout = async () => {
-    // Prevenir múltiplas chamadas
-    if (isLoggingOut) {
-      console.log('⏳ Logout já em andamento, ignorando clique');
-      return;
-    }
-
-    setIsLoggingOut(true);
-    
-    try {
-      console.log('👋 Iniciando logout...');
-      const { error } = await signOut();
-      
-      if (error) {
-        console.error('❌ Erro no logout:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao fazer logout: " + error.message,
-          variant: "destructive"
-        });
-      } else {
-        console.log('✅ Logout realizado com sucesso');
-        toast({
-          title: "Sucesso",
-          description: "Logout realizado com sucesso!"
-        });
-      }
-    } catch (error) {
-      console.error('💥 Erro inesperado no logout:', error);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado ao fazer logout",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
-    <div className={`bg-[#3600FF] text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen flex flex-col`}>
-      {/* Header */}
-      <div className="p-4 flex items-center justify-between">
-        {!isCollapsed && (
-          <img 
-            src="/lovable-uploads/78d0576b-d7ba-4f41-b1ac-30929441fa41.png" 
-            alt="Ellosuit Logo" 
-            className="h-8 w-auto"
-          />
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="text-white hover:bg-white/10"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </Button>
+    <Card className="h-full w-64 bg-gradient-to-b from-white to-gray-50 border-r shadow-lg">
+      <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+            <Sparkles className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="font-bold text-white text-lg">ElloSuit</h2>
+            <p className="text-blue-100 text-xs">Business Suite</p>
+          </div>
+        </div>
       </div>
 
-      {/* Menu Sections */}
-      <div className="flex-1 px-2">
-        {menuSections.map((section, sectionIndex) => (
-          <div key={section.title} className="mb-6">
-            {!isCollapsed && (
-              <h3 className="text-sm font-medium text-white/70 mb-3 px-3">
-                {section.title}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeItem === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-[#3200EA] text-white' 
-                        : 'text-white/80 hover:bg-[#3200EA] hover:text-white'
-                    }`}
+      <ScrollArea className="flex-1">
+        <nav className="p-4 space-y-2">
+          {navigationItems.map((item) => (
+            <Button
+              key={item.id}
+              variant={activeItem === item.id ? "default" : "ghost"}
+              className={`
+                w-full justify-start group transition-all duration-200
+                ${activeItem === item.id 
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
+                  : 'hover:bg-blue-50 hover:text-blue-700'
+                }
+                ${item.highlight ? 'ring-2 ring-purple-200 ring-offset-2' : ''}
+              `}
+              onClick={() => onItemClick(item.id)}
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center space-x-3">
+                  <item.icon className={`
+                    h-5 w-5 transition-transform group-hover:scale-110
+                    ${activeItem === item.id ? 'text-white' : 'text-gray-600'}
+                  `} />
+                  <div className="text-left">
+                    <div className={`
+                      font-medium text-sm
+                      ${activeItem === item.id ? 'text-white' : 'text-gray-900'}
+                    `}>
+                      {item.label}
+                    </div>
+                    <div className={`
+                      text-xs opacity-75
+                      ${activeItem === item.id ? 'text-blue-100' : 'text-gray-500'}
+                    `}>
+                      {item.description}
+                    </div>
+                  </div>
+                </div>
+                {item.badge && (
+                  <Badge 
+                    variant={item.badge === 'NEW' || item.badge === 'BETA' ? "secondary" : "default"}
+                    className={`
+                      text-xs px-2 py-0.5
+                      ${item.badge === 'NEW' ? 'bg-green-100 text-green-800' : ''}
+                      ${item.badge === 'BETA' ? 'bg-orange-100 text-orange-800' : ''}
+                      ${activeItem === item.id ? 'bg-white/20 text-white' : ''}
+                    `}
                   >
-                    <Icon size={20} />
-                    {!isCollapsed && <span className="text-sm">{item.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+                    {item.badge}
+                  </Badge>
+                )}
+              </div>
+            </Button>
+          ))}
+        </nav>
+      </ScrollArea>
 
-      {/* User Section */}
-      <div className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium">{initials}</span>
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" title={username}>{displayName}</p>
-              <p className="text-xs text-white/70 truncate" title={userEmail}>{userEmail}</p>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10 disabled:opacity-50"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            title={isLoggingOut ? "Fazendo logout..." : "Logout"}
+      {/* Quick Actions */}
+      <div className="p-4 border-t bg-gray-50">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Ações Rápidas
+          </h3>
+          <Button 
+            size="sm" 
+            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+            onClick={() => onItemClick('templates')}
           >
-            <LogOut size={16} />
+            <Palette className="h-4 w-4 mr-2" />
+            Novo Design
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="w-full"
+            onClick={() => onItemClick('campaigns')}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Nova Campanha
           </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

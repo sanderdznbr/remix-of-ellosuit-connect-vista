@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link } from 'lucide-react';
+import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { format, isPast, isBefore, addHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -29,6 +29,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editData, setEditData] = useState({
     notes: '',
     recording_link: '',
@@ -43,6 +44,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { getValidAccessToken } = useGoogleCalendar();
 
   React.useEffect(() => {
     if (event && isOpen) {
@@ -118,6 +120,70 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
   const startDateTime = formatDateTime(event.start);
   const endDateTime = formatDateTime(event.end);
+
+  const deleteGoogleCalendarEvent = async (googleEventId: string) => {
+    try {
+      const accessToken = await getValidAccessToken();
+      
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        }
+      );
+
+      if (!response.ok && response.status !== 404) {
+        console.error('Erro ao deletar evento do Google Calendar:', response.status);
+        // Não falhar completamente se não conseguir deletar do Google Calendar
+      } else {
+        console.log('✅ Evento deletado do Google Calendar');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao deletar evento do Google Calendar:', error);
+      // Não falhar completamente se não conseguir deletar do Google Calendar
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!event?.id || !user) return;
+    
+    setIsLoading(true);
+    try {
+      // Se o evento tem Google Event ID, tentar deletar do Google Calendar primeiro
+      if (eventData.google_event_id) {
+        await deleteGoogleCalendarEvent(eventData.google_event_id);
+      }
+
+      // Deletar do banco de dados
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Evento excluído com sucesso!"
+      });
+
+      onEventUpdate?.();
+      onClose();
+    } catch (error: any) {
+      console.error('Erro ao deletar evento:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao excluir evento",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   const handleSaveNotes = async () => {
     if (!event?.id || !user) return;
@@ -495,6 +561,39 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                   </Button>
                 </div>
               </div>
+            ) : showDeleteConfirm ? (
+              <div className="space-y-4 p-4 bg-red-50 rounded-xl border border-red-200">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <h4 className="font-medium text-red-900">Confirmar Exclusão</h4>
+                </div>
+                <p className="text-sm text-red-700">
+                  Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.
+                  {eventData.google_event_id && (
+                    <span className="block mt-1 font-medium">
+                      O evento também será removido do Google Calendar.
+                    </span>
+                  )}
+                </p>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleDeleteEvent}
+                    disabled={isLoading}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Excluindo...' : 'Confirmar Exclusão'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {canReschedule && (
@@ -535,6 +634,15 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                 >
                   <Link className="h-4 w-4 mr-2" />
                   Adicionar Gravação
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center justify-center text-red-600 hover:text-red-700 md:col-span-2"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Evento
                 </Button>
               </div>
             )}

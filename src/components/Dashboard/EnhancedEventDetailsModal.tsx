@@ -44,7 +44,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   
   const { user } = useAuth();
   const { toast } = useToast();
-  const { getValidAccessToken } = useGoogleCalendar();
+  const { deleteGoogleCalendarEvent, isConnected: googleConnected } = useGoogleCalendar();
 
   React.useEffect(() => {
     if (event && isOpen) {
@@ -121,49 +121,52 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const startDateTime = formatDateTime(event.start);
   const endDateTime = formatDateTime(event.end);
 
-  const deleteGoogleCalendarEvent = async (googleEventId: string) => {
-    try {
-      const accessToken = await getValidAccessToken();
-      
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          }
-        }
-      );
-
-      if (!response.ok && response.status !== 404) {
-        console.error('Erro ao deletar evento do Google Calendar:', response.status);
-        // Não falhar completamente se não conseguir deletar do Google Calendar
-      } else {
-        console.log('✅ Evento deletado do Google Calendar');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao deletar evento do Google Calendar:', error);
-      // Não falhar completamente se não conseguir deletar do Google Calendar
-    }
-  };
-
   const handleDeleteEvent = async () => {
     if (!event?.id || !user) return;
     
     setIsLoading(true);
     try {
-      // Se o evento tem Google Event ID, tentar deletar do Google Calendar primeiro
-      if (eventData.google_event_id) {
-        await deleteGoogleCalendarEvent(eventData.google_event_id);
+      console.log('🗑️ Starting event deletion process...');
+      
+      // Se o evento tem Google Event ID e o usuário está conectado ao Google, deletar do Google Calendar primeiro
+      if (eventData.google_event_id && googleConnected) {
+        try {
+          console.log('🔄 Deleting from Google Calendar first...');
+          await deleteGoogleCalendarEvent(eventData.google_event_id);
+          console.log('✅ Event deleted from Google Calendar');
+          
+          toast({
+            title: "Sucesso",
+            description: "Evento removido do Google Calendar",
+            duration: 3000
+          });
+        } catch (error: any) {
+          console.error('❌ Error deleting from Google Calendar:', error);
+          
+          // Se falhar ao deletar do Google Calendar, ainda permitir deletar localmente
+          // mas avisar o usuário
+          toast({
+            title: "Aviso",
+            description: "Evento deletado localmente, mas pode ainda existir no Google Calendar",
+            variant: "destructive",
+            duration: 5000
+          });
+        }
       }
 
-      // Deletar do banco de dados
+      // Deletar do banco de dados local
+      console.log('🔄 Deleting from local database...');
       const { error } = await supabase
         .from('calendar_events')
         .delete()
         .eq('id', event.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error deleting from database:', error);
+        throw error;
+      }
+
+      console.log('✅ Event deleted from local database');
 
       toast({
         title: "Sucesso",
@@ -173,7 +176,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       onEventUpdate?.();
       onClose();
     } catch (error: any) {
-      console.error('Erro ao deletar evento:', error);
+      console.error('💥 Error deleting event:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao excluir evento",
@@ -569,9 +572,14 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                 </div>
                 <p className="text-sm text-red-700">
                   Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.
-                  {eventData.google_event_id && (
-                    <span className="block mt-1 font-medium">
-                      O evento também será removido do Google Calendar.
+                  {eventData.google_event_id && googleConnected && (
+                    <span className="block mt-2 font-medium">
+                      ✅ O evento também será removido do Google Calendar automaticamente.
+                    </span>
+                  )}
+                  {eventData.google_event_id && !googleConnected && (
+                    <span className="block mt-2 font-medium text-yellow-700">
+                      ⚠️ O evento será removido apenas localmente. Para remover do Google Calendar, conecte sua conta Google primeiro.
                     </span>
                   )}
                 </p>

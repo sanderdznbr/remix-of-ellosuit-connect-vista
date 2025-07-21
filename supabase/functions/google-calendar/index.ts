@@ -177,6 +177,105 @@ serve(async (req) => {
         });
       }
 
+      // Handle delete_event action
+      if (body.action === 'delete_event') {
+        const { googleEventId, userId } = body;
+        console.log('🗑️ Deleting Google Calendar event:', googleEventId, 'for user:', userId);
+
+        if (!googleEventId || !userId) {
+          throw new Error('Google event ID or user ID missing');
+        }
+
+        // Get user's access token
+        const { data: integration, error: integrationError } = await supabase
+          .from('meeting_integrations')
+          .select('access_token, refresh_token, expires_at')
+          .eq('user_id', userId)
+          .eq('provider', 'google_meet')
+          .single();
+
+        if (integrationError || !integration) {
+          console.error('❌ Error getting user integration:', integrationError);
+          throw new Error('Google integration not found for user');
+        }
+
+        let accessToken = integration.access_token;
+
+        // Check if token is expired and renew if necessary
+        const expiresAt = new Date(integration.expires_at);
+        const now = new Date();
+        
+        if (now >= expiresAt && integration.refresh_token) {
+          console.log('🔄 Token expired, renewing before deletion...');
+          
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              refresh_token: integration.refresh_token,
+              grant_type: 'refresh_token'
+            })
+          });
+
+          const tokenData = await tokenResponse.json();
+
+          if (!tokenResponse.ok) {
+            console.error('❌ Token renewal error:', tokenData);
+            throw new Error(`Token renewal failed: ${tokenData.error}`);
+          }
+
+          accessToken = tokenData.access_token;
+
+          // Update token in database
+          const newExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+          await supabase
+            .from('meeting_integrations')
+            .update({
+              access_token: accessToken,
+              expires_at: newExpiresAt,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId)
+            .eq('provider', 'google_meet');
+
+          console.log('✅ Token renewed successfully');
+        }
+
+        // Delete event from Google Calendar
+        const deleteResponse = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            }
+          }
+        );
+
+        if (!deleteResponse.ok && deleteResponse.status !== 404) {
+          const errorText = await deleteResponse.text();
+          console.error('❌ Google Calendar delete error:', deleteResponse.status, errorText);
+          throw new Error(`Failed to delete event from Google Calendar: ${deleteResponse.status} ${errorText}`);
+        }
+
+        if (deleteResponse.status === 404) {
+          console.log('⚠️ Event not found in Google Calendar (already deleted)');
+        } else {
+          console.log('✅ Event deleted from Google Calendar successfully');
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Event deleted from Google Calendar successfully'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       // Handle token renewal
       if (body.action === 'renew_token') {
         const { refreshToken, userId } = body;

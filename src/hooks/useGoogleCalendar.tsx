@@ -553,6 +553,38 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [state.integration, getValidAccessToken]);
 
+  // Delete Google Calendar event
+  const deleteGoogleCalendarEvent = useCallback(async (googleEventId: string) => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      console.log('🗑️ Deleting Google Calendar event:', googleEventId);
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: JSON.stringify({
+          action: 'delete_event',
+          googleEventId: googleEventId,
+          userId: user.id
+        })
+      });
+
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || 'Failed to delete event from Google Calendar');
+      }
+
+      console.log('✅ Event deleted from Google Calendar successfully');
+      return {
+        success: true,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('❌ Error deleting Google Calendar event:', error);
+      throw error;
+    }
+  }, [user]);
+
   // Main effect for initialization and OAuth processing - otimizado
   useEffect(() => {
     // Check for OAuth callback
@@ -648,6 +680,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     checkConnection: () => checkConnection(true),
     getValidAccessToken,
     createGoogleMeetEvent,
-    importGoogleCalendarEvents
+    importGoogleCalendarEvents,
+    deleteGoogleCalendarEvent
   };
 };

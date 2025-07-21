@@ -4,257 +4,271 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Bell, Clock, Palette } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import ColorPicker from './ColorPicker';
 
 interface ReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
+  selectedRange?: { start: string; end: string } | null;
   onCreateEvent: (eventData: any) => Promise<void>;
 }
 
-const ReminderModal: React.FC<ReminderModalProps> = ({
-  isOpen,
-  onClose,
-  selectedDate,
-  onCreateEvent
-}) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    start_time: '09:00',
-    end_time: '09:30',
-    is_all_day: false,
-    color: '#F59E0B'
-  });
+const ReminderModal = ({ 
+  isOpen, 
+  onClose, 
+  selectedDate, 
+  selectedRange,
+  onCreateEvent 
+}: ReminderModalProps) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('#F59E0B');
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (selectedDate && isOpen) {
-      const date = new Date(selectedDate);
-      const formattedDate = format(date, 'yyyy-MM-dd');
+    if (selectedDate) {
+      setStartDate(selectedDate);
+      setEndDate(selectedDate);
+    }
+
+    // Se há um range selecionado (arrastar), usar essas datas
+    if (selectedRange) {
+      const startDateTime = new Date(selectedRange.start);
+      const endDateTime = new Date(selectedRange.end);
       
-      setFormData(prev => ({
-        ...prev,
-        start_date: formattedDate,
-        end_date: formattedDate
-      }));
+      setStartDate(startDateTime.toISOString().split('T')[0]);
+      setStartTime(startDateTime.toTimeString().slice(0, 5));
+      setEndDate(endDateTime.toISOString().split('T')[0]);
+      setEndTime(endDateTime.toTimeString().slice(0, 5));
+      setIsAllDay(false);
+    } else if (selectedDate && !startTime) {
+      // Se não há range, definir horários padrão
+      setStartTime('09:00');
+      setEndTime('09:30');
     }
-  }, [selectedDate, isOpen]);
+  }, [selectedDate, selectedRange]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setFormData({
-        title: '',
-        description: '',
-        start_date: '',
-        end_date: '',
-        start_time: '09:00',
-        end_time: '09:30',
-        is_all_day: false,
-        color: '#F59E0B'
-      });
-    }
-  }, [isOpen]);
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setStartDate('');
+    setStartTime('');
+    setEndDate('');
+    setEndTime('');
+    setIsAllDay(false);
+    setSelectedColor('#F59E0B');
   };
 
-  const handleSubmit = async () => {
-    if (!formData.title.trim()) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, insira um título para o lembrete",
+        description: "Título é obrigatório",
         variant: "destructive"
       });
       return;
     }
 
-    if (!formData.start_date) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione uma data para o lembrete",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+    setIsLoading(true);
 
     try {
-      let startDateTime, endDateTime;
+      let finalStartDate, finalEndDate;
 
-      if (formData.is_all_day) {
-        startDateTime = `${formData.start_date}T00:00:00`;
-        endDateTime = `${formData.end_date}T23:59:59`;
+      if (isAllDay) {
+        finalStartDate = new Date(startDate + 'T00:00:00').toISOString();
+        finalEndDate = new Date(endDate + 'T23:59:59').toISOString();
       } else {
-        startDateTime = `${formData.start_date}T${formData.start_time}:00`;
-        endDateTime = `${formData.end_date}T${formData.end_time}:00`;
+        finalStartDate = new Date(startDate + 'T' + startTime).toISOString();
+        finalEndDate = new Date(endDate + 'T' + endTime).toISOString();
       }
 
       const eventData = {
-        title: formData.title,
-        description: formData.description,
-        start_date: startDateTime,
-        end_date: endDateTime,
-        event_type: 'reminder',
-        attendees: [],
-        is_all_day: formData.is_all_day,
-        color: formData.color
+        title,
+        description,
+        start_date: finalStartDate,
+        end_date: finalEndDate,
+        event_type: 'reminder' as const,
+        is_all_day: isAllDay,
+        color: selectedColor
       };
 
       await onCreateEvent(eventData);
+      
+      toast({
+        title: "Sucesso",
+        description: "Lembrete criado com sucesso!"
+      });
+      
+      resetForm();
       onClose();
     } catch (error) {
+      console.error('Error creating reminder:', error);
       toast({
         title: "Erro",
         description: "Erro ao criar lembrete",
         variant: "destructive"
       });
     } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      return format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: ptBR });
-    } catch {
-      return dateStr;
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2 text-xl">
-            <Bell className="h-6 w-6 text-yellow-600" />
-            <span>Novo Lembrete</span>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Bell className="h-5 w-5 text-[#F59E0B]" />
+            Novo Lembrete
           </DialogTitle>
-          {selectedDate && (
-            <p className="text-sm text-gray-600 capitalize">
-              {formatDateForDisplay(selectedDate)}
-            </p>
-          )}
         </DialogHeader>
-
-        <div className="space-y-6 mt-6">
-          {/* Título */}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Título do lembrete</Label>
+            <Label htmlFor="title">Título do Lembrete *</Label>
             <Input
               id="title"
-              placeholder="Ex: Ligar para cliente"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              className="text-base"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Digite o título do lembrete"
+              required
             />
           </div>
 
-          {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
-              placeholder="Adicione detalhes sobre o lembrete..."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Adicione uma descrição (opcional)"
               rows={3}
             />
           </div>
 
-          {/* Data */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_date">Data de início</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => handleInputChange('start_date', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end_date">Data de término</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={formData.end_date}
-                onChange={(e) => handleInputChange('end_date', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Evento de dia inteiro */}
           <div className="flex items-center space-x-2">
-            <Switch
-              id="all_day"
-              checked={formData.is_all_day}
-              onCheckedChange={(checked) => handleInputChange('is_all_day', checked)}
+            <Checkbox
+              id="allDay"
+              checked={isAllDay}
+              onCheckedChange={(checked) => setIsAllDay(checked as boolean)}
             />
-            <Label htmlFor="all_day">Lembrete de dia inteiro</Label>
+            <Label htmlFor="allDay" className="text-sm">Lembrete de dia inteiro</Label>
           </div>
 
-          {/* Horários */}
-          {!formData.is_all_day && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start_time">Horário de início</Label>
-                <Input
-                  id="start_time"
-                  type="time"
-                  value={formData.start_time}
-                  onChange={(e) => handleInputChange('start_time', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_time">Horário de término</Label>
-                <Input
-                  id="end_time"
-                  type="time"
-                  value={formData.end_time}
-                  onChange={(e) => handleInputChange('end_time', e.target.value)}
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Data de Início</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
             </div>
-          )}
+            
+            {!isAllDay && (
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Hora de Início</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+          </div>
 
-          {/* Seletor de Cor */}
-          <ColorPicker
-            value={formData.color}
-            onChange={(color) => handleInputChange('color', color)}
-            label="Cor do lembrete"
-          />
-        </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="endDate">Data de Término</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
+            </div>
+            
+            {!isAllDay && (
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Hora de Término</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+          </div>
 
-        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-yellow-600 hover:bg-yellow-700"
-          >
-            {isSubmitting ? 'Criando...' : 'Criar Lembrete'}
-          </Button>
-        </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Cor do Evento
+            </Label>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-8 h-8 rounded-full border-2 border-gray-300 cursor-pointer"
+                style={{ backgroundColor: selectedColor }}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+              >
+                Escolher Cor
+              </Button>
+            </div>
+            {showColorPicker && (
+              <ColorPicker
+                selectedColor={selectedColor}
+                onColorChange={setSelectedColor}
+                onClose={() => setShowColorPicker(false)}
+              />
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706]"
+            >
+              {isLoading ? 'Criando...' : 'Criar Lembrete'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

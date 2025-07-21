@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -585,6 +586,100 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     }
   }, [user]);
 
+  // Nova função para sincronizar (ressincronizar) eventos do Google Calendar
+  const syncGoogleCalendarEvents = useCallback(async () => {
+    if (!state.integration || !user) {
+      throw new Error('Google Calendar not connected or user not authenticated');
+    }
+
+    try {
+      console.log('🔄 Starting full Google Calendar synchronization...');
+      
+      // Importar todos os eventos do Google Calendar
+      const googleEvents = await importGoogleCalendarEvents();
+      
+      if (googleEvents.length === 0) {
+        console.log('ℹ️ No events to synchronize from Google Calendar');
+        return { synchronized: 0, created: 0, updated: 0 };
+      }
+
+      // Buscar a empresa do usuário
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyUser) {
+        throw new Error('User company not found');
+      }
+
+      let created = 0;
+      let updated = 0;
+
+      // Processar cada evento do Google Calendar
+      for (const googleEvent of googleEvents) {
+        try {
+          // Verificar se já existe um evento com este google_event_id
+          const { data: existingEvent } = await supabase
+            .from('calendar_events')
+            .select('id')
+            .eq('google_event_id', googleEvent.google_event_id)
+            .eq('company_id', companyUser.company_id)
+            .maybeSingle();
+
+          if (existingEvent) {
+            // Atualizar evento existente
+            const { error: updateError } = await supabase
+              .from('calendar_events')
+              .update({
+                title: googleEvent.title,
+                description: googleEvent.description,
+                start_date: googleEvent.start_date,
+                end_date: googleEvent.end_date,
+                event_type: googleEvent.event_type,
+                meeting_link: googleEvent.meeting_link,
+                meeting_provider: googleEvent.meeting_provider,
+                attendees: googleEvent.attendees,
+                is_all_day: googleEvent.is_all_day
+              })
+              .eq('id', existingEvent.id);
+
+            if (!updateError) {
+              updated++;
+            }
+          } else {
+            // Criar novo evento
+            const { error: insertError } = await supabase
+              .from('calendar_events')
+              .insert({
+                ...googleEvent,
+                company_id: companyUser.company_id,
+                created_by: user.id
+              });
+
+            if (!insertError) {
+              created++;
+            }
+          }
+        } catch (eventError) {
+          console.error('❌ Error processing event:', googleEvent.title, eventError);
+        }
+      }
+
+      console.log(`✅ Synchronization complete: ${created} created, ${updated} updated`);
+      
+      return {
+        synchronized: googleEvents.length,
+        created,
+        updated
+      };
+    } catch (error) {
+      console.error('❌ Error synchronizing Google Calendar events:', error);
+      throw error;
+    }
+  }, [state.integration, user, importGoogleCalendarEvents]);
+
   // Main effect for initialization and OAuth processing - otimizado
   useEffect(() => {
     // Check for OAuth callback
@@ -681,6 +776,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     getValidAccessToken,
     createGoogleMeetEvent,
     importGoogleCalendarEvents,
+    syncGoogleCalendarEvents,
     deleteGoogleCalendarEvent
   };
 };

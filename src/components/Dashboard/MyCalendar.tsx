@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -5,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -34,6 +35,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [clusterEvents, setClusterEvents] = useState<any[]>([]);
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
   const { syncGoogleCalendarEvents } = useGoogleCalendar();
@@ -41,7 +43,24 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
+    setSelectedRange(null);
     setShowTypeSelector(true);
+  };
+
+  const handleDateSelect = (selectInfo: any) => {
+    // Quando o usuário arrasta para selecionar um intervalo de tempo
+    const start = selectInfo.start;
+    const end = selectInfo.end;
+    
+    // Verificar se é uma seleção válida (não apenas um clique)
+    if (start.getTime() !== end.getTime()) {
+      setSelectedRange({
+        start: start.toISOString(),
+        end: end.toISOString()
+      });
+      setSelectedDate(start.toISOString().split('T')[0]);
+      setShowEventModal(true); // Abrir diretamente o modal de reunião
+    }
   };
 
   const handleEventClick = (clickInfo: any) => {
@@ -89,20 +108,24 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setShowReminderModal(false);
     setShowTypeSelector(false);
     setSelectedDate(null);
+    setSelectedRange(null);
   };
 
   const handleRefreshCalendar = async () => {
     setIsRefreshing(true);
     try {
-      await syncGoogleCalendarEvents();
+      const result = await syncGoogleCalendarEvents();
       await refreshEvents();
+      
       toast({
-        title: "Sucesso",
-        description: "Eventos sincronizados com o Google Calendar!"
+        title: "✅ Sincronização Completa",
+        description: `${result.created} eventos criados, ${result.updated} atualizados`,
+        duration: 5000
       });
     } catch (error) {
+      console.error('Error synchronizing:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro na Sincronização", 
         description: "Erro ao sincronizar eventos do Google Calendar",
         variant: "destructive"
       });
@@ -208,16 +231,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
       <Card className="shadow-xl border-0 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
         <CardContent className="p-6">
-          {!loading && calendarEvents.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 inline-block">
-                <Calendar className="h-16 w-16 mx-auto mb-4 text-[#3600FF]/50" />
-                <p className="text-lg font-medium text-gray-700">Nenhum evento encontrado</p>
-                <p className="text-sm text-gray-500 mt-1">Crie seu primeiro evento para começar</p>
-              </div>
-            </div>
-          )}
-          
           <div className="calendar-container">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -230,6 +243,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               height="auto"
               events={calendarEvents}
               dateClick={handleDateClick}
+              select={handleDateSelect}
               eventClick={handleEventClick}
               moreLinkClick={handleMoreClick}
               editable={true}
@@ -240,6 +254,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               locale="pt-br"
               eventDisplay="block"
               eventTextColor="#ffffff"
+              selectLongPressDelay={0}
+              selectMinDistance={5}
               viewDidMount={(view) => {
                 setCurrentView(view.view.type);
               }}
@@ -273,6 +289,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         onClose={() => {
           setShowTypeSelector(false);
           setSelectedDate(null);
+          setSelectedRange(null);
         }}
         onSelectType={handleTypeSelect}
         selectedDate={selectedDate || ''}
@@ -282,6 +299,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         isOpen={showEventModal}
         onClose={handleCloseAllModals}
         selectedDate={selectedDate}
+        selectedRange={selectedRange}
         onCreateEvent={createEvent}
         onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
       />
@@ -290,6 +308,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         isOpen={showAppointmentModal}
         onClose={handleCloseAllModals}
         selectedDate={selectedDate || ''}
+        selectedRange={selectedRange}
         onCreateEvent={createEvent}
       />
 
@@ -297,6 +316,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         isOpen={showReminderModal}
         onClose={handleCloseAllModals}
         selectedDate={selectedDate || ''}
+        selectedRange={selectedRange}
         onCreateEvent={createEvent}
       />
 

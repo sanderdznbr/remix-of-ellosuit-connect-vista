@@ -20,6 +20,7 @@ interface CalendarEvent {
   meeting_provider?: string;
   is_all_day?: boolean;
   meeting_data?: any;
+  color?: string;
 }
 
 export const useCalendarData = () => {
@@ -194,7 +195,8 @@ export const useCalendarData = () => {
           attendees: attendeesList,
           meeting_provider: event.meeting_provider,
           is_all_day: event.is_all_day || false,
-          meeting_data: event.meeting_data || {}
+          meeting_data: event.meeting_data || {},
+          color: event.color || '#3600FF'
         };
       });
       
@@ -230,7 +232,8 @@ export const useCalendarData = () => {
           meeting_link: eventData.meeting_link,
           meeting_provider: eventData.meeting_provider,
           attendees: eventData.attendees || [],
-          is_all_day: eventData.is_all_day || false
+          is_all_day: eventData.is_all_day || false,
+          color: eventData.color || '#3600FF'
         })
         .select()
         .single();

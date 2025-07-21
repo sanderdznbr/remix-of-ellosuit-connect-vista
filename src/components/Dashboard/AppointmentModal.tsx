@@ -4,16 +4,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Calendar, MapPin, User, AlertCircle } from 'lucide-react';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { Calendar, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import ColorPicker from './ColorPicker';
 
 interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
-  selectedTime?: string | null;
   onCreateEvent: (eventData: any) => Promise<void>;
 }
 
@@ -21,275 +23,238 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
-  selectedTime,
   onCreateEvent
 }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState(selectedTime || '09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [location, setLocation] = useState('');
-  const [locationPreset, setLocationPreset] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { isConnected: googleConnected, loading: googleLoading, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    start_time: '09:00',
+    end_time: '10:00',
+    is_all_day: false,
+    color: '#10B981'
+  });
 
-  const locationPresets = [
-    { value: 'casa', label: 'Casa' },
-    { value: 'escritorio', label: 'Escritório' },
-    { value: 'custom', label: 'Outro local...' }
-  ];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  // Atualizar horário quando selectedTime mudar
   useEffect(() => {
-    if (selectedTime) {
-      setStartTime(selectedTime);
-      // Calcular horário de término automaticamente (1 hora depois)
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const endHour = hours + 1;
-      setEndTime(`${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    if (selectedDate && isOpen) {
+      const date = new Date(selectedDate);
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
+      setFormData(prev => ({
+        ...prev,
+        start_date: formattedDate,
+        end_date: formattedDate
+      }));
     }
-  }, [selectedTime]);
+  }, [selectedDate, isOpen]);
 
-  const formatDateTimeToLocal = (date: string, time: string) => {
-    const localDate = new Date(`${date}T${time}:00`);
-    return localDate.toISOString();
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        title: '',
+        description: '',
+        start_date: '',
+        end_date: '',
+        start_time: '09:00',
+        end_time: '10:00',
+        is_all_day: false,
+        color: '#10B981'
+      });
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const handleSubmit = async () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um título para o compromisso",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setIsLoading(true);
-    setError(null);
-    
+    if (!formData.start_date) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma data para o compromisso",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      const finalLocation = locationPreset === 'custom' ? location : 
-                          locationPreset === 'casa' ? 'Casa' :
-                          locationPreset === 'escritorio' ? 'Escritório' : location;
+      let startDateTime, endDateTime;
 
-      const startDateTime = formatDateTimeToLocal(selectedDate, startTime);
-      const endDateTime = formatDateTimeToLocal(selectedDate, endTime);
-
-      let meetingLink = '';
-      
-      // Criar evento no Google Calendar se conectado (mas oculto)
-      if (googleConnected) {
-        try {
-          console.log('🔄 Criando compromisso no Google Calendar...');
-          const accessToken = await getGoogleToken();
-          
-          const { data, error } = await supabase.functions.invoke('google-calendar', {
-            body: {
-              action: 'create_event',
-              eventData: {
-                title,
-                description: `${description}${contactPerson ? `\n\nContato: ${contactPerson}` : ''}${finalLocation ? `\nLocal: ${finalLocation}` : ''}`,
-                start_date: startDateTime,
-                end_date: endDateTime,
-                attendees: contactPerson ? [{ email: contactPerson }] : []
-              },
-              accessToken: accessToken
-            }
-          });
-
-          if (error) console.error('Erro ao criar no Google Calendar:', error);
-          if (data?.success && data?.meetLink) {
-            meetingLink = data.meetLink;
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar compromisso no Google Calendar:', error);
-          // Não falha se o Google Calendar der erro
-        }
+      if (formData.is_all_day) {
+        startDateTime = `${formData.start_date}T00:00:00`;
+        endDateTime = `${formData.end_date}T23:59:59`;
+      } else {
+        startDateTime = `${formData.start_date}T${formData.start_time}:00`;
+        endDateTime = `${formData.end_date}T${formData.end_time}:00`;
       }
 
-      await onCreateEvent({
-        title,
-        description: `${description}${contactPerson ? `\n\nContato: ${contactPerson}` : ''}${finalLocation ? `\nLocal: ${finalLocation}` : ''}`,
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
         start_date: startDateTime,
         end_date: endDateTime,
         event_type: 'appointment',
-        meeting_link: meetingLink,
-        meeting_provider: meetingLink ? 'google_meet' : null,
-        is_all_day: false
-      });
+        attendees: [],
+        is_all_day: formData.is_all_day,
+        color: formData.color
+      };
 
-      handleClose();
-    } catch (error: any) {
-      console.error('Erro ao criar compromisso:', error);
-      setError(error.message || 'Erro inesperado ao criar compromisso');
+      await onCreateEvent(eventData);
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar compromisso",
+        variant: "destructive"
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    setTitle('');
-    setDescription('');
-    setStartTime(selectedTime || '09:00');
-    setEndTime('10:00');
-    setLocation('');
-    setLocationPreset('');
-    setContactPerson('');
-    setError(null);
-    onClose();
+  const formatDateForDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      return format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-            <Calendar className="h-5 w-5 text-[#3600FF]" />
-            Agendar Compromisso
-            {googleConnected && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                Sincronizado com Google
-              </span>
-            )}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2 text-xl">
+            <Calendar className="h-6 w-6 text-green-600" />
+            <span>Novo Compromisso</span>
           </DialogTitle>
+          {selectedDate && (
+            <p className="text-sm text-gray-600 capitalize">
+              {formatDateForDisplay(selectedDate)}
+            </p>
+          )}
         </DialogHeader>
-        
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-700">{error}</span>
-            </div>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
+
+        <div className="space-y-6 mt-6">
+          {/* Título */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-gray-700">
-              Título *
-            </Label>
+            <Label htmlFor="title">Título do compromisso</Label>
             <Input
               id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Digite o título do compromisso"
-              required
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+              placeholder="Ex: Consulta médica"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              className="text-base"
             />
           </div>
 
+          {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-              Descrição
-            </Label>
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional do compromisso"
+              placeholder="Adicione detalhes sobre o compromisso..."
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               rows={3}
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Data</Label>
-            <Input
-              type="date"
-              value={selectedDate}
-              disabled
-              className="rounded-xl bg-gray-50 border-gray-200 text-gray-600"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          {/* Data */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startTime" className="text-sm font-medium text-gray-700">
-                Horário de Início
-              </Label>
+              <Label htmlFor="start_date">Data de início</Label>
               <Input
-                id="startTime"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+                id="start_date"
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => handleInputChange('start_date', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endTime" className="text-sm font-medium text-gray-700">
-                Horário de Término
-              </Label>
+              <Label htmlFor="end_date">Data de término</Label>
               <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+                id="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => handleInputChange('end_date', e.target.value)}
               />
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Local do Compromisso
-            </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {locationPresets.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  onClick={() => setLocationPreset(preset.value)}
-                  className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium ${
-                    locationPreset === preset.value
-                      ? 'border-[#3600FF] bg-[#3600FF]/5 text-[#3600FF]'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            {locationPreset === 'custom' && (
-              <Input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Digite o endereço do compromisso"
-                className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
-              />
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contact" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Com quem
-            </Label>
-            <Input
-              id="contact"
-              value={contactPerson}
-              onChange={(e) => setContactPerson(e.target.value)}
-              placeholder="Nome ou email da pessoa"
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+          {/* Evento de dia inteiro */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="all_day"
+              checked={formData.is_all_day}
+              onCheckedChange={(checked) => handleInputChange('is_all_day', checked)}
             />
+            <Label htmlFor="all_day">Compromisso de dia inteiro</Label>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleClose}
-              className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-              className="rounded-xl bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6"
-            >
-              {isLoading ? 'Criando...' : 'Criar Compromisso'}
-            </Button>
-          </div>
-        </form>
+          {/* Horários */}
+          {!formData.is_all_day && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_time">Horário de início</Label>
+                <Input
+                  id="start_time"
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => handleInputChange('start_time', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_time">Horário de término</Label>
+                <Input
+                  id="end_time"
+                  type="time"
+                  value={formData.end_time}
+                  onChange={(e) => handleInputChange('end_time', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Seletor de Cor */}
+          <ColorPicker
+            value={formData.color}
+            onChange={(color) => handleInputChange('color', color)}
+            label="Cor do compromisso"
+          />
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSubmitting ? 'Criando...' : 'Criar Compromisso'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

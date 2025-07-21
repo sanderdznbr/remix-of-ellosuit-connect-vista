@@ -4,16 +4,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, Mail, MessageCircle, AlertCircle } from 'lucide-react';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { Bell, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import ColorPicker from './ColorPicker';
 
 interface ReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string;
-  selectedTime?: string | null;
   onCreateEvent: (eventData: any) => Promise<void>;
 }
 
@@ -21,248 +23,238 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
-  selectedTime,
   onCreateEvent
 }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [reminderTime, setReminderTime] = useState(selectedTime || '09:00');
-  const [notifyEmail, setNotifyEmail] = useState(true);
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { isConnected: googleConnected, loading: googleLoading, getValidAccessToken: getGoogleToken } = useGoogleCalendar();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    start_time: '09:00',
+    end_time: '09:30',
+    is_all_day: false,
+    color: '#F59E0B'
+  });
 
-  // Atualizar horário quando selectedTime mudar
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
-    if (selectedTime) {
-      setReminderTime(selectedTime);
+    if (selectedDate && isOpen) {
+      const date = new Date(selectedDate);
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
+      setFormData(prev => ({
+        ...prev,
+        start_date: formattedDate,
+        end_date: formattedDate
+      }));
     }
-  }, [selectedTime]);
+  }, [selectedDate, isOpen]);
 
-  const formatDateTimeToLocal = (date: string, time: string) => {
-    const localDate = new Date(`${date}T${time}:00`);
-    return localDate.toISOString();
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        title: '',
+        description: '',
+        start_date: '',
+        end_date: '',
+        start_time: '09:00',
+        end_time: '09:30',
+        is_all_day: false,
+        color: '#F59E0B'
+      });
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const handleSubmit = async () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um título para o lembrete",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setIsLoading(true);
-    setError(null);
-    
+    if (!formData.start_date) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma data para o lembrete",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      const notifications = [];
-      if (notifyEmail) notifications.push('email');
-      if (notifyWhatsApp) notifications.push('whatsapp');
+      let startDateTime, endDateTime;
 
-      const notificationText = notifications.length > 0 
-        ? `\n\nNotificações: ${notifications.join(', ')}`
-        : '';
-
-      const startDateTime = formatDateTimeToLocal(selectedDate, reminderTime);
-      const endDateTime = formatDateTimeToLocal(selectedDate, reminderTime);
-
-      let meetingLink = '';
-      
-      // Criar evento no Google Calendar se conectado (mas oculto)
-      if (googleConnected) {
-        try {
-          console.log('🔄 Criando lembrete no Google Calendar...');
-          const accessToken = await getGoogleToken();
-          
-          const { data, error } = await supabase.functions.invoke('google-calendar', {
-            body: {
-              action: 'create_event',
-              eventData: {
-                title,
-                description: `${description}${notificationText}`,
-                start_date: startDateTime,
-                end_date: endDateTime,
-                attendees: []
-              },
-              accessToken: accessToken
-            }
-          });
-
-          if (error) console.error('Erro ao criar no Google Calendar:', error);
-          if (data?.success && data?.meetLink) {
-            meetingLink = data.meetLink;
-          }
-        } catch (error) {
-          console.error('💥 Erro ao criar lembrete no Google Calendar:', error);
-          // Não falha se o Google Calendar der erro
-        }
+      if (formData.is_all_day) {
+        startDateTime = `${formData.start_date}T00:00:00`;
+        endDateTime = `${formData.end_date}T23:59:59`;
+      } else {
+        startDateTime = `${formData.start_date}T${formData.start_time}:00`;
+        endDateTime = `${formData.end_date}T${formData.end_time}:00`;
       }
 
-      await onCreateEvent({
-        title,
-        description: `${description}${notificationText}`,
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
         start_date: startDateTime,
         end_date: endDateTime,
         event_type: 'reminder',
-        meeting_link: meetingLink,
-        meeting_provider: meetingLink ? 'google_meet' : null,
-        is_all_day: false
-      });
+        attendees: [],
+        is_all_day: formData.is_all_day,
+        color: formData.color
+      };
 
-      handleClose();
-    } catch (error: any) {
-      console.error('Erro ao criar lembrete:', error);
-      setError(error.message || 'Erro inesperado ao criar lembrete');
+      await onCreateEvent(eventData);
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar lembrete",
+        variant: "destructive"
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    setTitle('');
-    setDescription('');
-    setReminderTime(selectedTime || '09:00');
-    setNotifyEmail(true);
-    setNotifyWhatsApp(false);
-    setError(null);
-    onClose();
+  const formatDateForDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      return format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl shadow-2xl border-0">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-            <Bell className="h-5 w-5 text-[#3600FF]" />
-            Criar Lembrete
-            {googleConnected && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                Sincronizado com Google
-              </span>
-            )}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2 text-xl">
+            <Bell className="h-6 w-6 text-yellow-600" />
+            <span>Novo Lembrete</span>
           </DialogTitle>
+          {selectedDate && (
+            <p className="text-sm text-gray-600 capitalize">
+              {formatDateForDisplay(selectedDate)}
+            </p>
+          )}
         </DialogHeader>
-        
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-700">{error}</span>
-            </div>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
+
+        <div className="space-y-6 mt-6">
+          {/* Título */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-gray-700">
-              Título *
-            </Label>
+            <Label htmlFor="title">Título do lembrete</Label>
             <Input
               id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Digite o título do lembrete"
-              required
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+              placeholder="Ex: Ligar para cliente"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              className="text-base"
             />
           </div>
 
+          {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-              Descrição
-            </Label>
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional do lembrete"
+              placeholder="Adicione detalhes sobre o lembrete..."
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               rows={3}
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Data</Label>
-            <Input
-              type="date"
-              value={selectedDate}
-              disabled
-              className="rounded-xl bg-gray-50 border-gray-200 text-gray-600"
-            />
+          {/* Data */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Data de início</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => handleInputChange('start_date', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end_date">Data de término</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => handleInputChange('end_date', e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reminderTime" className="text-sm font-medium text-gray-700">
-              Horário do Lembrete
-            </Label>
-            <Input
-              id="reminderTime"
-              type="time"
-              value={reminderTime}
-              onChange={(e) => setReminderTime(e.target.value)}
-              className="rounded-xl border-gray-200 focus:border-[#3600FF] focus:ring-[#3600FF]"
+          {/* Evento de dia inteiro */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="all_day"
+              checked={formData.is_all_day}
+              onCheckedChange={(checked) => handleInputChange('is_all_day', checked)}
             />
+            <Label htmlFor="all_day">Lembrete de dia inteiro</Label>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700">
-              Opções de Notificação
-            </Label>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="notifyEmail"
-                  checked={notifyEmail}
-                  onChange={(e) => setNotifyEmail(e.target.checked)}
-                  className="w-4 h-4 text-[#3600FF] border-gray-300 rounded focus:ring-[#3600FF]"
+          {/* Horários */}
+          {!formData.is_all_day && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_time">Horário de início</Label>
+                <Input
+                  id="start_time"
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => handleInputChange('start_time', e.target.value)}
                 />
-                <div className="flex items-center space-x-2 flex-1">
-                  <Mail className="h-4 w-4 text-gray-600" />
-                  <Label htmlFor="notifyEmail" className="text-sm font-medium text-gray-700">
-                    Notificar por Email
-                  </Label>
-                </div>
               </div>
-              
-              <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="notifyWhatsApp"
-                  checked={notifyWhatsApp}
-                  onChange={(e) => setNotifyWhatsApp(e.target.checked)}
-                  className="w-4 h-4 text-[#3600FF] border-gray-300 rounded focus:ring-[#3600FF]"
+              <div className="space-y-2">
+                <Label htmlFor="end_time">Horário de término</Label>
+                <Input
+                  id="end_time"
+                  type="time"
+                  value={formData.end_time}
+                  onChange={(e) => handleInputChange('end_time', e.target.value)}
                 />
-                <div className="flex items-center space-x-2 flex-1">
-                  <MessageCircle className="h-4 w-4 text-gray-600" />
-                  <Label htmlFor="notifyWhatsApp" className="text-sm font-medium text-gray-700">
-                    Notificar por WhatsApp
-                  </Label>
-                </div>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              * Notificações por WhatsApp requerem configuração adicional
-            </p>
-          </div>
+          )}
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleClose}
-              className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-              className="rounded-xl bg-[#3600FF] hover:bg-[#3600FF]/90 text-white px-6"
-            >
-              {isLoading ? 'Criando...' : 'Criar Lembrete'}
-            </Button>
-          </div>
-        </form>
+          {/* Seletor de Cor */}
+          <ColorPicker
+            value={formData.color}
+            onChange={(color) => handleInputChange('color', color)}
+            label="Cor do lembrete"
+          />
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="bg-yellow-600 hover:bg-yellow-700"
+          >
+            {isSubmitting ? 'Criando...' : 'Criar Lembrete'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

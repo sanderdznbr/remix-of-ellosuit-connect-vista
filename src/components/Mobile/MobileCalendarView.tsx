@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Calendar, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import MobileCalendarCard from './MobileCalendarCard';
+import CalendarSkeleton from '../Dashboard/CalendarSkeleton';
 import { cn } from '@/lib/utils';
 
-const MobileCalendarView = () => {
+const MobileCalendarView = React.memo(() => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
   const { events, loading } = useCalendarData();
@@ -28,7 +30,7 @@ const MobileCalendarView = () => {
     setCurrentDate(newDate);
   };
 
-  const getDaysInMonth = () => {
+  const getDaysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -49,7 +51,7 @@ const MobileCalendarView = () => {
     }
     
     return days;
-  };
+  }, [currentDate]);
 
   const getEventsForDay = (day: number) => {
     if (!day) return [];
@@ -67,23 +69,25 @@ const MobileCalendarView = () => {
     );
   };
 
-  const todayEvents = events.filter(event => {
+  const todayEvents = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return event.start.startsWith(today);
-  });
+    return events.filter(event => event.start.startsWith(today));
+  }, [events]);
+
+  const upcomingEvents = useMemo(() => {
+    return events.slice(0, 5);
+  }, [events]);
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="bg-gray-200 rounded-2xl h-20 animate-pulse" />
-        ))}
+      <div className="p-4">
+        <CalendarSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       {/* Header with Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -150,7 +154,7 @@ const MobileCalendarView = () => {
       )}
 
       {/* Mini Calendar Grid */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="grid grid-cols-7 gap-1 mb-3">
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
             <div key={index} className="text-center text-xs font-medium text-gray-500 py-2">
@@ -160,13 +164,13 @@ const MobileCalendarView = () => {
         </div>
         
         <div className="grid grid-cols-7 gap-1">
-          {getDaysInMonth().map((day, index) => {
+          {getDaysInMonth.map((day, index) => {
             const dayEvents = day ? getEventsForDay(day) : [];
             return (
               <div
                 key={index}
                 className={cn(
-                  "aspect-square flex flex-col items-center justify-center text-sm relative rounded-lg",
+                  "aspect-square flex flex-col items-center justify-center text-sm relative rounded-lg transition-colors",
                   day ? "hover:bg-gray-50 cursor-pointer" : "",
                   isToday(day || 0) ? "bg-blue-500 text-white font-bold" : "text-gray-700"
                 )}
@@ -176,13 +180,16 @@ const MobileCalendarView = () => {
                     <span>{day}</span>
                     {dayEvents.length > 0 && (
                       <div className="absolute bottom-1 flex space-x-1">
-                        {dayEvents.slice(0, 3).map((_, i) => (
+                        {dayEvents.slice(0, 3).map((event, i) => (
                           <div
                             key={i}
                             className={cn(
                               "w-1 h-1 rounded-full",
-                              isToday(day) ? "bg-white" : "bg-blue-500"
+                              isToday(day) ? "bg-white" : ""
                             )}
+                            style={{ 
+                              backgroundColor: isToday(day) ? 'white' : (event.color || '#3600FF')
+                            }}
                           />
                         ))}
                       </div>
@@ -198,7 +205,7 @@ const MobileCalendarView = () => {
       {/* Upcoming Events */}
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-900">Próximos Eventos</h3>
-        {events.slice(0, 5).map(event => (
+        {upcomingEvents.map(event => (
           <MobileCalendarCard
             key={event.id}
             event={{
@@ -210,6 +217,8 @@ const MobileCalendarView = () => {
       </div>
     </div>
   );
-};
+});
+
+MobileCalendarView.displayName = 'MobileCalendarView';
 
 export default MobileCalendarView;

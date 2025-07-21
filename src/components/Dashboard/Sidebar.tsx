@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Mail, 
@@ -99,7 +100,11 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       onItemClick(itemId);
     } else {
       console.log('⚠️ Função em desenvolvimento para:', itemId);
-      alert('Função em desenvolvimento');
+      toast({
+        title: "Em desenvolvimento",
+        description: "Esta funcionalidade está sendo desenvolvida",
+        variant: "default"
+      });
     }
   };
 

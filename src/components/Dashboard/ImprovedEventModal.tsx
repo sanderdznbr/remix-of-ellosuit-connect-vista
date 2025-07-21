@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -376,22 +375,11 @@ const ImprovedEventModal = ({
                       onClick={() => setSelectedMeetingProvider(selectedMeetingProvider === 'google_meet' ? null : 'google_meet')}
                       className="h-20 p-4 flex items-center justify-center"
                     >
-                      <svg 
-                        width="60" 
-                        height="40" 
-                        viewBox="0 0 80 66" 
-                        fill="none" 
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="object-contain"
-                      >
-                        <path d="M61 45.9759V43.6468V40.4303V25.2907V22.0742L63.4783 16.9167L75.8696 7.10092C77.5217 5.71452 80 6.87912 80 9.04192V55.9581C80 58.1209 77.4667 59.2855 75.8145 57.8991L61 45.9759Z" fill="#00AC47"/>
-                        <path d="M20 0L0 20H20V0Z" fill="#EA4335"/>
-                        <path d="M20 20H0V46H20V20Z" fill="#2684FC"/>
-                        <path d="M0 46V59.3333C0 63 3 66 6.6667 66H20V46H0Z" fill="#0066DA"/>
-                        <path d="M63.5 6.5902C63.5 2.9656 60.5638 0 56.975 0H43.925H20V20H44.5V33L63.5 32.4016V6.5902Z" fill="#FFBA00"/>
-                        <path d="M44.5 46H20V66H43.925H56.975C60.5638 66 63.5 63.0387 63.5 59.4194V33H44.5V46Z" fill="#00AC47"/>
-                        <path d="M63.5 17V48L44.5 33L63.5 17Z" fill="#00832D"/>
-                      </svg>
+                      <img 
+                        src="/lovable-uploads/7e846fa0-7d39-4b0b-8448-c4e61d1c5b2f.png" 
+                        alt="Google Meet"
+                        className="w-[90%] h-auto object-contain"
+                      />
                     </Button>
                   )}
                   

@@ -6,11 +6,10 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, AlertCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import ImprovedEventModal from './ImprovedEventModal';
 import EventDetailsModal from './EventDetailsModal';
 import { useCalendarData } from '@/hooks/useCalendarData';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
 interface MyCalendarProps {
   onNavigate?: (page: string) => void;
@@ -24,7 +23,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [currentView, setCurrentView] = useState('dayGridMonth');
 
   const { events, loading, refreshEvents } = useCalendarData();
-  const { isConnected: googleConnected } = useGoogleCalendar();
 
   const handleDateClick = (arg: any) => {
     setSelectedDate(arg.dateStr);
@@ -41,12 +39,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       extendedProps: eventData.extendedProps
     });
     setShowDetailsModal(true);
-  };
-
-  const handleGoToSettings = () => {
-    if (onNavigate) {
-      onNavigate('settings');
-    }
   };
 
   const formatEventsForCalendar = (events: any[]) => {
@@ -101,30 +93,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </Button>
       </div>
 
-      {!googleConnected && (
-        <Card className="border-2 border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                <div>
-                  <h3 className="font-medium text-orange-900">Google Meet não conectado</h3>
-                  <p className="text-sm text-orange-700">Conecte para criar reuniões automáticas</p>
-                </div>
-              </div>
-              <Button
-                onClick={handleGoToSettings}
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                <SettingsIcon className="h-4 w-4 mr-2" />
-                Conectar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card className="shadow-lg border-0">
         <CardHeader className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] text-white">
           <CardTitle className="flex items-center space-x-2">
@@ -169,7 +137,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           setSelectedDate(null);
         }}
         selectedDate={selectedDate}
-        onEventCreated={() => {
+        onSuccess={() => {
           refreshEvents();
           setShowEventModal(false);
           setSelectedDate(null);
@@ -184,12 +152,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           setSelectedEvent(null);
         }}
         event={selectedEvent}
-        onEventUpdated={() => {
-          refreshEvents();
-          setShowDetailsModal(false);
-          setSelectedEvent(null);
-        }}
-        onEventDeleted={() => {
+        onSuccess={() => {
           refreshEvents();
           setShowDetailsModal(false);
           setSelectedEvent(null);

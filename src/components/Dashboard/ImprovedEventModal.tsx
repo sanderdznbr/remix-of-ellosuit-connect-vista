@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useZoomIntegration } from '@/hooks/useZoomIntegration';
+import { supabase } from '@/integrations/supabase/client';
 import { Video, Calendar, Users, Clock, Settings, Palette } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ColorPicker from './ColorPicker';
@@ -37,7 +38,7 @@ const ImprovedEventModal = ({
   const [endTime, setEndTime] = useState('');
   const [attendees, setAttendees] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [meetingProvider, setMeetingProvider] = useState<'google_meet' | 'zoom' | null>(null);
+  const [selectedMeetingProvider, setSelectedMeetingProvider] = useState<'google_meet' | 'zoom' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3600FF');
@@ -78,7 +79,7 @@ const ImprovedEventModal = ({
     setEndTime('');
     setAttendees('');
     setIsAllDay(false);
-    setMeetingProvider(null);
+    setSelectedMeetingProvider(null);
     setSelectedColor('#3600FF');
   };
 
@@ -141,10 +142,10 @@ const ImprovedEventModal = ({
 
       let meetingLink = '';
       let googleEventId = '';
-      let meetingProvider = '';
+      let finalMeetingProvider = '';
 
       // Criar reunião conforme o provedor selecionado
-      if (meetingProvider === 'google_meet' && isGoogleConnected) {
+      if (selectedMeetingProvider === 'google_meet' && isGoogleConnected) {
         try {
           const googleResult = await createGoogleMeetEvent({
             title,
@@ -157,7 +158,7 @@ const ImprovedEventModal = ({
           if (googleResult.success) {
             meetingLink = googleResult.meetLink;
             googleEventId = googleResult.googleEventId;
-            meetingProvider = 'google_meet';
+            finalMeetingProvider = 'google_meet';
           }
         } catch (error) {
           console.error('Error creating Google Meet event:', error);
@@ -167,7 +168,7 @@ const ImprovedEventModal = ({
             variant: "destructive"
           });
         }
-      } else if (meetingProvider === 'zoom' && isZoomConnected) {
+      } else if (selectedMeetingProvider === 'zoom' && isZoomConnected) {
         try {
           const zoomResult = await createZoomMeeting({
             title,
@@ -179,7 +180,7 @@ const ImprovedEventModal = ({
 
           if (zoomResult.success) {
             meetingLink = zoomResult.meetingLink;
-            meetingProvider = 'zoom';
+            finalMeetingProvider = 'zoom';
           }
         } catch (error) {
           console.error('Error creating Zoom meeting:', error);
@@ -200,7 +201,7 @@ const ImprovedEventModal = ({
         attendees: attendeesList,
         is_all_day: isAllDay,
         meeting_link: meetingLink,
-        meeting_provider: meetingProvider,
+        meeting_provider: finalMeetingProvider,
         google_event_id: googleEventId || undefined,
         color: selectedColor
       };
@@ -367,8 +368,8 @@ const ImprovedEventModal = ({
               {isGoogleConnected && (
                 <Button
                   type="button"
-                  variant={meetingProvider === 'google_meet' ? 'default' : 'outline'}
-                  onClick={() => setMeetingProvider(meetingProvider === 'google_meet' ? null : 'google_meet')}
+                  variant={selectedMeetingProvider === 'google_meet' ? 'default' : 'outline'}
+                  onClick={() => setSelectedMeetingProvider(selectedMeetingProvider === 'google_meet' ? null : 'google_meet')}
                   className="flex-1 h-16"
                 >
                   <img 
@@ -382,8 +383,8 @@ const ImprovedEventModal = ({
               {isZoomConnected && (
                 <Button
                   type="button"
-                  variant={meetingProvider === 'zoom' ? 'default' : 'outline'}
-                  onClick={() => setMeetingProvider(meetingProvider === 'zoom' ? null : 'zoom')}
+                  variant={selectedMeetingProvider === 'zoom' ? 'default' : 'outline'}
+                  onClick={() => setSelectedMeetingProvider(selectedMeetingProvider === 'zoom' ? null : 'zoom')}
                   className="flex-1 h-16"
                 >
                   <img 

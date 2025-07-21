@@ -38,7 +38,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
-  const { syncGoogleCalendarEvents } = useGoogleCalendar();
+  const { fullResyncCalendar } = useGoogleCalendar();
   const { toast } = useToast();
 
   const handleDateClick = (arg: any) => {
@@ -114,7 +114,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const handleRefreshCalendar = async () => {
     setIsRefreshing(true);
     try {
-      const result = await syncGoogleCalendarEvents();
+      const result = await fullResyncCalendar();
       await refreshEvents();
       
       toast({

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -23,18 +24,20 @@ interface GoogleCalendarState {
 const globalState = {
   clientId: null as string | null,
   lastCheck: 0,
-  checkInterval: 30000, // 30 seconds
+  checkInterval: 5000, // Reduzido para 5 segundos
   isProcessing: false,
   hasProcessedOAuth: false,
   processingTimeout: null as number | null,
+  cachedConnection: null as boolean | null,
+  cachedIntegration: null as GoogleIntegration | null,
 };
 
 export const useGoogleCalendar = () => {
   const [state, setState] = useState<GoogleCalendarState>({
-    isConnected: false,
+    isConnected: globalState.cachedConnection ?? false,
     loading: false,
     processingOAuth: false,
-    integration: null,
+    integration: globalState.cachedIntegration,
     error: null
   });
   
@@ -50,8 +53,8 @@ export const useGoogleCalendar = () => {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Debounced function calls
-  const debounce = useCallback((fn: Function, delay: number) => {
+  // Debounced function calls - reduzido o delay
+  const debounce = useCallback((fn: Function, delay: number = 100) => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -85,19 +88,24 @@ export const useGoogleCalendar = () => {
     }
   }, []);
 
-  // Check connection with debounce and cache
+  // Check connection with improved caching and faster response
   const checkConnection = useCallback(async (force = false) => {
     if (!user || authLoading) return;
     
-    // Prevent multiple simultaneous calls
-    if (globalState.isProcessing && !force) return;
-    
-    // Cache check
+    // Retornar cache imediatamente se disponível e recente
     const now = Date.now();
-    if (!force && (now - globalState.lastCheck) < globalState.checkInterval && state.integration) {
+    if (!force && globalState.cachedConnection !== null && (now - globalState.lastCheck) < globalState.checkInterval) {
+      updateState({ 
+        isConnected: globalState.cachedConnection,
+        integration: globalState.cachedIntegration,
+        loading: false 
+      });
       return;
     }
 
+    // Prevent multiple simultaneous calls
+    if (globalState.isProcessing && !force) return;
+    
     globalState.isProcessing = true;
     updateState({ loading: true, error: null });
     
@@ -126,6 +134,8 @@ export const useGoogleCalendar = () => {
         }
         
         console.log('✅ Google Meet is connected');
+        globalState.cachedConnection = true;
+        globalState.cachedIntegration = data;
         updateState({ 
           integration: data, 
           isConnected: true, 
@@ -133,6 +143,8 @@ export const useGoogleCalendar = () => {
         });
       } else {
         console.log('ℹ️ Google Meet not connected');
+        globalState.cachedConnection = false;
+        globalState.cachedIntegration = null;
         updateState({ 
           isConnected: false, 
           integration: null, 
@@ -141,6 +153,8 @@ export const useGoogleCalendar = () => {
       }
     } catch (error) {
       console.error('❌ Error checking connection:', error);
+      globalState.cachedConnection = false;
+      globalState.cachedIntegration = null;
       updateState({ 
         isConnected: false, 
         integration: null, 
@@ -265,6 +279,8 @@ export const useGoogleCalendar = () => {
         
         // Clear cache and check connection
         globalState.lastCheck = 0;
+        globalState.cachedConnection = null;
+        globalState.cachedIntegration = null;
         
         setTimeout(() => {
           checkConnection(true);
@@ -273,7 +289,7 @@ export const useGoogleCalendar = () => {
             description: "Google Meet foi conectado com sucesso!",
             duration: 5000,
           });
-        }, 1000);
+        }, 500); // Reduzido o delay
         
       } else {
         throw new Error(data?.error || 'Resposta inesperada do servidor');
@@ -340,6 +356,12 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       }
 
       console.log('✅ Token renewed successfully');
+      
+      // Clear cache to force refresh
+      globalState.cachedConnection = null;
+      globalState.cachedIntegration = null;
+      globalState.lastCheck = 0;
+      
       return data.access_token;
     } catch (error) {
       console.error('❌ Token renewal error:', error);
@@ -421,6 +443,8 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       // Clear cache
       globalState.clientId = null;
       globalState.lastCheck = 0;
+      globalState.cachedConnection = false;
+      globalState.cachedIntegration = null;
 
       updateState({ 
         isConnected: false, 
@@ -450,7 +474,7 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
     return [];
   }, []);
 
-  // Main effect for initialization and OAuth processing
+  // Main effect for initialization and OAuth processing - otimizado
   useEffect(() => {
     // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
@@ -500,14 +524,24 @@ https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/google-calendar
       return;
     }
     
-    // Normal initialization with debounce
+    // Normal initialization - mais rápido
     if (!authLoading && user && !globalState.isProcessing) {
+      // Se temos cache, usar imediatamente
+      if (globalState.cachedConnection !== null) {
+        updateState({
+          isConnected: globalState.cachedConnection,
+          integration: globalState.cachedIntegration,
+          loading: false
+        });
+      }
+      
+      // Verificar conexão com delay menor
       debounce(() => {
         checkConnection();
         getGoogleClientId();
-      }, 500);
+      }, 50);
     }
-  }, [user, authLoading, checkConnection, getGoogleClientId, processGoogleOAuthCode, toast, debounce]);
+  }, [user, authLoading, checkConnection, getGoogleClientId, processGoogleOAuthCode, toast, debounce, updateState]);
 
   // Cleanup effect
   useEffect(() => {

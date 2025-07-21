@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Mail, 
@@ -14,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,12 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
 
   const menuSections = [
     {
+      title: 'Dashboard',
+      items: [
+        { id: 'home', label: 'Início', icon: Home },
+      ]
+    },
+    {
       title: 'Email',
       items: [
         { id: 'mail-tracking', label: 'Rastreamento', icon: Mail },
@@ -63,7 +69,6 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
     {
       title: 'Sistema',
       items: [
-        { id: 'team', label: 'Equipe', icon: Users },
         { id: 'settings', label: 'Configurações', icon: Settings },
         { id: 'whatsapp-api', label: 'API WhatsApp', icon: MessageCircle },
       ]
@@ -75,6 +80,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
     
     // Itens que têm páginas implementadas
     const implementedItems = [
+      'home',
       'mail-tracking', 
       'campaign-mail', 
       'mail-productivity', 
@@ -85,7 +91,6 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
       'documents', 
       'clients', 
       'analytics',
-      'team',
       'settings'
     ];
     

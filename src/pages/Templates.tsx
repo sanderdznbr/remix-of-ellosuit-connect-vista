@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import MobileLayout from '@/components/Mobile/MobileLayout';
@@ -6,7 +7,7 @@ import EmailTemplates from '@/components/Dashboard/EmailTemplates';
 
 const Templates = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
+  const { isMobile } = useIsMobile();
 
   if (!user) {
     return null;
@@ -19,13 +20,15 @@ const Templates = () => {
         activeItem="templates" 
         onItemClick={() => {}}
       >
-        <EmailTemplates />
+        <div className="p-4">
+          <EmailTemplates />
+        </div>
       </MobileLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-7xl mx-auto p-6">
         <EmailTemplates />
       </div>

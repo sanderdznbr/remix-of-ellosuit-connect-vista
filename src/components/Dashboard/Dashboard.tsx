@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
+import Home from './Home';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
 import MailProductivity from './MailProductivity';
@@ -12,7 +13,6 @@ import Analytics from './Analytics';
 import StartMeet from './StartMeet';
 import EmailTemplates from './EmailTemplates';
 import Settings from './Settings';
-import Team from '../../pages/Team';
 import TestGoogleSecrets from '@/components/TestGoogleSecrets';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -20,7 +20,7 @@ import MobileLayout from '@/components/Mobile/MobileLayout';
 
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState('mail-tracking');
+  const [activeItem, setActiveItem] = useState('home');
   const { isMobile, isLoading } = useIsMobile();
 
   const handleSidebarToggle = () => {
@@ -34,6 +34,8 @@ const Dashboard = () => {
 
   const getPageTitle = () => {
     switch (activeItem) {
+      case 'home':
+        return 'Início';
       case 'mail-tracking':
         return 'Rastreamento de Email';
       case 'campaign-mail':
@@ -54,8 +56,6 @@ const Dashboard = () => {
         return 'Clientes';
       case 'analytics':
         return 'Análises';
-      case 'team':
-        return 'Equipe';
       case 'settings':
         return 'Configurações';
       case 'test-secrets':
@@ -68,6 +68,8 @@ const Dashboard = () => {
   const renderContent = () => {
     console.log('📋 Renderizando conteúdo para:', activeItem);
     switch (activeItem) {
+      case 'home':
+        return <Home onNavigate={handleItemClick} />;
       case 'mail-tracking':
         return <MailTracking />;
       case 'campaign-mail':
@@ -88,14 +90,12 @@ const Dashboard = () => {
         return <ClientsManager />;
       case 'analytics':
         return <Analytics />;
-      case 'team':
-        return <Team />;
       case 'settings':
         return <Settings />;
       case 'test-secrets':
         return <TestGoogleSecrets />;
       default:
-        return <MailTracking />;
+        return <Home onNavigate={handleItemClick} />;
     }
   };
 

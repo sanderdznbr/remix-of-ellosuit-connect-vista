@@ -196,7 +196,7 @@ const SidebarEditor = () => {
             <CardHeader className="p-6">
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Cor Principal da Sidebar
+                Cor dos Itens Selecionados
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 pt-0">
@@ -240,11 +240,11 @@ const SidebarEditor = () => {
                     <button
                       onClick={() => setShowBackgroundColorPicker(!showBackgroundColorPicker)}
                       className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
-                      style={{ backgroundColor: settings.sidebar_background_color || '#ffffff' }}
+                      style={{ backgroundColor: settings.sidebar_background_color || '#3600FF' }}
                     />
                     {showBackgroundColorPicker && (
                       <ColorWheel
-                        color={settings.sidebar_background_color || '#ffffff'}
+                        color={settings.sidebar_background_color || '#3600FF'}
                         onChange={handleBackgroundColorChange}
                         onClose={() => setShowBackgroundColorPicker(false)}
                       />
@@ -252,7 +252,7 @@ const SidebarEditor = () => {
                   </div>
                   <div className="flex-1">
                     <Label>Cor de Fundo Selecionada</Label>
-                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_background_color || '#ffffff'}</div>
+                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_background_color || '#3600FF'}</div>
                   </div>
                 </div>
               </div>
@@ -293,11 +293,11 @@ const SidebarEditor = () => {
                 ) : (
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center space-x-3 mb-2">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600"
-                      >
-                        E
-                      </div>
+                      <img 
+                        src="/lovable-uploads/ed54eb39-e51c-4ba2-817b-41de8affc95c.png" 
+                        alt="ElloSuit Logo" 
+                        className="h-10 w-auto"
+                      />
                       <span className="text-lg font-bold text-gray-900">ElloSuit</span>
                     </div>
                     <p className="text-sm text-gray-500">Logo padrão da ElloSuit</p>

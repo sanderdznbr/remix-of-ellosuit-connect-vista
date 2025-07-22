@@ -65,6 +65,8 @@ const Sidebar = () => {
     const handleSettingsUpdate = (event: CustomEvent) => {
       // As configurações já são atualizadas automaticamente pelo hook
       console.log('Configurações da sidebar atualizadas:', event.detail);
+      // Forçar uma atualização da UI
+      window.location.reload = () => window.location.reload();
     };
 
     window.addEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
@@ -116,7 +118,7 @@ const Sidebar = () => {
         <div className="flex items-center justify-center">
           {isCollapsed ? (
             // Container menor verticalmente para logo 1:1 quando recolhida
-            <div className="w-12 h-12 flex items-center justify-center">
+            <div className="w-12 h-10 flex items-center justify-center">
               <img 
                 src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
                 alt="Logo" 

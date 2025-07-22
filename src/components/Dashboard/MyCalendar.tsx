@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -17,6 +16,7 @@ import EventClusterModal from './EventClusterModal';
 import CalendarSkeleton from './CalendarSkeleton';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useRealtimeGoogleSync } from '@/hooks/useRealtimeGoogleSync';
 import './calendar-styles.css';
 
 interface MyCalendarProps {
@@ -34,11 +34,11 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [clusterEvents, setClusterEvents] = useState<any[]>([]);
   const [currentView, setCurrentView] = useState('dayGridMonth');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
-  const { fullResyncCalendar, isConnected, autoSyncCalendar } = useGoogleCalendar();
+  const { isConnected } = useGoogleCalendar();
+  const { syncing, lastSyncTime, syncStats, syncGoogleCalendar } = useRealtimeGoogleSync();
   const { toast } = useToast();
 
   const handleDateClick = (arg: any) => {
@@ -103,7 +103,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const handleCreateEvent = async (eventData: any) => {
     try {
       await createEvent(eventData);
-      // Immediately refresh events after creation to show the new event
       await refreshEvents();
       handleCloseAllModals();
     } catch (error) {
@@ -120,46 +119,29 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setSelectedRange(null);
   };
 
-  const handleRefreshCalendar = async () => {
-    setIsRefreshing(true);
-    try {
-      if (isConnected) {
-        console.log('🔄 Iniciando sincronização manual...');
-        const result = await fullResyncCalendar();
-        
-        toast({
-          title: "✅ Sincronização Completa",
-          description: `${result.created} eventos sincronizados do Google Calendar`,
-          duration: 5000
-        });
-      } else {
-        // Se não conectado, apenas atualizar eventos locais
-        await refreshEvents();
-        toast({
-          title: "✅ Calendário Atualizado",
-          description: "Eventos locais foram atualizados",
-          duration: 3000
-        });
+  const handleManualSync = async () => {
+    if (isConnected) {
+      try {
+        await syncGoogleCalendar(true); // Mostrar toast na sincronização manual
+        await refreshEvents(); // Atualizar eventos locais
+      } catch (error) {
+        console.error('Error in manual sync:', error);
       }
-    } catch (error) {
-      console.error('Error synchronizing:', error);
+    } else {
       toast({
-        title: "❌ Erro na Sincronização", 
-        description: "Erro ao sincronizar eventos do Google Calendar",
+        title: "Google Calendar não conectado",
+        description: "Conecte seu Google Calendar nas configurações para sincronizar",
         variant: "destructive"
       });
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
-  // Executar sincronização automática quando o componente carregar
+  // Atualizar eventos quando houver mudanças na sincronização
   useEffect(() => {
-    if (isConnected) {
-      console.log('🔄 Executando sincronização automática ao carregar calendário...');
-      autoSyncCalendar();
+    if (lastSyncTime) {
+      refreshEvents();
     }
-  }, [isConnected, autoSyncCalendar]);
+  }, [lastSyncTime, refreshEvents]);
 
   const formatEventsForCalendar = (events: any[]) => {
     return events.map((event) => {
@@ -234,18 +216,23 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </h1>
           <p className="text-gray-600">
             Gerencie seus eventos, reuniões e compromissos
+            {isConnected && lastSyncTime && (
+              <span className="block text-xs text-green-600 mt-1">
+                ✅ Sincronizado: {lastSyncTime.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         
         <div className="flex space-x-3">
           <Button 
-            onClick={handleRefreshCalendar}
-            disabled={isRefreshing}
+            onClick={handleManualSync}
+            disabled={syncing}
             variant="outline"
             className="rounded-xl border-[#3600FF]/20 hover:bg-[#3600FF]/5"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Sincronizando...' : 'Sincronizar'}
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar'}
           </Button>
           
           <Button 
@@ -257,6 +244,20 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </Button>
         </div>
       </div>
+
+      {isConnected && syncStats.total_processed > 0 && (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-4 text-sm text-green-700">
+              <span>📊 Última sincronização:</span>
+              <span>{syncStats.synced} novos</span>
+              <span>{syncStats.updated} atualizados</span>
+              <span>{syncStats.deleted} removidos</span>
+              <span>({syncStats.total_processed} total processados)</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-xl border-0 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
         <CardContent className="p-6">

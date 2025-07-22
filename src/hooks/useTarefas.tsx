@@ -3,16 +3,36 @@ import { useState, useEffect } from 'react';
 import { useCalendarData } from './useCalendarData';
 import { useToast } from './use-toast';
 
+interface TarefaItem {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  start_date: string;
+  end_date: string;
+  description?: string;
+  event_type: 'meeting' | 'appointment' | 'reminder';
+  status: 'pending' | 'completed';
+  meeting_link?: string;
+  google_event_id?: string;
+  source?: string;
+  attendees?: string[];
+  meeting_provider?: string;
+  is_all_day?: boolean;
+  meeting_data?: any;
+  color?: string;
+}
+
 export const useTarefas = () => {
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
   const { toast } = useToast();
-  const [tarefas, setTarefas] = useState<any[]>([]);
+  const [tarefas, setTarefas] = useState<TarefaItem[]>([]);
 
   useEffect(() => {
     // Converter eventos do calendário para o formato de tarefas
-    const tarefasFormatted = events.map(event => ({
+    const tarefasFormatted: TarefaItem[] = events.map(event => ({
       ...event,
-      status: event.status || 'pending'
+      status: 'pending' as const // Adicionar status padrão
     }));
     setTarefas(tarefasFormatted);
   }, [events]);

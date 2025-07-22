@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -98,21 +99,23 @@ const Sidebar = () => {
       </button>
 
       {/* Logo */}
-      <div className="p-6 pb-4">
-        <div className="flex items-center space-x-3">
+      <div className={`${isCollapsed ? 'p-2 pt-4' : 'p-6 pb-4'}`}>
+        <div className="flex items-center justify-center">
           {isCollapsed ? (
-            // Exibe favicon 1:1 quando recolhida - agora com 80x80px (60% maior)
-            <img 
-              src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
-              alt="Logo" 
-              className="h-[80px] w-[80px] object-contain transition-all duration-300"
-              onError={(e) => {
-                e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
-              }}
-            />
+            // Container menor verticalmente para logo 1:1 quando recolhida
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img 
+                src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
+                alt="Logo" 
+                className="w-[90%] h-[90%] object-contain transition-all duration-300"
+                onError={(e) => {
+                  e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
+                }}
+              />
+            </div>
           ) : (
             // Exibe logo completa quando expandida
-            <>
+            <div className="flex items-center space-x-3">
               {settings.custom_logo_url ? (
                 <img 
                   src={settings.custom_logo_url} 
@@ -140,7 +143,7 @@ const Sidebar = () => {
                   </span>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

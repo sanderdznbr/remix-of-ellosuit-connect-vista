@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileHeader from './MobileHeader';
 import MobileBottomNavigation from './MobileBottomNavigation';
+import '@/styles/mobile-theme.css';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -37,10 +39,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         onAddClick={onAddClick}
       />
       
-      <main className="pb-20 pt-4">
-        <div className="px-4">
-          {children}
-        </div>
+      <main className="pb-20 mobile-safe-top">
+        {children}
       </main>
       
       <MobileBottomNavigation

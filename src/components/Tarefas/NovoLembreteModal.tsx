@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Plus, Calendar, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { vibrate } from '@/utils/mobile-helpers';
+import MobileModal from '@/components/ui/mobile-modal';
+import MobileButton from '@/components/ui/mobile-button';
+import MobileCard from '@/components/ui/mobile-card';
 
 interface NovoLembreteModalProps {
   isOpen: boolean;
@@ -34,6 +37,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     };
 
     await onSave(tarefaData);
+    vibrate(30);
     
     // Reset form
     setTitle('');
@@ -42,24 +46,14 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     setSelectedTime('09:00');
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-end">
-      <div className="bg-white w-full rounded-t-3xl p-6 space-y-6 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Novo Lembrete</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
+    <MobileModal 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title="Novo Lembrete"
+      size="lg"
+    >
+      <div className="p-6 space-y-6">
         {/* Form */}
         <div className="space-y-4">
           <div>
@@ -67,7 +61,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
               placeholder="Título do lembrete"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 text-base py-3 rounded-xl"
+              className="mobile-input text-lg font-medium"
             />
           </div>
 
@@ -76,51 +70,84 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
               placeholder="Descrição (opcional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 text-base min-h-[80px] resize-none rounded-xl"
+              className="mobile-input min-h-[100px] resize-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-gray-500 mb-2 block">Data</label>
+          {/* Date & Time Selection */}
+          <div className="space-y-3">
+            <MobileCard className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <Calendar className="h-5 w-5 text-gray-600" />
+                <span className="font-medium text-gray-900">Data</span>
+              </div>
               <Input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-gray-50 border-gray-200 text-gray-900 text-base rounded-xl"
+                className="mobile-input"
               />
-            </div>
-            <div>
-              <label className="text-sm text-gray-500 mb-2 block">Hora</label>
+            </MobileCard>
+
+            <MobileCard className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <Clock className="h-5 w-5 text-gray-600" />
+                <span className="font-medium text-gray-900">Hora</span>
+              </div>
               <Input
                 type="time"
                 value={selectedTime}
                 onChange={(e) => setSelectedTime(e.target.value)}
-                className="bg-gray-50 border-gray-200 text-gray-900 text-base rounded-xl"
+                className="mobile-input"
               />
-            </div>
+            </MobileCard>
           </div>
         </div>
 
+        {/* Preview */}
+        {title && (
+          <MobileCard className="p-4 bg-blue-50 border-blue-200">
+            <div className="flex items-start space-x-3">
+              <div className="w-3 h-3 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div>
+                <h3 className="font-semibold text-gray-900">{title}</h3>
+                {description && (
+                  <p className="text-sm text-gray-600 mt-1">{description}</p>
+                )}
+                <p className="text-sm text-blue-600 mt-2">
+                  {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
+                    day: 'numeric',
+                    month: 'long',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
+          </MobileCard>
+        )}
+
         {/* Actions */}
         <div className="flex space-x-3 pt-4">
-          <Button
-            variant="outline"
+          <MobileButton
+            variant="secondary"
             onClick={onClose}
-            className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 rounded-xl"
+            className="flex-1"
           >
             Cancelar
-          </Button>
-          <Button
+          </MobileButton>
+          <MobileButton
+            variant="primary"
             onClick={handleSave}
             disabled={!title.trim()}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 rounded-xl"
+            className="flex-1 flex items-center justify-center space-x-2"
           >
-            Salvar
-          </Button>
+            <Plus className="h-4 w-4" />
+            <span>Salvar</span>
+          </MobileButton>
         </div>
       </div>
-    </div>
+    </MobileModal>
   );
 };
 

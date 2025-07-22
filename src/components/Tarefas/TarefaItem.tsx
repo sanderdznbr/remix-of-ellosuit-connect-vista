@@ -1,8 +1,11 @@
 
-import React, { useState, useRef } from 'react';
-import { Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, Clock, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSwipeGesture } from '@/hooks/use-mobile-gestures';
+import { formatDateMobile, formatTimeMobile, vibrate } from '@/utils/mobile-helpers';
 import TarefaDetailsModal from './TarefaDetailsModal';
+import MobileCard from '@/components/ui/mobile-card';
 
 interface TarefaItemProps {
   tarefa: any;
@@ -12,192 +15,159 @@ interface TarefaItemProps {
 
 const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) => {
   const [isCompleted, setIsCompleted] = useState(tarefa.status === 'completed');
-  const [swipeX, setSwipeX] = useState(0);
   const [showModal, setShowModal] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const startX = useRef(0);
-  const currentX = useRef(0);
+  const [swipeDistance, setSwipeDistance] = useState(0);
+
+  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
+    onSwipeLeft: () => {
+      setSwipeDistance(-80);
+      vibrate(50);
+    },
+    onSwipeRight: () => {
+      setSwipeDistance(0);
+    },
+    threshold: 50
+  });
 
   const handleToggleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const newStatus = isCompleted ? 'pending' : 'completed';
     setIsCompleted(!isCompleted);
     await onUpdate(tarefa.id, { status: newStatus });
+    vibrate(30);
   };
 
   const handleItemClick = () => {
-    if (!isDragging && swipeX === 0) {
+    if (swipeDistance === 0) {
       setShowModal(true);
     }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    setIsDragging(false);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!startX.current) return;
-    
-    currentX.current = e.touches[0].clientX;
-    const diffX = currentX.current - startX.current;
-    
-    if (Math.abs(diffX) > 5) {
-      setIsDragging(true);
-    }
-    
-    // Only allow left swipe (negative values)
-    if (diffX < 0) {
-      setSwipeX(Math.max(diffX, -100));
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (swipeX < -50) {
-      setSwipeX(-80);
-    } else {
-      setSwipeX(0);
-    }
-    
-    setTimeout(() => setIsDragging(false), 100);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(tarefa.id);
-  };
-
-  const formatTime = (dateStr: string) => {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const today = new Date();
-    
-    if (date.toDateString() === today.toDateString()) {
-      return '';
-    }
-    
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    vibrate([50, 100, 50]);
   };
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting':
-        return 'text-blue-500';
+        return 'bg-blue-500';
       case 'appointment':
-        return 'text-green-500';
+        return 'bg-green-500';
       case 'reminder':
-        return 'text-orange-500';
+        return 'bg-orange-500';
       default:
-        return 'text-gray-500';
+        return 'bg-gray-500';
     }
   };
 
   return (
     <>
-      <div className="relative overflow-hidden border-b border-gray-100 bg-white">
+      <div className="relative mb-3 overflow-hidden rounded-xl">
         {/* Delete Button Background */}
         <div 
           className={cn(
-            "absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center transition-opacity duration-200",
-            swipeX < -20 ? "opacity-100" : "opacity-0"
+            "absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center transition-all duration-200",
+            swipeDistance < -20 ? "opacity-100" : "opacity-0"
           )}
         >
           <button
             onClick={handleDeleteClick}
-            className="text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+            className="text-white p-3 rounded-full hover:bg-red-600 transition-colors mobile-touch-feedback"
           >
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
 
         {/* Main Content */}
-        <div 
+        <MobileCard
           className={cn(
-            "flex items-start space-x-4 py-4 px-4 bg-white transition-transform duration-200 ease-out",
-            isDragging ? "cursor-grabbing" : "cursor-pointer"
+            "transition-transform duration-200 ease-out",
+            isCompleted && "opacity-75"
           )}
-          style={{ 
-            transform: `translateX(${swipeX}px)`,
-            touchAction: 'pan-y'
-          }}
+          style={{ transform: `translateX(${swipeDistance}px)` }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
           onClick={handleItemClick}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          pressable
         >
-          {/* Checkbox */}
-          <button
-            onClick={handleToggleComplete}
-            className={cn(
-              "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0",
-              isCompleted
-                ? "bg-blue-500 border-blue-500"
-                : "border-gray-300 hover:border-gray-400"
-            )}
-          >
-            {isCompleted && (
-              <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-          </button>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div
+          <div className="flex items-start space-x-4 p-4">
+            {/* Checkbox */}
+            <button
+              onClick={handleToggleComplete}
               className={cn(
-                "text-gray-900 text-base leading-snug font-medium",
-                isCompleted && "line-through text-gray-500"
+                "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0 mobile-touch-feedback",
+                isCompleted
+                  ? "bg-blue-500 border-blue-500"
+                  : "border-gray-300 hover:border-gray-400"
               )}
             >
-              {tarefa.title}
-            </div>
-            
-            {tarefa.description && (
-              <div className={cn(
-                "text-sm text-gray-600 mt-1",
-                isCompleted && "line-through text-gray-400"
-              )}>
-                {tarefa.description}
-              </div>
-            )}
+              {isCompleted && (
+                <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
 
-            <div className="flex items-center space-x-3 mt-2">
-              {formatTime(tarefa.start_date) && (
-                <span className={cn(
-                  "text-xs font-medium",
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className={cn(
+                    "text-gray-900 text-base font-semibold leading-snug",
+                    isCompleted && "line-through text-gray-500"
+                  )}>
+                    {tarefa.title}
+                  </h3>
+                  
+                  {tarefa.description && (
+                    <p className={cn(
+                      "text-sm text-gray-600 mt-1 line-clamp-2",
+                      isCompleted && "line-through text-gray-400"
+                    )}>
+                      {tarefa.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Event Type Indicator */}
+                <div className={cn(
+                  "w-3 h-3 rounded-full flex-shrink-0 ml-3 mt-1",
                   getEventTypeColor(tarefa.event_type)
-                )}>
-                  {formatTime(tarefa.start_date)}
-                </span>
-              )}
-              
-              {formatDate(tarefa.start_date) && (
-                <span className="text-xs text-red-500 font-medium">
-                  {formatDate(tarefa.start_date)}
-                </span>
-              )}
-              
-              {tarefa.attendees && tarefa.attendees.length > 0 && (
-                <span className="text-xs text-gray-500">
-                  Com {tarefa.attendees[0]}
-                </span>
-              )}
+                )} />
+              </div>
+
+              {/* Meta Information */}
+              <div className="flex items-center space-x-4 mt-3">
+                {formatTimeMobile(tarefa.start_date) && (
+                  <div className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600 font-medium">
+                      {formatTimeMobile(tarefa.start_date)}
+                    </span>
+                  </div>
+                )}
+                
+                {formatDateMobile(tarefa.start_date) !== 'Hoje' && (
+                  <span className="text-sm text-red-500 font-medium">
+                    {formatDateMobile(tarefa.start_date)}
+                  </span>
+                )}
+                
+                {tarefa.attendees && tarefa.attendees.length > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <Users className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {tarefa.attendees.length}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </MobileCard>
       </div>
 
       {/* Modal */}

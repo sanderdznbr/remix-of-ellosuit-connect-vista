@@ -89,7 +89,7 @@ const Dashboard = () => {
       case 'clients':
         return <ClientsManager />;
       case 'analytics':
-        return <Analytics onNavigate={handleItemClick} />;
+        return <Analytics />;
       case 'settings':
         return <Settings />;
       case 'test-secrets':

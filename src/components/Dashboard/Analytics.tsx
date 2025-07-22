@@ -121,17 +121,17 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6 bg-gray-50 min-h-screen ml-4">
+      <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h1 className="text-3xl font-bold text-gray-900">Carregando Análises...</h1>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h1 className="text-4xl font-bold text-gray-900">Carregando Análises...</h1>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse border-none shadow-lg rounded-2xl">
-              <CardContent className="p-6">
-                <div className="h-16 bg-gray-200 rounded-xl"></div>
+            <Card key={i} className="animate-pulse border-none shadow-lg rounded-3xl">
+              <CardContent className="p-8">
+                <div className="h-24 bg-gray-200 rounded-2xl"></div>
               </CardContent>
             </Card>
           ))}
@@ -141,74 +141,74 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen ml-4">
+    <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-3 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          📊 Análises
+        <h1 className="text-5xl font-bold mb-4 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          📊 Analytics
         </h1>
-        <p className="text-gray-600 text-base">
+        <p className="text-gray-600 text-xl">
           Acompanhe o desempenho do seu negócio com métricas detalhadas
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-          <CardContent className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Total de Emails</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalEmails}</p>
-                <p className="text-xs text-gray-500 mt-1">enviados</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.totalEmails}</p>
+                <p className="text-sm text-gray-500 mt-2">enviados</p>
               </div>
-              <div className="p-3 rounded-full bg-blue-50">
-                <Mail className="h-6 w-6 text-blue-600" />
+              <div className="p-5 rounded-full bg-blue-50">
+                <Mail className="h-8 w-8 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-          <CardContent className="p-6">
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Reuniões</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalMeetings}</p>
-                <p className="text-xs text-gray-500 mt-1">agendadas</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.totalMeetings}</p>
+                <p className="text-sm text-gray-500 mt-2">agendadas</p>
               </div>
-              <div className="p-3 rounded-full bg-green-50">
-                <Calendar className="h-6 w-6 text-green-600" />
+              <div className="p-5 rounded-full bg-green-50">
+                <Calendar className="h-8 w-8 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-          <CardContent className="p-6">
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Clientes</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalClients}</p>
-                <p className="text-xs text-gray-500 mt-1">cadastrados</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.totalClients}</p>
+                <p className="text-sm text-gray-500 mt-2">cadastrados</p>
               </div>
-              <div className="p-3 rounded-full bg-purple-50">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="p-5 rounded-full bg-purple-50">
+                <Users className="h-8 w-8 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-          <CardContent className="p-6">
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Modelos</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalTemplates}</p>
-                <p className="text-xs text-gray-500 mt-1">criados</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Templates</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.totalTemplates}</p>
+                <p className="text-sm text-gray-500 mt-2">criados</p>
               </div>
-              <div className="p-3 rounded-full bg-orange-50">
-                <FileText className="h-6 w-6 text-orange-600" />
+              <div className="p-5 rounded-full bg-orange-50">
+                <FileText className="h-8 w-8 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -216,32 +216,32 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-none shadow-lg rounded-2xl bg-white">
+      <Card className="border-none shadow-xl rounded-3xl bg-white">
         <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-xl">
-            <Target className="h-6 w-6 text-[#3600FF]" />
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Target className="h-8 w-8 text-[#3600FF]" />
             Ações Rápidas
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
                 <button
                   key={index}
                   onClick={action.action}
-                  className={`group p-4 rounded-2xl ${action.color} text-white hover:shadow-lg transition-all duration-300 transform hover:scale-105`}
+                  className={`group p-6 rounded-3xl ${action.color} text-white hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
                 >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="p-3 rounded-full bg-white/20">
-                      <Icon className="h-6 w-6" />
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="p-4 rounded-full bg-white/20">
+                      <Icon className="h-8 w-8" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-base mb-1">{action.title}</h3>
+                      <h3 className="font-semibold text-lg mb-1">{action.title}</h3>
                       <p className="text-sm text-white/80">{action.description}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </button>
               );
@@ -251,59 +251,59 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
       </Card>
 
       {/* Analytics Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 rounded-xl bg-white shadow-lg">
-          <TabsTrigger value="overview" className="rounded-lg">Visão Geral</TabsTrigger>
-          <TabsTrigger value="email" className="rounded-lg">Email Marketing</TabsTrigger>
-          <TabsTrigger value="meetings" className="rounded-lg">Reuniões</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white shadow-lg">
+          <TabsTrigger value="overview" className="rounded-xl">Visão Geral</TabsTrigger>
+          <TabsTrigger value="email" className="rounded-xl">Email Marketing</TabsTrigger>
+          <TabsTrigger value="meetings" className="rounded-xl">Reuniões</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-none shadow-lg rounded-2xl bg-white">
+        <TabsContent value="overview" className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="border-none shadow-xl rounded-3xl bg-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <PieChart className="h-5 w-5 text-[#3600FF]" />
+                <CardTitle className="flex items-center gap-3">
+                  <PieChart className="h-6 w-6 text-[#3600FF]" />
                   Distribuição de Atividades
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">Gráfico de distribuição será exibido aqui</p>
+              <CardContent className="p-8">
+                <div className="text-center py-12">
+                  <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">Gráfico de distribuição será exibido aqui</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg rounded-2xl bg-white">
+            <Card className="border-none shadow-xl rounded-3xl bg-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <Clock className="h-5 w-5 text-[#3600FF]" />
+                <CardTitle className="flex items-center gap-3">
+                  <Clock className="h-6 w-6 text-[#3600FF]" />
                   Atividade por Período
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">Gráfico de timeline será exibido aqui</p>
+              <CardContent className="p-8">
+                <div className="text-center py-12">
+                  <BarChart3 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">Gráfico de timeline será exibido aqui</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="email" className="space-y-6">
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-8">
+        <TabsContent value="email" className="space-y-8">
+          <Card className="border-none shadow-xl rounded-3xl bg-white">
+            <CardContent className="p-12">
               <div className="text-center">
-                <Mail className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <Mail className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
                   Análises de Email Marketing
                 </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm">
+                <p className="text-gray-600 mb-8 max-w-md mx-auto">
                   As análises detalhadas de email marketing estarão disponíveis quando você começar a enviar campanhas.
                 </p>
-                <Button onClick={() => onNavigate('mail-tracking')} className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-lg">
+                <Button onClick={() => onNavigate('mail-tracking')} className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl">
                   <Mail className="h-4 w-4 mr-2" />
                   Ir para Rastreamento
                 </Button>
@@ -312,18 +312,18 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="meetings" className="space-y-6">
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-8">
+        <TabsContent value="meetings" className="space-y-8">
+          <Card className="border-none shadow-xl rounded-3xl bg-white">
+            <CardContent className="p-12">
               <div className="text-center">
-                <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <Calendar className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
                   Análises de Reuniões
                 </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm">
+                <p className="text-gray-600 mb-8 max-w-md mx-auto">
                   Acompanhe o desempenho das suas reuniões e compromissos agendados.
                 </p>
-                <Button onClick={() => onNavigate('my-calendar')} className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-lg">
+                <Button onClick={() => onNavigate('my-calendar')} className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl">
                   <Calendar className="h-4 w-4 mr-2" />
                   Ver Calendário
                 </Button>

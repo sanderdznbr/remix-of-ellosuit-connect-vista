@@ -1,257 +1,379 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Plus, Video, Users, Clock, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import './calendar-styles.css';
-import { useCalendarData } from '@/hooks/useCalendarData';
-import { useAuth } from '@/hooks/useAuth';
-import EventDetailsModal from './EventDetailsModal';
+import { Plus, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
+import AppointmentModal from './AppointmentModal';
+import ReminderModal from './ReminderModal';
+import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
+import EventTypeSelector from './EventTypeSelector';
+import EventClusterModal from './EventClusterModal';
 import CalendarSkeleton from './CalendarSkeleton';
+import { useCalendarData } from '@/hooks/useCalendarData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import GoogleMeetConnectionStatus from './GoogleMeetConnectionStatus';
+import './calendar-styles.css';
 
 interface MyCalendarProps {
-  onNavigate?: (item: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
 const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
-  const { user } = useAuth();
-  const [view, setView] = useState('dayGridMonth');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [showClusterModal, setShowClusterModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const calendarRef = useRef<FullCalendar>(null);
-  
-  const { events, loading, refreshEvents, handleEventUpdate, handleEventDelete } = useCalendarData();
-  const { isConnected, connect } = useGoogleCalendar();
+  const [clusterEvents, setClusterEvents] = useState<any[]>([]);
+  const [currentView, setCurrentView] = useState('dayGridMonth');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
+
+  const { events, loading, createEvent, refreshEvents } = useCalendarData();
+  const { fullResyncCalendar, isConnected, autoSyncCalendar } = useGoogleCalendar();
+  const { toast } = useToast();
 
   const handleDateClick = (arg: any) => {
-    setSelectedDate(arg.date);
-    setIsEventModalOpen(true);
+    setSelectedDate(arg.dateStr);
+    setSelectedRange(null);
+    setShowTypeSelector(true);
+  };
+
+  const handleDateSelect = (selectInfo: any) => {
+    const start = selectInfo.start;
+    const end = selectInfo.end;
+    
+    if (start.getTime() !== end.getTime()) {
+      setSelectedRange({
+        start: start.toISOString(),
+        end: end.toISOString()
+      });
+      setSelectedDate(start.toISOString().split('T')[0]);
+      setShowEventModal(true);
+    }
   };
 
   const handleEventClick = (clickInfo: any) => {
+    const eventData = clickInfo.event;
+    
     setSelectedEvent({
-      id: clickInfo.event.id,
-      title: clickInfo.event.title,
-      start_date: clickInfo.event.startStr,
-      end_date: clickInfo.event.endStr,
-      description: clickInfo.event.extendedProps.description,
-      event_type: clickInfo.event.extendedProps.event_type,
-      meeting_provider: clickInfo.event.extendedProps.meeting_provider,
-      meeting_link: clickInfo.event.extendedProps.meeting_link,
-      attendees: clickInfo.event.extendedProps.attendees,
-      color: clickInfo.event.backgroundColor,
-      is_all_day: clickInfo.event.extendedProps.is_all_day
+      id: eventData.id,
+      title: eventData.title,
+      start: eventData.start,
+      end: eventData.end,
+      extendedProps: eventData.extendedProps
     });
-    setIsEventDetailsOpen(true);
+    setShowDetailsModal(true);
   };
 
-  useEffect(() => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.gotoDate(currentDate);
+  const handleMoreClick = (info: any) => {
+    const dayEvents = info.allSegs.map((seg: any) => ({
+      id: seg.event.id,
+      title: seg.event.title,
+      start: seg.event.start,
+      end: seg.event.end,
+      extendedProps: seg.event.extendedProps
+    }));
+    
+    setClusterEvents(dayEvents);
+    setSelectedDate(info.date.toISOString().split('T')[0]);
+    setShowClusterModal(true);
+  };
+
+  const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
+    setShowTypeSelector(false);
+    
+    if (type === 'meeting') {
+      setShowEventModal(true);
+    } else if (type === 'appointment') {
+      setShowAppointmentModal(true);
+    } else if (type === 'reminder') {
+      setShowReminderModal(true);
     }
-  }, [currentDate]);
+  };
+
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      await createEvent(eventData);
+      // Immediately refresh events after creation to show the new event
+      await refreshEvents();
+      handleCloseAllModals();
+    } catch (error) {
+      console.error('Error creating event:', error);
+    }
+  };
+
+  const handleCloseAllModals = () => {
+    setShowEventModal(false);
+    setShowAppointmentModal(false);
+    setShowReminderModal(false);
+    setShowTypeSelector(false);
+    setSelectedDate(null);
+    setSelectedRange(null);
+  };
+
+  const handleRefreshCalendar = async () => {
+    setIsRefreshing(true);
+    try {
+      if (isConnected) {
+        console.log('🔄 Iniciando sincronização manual...');
+        const result = await fullResyncCalendar();
+        
+        toast({
+          title: "✅ Sincronização Completa",
+          description: `${result.created} eventos sincronizados do Google Calendar`,
+          duration: 5000
+        });
+      } else {
+        // Se não conectado, apenas atualizar eventos locais
+        await refreshEvents();
+        toast({
+          title: "✅ Calendário Atualizado",
+          description: "Eventos locais foram atualizados",
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      console.error('Error synchronizing:', error);
+      toast({
+        title: "❌ Erro na Sincronização", 
+        description: "Erro ao sincronizar eventos do Google Calendar",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Executar sincronização automática quando o componente carregar
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔄 Executando sincronização automática ao carregar calendário...');
+      autoSyncCalendar();
+    }
+  }, [isConnected, autoSyncCalendar]);
+
+  const formatEventsForCalendar = (events: any[]) => {
+    return events.map((event) => {
+      const startDate = event.start_date || event.start;
+      const endDate = event.end_date || event.end;
+      
+      if (!startDate) {
+        return null;
+      }
+
+      return {
+        id: event.id,
+        title: event.title || 'Evento sem título',
+        start: startDate,
+        end: endDate || startDate,
+        backgroundColor: event.color || getEventColor(event.event_type),
+        borderColor: event.color || getEventColor(event.event_type),
+        textColor: '#ffffff',
+        classNames: ['modern-event'],
+        extendedProps: {
+          description: event.description || '',
+          event_type: event.event_type || 'meeting',
+          meeting_link: event.meeting_link,
+          meeting_provider: event.meeting_provider,
+          attendees: event.attendees || [],
+          is_all_day: event.is_all_day || false,
+          source: event.source || (event.google_event_id ? 'google' : 'local'),
+          google_event_id: event.google_event_id,
+          meeting_data: event.meeting_data || {},
+          meeting_status: event.meeting_status,
+          meeting_notes: event.meeting_notes,
+          recording_link: event.recording_link,
+          color: event.color
+        }
+      };
+    }).filter(event => event !== null);
+  };
+
+  const getEventColor = (eventType: string) => {
+    const colors = {
+      'meeting': '#3600FF',
+      'appointment': '#10B981',
+      'reminder': '#F59E0B',
+      'task': '#EF4444',
+      'google_meet': '#4285F4'
+    };
+    return colors[eventType] || '#6B7280';
+  };
+
+  const calendarEvents = formatEventsForCalendar(events);
 
   if (loading) {
-    return <CalendarSkeleton />;
+    return (
+      <div className="p-6 space-y-6 bg-white min-h-screen">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Meu Calendário</h1>
+            <p className="text-gray-600">Gerencie seus eventos, reuniões e compromissos</p>
+          </div>
+        </div>
+        <CalendarSkeleton />
+      </div>
+    );
   }
 
-  const calendarEvents = events.map(event => ({
-    id: event.id,
-    title: event.title,
-    start: event.start_date,
-    end: event.end_date,
-    color: event.color || '#3600FF',
-    extendedProps: {
-      description: event.description,
-      event_type: event.event_type,
-      meeting_provider: event.meeting_provider,
-      meeting_link: event.meeting_link,
-      attendees: event.attendees || [],
-      is_all_day: event.is_all_day
-    }
-  }));
-
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen ml-4">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main Calendar */}
-        <div className="flex-1">
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-2">
-                    <Calendar className="h-8 w-8 text-blue-600" />
-                    Meu Calendário
-                  </h1>
-                  <p className="text-gray-600 text-base">
-                    Gerencie seus eventos e compromissos
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <GoogleMeetConnectionStatus 
-                    isConnected={isConnected}
-                    onConnect={connect}
-                  />
-                  <Button 
-                    onClick={() => setIsEventModalOpen(true)}
-                    className="bg-[#3600FF] hover:bg-[#3600FF]/90 text-white rounded-xl px-4 py-2"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Evento
-                  </Button>
-                </div>
-              </div>
-
-              <div className="calendar-container">
-                <FullCalendar
-                  ref={calendarRef}
-                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  initialView="dayGridMonth"
-                  locale="pt-br"
-                  headerToolbar={{
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                  }}
-                  buttonText={{
-                    today: 'Hoje',
-                    month: 'Mês',
-                    week: 'Semana',
-                    day: 'Dia'
-                  }}
-                  events={calendarEvents}
-                  dateClick={handleDateClick}
-                  eventClick={handleEventClick}
-                  height="600px"
-                  dayMaxEvents={3}
-                  moreLinkText="mais"
-                  eventDisplay="block"
-                  displayEventTime={true}
-                  eventTimeFormat={{
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  }}
-                  dayHeaderFormat={{ weekday: 'short' }}
-                  firstDay={0}
-                />
-              </div>
-            </CardContent>
-          </Card>
+    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3600FF] to-[#4F46E5] bg-clip-text text-transparent mb-2">
+            Meu Calendário
+          </h1>
+          <p className="text-gray-600">
+            Gerencie seus eventos, reuniões e compromissos
+          </p>
         </div>
-
-        {/* Sidebar */}
-        <div className="w-full lg:w-80 space-y-6">
-          {/* Quick Stats */}
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Resumo do Mês
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 text-sm">Total de Eventos</span>
-                  <Badge variant="secondary" className="rounded-full">
-                    {events.length}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 text-sm">Este Mês</span>
-                  <Badge variant="secondary" className="rounded-full">
-                    {events.filter(event => {
-                      const eventDate = new Date(event.start_date);
-                      const now = new Date();
-                      return eventDate.getMonth() === now.getMonth() && 
-                             eventDate.getFullYear() === now.getFullYear();
-                    }).length}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 text-sm">Com Google Meet</span>
-                  <Badge variant="secondary" className="rounded-full">
-                    {events.filter(event => event.meeting_provider === 'google_meet').length}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Next Events */}
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Próximos Eventos
-              </h3>
-              <div className="space-y-3">
-                {events
-                  .filter(event => new Date(event.start_date) > new Date())
-                  .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-                  .slice(0, 5)
-                  .map(event => (
-                    <div key={event.id} className="p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 text-sm mb-1">
-                            {event.title}
-                          </h4>
-                          <div className="flex items-center text-xs text-gray-500 gap-2">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(event.start_date), 'dd/MM HH:mm', { locale: ptBR })}
-                          </div>
-                          {event.meeting_link && (
-                            <div className="flex items-center text-xs text-blue-600 gap-1 mt-1">
-                              <Video className="h-3 w-3" />
-                              Online
-                            </div>
-                          )}
-                        </div>
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: event.color || '#3600FF' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                {events.filter(event => new Date(event.start_date) > new Date()).length === 0 && (
-                  <p className="text-gray-500 text-sm text-center py-4">
-                    Nenhum evento próximo
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        
+        <div className="flex space-x-3">
+          <Button 
+            onClick={handleRefreshCalendar}
+            disabled={isRefreshing}
+            variant="outline"
+            className="rounded-xl border-[#3600FF]/20 hover:bg-[#3600FF]/5"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Sincronizando...' : 'Sincronizar'}
+          </Button>
+          
+          <Button 
+            onClick={() => setShowTypeSelector(true)}
+            className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90 rounded-xl shadow-lg"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Evento
+          </Button>
         </div>
       </div>
 
-      {/* Modals */}
-      <ImprovedEventModal
-        isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        onEventCreated={refreshEvents}
-        selectedDate={selectedDate}
+      <Card className="shadow-xl border-0 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="calendar-container">
+            <FullCalendar
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView={currentView}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              }}
+              height="auto"
+              events={calendarEvents}
+              dateClick={handleDateClick}
+              select={handleDateSelect}
+              eventClick={handleEventClick}
+              moreLinkClick={handleMoreClick}
+              editable={true}
+              selectable={true}
+              selectMirror={true}
+              dayMaxEvents={4}
+              weekends={true}
+              locale="pt-br"
+              eventDisplay="block"
+              eventTextColor="#ffffff"
+              selectLongPressDelay={0}
+              selectMinDistance={5}
+              viewDidMount={(view) => {
+                setCurrentView(view.view.type);
+              }}
+              eventContent={(eventInfo) => {
+                return (
+                  <div className="modern-event-content p-1 rounded">
+                    <div className="event-title text-xs font-medium truncate">
+                      {eventInfo.event.title}
+                    </div>
+                    {eventInfo.event.extendedProps.source === 'google' && (
+                      <div className="event-source text-xs opacity-75 flex items-center">
+                        <span className="text-xs">Google</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+              moreLinkContent={(args) => {
+                return (
+                  <div className="more-events-link text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full flex items-center">
+                    <Plus className="h-3 w-3 mr-1" />
+                    <span>{args.num} mais</span>
+                  </div>
+                );
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <EventTypeSelector
+        isOpen={showTypeSelector}
+        onClose={() => {
+          setShowTypeSelector(false);
+          setSelectedDate(null);
+          setSelectedRange(null);
+        }}
+        onSelectType={handleTypeSelect}
+        selectedDate={selectedDate || ''}
       />
 
-      <EventDetailsModal
-        isOpen={isEventDetailsOpen}
-        onClose={() => setIsEventDetailsOpen(false)}
+      <ImprovedEventModal
+        isOpen={showEventModal}
+        onClose={handleCloseAllModals}
+        selectedDate={selectedDate}
+        selectedRange={selectedRange}
+        onCreateEvent={handleCreateEvent}
+        onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
+      />
+
+      <AppointmentModal
+        isOpen={showAppointmentModal}
+        onClose={handleCloseAllModals}
+        selectedDate={selectedDate || ''}
+        selectedRange={selectedRange}
+        onCreateEvent={handleCreateEvent}
+      />
+
+      <ReminderModal
+        isOpen={showReminderModal}
+        onClose={handleCloseAllModals}
+        selectedDate={selectedDate || ''}
+        selectedRange={selectedRange}
+        onCreateEvent={handleCreateEvent}
+      />
+
+      <EnhancedEventDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedEvent(null);
+        }}
         event={selectedEvent}
-        onEventUpdated={handleEventUpdate}
-        onEventDeleted={handleEventDelete}
+        onEventUpdate={refreshEvents}
+      />
+
+      <EventClusterModal
+        isOpen={showClusterModal}
+        onClose={() => {
+          setShowClusterModal(false);
+          setClusterEvents([]);
+        }}
+        events={clusterEvents}
+        date={selectedDate || ''}
+        onEventClick={(event) => {
+          setSelectedEvent(event);
+          setShowClusterModal(false);
+          setShowDetailsModal(true);
+        }}
       />
     </div>
   );

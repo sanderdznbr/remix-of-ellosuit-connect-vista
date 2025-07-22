@@ -100,7 +100,7 @@ const Sidebar = () => {
       </button>
 
       {/* Logo */}
-      <div className="p-6">
+      <div className="p-6 pb-4">
         <div className="flex items-center space-x-3">
           {isCollapsed ? (
             // Exibe favicon quando recolhida
@@ -188,7 +188,7 @@ const Sidebar = () => {
               onClick={signOut}
               variant="ghost"
               size="sm"
-              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border border-transparent hover:border-current hover:bg-transparent`}
+              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border border-transparent hover:border-current hover:bg-transparent bg-transparent`}
             >
               <LogOut className="h-4 w-4" />
               <span>Sair</span>
@@ -206,7 +206,7 @@ const Sidebar = () => {
               onClick={signOut}
               variant="ghost"
               size="sm"
-              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border border-transparent hover:border-current hover:bg-transparent`}
+              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border border-transparent hover:border-current hover:bg-transparent bg-transparent`}
             >
               <LogOut className="h-4 w-4" />
             </Button>

@@ -942,6 +942,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          custom_favicon_url: string | null
           custom_logo_url: string | null
           id: string
           menu_order: Json | null
@@ -953,6 +954,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null
@@ -964,6 +966,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null

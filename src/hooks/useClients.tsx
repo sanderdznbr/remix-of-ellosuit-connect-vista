@@ -21,6 +21,19 @@ interface Client {
   address_city?: string;
   address_state?: string;
   address_zip?: string;
+  avatar_url?: string;
+  birth_date?: string;
+  profession?: string;
+  website?: string;
+  linkedin?: string;
+  instagram?: string;
+  facebook?: string;
+  whatsapp_business?: string;
+  tags?: string[];
+  client_type?: string;
+  company_size?: string;
+  industry?: string;
+  annual_revenue?: number;
 }
 
 export const useClients = () => {

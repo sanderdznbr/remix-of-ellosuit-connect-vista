@@ -24,6 +24,8 @@ interface DocumentFolder {
   parent_folder_id?: string;
   created_at: string;
   created_by: string;
+  description?: string;
+  color?: string;
 }
 
 export const useDocuments = () => {
@@ -109,7 +111,7 @@ export const useDocuments = () => {
     }
   };
 
-  const createFolder = async (name: string, parentFolderId?: string) => {
+  const createFolder = async (name: string, parentFolderId?: string, description?: string, color?: string) => {
     if (!user) return;
 
     try {
@@ -127,6 +129,8 @@ export const useDocuments = () => {
         .insert({
           name,
           parent_folder_id: parentFolderId,
+          description,
+          color,
           created_by: user.id,
           company_id: companyUser.company_id
         });

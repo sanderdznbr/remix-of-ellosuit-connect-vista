@@ -49,7 +49,7 @@ export const useSidebarSettings = () => {
           id: data.id,
           sidebar_color: data.sidebar_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
-          menu_order: data.menu_order || []
+          menu_order: Array.isArray(data.menu_order) ? data.menu_order : []
         });
       }
     } catch (error) {

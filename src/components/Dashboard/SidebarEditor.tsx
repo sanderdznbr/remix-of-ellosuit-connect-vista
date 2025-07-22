@@ -409,9 +409,12 @@ const SidebarEditor = () => {
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center space-x-3 mb-2">
                       <img 
-                        src="/lovable-uploads/190e67de-b11c-4255-b137-25ced6811606.png" 
+                        src="/lovable-uploads/46bd0cbc-7f70-4ed3-96f2-c376b107d40c.png" 
                         alt="ElloSuit Logo" 
                         className="h-10 w-auto"
+                        onError={(e) => {
+                          console.error('Erro ao carregar logo padrão no editor:', e);
+                        }}
                       />
                       <span className="text-lg font-bold text-gray-900">ElloSuit</span>
                     </div>
@@ -465,9 +468,12 @@ const SidebarEditor = () => {
                 ) : (
                   <div className="p-4 border rounded-lg">
                     <img 
-                      src="/lovable-uploads/809c322f-1a44-441f-976f-d1246e7f1b2c.png" 
+                      src="/lovable-uploads/6dc50aee-0855-403f-91a2-dce507fedef9.png" 
                       alt="ElloSuit Favicon" 
                       className="h-12 w-12 object-contain mb-2"
+                      onError={(e) => {
+                        console.error('Erro ao carregar favicon padrão no editor:', e);
+                      }}
                     />
                     <p className="text-sm text-gray-500">Favicon padrão da ElloSuit</p>
                   </div>

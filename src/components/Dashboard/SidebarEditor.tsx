@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,6 +81,7 @@ const SidebarEditor = () => {
   const [backgroundColor, setBackgroundColor] = useState(settings.sidebar_background_color || '#3600FF');
   const [sidebarColorHex, setSidebarColorHex] = useState(settings.sidebar_color || '#3000E3');
   const [backgroundColorHex, setBackgroundColorHex] = useState(settings.sidebar_background_color || '#3600FF');
+  const [pendingChanges, setPendingChanges] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -133,11 +133,13 @@ const SidebarEditor = () => {
   const handleSidebarColorChange = (color: string) => {
     setSidebarColor(color);
     setSidebarColorHex(color);
+    setPendingChanges(true);
   };
 
   const handleBackgroundColorChange = (color: string) => {
     setBackgroundColor(color);
     setBackgroundColorHex(color);
+    setPendingChanges(true);
   };
 
   const handleSidebarColorHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +147,7 @@ const SidebarEditor = () => {
     setSidebarColorHex(value);
     if (value.match(/^#[0-9A-Fa-f]{6}$/)) {
       setSidebarColor(value);
+      setPendingChanges(true);
     }
   };
 
@@ -153,6 +156,7 @@ const SidebarEditor = () => {
     setBackgroundColorHex(value);
     if (value.match(/^#[0-9A-Fa-f]{6}$/)) {
       setBackgroundColor(value);
+      setPendingChanges(true);
     }
   };
 
@@ -161,31 +165,49 @@ const SidebarEditor = () => {
     setBackgroundColor('#3600FF');
     setSidebarColorHex('#3000E3');
     setBackgroundColorHex('#3600FF');
+    setPendingChanges(true);
   };
 
-  const handleSaveColors = () => {
-    updateSettings({
-      sidebar_color: sidebarColor,
-      sidebar_background_color: backgroundColor
-    });
+  const handleLogoFileChange = (file: File | null) => {
+    setCustomLogoFile(file);
+    setPendingChanges(true);
   };
 
-  const handleLogoUpload = async () => {
-    if (!customLogoFile) return;
-
-    const logoUrl = URL.createObjectURL(customLogoFile);
-    updateSettings({
-      custom_logo_url: logoUrl
-    });
+  const handleFaviconFileChange = (file: File | null) => {
+    setFaviconFile(file);
+    setPendingChanges(true);
   };
 
-  const handleFaviconUpload = async () => {
-    if (!faviconFile) return;
+  const handleSaveAllChanges = async () => {
+    try {
+      // Salvar cores
+      await updateSettings({
+        sidebar_color: sidebarColor,
+        sidebar_background_color: backgroundColor
+      });
 
-    const faviconUrl = URL.createObjectURL(faviconFile);
-    updateSettings({
-      custom_favicon_url: faviconUrl
-    });
+      // Fazer upload da logo se houver
+      if (customLogoFile) {
+        const logoUrl = URL.createObjectURL(customLogoFile);
+        await updateSettings({
+          custom_logo_url: logoUrl
+        });
+        setCustomLogoFile(null);
+      }
+
+      // Fazer upload do favicon se houver
+      if (faviconFile) {
+        const faviconUrl = URL.createObjectURL(faviconFile);
+        await updateSettings({
+          custom_favicon_url: faviconUrl
+        });
+        setFaviconFile(null);
+      }
+
+      setPendingChanges(false);
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+    }
   };
 
   const resetToDefaultLogo = () => {
@@ -212,10 +234,21 @@ const SidebarEditor = () => {
 
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Editar Sidebar</h1>
-        <p className="text-base text-gray-600 mt-2">Personalize a aparência e ordem do menu lateral</p>
+      {/* Header com botão de salvar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Editar Sidebar</h1>
+          <p className="text-base text-gray-600 mt-2">Personalize a aparência e ordem do menu lateral</p>
+        </div>
+        <Button
+          onClick={handleSaveAllChanges}
+          disabled={!pendingChanges}
+          className="flex items-center gap-2 px-6 py-3 text-base"
+          size="lg"
+        >
+          <Save className="h-5 w-5" />
+          Salvar Alterações
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -333,13 +366,6 @@ const SidebarEditor = () => {
                     />
                   </div>
                 </div>
-                <Button 
-                  onClick={handleSaveColors}
-                  className="w-full flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Salvar Cores
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -359,7 +385,7 @@ const SidebarEditor = () => {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setCustomLogoFile(e.target.files?.[0] || null)}
+                    onChange={(e) => handleLogoFileChange(e.target.files?.[0] || null)}
                     className="mt-1"
                   />
                 </div>
@@ -383,7 +409,7 @@ const SidebarEditor = () => {
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center space-x-3 mb-2">
                       <img 
-                        src="/lovable-uploads/ed54eb39-e51c-4ba2-817b-41de8affc95c.png" 
+                        src="/lovable-uploads/190e67de-b11c-4255-b137-25ced6811606.png" 
                         alt="ElloSuit Logo" 
                         className="h-10 w-auto"
                       />
@@ -392,13 +418,11 @@ const SidebarEditor = () => {
                     <p className="text-sm text-gray-500">Logo padrão da ElloSuit</p>
                   </div>
                 )}
-                <Button 
-                  onClick={handleLogoUpload} 
-                  disabled={!customLogoFile}
-                  className="w-full"
-                >
-                  Fazer Upload da Logo
-                </Button>
+                {customLogoFile && (
+                  <p className="text-sm text-green-600">
+                    Arquivo selecionado: {customLogoFile.name}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -418,7 +442,7 @@ const SidebarEditor = () => {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setFaviconFile(e.target.files?.[0] || null)}
+                    onChange={(e) => handleFaviconFileChange(e.target.files?.[0] || null)}
                     className="mt-1"
                   />
                 </div>
@@ -441,20 +465,18 @@ const SidebarEditor = () => {
                 ) : (
                   <div className="p-4 border rounded-lg">
                     <img 
-                      src="/lovable-uploads/644ccf9e-389e-4a0e-9608-ac9326a8d64a.png" 
+                      src="/lovable-uploads/809c322f-1a44-441f-976f-d1246e7f1b2c.png" 
                       alt="ElloSuit Favicon" 
                       className="h-12 w-12 object-contain mb-2"
                     />
                     <p className="text-sm text-gray-500">Favicon padrão da ElloSuit</p>
                   </div>
                 )}
-                <Button 
-                  onClick={handleFaviconUpload} 
-                  disabled={!faviconFile}
-                  className="w-full"
-                >
-                  Fazer Upload do Favicon
-                </Button>
+                {faviconFile && (
+                  <p className="text-sm text-green-600">
+                    Arquivo selecionado: {faviconFile.name}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

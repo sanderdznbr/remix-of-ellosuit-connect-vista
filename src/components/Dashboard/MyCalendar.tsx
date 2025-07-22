@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -5,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw, CheckCircle } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -96,6 +97,17 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       setShowAppointmentModal(true);
     } else if (type === 'reminder') {
       setShowReminderModal(true);
+    }
+  };
+
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      await createEvent(eventData);
+      // Immediately refresh events after creation to show the new event
+      await refreshEvents();
+      handleCloseAllModals();
+    } catch (error) {
+      console.error('Error creating event:', error);
     }
   };
 
@@ -222,12 +234,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </h1>
           <p className="text-gray-600">
             Gerencie seus eventos, reuniões e compromissos
-            {isConnected && (
-              <span className="ml-2 inline-flex items-center text-green-600 text-sm">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Google Calendar Conectado
-              </span>
-            )}
           </p>
         </div>
         
@@ -325,7 +331,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         onClose={handleCloseAllModals}
         selectedDate={selectedDate}
         selectedRange={selectedRange}
-        onCreateEvent={createEvent}
+        onCreateEvent={handleCreateEvent}
         onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
       />
 
@@ -334,7 +340,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         onClose={handleCloseAllModals}
         selectedDate={selectedDate || ''}
         selectedRange={selectedRange}
-        onCreateEvent={createEvent}
+        onCreateEvent={handleCreateEvent}
       />
 
       <ReminderModal
@@ -342,7 +348,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         onClose={handleCloseAllModals}
         selectedDate={selectedDate || ''}
         selectedRange={selectedRange}
-        onCreateEvent={createEvent}
+        onCreateEvent={handleCreateEvent}
       />
 
       <EnhancedEventDetailsModal

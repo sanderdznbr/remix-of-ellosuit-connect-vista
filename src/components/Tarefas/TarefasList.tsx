@@ -1,6 +1,7 @@
 
 import React from 'react';
 import TarefaItem from './TarefaItem';
+import TarefasByTime from './TarefasByTime';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 interface TarefasListProps {
@@ -68,6 +69,18 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
     }
   };
 
+  // Se for filtro "hoje", usar o componente de separação por horário
+  if (filter === 'hoje') {
+    return (
+      <TarefasByTime 
+        tarefas={filteredTarefas}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />
+    );
+  }
+
+  // Para outros filtros, usar a lista normal
   return (
     <div className="space-y-0">
       {filteredTarefas.map((tarefa) => (

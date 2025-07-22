@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { 
   Users, 
@@ -23,140 +24,74 @@ import {
   Plus,
   Search
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface Client {
-  id: string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'inactive' | 'prospect';
-  lastContact: string;
-  avatar: string;
-}
+import { useClients } from '@/hooks/useClients';
 
 const ClientsManager = () => {
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: '1',
-      name: 'João Silva',
-      company: 'Empresa A',
-      email: 'joao.silva@email.com',
-      phone: '+55 11 99999-9999',
-      status: 'active',
-      lastContact: '1 semana atrás',
-      avatar: 'https://github.com/shadcn.png'
-    },
-    {
-      id: '2',
-      name: 'Maria Oliveira',
-      company: 'Empresa B',
-      email: 'maria.oliveira@email.com',
-      phone: '+55 21 88888-8888',
-      status: 'inactive',
-      lastContact: '2 meses atrás',
-      avatar: 'https://avatars.githubusercontent.com/u/104714744?v=4'
-    },
-    {
-      id: '3',
-      name: 'Carlos Pereira',
-      company: 'Empresa C',
-      email: 'carlos.pereira@email.com',
-      phone: '+55 31 77777-7777',
-      status: 'prospect',
-      lastContact: '3 dias atrás',
-      avatar: 'https://pbs.twimg.com/profile_images/1653844827364270080/NLVjQDj_.jpg'
-    }
-  ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newClient, setNewClient] = useState<Omit<Client, 'id' | 'avatar'>>({
+  const [newClient, setNewClient] = useState({
     name: '',
-    company: '',
+    company_name: '',
     email: '',
     phone: '',
     status: 'active',
-    lastContact: 'Hoje'
+    notes: ''
   });
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [newThisMonth, setNewThisMonth] = useState(12);
-  const { toast } = useToast();
+  const [editingClient, setEditingClient] = useState<any>(null);
 
-  useEffect(() => {
-    // Simulação de novos clientes este mês
-    setNewThisMonth(Math.floor(Math.random() * 20));
-  }, []);
+  const { clients, loading, createClient, updateClient, deleteClient } = useClients();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewClient(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddClient = () => {
-    const newId = String(Date.now());
-    const avatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${newClient.name}`;
-    const completeNewClient = { ...newClient, id: newId, avatar: avatarUrl };
-    setClients(prev => [...prev, completeNewClient]);
+  const handleAddClient = async () => {
+    await createClient(newClient);
     setNewClient({
       name: '',
-      company: '',
+      company_name: '',
       email: '',
       phone: '',
       status: 'active',
-      lastContact: 'Hoje'
+      notes: ''
     });
     setShowAddModal(false);
-    toast({
-      title: "Cliente adicionado",
-      description: "Cliente adicionado com sucesso.",
-    });
   };
 
-  const handleEditClient = (client: Client) => {
+  const handleEditClient = (client: any) => {
     setEditingClient(client);
     setNewClient({
       name: client.name,
-      company: client.company,
-      email: client.email,
-      phone: client.phone,
+      company_name: client.company_name || '',
+      email: client.email || '',
+      phone: client.phone || '',
       status: client.status,
-      lastContact: client.lastContact
+      notes: client.notes || ''
     });
     setShowAddModal(true);
   };
 
-  const handleUpdateClient = () => {
+  const handleUpdateClient = async () => {
     if (!editingClient) return;
-
-    const updatedClients = clients.map(client =>
-      client.id === editingClient.id ? { ...client, ...newClient } : client
-    );
-
-    setClients(updatedClients);
+    await updateClient(editingClient.id, newClient);
     setEditingClient(null);
     setNewClient({
       name: '',
-      company: '',
+      company_name: '',
       email: '',
       phone: '',
       status: 'active',
-      lastContact: 'Hoje'
+      notes: ''
     });
     setShowAddModal(false);
-    toast({
-      title: "Cliente atualizado",
-      description: "Cliente atualizado com sucesso.",
-    });
   };
 
-  const handleDeleteClient = (id: string) => {
-    setClients(prev => prev.filter(client => client.id !== id));
-    toast({
-      title: "Cliente excluído",
-      description: "Cliente excluído com sucesso.",
-    });
+  const handleDeleteClient = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+      await deleteClient(id);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -189,13 +124,31 @@ const ClientsManager = () => {
     const searchTermLower = searchTerm.toLowerCase();
     const matchesSearch =
       client.name.toLowerCase().includes(searchTermLower) ||
-      client.company.toLowerCase().includes(searchTermLower) ||
-      client.email.toLowerCase().includes(searchTermLower);
+      (client.company_name || '').toLowerCase().includes(searchTermLower) ||
+      (client.email || '').toLowerCase().includes(searchTermLower);
 
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
+
+  const activeClients = clients.filter(c => c.status === 'active').length;
+  const prospectClients = clients.filter(c => c.status === 'prospect').length;
+  const newThisMonth = clients.filter(c => {
+    const createdDate = new Date(c.created_at);
+    const now = new Date();
+    return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+  }).length;
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
@@ -257,9 +210,7 @@ const ClientsManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Clientes Ativos</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {clients.filter(c => c.status === 'active').length}
-                </p>
+                <p className="text-3xl font-bold text-gray-900">{activeClients}</p>
               </div>
               <div className="p-4 rounded-full bg-green-50">
                 <UserCheck className="h-6 w-6 text-green-600" />
@@ -273,9 +224,7 @@ const ClientsManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Prospectos</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {clients.filter(c => c.status === 'prospect').length}
-                </p>
+                <p className="text-3xl font-bold text-gray-900">{prospectClients}</p>
               </div>
               <div className="p-4 rounded-full bg-orange-50">
                 <Target className="h-6 w-6 text-orange-600" />
@@ -305,93 +254,106 @@ const ClientsManager = () => {
           <CardTitle className="text-lg font-semibold">Lista de Clientes</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="text-sm text-gray-600 font-medium p-6">CLIENTE</TableHead>
-                <TableHead className="text-sm text-gray-600 font-medium p-6">CONTATO</TableHead>
-                <TableHead className="text-sm text-gray-600 font-medium p-6">STATUS</TableHead>
-                <TableHead className="text-sm text-gray-600 font-medium p-6">ÚLTIMO CONTATO</TableHead>
-                <TableHead className="text-sm text-gray-600 font-medium p-6">AÇÕES</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id} className="hover:bg-gray-50">
-                  <TableCell className="p-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={client.avatar} />
-                        <AvatarFallback className="bg-blue-50 text-blue-600">
-                          {client.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-base font-semibold text-gray-900">{client.name}</p>
-                        <p className="text-sm text-gray-600">{client.company}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="p-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span>{client.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span>{client.phone}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="p-6">
-                    <Badge 
-                      className={`rounded-full ${getStatusColor(client.status)}`}
-                    >
-                      {getStatusLabel(client.status)}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell className="p-6">
-                    <span className="text-base text-gray-600">{client.lastContact}</span>
-                  </TableCell>
-                  
-                  <TableCell className="p-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-xl">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-xl">
-                        <DropdownMenuItem onClick={() => handleEditClient(client)}>
-                          <UserCog className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Enviar Email
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Agendar Reunião
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteClient(client.id)} 
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {filteredClients.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Nenhum cliente encontrado
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Comece adicionando seu primeiro cliente
+              </p>
+              <Button onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Cliente
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">CLIENTE</TableHead>
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">CONTATO</TableHead>
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">STATUS</TableHead>
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">CRIADO EM</TableHead>
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">AÇÕES</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id} className="hover:bg-gray-50">
+                    <TableCell className="p-6">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className="bg-blue-50 text-blue-600">
+                            {client.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900">{client.name}</p>
+                          <p className="text-sm text-gray-600">{client.company_name}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="p-6">
+                      <div className="space-y-1">
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span>{client.email}</span>
+                          </div>
+                        )}
+                        {client.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="p-6">
+                      <Badge 
+                        className={`rounded-full ${getStatusColor(client.status)}`}
+                      >
+                        {getStatusLabel(client.status)}
+                      </Badge>
+                    </TableCell>
+                    
+                    <TableCell className="p-6">
+                      <span className="text-base text-gray-600">
+                        {new Date(client.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell className="p-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-xl">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                            <UserCog className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteClient(client.id)} 
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -405,21 +367,22 @@ const ClientsManager = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div>
-              <Label htmlFor="name" className="text-base font-medium">Nome</Label>
+              <Label htmlFor="name" className="text-base font-medium">Nome *</Label>
               <Input
                 id="name"
                 name="name"
                 value={newClient.name}
                 onChange={handleInputChange}
                 className="mt-2 rounded-xl"
+                required
               />
             </div>
             <div>
-              <Label htmlFor="company" className="text-base font-medium">Empresa</Label>
+              <Label htmlFor="company_name" className="text-base font-medium">Empresa</Label>
               <Input
-                id="company"
-                name="company"
-                value={newClient.company}
+                id="company_name"
+                name="company_name"
+                value={newClient.company_name}
                 onChange={handleInputChange}
                 className="mt-2 rounded-xl"
               />

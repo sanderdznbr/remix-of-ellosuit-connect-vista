@@ -17,34 +17,14 @@ import {
   BarChart3,
   PieChart
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AnalyticsProps {
   onNavigate: (page: string) => void;
 }
 
 const Analytics = ({ onNavigate }: AnalyticsProps) => {
-  const emailData = [
-    { name: 'Jan', enviados: 400, abertos: 240, cliques: 120 },
-    { name: 'Fev', enviados: 300, abertos: 139, cliques: 89 },
-    { name: 'Mar', enviados: 500, abertos: 300, cliques: 180 },
-    { name: 'Abr', enviados: 780, abertos: 390, cliques: 200 },
-    { name: 'Mai', enviados: 890, abertos: 480, cliques: 290 },
-    { name: 'Jun', enviados: 690, abertos: 380, cliques: 250 },
-  ];
-
-  const deviceData = [
-    { name: 'Desktop', value: 60, color: '#3b82f6' },
-    { name: 'Mobile', value: 30, color: '#10b981' },
-    { name: 'Tablet', value: 10, color: '#f59e0b' },
-  ];
-
-  const campaignData = [
-    { name: 'Promoção Verão', taxa: 25.5, tendencia: 'increase' },
-    { name: 'Newsletter Semanal', taxa: 18.2, tendencia: 'decrease' },
-    { name: 'Lançamento Produto', taxa: 32.1, tendencia: 'increase' },
-    { name: 'Black Friday', taxa: 45.8, tendencia: 'increase' },
-  ];
+  const { user } = useAuth();
 
   const MetricCard = ({ title, value, change, icon: Icon, trend }: any) => (
     <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
@@ -72,22 +52,15 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
     </Card>
   );
 
-  const CampaignCard = ({ name, taxa, tendencia }: any) => (
-    <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300">
-      <div>
-        <p className="text-base font-semibold text-gray-900">{name}</p>
-        <p className="text-sm text-gray-600">Taxa de abertura</p>
+  if (!user) {
+    return (
+      <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-gray-500">Faça login para ver suas análises</p>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-bold text-gray-900">{taxa}%</span>
-        {tendencia === 'increase' ? (
-          <TrendingUp className="h-4 w-4 text-green-500" />
-        ) : (
-          <TrendingDown className="h-4 w-4 text-red-500" />
-        )}
-      </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
@@ -113,37 +86,36 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard 
             title="E-mails Enviados"
-            value="12.5K"
-            change="+12.5%"
+            value="0"
+            change="0%"
             icon={Mail}
             trend="up"
           />
           <MetricCard 
             title="Taxa de Abertura"
-            value="24.8%"
-            change="+3.2%"
+            value="0%"
+            change="0%"
             icon={Eye}
             trend="up"
           />
           <MetricCard 
             title="Taxa de Clique"
-            value="4.2%"
-            change="-0.8%"
+            value="0%"
+            change="0%"
             icon={MousePointer}
-            trend="down"
+            trend="up"
           />
           <MetricCard 
             title="Novos Contatos"
-            value="1.8K"
-            change="+18.3%"
+            value="0"
+            change="0%"
             icon={Users}
             trend="up"
           />
         </div>
 
-        {/* Gráficos */}
+        {/* Gráficos Placeholder */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de Desempenho de E-mail */}
           <Card className="border-none shadow-lg rounded-2xl bg-white">
             <CardHeader className="p-6 pb-4">
               <div className="flex items-center gap-2">
@@ -152,21 +124,15 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
               </div>
             </CardHeader>
             <CardContent className="p-6 pt-0">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={emailData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="enviados" fill="#3b82f6" name="Enviados" />
-                  <Bar dataKey="abertos" fill="#10b981" name="Abertos" />
-                  <Bar dataKey="cliques" fill="#f59e0b" name="Cliques" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-xl">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Dados aparecerão quando você enviar emails</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Gráfico de Dispositivos */}
           <Card className="border-none shadow-lg rounded-2xl bg-white">
             <CardHeader className="p-6 pb-4">
               <div className="flex items-center gap-2">
@@ -175,23 +141,12 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
               </div>
             </CardHeader>
             <CardContent className="p-6 pt-0">
-              <ResponsiveContainer width="100%" height={300}>
-                <RechartsPieChart>
-                  <Pie
-                    data={deviceData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {deviceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-              </ResponsiveContainer>
+              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-xl">
+                <div className="text-center">
+                  <PieChart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Dados aparecerão quando você tiver interações</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -205,10 +160,18 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
             </div>
           </CardHeader>
           <CardContent className="p-6 pt-0">
-            <div className="space-y-4">
-              {campaignData.map((campaign, index) => (
-                <CampaignCard key={index} {...campaign} />
-              ))}
+            <div className="text-center py-12">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Nenhuma campanha ainda
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Crie sua primeira campanha para ver as métricas aqui
+              </p>
+              <Button onClick={() => onNavigate('campaign-mail')}>
+                <Target className="h-4 w-4 mr-2" />
+                Criar Campanha
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -239,12 +202,12 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
 
           <Card 
             className="border-none shadow-lg rounded-2xl bg-white cursor-pointer hover:shadow-xl transition-all duration-300"
-            onClick={() => onNavigate('templates')}
+            onClick={() => onNavigate('documents')}
           >
             <CardContent className="p-8 text-center">
               <FileText className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Modelos</h3>
-              <p className="text-sm text-gray-600">Criar novos templates</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Documentos</h3>
+              <p className="text-sm text-gray-600">Gerenciar arquivos</p>
             </CardContent>
           </Card>
         </div>

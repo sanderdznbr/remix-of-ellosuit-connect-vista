@@ -19,7 +19,7 @@ import { useSidebarSettings } from '@/hooks/useSidebarSettings';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { settings, loading } = useSidebarSettings();
   
   const defaultMenuItems = [
@@ -149,7 +149,7 @@ const Sidebar = () => {
         </div>
 
         <Button
-          onClick={logout}
+          onClick={signOut}
           variant="outline"
           size="sm"
           className="w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-900 rounded-xl"

@@ -45,11 +45,17 @@ export const useSidebarSettings = () => {
       }
 
       if (data) {
+        // Safely handle the menu_order conversion
+        let menuOrder: string[] = [];
+        if (data.menu_order && Array.isArray(data.menu_order)) {
+          menuOrder = data.menu_order.map((item: any) => String(item));
+        }
+
         setSettings({
           id: data.id,
           sidebar_color: data.sidebar_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
-          menu_order: Array.isArray(data.menu_order) ? data.menu_order : []
+          menu_order: menuOrder
         });
       }
     } catch (error) {

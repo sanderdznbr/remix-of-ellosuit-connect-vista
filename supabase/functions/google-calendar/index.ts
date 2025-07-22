@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
@@ -12,6 +11,44 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
 const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+
+// Função para detectar o tipo do evento
+const detectEventType = (event: any): 'meeting' | 'appointment' | 'reminder' => {
+  console.log('🔍 Analisando evento para determinar tipo:', {
+    summary: event.summary,
+    hasAttendees: !!event.attendees?.length,
+    hasHangoutLink: !!event.hangoutLink,
+    hasConferenceData: !!event.conferenceData,
+    isAllDay: !event.start?.dateTime,
+    description: event.description?.substring(0, 100)
+  });
+
+  // Se tem link de reunião ou participantes, é meeting
+  if (event.hangoutLink || event.conferenceData || (event.attendees && event.attendees.length > 1)) {
+    console.log('📋 Classificado como: MEETING (tem link/participantes)');
+    return 'meeting';
+  }
+
+  // Se é evento de dia inteiro ou tem características de lembrete
+  if (!event.start?.dateTime || 
+      event.summary?.toLowerCase().includes('lembrete') ||
+      event.summary?.toLowerCase().includes('reminder') ||
+      event.description?.toLowerCase().includes('lembrete') ||
+      event.description?.toLowerCase().includes('reminder')) {
+    console.log('⏰ Classificado como: REMINDER (dia inteiro ou palavra-chave)');
+    return 'reminder';
+  }
+
+  // Se tem apenas um participante (o criador) e duração específica, é appointment
+  if (event.attendees && event.attendees.length === 1) {
+    console.log('📅 Classificado como: APPOINTMENT (um participante)');
+    return 'appointment';
+  }
+
+  // Por padrão, eventos com horário específico são appointments
+  console.log('📅 Classificado como: APPOINTMENT (padrão)');
+  return 'appointment';
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -136,10 +173,10 @@ serve(async (req) => {
         });
       }
 
-      // Handle list_events action
+      // Handle list_events action with enhanced event processing
       if (body.action === 'list_events') {
         const { timeMin, timeMax } = body;
-        console.log('📅 Listing Google Calendar events...');
+        console.log('📅 Listing Google Calendar events with enhanced processing...');
 
         // Get authorization header to extract user token
         const authHeader = req.headers.get('authorization');
@@ -214,11 +251,13 @@ serve(async (req) => {
           console.log('✅ Token refreshed successfully');
         }
 
-        // Fetch events from Google Calendar
+        // Fetch events from Google Calendar with enhanced parameters
         const calendarUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
         calendarUrl.searchParams.set('maxResults', '2500');
         calendarUrl.searchParams.set('singleEvents', 'true');
         calendarUrl.searchParams.set('orderBy', 'startTime');
+        calendarUrl.searchParams.set('showDeleted', 'false');
+        calendarUrl.searchParams.set('showHiddenInvitations', 'false');
         
         if (timeMin) {
           calendarUrl.searchParams.set('timeMin', timeMin);
@@ -226,6 +265,8 @@ serve(async (req) => {
         if (timeMax) {
           calendarUrl.searchParams.set('timeMax', timeMax);
         }
+
+        console.log('🔍 Fetching events with URL:', calendarUrl.toString());
 
         const eventsResponse = await fetch(calendarUrl.toString(), {
           headers: {
@@ -241,11 +282,36 @@ serve(async (req) => {
           throw new Error(`Calendar API error: ${eventsData.error?.message || 'Unknown error'}`);
         }
 
-        console.log(`✅ Successfully fetched ${eventsData.items?.length || 0} events from Google Calendar`);
+        console.log(`📊 Raw events fetched: ${eventsData.items?.length || 0}`);
+
+        // Process events with enhanced type detection
+        const processedEvents = (eventsData.items || []).map((event: any) => {
+          const eventType = detectEventType(event);
+          
+          return {
+            ...event,
+            detectedType: eventType,
+            processedAt: new Date().toISOString()
+          };
+        });
+
+        // Log statistics
+        const typeStats = processedEvents.reduce((acc, event) => {
+          acc[event.detectedType] = (acc[event.detectedType] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        console.log('📊 Event type statistics:', typeStats);
+
+        console.log(`✅ Successfully processed ${processedEvents.length} events from Google Calendar`);
 
         return new Response(JSON.stringify({
           success: true,
-          events: eventsData.items || []
+          events: processedEvents,
+          statistics: {
+            total: processedEvents.length,
+            byType: typeStats
+          }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });

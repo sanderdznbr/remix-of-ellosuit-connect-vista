@@ -17,7 +17,7 @@ import {
   BarChart3,
   PieChart
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
 
 interface AnalyticsProps {
   onNavigate: (page: string) => void;
@@ -47,11 +47,11 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
   ];
 
   const MetricCard = ({ title, value, change, icon: Icon, trend }: any) => (
-    <Card className="hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+    <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
+            <p className="text-sm text-gray-600 mb-2">{title}</p>
             <p className="text-3xl font-bold text-gray-900">{value}</p>
             <div className="flex items-center mt-2">
               {trend === 'up' ? (
@@ -64,7 +64,7 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
               </span>
             </div>
           </div>
-          <div className="p-3 rounded-full bg-blue-50">
+          <div className="p-4 rounded-full bg-blue-50">
             <Icon className="h-6 w-6 text-blue-600" />
           </div>
         </div>
@@ -73,9 +73,9 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
   );
 
   const CampaignCard = ({ name, taxa, tendencia }: any) => (
-    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300">
       <div>
-        <p className="font-medium text-gray-900">{name}</p>
+        <p className="text-base font-semibold text-gray-900">{name}</p>
         <p className="text-sm text-gray-600">Taxa de abertura</p>
       </div>
       <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -102,7 +102,7 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
           </div>
           <Button 
             onClick={() => onNavigate('campaign-mail')}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 rounded-xl"
           >
             <Target className="h-4 w-4 mr-2" />
             Nova Campanha
@@ -144,14 +144,14 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de Desempenho de E-mail */}
-          <Card className="shadow-md border-0">
-            <CardHeader className="pb-4">
+          <Card className="border-none shadow-lg rounded-2xl bg-white">
+            <CardHeader className="p-6 pb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-lg">Desempenho de E-mails</CardTitle>
+                <CardTitle className="text-lg font-semibold">Desempenho de E-mails</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-0">
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={emailData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -167,14 +167,14 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
           </Card>
 
           {/* Gráfico de Dispositivos */}
-          <Card className="shadow-md border-0">
-            <CardHeader className="pb-4">
+          <Card className="border-none shadow-lg rounded-2xl bg-white">
+            <CardHeader className="p-6 pb-4">
               <div className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-lg">Dispositivos</CardTitle>
+                <CardTitle className="text-lg font-semibold">Dispositivos</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-0">
               <ResponsiveContainer width="100%" height={300}>
                 <RechartsPieChart>
                   <Pie
@@ -197,14 +197,14 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
         </div>
 
         {/* Performance das Campanhas */}
-        <Card className="shadow-md border-0">
-          <CardHeader className="pb-4">
+        <Card className="border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader className="p-6 pb-4">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">Performance das Campanhas</CardTitle>
+              <CardTitle className="text-lg font-semibold">Performance das Campanhas</CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6 pt-0">
             <div className="space-y-4">
               {campaignData.map((campaign, index) => (
                 <CampaignCard key={index} {...campaign} />
@@ -216,10 +216,10 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
         {/* Ações Rápidas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 shadow-md"
+            className="border-none shadow-lg rounded-2xl bg-white cursor-pointer hover:shadow-xl transition-all duration-300"
             onClick={() => onNavigate('mail-tracking')}
           >
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-8 text-center">
               <Eye className="h-12 w-12 text-blue-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Rastreamento</h3>
               <p className="text-sm text-gray-600">Ver detalhes dos e-mails enviados</p>
@@ -227,10 +227,10 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 shadow-md"
+            className="border-none shadow-lg rounded-2xl bg-white cursor-pointer hover:shadow-xl transition-all duration-300"
             onClick={() => onNavigate('my-calendar')}
           >
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-8 text-center">
               <Calendar className="h-12 w-12 text-green-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Agenda</h3>
               <p className="text-sm text-gray-600">Gerenciar compromissos</p>
@@ -238,10 +238,10 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 shadow-md"
+            className="border-none shadow-lg rounded-2xl bg-white cursor-pointer hover:shadow-xl transition-all duration-300"
             onClick={() => onNavigate('templates')}
           >
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-8 text-center">
               <FileText className="h-12 w-12 text-purple-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Modelos</h3>
               <p className="text-sm text-gray-600">Criar novos templates</p>

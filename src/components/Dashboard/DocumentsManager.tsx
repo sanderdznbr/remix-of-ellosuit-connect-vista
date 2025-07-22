@@ -1,380 +1,120 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { 
   Upload, 
-  File, 
+  FileText, 
   Folder, 
-  Search, 
-  Filter, 
-  Download, 
-  Trash2, 
-  Plus,
-  FolderPlus,
-  MoreHorizontal,
-  Eye,
-  Edit,
+  MoreHorizontal, 
+  Search,
   Grid3X3,
   List,
+  Plus,
+  Download,
+  Share,
+  Trash2,
   Star,
   Clock,
-  User,
-  ArrowLeft,
   Tag,
-  Move,
-  Copy,
-  Share
+  FolderPlus,
+  File
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 interface Document {
   id: string;
   name: string;
-  file_type: string;
-  file_size: number;
-  file_url: string;
-  folder_id: string | null;
+  type: 'file' | 'folder';
+  size?: string;
+  lastModified: string;
+  starred: boolean;
   tags: string[];
-  description: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-}
-
-interface DocumentFolder {
-  id: string;
-  name: string;
-  parent_folder_id: string | null;
-  created_at: string;
-  created_by: string;
+  mimeType?: string;
 }
 
 const DocumentsManager = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [folders, setFolders] = useState<DocumentFolder[]>([]);
-  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [documents, setDocuments] = useState<Document[]>([
+    {
+      id: '1',
+      name: 'Contrato Cliente A',
+      type: 'file',
+      size: '2.4 MB',
+      lastModified: '2 dias atrás',
+      starred: true,
+      tags: ['Contrato', 'Importante'],
+      mimeType: 'application/pdf'
+    },
+    {
+      id: '2',
+      name: 'Apresentação Q4',
+      type: 'file',
+      size: '15.2 MB',
+      lastModified: '1 semana atrás',
+      starred: false,
+      tags: ['Apresentação'],
+      mimeType: 'application/vnd.ms-powerpoint'
+    },
+    {
+      id: '3',
+      name: 'Pasta de Projetos',
+      type: 'folder',
+      lastModified: '3 dias atrás',
+      starred: false,
+      tags: ['Projetos']
+    }
+  ]);
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const [showTagDialog, setShowTagDialog] = useState(false);
-  const [selectedDocumentForTags, setSelectedDocumentForTags] = useState<string | null>(null);
-  const [newTag, setNewTag] = useState('');
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      loadDocuments();
-      loadFolders();
-    }
-  }, [user, currentFolder]);
-
-  const loadDocuments = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user's company
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!companyUser) {
-        setDocuments([]);
-        return;
-      }
-
-      let query = supabase
-        .from('documents')
-        .select('*')
-        .eq('company_id', companyUser.company_id)
-        .order('created_at', { ascending: false });
-
-      if (currentFolder) {
-        query = query.eq('folder_id', currentFolder);
-      } else {
-        query = query.is('folder_id', null);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setDocuments(data || []);
-    } catch (error) {
-      console.error('Error loading documents:', error);
-      setDocuments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadFolders = async () => {
-    try {
-      // Get user's company
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!companyUser) {
-        setFolders([]);
-        return;
-      }
-
-      let query = supabase
-        .from('document_folders')
-        .select('*')
-        .eq('company_id', companyUser.company_id)
-        .order('name', { ascending: true });
-
-      if (currentFolder) {
-        query = query.eq('parent_folder_id', currentFolder);
-      } else {
-        query = query.is('parent_folder_id', null);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setFolders(data || []);
-    } catch (error) {
-      console.error('Error loading folders:', error);
-      setFolders([]);
-    }
-  };
-
-  const createFolder = async () => {
-    if (!newFolderName.trim()) return;
-
-    try {
-      // Get user's company
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!companyUser) {
-        toast({
-          title: "Erro",
-          description: "Empresa não encontrada",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('document_folders')
-        .insert({
-          name: newFolderName,
-          parent_folder_id: currentFolder,
-          company_id: companyUser.company_id,
-          created_by: user?.id
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Pasta criada com sucesso!"
-      });
-
-      setNewFolderName('');
-      setShowNewFolderDialog(false);
-      loadFolders();
-    } catch (error) {
-      console.error('Error creating folder:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar pasta",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleFileUpload = async (files: FileList) => {
-    try {
-      // Get user's company
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!companyUser) {
-        toast({
-          title: "Erro",
-          description: "Empresa não encontrada",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Upload file to Supabase Storage
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${file.name}`;
-        const filePath = `documents/${companyUser.company_id}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
-
-        // Save document record
-        const { error: dbError } = await supabase
-          .from('documents')
-          .insert({
-            name: file.name,
-            file_type: fileExt || 'unknown',
-            file_size: file.size,
-            file_url: publicUrl,
-            folder_id: currentFolder,
-            company_id: companyUser.company_id,
-            created_by: user?.id
-          });
-
-        if (dbError) throw dbError;
-      }
-
-      toast({
-        title: "Sucesso",
-        description: `${files.length} arquivo(s) enviado(s) com sucesso!`
-      });
-
-      loadDocuments();
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao enviar arquivos",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(false);
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files);
-    }
-  };
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => {
+      const newDoc: Document = {
+        id: Date.now().toString() + Math.random(),
+        name: file.name,
+        type: 'file',
+        size: formatFileSize(file.size),
+        lastModified: 'Agora',
+        starred: false,
+        tags: [],
+        mimeType: file.type
+      };
+      
+      setDocuments(prev => [...prev, newDoc]);
+    });
+    
+    toast({
+      title: "Arquivos enviados",
+      description: `${files.length} arquivo(s) foram adicionados com sucesso.`,
+    });
+  }, [toast]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const addTagToDocument = async () => {
-    if (!selectedDocumentForTags || !newTag.trim()) return;
-
-    try {
-      const document = documents.find(doc => doc.id === selectedDocumentForTags);
-      if (!document) return;
-
-      const updatedTags = [...(document.tags || []), newTag.trim()];
-
-      const { error } = await supabase
-        .from('documents')
-        .update({ tags: updatedTags })
-        .eq('id', selectedDocumentForTags);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Tag adicionada com sucesso!"
-      });
-
-      setNewTag('');
-      setShowTagDialog(false);
-      setSelectedDocumentForTags(null);
-      loadDocuments();
-    } catch (error) {
-      console.error('Error adding tag:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao adicionar tag",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const removeTag = async (documentId: string, tagToRemove: string) => {
-    try {
-      const document = documents.find(doc => doc.id === documentId);
-      if (!document) return;
-
-      const updatedTags = document.tags.filter(tag => tag !== tagToRemove);
-
-      const { error } = await supabase
-        .from('documents')
-        .update({ tags: updatedTags })
-        .eq('id', documentId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Tag removida com sucesso!"
-      });
-
-      loadDocuments();
-    } catch (error) {
-      console.error('Error removing tag:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao remover tag",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const filteredDocuments = documents.filter(doc =>
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
-
-  const filteredFolders = folders.filter(folder =>
-    folder.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -382,565 +122,330 @@ const DocumentsManager = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileIcon = (fileType: string) => {
-    switch (fileType.toLowerCase()) {
-      case 'pdf':
-        return '📄';
-      case 'doc':
-      case 'docx':
-        return '📝';
-      case 'xls':
-      case 'xlsx':
-        return '📊';
-      case 'ppt':
-      case 'pptx':
-        return '📋';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return '🖼️';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return '🎥';
-      case 'mp3':
-      case 'wav':
-        return '🎵';
-      case 'zip':
-      case 'rar':
-        return '📦';
-      default:
-        return '📄';
+  const handleFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      const newDoc: Document = {
+        id: Date.now().toString() + Math.random(),
+        name: file.name,
+        type: 'file',
+        size: formatFileSize(file.size),
+        lastModified: 'Agora',
+        starred: false,
+        tags: [],
+        mimeType: file.type
+      };
+      
+      setDocuments(prev => [...prev, newDoc]);
+    });
+    
+    toast({
+      title: "Arquivos enviados",
+      description: `${files.length} arquivo(s) foram adicionados com sucesso.`,
+    });
+  };
+
+  const createNewFolder = () => {
+    if (newFolderName.trim()) {
+      const newFolder: Document = {
+        id: Date.now().toString(),
+        name: newFolderName,
+        type: 'folder',
+        lastModified: 'Agora',
+        starred: false,
+        tags: []
+      };
+      
+      setDocuments(prev => [...prev, newFolder]);
+      setNewFolderName('');
+      setShowNewFolderDialog(false);
+      
+      toast({
+        title: "Pasta criada",
+        description: `A pasta "${newFolderName}" foi criada com sucesso.`,
+      });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6 bg-gray-50 min-h-screen ml-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
-        </div>
-      </div>
+  const toggleStar = (id: string) => {
+    setDocuments(prev => 
+      prev.map(doc => 
+        doc.id === id ? { ...doc, starred: !doc.starred } : doc
+      )
     );
-  }
+  };
+
+  const deleteDocument = (id: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== id));
+    toast({
+      title: "Item excluído",
+      description: "O item foi excluído com sucesso.",
+    });
+  };
+
+  const getFileIcon = (mimeType?: string, type?: string) => {
+    if (type === 'folder') return <Folder className="h-8 w-8 text-blue-500" />;
+    
+    if (mimeType?.includes('pdf')) return <FileText className="h-8 w-8 text-red-500" />;
+    if (mimeType?.includes('image')) return <File className="h-8 w-8 text-green-500" />;
+    if (mimeType?.includes('presentation')) return <File className="h-8 w-8 text-orange-500" />;
+    
+    return <FileText className="h-8 w-8 text-gray-500" />;
+  };
+
+  const filteredDocuments = documents.filter(doc =>
+    doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Google Drive Style Header */}
-      <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
-        <div className="p-4 max-w-7xl mx-auto ml-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {currentFolder && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentFolder(null)}
-                  className="hover:bg-gray-100 rounded-lg"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-              )}
-              <h1 className="text-2xl font-normal text-gray-900">
-                {currentFolder ? 'Pasta' : 'Meus Arquivos'}
-              </h1>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                className="hover:bg-gray-100 rounded-lg"
-              >
-                {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-              </Button>
-              
-              <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="hover:bg-gray-50 rounded-lg">
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Nova Pasta
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle>Nova Pasta</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="folderName">Nome da pasta</Label>
-                      <Input
-                        id="folderName"
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        placeholder="Pasta sem título"
-                        className="rounded-lg"
-                      />
-                    </div>
-                    <div className="flex gap-3 justify-end">
-                      <Button variant="outline" onClick={() => setShowNewFolderDialog(false)} className="rounded-lg">
-                        Cancelar
-                      </Button>
-                      <Button onClick={createFolder} className="rounded-lg bg-blue-600 hover:bg-blue-700">
-                        Criar
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Button 
-                className="rounded-lg bg-blue-600 hover:bg-blue-700"
-                onClick={() => document.getElementById('file-upload')?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Enviar
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    handleFileUpload(e.target.files);
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative max-w-md">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Documentos</h1>
+          <p className="text-base text-gray-600 mt-2">Gerencie seus arquivos e pastas</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Pesquisar no Drive"
+              placeholder="Buscar documentos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-gray-300 rounded-full bg-gray-50 hover:bg-white hover:shadow-sm focus:bg-white transition-all"
+              className="pl-10 w-64 rounded-xl"
             />
           </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('grid')}
+              className="rounded-xl"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('list')}
+              className="rounded-xl"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="rounded-xl">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl">
+              <DropdownMenuItem onClick={handleFileUpload}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload de Arquivo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowNewFolderDialog(true)}>
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Nova Pasta
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="p-4 max-w-7xl mx-auto ml-6">
-        {/* Drag and Drop Zone */}
-        <div
-          className={`border-2 border-dashed rounded-2xl transition-all duration-300 ${
-            dragOver 
-              ? 'border-blue-500 bg-blue-50 p-8' 
-              : 'border-transparent'
-          } ${
-            (filteredFolders.length === 0 && filteredDocuments.length === 0 && !searchTerm) 
-              ? 'p-16 border-gray-300 bg-gray-50' 
-              : dragOver ? 'p-8' : 'p-0'
-          }`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        >
-          {(filteredFolders.length === 0 && filteredDocuments.length === 0 && !searchTerm) || dragOver ? (
-            <div className="text-center">
-              <Upload className={`h-16 w-16 mx-auto mb-4 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                {dragOver ? 'Solte para fazer upload' : 'Arraste arquivos para cá'}
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Ou clique em "Enviar" para selecionar arquivos
-              </p>
-              <Button 
-                onClick={() => document.getElementById('file-upload')?.click()}
-                className="rounded-lg"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Selecionar Arquivos
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Quick Access */}
-              {!currentFolder && !searchTerm && (
-                <div className="mb-8">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Acesso Rápido</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <Star className="h-8 w-8 text-yellow-500" />
-                        <div>
-                          <p className="font-medium text-gray-900">Com estrela</p>
-                          <p className="text-sm text-gray-500">0 itens</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <Clock className="h-8 w-8 text-gray-500" />
-                        <div>
-                          <p className="font-medium text-gray-900">Recentes</p>
-                          <p className="text-sm text-gray-500">{documents.length} itens</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <User className="h-8 w-8 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-900">Compartilhados</p>
-                          <p className="text-sm text-gray-500">0 itens</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <Trash2 className="h-8 w-8 text-red-500" />
-                        <div>
-                          <p className="font-medium text-gray-900">Lixeira</p>
-                          <p className="text-sm text-gray-500">0 itens</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+      {/* Drag and Drop Area */}
+      <div
+        className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
+          isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-lg font-semibold text-gray-900 mb-2">
+          Arraste arquivos aqui ou clique para enviar
+        </p>
+        <p className="text-base text-gray-600 mb-4">
+          Suporta PDFs, imagens, documentos e apresentações
+        </p>
+        <Button onClick={handleFileUpload} className="rounded-xl">
+          Selecionar Arquivos
+        </Button>
+      </div>
+
+      {/* Documents Grid/List */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {filteredDocuments.map((doc) => (
+            <Card key={doc.id} className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 group">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  {getFileIcon(doc.mimeType, doc.type)}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl">
+                      <DropdownMenuItem onClick={() => toggleStar(doc.id)}>
+                        <Star className={`h-4 w-4 mr-2 ${doc.starred ? 'fill-yellow-400' : ''}`} />
+                        {doc.starred ? 'Remover favorito' : 'Adicionar aos favoritos'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Share className="h-4 w-4 mr-2" />
+                        Compartilhar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => deleteDocument(doc.id)} className="text-red-600">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              )}
-
-              {/* Files and Folders */}
-              {(filteredFolders.length > 0 || filteredDocuments.length > 0) && (
-                <div className="space-y-4">
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                      {/* Folders */}
-                      {filteredFolders.map((folder) => (
-                        <ContextMenu key={folder.id}>
-                          <ContextMenuTrigger>
-                            <div
-                              className="group cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                              onClick={() => setCurrentFolder(folder.id)}
-                            >
-                              <div className="text-center">
-                                <Folder className="h-12 w-12 text-blue-500 mx-auto mb-2 group-hover:text-blue-600" />
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {folder.name}
-                                </p>
-                              </div>
-                            </div>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Abrir
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Renomear
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Move className="h-4 w-4 mr-2" />
-                              Mover
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copiar
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Share className="h-4 w-4 mr-2" />
-                              Compartilhar
-                            </ContextMenuItem>
-                            <ContextMenuItem className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      ))}
-
-                      {/* Documents */}
-                      {filteredDocuments.map((doc) => (
-                        <ContextMenu key={doc.id}>
-                          <ContextMenuTrigger>
-                            <div className="group cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                              <div className="text-center">
-                                <div className="text-4xl mb-2">{getFileIcon(doc.file_type)}</div>
-                                <p className="text-sm font-medium text-gray-900 truncate mb-1">
-                                  {doc.name}
-                                </p>
-                                <p className="text-xs text-gray-500 mb-2">
-                                  {formatFileSize(doc.file_size)}
-                                </p>
-                                {doc.tags && doc.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 justify-center">
-                                    {doc.tags.slice(0, 2).map((tag, index) => (
-                                      <Badge 
-                                        key={index} 
-                                        variant="secondary" 
-                                        className="text-xs px-1 py-0"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeTag(doc.id, tag);
-                                        }}
-                                      >
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                    {doc.tags.length > 2 && (
-                                      <Badge variant="outline" className="text-xs px-1 py-0">
-                                        +{doc.tags.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Visualizar
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                              onClick={() => {
-                                setSelectedDocumentForTags(doc.id);
-                                setShowTagDialog(true);
-                              }}
-                            >
-                              <Tag className="h-4 w-4 mr-2" />
-                              Adicionar Tag
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Renomear
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Move className="h-4 w-4 mr-2" />
-                              Mover
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copiar
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Share className="h-4 w-4 mr-2" />
-                              Compartilhar
-                            </ContextMenuItem>
-                            <ContextMenuItem className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {/* List Header */}
-                      <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-gray-500 border-b border-gray-200">
-                        <div className="col-span-5">Nome</div>
-                        <div className="col-span-2">Proprietário</div>
-                        <div className="col-span-2">Modificado</div>
-                        <div className="col-span-2">Tamanho</div>
-                        <div className="col-span-1"></div>
-                      </div>
-
-                      {/* Folders */}
-                      {filteredFolders.map((folder) => (
-                        <ContextMenu key={folder.id}>
-                          <ContextMenuTrigger>
-                            <div
-                              className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                              onClick={() => setCurrentFolder(folder.id)}
-                            >
-                              <div className="col-span-5 flex items-center gap-3">
-                                <Folder className="h-5 w-5 text-blue-500" />
-                                <span className="font-medium text-gray-900">{folder.name}</span>
-                              </div>
-                              <div className="col-span-2 text-sm text-gray-500">Você</div>
-                              <div className="col-span-2 text-sm text-gray-500">
-                                {new Date(folder.created_at).toLocaleDateString('pt-BR')}
-                              </div>
-                              <div className="col-span-2 text-sm text-gray-500">—</div>
-                              <div className="col-span-1">
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Abrir
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Renomear
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Move className="h-4 w-4 mr-2" />
-                              Mover
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Share className="h-4 w-4 mr-2" />
-                              Compartilhar
-                            </ContextMenuItem>
-                            <ContextMenuItem className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      ))}
-
-                      {/* Documents */}
-                      {filteredDocuments.map((doc) => (
-                        <ContextMenu key={doc.id}>
-                          <ContextMenuTrigger>
-                            <div className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-                              <div className="col-span-5 flex items-center gap-3">
-                                <span className="text-xl">{getFileIcon(doc.file_type)}</span>
-                                <div className="flex-1 min-w-0">
-                                  <span className="font-medium text-gray-900 block truncate">{doc.name}</span>
-                                  {doc.tags && doc.tags.length > 0 && (
-                                    <div className="flex gap-1 mt-1">
-                                      {doc.tags.slice(0, 3).map((tag, index) => (
-                                        <Badge 
-                                          key={index} 
-                                          variant="secondary" 
-                                          className="text-xs px-1 py-0"
-                                        >
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="col-span-2 text-sm text-gray-500">Você</div>
-                              <div className="col-span-2 text-sm text-gray-500">
-                                {new Date(doc.created_at).toLocaleDateString('pt-BR')}
-                              </div>
-                              <div className="col-span-2 text-sm text-gray-500">
-                                {formatFileSize(doc.file_size)}
-                              </div>
-                              <div className="col-span-1">
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Visualizar
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                              onClick={() => {
-                                setSelectedDocumentForTags(doc.id);
-                                setShowTagDialog(true);
-                              }}
-                            >
-                              <Tag className="h-4 w-4 mr-2" />
-                              Adicionar Tag
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Renomear
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Move className="h-4 w-4 mr-2" />
-                              Mover
-                            </ContextMenuItem>
-                            <ContextMenuItem>
-                              <Share className="h-4 w-4 mr-2" />
-                              Compartilhar
-                            </ContextMenuItem>
-                            <ContextMenuItem className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
+                
+                <div className="space-y-2">
+                  <h3 className="text-base font-semibold text-gray-900 truncate">{doc.name}</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="h-3 w-3" />
+                    {doc.lastModified}
+                  </div>
+                  {doc.size && (
+                    <p className="text-sm text-gray-500">{doc.size}</p>
+                  )}
+                  
+                  {doc.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {doc.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs bg-gray-100 text-gray-700 rounded-full">
+                          <Tag className="h-2 w-2 mr-1" />
+                          {tag}
+                        </Badge>
                       ))}
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* Empty Search Results */}
-              {searchTerm && filteredFolders.length === 0 && filteredDocuments.length === 0 && (
-                <div className="text-center py-16">
-                  <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">
-                    Nenhum resultado encontrado
-                  </h3>
-                  <p className="text-gray-500">
-                    Tente termos de pesquisa diferentes
-                  </p>
-                </div>
-              )}
-            </>
-          )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
+      ) : (
+        <Card className="border-none shadow-lg rounded-2xl bg-white">
+          <CardContent className="p-0">
+            <div className="space-y-2">
+              {filteredDocuments.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    {getFileIcon(doc.mimeType, doc.type)}
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">{doc.name}</h3>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>{doc.lastModified}</span>
+                        {doc.size && <span>{doc.size}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {doc.tags.length > 0 && (
+                      <div className="flex gap-1">
+                        {doc.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs bg-gray-100 text-gray-700 rounded-full">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => toggleStar(doc.id)}
+                      className="rounded-xl"
+                    >
+                      <Star className={`h-4 w-4 ${doc.starred ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} />
+                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-xl">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl">
+                        <DropdownMenuItem>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Share className="h-4 w-4 mr-2" />
+                          Compartilhar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteDocument(doc.id)} className="text-red-600">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Tag Dialog */}
-      <Dialog open={showTagDialog} onOpenChange={setShowTagDialog}>
-        <DialogContent className="rounded-xl">
+      {/* New Folder Dialog */}
+      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Adicionar Tag</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Criar Nova Pasta</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="newTag">Nova tag</Label>
+              <Label htmlFor="folder-name" className="text-base font-medium">Nome da Pasta</Label>
               <Input
-                id="newTag"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Digite a tag"
-                className="rounded-lg"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addTagToDocument();
-                  }
-                }}
+                id="folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Digite o nome da pasta..."
+                className="mt-2 rounded-xl"
               />
             </div>
-            <div className="flex gap-3 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowTagDialog(false);
-                  setNewTag('');
-                  setSelectedDocumentForTags(null);
-                }} 
-                className="rounded-lg"
-              >
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowNewFolderDialog(false)} className="rounded-xl">
                 Cancelar
               </Button>
-              <Button onClick={addTagToDocument} className="rounded-lg bg-blue-600 hover:bg-blue-700">
-                Adicionar
+              <Button onClick={createNewFolder} className="rounded-xl">
+                Criar Pasta
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
     </div>
   );
 };

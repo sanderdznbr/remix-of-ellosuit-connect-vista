@@ -178,26 +178,28 @@ const MailTracking = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Mail Tracking</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Mail Tracking</h1>
+          <p className="text-base text-gray-600 mt-2">Acompanhe seus emails enviados</p>
         </div>
         
         <div className="flex items-center gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search Contacts"
+              placeholder="Buscar contatos"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10 w-64 rounded-xl"
             />
           </div>
           <Button 
             variant="outline" 
             size="icon"
             onClick={() => toast({ title: "Configurações", description: "Funcionalidade em desenvolvimento" })}
+            className="rounded-xl"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -205,30 +207,31 @@ const MailTracking = () => {
             variant="outline" 
             size="icon"
             onClick={handleExportReport}
+            className="rounded-xl"
           >
             <FileText className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <Card>
+      <Card className="border-none shadow-lg rounded-2xl bg-white">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="border-b">
-                <TableHead className="text-gray-500 font-medium">RECIPIENTS</TableHead>
-                <TableHead className="text-gray-500 font-medium">EMAIL</TableHead>
-                <TableHead className="text-gray-500 font-medium">ACTIVITY</TableHead>
-                <TableHead className="text-gray-500 font-medium">LIST</TableHead>
-                <TableHead className="text-gray-500 font-medium">ACTION</TableHead>
+                <TableHead className="text-sm text-gray-600 font-medium p-6">DESTINATÁRIOS</TableHead>
+                <TableHead className="text-sm text-gray-600 font-medium p-6">EMAIL</TableHead>
+                <TableHead className="text-sm text-gray-600 font-medium p-6">ATIVIDADE</TableHead>
+                <TableHead className="text-sm text-gray-600 font-medium p-6">LISTA</TableHead>
+                <TableHead className="text-sm text-gray-600 font-medium p-6">AÇÃO</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
-                      <div className="animate-pulse h-12 bg-gray-100 rounded"></div>
+                    <TableCell colSpan={5} className="p-6">
+                      <div className="animate-pulse h-12 bg-gray-100 rounded-xl"></div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -245,45 +248,44 @@ const MailTracking = () => {
                   
                   return (
                     <TableRow key={email.id} className="hover:bg-gray-50">
-                      <TableCell className="py-4">
-                        <div className="text-sm text-gray-600">
+                      <TableCell className="p-6">
+                        <div className="text-base text-gray-900">
                           {email.recipient_email}
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
+                      <TableCell className="p-6">
                         <div>
-                          <div className="font-medium text-sm">{email.subject}</div>
-                          <div className="text-xs text-gray-500">
-                            Sent on {new Date(email.sent_at).toLocaleDateString('en-US', {
-                              month: 'short',
+                          <div className="text-base font-semibold">{email.subject}</div>
+                          <div className="text-sm text-gray-600">
+                            Enviado em {new Date(email.sent_at).toLocaleDateString('pt-BR', {
                               day: 'numeric',
+                              month: 'short',
                               year: 'numeric'
-                            })} at {new Date(email.sent_at).toLocaleTimeString('en-US', {
+                            })} às {new Date(email.sent_at).toLocaleTimeString('pt-BR', {
                               hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
+                              minute: '2-digit'
                             })}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
-                        <div className="text-sm font-medium">
-                          {openCount} Opens
+                      <TableCell className="p-6">
+                        <div className="text-base font-semibold">
+                          {openCount} Aberturas
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
-                        <Badge className={`${listBadge.color} text-white text-xs px-2 py-1`}>
+                      <TableCell className="p-6">
+                        <Badge className={`${listBadge.color} text-white text-sm px-3 py-1 rounded-full`}>
                           {listBadge.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-4">
+                      <TableCell className="p-6">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="rounded-xl">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="rounded-xl">
                             <DropdownMenuItem onClick={() => handleViewDetails(email)}>
                               <Eye className="h-4 w-4 mr-2" />
                               Ver detalhes
@@ -311,51 +313,51 @@ const MailTracking = () => {
 
       {/* Email Details Dialog */}
       <Dialog open={!!selectedEmail} onOpenChange={() => setSelectedEmail(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Detalhes do Email</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Detalhes do Email</DialogTitle>
           </DialogHeader>
           {selectedEmail && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Destinatário</label>
-                  <p className="text-sm">{selectedEmail.recipient_email}</p>
+                  <label className="text-sm font-medium text-gray-600">Destinatário</label>
+                  <p className="text-base">{selectedEmail.recipient_email}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Nome</label>
-                  <p className="text-sm">{selectedEmail.recipient_name || 'N/A'}</p>
+                  <label className="text-sm font-medium text-gray-600">Nome</label>
+                  <p className="text-base">{selectedEmail.recipient_name || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Assunto</label>
-                  <p className="text-sm">{selectedEmail.subject}</p>
+                  <label className="text-sm font-medium text-gray-600">Assunto</label>
+                  <p className="text-base">{selectedEmail.subject}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Enviado em</label>
-                  <p className="text-sm">
+                  <label className="text-sm font-medium text-gray-600">Enviado em</label>
+                  <p className="text-base">
                     {new Date(selectedEmail.sent_at).toLocaleString('pt-BR')}
                   </p>
                 </div>
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-500">Eventos</label>
+                <label className="text-sm font-medium text-gray-600">Eventos</label>
                 <div className="mt-2 space-y-2">
                   {selectedEmail.email_events.length > 0 ? (
                     selectedEmail.email_events.map((event, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm font-medium">
+                      <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                        <span className="text-base font-medium">
                           {event.event_type === 'opened' ? 'Aberto' : 
                            event.event_type === 'clicked' ? 'Clicado' : 
                            event.event_type}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-600">
                           {new Date(event.timestamp).toLocaleString('pt-BR')}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500">Nenhum evento registrado</p>
+                    <p className="text-base text-gray-500">Nenhum evento registrado</p>
                   )}
                 </div>
               </div>

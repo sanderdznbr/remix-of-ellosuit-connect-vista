@@ -1,23 +1,48 @@
 
 import React, { useState } from 'react';
-import { Mail, Send, Users, TrendingUp, Plus } from 'lucide-react';
-import MobileCard from '@/components/ui/mobile-card';
+import { Mail, Send, Users, TrendingUp, Plus, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { vibrate } from '@/utils/mobile-helpers';
 
 const MobileEmailDashboard = () => {
   const [activeTab, setActiveTab] = useState('inbox');
 
   const emailStats = [
-    { icon: Mail, label: 'Recebidos', value: '24', color: 'text-blue-500' },
-    { icon: Send, label: 'Enviados', value: '127', color: 'text-green-500' },
-    { icon: Users, label: 'Campanhas', value: '8', color: 'text-purple-500' },
-    { icon: TrendingUp, label: 'Taxa de Abertura', value: '68%', color: 'text-orange-500' }
+    { 
+      icon: Mail, 
+      label: 'Recebidos', 
+      value: '24', 
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    { 
+      icon: Send, 
+      label: 'Enviados', 
+      value: '127', 
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    { 
+      icon: Users, 
+      label: 'Campanhas', 
+      value: '8', 
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Taxa Abertura', 
+      value: '68%', 
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    }
   ];
 
   const recentEmails = [
     { from: 'João Silva', subject: 'Proposta comercial', time: '2 min', status: 'unread' },
     { from: 'Maria Santos', subject: 'Feedback do projeto', time: '1 hora', status: 'read' },
-    { from: 'Pedro Costa', subject: 'Reunião de amanhã', time: '3 horas', status: 'replied' }
+    { from: 'Pedro Costa', subject: 'Reunião de amanhã', time: '3 horas', status: 'replied' },
+    { from: 'Ana Oliveira', subject: 'Documentos pendentes', time: '1 dia', status: 'read' }
   ];
 
   const handleTabChange = (tab: string) => {
@@ -25,62 +50,89 @@ const MobileEmailDashboard = () => {
     vibrate(30);
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'unread': return 'bg-blue-500';
+      case 'replied': return 'bg-green-500';
+      default: return 'bg-gray-300';
+    }
+  };
+
   return (
-    <div className="ios-scroll" style={{ backgroundColor: 'var(--ios-bg-grouped)' }}>
-      <div className="px-4 pb-6 space-y-6">
-        {/* Email Stats */}
-        <div className="ios-card-section">
-          <div className="ios-section-header">
-            <h2 className="ios-title-3">Estatísticas</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4 p-4">
-            {emailStats.map((stat, index) => (
-              <MobileCard 
-                key={index} 
-                className="ios-card p-4 text-center ios-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
-                <p className="ios-title-2 font-bold mb-1">{stat.value}</p>
-                <p className="ios-caption">{stat.label}</p>
-              </MobileCard>
-            ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="px-4 pt-6 pb-24 space-y-6">
+        {/* Search Bar */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center space-x-3">
+            <Search className="h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar emails..."
+              className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-500"
+            />
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex space-x-3 px-4">
-          {['inbox', 'sent', 'campaigns'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200 ${
-                activeTab === tab ? 'ios-pill-active' : ''
-              }`}
+        {/* Email Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          {emailStats.map((stat, index) => (
+            <div 
+              key={index} 
+              className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in"
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <span className="ios-callout font-medium capitalize">{tab}</span>
+              <div className={cn("inline-flex p-2 rounded-xl mb-3", stat.bgColor)}>
+                <stat.icon className={cn("h-5 w-5", stat.color)} />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
+              <p className="text-sm text-gray-600">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex space-x-3">
+          {[
+            { id: 'inbox', label: 'Inbox' },
+            { id: 'sent', label: 'Enviados' },
+            { id: 'campaigns', label: 'Campanhas' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={cn(
+                "px-4 py-2 rounded-full font-medium transition-all duration-200",
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              )}
+            >
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Email List */}
-        <div className="ios-card-section">
-          <div className="ios-section-header">
-            <h2 className="ios-title-3">Emails Recentes</h2>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Emails Recentes</h3>
           </div>
-          <div className="space-y-1">
+          <div className="divide-y divide-gray-100">
             {recentEmails.map((email, index) => (
-              <div key={index} className="ios-list-item ios-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+              <div 
+                key={index} 
+                className="p-4 hover:bg-gray-50 transition-colors animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
                 <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${
-                    email.status === 'unread' ? 'bg-blue-500' :
-                    email.status === 'replied' ? 'bg-green-500' : 'bg-gray-300'
-                  }`}></div>
-                  <div className="flex-1">
-                    <h3 className="ios-headline">{email.from}</h3>
-                    <p className="ios-subheadline line-clamp-1">{email.subject}</p>
+                  <div className={cn("w-3 h-3 rounded-full", getStatusColor(email.status))}></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">{email.from}</h4>
+                      <span className="text-xs text-gray-500">{email.time}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 truncate mt-1">{email.subject}</p>
                   </div>
-                  <span className="ios-caption text-gray-500">{email.time}</span>
                 </div>
               </div>
             ))}
@@ -88,18 +140,16 @@ const MobileEmailDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="ios-card-section">
-          <div className="ios-section-header">
-            <h2 className="ios-title-3">Ações Rápidas</h2>
-          </div>
-          <div className="p-4 space-y-3">
-            <button className="ios-button ios-button-primary w-full">
-              <Plus className="h-5 w-5 mr-2" />
-              <span>Novo Email</span>
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h3 className="font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
+          <div className="space-y-3">
+            <button className="w-full flex items-center justify-center space-x-3 p-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
+              <Plus className="h-5 w-5" />
+              <span className="font-medium">Novo Email</span>
             </button>
-            <button className="ios-button ios-button-secondary w-full">
-              <Users className="h-5 w-5 mr-2" />
-              <span>Nova Campanha</span>
+            <button className="w-full flex items-center justify-center space-x-3 p-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors">
+              <Users className="h-5 w-5" />
+              <span className="font-medium">Nova Campanha</span>
             </button>
           </div>
         </div>

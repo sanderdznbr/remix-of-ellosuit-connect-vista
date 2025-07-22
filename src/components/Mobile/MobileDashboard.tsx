@@ -7,9 +7,6 @@ import MobileHome from './MobileHome';
 import MobileCalendarView from './MobileCalendarView';
 import MobileEmailDashboard from './MobileEmailDashboard';
 import MobileClientsManager from './MobileClientsManager';
-import MobileAnalytics from './MobileAnalytics';
-import MobileSettings from './MobileSettings';
-import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 
 const MobileDashboard = () => {
   const [activeItem, setActiveItem] = useState('home');
@@ -23,10 +20,7 @@ const MobileDashboard = () => {
     '/dashboard/': 'home',
     '/dashboard/agenda': 'agenda',
     '/dashboard/email': 'email',
-    '/dashboard/clientes': 'clientes',
-    '/dashboard/analises': 'analises',
-    '/dashboard/configuracoes': 'configuracoes',
-    '/dashboard/tarefas': 'tarefas'
+    '/dashboard/clientes': 'clientes'
   };
 
   useEffect(() => {
@@ -41,10 +35,7 @@ const MobileDashboard = () => {
       'home': '/dashboard',
       'agenda': '/dashboard/agenda',
       'email': '/dashboard/email',
-      'clientes': '/dashboard/clientes',
-      'analises': '/dashboard/analises',
-      'configuracoes': '/dashboard/configuracoes',
-      'tarefas': '/dashboard/tarefas'
+      'clientes': '/dashboard/clientes'
     };
     
     navigate(itemToRoute[item] || '/dashboard');
@@ -55,10 +46,7 @@ const MobileDashboard = () => {
       'home': 'Dashboard',
       'agenda': 'Minha Agenda',
       'email': 'Email Marketing',
-      'clientes': 'Clientes',
-      'analises': 'Análises',
-      'configuracoes': 'Configurações',
-      'tarefas': 'Lembretes'
+      'clientes': 'Clientes'
     };
     return titles[item] || 'Dashboard';
   };
@@ -73,19 +61,13 @@ const MobileDashboard = () => {
         return <MobileEmailDashboard />;
       case 'clientes':
         return <MobileClientsManager />;
-      case 'analises':
-        return <MobileAnalytics />;
-      case 'configuracoes':
-        return <MobileSettings />;
-      case 'tarefas':
-        return <TarefasMobile />;
       default:
         return <MobileHome />;
     }
   };
 
   if (!isMobile) {
-    return null; // Fallback para desktop
+    return null;
   }
 
   return (
@@ -94,9 +76,8 @@ const MobileDashboard = () => {
       activeItem={activeItem}
       onItemClick={handleItemClick}
       showSearch={['home', 'clientes', 'email'].includes(activeItem)}
-      showAddButton={['agenda', 'clientes', 'tarefas'].includes(activeItem)}
+      showAddButton={['agenda', 'clientes'].includes(activeItem)}
       onAddClick={() => {
-        // Implementar ação de adicionar baseada no item ativo
         console.log('Add clicked for:', activeItem);
       }}
     >

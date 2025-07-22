@@ -5,6 +5,7 @@ import { useToast } from './use-toast';
 import { CalendarEvent } from '@/integrations/supabase/types';
 
 interface TarefaItem extends CalendarEvent {
+  id: string;
   status: 'pending' | 'completed' | 'deleted';
 }
 
@@ -18,6 +19,7 @@ export const useTarefas = () => {
     // Converter eventos do calendário para o formato de tarefas
     const tarefasFormatted: TarefaItem[] = events.map(event => ({
       ...event,
+      id: event.id,
       status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending'
     }));
     

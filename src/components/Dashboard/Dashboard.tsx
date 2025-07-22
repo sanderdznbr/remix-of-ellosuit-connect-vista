@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Home from './Home';
@@ -89,7 +88,7 @@ const Dashboard = () => {
       case 'clients':
         return <ClientsManager />;
       case 'analytics':
-        return <Analytics />;
+        return <Analytics onNavigate={handleItemClick} />;
       case 'settings':
         return <Settings />;
       case 'test-secrets':

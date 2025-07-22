@@ -409,7 +409,7 @@ const SidebarEditor = () => {
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center space-x-3 mb-2">
                       <img 
-                        src="/lovable-uploads/46bd0cbc-7f70-4ed3-96f2-c376b107d40c.png" 
+                        src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
                         alt="ElloSuit Logo" 
                         className="h-10 w-auto"
                         onError={(e) => {
@@ -468,7 +468,7 @@ const SidebarEditor = () => {
                 ) : (
                   <div className="p-4 border rounded-lg">
                     <img 
-                      src="/lovable-uploads/6dc50aee-0855-403f-91a2-dce507fedef9.png" 
+                      src="/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png" 
                       alt="ElloSuit Favicon" 
                       className="h-12 w-12 object-contain mb-2"
                       onError={(e) => {

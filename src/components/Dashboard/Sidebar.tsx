@@ -102,13 +102,13 @@ const Sidebar = () => {
       <div className="p-6 pb-4">
         <div className="flex items-center space-x-3">
           {isCollapsed ? (
-            // Exibe favicon 1:1 quando recolhida
+            // Exibe favicon 1:1 quando recolhida - usando uma imagem válida do projeto
             <img 
-              src={settings.custom_favicon_url || "/lovable-uploads/6dc50aee-0855-403f-91a2-dce507fedef9.png"} 
+              src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
               alt="Logo" 
               className="h-12 w-12 object-contain transition-all duration-300"
               onError={(e) => {
-                e.currentTarget.src = "/lovable-uploads/6dc50aee-0855-403f-91a2-dce507fedef9.png";
+                e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
               }}
             />
           ) : (
@@ -120,18 +120,20 @@ const Sidebar = () => {
                   alt="Logo" 
                   className="h-10 w-auto transition-all duration-300"
                   onError={(e) => {
-                    e.currentTarget.src = "/lovable-uploads/46bd0cbc-7f70-4ed3-96f2-c376b107d40c.png";
+                    e.currentTarget.src = "/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png";
                   }}
                 />
               ) : (
                 // Logo padrão ElloSuit sempre visível quando não há custom_logo_url
                 <>
                   <img 
-                    src="/lovable-uploads/46bd0cbc-7f70-4ed3-96f2-c376b107d40c.png" 
+                    src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
                     alt="ElloSuit Logo" 
                     className="h-10 w-auto transition-all duration-300"
                     onError={(e) => {
                       console.error('Erro ao carregar logo padrão:', e);
+                      // Fallback para texto se a imagem não carregar
+                      e.currentTarget.style.display = 'none';
                     }}
                   />
                   <span className={`text-xl font-bold ${textColor} transition-opacity duration-300`}>

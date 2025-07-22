@@ -9,6 +9,7 @@ interface SidebarSettings {
   sidebar_color: string;
   sidebar_background_color?: string;
   custom_logo_url?: string;
+  custom_favicon_url?: string;
   menu_order: string[];
 }
 
@@ -58,6 +59,7 @@ export const useSidebarSettings = () => {
           sidebar_color: data.sidebar_color || '#3000E3',
           sidebar_background_color: data.sidebar_background_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
+          custom_favicon_url: data.custom_favicon_url,
           menu_order: menuOrder
         });
       }
@@ -91,6 +93,7 @@ export const useSidebarSettings = () => {
             sidebar_color: updatedSettings.sidebar_color,
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
+            custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order
           })
           .eq('id', settings.id);
@@ -106,6 +109,7 @@ export const useSidebarSettings = () => {
             sidebar_color: updatedSettings.sidebar_color,
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
+            custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order
           })
           .select()
@@ -115,7 +119,7 @@ export const useSidebarSettings = () => {
         updatedSettings.id = data.id;
       }
 
-      // Atualiza o estado imediatamente para reflexo instantâneo
+      // Atualiza o estado imediatamente para reflexão instantânea
       setSettings(updatedSettings);
       
       toast({

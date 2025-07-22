@@ -102,23 +102,33 @@ const Sidebar = () => {
       {/* Logo */}
       <div className="p-6">
         <div className="flex items-center space-x-3">
-          {settings.custom_logo_url ? (
+          {isCollapsed ? (
+            // Exibe favicon quando recolhida
             <img 
-              src={settings.custom_logo_url} 
+              src={settings.custom_favicon_url || "/lovable-uploads/644ccf9e-389e-4a0e-9608-ac9326a8d64a.png"} 
               alt="Logo" 
-              className={`${isCollapsed ? 'h-8 w-8' : 'h-10 w-auto'} transition-all duration-300`}
+              className="h-8 w-8 object-contain transition-all duration-300"
             />
           ) : (
+            // Exibe logo completa quando expandida
             <>
-              <img 
-                src="/lovable-uploads/ed54eb39-e51c-4ba2-817b-41de8affc95c.png" 
-                alt="ElloSuit Logo" 
-                className={`${isCollapsed ? 'h-8 w-8' : 'h-10 w-auto'} transition-all duration-300`}
-              />
-              {!isCollapsed && (
-                <span className={`text-xl font-bold ${textColor} transition-opacity duration-300`}>
-                  ElloSuit
-                </span>
+              {settings.custom_logo_url ? (
+                <img 
+                  src={settings.custom_logo_url} 
+                  alt="Logo" 
+                  className="h-10 w-auto transition-all duration-300"
+                />
+              ) : (
+                <>
+                  <img 
+                    src="/lovable-uploads/ed54eb39-e51c-4ba2-817b-41de8affc95c.png" 
+                    alt="ElloSuit Logo" 
+                    className="h-10 w-auto transition-all duration-300"
+                  />
+                  <span className={`text-xl font-bold ${textColor} transition-opacity duration-300`}>
+                    ElloSuit
+                  </span>
+                </>
               )}
             </>
           )}
@@ -176,9 +186,9 @@ const Sidebar = () => {
 
             <Button
               onClick={signOut}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border-current`}
+              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border border-transparent hover:border-current hover:bg-transparent`}
             >
               <LogOut className="h-4 w-4" />
               <span>Sair</span>
@@ -194,9 +204,9 @@ const Sidebar = () => {
             </Avatar>
             <Button
               onClick={signOut}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border-current`}
+              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border border-transparent hover:border-current hover:bg-transparent`}
             >
               <LogOut className="h-4 w-4" />
             </Button>

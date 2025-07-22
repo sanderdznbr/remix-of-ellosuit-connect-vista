@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -6,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -38,7 +37,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
-  const { fullResyncCalendar } = useGoogleCalendar();
+  const { fullResyncCalendar, isConnected, autoSyncCalendar } = useGoogleCalendar();
   const { toast } = useToast();
 
   const handleDateClick = (arg: any) => {
@@ -48,18 +47,16 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const handleDateSelect = (selectInfo: any) => {
-    // Quando o usuário arrasta para selecionar um intervalo de tempo
     const start = selectInfo.start;
     const end = selectInfo.end;
     
-    // Verificar se é uma seleção válida (não apenas um clique)
     if (start.getTime() !== end.getTime()) {
       setSelectedRange({
         start: start.toISOString(),
         end: end.toISOString()
       });
       setSelectedDate(start.toISOString().split('T')[0]);
-      setShowEventModal(true); // Abrir diretamente o modal de reunião
+      setShowEventModal(true);
     }
   };
 
@@ -114,14 +111,24 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const handleRefreshCalendar = async () => {
     setIsRefreshing(true);
     try {
-      const result = await fullResyncCalendar();
-      await refreshEvents();
-      
-      toast({
-        title: "✅ Sincronização Completa",
-        description: `${result.created} eventos criados, ${result.updated} atualizados`,
-        duration: 5000
-      });
+      if (isConnected) {
+        console.log('🔄 Iniciando sincronização manual...');
+        const result = await fullResyncCalendar();
+        
+        toast({
+          title: "✅ Sincronização Completa",
+          description: `${result.created} eventos sincronizados do Google Calendar`,
+          duration: 5000
+        });
+      } else {
+        // Se não conectado, apenas atualizar eventos locais
+        await refreshEvents();
+        toast({
+          title: "✅ Calendário Atualizado",
+          description: "Eventos locais foram atualizados",
+          duration: 3000
+        });
+      }
     } catch (error) {
       console.error('Error synchronizing:', error);
       toast({
@@ -133,6 +140,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       setIsRefreshing(false);
     }
   };
+
+  // Executar sincronização automática quando o componente carregar
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔄 Executando sincronização automática ao carregar calendário...');
+      autoSyncCalendar();
+    }
+  }, [isConnected, autoSyncCalendar]);
 
   const formatEventsForCalendar = (events: any[]) => {
     return events.map((event) => {
@@ -205,7 +220,15 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3600FF] to-[#4F46E5] bg-clip-text text-transparent mb-2">
             Meu Calendário
           </h1>
-          <p className="text-gray-600">Gerencie seus eventos, reuniões e compromissos</p>
+          <p className="text-gray-600">
+            Gerencie seus eventos, reuniões e compromissos
+            {isConnected && (
+              <span className="ml-2 inline-flex items-center text-green-600 text-sm">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Google Calendar Conectado
+              </span>
+            )}
+          </p>
         </div>
         
         <div className="flex space-x-3">
@@ -266,7 +289,9 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                       {eventInfo.event.title}
                     </div>
                     {eventInfo.event.extendedProps.source === 'google' && (
-                      <div className="event-source text-xs opacity-75">Google</div>
+                      <div className="event-source text-xs opacity-75 flex items-center">
+                        <span className="text-xs">Google</span>
+                      </div>
                     )}
                   </div>
                 );

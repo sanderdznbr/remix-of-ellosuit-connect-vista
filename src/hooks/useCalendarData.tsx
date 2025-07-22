@@ -73,6 +73,9 @@ export const useCalendarData = () => {
         setHasCompany(true);
         setCompanyId(companyUser.company_id);
         await fetchEvents(companyUser.company_id);
+        
+        // Configurar realtime subscription para novos eventos
+        setupRealtimeSubscription(companyUser.company_id);
       } else {
         await createUserCompany(userId);
       }
@@ -81,6 +84,35 @@ export const useCalendarData = () => {
       setCompanyId(null);
       setLoading(false);
     }
+  };
+
+  const setupRealtimeSubscription = (userCompanyId: string) => {
+    console.log('📡 Configurando subscription em tempo real para eventos...');
+    
+    const channel = supabase
+      .channel('calendar-events-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_events',
+          filter: `company_id=eq.${userCompanyId}`
+        },
+        (payload) => {
+          console.log('📡 Evento em tempo real recebido:', payload);
+          // Refetch events when there are changes
+          fetchEvents(userCompanyId);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Status da subscription:', status);
+      });
+
+    return () => {
+      console.log('📡 Removendo subscription em tempo real');
+      supabase.removeChannel(channel);
+    };
   };
 
   const createUserCompany = async (userId: string) => {
@@ -95,6 +127,7 @@ export const useCalendarData = () => {
         setHasCompany(true);
         setCompanyId(existingCompany.company_id);
         await fetchEvents(existingCompany.company_id);
+        setupRealtimeSubscription(existingCompany.company_id);
         return;
       }
 
@@ -135,6 +168,7 @@ export const useCalendarData = () => {
       setHasCompany(true);
       setCompanyId(newCompany.id);
       await fetchEvents(newCompany.id);
+      setupRealtimeSubscription(newCompany.id);
 
     } catch (error) {
       setHasCompany(false);
@@ -151,6 +185,8 @@ export const useCalendarData = () => {
 
   const fetchEvents = async (userCompanyId: string) => {
     try {
+      console.log('📅 Buscando eventos do banco de dados...');
+      
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
@@ -158,14 +194,18 @@ export const useCalendarData = () => {
         .order('start_date', { ascending: true });
 
       if (error) {
+        console.error('❌ Erro ao buscar eventos:', error);
         setEvents([]);
         return;
       }
 
       if (!data || data.length === 0) {
+        console.log('📅 Nenhum evento encontrado no banco');
         setEvents([]);
         return;
       }
+
+      console.log(`📅 ${data.length} eventos encontrados no banco`);
 
       const formattedEvents: CalendarEvent[] = data.map((event) => {
         let startDate = event.start_date;
@@ -196,12 +236,13 @@ export const useCalendarData = () => {
           meeting_provider: event.meeting_provider,
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
-          color: event.color || '#3600FF'
+          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF')
         };
       });
       
       setEvents(formattedEvents);
     } catch (error) {
+      console.error('💥 Erro ao formatar eventos:', error);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -233,7 +274,8 @@ export const useCalendarData = () => {
           meeting_provider: eventData.meeting_provider,
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false,
-          color: eventData.color || '#3600FF'
+          color: eventData.color || '#3600FF',
+          google_event_id: eventData.google_event_id // Para eventos criados via Google
         })
         .select()
         .single();
@@ -252,7 +294,7 @@ export const useCalendarData = () => {
         description: "Evento criado com sucesso!"
       });
 
-      await fetchEvents(companyId);
+      // Não precisa chamar fetchEvents pois o realtime subscription já vai atualizar
     } catch (error) {
       toast({
         title: "Erro",

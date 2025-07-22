@@ -59,6 +59,9 @@ export const useGoogleCalendar = () => {
         setIntegration(data);
         setIsConnected(true);
         setError(null);
+        
+        // Sincronizar automaticamente quando conectado
+        await autoSyncCalendar();
       } else {
         console.log('⚠️ Nenhuma integração Google Calendar encontrada');
         setIsConnected(false);
@@ -67,6 +70,121 @@ export const useGoogleCalendar = () => {
     } catch (error) {
       console.error('💥 Erro ao verificar conexão Google Calendar:', error);
       setError('Erro ao verificar conexão');
+    }
+  };
+
+  // Função de sincronização automática
+  const autoSyncCalendar = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('🔄 Sincronização automática iniciada...');
+      
+      // Obter company_id do usuário
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyData?.company_id) {
+        console.log('❌ Usuário não está associado a uma empresa');
+        return;
+      }
+
+      // Buscar eventos do Google Calendar dos últimos 3 meses até próximos 6 meses
+      const timeMin = new Date();
+      timeMin.setMonth(timeMin.getMonth() - 3);
+      
+      const timeMax = new Date();
+      timeMax.setMonth(timeMax.getMonth() + 6);
+
+      console.log('📅 Buscando eventos do Google Calendar...', {
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString()
+      });
+
+      const { data: googleEvents, error: fetchError } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'list_events',
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString()
+        }
+      });
+
+      if (fetchError) {
+        console.error('❌ Erro ao buscar eventos:', fetchError);
+        return;
+      }
+
+      if (!googleEvents?.events || googleEvents.events.length === 0) {
+        console.log('📅 Nenhum evento encontrado no Google Calendar');
+        return;
+      }
+
+      console.log(`📅 Encontrados ${googleEvents.events.length} eventos no Google Calendar`);
+
+      // Obter eventos existentes do banco
+      const { data: existingEvents } = await supabase
+        .from('calendar_events')
+        .select('google_event_id')
+        .eq('company_id', companyData.company_id)
+        .not('google_event_id', 'is', null);
+
+      const existingEventIds = new Set(existingEvents?.map(e => e.google_event_id) || []);
+
+      // Filtrar apenas eventos novos
+      const newEvents = googleEvents.events.filter((event: any) => 
+        !existingEventIds.has(event.id)
+      );
+
+      if (newEvents.length === 0) {
+        console.log('✅ Todos os eventos já estão sincronizados');
+        return;
+      }
+
+      console.log(`📅 Inserindo ${newEvents.length} novos eventos...`);
+
+      // Criar eventos localmente em lotes
+      const eventsToCreate = newEvents.map((event: any) => ({
+        title: event.summary || 'Evento sem título',
+        description: event.description || '',
+        start_date: event.start?.dateTime || event.start?.date,
+        end_date: event.end?.dateTime || event.end?.date,
+        event_type: 'meeting' as const,
+        meeting_link: event.hangoutLink || '',
+        meeting_provider: event.hangoutLink ? 'google_meet' : '',
+        attendees: event.attendees ? event.attendees.map((a: any) => a.email) : [],
+        is_all_day: !event.start?.dateTime,
+        google_event_id: event.id,
+        company_id: companyData.company_id,
+        created_by: user.id,
+        color: '#4285F4' // Cor do Google
+      }));
+
+      // Inserir em lotes para evitar timeouts
+      const batchSize = 10;
+      let totalCreated = 0;
+      for (let i = 0; i < eventsToCreate.length; i += batchSize) {
+        const batch = eventsToCreate.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from('calendar_events')
+          .insert(batch);
+
+        if (insertError) {
+          console.error('❌ Erro ao inserir lote de eventos:', insertError);
+        } else {
+          totalCreated += batch.length;
+        }
+      }
+
+      if (totalCreated > 0) {
+        console.log(`✅ ${totalCreated} novos eventos sincronizados`);
+      }
+
+    } catch (error: any) {
+      console.error('💥 Erro na sincronização automática:', error);
     }
   };
 
@@ -92,7 +210,6 @@ export const useGoogleCalendar = () => {
         description: errorMessage,
         variant: "destructive"
       });
-      // Limpar URL após erro
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -118,19 +235,15 @@ export const useGoogleCalendar = () => {
         if (data?.success) {
           console.log('✅ Google Calendar conectado com sucesso');
           
-          // Limpar URL primeiro
           window.history.replaceState({}, document.title, '/dashboard');
           
-          // Aguardar um pouco para garantir que a integração foi salva
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Verificar conexão
           await checkConnection();
           
-          // Mostrar popup de sucesso
           toast({
             title: "✅ Google Calendar Conectado!",
-            description: "Google Calendar foi conectado com sucesso! Agora você pode criar eventos automaticamente.",
+            description: "Google Calendar foi conectado com sucesso! Sincronizando eventos...",
             duration: 5000,
           });
         } else {
@@ -145,7 +258,6 @@ export const useGoogleCalendar = () => {
           variant: "destructive"
         });
         
-        // Limpar URL após erro
         window.history.replaceState({}, document.title, '/dashboard');
       } finally {
         setLoading(false);
@@ -194,7 +306,6 @@ export const useGoogleCalendar = () => {
     }
   };
 
-  // Alias for compatibility
   const connectGoogle = connectGoogleCalendar;
 
   const createGoogleMeetEvent = async ({ title, description, start_date, end_date, attendees }: { title: string; description: string; start_date: string; end_date: string; attendees: string[] }) => {
@@ -300,7 +411,6 @@ export const useGoogleCalendar = () => {
     }
   };
 
-  // Alias for compatibility
   const disconnectGoogle = disconnectGoogleCalendar;
 
   const syncGoogleCalendarEvents = async () => {
@@ -349,10 +459,10 @@ export const useGoogleCalendar = () => {
       console.log('📅 Buscando eventos do Google Calendar...');
       
       const timeMin = new Date();
-      timeMin.setMonth(timeMin.getMonth() - 6); // 6 meses atrás
+      timeMin.setMonth(timeMin.getMonth() - 6);
       
       const timeMax = new Date();
-      timeMax.setMonth(timeMax.getMonth() + 6); // 6 meses à frente
+      timeMax.setMonth(timeMax.getMonth() + 12); // Aumentar período para 12 meses
 
       const { data: googleEvents, error: fetchError } = await supabase.functions.invoke('google-calendar', {
         body: {
@@ -391,10 +501,10 @@ export const useGoogleCalendar = () => {
         google_event_id: event.id,
         company_id: companyData.company_id,
         created_by: user.id,
-        color: '#3600FF'
+        color: '#4285F4'
       }));
 
-      // Inserir em lotes para evitar timeouts
+      // Inserir em lotes
       const batchSize = 10;
       let totalCreated = 0;
       for (let i = 0; i < eventsToCreate.length; i += batchSize) {
@@ -434,6 +544,27 @@ export const useGoogleCalendar = () => {
     }
   };
 
+  // Configurar sincronização automática a cada 5 minutos quando conectado
+  useEffect(() => {
+    if (isConnected && user) {
+      console.log('⏰ Configurando sincronização automática...');
+      
+      // Sincronizar imediatamente
+      autoSyncCalendar();
+      
+      // Configurar intervalo para sincronização automática
+      const syncInterval = setInterval(() => {
+        console.log('🔄 Executando sincronização automática...');
+        autoSyncCalendar();
+      }, 5 * 60 * 1000); // 5 minutos
+
+      return () => {
+        console.log('🛑 Parando sincronização automática');
+        clearInterval(syncInterval);
+      };
+    }
+  }, [isConnected, user]);
+
   useEffect(() => {
     if (user) {
       checkConnection();
@@ -455,6 +586,7 @@ export const useGoogleCalendar = () => {
     deleteGoogleCalendarEvent,
     checkConnection,
     syncGoogleCalendarEvents,
-    fullResyncCalendar
+    fullResyncCalendar,
+    autoSyncCalendar
   };
 };

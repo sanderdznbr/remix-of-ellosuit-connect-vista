@@ -1,29 +1,76 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Mail, 
+  TrendingUp, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle,
+  Calendar,
+  Target,
+  Activity,
+  BarChart3,
+  Users,
+  Zap
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDistanceToNow, isToday, isYesterday, startOfDay, endOfDay, subDays, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, TrendingUp, Mail, Target, Calendar as CalIcon, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-interface DailyEmailCount {
-  date: string;
-  count: number;
+interface EmailMetrics {
+  total_sent: number;
+  total_opened: number;
+  total_clicked: number;
+  total_replied: number;
+  open_rate: number;
+  click_rate: number;
+  reply_rate: number;
+}
+
+interface ProductivityData {
+  daily_emails: number;
+  weekly_emails: number;
+  monthly_emails: number;
+  avg_response_time: number;
+  active_conversations: number;
+  completed_tasks: number;
 }
 
 const MailProductivity = () => {
   const { user } = useAuth();
-  const [emailCounts, setEmailCounts] = useState<DailyEmailCount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<EmailMetrics>({
+    total_sent: 0,
+    total_opened: 0,
+    total_clicked: 0,
+    total_replied: 0,
+    open_rate: 0,
+    click_rate: 0,
+    reply_rate: 0
+  });
+  const [productivity, setProductivity] = useState<ProductivityData>({
+    daily_emails: 0,
+    weekly_emails: 0,
+    monthly_emails: 0,
+    avg_response_time: 0,
+    active_conversations: 0,
+    completed_tasks: 0
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchEmailProductivity();
+    }
+  }, [user, selectedPeriod]);
 
   const fetchEmailProductivity = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       
       // Get user's company
       const { data: companyUser } = await supabase
@@ -33,144 +80,58 @@ const MailProductivity = () => {
         .single();
 
       if (!companyUser) {
-        // Se não tem empresa, criar dados vazios
-        const counts: DailyEmailCount[] = [];
-        for (let i = 29; i >= 0; i--) {
-          const date = subDays(new Date(), i);
-          const dateStr = format(date, 'yyyy-MM-dd');
-          counts.push({
-            date: dateStr,
-            count: 0
-          });
-        }
-        setEmailCounts(counts);
-        setCurrentStreak(0);
-        setLongestStreak(0);
+        console.log('No company found for user');
         return;
       }
 
-      const thirtyDaysAgo = subDays(new Date(), 30);
-      
-      const { data, error } = await supabase
-        .from('emails')
-        .select('sent_at')
-        .eq('company_id', companyUser.company_id)
-        .gte('sent_at', thirtyDaysAgo.toISOString())
-        .order('sent_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Group emails by date
-      const emailsByDate: { [key: string]: number } = {};
-      
-      data?.forEach(email => {
-        const date = format(new Date(email.sent_at), 'yyyy-MM-dd');
-        emailsByDate[date] = (emailsByDate[date] || 0) + 1;
+      // Reset all metrics to zero (no real data available yet)
+      setMetrics({
+        total_sent: 0,
+        total_opened: 0,
+        total_clicked: 0,
+        total_replied: 0,
+        open_rate: 0,
+        click_rate: 0,
+        reply_rate: 0
       });
 
-      // Convert to array and fill missing dates with 0
-      const counts: DailyEmailCount[] = [];
-      for (let i = 29; i >= 0; i--) {
-        const date = subDays(new Date(), i);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        counts.push({
-          date: dateStr,
-          count: emailsByDate[dateStr] || 0
-        });
-      }
+      setProductivity({
+        daily_emails: 0,
+        weekly_emails: 0,
+        monthly_emails: 0,
+        avg_response_time: 0,
+        active_conversations: 0,
+        completed_tasks: 0
+      });
 
-      setEmailCounts(counts);
-      calculateStreaks(counts);
     } catch (error) {
       console.error('Error fetching email productivity:', error);
-      // Em caso de erro, criar dados vazios
-      const counts: DailyEmailCount[] = [];
-      for (let i = 29; i >= 0; i--) {
-        const date = subDays(new Date(), i);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        counts.push({
-          date: dateStr,
-          count: 0
-        });
-      }
-      setEmailCounts(counts);
-      setCurrentStreak(0);
-      setLongestStreak(0);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const calculateStreaks = (counts: DailyEmailCount[]) => {
-    let current = 0;
-    let longest = 0;
-    let tempStreak = 0;
-
-    // Calculate current streak (from today backwards)
-    const sortedCounts = [...counts].reverse();
-    for (const day of sortedCounts) {
-      if (day.count > 0) {
-        current++;
-      } else {
-        break;
-      }
+  const formatResponseTime = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes}min`;
     }
-
-    // Calculate longest streak
-    for (const day of counts) {
-      if (day.count > 0) {
-        tempStreak++;
-        longest = Math.max(longest, tempStreak);
-      } else {
-        tempStreak = 0;
-      }
-    }
-
-    setCurrentStreak(current);
-    setLongestStreak(longest);
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h`;
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchEmailProductivity();
-    }
-  }, [user]);
-
-  const getSelectedDateEmails = () => {
-    if (!selectedDate) return 0;
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const dayData = emailCounts.find(d => d.date === dateStr);
-    return dayData?.count || 0;
-  };
-
-  const getTotalEmails = () => {
-    return emailCounts.reduce((sum, day) => sum + day.count, 0);
-  };
-
-  const getAverageEmails = () => {
-    const total = getTotalEmails();
-    return emailCounts.length > 0 ? Math.round((total / emailCounts.length) * 10) / 10 : 0;
-  };
-
-  const getStreakColor = (streak: number) => {
-    if (streak >= 7) return 'bg-gradient-to-r from-green-500 to-green-600';
-    if (streak >= 3) return 'bg-gradient-to-r from-yellow-500 to-yellow-600';
-    return 'bg-gradient-to-r from-gray-500 to-gray-600';
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div>
-          <h1 className="text-3xl font-bold mb-2 text-gray-900">Mail Productivity</h1>
-          <p className="text-gray-600">Acompanhe sua consistência no envio de emails</p>
+          <h1 className="text-3xl font-bold">Produtividade de Email</h1>
+          <p className="text-gray-600 mt-1">Analisando métricas...</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse border-none shadow-lg rounded-2xl">
+            <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-20 bg-gray-200 rounded-xl"></div>
+                <div className="h-20 bg-gray-200 rounded"></div>
               </CardContent>
             </Card>
           ))}
@@ -180,225 +141,228 @@ const MailProductivity = () => {
   }
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-3 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Mail Productivity
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Acompanhe sua consistência no envio de emails e mantenha sua produtividade
-        </p>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Produtividade de Email</h1>
+          <p className="text-gray-600 mt-1">Acompanhe suas métricas de email e produtividade</p>
+        </div>
+        
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="day">Hoje</SelectItem>
+            <SelectItem value="week">Esta Semana</SelectItem>
+            <SelectItem value="month">Este Mês</SelectItem>
+            <SelectItem value="quarter">Este Trimestre</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Stats Cards */}
+      {/* Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Sequência Atual</p>
-                <p className="text-3xl font-bold text-gray-900">{currentStreak}</p>
-                <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Emails Enviados</p>
+                <p className="text-2xl font-bold">{metrics.total_sent}</p>
+                <p className="text-sm text-gray-500 mt-1">Este período</p>
               </div>
-              <div className={`p-4 rounded-full ${getStreakColor(currentStreak)} shadow-lg`}>
-                <Target className="h-6 w-6 text-white" />
+              <div className="p-3 rounded-full bg-blue-50">
+                <Mail className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Maior Sequência</p>
-                <p className="text-3xl font-bold text-gray-900">{longestStreak}</p>
-                <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Taxa de Abertura</p>
+                <p className="text-2xl font-bold">{metrics.open_rate}%</p>
+                <p className="text-sm text-gray-500 mt-1">De {metrics.total_sent} enviados</p>
               </div>
-              <div className="p-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg">
-                <TrendingUp className="h-6 w-6 text-white" />
+              <div className="p-3 rounded-full bg-green-50">
+                <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total (30 dias)</p>
-                <p className="text-3xl font-bold text-gray-900">{getTotalEmails()}</p>
-                <p className="text-sm text-gray-500 mt-1">emails enviados</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Taxa de Cliques</p>
+                <p className="text-2xl font-bold">{metrics.click_rate}%</p>
+                <p className="text-sm text-gray-500 mt-1">De {metrics.total_opened} abertos</p>
               </div>
-              <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg">
-                <Mail className="h-6 w-6 text-white" />
+              <div className="p-3 rounded-full bg-purple-50">
+                <Target className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Média por Dia</p>
-                <p className="text-3xl font-bold text-gray-900">{getAverageEmails()}</p>
-                <p className="text-sm text-gray-500 mt-1">emails por dia</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Tempo de Resposta</p>
+                <p className="text-2xl font-bold">{formatResponseTime(productivity.avg_response_time)}</p>
+                <p className="text-sm text-gray-500 mt-1">Tempo médio</p>
               </div>
-              <div className="p-4 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg">
-                <BarChart3 className="h-6 w-6 text-white" />
+              <div className="p-3 rounded-full bg-orange-50">
+                <Clock className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Calendar and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Calendar */}
-        <Card className="lg:col-span-2 border-none shadow-lg rounded-2xl bg-white">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <CalendarIcon className="h-6 w-6 text-blue-600" />
-              Calendário de Atividade
+      {/* Detailed Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Productivity Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Visão Geral da Produtividade
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-7 gap-2 mb-6">
-              {emailCounts.map((day, index) => {
-                const date = new Date(day.date);
-                const isCurrentDay = isToday(date);
-                const dayCount = day.count;
-                
-                let bgColor = 'bg-gray-100 hover:bg-gray-200';
-                if (dayCount > 0) {
-                  if (dayCount >= 10) bgColor = 'bg-green-600 hover:bg-green-700';
-                  else if (dayCount >= 5) bgColor = 'bg-green-400 hover:bg-green-500';
-                  else if (dayCount >= 1) bgColor = 'bg-green-200 hover:bg-green-300';
-                }
-
-                return (
-                  <div
-                    key={index}
-                    className={`
-                      w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium cursor-pointer transition-all duration-200
-                      ${bgColor}
-                      ${isCurrentDay ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-                      ${dayCount > 0 ? 'text-white' : 'text-gray-600'}
-                      hover:scale-110 transform shadow-sm
-                    `}
-                    title={`${format(date, 'dd/MM/yyyy')} - ${dayCount} emails`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    {format(date, 'd')}
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">{productivity.daily_emails}</p>
+                    <p className="text-sm text-blue-700">Emails Hoje</p>
                   </div>
-                );
-              })}
-            </div>
-            
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
-              <span className="font-medium">Menos</span>
-              <div className="flex gap-2">
-                <div className="w-4 h-4 bg-gray-100 rounded-lg"></div>
-                <div className="w-4 h-4 bg-green-200 rounded-lg"></div>
-                <div className="w-4 h-4 bg-green-400 rounded-lg"></div>
-                <div className="w-4 h-4 bg-green-600 rounded-lg"></div>
+                </div>
               </div>
-              <span className="font-medium">Mais</span>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Users className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">{productivity.active_conversations}</p>
+                    <p className="text-sm text-green-700">Conversas Ativas</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-8 w-8 text-purple-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-purple-600">{productivity.completed_tasks}</p>
+                    <p className="text-sm text-purple-700">Tarefas Concluídas</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-8 w-8 text-orange-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">{productivity.weekly_emails}</p>
+                    <p className="text-sm text-orange-700">Emails na Semana</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Selected Day Details */}
-        <Card className="border-none shadow-lg rounded-2xl bg-white">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-center text-lg">
-              {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Selecione um dia'}
+        {/* Email Performance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Performance de Email
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-6 text-center">
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <div className="text-4xl font-bold text-gray-900 mb-2">
-                  {getSelectedDateEmails()}
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium">Taxa de Abertura</span>
+                  <span className="text-sm text-gray-600">{metrics.open_rate}%</span>
                 </div>
-                <p className="text-sm text-gray-600">emails enviados</p>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${metrics.open_rate}%` }}
+                  ></div>
+                </div>
               </div>
-
-              {selectedDate && (
-                <div className="space-y-3">
-                  <Badge 
-                    variant={getSelectedDateEmails() > 0 ? "default" : "secondary"}
-                    className="px-4 py-2 rounded-full text-sm"
-                  >
-                    {getSelectedDateEmails() > 0 ? '✅ Dia Produtivo' : '⭕ Sem Atividade'}
-                  </Badge>
-
-                  {isToday(selectedDate) && (
-                    <p className="text-sm text-blue-600 font-medium">📅 Hoje</p>
-                  )}
-                  
-                  {isYesterday(selectedDate) && (
-                    <p className="text-sm text-gray-500 font-medium">📅 Ontem</p>
-                  )}
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium">Taxa de Cliques</span>
+                  <span className="text-sm text-gray-600">{metrics.click_rate}%</span>
                 </div>
-              )}
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ width: `${metrics.click_rate}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium">Taxa de Resposta</span>
+                  <span className="text-sm text-gray-600">{metrics.reply_rate}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-purple-600 h-2 rounded-full" 
+                    style={{ width: `${metrics.reply_rate}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">Status do Sistema</p>
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                  Aguardando Dados
+                </Badge>
+                <p className="text-xs text-gray-500 mt-2">
+                  Os dados serão coletados conforme você usa o sistema de email
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card className="border-none shadow-lg rounded-2xl bg-white">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <BarChart3 className="h-6 w-6 text-purple-600" />
-            Atividade Recente (7 dias)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {emailCounts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Mail className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">Nenhuma atividade encontrada</p>
-              <p className="text-sm">Comece enviando emails para ver suas estatísticas aqui</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {emailCounts.slice(-7).reverse().map((day, index) => {
-                const date = new Date(day.date);
-                const isCurrentDay = isToday(date);
-                const wasYesterday = isYesterday(date);
-                
-                return (
-                  <div key={index} className="flex items-center justify-between py-4 px-4 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-4 h-4 rounded-full ${day.count > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {isCurrentDay ? '📅 Hoje' : 
-                           wasYesterday ? '📅 Ontem' : 
-                           format(date, 'dd/MM')}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {format(date, 'EEEE', { locale: ptBR })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-lg text-gray-900">{day.count}</p>
-                      <p className="text-sm text-gray-500">emails</p>
-                      {day.count > 0 && (
-                        <Badge className="mt-1 bg-green-100 text-green-800 rounded-full text-xs">
-                          ✅ Produtivo
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* Call to Action */}
+      <Card className="border-2 border-dashed border-gray-300">
+        <CardContent className="p-8 text-center">
+          <Mail className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Comece a Usar o Sistema de Email</h3>
+          <p className="text-gray-600 mb-6">
+            Conecte sua conta de email e comece a enviar campanhas para ver suas métricas de produtividade aqui.
+          </p>
+          <div className="flex justify-center gap-4">
+            <Button>
+              <Mail className="h-4 w-4 mr-2" />
+              Configurar Email
+            </Button>
+            <Button variant="outline">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Ver Tutorial
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

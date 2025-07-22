@@ -21,13 +21,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-interface QuickActionItem {
-  title: string;
-  icon: React.ElementType;
-  color: string;
-  onClick: () => void;
-}
-
 interface RecentActivity {
   id: string;
   type: 'email' | 'meeting' | 'client' | 'template';
@@ -93,39 +86,6 @@ const Home = ({ onNavigate }: HomeProps) => {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const quickActions: QuickActionItem[] = [
-    {
-      title: 'E-mail',
-      icon: Mail,
-      color: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
-      onClick: () => onNavigate('mail-tracking')
-    },
-    {
-      title: 'Reunião',
-      icon: Calendar,
-      color: 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
-      onClick: () => onNavigate('my-calendar')
-    },
-    {
-      title: 'Cliente',
-      icon: Users,
-      color: 'bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700',
-      onClick: () => onNavigate('clients')
-    },
-    {
-      title: 'Meet',
-      icon: Video,
-      color: 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
-      onClick: () => onNavigate('start-meet')
-    },
-    {
-      title: 'Análises',
-      icon: BarChart3,
-      color: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700',
-      onClick: () => onNavigate('analytics')
-    }
-  ];
 
   useEffect(() => {
     // Set random quote on component mount
@@ -331,26 +291,6 @@ const Home = ({ onNavigate }: HomeProps) => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Ações Rápidas - Apenas Ícones */}
-      <Card className="border-none shadow-lg rounded-2xl bg-white">
-        <CardContent className="p-8">
-          <div className="grid grid-cols-5 gap-6 max-w-2xl mx-auto">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={action.onClick}
-                  className={`group flex items-center justify-center p-6 rounded-2xl ${action.color} transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl`}
-                >
-                  <Icon className="h-8 w-8 text-white" />
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Próximos Compromissos e Atividades Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

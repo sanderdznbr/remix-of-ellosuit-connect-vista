@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Upload, 
   File, 
@@ -19,7 +18,13 @@ import {
   FolderPlus,
   MoreHorizontal,
   Eye,
-  Edit
+  Edit,
+  Grid3X3,
+  List,
+  Star,
+  Clock,
+  User,
+  ArrowLeft
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,7 +60,8 @@ const DocumentsManager = () => {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -333,240 +339,314 @@ const DocumentsManager = () => {
   if (loading) {
     return (
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Documentos</h1>
-          <p className="text-gray-600">Gerencie seus arquivos e documentos</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="animate-pulse border-none shadow-lg rounded-2xl">
-              <CardContent className="p-6">
-                <div className="h-20 bg-gray-200 rounded-xl"></div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Documentos
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Gerencie seus arquivos e documentos de forma organizada
-          </p>
-        </div>
-        
-        <div className="flex gap-3">
-          <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Nova Pasta
+    <div className="min-h-screen bg-white">
+      {/* Google Drive Style Header */}
+      <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
+        <div className="p-4 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              {currentFolder && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentFolder(null)}
+                  className="hover:bg-gray-100 rounded-lg"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+              )}
+              <h1 className="text-2xl font-normal text-gray-900">
+                {currentFolder ? 'Pasta' : 'Meus Arquivos'}
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                className="hover:bg-gray-100 rounded-lg"
+              >
+                {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
               </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-2xl">
-              <DialogHeader>
-                <DialogTitle>Criar Nova Pasta</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="folderName">Nome da pasta</Label>
-                  <Input
-                    id="folderName"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="Digite o nome da pasta"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button variant="outline" onClick={() => setShowNewFolderDialog(false)} className="rounded-xl">
-                    Cancelar
+              
+              <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="hover:bg-gray-50 rounded-lg">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Nova Pasta
                   </Button>
-                  <Button onClick={createFolder} className="rounded-xl">
-                    Criar Pasta
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+                </DialogTrigger>
+                <DialogContent className="rounded-xl">
+                  <DialogHeader>
+                    <DialogTitle>Nova Pasta</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="folderName">Nome da pasta</Label>
+                      <Input
+                        id="folderName"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="Pasta sem título"
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <Button variant="outline" onClick={() => setShowNewFolderDialog(false)} className="rounded-lg">
+                        Cancelar
+                      </Button>
+                      <Button onClick={createFolder} className="rounded-lg bg-blue-600 hover:bg-blue-700">
+                        Criar
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
-          <Button 
-            className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-            onClick={() => document.getElementById('file-upload')?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Enviar Arquivo
-          </Button>
-          <input
-            id="file-upload"
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files) {
-                handleFileUpload(e.target.files);
-              }
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <Card className="border-none shadow-lg rounded-2xl bg-white">
-        <CardContent className="p-6">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar documentos e pastas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-xl border-gray-200"
+              <Button 
+                className="rounded-lg bg-blue-600 hover:bg-blue-700"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Enviar
+              </Button>
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    handleFileUpload(e.target.files);
+                  }
+                }}
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Drag and Drop Area */}
-      <div
-        className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-          dragOver 
-            ? 'border-blue-500 bg-blue-50' 
-            : 'border-gray-300 bg-white hover:border-gray-400'
-        }`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-      >
-        <Upload className={`h-16 w-16 mx-auto mb-4 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          {dragOver ? 'Solte os arquivos aqui' : 'Arraste e solte seus arquivos'}
-        </h3>
-        <p className="text-gray-600 mb-4">
-          Ou clique no botão "Enviar Arquivo" acima
-        </p>
-        <p className="text-sm text-gray-500">
-          Suporta todos os tipos de arquivo
-        </p>
+          {/* Search Bar */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Pesquisar no Drive"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 rounded-full bg-gray-50 hover:bg-white hover:shadow-sm focus:bg-white transition-all"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Folders and Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Back Button */}
-        {currentFolder && (
-          <Card 
-            className="cursor-pointer hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white transform hover:scale-105"
-            onClick={() => setCurrentFolder(null)}
+      {/* Content Area */}
+      <div className="p-4 max-w-7xl mx-auto">
+        {/* Drag and Drop Zone (when empty or dragging) */}
+        {(filteredFolders.length === 0 && filteredDocuments.length === 0 && !searchTerm) || dragOver ? (
+          <div
+            className={`border-2 border-dashed rounded-2xl p-16 text-center transition-all duration-300 ${
+              dragOver 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
           >
-            <CardContent className="p-6 text-center">
-              <div className="text-4xl mb-3">⬅️</div>
-              <p className="font-medium text-gray-700">Voltar</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Folders */}
-        {filteredFolders.map((folder) => (
-          <Card 
-            key={folder.id}
-            className="cursor-pointer hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-gradient-to-br from-yellow-50 to-orange-50 transform hover:scale-105"
-            onClick={() => setCurrentFolder(folder.id)}
-          >
-            <CardContent className="p-6 text-center">
-              <Folder className="h-12 w-12 text-yellow-600 mx-auto mb-3" />
-              <p className="font-medium text-gray-900 truncate">{folder.name}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                {new Date(folder.created_at).toLocaleDateString('pt-BR')}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Documents */}
-        {filteredDocuments.map((doc) => (
-          <Card 
-            key={doc.id}
-            className="cursor-pointer hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white transform hover:scale-105"
-          >
-            <CardContent className="p-6">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-3">{getFileIcon(doc.file_type)}</div>
-                <p className="font-medium text-gray-900 truncate mb-1">{doc.name}</p>
-                <p className="text-sm text-gray-500">{formatFileSize(doc.file_size)}</p>
-              </div>
-              
-              <div className="flex gap-2 justify-center">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => window.open(doc.file_url, '_blank')}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = doc.file_url;
-                    link.download = doc.name;
-                    link.click();
-                  }}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {doc.tags && doc.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-3 justify-center">
-                  {doc.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs rounded-full">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredFolders.length === 0 && filteredDocuments.length === 0 && !loading && (
-        <div className="text-center py-16">
-          <File className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-          <h3 className="text-2xl font-semibold text-gray-900 mb-3">
-            {searchTerm ? 'Nenhum resultado encontrado' : 'Nenhum documento ainda'}
-          </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            {searchTerm 
-              ? 'Tente ajustar sua busca ou remover filtros' 
-              : 'Comece enviando seus primeiros arquivos ou criando pastas para organizá-los'
-            }
-          </p>
-          {!searchTerm && (
+            <Upload className={`h-16 w-16 mx-auto mb-4 ${dragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+            <h3 className="text-xl font-medium text-gray-900 mb-2">
+              {dragOver ? 'Solte para fazer upload' : 'Arraste arquivos para cá'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Ou clique em "Enviar" para selecionar arquivos
+            </p>
             <Button 
-              className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
               onClick={() => document.getElementById('file-upload')?.click()}
+              className="rounded-lg"
             >
               <Upload className="h-4 w-4 mr-2" />
-              Enviar Primeiro Arquivo
+              Selecionar Arquivos
             </Button>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <>
+            {/* Quick Access */}
+            {!currentFolder && !searchTerm && (
+              <div className="mb-8">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Acesso Rápido</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Star className="h-8 w-8 text-yellow-500" />
+                      <div>
+                        <p className="font-medium text-gray-900">Com estrela</p>
+                        <p className="text-sm text-gray-500">0 itens</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Clock className="h-8 w-8 text-gray-500" />
+                      <div>
+                        <p className="font-medium text-gray-900">Recentes</p>
+                        <p className="text-sm text-gray-500">{documents.length} itens</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <User className="h-8 w-8 text-blue-500" />
+                      <div>
+                        <p className="font-medium text-gray-900">Compartilhados</p>
+                        <p className="text-sm text-gray-500">0 itens</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer rounded-xl border-gray-200">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Trash2 className="h-8 w-8 text-red-500" />
+                      <div>
+                        <p className="font-medium text-gray-900">Lixeira</p>
+                        <p className="text-sm text-gray-500">0 itens</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Files and Folders */}
+            {(filteredFolders.length > 0 || filteredDocuments.length > 0) && (
+              <div className="space-y-4">
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                    {/* Folders */}
+                    {filteredFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="group cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        onClick={() => setCurrentFolder(folder.id)}
+                      >
+                        <div className="text-center">
+                          <Folder className="h-12 w-12 text-blue-500 mx-auto mb-2 group-hover:text-blue-600" />
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {folder.name}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Documents */}
+                    {filteredDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="group cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">{getFileIcon(doc.file_type)}</div>
+                          <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                            {doc.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(doc.file_size)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {/* List Header */}
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-gray-500 border-b border-gray-200">
+                      <div className="col-span-6">Nome</div>
+                      <div className="col-span-2">Proprietário</div>
+                      <div className="col-span-2">Modificado</div>
+                      <div className="col-span-1">Tamanho</div>
+                      <div className="col-span-1"></div>
+                    </div>
+
+                    {/* Folders */}
+                    {filteredFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                        onClick={() => setCurrentFolder(folder.id)}
+                      >
+                        <div className="col-span-6 flex items-center gap-3">
+                          <Folder className="h-5 w-5 text-blue-500" />
+                          <span className="font-medium text-gray-900">{folder.name}</span>
+                        </div>
+                        <div className="col-span-2 text-sm text-gray-500">Você</div>
+                        <div className="col-span-2 text-sm text-gray-500">
+                          {new Date(folder.created_at).toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className="col-span-1 text-sm text-gray-500">—</div>
+                        <div className="col-span-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Documents */}
+                    {filteredDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div className="col-span-6 flex items-center gap-3">
+                          <span className="text-xl">{getFileIcon(doc.file_type)}</span>
+                          <span className="font-medium text-gray-900">{doc.name}</span>
+                        </div>
+                        <div className="col-span-2 text-sm text-gray-500">Você</div>
+                        <div className="col-span-2 text-sm text-gray-500">
+                          {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className="col-span-1 text-sm text-gray-500">
+                          {formatFileSize(doc.file_size)}
+                        </div>
+                        <div className="col-span-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Empty Search Results */}
+            {searchTerm && filteredFolders.length === 0 && filteredDocuments.length === 0 && (
+              <div className="text-center py-16">
+                <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  Nenhum resultado encontrado
+                </h3>
+                <p className="text-gray-500">
+                  Tente termos de pesquisa diferentes
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

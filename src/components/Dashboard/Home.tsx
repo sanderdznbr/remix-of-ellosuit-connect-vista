@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Calendar, 
@@ -9,24 +8,11 @@ import {
   Users, 
   TrendingUp, 
   Clock, 
-  Target,
-  Plus,
-  ArrowRight,
   Activity,
-  FileText,
-  Video,
-  BarChart3,
   Quote
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-
-interface QuickActionItem {
-  title: string;
-  icon: React.ElementType;
-  color: string;
-  onClick: () => void;
-}
 
 interface RecentActivity {
   id: string;
@@ -93,39 +79,6 @@ const Home = ({ onNavigate }: HomeProps) => {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const quickActions: QuickActionItem[] = [
-    {
-      title: 'E-mail',
-      icon: Mail,
-      color: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
-      onClick: () => onNavigate('mail-tracking')
-    },
-    {
-      title: 'Reunião',
-      icon: Calendar,
-      color: 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
-      onClick: () => onNavigate('my-calendar')
-    },
-    {
-      title: 'Cliente',
-      icon: Users,
-      color: 'bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700',
-      onClick: () => onNavigate('clients')
-    },
-    {
-      title: 'Meet',
-      icon: Video,
-      color: 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
-      onClick: () => onNavigate('start-meet')
-    },
-    {
-      title: 'Análises',
-      icon: BarChart3,
-      color: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700',
-      onClick: () => onNavigate('analytics')
-    }
-  ];
 
   useEffect(() => {
     // Set random quote on component mount
@@ -225,7 +178,6 @@ const Home = ({ onNavigate }: HomeProps) => {
       case 'email': return Mail;
       case 'meeting': return Calendar;
       case 'client': return Users;
-      case 'template': return FileText;
       default: return Activity;
     }
   };
@@ -249,19 +201,19 @@ const Home = ({ onNavigate }: HomeProps) => {
   };
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+    <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
       {/* Frase Inspiradora no Topo */}
-      <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl">
-        <CardContent className="p-8">
-          <div className="flex items-start gap-4">
-            <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-              <Quote className="h-6 w-6 text-white" />
+      <Card className="border-none shadow-xl bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl">
+        <CardContent className="p-10">
+          <div className="flex items-start gap-6">
+            <div className="p-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
+              <Quote className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-3 text-lg">
+              <h3 className="font-semibold text-gray-900 mb-4 text-xl">
                 💡 Inspiração do Momento
               </h3>
-              <p className="text-gray-700 text-xl italic leading-relaxed">
+              <p className="text-gray-700 text-2xl italic leading-relaxed">
                 "{currentQuote}"
               </p>
             </div>
@@ -270,132 +222,105 @@ const Home = ({ onNavigate }: HomeProps) => {
       </Card>
 
       {/* Estatísticas Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">E-mails Hoje</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.emails}</p>
-                <p className="text-sm text-gray-500 mt-1">vs. ontem</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">E-mails Hoje</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.emails}</p>
+                <p className="text-sm text-gray-500 mt-2">enviados</p>
               </div>
-              <div className="p-4 rounded-full bg-blue-50">
-                <Mail className="h-6 w-6 text-blue-600" />
+              <div className="p-5 rounded-full bg-blue-50">
+                <Mail className="h-8 w-8 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Reuniões Hoje</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.meetings}</p>
-                <p className="text-sm text-gray-500 mt-1">agendadas</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Reuniões Hoje</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.meetings}</p>
+                <p className="text-sm text-gray-500 mt-2">agendadas</p>
               </div>
-              <div className="p-4 rounded-full bg-green-50">
-                <Calendar className="h-6 w-6 text-green-600" />
+              <div className="p-5 rounded-full bg-green-50">
+                <Calendar className="h-8 w-8 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Clientes</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.clients}</p>
-                <p className="text-sm text-gray-500 mt-1">cadastrados</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Clientes</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.clients}</p>
+                <p className="text-sm text-gray-500 mt-2">cadastrados</p>
               </div>
-              <div className="p-4 rounded-full bg-purple-50">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="p-5 rounded-full bg-purple-50">
+                <Users className="h-8 w-8 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Produtividade</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.productivity}%</p>
-                <p className="text-sm text-gray-500 mt-1">do objetivo</p>
+                <p className="text-sm font-medium text-gray-600 mb-2">Produtividade</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.productivity}%</p>
+                <p className="text-sm text-gray-500 mt-2">do objetivo</p>
               </div>
-              <div className="p-4 rounded-full bg-orange-50">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
+              <div className="p-5 rounded-full bg-orange-50">
+                <TrendingUp className="h-8 w-8 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Ações Rápidas - Apenas Ícones */}
-      <Card className="border-none shadow-lg rounded-2xl bg-white">
-        <CardContent className="p-8">
-          <div className="grid grid-cols-5 gap-6 max-w-2xl mx-auto">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={action.onClick}
-                  className={`group flex items-center justify-center p-6 rounded-2xl ${action.color} transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl`}
-                >
-                  <Icon className="h-8 w-8 text-white" />
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Próximos Compromissos e Atividades Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Próximos Compromissos */}
-        <Card className="border-none shadow-lg rounded-2xl bg-white">
+        <Card className="border-none shadow-xl rounded-3xl bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <Clock className="h-6 w-6" />
               Próximos Compromissos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {loading ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : upcomingEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhum compromisso agendado</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4 rounded-xl"
-                    onClick={() => onNavigate('my-calendar')}
-                  >
-                    Ver Calendário
-                  </Button>
+                <div className="text-center py-12 text-gray-500">
+                  <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Nenhum compromisso agendado</p>
                 </div>
               ) : (
                 upcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors">
-                    <div className="p-2 rounded-lg bg-blue-100">
-                      <Calendar className="h-4 w-4 text-blue-600" />
+                  <div key={event.id} className="flex items-start gap-4 p-5 rounded-2xl hover:bg-gray-50 transition-colors">
+                    <div className="p-3 rounded-xl bg-blue-100">
+                      <Calendar className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">{event.title}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 mt-1">
                         {new Date(event.start_date).toLocaleDateString('pt-BR')} às{' '}
                         {new Date(event.start_date).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </p>
-                      <Badge variant="secondary" className="mt-1 rounded-full">
+                      <Badge variant="secondary" className="mt-2 rounded-full">
                         {event.event_type}
                       </Badge>
                     </div>
@@ -407,37 +332,37 @@ const Home = ({ onNavigate }: HomeProps) => {
         </Card>
 
         {/* Atividades Recentes */}
-        <Card className="border-none shadow-lg rounded-2xl bg-white">
+        <Card className="border-none shadow-xl rounded-3xl bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <Activity className="h-6 w-6" />
               Atividades Recentes
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {loading ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : recentActivities.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhuma atividade recente</p>
-                  <p className="text-sm mt-1">Comece usando o sistema para ver suas atividades aqui</p>
+                <div className="text-center py-12 text-gray-500">
+                  <Activity className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Nenhuma atividade recente</p>
+                  <p className="text-sm mt-2">Comece usando o sistema para ver suas atividades aqui</p>
                 </div>
               ) : (
                 recentActivities.map((activity) => {
                   const Icon = getActivityIcon(activity.type);
                   return (
-                    <div key={activity.id} className="flex items-start gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Icon className="h-4 w-4 text-gray-600" />
+                    <div key={activity.id} className="flex items-start gap-4 p-5 rounded-2xl hover:bg-gray-50 transition-colors">
+                      <div className="p-3 rounded-xl bg-gray-100">
+                        <Icon className="h-5 w-5 text-gray-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{activity.title}</p>
-                        <p className="text-sm text-gray-600 truncate">{activity.description}</p>
-                        <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
+                        <p className="text-sm text-gray-600 truncate mt-1">{activity.description}</p>
+                        <p className="text-xs text-gray-400 mt-2">{activity.time}</p>
                       </div>
                       <Badge className={`${getStatusColor(activity.status)} rounded-full`}>
                         {getStatusLabel(activity.status)}

@@ -1,368 +1,254 @@
 
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Mail, Search, Filter, Plus, BarChart3, TrendingUp, Users, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Search, MoreHorizontal, Settings, FileText, Eye } from 'lucide-react';
-
-interface EmailTracking {
-  id: string;
-  recipient_email: string;
-  recipient_name: string;
-  subject: string;
-  sent_at: string;
-  campaign_id: string | null;
-  email_events: Array<{
-    event_type: string;
-    timestamp: string;
-  }>;
-}
+import { useAuth } from '@/hooks/useAuth';
 
 const MailTracking = () => {
-  const [emails, setEmails] = useState<EmailTracking[]>([]);
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedEmail, setSelectedEmail] = useState<EmailTracking | null>(null);
-  const { toast } = useToast();
-
-  const fetchEmails = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('emails')
-        .select(`
-          id,
-          recipient_email,
-          recipient_name,
-          subject,
-          sent_at,
-          campaign_id,
-          email_events (
-            event_type,
-            timestamp
-          )
-        `)
-        .order('sent_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setEmails(data || []);
-    } catch (error) {
-      console.error('Error fetching emails:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalEmails: 0,
+    opened: 0,
+    clicked: 0,
+    replied: 0
+  });
 
   useEffect(() => {
-    fetchEmails();
+    if (user) {
+      loadEmailStats();
+    }
+  }, [user]);
 
-    const channel = supabase
-      .channel('email-tracking')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'emails'
-      }, () => {
-        fetchEmails();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'email_events'
-      }, () => {
-        fetchEmails();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const getOpenCount = (events: Array<{event_type: string}>) => {
-    return events.filter(event => event.event_type === 'opened').length;
-  };
-
-  const getListBadge = (campaignId: string | null) => {
-    if (!campaignId) return { label: 'List 1', color: 'bg-blue-500' };
-    
-    // Simple hash to assign consistent colors
-    const hash = campaignId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const colors = [
-      'bg-blue-500',
-      'bg-orange-500', 
-      'bg-red-500',
-      'bg-green-500',
-      'bg-purple-500'
-    ];
-    
-    const listNumber = Math.abs(hash % 3) + 1;
-    const colorIndex = Math.abs(hash % colors.length);
-    
-    return {
-      label: `List ${listNumber}`,
-      color: colors[colorIndex]
-    };
-  };
-
-  const filteredEmails = emails.filter(email =>
-    email.recipient_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (email.recipient_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
-
-  const handleViewDetails = (email: EmailTracking) => {
-    setSelectedEmail(email);
-  };
-
-  const handleExportReport = () => {
-    const csvContent = [
-      ['Recipient', 'Subject', 'Sent At', 'Opens', 'Status'],
-      ...filteredEmails.map(email => [
-        email.recipient_email,
-        email.subject,
-        new Date(email.sent_at).toLocaleDateString(),
-        getOpenCount(email.email_events).toString(),
-        getOpenCount(email.email_events) > 0 ? 'Opened' : 'Sent'
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'email-tracking-report.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Relatório exportado",
-      description: "O relatório foi baixado com sucesso.",
-    });
-  };
-
-  const handleDeleteEmail = async (emailId: string) => {
+  const loadEmailStats = async () => {
     try {
-      const { error } = await supabase
-        .from('emails')
-        .delete()
-        .eq('id', emailId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Email excluído",
-        description: "O email foi excluído com sucesso.",
-      });
+      setLoading(true);
       
-      fetchEmails();
+      // Get user's company
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!companyUser) {
+        setStats({ totalEmails: 0, opened: 0, clicked: 0, replied: 0 });
+        return;
+      }
+
+      // Load email stats (placeholder - will be implemented when email tracking is ready)
+      setStats({ totalEmails: 0, opened: 0, clicked: 0, replied: 0 });
+
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir email.",
-        variant: "destructive",
-      });
+      console.error('Error loading email stats:', error);
+      setStats({ totalEmails: 0, opened: 0, clicked: 0, replied: 0 });
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Mail Tracking</h1>
+  if (loading) {
+    return (
+      <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h1 className="text-4xl font-bold text-gray-900">Carregando Rastreamento...</h1>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search Contacts"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => toast({ title: "Configurações", description: "Funcionalidade em desenvolvimento" })}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={handleExportReport}
-          >
-            <FileText className="h-4 w-4" />
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse border-none shadow-lg rounded-3xl">
+              <CardContent className="p-8">
+                <div className="h-24 bg-gray-200 rounded-2xl"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="text-gray-500 font-medium">RECIPIENTS</TableHead>
-                <TableHead className="text-gray-500 font-medium">EMAIL</TableHead>
-                <TableHead className="text-gray-500 font-medium">ACTIVITY</TableHead>
-                <TableHead className="text-gray-500 font-medium">LIST</TableHead>
-                <TableHead className="text-gray-500 font-medium">ACTION</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={5}>
-                      <div className="animate-pulse h-12 bg-gray-100 rounded"></div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filteredEmails.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                    Nenhum email encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredEmails.map((email) => {
-                  const openCount = getOpenCount(email.email_events);
-                  const listBadge = getListBadge(email.campaign_id);
-                  
-                  return (
-                    <TableRow key={email.id} className="hover:bg-gray-50">
-                      <TableCell className="py-4">
-                        <div className="text-sm text-gray-600">
-                          {email.recipient_email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div>
-                          <div className="font-medium text-sm">{email.subject}</div>
-                          <div className="text-xs text-gray-500">
-                            Sent on {new Date(email.sent_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })} at {new Date(email.sent_at).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="text-sm font-medium">
-                          {openCount} Opens
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <Badge className={`${listBadge.color} text-white text-xs px-2 py-1`}>
-                          {listBadge.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(email)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast({ title: "Reenviar", description: "Funcionalidade em desenvolvimento" })}>
-                              Reenviar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600" 
-                              onClick={() => handleDeleteEmail(email.id)}
-                            >
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+  return (
+    <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-5xl font-bold mb-4 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          📧 Rastreamento de Email
+        </h1>
+        <p className="text-gray-600 text-xl">
+          Monitore o desempenho dos seus emails em tempo real
+        </p>
+      </div>
 
-      {/* Email Details Dialog */}
-      <Dialog open={!!selectedEmail} onOpenChange={() => setSelectedEmail(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Email</DialogTitle>
-          </DialogHeader>
-          {selectedEmail && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Destinatário</label>
-                  <p className="text-sm">{selectedEmail.recipient_email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Nome</label>
-                  <p className="text-sm">{selectedEmail.recipient_name || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Assunto</label>
-                  <p className="text-sm">{selectedEmail.subject}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Enviado em</label>
-                  <p className="text-sm">
-                    {new Date(selectedEmail.sent_at).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              </div>
-              
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-500">Eventos</label>
-                <div className="mt-2 space-y-2">
-                  {selectedEmail.email_events.length > 0 ? (
-                    selectedEmail.email_events.map((event, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm font-medium">
-                          {event.event_type === 'opened' ? 'Aberto' : 
-                           event.event_type === 'clicked' ? 'Clicado' : 
-                           event.event_type}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(event.timestamp).toLocaleString('pt-BR')}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">Nenhum evento registrado</p>
-                  )}
-                </div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Enviados</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.totalEmails}</p>
+                <p className="text-sm text-gray-500 mt-2">emails</p>
+              </div>
+              <div className="p-5 rounded-full bg-blue-50">
+                <Mail className="h-8 w-8 text-blue-600" />
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Taxa de Abertura</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.opened}%</p>
+                <p className="text-sm text-gray-500 mt-2">abertos</p>
+              </div>
+              <div className="p-5 rounded-full bg-green-50">
+                <TrendingUp className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Taxa de Clique</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.clicked}%</p>
+                <p className="text-sm text-gray-500 mt-2">clicados</p>
+              </div>
+              <div className="p-5 rounded-full bg-purple-50">
+                <BarChart3 className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Taxa de Resposta</p>
+                <p className="text-4xl font-bold text-gray-900">{stats.replied}%</p>
+                <p className="text-sm text-gray-500 mt-2">respondidos</p>
+              </div>
+              <div className="p-5 rounded-full bg-orange-50">
+                <Users className="h-8 w-8 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs defaultValue="overview" className="space-y-8">
+        <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
+          <TabsList className="grid w-full sm:w-auto grid-cols-3 rounded-2xl">
+            <TabsTrigger value="overview" className="rounded-xl">Visão Geral</TabsTrigger>
+            <TabsTrigger value="campaigns" className="rounded-xl">Campanhas</TabsTrigger>
+            <TabsTrigger value="analytics" className="rounded-xl">Análises</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex gap-4 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar emails..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full sm:w-80 rounded-xl border-gray-200"
+              />
+            </div>
+            <Button className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Campanha
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="overview" className="space-y-8">
+          <Card className="border-none shadow-xl rounded-3xl bg-white">
+            <CardContent className="p-12">
+              <div className="text-center">
+                <Mail className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                  Sistema de Rastreamento em Desenvolvimento
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  O sistema de rastreamento de emails está sendo desenvolvido. Em breve você poderá acompanhar todas as métricas dos seus emails em tempo real.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Badge className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
+                    🔧 Em Desenvolvimento
+                  </Badge>
+                  <Badge className="bg-green-100 text-green-800 px-4 py-2 rounded-full">
+                    📊 Métricas Avançadas
+                  </Badge>
+                  <Badge className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full">
+                    📧 Rastreamento em Tempo Real
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="space-y-8">
+          <Card className="border-none shadow-xl rounded-3xl bg-white">
+            <CardContent className="p-12">
+              <div className="text-center">
+                <Calendar className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                  Campanhas de Email
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Nenhuma campanha encontrada. Crie sua primeira campanha para começar a rastrear seus emails.
+                </p>
+                <Button className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Primeira Campanha
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-8">
+          <Card className="border-none shadow-xl rounded-3xl bg-white">
+            <CardContent className="p-12">
+              <div className="text-center">
+                <BarChart3 className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                  Análises Detalhadas
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  As análises detalhadas estarão disponíveis assim que você começar a enviar emails através da plataforma.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
+                  <div className="p-4 bg-gray-50 rounded-2xl">
+                    <p className="text-sm text-gray-600">Gráficos Interativos</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-2xl">
+                    <p className="text-sm text-gray-600">Relatórios Detalhados</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-2xl">
+                    <p className="text-sm text-gray-600">Comparações</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

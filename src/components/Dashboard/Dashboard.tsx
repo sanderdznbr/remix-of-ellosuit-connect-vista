@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Home from './Home';
 import MyCalendar from './MyCalendar';
-import EmailList from './EmailList';
+import EmailDashboard from './EmailDashboard';
 import ClientsManager from './ClientsManager';
 import DocumentsManager from './DocumentsManager';
 import Analytics from './Analytics';
@@ -23,7 +23,7 @@ const Dashboard = () => {
         <Routes>
           <Route path="/" element={<Home onNavigate={handleNavigate} />} />
           <Route path="/agenda" element={<MyCalendar />} />
-          <Route path="/email/*" element={<EmailList />} />
+          <Route path="/email/*" element={<EmailDashboard />} />
           <Route path="/clientes" element={<ClientsManager />} />
           <Route path="/documentos" element={<DocumentsManager />} />
           <Route path="/analises" element={<Analytics onNavigate={handleNavigate} />} />

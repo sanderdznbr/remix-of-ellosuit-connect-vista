@@ -81,8 +81,7 @@ export const useTarefas = () => {
       if (tarefaToDelete) {
         const deletedTarefa = {
           ...tarefaToDelete,
-          status: 'deleted' as const,
-          deleted_at: new Date().toISOString()
+          status: 'deleted' as const
         };
         
         setTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
@@ -108,8 +107,7 @@ export const useTarefas = () => {
       if (tarefaToRestore) {
         const restoredTarefa = {
           ...tarefaToRestore,
-          status: 'pending' as const,
-          deleted_at: null
+          status: 'pending' as const
         };
         
         setDeletedTarefas(prev => prev.filter(tarefa => tarefa.id !== id));

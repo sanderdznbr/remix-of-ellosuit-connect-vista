@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Calendar, Clock, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { vibrate } from '@/utils/mobile-helpers';
 
 interface NovoLembreteModalProps {

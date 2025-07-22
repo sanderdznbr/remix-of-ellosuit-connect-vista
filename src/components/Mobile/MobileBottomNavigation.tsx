@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Mail, Users, BarChart3, Video, FileText } from 'lucide-react';
+import { Home, Calendar, Mail, Users, BarChart3, Settings, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileBottomNavigationProps {
@@ -14,34 +14,34 @@ const MobileBottomNavigation: React.FC<MobileBottomNavigationProps> = ({
 }) => {
   const navItems = [
     { 
-      id: 'my-calendar', 
-      icon: Calendar, 
-      label: 'Agenda',
+      id: 'home', 
+      icon: Home, 
+      label: 'Início',
       color: 'text-blue-500'
     },
     { 
-      id: 'mail-tracking', 
-      icon: Mail, 
-      label: 'Email',
+      id: 'agenda', 
+      icon: Calendar, 
+      label: 'Agenda',
       color: 'text-green-500'
     },
     { 
-      id: 'start-meet', 
-      icon: Video, 
-      label: 'Meet',
-      color: 'text-purple-500'
-    },
-    { 
-      id: 'clients', 
-      icon: Users, 
-      label: 'Clientes',
+      id: 'tarefas', 
+      icon: CheckSquare, 
+      label: 'Tarefas',
       color: 'text-orange-500'
     },
     { 
-      id: 'analytics', 
-      icon: BarChart3, 
-      label: 'Análises',
-      color: 'text-red-500'
+      id: 'email', 
+      icon: Mail, 
+      label: 'Email',
+      color: 'text-purple-500'
+    },
+    { 
+      id: 'clientes', 
+      icon: Users, 
+      label: 'Clientes',
+      color: 'text-pink-500'
     },
   ];
 

@@ -68,7 +68,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 text-base py-3 rounded-xl"
-              autoFocus
             />
           </div>
 

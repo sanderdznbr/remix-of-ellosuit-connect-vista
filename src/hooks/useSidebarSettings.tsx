@@ -54,14 +54,16 @@ export const useSidebarSettings = () => {
           menuOrder = data.menu_order.map((item: any) => String(item));
         }
 
-        setSettings({
+        const newSettings = {
           id: data.id,
           sidebar_color: data.sidebar_color || '#3000E3',
           sidebar_background_color: data.sidebar_background_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
           custom_favicon_url: data.custom_favicon_url,
           menu_order: menuOrder
-        });
+        };
+
+        setSettings(newSettings);
       }
     } catch (error) {
       console.error('Error fetching sidebar settings:', error);
@@ -121,6 +123,11 @@ export const useSidebarSettings = () => {
 
       // Atualiza o estado imediatamente para reflexão instantânea
       setSettings(updatedSettings);
+      
+      // Disparar evento customizado para atualizar outras partes da aplicação
+      window.dispatchEvent(new CustomEvent('sidebarSettingsUpdated', { 
+        detail: updatedSettings 
+      }));
       
       toast({
         title: "Sucesso",

@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Calendar, 
@@ -60,6 +59,20 @@ const Sidebar = () => {
     }
     return location.pathname.startsWith(path);
   };
+
+  // Escutar mudanças nas configurações
+  useEffect(() => {
+    const handleSettingsUpdate = (event: CustomEvent) => {
+      // As configurações já são atualizadas automaticamente pelo hook
+      console.log('Configurações da sidebar atualizadas:', event.detail);
+    };
+
+    window.addEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
+    };
+  }, []);
 
   // Determinar cor do texto baseado na cor de fundo
   const backgroundColor = settings.sidebar_background_color || '#3600FF';

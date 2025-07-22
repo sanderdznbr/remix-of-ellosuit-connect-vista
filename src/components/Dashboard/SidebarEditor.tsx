@@ -23,6 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Upload, Palette, Settings, Image, RotateCcw, Save } from 'lucide-react';
 import { useSidebarSettings } from '@/hooks/useSidebarSettings';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import ColorWheel from './ColorWheel';
 
 const defaultMenuItems = [
@@ -71,7 +72,8 @@ function SortableItem({ id, label, icon }: SortableItemProps) {
 }
 
 const SidebarEditor = () => {
-  const { settings, loading, updateSettings } = useSidebarSettings();
+  const { settings, loading, updateSettings, refetch } = useSidebarSettings();
+  const { uploadFile, uploading } = useFileUpload();
   const [menuItems, setMenuItems] = useState(defaultMenuItems);
   const [customLogoFile, setCustomLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
@@ -180,29 +182,37 @@ const SidebarEditor = () => {
 
   const handleSaveAllChanges = async () => {
     try {
-      // Salvar cores
-      await updateSettings({
-        sidebar_color: sidebarColor,
-        sidebar_background_color: backgroundColor
-      });
+      let logoUrl = settings.custom_logo_url;
+      let faviconUrl = settings.custom_favicon_url;
 
-      // Fazer upload da logo se houver
+      // Upload da logo se houver arquivo selecionado
       if (customLogoFile) {
-        const logoUrl = URL.createObjectURL(customLogoFile);
-        await updateSettings({
-          custom_logo_url: logoUrl
-        });
+        const uploadedLogoUrl = await uploadFile(customLogoFile, 'logos');
+        if (uploadedLogoUrl) {
+          logoUrl = uploadedLogoUrl;
+        }
         setCustomLogoFile(null);
       }
 
-      // Fazer upload do favicon se houver
+      // Upload do favicon se houver arquivo selecionado
       if (faviconFile) {
-        const faviconUrl = URL.createObjectURL(faviconFile);
-        await updateSettings({
-          custom_favicon_url: faviconUrl
-        });
+        const uploadedFaviconUrl = await uploadFile(faviconFile, 'logos');
+        if (uploadedFaviconUrl) {
+          faviconUrl = uploadedFaviconUrl;
+        }
         setFaviconFile(null);
       }
+
+      // Salvar todas as configurações de uma vez
+      await updateSettings({
+        sidebar_color: sidebarColor,
+        sidebar_background_color: backgroundColor,
+        custom_logo_url: logoUrl,
+        custom_favicon_url: faviconUrl
+      });
+
+      // Recarregar as configurações para garantir que estão atualizadas
+      await refetch();
 
       setPendingChanges(false);
     } catch (error) {
@@ -210,16 +220,18 @@ const SidebarEditor = () => {
     }
   };
 
-  const resetToDefaultLogo = () => {
-    updateSettings({
+  const resetToDefaultLogo = async () => {
+    await updateSettings({
       custom_logo_url: undefined
     });
+    await refetch();
   };
 
-  const resetToDefaultFavicon = () => {
-    updateSettings({
+  const resetToDefaultFavicon = async () => {
+    await updateSettings({
       custom_favicon_url: undefined
     });
+    await refetch();
   };
 
   if (loading) {
@@ -242,12 +254,12 @@ const SidebarEditor = () => {
         </div>
         <Button
           onClick={handleSaveAllChanges}
-          disabled={!pendingChanges}
+          disabled={!pendingChanges || uploading}
           className="flex items-center gap-2 px-6 py-3 text-base"
           size="lg"
         >
           <Save className="h-5 w-5" />
-          Salvar Alterações
+          {uploading ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
       </div>
 
@@ -385,8 +397,13 @@ const SidebarEditor = () => {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleLogoFileChange(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setCustomLogoFile(file);
+                      setPendingChanges(true);
+                    }}
                     className="mt-1"
+                    disabled={uploading}
                   />
                 </div>
                 {settings.custom_logo_url ? (
@@ -401,6 +418,7 @@ const SidebarEditor = () => {
                       variant="outline"
                       size="sm"
                       className="w-full"
+                      disabled={uploading}
                     >
                       Usar Logo Padrão
                     </Button>
@@ -445,8 +463,13 @@ const SidebarEditor = () => {
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleFaviconFileChange(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setFaviconFile(file);
+                      setPendingChanges(true);
+                    }}
                     className="mt-1"
+                    disabled={uploading}
                   />
                 </div>
                 {settings.custom_favicon_url ? (
@@ -461,6 +484,7 @@ const SidebarEditor = () => {
                       variant="outline"
                       size="sm"
                       className="w-full"
+                      disabled={uploading}
                     >
                       Usar Favicon Padrão
                     </Button>

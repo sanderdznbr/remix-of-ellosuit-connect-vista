@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Mail, Phone, Eye, EyeOff, Building } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthScreen = () => {
@@ -22,29 +21,38 @@ const AuthScreen = () => {
 
   const { user, signUp, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   // useEffect para redirect - SIMPLIFICADO
   useEffect(() => {
     if (user) {
-      console.log('🔄 Usuário autenticado, redirecionando para dashboard...');
+      console.log('🔄 Usuário autenticado, redirecionando...');
       
-      // Verificar se há OAuth callback
-      const urlParams = new URLSearchParams(window.location.search);
-      const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
+      // Verificar se há parâmetro returnTo
+      const returnTo = searchParams.get('returnTo');
       
-      if (hasGoogleCallback) {
-        console.log('🔄 OAuth callback detectado, aguardando processamento...');
-        // Aguardar um pouco para o hook processar
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+      if (returnTo === 'tarefas') {
+        console.log('🔄 Redirecionando para tarefas...');
+        navigate('/tarefas');
       } else {
-        // Redirect normal imediato
-        navigate('/dashboard');
+        // Verificar se há OAuth callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasGoogleCallback = urlParams.get('code') && urlParams.get('state') === 'google_calendar_auth';
+        
+        if (hasGoogleCallback) {
+          console.log('🔄 OAuth callback detectado, aguardando processamento...');
+          // Aguardar um pouco para o hook processar
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 2000);
+        } else {
+          // Redirect normal imediato
+          navigate('/dashboard');
+        }
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   const validateForm = () => {
     if (!email) {

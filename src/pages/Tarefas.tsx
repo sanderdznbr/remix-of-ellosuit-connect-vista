@@ -5,14 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 import TarefasDesktop from '@/components/Tarefas/TarefasDesktop';
+import TarefasPublica from '@/components/Tarefas/TarefasPublica';
 
 const Tarefas = () => {
   const { user } = useAuth();
   const { isMobile, isLoading } = useIsMobile();
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
 
   // Exibir loading durante a verificação do dispositivo
   if (isLoading) {
@@ -23,7 +20,12 @@ const Tarefas = () => {
     );
   }
 
-  // Priorizar experiência mobile - sempre renderizar mobile em caso de dúvida
+  // Se não há usuário autenticado, mostrar página pública
+  if (!user) {
+    return <TarefasPublica />;
+  }
+
+  // Se há usuário autenticado, mostrar tarefas normais
   return isMobile ? <TarefasMobile /> : <TarefasDesktop />;
 };
 

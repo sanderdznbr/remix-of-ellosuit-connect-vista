@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,8 @@ import {
   Activity,
   FileText,
   Video,
-  BarChart3
+  BarChart3,
+  Quote
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,8 +47,42 @@ interface HomeProps {
   onNavigate: (item: string) => void;
 }
 
+const inspirationalQuotes = [
+  "Grandes negócios nascem de grandes sonhos.",
+  "Não tenha medo de começar pequeno. Grandes impérios começaram com uma ideia.",
+  "O sucesso é a soma de pequenos esforços repetidos diariamente.",
+  "Empreender é transformar problemas em oportunidades.",
+  "Quem ousa, conquista.",
+  "A inovação distingue os líderes dos seguidores. – Steve Jobs",
+  "Não espere por oportunidades. Crie-as.",
+  "Empresas fortes são feitas de pessoas fortes.",
+  "Os desafios de hoje são as vitórias de amanhã.",
+  "A persistência realiza o impossível.",
+  "Seja o líder que você gostaria de seguir.",
+  "Sucesso é a habilidade de ir de fracasso em fracasso sem perder o entusiasmo. – Winston Churchill",
+  "Sonhar grande e sonhar pequeno dá o mesmo trabalho. Então sonhe grande!",
+  "Nunca é sobre ideias. É sobre fazer as ideias acontecerem.",
+  "O cliente satisfeito é o melhor negócio.",
+  "O único limite para o seu sucesso é você mesmo.",
+  "Lidere pelo exemplo, inspire pela ação.",
+  "A disciplina é o atalho para o sucesso.",
+  "Empreender é cair sete vezes e levantar oito.",
+  "Grandes líderes criam mais líderes, não seguidores.",
+  "Pessoas comuns focam em problemas, líderes focam em soluções.",
+  "Não venda produtos. Construa relacionamentos.",
+  "O sucesso acontece quando a preparação encontra a oportunidade.",
+  "A melhor maneira de prever o futuro é criá-lo. – Peter Drucker",
+  "Coragem é a chave para abrir portas que o medo mantém fechadas.",
+  "Toda crise carrega dentro de si a semente de uma grande oportunidade.",
+  "Empresários de sucesso não desistem; eles se reinventam.",
+  "Não se trata do quão grande é a sua empresa, mas do quão grande é a sua visão.",
+  "Seu cliente pode esquecer o que você disse, mas nunca como você o fez sentir.",
+  "Comece onde você está. Use o que você tem. Faça o que você pode. – Arthur Ashe"
+];
+
 const Home = ({ onNavigate }: HomeProps) => {
   const { user } = useAuth();
+  const [currentQuote, setCurrentQuote] = useState('');
   const [stats, setStats] = useState({
     emails: 0,
     meetings: 0,
@@ -97,6 +131,20 @@ const Home = ({ onNavigate }: HomeProps) => {
       onClick: () => onNavigate('analytics')
     }
   ];
+
+  useEffect(() => {
+    // Set random quote on component mount
+    const randomQuote = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
+    setCurrentQuote(randomQuote);
+    
+    // Change quote every 30 seconds
+    const interval = setInterval(() => {
+      const newRandomQuote = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
+      setCurrentQuote(newRandomQuote);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -207,29 +255,20 @@ const Home = ({ onNavigate }: HomeProps) => {
 
   return (
     <div className="p-6 space-y-8">
-      {/* Dica de Produtividade no Topo */}
+      {/* Frase Inspiradora no Topo */}
       <Card className="border-2 border-dashed border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
-              <TrendingUp className="h-6 w-6 text-white" />
+              <Quote className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 mb-2">
-                💡 Dica de Produtividade
+                💡 Inspiração do Momento
               </h3>
-              <p className="text-gray-700 mb-4">
-                Organize seu dia criando templates de e-mail para respostas frequentes. 
-                Isso pode economizar até 30% do seu tempo diário com comunicações.
+              <p className="text-gray-700 text-lg italic">
+                "{currentQuote}"
               </p>
-              <Button 
-                variant="outline" 
-                onClick={() => onNavigate('templates')}
-                className="bg-white hover:bg-gray-50"
-              >
-                Criar Template
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -310,7 +349,7 @@ const Home = ({ onNavigate }: HomeProps) => {
         </Card>
       </div>
 
-      {/* Ações Rápidas - Apenas Ícones */}
+      {/* Ações Rápidas - Apenas Ícones Minimalistas */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -326,10 +365,12 @@ const Home = ({ onNavigate }: HomeProps) => {
                 <button
                   key={index}
                   onClick={action.onClick}
-                  className={`group flex flex-col items-center p-6 rounded-2xl ${action.color} text-white hover:shadow-lg transform hover:scale-105 transition-all duration-200`}
+                  className="group flex flex-col items-center p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md hover:border-gray-300 transition-all duration-200"
                 >
-                  <Icon className="h-8 w-8 mb-3" />
-                  <span className="text-sm font-medium">{action.title}</span>
+                  <div className={`p-3 rounded-full ${action.color} mb-2`}>
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">{action.title}</span>
                 </button>
               );
             })}

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,12 @@ import {
   Video,
   BarChart3
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-interface QuickAccessItem {
+interface QuickActionItem {
   title: string;
-  description: string;
   icon: React.ElementType;
-  action: string;
   color: string;
   onClick: () => void;
 }
@@ -36,107 +36,145 @@ interface RecentActivity {
   status: 'completed' | 'pending' | 'scheduled';
 }
 
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  start_date: string;
+  event_type: string;
+}
+
 interface HomeProps {
   onNavigate: (item: string) => void;
 }
 
 const Home = ({ onNavigate }: HomeProps) => {
-  // Estatísticas em tempo real (estas serão conectadas aos dados reais posteriormente)
-  const stats = [
-    {
-      title: 'E-mails Hoje',
-      value: '0',
-      change: '0%',
-      icon: Mail,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Reuniões Agendadas',
-      value: '0',
-      change: '0%',
-      icon: Calendar,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      title: 'Novos Clientes',
-      value: '0',
-      change: '0%',
-      icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      title: 'Produtividade',
-      value: '0%',
-      change: '0%',
-      icon: TrendingUp,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    }
-  ];
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    emails: 0,
+    meetings: 0,
+    clients: 0,
+    productivity: 0
+  });
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const quickActions: QuickAccessItem[] = [
+  const quickActions: QuickActionItem[] = [
     {
-      title: 'Novo E-mail',
-      description: 'Compose e envie um e-mail',
+      title: 'E-mail',
       icon: Mail,
-      action: 'Enviar',
-      color: 'bg-blue-500',
+      color: 'bg-blue-500 hover:bg-blue-600',
       onClick: () => onNavigate('mail-tracking')
     },
     {
-      title: 'Agendar Reunião',
-      description: 'Marque um novo compromisso',
+      title: 'Reunião',
       icon: Calendar,
-      action: 'Agendar',
-      color: 'bg-green-500',
+      color: 'bg-green-500 hover:bg-green-600',
       onClick: () => onNavigate('my-calendar')
     },
     {
-      title: 'Adicionar Cliente',
-      description: 'Cadastre um novo cliente',
+      title: 'Cliente',
       icon: Users,
-      action: 'Adicionar',
-      color: 'bg-purple-500',
+      color: 'bg-purple-500 hover:bg-purple-600',
       onClick: () => onNavigate('clients')
     },
     {
-      title: 'Criar Template',
-      description: 'Novo modelo de e-mail',
+      title: 'Template',
       icon: FileText,
-      action: 'Criar',
-      color: 'bg-orange-500',
+      color: 'bg-orange-500 hover:bg-orange-600',
       onClick: () => onNavigate('templates')
     },
     {
-      title: 'Iniciar Meet',
-      description: 'Comece uma reunião agora',
+      title: 'Meet',
       icon: Video,
-      action: 'Iniciar',
-      color: 'bg-red-500',
+      color: 'bg-red-500 hover:bg-red-600',
       onClick: () => onNavigate('start-meet')
     },
     {
-      title: 'Ver Análises',
-      description: 'Relatórios e métricas',
+      title: 'Análises',
       icon: BarChart3,
-      action: 'Visualizar',
-      color: 'bg-indigo-500',
+      color: 'bg-indigo-500 hover:bg-indigo-600',
       onClick: () => onNavigate('analytics')
     }
   ];
 
-  const recentActivities: RecentActivity[] = [
-    // Atividades recentes serão carregadas dos dados reais
-  ];
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
 
-  const getTimeOfDay = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user's company
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!companyUser) return;
+
+      // Load upcoming events (next 7 days)
+      const today = new Date();
+      const nextWeek = new Date(today);
+      nextWeek.setDate(today.getDate() + 7);
+
+      const { data: events } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_date, event_type')
+        .eq('company_id', companyUser.company_id)
+        .gte('start_date', today.toISOString())
+        .lte('start_date', nextWeek.toISOString())
+        .order('start_date', { ascending: true })
+        .limit(5);
+
+      setUpcomingEvents(events || []);
+
+      // Load stats
+      const { data: clientsCount } = await supabase
+        .from('clients')
+        .select('id', { count: 'exact' })
+        .eq('company_id', companyUser.company_id);
+
+      const { data: todayEvents } = await supabase
+        .from('calendar_events')
+        .select('id', { count: 'exact' })
+        .eq('company_id', companyUser.company_id)
+        .gte('start_date', today.toISOString().split('T')[0])
+        .lt('start_date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+      const { data: templatesCount } = await supabase
+        .from('email_templates')
+        .select('id', { count: 'exact' })
+        .eq('company_id', companyUser.company_id);
+
+      setStats({
+        emails: 0, // Email tracking não implementado ainda
+        meetings: todayEvents?.length || 0,
+        clients: clientsCount?.length || 0,
+        productivity: Math.min(100, ((todayEvents?.length || 0) + (templatesCount?.length || 0)) * 10)
+      });
+
+      // Create recent activities from events
+      const recentEventActivities: RecentActivity[] = (events || []).slice(0, 3).map(event => ({
+        id: event.id,
+        type: event.event_type === 'meeting' ? 'meeting' : 'meeting',
+        title: event.title,
+        description: `Agendado para ${new Date(event.start_date).toLocaleDateString('pt-BR')}`,
+        time: new Date(event.start_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        status: 'scheduled' as const
+      }));
+
+      setRecentActivities(recentEventActivities);
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getActivityIcon = (type: string) => {
@@ -158,190 +196,18 @@ const Home = ({ onNavigate }: HomeProps) => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Concluído';
+      case 'pending': return 'Pendente';
+      case 'scheduled': return 'Agendado';
+      default: return status;
+    }
+  };
+
   return (
     <div className="p-6 space-y-8">
-      {/* Header de Boas-vindas */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              {getTimeOfDay()}! 👋
-            </h1>
-            <p className="text-xl text-gray-600 mt-2">
-              Vamos tornar seu dia mais produtivo
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">
-              {new Date().toLocaleDateString('pt-BR', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </p>
-            <p className="text-lg font-semibold text-gray-900">
-              {new Date().toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Estatísticas Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">
-                      {stat.title}
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {stat.value}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      vs. ontem
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                    <Icon className={`h-6 w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Ações Rápidas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Ações Rápidas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <div
-                  key={index}
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer"
-                  onClick={action.onClick}
-                >
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-lg ${action.color} shadow-lg`}>
-                        <Icon className="h-6 w-6 text-white" />
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      {action.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      {action.description}
-                    </p>
-                    <Button 
-                      size="sm" 
-                      className="w-full group-hover:shadow-md transition-shadow duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {action.action}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Próximos Compromissos e Atividades Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Próximos Compromissos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Próximos Compromissos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Nenhum compromisso agendado para hoje</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => onNavigate('my-calendar')}
-                >
-                  Ver Calendário
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Atividades Recentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Atividades Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhuma atividade recente</p>
-                  <p className="text-sm mt-1">Comece usando o sistema para ver suas atividades aqui</p>
-                </div>
-              ) : (
-                recentActivities.map((activity) => {
-                  const Icon = getActivityIcon(activity.type);
-                  return (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Icon className="h-4 w-4 text-gray-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {activity.title}
-                        </p>
-                        <p className="text-sm text-gray-600 truncate">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {activity.time}
-                        </p>
-                      </div>
-                      <Badge className={getStatusColor(activity.status)}>
-                        {activity.status === 'completed' && 'Concluído'}
-                        {activity.status === 'pending' && 'Pendente'}
-                        {activity.status === 'scheduled' && 'Agendado'}
-                      </Badge>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Dicas e Sugestões */}
+      {/* Dica de Produtividade no Topo */}
       <Card className="border-2 border-dashed border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
@@ -368,6 +234,207 @@ const Home = ({ onNavigate }: HomeProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Header Simples */}
+      <div className="text-center">
+        <p className="text-2xl text-gray-600">
+          {new Date().toLocaleDateString('pt-BR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </p>
+      </div>
+
+      {/* Estatísticas Rápidas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">E-mails Hoje</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.emails}</p>
+                <p className="text-sm text-gray-500 mt-1">vs. ontem</p>
+              </div>
+              <div className="p-3 rounded-full bg-blue-50">
+                <Mail className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Reuniões Hoje</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.meetings}</p>
+                <p className="text-sm text-gray-500 mt-1">agendadas</p>
+              </div>
+              <div className="p-3 rounded-full bg-green-50">
+                <Calendar className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Total Clientes</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.clients}</p>
+                <p className="text-sm text-gray-500 mt-1">cadastrados</p>
+              </div>
+              <div className="p-3 rounded-full bg-purple-50">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Produtividade</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.productivity}%</p>
+                <p className="text-sm text-gray-500 mt-1">do objetivo</p>
+              </div>
+              <div className="p-3 rounded-full bg-orange-50">
+                <TrendingUp className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Ações Rápidas - Apenas Ícones */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Ações Rápidas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={action.onClick}
+                  className={`group flex flex-col items-center p-6 rounded-2xl ${action.color} text-white hover:shadow-lg transform hover:scale-105 transition-all duration-200`}
+                >
+                  <Icon className="h-8 w-8 mb-3" />
+                  <span className="text-sm font-medium">{action.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Próximos Compromissos e Atividades Recentes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Próximos Compromissos */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Próximos Compromissos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : upcomingEvents.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Nenhum compromisso agendado</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => onNavigate('my-calendar')}
+                  >
+                    Ver Calendário
+                  </Button>
+                </div>
+              ) : (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="p-2 rounded-lg bg-blue-100">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{event.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {new Date(event.start_date).toLocaleDateString('pt-BR')} às{' '}
+                        {new Date(event.start_date).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      <Badge variant="secondary" className="mt-1">
+                        {event.event_type}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Atividades Recentes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Atividades Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : recentActivities.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Nenhuma atividade recente</p>
+                  <p className="text-sm mt-1">Comece usando o sistema para ver suas atividades aqui</p>
+                </div>
+              ) : (
+                recentActivities.map((activity) => {
+                  const Icon = getActivityIcon(activity.type);
+                  return (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <Icon className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{activity.title}</p>
+                        <p className="text-sm text-gray-600 truncate">{activity.description}</p>
+                        <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
+                      </div>
+                      <Badge className={getStatusColor(activity.status)}>
+                        {getStatusLabel(activity.status)}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

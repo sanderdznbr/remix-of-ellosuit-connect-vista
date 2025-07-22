@@ -221,14 +221,20 @@ serve(async (req) => {
       for (const googleEvent of allEvents) {
         const existingEvent = existingEventsMap.get(googleEvent.id);
         
+        // Determine meeting provider based on meeting link
+        let meetingProvider = null;
+        if (googleEvent.hangoutLink) {
+          meetingProvider = 'google_meet';
+        }
+
         const eventData = {
           title: googleEvent.summary || 'Evento sem título',
           description: googleEvent.description || '',
           start_date: googleEvent.start?.dateTime || googleEvent.start?.date,
           end_date: googleEvent.end?.dateTime || googleEvent.end?.date,
           event_type: 'meeting' as const,
-          meeting_link: googleEvent.hangoutLink || '',
-          meeting_provider: googleEvent.hangoutLink ? 'google_meet' : '',
+          meeting_link: googleEvent.hangoutLink || null,
+          meeting_provider: meetingProvider,
           attendees: googleEvent.attendees ? googleEvent.attendees.map((a: any) => a.email) : [],
           is_all_day: !googleEvent.start?.dateTime,
           google_event_id: googleEvent.id,

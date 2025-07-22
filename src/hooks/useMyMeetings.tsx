@@ -205,56 +205,6 @@ export const useMyMeetings = () => {
     }
   };
 
-  const updateBookingLink = async (id: string, updates: Partial<PublicBookingLink>) => {
-    try {
-      const { error } = await supabase
-        .from('public_booking_links')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      toast({
-        title: "Sucesso",
-        description: "Link de agendamento atualizado com sucesso"
-      });
-
-      fetchBookingLinks();
-    } catch (error) {
-      console.error('Error updating booking link:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar link de agendamento",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const deleteBookingLink = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('public_booking_links')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      toast({
-        title: "Sucesso",
-        description: "Link de agendamento excluído com sucesso"
-      });
-
-      fetchBookingLinks();
-    } catch (error) {
-      console.error('Error deleting booking link:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir link de agendamento",
-        variant: "destructive"
-      });
-    }
-  };
-
   useEffect(() => {
     if (user) {
       Promise.all([
@@ -273,8 +223,6 @@ export const useMyMeetings = () => {
     createSchedule,
     updateSchedule,
     createBookingLink,
-    updateBookingLink,
-    deleteBookingLink,
     refreshData: () => {
       fetchSchedules();
       fetchHolidays();

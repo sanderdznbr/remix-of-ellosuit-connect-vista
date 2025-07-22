@@ -1,116 +1,136 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart3, TrendingUp, Mail, Users, Calendar, FileText, ArrowRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Calendar as CalendarIcon, 
+  Mail, 
+  Users, 
+  Target,
+  BarChart3,
+  PieChart,
+  Download,
+  RefreshCw
+} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface AnalyticsProps {
-  onNavigate: (page: string) => void;
-}
+const Analytics = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedYear, setSelectedYear] = useState('2024');
 
-const Analytics = ({ onNavigate }: AnalyticsProps) => {
-  const analyticsData = [
+  // Dados reais serão carregados aqui posteriormente
+  const metrics = [
     {
-      title: "Emails Enviados",
-      value: "1,234",
-      change: "+12.5%",
-      trend: "up",
+      title: 'Reuniões Realizadas',
+      value: '0',
+      change: 0,
+      changeType: 'increase' as const,
+      icon: CalendarIcon,
+      color: 'text-blue-600'
+    },
+    {
+      title: 'E-mails Enviados',
+      value: '0',
+      change: 0,
+      changeType: 'increase' as const,
       icon: Mail,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200"
+      color: 'text-green-600'
     },
     {
-      title: "Taxa de Abertura",
-      value: "68.2%",
-      change: "+5.3%",
-      trend: "up",
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200"
+      title: 'Taxa de Abertura',
+      value: '0%',
+      change: 0,
+      changeType: 'increase' as const,
+      icon: Target,
+      color: 'text-purple-600'
     },
     {
-      title: "Reuniões Agendadas",
-      value: "87",
-      change: "+8.1%",
-      trend: "up",
-      icon: Calendar,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-200"
-    },
-    {
-      title: "Novos Clientes",
-      value: "23",
-      change: "+15.7%",
-      trend: "up",
+      title: 'Novos Clientes',
+      value: '0',
+      change: 0,
+      changeType: 'increase' as const,
       icon: Users,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-200"
-    }
-  ];
-
-  const shortcuts = [
-    {
-      title: "Rastreamento de Email",
-      description: "Acompanhe o desempenho dos seus emails",
-      icon: Mail,
-      color: "bg-blue-500",
-      page: "mail-tracking"
-    },
-    {
-      title: "Produtividade",
-      description: "Visualize sua produtividade diária",
-      icon: BarChart3,
-      color: "bg-green-500",
-      page: "mail-productivity"
-    },
-    {
-      title: "Calendário",
-      description: "Gerencie seus compromissos",
-      icon: Calendar,
-      color: "bg-purple-500",
-      page: "my-calendar"
-    },
-    {
-      title: "Documentos",
-      description: "Organize seus arquivos",
-      icon: FileText,
-      color: "bg-orange-500",
-      page: "documents"
+      color: 'text-orange-600'
     }
   ];
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          📊 Análises e Relatórios
-        </h1>
-        <p className="text-gray-600 text-base">
-          Acompanhe o desempenho das suas atividades e tome decisões baseadas em dados
-        </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Analytics</h1>
+          <p className="text-muted-foreground mt-1">Acompanhe o desempenho do seu negócio</p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-32 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Esta Semana</SelectItem>
+              <SelectItem value="month">Este Mês</SelectItem>
+              <SelectItem value="quarter">Este Trimestre</SelectItem>
+              <SelectItem value="year">Este Ano</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button variant="outline" size="sm" className="rounded-xl">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          
+          <Button variant="outline" size="sm" className="rounded-xl">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
       </div>
 
-      {/* Métricas Principais */}
+      {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {analyticsData.map((metric, index) => {
-          const IconComponent = metric.icon;
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
           return (
-            <Card key={index} className={`border-2 ${metric.borderColor} shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105`}>
+            <Card key={metric.title} className="rounded-2xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">{metric.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 mb-1">{metric.value}</p>
-                    <p className={`text-sm font-medium ${metric.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                      {metric.change} este mês
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      {metric.title}
                     </p>
+                    <p className="text-2xl font-bold">{metric.value}</p>
+                    <div className="flex items-center mt-1">
+                      {metric.change !== 0 ? (
+                        <>
+                          {metric.changeType === 'increase' ? (
+                            <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                          )}
+                          <span className={`text-sm font-medium ${
+                            metric.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {metric.change > 0 ? '+' : ''}{metric.change}%
+                          </span>
+                          <span className="text-sm text-muted-foreground ml-1">
+                            vs mês anterior
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Sem dados do período anterior
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className={`p-3 rounded-xl ${metric.bgColor}`}>
-                    <IconComponent className={`h-6 w-6 ${metric.color}`} />
+                  <div className={`p-3 rounded-full bg-accent/10`}>
+                    <Icon className={`h-6 w-6 ${metric.color}`} />
                   </div>
                 </div>
               </CardContent>
@@ -119,74 +139,104 @@ const Analytics = ({ onNavigate }: AnalyticsProps) => {
         })}
       </div>
 
-      {/* Atalhos Rápidos */}
-      <Card className="border-none shadow-xl rounded-3xl bg-white">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-xl">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-            Acesso Rápido
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {shortcuts.map((shortcut, index) => {
-              const IconComponent = shortcut.icon;
-              return (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  className="h-auto p-4 justify-start hover:bg-gray-50 rounded-2xl border border-gray-200 hover:border-gray-300 transition-all duration-200"
-                  onClick={() => onNavigate(shortcut.page)}
-                >
-                  <div className="flex items-center gap-4 w-full">
-                    <div className={`p-3 rounded-xl ${shortcut.color}`}>
-                      <IconComponent className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="font-semibold text-gray-900 text-base">{shortcut.title}</h3>
-                      <p className="text-sm text-gray-600">{shortcut.description}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </div>
-                </Button>
-              );
-            })}
+      {/* Mensagem de Dados em Desenvolvimento */}
+      <Card className="rounded-2xl border-2 border-dashed border-muted">
+        <CardContent className="p-8 text-center">
+          <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Analytics em Desenvolvimento</h3>
+          <p className="text-muted-foreground mb-4">
+            Os dados analíticos serão coletados conforme você utiliza o sistema. 
+            Comece enviando e-mails, agendando reuniões e gerenciando clientes para ver suas métricas aqui.
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline">
+              <Mail className="h-4 w-4 mr-2" />
+              Enviar E-mail
+            </Button>
+            <Button variant="outline">
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Agendar Reunião
+            </Button>
+            <Button variant="outline">
+              <Users className="h-4 w-4 mr-2" />
+              Adicionar Cliente
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Gráficos Placeholder */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-none shadow-xl rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Desempenho de Emails (30 dias)</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-2xl">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-base">Gráfico em desenvolvimento</p>
-                <p className="text-sm text-gray-400">Em breve você verá seus dados aqui</p>
+      {/* Detailed Analytics Tabs */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-6">
+          <Tabs defaultValue="meetings" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-xl">
+              <TabsTrigger value="meetings">Reuniões</TabsTrigger>
+              <TabsTrigger value="emails">E-mails</TabsTrigger>
+              <TabsTrigger value="clients">Clientes</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="meetings" className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-blue-900">Total de Reuniões</h3>
+                  <p className="text-2xl font-bold text-blue-600">0</p>
+                  <p className="text-sm text-blue-700">Aguardando dados</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-green-900">Taxa de Comparecimento</h3>
+                  <p className="text-2xl font-bold text-green-600">0%</p>
+                  <p className="text-sm text-green-700">Aguardando dados</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-purple-900">Duração Média</h3>
+                  <p className="text-2xl font-bold text-purple-600">0min</p>
+                  <p className="text-sm text-purple-700">Aguardando dados</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-xl rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Atividade Mensal</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-2xl">
-              <div className="text-center">
-                <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-base">Relatório em desenvolvimento</p>
-                <p className="text-sm text-gray-400">Seus insights aparecerão aqui</p>
+            </TabsContent>
+            
+            <TabsContent value="emails" className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-blue-900">E-mails Enviados</h3>
+                  <p className="text-2xl font-bold text-blue-600">0</p>
+                  <p className="text-sm text-blue-700">Aguardando dados</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-green-900">Taxa de Abertura</h3>
+                  <p className="text-2xl font-bold text-green-600">0%</p>
+                  <p className="text-sm text-green-700">Aguardando dados</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-orange-900">Taxa de Cliques</h3>
+                  <p className="text-2xl font-bold text-orange-600">0%</p>
+                  <p className="text-sm text-orange-700">Aguardando dados</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </TabsContent>
+            
+            <TabsContent value="clients" className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-green-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-green-900">Novos Clientes</h3>
+                  <p className="text-2xl font-bold text-green-600">0</p>
+                  <p className="text-sm text-green-700">Aguardando dados</p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-blue-900">Taxa de Conversão</h3>
+                  <p className="text-2xl font-bold text-blue-600">0%</p>
+                  <p className="text-sm text-blue-700">Aguardando dados</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-xl">
+                  <h3 className="font-semibold text-purple-900">Clientes Ativos</h3>
+                  <p className="text-2xl font-bold text-purple-600">0</p>
+                  <p className="text-sm text-purple-700">Aguardando dados</p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

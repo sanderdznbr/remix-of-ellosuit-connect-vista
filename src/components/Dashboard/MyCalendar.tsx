@@ -4,7 +4,6 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
@@ -233,7 +232,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3600FF] to-[#4F46E5] bg-clip-text text-transparent mb-2">
             Meu Calendário
           </h1>
-          <p className="text-gray-600 text-base">
+          <p className="text-gray-600">
             Gerencie seus eventos, reuniões e compromissos
           </p>
         </div>
@@ -265,17 +264,10 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView={currentView}
-              locale={ptBrLocale}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
-              }}
-              buttonText={{
-                today: 'Hoje',
-                month: 'Mês',
-                week: 'Semana',
-                day: 'Dia'
               }}
               height="auto"
               events={calendarEvents}
@@ -288,6 +280,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               selectMirror={true}
               dayMaxEvents={4}
               weekends={true}
+              locale="pt-br"
               eventDisplay="block"
               eventTextColor="#ffffff"
               selectLongPressDelay={0}

@@ -161,16 +161,16 @@ const MailProductivity = () => {
   if (isLoading) {
     return (
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h1 className="text-3xl font-bold text-gray-900">Carregando Produtividade...</h1>
+        <div>
+          <h1 className="text-3xl font-bold mb-2 text-gray-900">Mail Productivity</h1>
+          <p className="text-gray-600">Acompanhe sua consistência no envio de emails</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse border-none shadow-lg rounded-3xl">
+            <Card key={i} className="animate-pulse border-none shadow-lg rounded-2xl">
               <CardContent className="p-6">
-                <div className="h-20 bg-gray-200 rounded-2xl"></div>
+                <div className="h-20 bg-gray-200 rounded-xl"></div>
               </CardContent>
             </Card>
           ))}
@@ -180,23 +180,23 @@ const MailProductivity = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          📧 Produtividade de Email
+        <h1 className="text-4xl font-bold mb-3 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Mail Productivity
         </h1>
-        <p className="text-gray-600 text-base">
+        <p className="text-gray-600 text-lg">
           Acompanhe sua consistência no envio de emails e mantenha sua produtividade
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Sequência Atual</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Sequência Atual</p>
                 <p className="text-3xl font-bold text-gray-900">{currentStreak}</p>
                 <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
               </div>
@@ -207,11 +207,11 @@ const MailProductivity = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Maior Sequência</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Maior Sequência</p>
                 <p className="text-3xl font-bold text-gray-900">{longestStreak}</p>
                 <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
               </div>
@@ -222,11 +222,11 @@ const MailProductivity = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Total (30 dias)</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Total (30 dias)</p>
                 <p className="text-3xl font-bold text-gray-900">{getTotalEmails()}</p>
                 <p className="text-sm text-gray-500 mt-1">emails enviados</p>
               </div>
@@ -237,11 +237,11 @@ const MailProductivity = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl rounded-3xl bg-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Média por Dia</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Média por Dia</p>
                 <p className="text-3xl font-bold text-gray-900">{getAverageEmails()}</p>
                 <p className="text-sm text-gray-500 mt-1">emails por dia</p>
               </div>
@@ -254,11 +254,11 @@ const MailProductivity = () => {
       </div>
 
       {/* Calendar and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calendar */}
-        <Card className="lg:col-span-2 border-none shadow-xl rounded-3xl bg-white">
+        <Card className="lg:col-span-2 border-none shadow-lg rounded-2xl bg-white">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl">
               <CalendarIcon className="h-6 w-6 text-blue-600" />
               Calendário de Atividade
             </CardTitle>
@@ -285,7 +285,7 @@ const MailProductivity = () => {
                       ${bgColor}
                       ${isCurrentDay ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
                       ${dayCount > 0 ? 'text-white' : 'text-gray-600'}
-                      hover:scale-110 transform shadow-md
+                      hover:scale-110 transform shadow-sm
                     `}
                     title={`${format(date, 'dd/MM/yyyy')} - ${dayCount} emails`}
                     onClick={() => setSelectedDate(date)}
@@ -310,9 +310,9 @@ const MailProductivity = () => {
         </Card>
 
         {/* Selected Day Details */}
-        <Card className="border-none shadow-xl rounded-3xl bg-white">
-          <CardHeader className="pb-4 text-center">
-            <CardTitle className="text-lg">
+        <Card className="border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-center text-lg">
               {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Selecione um dia'}
             </CardTitle>
           </CardHeader>
@@ -349,19 +349,56 @@ const MailProductivity = () => {
       </div>
 
       {/* Recent Activity */}
-      <Card className="border-none shadow-xl rounded-3xl bg-white">
+      <Card className="border-none shadow-lg rounded-2xl bg-white">
         <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-xl">
+          <CardTitle className="flex items-center gap-2 text-xl">
             <BarChart3 className="h-6 w-6 text-purple-600" />
             Atividade Recente (7 dias)
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="text-center py-12 text-gray-500">
-            <Mail className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">Nenhuma atividade encontrada</p>
-            <p className="text-sm">Comece enviando emails para ver suas estatísticas aqui</p>
-          </div>
+          {emailCounts.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Mail className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">Nenhuma atividade encontrada</p>
+              <p className="text-sm">Comece enviando emails para ver suas estatísticas aqui</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {emailCounts.slice(-7).reverse().map((day, index) => {
+                const date = new Date(day.date);
+                const isCurrentDay = isToday(date);
+                const wasYesterday = isYesterday(date);
+                
+                return (
+                  <div key={index} className="flex items-center justify-between py-4 px-4 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-4 h-4 rounded-full ${day.count > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {isCurrentDay ? '📅 Hoje' : 
+                           wasYesterday ? '📅 Ontem' : 
+                           format(date, 'dd/MM')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {format(date, 'EEEE', { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-lg text-gray-900">{day.count}</p>
+                      <p className="text-sm text-gray-500">emails</p>
+                      {day.count > 0 && (
+                        <Badge className="mt-1 bg-green-100 text-green-800 rounded-full text-xs">
+                          ✅ Produtivo
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

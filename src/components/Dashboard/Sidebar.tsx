@@ -108,11 +108,6 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
     }
   };
 
-  const handleLogoClick = () => {
-    console.log('🖱️ Logo clicado - navegando para home');
-    onItemClick('home');
-  };
-
   const handleLogout = async () => {
     // Prevenir múltiplas chamadas
     if (isLoggingOut) {
@@ -160,8 +155,7 @@ const Sidebar = ({ isCollapsed, onToggle, activeItem, onItemClick }: SidebarProp
           <img 
             src="/lovable-uploads/78d0576b-d7ba-4f41-b1ac-30929441fa41.png" 
             alt="Ellosuit Logo" 
-            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={handleLogoClick}
+            className="h-8 w-auto"
           />
         )}
         <Button

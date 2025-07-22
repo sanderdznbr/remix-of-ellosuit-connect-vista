@@ -1,12 +1,9 @@
 
 import React, { useState } from 'react';
-import { Plus, Calendar, Clock } from 'lucide-react';
+import { Plus, Calendar, Clock, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { vibrate } from '@/utils/mobile-helpers';
-import MobileModal from '@/components/ui/mobile-modal';
-import MobileButton from '@/components/ui/mobile-button';
-import MobileCard from '@/components/ui/mobile-card';
 
 interface NovoLembreteModalProps {
   isOpen: boolean;
@@ -46,108 +43,125 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     setSelectedTime('09:00');
   };
 
+  const handleClose = () => {
+    onClose();
+    vibrate(30);
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <MobileModal 
-      isOpen={isOpen} 
-      onClose={onClose}
-      title="Novo Lembrete"
-      size="lg"
-    >
-      <div className="p-6 space-y-6">
-        {/* Form */}
-        <div className="space-y-4">
-          <div>
-            <Input
-              placeholder="Título do lembrete"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mobile-input text-lg font-medium"
-            />
-          </div>
-
-          <div>
-            <Textarea
-              placeholder="Descrição (opcional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mobile-input min-h-[100px] resize-none"
-            />
-          </div>
-
-          {/* Date & Time Selection */}
-          <div className="space-y-3">
-            <MobileCard className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <Calendar className="h-5 w-5 text-gray-600" />
-                <span className="font-medium text-gray-900">Data</span>
-              </div>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="mobile-input"
-              />
-            </MobileCard>
-
-            <MobileCard className="p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <span className="font-medium text-gray-900">Hora</span>
-              </div>
-              <Input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                className="mobile-input"
-              />
-            </MobileCard>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-end md:items-center md:justify-center">
+      <div className="ios-modal w-full max-h-[90vh] flex flex-col ios-slide-up">
+        {/* Drag Handle */}
+        <div className="flex justify-center py-3 md:hidden">
+          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--ios-gray-300)' }}></div>
         </div>
 
-        {/* Preview */}
-        {title && (
-          <MobileCard className="p-4 bg-blue-50 border-blue-200">
-            <div className="flex items-start space-x-3">
-              <div className="w-3 h-3 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <h3 className="font-semibold text-gray-900">{title}</h3>
-                {description && (
-                  <p className="text-sm text-gray-600 mt-1">{description}</p>
-                )}
-                <p className="text-sm text-blue-600 mt-2">
-                  {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
-                    day: 'numeric',
-                    month: 'long',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              </div>
-            </div>
-          </MobileCard>
-        )}
-
-        {/* Actions */}
-        <div className="flex space-x-3 pt-4">
-          <MobileButton
-            variant="secondary"
-            onClick={onClose}
-            className="flex-1"
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--ios-gray-200)' }}>
+          <button
+            onClick={handleClose}
+            className="ios-button ios-button-ghost p-2 w-10 h-10 rounded-full"
           >
-            Cancelar
-          </MobileButton>
-          <MobileButton
-            variant="primary"
+            <X className="h-5 w-5" />
+          </button>
+          
+          <h2 className="ios-title-2">Novo Lembrete</h2>
+          
+          <button
             onClick={handleSave}
             disabled={!title.trim()}
-            className="flex-1 flex items-center justify-center space-x-2"
+            className={cn(
+              "ios-button px-4 py-2 rounded-full",
+              title.trim() ? "ios-button-primary" : "ios-button-secondary opacity-50"
+            )}
           >
-            <Plus className="h-4 w-4" />
-            <span>Salvar</span>
-          </MobileButton>
+            <span className="ios-callout font-medium">Salvar</span>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 ios-scroll">
+          {/* Form */}
+          <div className="space-y-4">
+            <div>
+              <Input
+                placeholder="Título do lembrete"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="ios-input ios-title-3 font-medium"
+                style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
+              />
+            </div>
+
+            <div>
+              <Textarea
+                placeholder="Descrição (opcional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="ios-input min-h-[100px] resize-none ios-body"
+                style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
+              />
+            </div>
+
+            {/* Date & Time Selection */}
+            <div className="space-y-4">
+              <div className="ios-card p-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Calendar className="h-5 w-5" style={{ color: 'var(--ios-gray-600)' }} />
+                  <span className="ios-headline">Data</span>
+                </div>
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="ios-input"
+                  style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
+                />
+              </div>
+
+              <div className="ios-card p-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Clock className="h-5 w-5" style={{ color: 'var(--ios-gray-600)' }} />
+                  <span className="ios-headline">Hora</span>
+                </div>
+                <Input
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="ios-input"
+                  style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          {title && (
+            <div className="ios-card p-4" style={{ backgroundColor: 'var(--ios-blue-light)', borderColor: 'var(--ios-blue)' }}>
+              <div className="flex items-start space-x-3">
+                <div className="w-3 h-3 rounded-full mt-2 flex-shrink-0" style={{ backgroundColor: 'var(--ios-orange)' }}></div>
+                <div>
+                  <h3 className="ios-headline mb-1">{title}</h3>
+                  {description && (
+                    <p className="ios-subheadline mb-2">{description}</p>
+                  )}
+                  <p className="ios-footnote" style={{ color: 'var(--ios-blue)' }}>
+                    {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
+                      day: 'numeric',
+                      month: 'long',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </MobileModal>
+    </div>
   );
 };
 

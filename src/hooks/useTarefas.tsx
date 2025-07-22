@@ -2,26 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useCalendarData } from './useCalendarData';
 import { useToast } from './use-toast';
+import { CalendarEvent } from '@/integrations/supabase/types';
 
-interface TarefaItem {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  start_date: string;
-  end_date: string;
-  description?: string;
-  event_type: 'meeting' | 'appointment' | 'reminder';
+interface TarefaItem extends CalendarEvent {
   status: 'pending' | 'completed' | 'deleted';
-  meeting_link?: string;
-  google_event_id?: string;
-  source?: string;
-  attendees?: string[];
-  meeting_provider?: string;
-  is_all_day?: boolean;
-  meeting_data?: any;
-  color?: string;
-  deleted_at?: string;
 }
 
 export const useTarefas = () => {
@@ -34,7 +18,7 @@ export const useTarefas = () => {
     // Converter eventos do calendário para o formato de tarefas
     const tarefasFormatted: TarefaItem[] = events.map(event => ({
       ...event,
-      status: event.status || 'pending' as const
+      status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending'
     }));
     
     // Separar tarefas ativas das excluídas
@@ -125,7 +109,7 @@ export const useTarefas = () => {
         const restoredTarefa = {
           ...tarefaToRestore,
           status: 'pending' as const,
-          deleted_at: undefined
+          deleted_at: null
         };
         
         setDeletedTarefas(prev => prev.filter(tarefa => tarefa.id !== id));

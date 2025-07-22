@@ -1,380 +1,220 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Calendar, 
-  Mail, 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  Activity,
-  Quote
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-
-interface RecentActivity {
-  id: string;
-  type: 'email' | 'meeting' | 'client' | 'template';
-  title: string;
-  description: string;
-  time: string;
-  status: 'completed' | 'pending' | 'scheduled';
-}
-
-interface UpcomingEvent {
-  id: string;
-  title: string;
-  start_date: string;
-  event_type: string;
-}
+import { Calendar, Mail, Users, FileText, Clock, CheckCircle } from 'lucide-react';
 
 interface HomeProps {
   onNavigate: (item: string) => void;
 }
 
-const inspirationalQuotes = [
-  "Grandes negócios nascem de grandes sonhos.",
-  "Não tenha medo de começar pequeno. Grandes impérios começaram com uma ideia.",
-  "O sucesso é a soma de pequenos esforços repetidos diariamente.",
-  "Empreender é transformar problemas em oportunidades.",
-  "Quem ousa, conquista.",
-  "A inovação distingue os líderes dos seguidores. – Steve Jobs",
-  "Não espere por oportunidades. Crie-as.",
-  "Empresas fortes são feitas de pessoas fortes.",
-  "Os desafios de hoje são as vitórias de amanhã.",
-  "A persistência realiza o impossível.",
-  "Seja o líder que você gostaria de seguir.",
-  "Sucesso é a habilidade de ir de fracasso em fracasso sem perder o entusiasmo. – Winston Churchill",
-  "Sonhar grande e sonhar pequeno dá o mesmo trabalho. Então sonhe grande!",
-  "Nunca é sobre ideias. É sobre fazer as ideias acontecerem.",
-  "O cliente satisfeito é o melhor negócio.",
-  "O único limite para o seu sucesso é você mesmo.",
-  "Lidere pelo exemplo, inspire pela ação.",
-  "A disciplina é o atalho para o sucesso.",
-  "Empreender é cair sete vezes e levantar oito.",
-  "Grandes líderes criam mais líderes, não seguidores.",
-  "Pessoas comuns focam em problemas, líderes focam em soluções.",
-  "Não venda produtos. Construa relacionamentos.",
-  "O sucesso acontece quando a preparação encontra a oportunidade.",
-  "A melhor maneira de prever o futuro é criá-lo. – Peter Drucker",
-  "Coragem é a chave para abrir portas que o medo mantém fechadas.",
-  "Toda crise carrega dentro de si a semente de uma grande oportunidade.",
-  "Empresários de sucesso não desistem; eles se reinventam.",
-  "Não se trata do quão grande é a sua empresa, mas do quão grande é a sua visão.",
-  "Seu cliente pode esquecer o que você disse, mas nunca como você o fez sentir.",
-  "Comece onde você está. Use o que você tem. Faça o que você pode. – Arthur Ashe"
-];
-
 const Home = ({ onNavigate }: HomeProps) => {
   const { user } = useAuth();
-  const [currentQuote, setCurrentQuote] = useState('');
-  const [stats, setStats] = useState({
-    emails: 0,
-    meetings: 0,
-    clients: 0,
-    productivity: 0
-  });
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set random quote on component mount
-    const randomQuote = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
-    setCurrentQuote(randomQuote);
-    
-    // Change quote every 30 seconds
-    const interval = setInterval(() => {
-      const newRandomQuote = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
-      setCurrentQuote(newRandomQuote);
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadDashboardData();
-    }
-  }, [user]);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user's company
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (!companyUser) return;
-
-      // Load upcoming events (next 7 days)
-      const today = new Date();
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
-
-      const { data: events } = await supabase
-        .from('calendar_events')
-        .select('id, title, start_date, event_type')
-        .eq('company_id', companyUser.company_id)
-        .gte('start_date', today.toISOString())
-        .lte('start_date', nextWeek.toISOString())
-        .order('start_date', { ascending: true })
-        .limit(5);
-
-      setUpcomingEvents(events || []);
-
-      // Load stats
-      const { data: clientsCount } = await supabase
-        .from('clients')
-        .select('id', { count: 'exact' })
-        .eq('company_id', companyUser.company_id);
-
-      const { data: todayEvents } = await supabase
-        .from('calendar_events')
-        .select('id', { count: 'exact' })
-        .eq('company_id', companyUser.company_id)
-        .gte('start_date', today.toISOString().split('T')[0])
-        .lt('start_date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-
-      const { data: templatesCount } = await supabase
-        .from('email_templates')
-        .select('id', { count: 'exact' })
-        .eq('company_id', companyUser.company_id);
-
-      setStats({
-        emails: 0, // Email tracking não implementado ainda
-        meetings: todayEvents?.length || 0,
-        clients: clientsCount?.length || 0,
-        productivity: Math.min(100, ((todayEvents?.length || 0) + (templatesCount?.length || 0)) * 10)
-      });
-
-      // Create recent activities from events
-      const recentEventActivities: RecentActivity[] = (events || []).slice(0, 3).map(event => ({
-        id: event.id,
-        type: event.event_type === 'meeting' ? 'meeting' : 'meeting',
-        title: event.title,
-        description: `Agendado para ${new Date(event.start_date).toLocaleDateString('pt-BR')}`,
-        time: new Date(event.start_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        status: 'scheduled' as const
-      }));
-
-      setRecentActivities(recentEventActivities);
-
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
   };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'email': return Mail;
-      case 'meeting': return Calendar;
-      case 'client': return Users;
-      default: return Activity;
+  const upcomingTasks = [
+    {
+      id: 1,
+      title: 'Revisar propostas de clientes',
+      time: '14:00',
+      priority: 'Alta',
+      type: 'review'
+    },
+    {
+      id: 2,
+      title: 'Reunião com equipe de marketing',
+      time: '16:30',
+      priority: 'Média',
+      type: 'meeting'
+    },
+    {
+      id: 3,
+      title: 'Enviar relatório mensal',
+      time: 'Amanhã',
+      priority: 'Baixa',
+      type: 'report'
     }
-  };
+  ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const recentActivity = [
+    {
+      id: 1,
+      action: 'Novo cliente cadastrado',
+      time: '2 horas atrás',
+      icon: Users,
+      color: 'text-green-600'
+    },
+    {
+      id: 2,
+      action: 'Email enviado para 15 contatos',
+      time: '4 horas atrás',
+      icon: Mail,
+      color: 'text-blue-600'
+    },
+    {
+      id: 3,
+      action: 'Reunião agendada para sexta-feira',
+      time: '1 dia atrás',
+      icon: Calendar,
+      color: 'text-purple-600'
     }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Concluído';
-      case 'pending': return 'Pendente';
-      case 'scheduled': return 'Agendado';
-      default: return status;
-    }
-  };
+  ];
 
   return (
-    <div className="p-8 space-y-8 bg-gray-50 min-h-screen ml-4">
-      {/* Frase Inspiradora no Topo */}
-      <Card className="border-none shadow-xl bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl">
-        <CardContent className="p-10">
-          <div className="flex items-start gap-6">
-            <div className="p-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-              <Quote className="h-8 w-8 text-white" />
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen ml-4">
+      {/* Welcome Section */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {getGreeting()}, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
+        </h1>
+        <p className="text-gray-600 text-base">
+          Aqui está um resumo do que está acontecendo hoje
+        </p>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Emails Hoje</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div className="p-3 rounded-full bg-blue-50">
+                <Mail className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-4 text-xl">
-                💡 Inspiração do Momento
-              </h3>
-              <p className="text-gray-700 text-2xl italic leading-relaxed">
-                "{currentQuote}"
-              </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Reuniões</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div className="p-3 rounded-full bg-green-50">
+                <Calendar className="h-5 w-5 text-green-600" />
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Clientes</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div className="p-3 rounded-full bg-purple-50">
+                <Users className="h-5 w-5 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Modelos</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div className="p-3 rounded-full bg-orange-50">
+                <FileText className="h-5 w-5 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tasks for Today */}
+        <Card className="lg:col-span-2 border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <CheckCircle className="h-5 w-5 text-[#3600FF]" />
+              Tarefas de Hoje
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {upcomingTasks.map((task) => (
+                <div key={task.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-3 h-3 bg-[#3600FF] rounded-full"></div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{task.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="h-3 w-3 text-gray-500" />
+                        <span className="text-xs text-gray-500">{task.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={task.priority === 'Alta' ? 'destructive' : task.priority === 'Média' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {task.priority}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader>
+            <CardTitle className="text-xl">Atividade Recente</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {recentActivity.map((activity) => {
+                const Icon = activity.icon;
+                return (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className={`p-2 rounded-full bg-gray-50 ${activity.color}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Welcome Message */}
+      <Card className="border-none shadow-lg rounded-2xl bg-gradient-to-r from-[#3600FF] to-purple-600 text-white">
+        <CardContent className="p-8 text-center">
+          <h2 className="text-xl font-bold mb-2">Bem-vindo ao ElloSuit! 🎉</h2>
+          <p className="text-blue-100 mb-4 text-sm">
+            Sua plataforma completa para gerenciar emails, reuniões e clientes de forma eficiente
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Badge className="bg-white/20 text-white border-0 text-xs">Email Marketing</Badge>
+            <Badge className="bg-white/20 text-white border-0 text-xs">Gestão de Clientes</Badge>
+            <Badge className="bg-white/20 text-white border-0 text-xs">Calendário Inteligente</Badge>
+            <Badge className="bg-white/20 text-white border-0 text-xs">Análises Detalhadas</Badge>
           </div>
         </CardContent>
       </Card>
-
-      {/* Estatísticas Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">E-mails Hoje</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.emails}</p>
-                <p className="text-sm text-gray-500 mt-2">enviados</p>
-              </div>
-              <div className="p-5 rounded-full bg-blue-50">
-                <Mail className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Reuniões Hoje</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.meetings}</p>
-                <p className="text-sm text-gray-500 mt-2">agendadas</p>
-              </div>
-              <div className="p-5 rounded-full bg-green-50">
-                <Calendar className="h-8 w-8 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Total Clientes</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.clients}</p>
-                <p className="text-sm text-gray-500 mt-2">cadastrados</p>
-              </div>
-              <div className="p-5 rounded-full bg-purple-50">
-                <Users className="h-8 w-8 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-2xl transition-all duration-300 border-none shadow-xl rounded-3xl bg-white transform hover:scale-105">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Produtividade</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.productivity}%</p>
-                <p className="text-sm text-gray-500 mt-2">do objetivo</p>
-              </div>
-              <div className="p-5 rounded-full bg-orange-50">
-                <TrendingUp className="h-8 w-8 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Próximos Compromissos e Atividades Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Próximos Compromissos */}
-        <Card className="border-none shadow-xl rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <Clock className="h-6 w-6" />
-              Próximos Compromissos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : upcomingEvents.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">Nenhum compromisso agendado</p>
-                </div>
-              ) : (
-                upcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-4 p-5 rounded-2xl hover:bg-gray-50 transition-colors">
-                    <div className="p-3 rounded-xl bg-blue-100">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{event.title}</p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {new Date(event.start_date).toLocaleDateString('pt-BR')} às{' '}
-                        {new Date(event.start_date).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                      <Badge variant="secondary" className="mt-2 rounded-full">
-                        {event.event_type}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Atividades Recentes */}
-        <Card className="border-none shadow-xl rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <Activity className="h-6 w-6" />
-              Atividades Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : recentActivities.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Activity className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">Nenhuma atividade recente</p>
-                  <p className="text-sm mt-2">Comece usando o sistema para ver suas atividades aqui</p>
-                </div>
-              ) : (
-                recentActivities.map((activity) => {
-                  const Icon = getActivityIcon(activity.type);
-                  return (
-                    <div key={activity.id} className="flex items-start gap-4 p-5 rounded-2xl hover:bg-gray-50 transition-colors">
-                      <div className="p-3 rounded-xl bg-gray-100">
-                        <Icon className="h-5 w-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{activity.title}</p>
-                        <p className="text-sm text-gray-600 truncate mt-1">{activity.description}</p>
-                        <p className="text-xs text-gray-400 mt-2">{activity.time}</p>
-                      </div>
-                      <Badge className={`${getStatusColor(activity.status)} rounded-full`}>
-                        {getStatusLabel(activity.status)}
-                      </Badge>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };

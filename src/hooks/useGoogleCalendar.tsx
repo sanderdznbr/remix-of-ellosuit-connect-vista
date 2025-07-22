@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -17,15 +18,10 @@ interface GoogleCalendarEvent {
   };
   hangoutLink?: string;
   attendees?: { email: string }[];
-  detectedType?: 'meeting' | 'appointment' | 'reminder';
 }
 
 interface GoogleCalendarResponse {
   events: GoogleCalendarEvent[];
-  statistics?: {
-    total: number;
-    byType: Record<string, number>;
-  };
 }
 
 export const useGoogleCalendar = () => {
@@ -77,12 +73,12 @@ export const useGoogleCalendar = () => {
     }
   };
 
-  // Função de sincronização automática com detecção de tipos
+  // Função de sincronização automática
   const autoSyncCalendar = async () => {
     if (!user) return;
     
     try {
-      console.log('🔄 Sincronização automática iniciada com detecção de tipos...');
+      console.log('🔄 Sincronização automática iniciada...');
       
       // Obter company_id do usuário
       const { data: companyData } = await supabase
@@ -103,7 +99,7 @@ export const useGoogleCalendar = () => {
       const timeMax = new Date();
       timeMax.setMonth(timeMax.getMonth() + 6);
 
-      console.log('📅 Buscando eventos do Google Calendar com detecção de tipos...', {
+      console.log('📅 Buscando eventos do Google Calendar...', {
         timeMin: timeMin.toISOString(),
         timeMax: timeMax.toISOString()
       });
@@ -127,11 +123,6 @@ export const useGoogleCalendar = () => {
       }
 
       console.log(`📅 Encontrados ${googleEvents.events.length} eventos no Google Calendar`);
-      
-      // Log das estatísticas de tipos
-      if (googleEvents.statistics) {
-        console.log('📊 Estatísticas de tipos de eventos:', googleEvents.statistics.byType);
-      }
 
       // Obter eventos existentes do banco
       const { data: existingEvents } = await supabase
@@ -152,46 +143,28 @@ export const useGoogleCalendar = () => {
         return;
       }
 
-      console.log(`📅 Inserindo ${newEvents.length} novos eventos com tipos detectados...`);
+      console.log(`📅 Inserindo ${newEvents.length} novos eventos...`);
 
-      // Criar eventos localmente em lotes com tipos detectados
-      const eventsToCreate = newEvents.map((event: any) => {
-        const eventType = event.detectedType || 'meeting';
-        
-        // Definir cores baseadas no tipo
-        const getEventColor = (type: string) => {
-          switch (type) {
-            case 'reminder': return '#F59E0B'; // Amarelo para lembretes
-            case 'appointment': return '#10B981'; // Verde para compromissos
-            case 'meeting': return '#4285F4'; // Azul Google para reuniões
-            default: return '#4285F4';
-          }
-        };
-
-        console.log(`📋 Processando evento "${event.summary}" como tipo: ${eventType}`);
-
-        return {
-          title: event.summary || 'Evento sem título',
-          description: event.description || '',
-          start_date: event.start?.dateTime || event.start?.date,
-          end_date: event.end?.dateTime || event.end?.date,
-          event_type: eventType,
-          meeting_link: event.hangoutLink || '',
-          meeting_provider: event.hangoutLink ? 'google_meet' : '',
-          attendees: event.attendees ? event.attendees.map((a: any) => a.email) : [],
-          is_all_day: !event.start?.dateTime,
-          google_event_id: event.id,
-          company_id: companyData.company_id,
-          created_by: user.id,
-          color: getEventColor(eventType)
-        };
-      });
+      // Criar eventos localmente em lotes
+      const eventsToCreate = newEvents.map((event: any) => ({
+        title: event.summary || 'Evento sem título',
+        description: event.description || '',
+        start_date: event.start?.dateTime || event.start?.date,
+        end_date: event.end?.dateTime || event.end?.date,
+        event_type: 'meeting' as const,
+        meeting_link: event.hangoutLink || '',
+        meeting_provider: event.hangoutLink ? 'google_meet' : '',
+        attendees: event.attendees ? event.attendees.map((a: any) => a.email) : [],
+        is_all_day: !event.start?.dateTime,
+        google_event_id: event.id,
+        company_id: companyData.company_id,
+        created_by: user.id,
+        color: '#4285F4' // Cor do Google
+      }));
 
       // Inserir em lotes para evitar timeouts
       const batchSize = 10;
       let totalCreated = 0;
-      const typeStats = { meeting: 0, appointment: 0, reminder: 0 };
-
       for (let i = 0; i < eventsToCreate.length; i += batchSize) {
         const batch = eventsToCreate.slice(i, i + batchSize);
         
@@ -203,15 +176,11 @@ export const useGoogleCalendar = () => {
           console.error('❌ Erro ao inserir lote de eventos:', insertError);
         } else {
           totalCreated += batch.length;
-          // Contar tipos
-          batch.forEach(event => {
-            typeStats[event.event_type as keyof typeof typeStats]++;
-          });
         }
       }
 
       if (totalCreated > 0) {
-        console.log(`✅ ${totalCreated} novos eventos sincronizados:`, typeStats);
+        console.log(`✅ ${totalCreated} novos eventos sincronizados`);
       }
 
     } catch (error: any) {
@@ -461,7 +430,7 @@ export const useGoogleCalendar = () => {
     setLoading(true);
     
     try {
-      console.log('🔄 Iniciando ressincronização completa com detecção de tipos...');
+      console.log('🔄 Iniciando ressincronização completa...');
       
       // 1. Obter company_id do usuário
       const { data: companyData } = await supabase
@@ -486,14 +455,14 @@ export const useGoogleCalendar = () => {
         console.error('Erro ao deletar eventos:', deleteError);
       }
 
-      // 3. Buscar todos os eventos do Google Calendar com período expandido
+      // 3. Buscar todos os eventos do Google Calendar
       console.log('📅 Buscando eventos do Google Calendar...');
       
       const timeMin = new Date();
       timeMin.setMonth(timeMin.getMonth() - 6);
       
       const timeMax = new Date();
-      timeMax.setMonth(timeMax.getMonth() + 12);
+      timeMax.setMonth(timeMax.getMonth() + 12); // Aumentar período para 12 meses
 
       const { data: googleEvents, error: fetchError } = await supabase.functions.invoke('google-calendar', {
         body: {
@@ -517,48 +486,27 @@ export const useGoogleCalendar = () => {
       }
 
       console.log(`📅 Encontrados ${googleEvents.events.length} eventos no Google Calendar`);
-      
-      // Log das estatísticas de tipos
-      if (googleEvents.statistics) {
-        console.log('📊 Estatísticas de tipos de eventos:', googleEvents.statistics.byType);
-      }
 
-      // 4. Criar eventos localmente com tipos detectados
-      const eventsToCreate = googleEvents.events.map((event: any) => {
-        const eventType = event.detectedType || 'meeting';
-        
-        // Definir cores baseadas no tipo
-        const getEventColor = (type: string) => {
-          switch (type) {
-            case 'reminder': return '#F59E0B'; // Amarelo para lembretes
-            case 'appointment': return '#10B981'; // Verde para compromissos
-            case 'meeting': return '#4285F4'; // Azul Google para reuniões
-            default: return '#4285F4';
-          }
-        };
-
-        return {
-          title: event.summary || 'Evento sem título',
-          description: event.description || '',
-          start_date: event.start?.dateTime || event.start?.date,
-          end_date: event.end?.dateTime || event.end?.date,
-          event_type: eventType,
-          meeting_link: event.hangoutLink || '',
-          meeting_provider: event.hangoutLink ? 'google_meet' : '',
-          attendees: event.attendees ? event.attendees.map((a: any) => a.email) : [],
-          is_all_day: !event.start?.dateTime,
-          google_event_id: event.id,
-          company_id: companyData.company_id,
-          created_by: user.id,
-          color: getEventColor(eventType)
-        };
-      });
+      // 4. Criar eventos localmente
+      const eventsToCreate = googleEvents.events.map((event: any) => ({
+        title: event.summary || 'Evento sem título',
+        description: event.description || '',
+        start_date: event.start?.dateTime || event.start?.date,
+        end_date: event.end?.dateTime || event.end?.date,
+        event_type: 'meeting' as const,
+        meeting_link: event.hangoutLink || '',
+        meeting_provider: event.hangoutLink ? 'google_meet' : '',
+        attendees: event.attendees ? event.attendees.map((a: any) => a.email) : [],
+        is_all_day: !event.start?.dateTime,
+        google_event_id: event.id,
+        company_id: companyData.company_id,
+        created_by: user.id,
+        color: '#4285F4'
+      }));
 
       // Inserir em lotes
       const batchSize = 10;
       let totalCreated = 0;
-      const typeStats = { meeting: 0, appointment: 0, reminder: 0 };
-
       for (let i = 0; i < eventsToCreate.length; i += batchSize) {
         const batch = eventsToCreate.slice(i, i + batchSize);
         
@@ -570,31 +518,14 @@ export const useGoogleCalendar = () => {
           console.error('Erro ao inserir lote de eventos:', insertError);
         } else {
           totalCreated += batch.length;
-          // Contar tipos
-          batch.forEach(event => {
-            typeStats[event.event_type as keyof typeof typeStats]++;
-          });
         }
       }
 
       console.log('✅ Ressincronização completa finalizada');
       
-      // Mensagem detalhada com estatísticas de tipos
-      const statsMessage = Object.entries(typeStats)
-        .filter(([_, count]) => count > 0)
-        .map(([type, count]) => {
-          const typeNames = {
-            meeting: 'reuniões',
-            appointment: 'compromissos', 
-            reminder: 'lembretes'
-          };
-          return `${count} ${typeNames[type as keyof typeof typeNames]}`;
-        })
-        .join(', ');
-
       toast({
         title: "✅ Sincronização Completa!",
-        description: `${totalCreated} eventos foram sincronizados: ${statsMessage}`,
+        description: `${totalCreated} eventos foram sincronizados do Google Calendar`,
         duration: 5000,
       });
 

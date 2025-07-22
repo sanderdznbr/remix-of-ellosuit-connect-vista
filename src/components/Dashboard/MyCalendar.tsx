@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw, CheckCircle, Calendar, Clock, Bell } from 'lucide-react';
+import { Plus, RefreshCw, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -112,12 +112,12 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setIsRefreshing(true);
     try {
       if (isConnected) {
-        console.log('🔄 Iniciando sincronização manual com detecção de tipos...');
+        console.log('🔄 Iniciando sincronização manual...');
         const result = await fullResyncCalendar();
         
         toast({
           title: "✅ Sincronização Completa",
-          description: `${result.created} eventos sincronizados com detecção automática de tipos (reuniões, compromissos e lembretes)`,
+          description: `${result.created} eventos sincronizados do Google Calendar`,
           duration: 5000
         });
       } else {
@@ -166,9 +166,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         backgroundColor: event.color || getEventColor(event.event_type),
         borderColor: event.color || getEventColor(event.event_type),
         textColor: '#ffffff',
-        classNames: ['modern-event', `event-${event.event_type}`],
-        extendedProps: { 
-          ...event,
+        classNames: ['modern-event'],
+        extendedProps: {
           description: event.description || '',
           event_type: event.event_type || 'meeting',
           meeting_link: event.meeting_link,
@@ -189,23 +188,13 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const getEventColor = (eventType: string) => {
     const colors = {
-      'meeting': '#4285F4',      // Azul Google para reuniões
-      'appointment': '#10B981',   // Verde para compromissos  
-      'reminder': '#F59E0B',      // Amarelo para lembretes
+      'meeting': '#3600FF',
+      'appointment': '#10B981',
+      'reminder': '#F59E0B',
       'task': '#EF4444',
       'google_meet': '#4285F4'
     };
     return colors[eventType] || '#6B7280';
-  };
-
-  // Função para obter ícone baseado no tipo
-  const getEventTypeIcon = (eventType: string) => {
-    switch (eventType) {
-      case 'meeting': return <Calendar className="h-3 w-3" />;
-      case 'appointment': return <Clock className="h-3 w-3" />;
-      case 'reminder': return <Bell className="h-3 w-3" />;
-      default: return <Calendar className="h-3 w-3" />;
-    }
   };
 
   const calendarEvents = formatEventsForCalendar(events);
@@ -236,7 +225,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
             {isConnected && (
               <span className="ml-2 inline-flex items-center text-green-600 text-sm">
                 <CheckCircle className="h-4 w-4 mr-1" />
-                Google Calendar Conectado - Lembretes incluídos
+                Google Calendar Conectado
               </span>
             )}
           </p>
@@ -250,7 +239,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
             className="rounded-xl border-[#3600FF]/20 hover:bg-[#3600FF]/5"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Sincronizando...' : 'Sincronizar Tudo'}
+            {isRefreshing ? 'Sincronizando...' : 'Sincronizar'}
           </Button>
           
           <Button 
@@ -294,19 +283,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                 setCurrentView(view.view.type);
               }}
               eventContent={(eventInfo) => {
-                const eventType = eventInfo.event.extendedProps.event_type;
-                
                 return (
-                  <div className="modern-event-content p-1 rounded flex items-center">
-                    <div className="flex items-center space-x-1 min-w-0 flex-1">
-                      {getEventTypeIcon(eventType)}
-                      <div className="event-title text-xs font-medium truncate">
-                        {eventInfo.event.title}
-                      </div>
+                  <div className="modern-event-content p-1 rounded">
+                    <div className="event-title text-xs font-medium truncate">
+                      {eventInfo.event.title}
                     </div>
                     {eventInfo.event.extendedProps.source === 'google' && (
-                      <div className="event-source text-xs opacity-75 ml-1">
-                        <span className="text-xs">G</span>
+                      <div className="event-source text-xs opacity-75 flex items-center">
+                        <span className="text-xs">Google</span>
                       </div>
                     )}
                   </div>

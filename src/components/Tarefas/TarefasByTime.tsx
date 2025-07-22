@@ -46,8 +46,8 @@ const TarefasByTime: React.FC<TarefasByTimeProps> = ({ tarefas, onUpdate, onDele
             <Icon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500">{events.length} evento{events.length > 1 ? 's' : ''}</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{events.length} evento{events.length > 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="space-y-0">
@@ -70,28 +70,28 @@ const TarefasByTime: React.FC<TarefasByTimeProps> = ({ tarefas, onUpdate, onDele
         title="Manhã" 
         events={morning} 
         icon={Sun} 
-        color="var(--ios-orange)"
+        color="#FF9500"
       />
       <TimeSection 
         title="Tarde" 
         events={afternoon} 
         icon={Sunset} 
-        color="var(--ios-blue)"
+        color="#007AFF"
       />
       <TimeSection 
         title="Noite" 
         events={evening} 
         icon={Moon} 
-        color="var(--ios-purple)"
+        color="#5856D6"
       />
       
       {morning.length === 0 && afternoon.length === 0 && evening.length === 0 && (
         <div className="mobile-empty-state">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
             <span className="text-4xl">📝</span>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma tarefa para hoje</h3>
-          <p className="text-gray-500">Adicione um novo lembrete para começar</p>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Nenhuma tarefa para hoje</h3>
+          <p className="text-gray-500 dark:text-gray-400">Adicione um novo lembrete para começar</p>
         </div>
       )}
     </div>

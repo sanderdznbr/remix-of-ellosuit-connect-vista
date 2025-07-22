@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -102,11 +101,11 @@ const Sidebar = () => {
       <div className="p-6 pb-4">
         <div className="flex items-center space-x-3">
           {isCollapsed ? (
-            // Exibe favicon 1:1 quando recolhida - usando uma imagem válida do projeto
+            // Exibe favicon 1:1 quando recolhida - agora com 50x50px
             <img 
               src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
               alt="Logo" 
-              className="h-12 w-12 object-contain transition-all duration-300"
+              className="h-[50px] w-[50px] object-contain transition-all duration-300"
               onError={(e) => {
                 e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
               }}

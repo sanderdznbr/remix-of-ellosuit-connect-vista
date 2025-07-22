@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -101,9 +102,9 @@ const Sidebar = () => {
       <div className="p-6 pb-4">
         <div className="flex items-center space-x-3">
           {isCollapsed ? (
-            // Exibe favicon quando recolhida - aumentado o tamanho
+            // Exibe favicon 1:1 quando recolhida
             <img 
-              src={settings.custom_favicon_url || "/lovable-uploads/0c75d1d1-909f-4115-842d-d70fcbc73365.png"} 
+              src={settings.custom_favicon_url || "/lovable-uploads/809c322f-1a44-441f-976f-d1246e7f1b2c.png"} 
               alt="Logo" 
               className="h-12 w-12 object-contain transition-all duration-300"
             />
@@ -120,7 +121,7 @@ const Sidebar = () => {
                 // Logo padrão ElloSuit sempre visível quando não há custom_logo_url
                 <>
                   <img 
-                    src="/lovable-uploads/0c75d1d1-909f-4115-842d-d70fcbc73365.png" 
+                    src="/lovable-uploads/190e67de-b11c-4255-b137-25ced6811606.png" 
                     alt="ElloSuit Logo" 
                     className="h-10 w-auto transition-all duration-300"
                   />

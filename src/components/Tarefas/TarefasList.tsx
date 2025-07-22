@@ -15,16 +15,19 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
   const todayString = today.toISOString().split('T')[0];
 
   const getFilteredTarefas = () => {
+    // Filtrar apenas tarefas ativas (não excluídas)
+    const activeTarefas = tarefas.filter(tarefa => tarefa.status !== 'deleted');
+    
     switch (filter) {
       case 'hoje':
-        return tarefas.filter(tarefa => 
+        return activeTarefas.filter(tarefa => 
           tarefa.start_date.startsWith(todayString)
         );
       
       case 'semana':
         const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Domingo
         const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-        return tarefas.filter(tarefa => {
+        return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
             return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
@@ -36,7 +39,7 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
       case 'mes':
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
-        return tarefas.filter(tarefa => {
+        return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
             return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
@@ -46,7 +49,7 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
         });
       
       default:
-        return tarefas;
+        return activeTarefas;
     }
   };
 

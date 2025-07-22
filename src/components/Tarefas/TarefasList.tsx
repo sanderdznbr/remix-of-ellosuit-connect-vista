@@ -15,7 +15,7 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete }
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-0">
       {todayTarefas.map((tarefa) => (
         <TarefaItem
           key={tarefa.id}

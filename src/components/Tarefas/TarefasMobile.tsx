@@ -2,19 +2,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Share, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import { useTarefas } from '@/hooks/useTarefas';
 
 const TarefasMobile = () => {
-  const navigate = useNavigate();
   const [showNovoLembrete, setShowNovoLembrete] = useState(false);
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa } = useTarefas();
-
-  const handleGoBack = () => {
-    navigate('/dashboard');
-  };
 
   const handleCreateTarefa = async (tarefaData: any) => {
     await createTarefa(tarefaData);
@@ -31,13 +25,12 @@ const TarefasMobile = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 pt-12">
+      {/* Header with safe area */}
+      <div className="flex items-center justify-between p-4 pt-safe-area-inset-top pt-12">
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleGoBack}
-          className="text-blue-400 hover:bg-gray-800 p-2"
+          className="text-blue-400 hover:bg-gray-800 p-2 cursor-default"
         >
           <ArrowLeft className="h-5 w-5 mr-1" />
           <span className="text-blue-400 text-base">Listas</span>
@@ -76,7 +69,7 @@ const TarefasMobile = () => {
       </div>
 
       {/* Add Button */}
-      <div className="fixed bottom-8 left-4 right-4">
+      <div className="fixed bottom-8 left-4 right-4 pb-safe-area-inset-bottom">
         <Button
           onClick={() => setShowNovoLembrete(true)}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full py-4 flex items-center justify-center space-x-2"

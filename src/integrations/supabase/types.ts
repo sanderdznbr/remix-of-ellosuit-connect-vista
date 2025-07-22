@@ -945,6 +945,7 @@ export type Database = {
           custom_logo_url: string | null
           id: string
           menu_order: Json | null
+          sidebar_background_color: string | null
           sidebar_color: string | null
           updated_at: string
           user_id: string
@@ -955,6 +956,7 @@ export type Database = {
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null
+          sidebar_background_color?: string | null
           sidebar_color?: string | null
           updated_at?: string
           user_id: string
@@ -965,6 +967,7 @@ export type Database = {
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null
+          sidebar_background_color?: string | null
           sidebar_color?: string | null
           updated_at?: string
           user_id?: string

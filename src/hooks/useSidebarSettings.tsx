@@ -56,7 +56,7 @@ export const useSidebarSettings = () => {
         setSettings({
           id: data.id,
           sidebar_color: data.sidebar_color || '#3600FF',
-          sidebar_background_color: data.sidebar_background_color || '#ffffff',
+          sidebar_background_color: (data as any).sidebar_background_color || '#ffffff',
           custom_logo_url: data.custom_logo_url,
           menu_order: menuOrder
         });

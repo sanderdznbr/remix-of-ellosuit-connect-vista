@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Share, MoreHorizontal, Plus } from 'lucide-react';
+import { Share, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
@@ -17,50 +17,40 @@ const TarefasMobile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-lg">Carregando...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-lg text-gray-600">Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white">
       {/* Header with safe area */}
-      <div className="flex items-center justify-between p-4 pt-safe-area-inset-top pt-12">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-blue-400 hover:bg-gray-800 p-2 cursor-default"
-        >
-          <ArrowLeft className="h-5 w-5 mr-1" />
-          <span className="text-blue-400 text-base">Listas</span>
-        </Button>
+      <div className="flex items-center justify-between p-4 pt-16 bg-white border-b border-gray-100">
+        <div className="w-16"></div> {/* Spacer for centering */}
+        
+        <h1 className="text-2xl font-bold text-blue-500">Lembretes</h1>
         
         <div className="flex items-center space-x-3">
           <Button
             variant="ghost"
             size="sm"
-            className="text-blue-400 hover:bg-gray-800 p-2"
+            className="text-blue-500 hover:bg-gray-100 p-2"
           >
             <Share className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-blue-400 hover:bg-gray-800 p-2"
+            className="text-blue-500 hover:bg-gray-100 p-2"
           >
             <MoreHorizontal className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
-      {/* Title */}
-      <div className="px-4 mb-8">
-        <h1 className="text-3xl font-bold text-blue-400">Lembretes</h1>
-      </div>
-
       {/* Tarefas List */}
-      <div className="flex-1 px-4">
+      <div className="flex-1 bg-white">
         <TarefasList
           tarefas={tarefas}
           onUpdate={updateTarefa}
@@ -72,7 +62,7 @@ const TarefasMobile = () => {
       <div className="fixed bottom-8 left-4 right-4 pb-safe-area-inset-bottom">
         <Button
           onClick={() => setShowNovoLembrete(true)}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full py-4 flex items-center justify-center space-x-2"
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-4 flex items-center justify-center space-x-2 shadow-lg"
         >
           <Plus className="h-5 w-5" />
           <span className="text-base font-medium">Novo Lembrete</span>

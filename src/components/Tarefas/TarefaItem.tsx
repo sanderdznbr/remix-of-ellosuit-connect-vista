@@ -94,29 +94,29 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting':
-        return 'text-blue-400';
+        return 'text-blue-500';
       case 'appointment':
-        return 'text-green-400';
+        return 'text-green-500';
       case 'reminder':
-        return 'text-yellow-400';
+        return 'text-orange-500';
       default:
-        return 'text-gray-400';
+        return 'text-gray-500';
     }
   };
 
   return (
     <>
-      <div className="relative overflow-hidden border-b border-gray-800">
+      <div className="relative overflow-hidden border-b border-gray-100 bg-white">
         {/* Delete Button Background */}
         <div 
           className={cn(
-            "absolute right-0 top-0 h-full w-20 bg-red-600 flex items-center justify-center transition-opacity duration-200",
+            "absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center transition-opacity duration-200",
             swipeX < -20 ? "opacity-100" : "opacity-0"
           )}
         >
           <button
             onClick={handleDeleteClick}
-            className="text-white p-2 rounded-full hover:bg-red-700 transition-colors"
+            className="text-white p-2 rounded-full hover:bg-red-600 transition-colors"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -125,7 +125,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
         {/* Main Content */}
         <div 
           className={cn(
-            "flex items-start space-x-3 py-3 bg-black transition-transform duration-200 ease-out",
+            "flex items-start space-x-4 py-4 px-4 bg-white transition-transform duration-200 ease-out",
             isDragging ? "cursor-grabbing" : "cursor-pointer"
           )}
           style={{ 
@@ -141,10 +141,10 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
           <button
             onClick={handleToggleComplete}
             className={cn(
-              "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all",
+              "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0",
               isCompleted
-                ? "bg-blue-600 border-blue-600"
-                : "border-gray-600 hover:border-gray-400"
+                ? "bg-blue-500 border-blue-500"
+                : "border-gray-300 hover:border-gray-400"
             )}
           >
             {isCompleted && (
@@ -158,7 +158,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
           <div className="flex-1 min-w-0">
             <div
               className={cn(
-                "text-white text-base leading-snug",
+                "text-gray-900 text-base leading-snug font-medium",
                 isCompleted && "line-through text-gray-500"
               )}
             >
@@ -167,17 +167,17 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
             
             {tarefa.description && (
               <div className={cn(
-                "text-sm text-gray-400 mt-1",
-                isCompleted && "line-through text-gray-600"
+                "text-sm text-gray-600 mt-1",
+                isCompleted && "line-through text-gray-400"
               )}>
                 {tarefa.description}
               </div>
             )}
 
-            <div className="flex items-center space-x-2 mt-2">
+            <div className="flex items-center space-x-3 mt-2">
               {formatTime(tarefa.start_date) && (
                 <span className={cn(
-                  "text-xs",
+                  "text-xs font-medium",
                   getEventTypeColor(tarefa.event_type)
                 )}>
                   {formatTime(tarefa.start_date)}
@@ -185,13 +185,13 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
               )}
               
               {formatDate(tarefa.start_date) && (
-                <span className="text-xs text-red-400">
+                <span className="text-xs text-red-500 font-medium">
                   {formatDate(tarefa.start_date)}
                 </span>
               )}
               
               {tarefa.attendees && tarefa.attendees.length > 0 && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   Com {tarefa.attendees[0]}
                 </span>
               )}

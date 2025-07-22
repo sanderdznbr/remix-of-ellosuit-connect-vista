@@ -15,7 +15,7 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete }
   );
 
   return (
-    <div className="space-y-0">
+    <div className="bg-white">
       {todayTarefas.map((tarefa) => (
         <TarefaItem
           key={tarefa.id}
@@ -26,9 +26,9 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete }
       ))}
       
       {todayTarefas.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">Nenhuma tarefa para hoje</p>
-          <p className="text-gray-500 text-sm mt-2">Adicione um novo lembrete para começar</p>
+        <div className="text-center py-16 px-4">
+          <p className="text-gray-500 text-lg">Nenhuma tarefa para hoje</p>
+          <p className="text-gray-400 text-sm mt-2">Adicione um novo lembrete para começar</p>
         </div>
       )}
     </div>

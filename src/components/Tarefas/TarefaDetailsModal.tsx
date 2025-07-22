@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { X, Clock, Calendar, Users, LinkIcon } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Clock, Calendar, Users, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,10 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(tarefa?.title || '');
   const [description, setDescription] = useState(tarefa?.description || '');
+  const [startY, setStartY] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const handleSave = async () => {
     if (!tarefa) return;
@@ -41,6 +45,28 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
     
     await onDelete(tarefa.id);
     onClose();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartY(e.touches[0].clientY);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    
+    const diff = e.touches[0].clientY - startY;
+    if (diff > 0) {
+      setCurrentY(diff);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (currentY > 150) {
+      onClose();
+    }
+    setCurrentY(0);
+    setIsDragging(false);
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -71,38 +97,46 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting':
-        return 'text-blue-400';
+        return 'text-blue-500';
       case 'appointment':
-        return 'text-green-400';
+        return 'text-green-500';
       case 'reminder':
-        return 'text-yellow-400';
+        return 'text-orange-500';
       default:
-        return 'text-gray-400';
+        return 'text-gray-500';
     }
   };
 
   if (!isOpen || !tarefa) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-      <div className="bg-gray-900 w-full h-[85vh] rounded-t-2xl flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-end">
+      <div 
+        ref={modalRef}
+        className="bg-white w-full max-h-[90vh] rounded-t-3xl flex flex-col shadow-2xl"
+        style={{ 
+          transform: `translateY(${currentY}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Drag Handle */}
+        <div className="flex justify-center py-3">
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
+          <div className="w-16"></div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsEditing(!isEditing)}
-              className="text-blue-400 hover:bg-gray-800"
+              className="text-blue-500 hover:bg-gray-100 px-4 py-2"
             >
               {isEditing ? 'Cancelar' : 'Editar'}
             </Button>
@@ -111,7 +145,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
               <Button
                 size="sm"
                 onClick={handleSave}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
               >
                 Salvar
               </Button>
@@ -120,33 +154,33 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
           {/* Title */}
           <div>
             {isEditing ? (
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white text-lg font-medium"
+                className="bg-gray-50 border-gray-200 text-gray-900 text-lg font-medium rounded-xl"
                 placeholder="Título da tarefa"
               />
             ) : (
-              <h2 className="text-xl font-semibold text-white">{tarefa.title}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">{tarefa.title}</h2>
             )}
           </div>
 
           {/* Description */}
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">Descrição</label>
+            <label className="text-sm text-gray-500 mb-2 block">Descrição</label>
             {isEditing ? (
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white min-h-[100px] resize-none"
+                className="bg-gray-50 border-gray-200 text-gray-900 min-h-[100px] resize-none rounded-xl"
                 placeholder="Adicione uma descrição..."
               />
             ) : (
-              <p className="text-gray-300">
+              <p className="text-gray-700 text-base">
                 {tarefa.description || 'Nenhuma descrição adicionada'}
               </p>
             )}
@@ -155,56 +189,56 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
           {/* Event Details */}
           <div className="space-y-4">
             {/* Event Type */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
-                <div className={cn("w-3 h-3 rounded-full", getEventTypeColor(tarefa.event_type))} />
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <div className={cn("w-4 h-4 rounded-full", getEventTypeColor(tarefa.event_type))} />
               </div>
               <div>
-                <p className="text-white font-medium">{getEventTypeLabel(tarefa.event_type)}</p>
-                <p className="text-sm text-gray-400">Tipo do evento</p>
+                <p className="text-gray-900 font-medium">{getEventTypeLabel(tarefa.event_type)}</p>
+                <p className="text-sm text-gray-500">Tipo do evento</p>
               </div>
             </div>
 
             {/* Date and Time */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-gray-500" />
               </div>
               <div>
-                <p className="text-white font-medium">{formatDateTime(tarefa.start_date)}</p>
-                <p className="text-sm text-gray-400">Data e horário</p>
+                <p className="text-gray-900 font-medium">{formatDateTime(tarefa.start_date)}</p>
+                <p className="text-sm text-gray-500">Data e horário</p>
               </div>
             </div>
 
             {/* Attendees */}
             {tarefa.attendees && tarefa.attendees.length > 0 && (
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-gray-500" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">{tarefa.attendees.join(', ')}</p>
-                  <p className="text-sm text-gray-400">Participantes</p>
+                  <p className="text-gray-900 font-medium">{tarefa.attendees.join(', ')}</p>
+                  <p className="text-sm text-gray-500">Participantes</p>
                 </div>
               </div>
             )}
 
             {/* Meeting Link */}
             {tarefa.meeting_link && (
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
-                  <LinkIcon className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <LinkIcon className="w-5 h-5 text-gray-500" />
                 </div>
                 <div>
                   <a
                     href={tarefa.meeting_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 font-medium hover:underline"
+                    className="text-blue-500 font-medium hover:underline"
                   >
                     Link da reunião
                   </a>
-                  <p className="text-sm text-gray-400">Clique para acessar</p>
+                  <p className="text-sm text-gray-500">Clique para acessar</p>
                 </div>
               </div>
             )}
@@ -212,11 +246,11 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-6 border-t border-gray-100">
           <Button
             onClick={handleDelete}
             variant="destructive"
-            className="w-full bg-red-600 hover:bg-red-700 text-white"
+            className="w-full bg-red-500 hover:bg-red-600 text-white rounded-xl py-3"
           >
             Excluir Lembrete
           </Button>

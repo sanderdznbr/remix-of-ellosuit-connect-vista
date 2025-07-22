@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -78,8 +77,8 @@ const Sidebar = () => {
 
   return (
     <div 
-      className="w-64 bg-white border-r border-gray-200 flex flex-col"
-      style={{ backgroundColor: settings.sidebar_color ? `${settings.sidebar_color}15` : undefined }}
+      className="w-64 border-r border-gray-200 flex flex-col"
+      style={{ backgroundColor: settings.sidebar_background_color || '#ffffff' }}
     >
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
@@ -93,8 +92,7 @@ const Sidebar = () => {
           ) : (
             <>
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: settings.sidebar_color || '#3600FF' }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600"
               >
                 E
               </div>

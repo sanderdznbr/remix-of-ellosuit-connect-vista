@@ -7,6 +7,7 @@ import { useToast } from './use-toast';
 interface SidebarSettings {
   id?: string;
   sidebar_color: string;
+  sidebar_background_color?: string;
   custom_logo_url?: string;
   menu_order: string[];
 }
@@ -14,6 +15,7 @@ interface SidebarSettings {
 export const useSidebarSettings = () => {
   const [settings, setSettings] = useState<SidebarSettings>({
     sidebar_color: '#3600FF',
+    sidebar_background_color: '#ffffff',
     menu_order: []
   });
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,7 @@ export const useSidebarSettings = () => {
         setSettings({
           id: data.id,
           sidebar_color: data.sidebar_color || '#3600FF',
+          sidebar_background_color: data.sidebar_background_color || '#ffffff',
           custom_logo_url: data.custom_logo_url,
           menu_order: menuOrder
         });
@@ -86,6 +89,7 @@ export const useSidebarSettings = () => {
           .from('user_sidebar_settings')
           .update({
             sidebar_color: updatedSettings.sidebar_color,
+            sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
             menu_order: updatedSettings.menu_order
           })
@@ -100,6 +104,7 @@ export const useSidebarSettings = () => {
             user_id: user.id,
             company_id: companyUser.company_id,
             sidebar_color: updatedSettings.sidebar_color,
+            sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
             menu_order: updatedSettings.menu_order
           })

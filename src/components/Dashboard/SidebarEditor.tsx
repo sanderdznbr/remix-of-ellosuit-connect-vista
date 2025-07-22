@@ -22,8 +22,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Upload, Palette, Settings } from 'lucide-react';
+import { GripVertical, Upload, Palette, Settings, Image } from 'lucide-react';
 import { useSidebarSettings } from '@/hooks/useSidebarSettings';
+import ColorWheel from './ColorWheel';
 
 const defaultMenuItems = [
   { id: 'home', label: 'Home', icon: '🏠' },
@@ -74,7 +75,8 @@ const SidebarEditor = () => {
   const { settings, loading, updateSettings } = useSidebarSettings();
   const [menuItems, setMenuItems] = useState(defaultMenuItems);
   const [customLogoFile, setCustomLogoFile] = useState<File | null>(null);
-  const [colorInput, setColorInput] = useState(settings.sidebar_color);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showBackgroundColorPicker, setShowBackgroundColorPicker] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -89,14 +91,12 @@ const SidebarEditor = () => {
         .map(id => defaultMenuItems.find(item => item.id === id))
         .filter(Boolean) as typeof defaultMenuItems;
       
-      // Add any new items that weren't in the saved order
       const remainingItems = defaultMenuItems.filter(
         item => !settings.menu_order.includes(item.id)
       );
       
       setMenuItems([...orderedItems, ...remainingItems]);
     }
-    setColorInput(settings.sidebar_color);
   }, [settings]);
 
   function handleDragEnd(event: any) {
@@ -109,7 +109,6 @@ const SidebarEditor = () => {
 
         const newItems = arrayMove(items, oldIndex, newIndex);
         
-        // Update settings with new order
         updateSettings({
           menu_order: newItems.map(item => item.id)
         });
@@ -119,20 +118,30 @@ const SidebarEditor = () => {
     }
   }
 
-  const handleColorChange = () => {
+  const handleSidebarColorChange = (color: string) => {
     updateSettings({
-      sidebar_color: colorInput
+      sidebar_color: color
+    });
+  };
+
+  const handleBackgroundColorChange = (color: string) => {
+    updateSettings({
+      sidebar_background_color: color
     });
   };
 
   const handleLogoUpload = async () => {
     if (!customLogoFile) return;
 
-    // Here you would typically upload to storage
-    // For now, we'll just save a placeholder URL
     const logoUrl = URL.createObjectURL(customLogoFile);
     updateSettings({
       custom_logo_url: logoUrl
+    });
+  };
+
+  const resetToDefaultLogo = () => {
+    updateSettings({
+      custom_logo_url: undefined
     });
   };
 
@@ -182,36 +191,70 @@ const SidebarEditor = () => {
 
         {/* Customization Options */}
         <div className="space-y-6">
-          {/* Color Picker */}
+          {/* Accent Color Picker */}
           <Card className="border-none shadow-lg rounded-2xl bg-white">
             <CardHeader className="p-6">
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Cor da Sidebar
+                Cor Principal da Sidebar
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 pt-0">
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div 
-                    className="w-12 h-12 rounded-lg border-2 border-gray-200"
-                    style={{ backgroundColor: colorInput }}
-                  ></div>
-                  <div className="flex-1">
-                    <Label htmlFor="color-input">Código da Cor</Label>
-                    <Input
-                      id="color-input"
-                      type="text"
-                      value={colorInput}
-                      onChange={(e) => setColorInput(e.target.value)}
-                      placeholder="#3600FF"
-                      className="mt-1"
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowColorPicker(!showColorPicker)}
+                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
+                      style={{ backgroundColor: settings.sidebar_color }}
                     />
+                    {showColorPicker && (
+                      <ColorWheel
+                        color={settings.sidebar_color}
+                        onChange={handleSidebarColorChange}
+                        onClose={() => setShowColorPicker(false)}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Label>Cor Selecionada</Label>
+                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_color}</div>
                   </div>
                 </div>
-                <Button onClick={handleColorChange} className="w-full">
-                  Aplicar Cor
-                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Background Color Picker */}
+          <Card className="border-none shadow-lg rounded-2xl bg-white">
+            <CardHeader className="p-6">
+              <CardTitle className="flex items-center gap-2">
+                <Image className="h-5 w-5" />
+                Cor de Fundo da Sidebar
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowBackgroundColorPicker(!showBackgroundColorPicker)}
+                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
+                      style={{ backgroundColor: settings.sidebar_background_color || '#ffffff' }}
+                    />
+                    {showBackgroundColorPicker && (
+                      <ColorWheel
+                        color={settings.sidebar_background_color || '#ffffff'}
+                        onChange={handleBackgroundColorChange}
+                        onClose={() => setShowBackgroundColorPicker(false)}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Label>Cor de Fundo Selecionada</Label>
+                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_background_color || '#ffffff'}</div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -231,13 +274,33 @@ const SidebarEditor = () => {
                   accept="image/*"
                   onChange={(e) => setCustomLogoFile(e.target.files?.[0] || null)}
                 />
-                {settings.custom_logo_url && (
+                {settings.custom_logo_url ? (
                   <div className="p-4 border rounded-lg">
                     <img 
                       src={settings.custom_logo_url} 
                       alt="Custom Logo" 
-                      className="h-12 object-contain"
+                      className="h-12 object-contain mb-2"
                     />
+                    <Button
+                      onClick={resetToDefaultLogo}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Usar Logo Padrão
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600"
+                      >
+                        E
+                      </div>
+                      <span className="text-lg font-bold text-gray-900">ElloSuit</span>
+                    </div>
+                    <p className="text-sm text-gray-500">Logo padrão da ElloSuit</p>
                   </div>
                 )}
                 <Button 

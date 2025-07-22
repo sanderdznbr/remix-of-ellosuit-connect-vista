@@ -185,19 +185,32 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          annual_revenue: number | null
+          avatar_url: string | null
+          birth_date: string | null
+          client_type: string | null
           cnpj_cpf: string | null
           company_id: string
           company_name: string | null
+          company_size: string | null
           created_at: string
           created_by: string
           email: string | null
+          facebook: string | null
           id: string
+          industry: string | null
+          instagram: string | null
+          linkedin: string | null
           name: string
           notes: string | null
           phone: string | null
+          profession: string | null
           status: string
+          tags: string[] | null
           updated_at: string
+          website: string | null
           whatsapp: string | null
+          whatsapp_business: string | null
         }
         Insert: {
           address_city?: string | null
@@ -205,19 +218,32 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          annual_revenue?: number | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          client_type?: string | null
           cnpj_cpf?: string | null
           company_id: string
           company_name?: string | null
+          company_size?: string | null
           created_at?: string
           created_by: string
           email?: string | null
+          facebook?: string | null
           id?: string
+          industry?: string | null
+          instagram?: string | null
+          linkedin?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          profession?: string | null
           status?: string
+          tags?: string[] | null
           updated_at?: string
+          website?: string | null
           whatsapp?: string | null
+          whatsapp_business?: string | null
         }
         Update: {
           address_city?: string | null
@@ -225,19 +251,32 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          annual_revenue?: number | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          client_type?: string | null
           cnpj_cpf?: string | null
           company_id?: string
           company_name?: string | null
+          company_size?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
+          facebook?: string | null
           id?: string
+          industry?: string | null
+          instagram?: string | null
+          linkedin?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          profession?: string | null
           status?: string
+          tags?: string[] | null
           updated_at?: string
+          website?: string | null
           whatsapp?: string | null
+          whatsapp_business?: string | null
         }
         Relationships: [
           {
@@ -314,29 +353,73 @@ export type Database = {
           },
         ]
       }
+      document_files: {
+        Row: {
+          created_at: string
+          document_id: string
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string
+          original_filename: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          file_path: string
+          file_size: number
+          id?: string
+          mime_type: string
+          original_filename: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          original_filename?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_folders: {
         Row: {
+          color: string | null
           company_id: string
           created_at: string
           created_by: string
+          description: string | null
           id: string
           name: string
           parent_folder_id: string | null
           updated_at: string
         }
         Insert: {
+          color?: string | null
           company_id: string
           created_at?: string
           created_by: string
+          description?: string | null
           id?: string
           name: string
           parent_folder_id?: string | null
           updated_at?: string
         }
         Update: {
+          color?: string | null
           company_id?: string
           created_at?: string
           created_by?: string
+          description?: string | null
           id?: string
           name?: string
           parent_folder_id?: string | null
@@ -854,6 +937,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_sidebar_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          custom_logo_url: string | null
+          id: string
+          menu_order: Json | null
+          sidebar_color: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          custom_logo_url?: string | null
+          id?: string
+          menu_order?: Json | null
+          sidebar_color?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          custom_logo_url?: string | null
+          id?: string
+          menu_order?: Json | null
+          sidebar_color?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

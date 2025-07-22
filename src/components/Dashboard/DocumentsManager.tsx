@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Upload, 
   FileText, 
@@ -19,11 +19,11 @@ import {
   Download,
   Share,
   Trash2,
-  Star,
   Clock,
   Tag,
   FolderPlus,
-  File
+  File,
+  MousePointer
 } from 'lucide-react';
 import { useDocuments } from '@/hooks/useDocuments';
 
@@ -31,8 +31,9 @@ const DocumentsManager = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'document' | 'folder' | 'empty'; item?: any } | null>(null);
+  const [newFolder, setNewFolder] = useState({ name: '', description: '', color: '#3B82F6' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { documents, folders, loading, createDocument, createFolder, deleteDocument, deleteFolder } = useDocuments();
@@ -78,10 +79,20 @@ const DocumentsManager = () => {
     });
   };
 
+  const handleContextMenu = (e: React.MouseEvent, type: 'document' | 'folder' | 'empty', item?: any) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      type,
+      item
+    });
+  };
+
   const handleCreateFolder = async () => {
-    if (newFolderName.trim()) {
-      await createFolder(newFolderName);
-      setNewFolderName('');
+    if (newFolder.name.trim()) {
+      await createFolder(newFolder.name);
+      setNewFolder({ name: '', description: '', color: '#3B82F6' });
       setShowNewFolderDialog(false);
     }
   };
@@ -111,6 +122,13 @@ const DocumentsManager = () => {
     folder.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Close context menu when clicking elsewhere
+  React.useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
   if (loading) {
     return (
       <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
@@ -122,7 +140,7 @@ const DocumentsManager = () => {
   }
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen" onContextMenu={(e) => handleContextMenu(e, 'empty')}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
@@ -202,6 +220,16 @@ const DocumentsManager = () => {
         </Button>
       </div>
 
+      {/* Context Menu Instructions */}
+      <Card className="border-none shadow-lg rounded-2xl bg-white">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <MousePointer className="h-4 w-4" />
+            <span>Clique com o botão direito em pastas e documentos para ver mais opções</span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Documents and Folders */}
       {(filteredDocuments.length === 0 && filteredFolders.length === 0) ? (
         <Card className="border-none shadow-lg rounded-2xl bg-white">
@@ -223,10 +251,14 @@ const DocumentsManager = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {/* Folders */}
           {filteredFolders.map((folder) => (
-            <Card key={folder.id} className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 group">
+            <Card 
+              key={folder.id} 
+              className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 group"
+              onContextMenu={(e) => handleContextMenu(e, 'folder', folder)}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <Folder className="h-8 w-8 text-blue-500" />
+                  <Folder className="h-8 w-8 text-blue-500" style={{ color: folder.color }} />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
@@ -244,6 +276,9 @@ const DocumentsManager = () => {
                 
                 <div className="space-y-2">
                   <h3 className="text-base font-semibold text-gray-900 truncate">{folder.name}</h3>
+                  {folder.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2">{folder.description}</p>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="h-3 w-3" />
                     {new Date(folder.created_at).toLocaleDateString('pt-BR')}
@@ -255,7 +290,11 @@ const DocumentsManager = () => {
 
           {/* Documents */}
           {filteredDocuments.map((doc) => (
-            <Card key={doc.id} className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 group">
+            <Card 
+              key={doc.id} 
+              className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 group"
+              onContextMenu={(e) => handleContextMenu(e, 'document', doc)}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   {getFileIcon(doc.file_type)}
@@ -311,11 +350,10 @@ const DocumentsManager = () => {
         <Card className="border-none shadow-lg rounded-2xl bg-white">
           <CardContent className="p-0">
             <div className="space-y-2">
-              {/* Folders in list view */}
               {filteredFolders.map((folder) => (
-                <div key={folder.id} className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors">
+                <div key={folder.id} className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors" onContextMenu={(e) => handleContextMenu(e, 'folder', folder)}>
                   <div className="flex items-center gap-4">
-                    <Folder className="h-8 w-8 text-blue-500" />
+                    <Folder className="h-8 w-8 text-blue-500" style={{ color: folder.color }} />
                     <div>
                       <h3 className="text-base font-semibold text-gray-900">{folder.name}</h3>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -340,9 +378,8 @@ const DocumentsManager = () => {
                 </div>
               ))}
 
-              {/* Documents in list view */}
               {filteredDocuments.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors">
+                <div key={doc.id} className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors" onContextMenu={(e) => handleContextMenu(e, 'document', doc)}>
                   <div className="flex items-center gap-4">
                     {getFileIcon(doc.file_type)}
                     <div>
@@ -394,6 +431,75 @@ const DocumentsManager = () => {
         </Card>
       )}
 
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {contextMenu.type === 'empty' && (
+            <>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => {
+                  setShowNewFolderDialog(true);
+                  setContextMenu(null);
+                }}
+              >
+                <FolderPlus className="h-4 w-4" />
+                Nova Pasta
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => {
+                  handleFileUpload();
+                  setContextMenu(null);
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                Upload Arquivo
+              </button>
+            </>
+          )}
+          
+          {contextMenu.type === 'folder' && (
+            <button
+              className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
+              onClick={() => {
+                deleteFolder(contextMenu.item.id);
+                setContextMenu(null);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir Pasta
+            </button>
+          )}
+          
+          {contextMenu.type === 'document' && (
+            <>
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Download
+              </button>
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2">
+                <Share className="h-4 w-4" />
+                Compartilhar
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                onClick={() => {
+                  deleteDocument(contextMenu.item.id);
+                  setContextMenu(null);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* New Folder Dialog */}
       <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
         <DialogContent className="rounded-2xl">
@@ -402,13 +508,24 @@ const DocumentsManager = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="folder-name" className="text-base font-medium">Nome da Pasta</Label>
+              <Label htmlFor="folder-name">Nome da Pasta *</Label>
               <Input
                 id="folder-name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
+                value={newFolder.name}
+                onChange={(e) => setNewFolder({ ...newFolder, name: e.target.value })}
                 placeholder="Digite o nome da pasta..."
                 className="mt-2 rounded-xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="folder-description">Descrição</Label>
+              <Textarea
+                id="folder-description"
+                value={newFolder.description}
+                onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
+                placeholder="Descrição da pasta (opcional)..."
+                className="mt-2 rounded-xl"
+                rows={3}
               />
             </div>
             <div className="flex justify-end gap-2">

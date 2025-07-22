@@ -8,8 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { 
   Users, 
   Mail, 
@@ -19,73 +17,38 @@ import {
   TrendingUp, 
   MoreHorizontal, 
   UserCog, 
-  Calendar, 
   Trash2,
   Plus,
-  Search
+  Search,
+  Eye
 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
+import ClientForm from './ClientForm';
 
 const ClientsManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newClient, setNewClient] = useState({
-    name: '',
-    company_name: '',
-    email: '',
-    phone: '',
-    status: 'active',
-    notes: ''
-  });
+  const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
 
   const { clients, loading, createClient, updateClient, deleteClient } = useClients();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNewClient(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAddClient = async () => {
-    await createClient(newClient);
-    setNewClient({
-      name: '',
-      company_name: '',
-      email: '',
-      phone: '',
-      status: 'active',
-      notes: ''
-    });
-    setShowAddModal(false);
+  const handleAddClient = () => {
+    setEditingClient(null);
+    setShowClientForm(true);
   };
 
   const handleEditClient = (client: any) => {
     setEditingClient(client);
-    setNewClient({
-      name: client.name,
-      company_name: client.company_name || '',
-      email: client.email || '',
-      phone: client.phone || '',
-      status: client.status,
-      notes: client.notes || ''
-    });
-    setShowAddModal(true);
+    setShowClientForm(true);
   };
 
-  const handleUpdateClient = async () => {
-    if (!editingClient) return;
-    await updateClient(editingClient.id, newClient);
-    setEditingClient(null);
-    setNewClient({
-      name: '',
-      company_name: '',
-      email: '',
-      phone: '',
-      status: 'active',
-      notes: ''
-    });
-    setShowAddModal(false);
+  const handleSaveClient = async (clientData: any) => {
+    if (editingClient) {
+      await updateClient(editingClient.id, clientData);
+    } else {
+      await createClient(clientData);
+    }
   };
 
   const handleDeleteClient = async (id: string) => {
@@ -182,7 +145,7 @@ const ClientsManager = () => {
             </SelectContent>
           </Select>
 
-          <Button onClick={() => setShowAddModal(true)} className="rounded-xl">
+          <Button onClick={handleAddClient} className="rounded-xl">
             <Plus className="h-4 w-4 mr-2" />
             Novo Cliente
           </Button>
@@ -263,7 +226,7 @@ const ClientsManager = () => {
               <p className="text-gray-500 mb-4">
                 Comece adicionando seu primeiro cliente
               </p>
-              <Button onClick={() => setShowAddModal(true)}>
+              <Button onClick={handleAddClient}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Cliente
               </Button>
@@ -285,6 +248,7 @@ const ClientsManager = () => {
                     <TableCell className="p-6">
                       <div className="flex items-center gap-3">
                         <Avatar>
+                          <AvatarImage src={client.avatar_url} />
                           <AvatarFallback className="bg-blue-50 text-blue-600">
                             {client.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
@@ -336,6 +300,10 @@ const ClientsManager = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
                           <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditClient(client)}>
                             <UserCog className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
@@ -357,81 +325,13 @@ const ClientsManager = () => {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Client Modal */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {editingClient ? 'Editar Cliente' : 'Adicionar Novo Cliente'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="name" className="text-base font-medium">Nome *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={newClient.name}
-                onChange={handleInputChange}
-                className="mt-2 rounded-xl"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="company_name" className="text-base font-medium">Empresa</Label>
-              <Input
-                id="company_name"
-                name="company_name"
-                value={newClient.company_name}
-                onChange={handleInputChange}
-                className="mt-2 rounded-xl"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email" className="text-base font-medium">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={newClient.email}
-                onChange={handleInputChange}
-                className="mt-2 rounded-xl"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone" className="text-base font-medium">Telefone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={newClient.phone}
-                onChange={handleInputChange}
-                className="mt-2 rounded-xl"
-              />
-            </div>
-            <div>
-              <Label htmlFor="status" className="text-base font-medium">Status</Label>
-              <Select value={newClient.status} onValueChange={(value) => handleInputChange({ target: { name: 'status', value } } as any)}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                  <SelectItem value="prospect">Prospecto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-xl">
-              Cancelar
-            </Button>
-            <Button onClick={editingClient ? handleUpdateClient : handleAddClient} className="rounded-xl">
-              {editingClient ? 'Atualizar Cliente' : 'Adicionar Cliente'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Client Form Modal */}
+      <ClientForm
+        client={editingClient}
+        open={showClientForm}
+        onOpenChange={setShowClientForm}
+        onSave={handleSaveClient}
+      />
     </div>
   );
 };

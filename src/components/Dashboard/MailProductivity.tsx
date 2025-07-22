@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow, isToday, isYesterday, startOfDay, endOfDay, subDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, TrendingUp, Mail, Target, Calendar as CalIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, TrendingUp, Mail, Target, Calendar as CalIcon, BarChart3 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DailyEmailCount {
   date: string;
@@ -13,6 +14,7 @@ interface DailyEmailCount {
 }
 
 const MailProductivity = () => {
+  const { user } = useAuth();
   const [emailCounts, setEmailCounts] = useState<DailyEmailCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -21,11 +23,38 @@ const MailProductivity = () => {
 
   const fetchEmailProductivity = async () => {
     try {
+      setIsLoading(true);
+      
+      // Get user's company
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!companyUser) {
+        // Se não tem empresa, criar dados vazios
+        const counts: DailyEmailCount[] = [];
+        for (let i = 29; i >= 0; i--) {
+          const date = subDays(new Date(), i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          counts.push({
+            date: dateStr,
+            count: 0
+          });
+        }
+        setEmailCounts(counts);
+        setCurrentStreak(0);
+        setLongestStreak(0);
+        return;
+      }
+
       const thirtyDaysAgo = subDays(new Date(), 30);
       
       const { data, error } = await supabase
         .from('emails')
         .select('sent_at')
+        .eq('company_id', companyUser.company_id)
         .gte('sent_at', thirtyDaysAgo.toISOString())
         .order('sent_at', { ascending: false });
 
@@ -54,6 +83,19 @@ const MailProductivity = () => {
       calculateStreaks(counts);
     } catch (error) {
       console.error('Error fetching email productivity:', error);
+      // Em caso de erro, criar dados vazios
+      const counts: DailyEmailCount[] = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = subDays(new Date(), i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        counts.push({
+          date: dateStr,
+          count: 0
+        });
+      }
+      setEmailCounts(counts);
+      setCurrentStreak(0);
+      setLongestStreak(0);
     } finally {
       setIsLoading(false);
     }
@@ -89,23 +131,10 @@ const MailProductivity = () => {
   };
 
   useEffect(() => {
-    fetchEmailProductivity();
-
-    const channel = supabase
-      .channel('email-productivity')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'emails'
-      }, () => {
-        fetchEmailProductivity();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    if (user) {
+      fetchEmailProductivity();
+    }
+  }, [user]);
 
   const getSelectedDateEmails = () => {
     if (!selectedDate) return 0;
@@ -124,24 +153,24 @@ const MailProductivity = () => {
   };
 
   const getStreakColor = (streak: number) => {
-    if (streak >= 7) return 'bg-green-500';
-    if (streak >= 3) return 'bg-yellow-500';
-    return 'bg-gray-500';
+    if (streak >= 7) return 'bg-gradient-to-r from-green-500 to-green-600';
+    if (streak >= 3) return 'bg-gradient-to-r from-yellow-500 to-yellow-600';
+    return 'bg-gradient-to-r from-gray-500 to-gray-600';
   };
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Mail Productivity</h1>
+          <h1 className="text-3xl font-bold mb-2 text-gray-900">Mail Productivity</h1>
           <p className="text-gray-600">Acompanhe sua consistência no envio de emails</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse border-none shadow-lg rounded-2xl">
               <CardContent className="p-6">
-                <div className="h-20 bg-gray-200 rounded"></div>
+                <div className="h-20 bg-gray-200 rounded-xl"></div>
               </CardContent>
             </Card>
           ))}
@@ -151,67 +180,73 @@ const MailProductivity = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-white min-h-screen">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 text-gray-900">Mail Productivity</h1>
-        <p className="text-gray-600">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-3 text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Mail Productivity
+        </h1>
+        <p className="text-gray-600 text-lg">
           Acompanhe sua consistência no envio de emails e mantenha sua produtividade
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white border rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Sequência Atual</p>
-                <p className="text-2xl font-bold text-gray-900">{currentStreak} dias</p>
+                <p className="text-3xl font-bold text-gray-900">{currentStreak}</p>
+                <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
               </div>
-              <div className={`p-3 rounded-full ${getStreakColor(currentStreak)}`}>
+              <div className={`p-4 rounded-full ${getStreakColor(currentStreak)} shadow-lg`}>
                 <Target className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border rounded-lg">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Maior Sequência</p>
-                <p className="text-2xl font-bold text-gray-900">{longestStreak} dias</p>
+                <p className="text-3xl font-bold text-gray-900">{longestStreak}</p>
+                <p className="text-sm text-gray-500 mt-1">dias consecutivos</p>
               </div>
-              <div className="p-3 rounded-full bg-purple-500">
+              <div className="p-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg">
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border rounded-lg">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Total (30 dias)</p>
-                <p className="text-2xl font-bold text-gray-900">{getTotalEmails()}</p>
+                <p className="text-3xl font-bold text-gray-900">{getTotalEmails()}</p>
+                <p className="text-sm text-gray-500 mt-1">emails enviados</p>
               </div>
-              <div className="p-3 rounded-full bg-blue-500">
+              <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg">
                 <Mail className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border rounded-lg">
+        <Card className="border-none shadow-lg rounded-2xl bg-white hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Média por Dia</p>
-                <p className="text-2xl font-bold text-gray-900">{getAverageEmails()}</p>
+                <p className="text-3xl font-bold text-gray-900">{getAverageEmails()}</p>
+                <p className="text-sm text-gray-500 mt-1">emails por dia</p>
               </div>
-              <div className="p-3 rounded-full bg-orange-500">
-                <CalIcon className="h-6 w-6 text-white" />
+              <div className="p-4 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg">
+                <BarChart3 className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -219,38 +254,38 @@ const MailProductivity = () => {
       </div>
 
       {/* Calendar and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calendar */}
-        <Card className="lg:col-span-2 bg-white border rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
+        <Card className="lg:col-span-2 border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <CalendarIcon className="h-6 w-6 text-blue-600" />
               Calendário de Atividade
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-1 mb-4">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-7 gap-2 mb-6">
               {emailCounts.map((day, index) => {
                 const date = new Date(day.date);
                 const isCurrentDay = isToday(date);
                 const dayCount = day.count;
                 
-                let bgColor = 'bg-gray-100';
+                let bgColor = 'bg-gray-100 hover:bg-gray-200';
                 if (dayCount > 0) {
-                  if (dayCount >= 10) bgColor = 'bg-green-600';
-                  else if (dayCount >= 5) bgColor = 'bg-green-400';
-                  else if (dayCount >= 1) bgColor = 'bg-green-200';
+                  if (dayCount >= 10) bgColor = 'bg-green-600 hover:bg-green-700';
+                  else if (dayCount >= 5) bgColor = 'bg-green-400 hover:bg-green-500';
+                  else if (dayCount >= 1) bgColor = 'bg-green-200 hover:bg-green-300';
                 }
 
                 return (
                   <div
                     key={index}
                     className={`
-                      w-8 h-8 rounded flex items-center justify-center text-xs font-medium cursor-pointer
+                      w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium cursor-pointer transition-all duration-200
                       ${bgColor}
-                      ${isCurrentDay ? 'ring-2 ring-blue-500' : ''}
+                      ${isCurrentDay ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
                       ${dayCount > 0 ? 'text-white' : 'text-gray-600'}
-                      hover:scale-110 transition-transform
+                      hover:scale-110 transform shadow-sm
                     `}
                     title={`${format(date, 'dd/MM/yyyy')} - ${dayCount} emails`}
                     onClick={() => setSelectedDate(date)}
@@ -261,50 +296,50 @@ const MailProductivity = () => {
               })}
             </div>
             
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>Menos</span>
-              <div className="flex gap-1">
-                <div className="w-3 h-3 bg-gray-100 rounded"></div>
-                <div className="w-3 h-3 bg-green-200 rounded"></div>
-                <div className="w-3 h-3 bg-green-400 rounded"></div>
-                <div className="w-3 h-3 bg-green-600 rounded"></div>
+            <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
+              <span className="font-medium">Menos</span>
+              <div className="flex gap-2">
+                <div className="w-4 h-4 bg-gray-100 rounded-lg"></div>
+                <div className="w-4 h-4 bg-green-200 rounded-lg"></div>
+                <div className="w-4 h-4 bg-green-400 rounded-lg"></div>
+                <div className="w-4 h-4 bg-green-600 rounded-lg"></div>
               </div>
-              <span>Mais</span>
+              <span className="font-medium">Mais</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Selected Day Details */}
-        <Card className="bg-white border rounded-lg">
-          <CardHeader>
-            <CardTitle>
+        <Card className="border-none shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-center text-lg">
               {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Selecione um dia'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">
+          <CardContent className="p-6">
+            <div className="space-y-6 text-center">
+              <div>
+                <div className="text-4xl font-bold text-gray-900 mb-2">
                   {getSelectedDateEmails()}
                 </div>
                 <p className="text-sm text-gray-600">emails enviados</p>
               </div>
 
               {selectedDate && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Badge 
                     variant={getSelectedDateEmails() > 0 ? "default" : "secondary"}
-                    className="w-full justify-center"
+                    className="px-4 py-2 rounded-full text-sm"
                   >
                     {getSelectedDateEmails() > 0 ? '✅ Dia Produtivo' : '⭕ Sem Atividade'}
                   </Badge>
 
                   {isToday(selectedDate) && (
-                    <p className="text-xs text-blue-600 text-center">Hoje</p>
+                    <p className="text-sm text-blue-600 font-medium">📅 Hoje</p>
                   )}
                   
                   {isYesterday(selectedDate) && (
-                    <p className="text-xs text-gray-500 text-center">Ontem</p>
+                    <p className="text-sm text-gray-500 font-medium">📅 Ontem</p>
                   )}
                 </div>
               )}
@@ -314,42 +349,56 @@ const MailProductivity = () => {
       </div>
 
       {/* Recent Activity */}
-      <Card className="bg-white border rounded-lg">
+      <Card className="border-none shadow-lg rounded-2xl bg-white">
         <CardHeader>
-          <CardTitle>Atividade Recente</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <BarChart3 className="h-6 w-6 text-purple-600" />
+            Atividade Recente (7 dias)
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {emailCounts.slice(-7).reverse().map((day, index) => {
-              const date = new Date(day.date);
-              const isCurrentDay = isToday(date);
-              const wasYesterday = isYesterday(date);
-              
-              return (
-                <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${day.count > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {isCurrentDay ? 'Hoje' : 
-                         wasYesterday ? 'Ontem' : 
-                         format(date, 'dd/MM')}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {format(date, 'EEEE', { locale: ptBR })}
-                      </p>
+        <CardContent className="p-6">
+          {emailCounts.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Mail className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">Nenhuma atividade encontrada</p>
+              <p className="text-sm">Comece enviando emails para ver suas estatísticas aqui</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {emailCounts.slice(-7).reverse().map((day, index) => {
+                const date = new Date(day.date);
+                const isCurrentDay = isToday(date);
+                const wasYesterday = isYesterday(date);
+                
+                return (
+                  <div key={index} className="flex items-center justify-between py-4 px-4 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-4 h-4 rounded-full ${day.count > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {isCurrentDay ? '📅 Hoje' : 
+                           wasYesterday ? '📅 Ontem' : 
+                           format(date, 'dd/MM')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {format(date, 'EEEE', { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-lg text-gray-900">{day.count}</p>
+                      <p className="text-sm text-gray-500">emails</p>
+                      {day.count > 0 && (
+                        <Badge className="mt-1 bg-green-100 text-green-800 rounded-full text-xs">
+                          ✅ Produtivo
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{day.count} emails</p>
-                    {day.count > 0 && (
-                      <p className="text-xs text-green-600">✅ Produtivo</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

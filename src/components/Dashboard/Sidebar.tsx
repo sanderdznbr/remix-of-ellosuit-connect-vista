@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -36,7 +35,6 @@ const Sidebar = () => {
     { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
   ];
 
-  // Order menu items based on user settings
   const orderedMenuItems = () => {
     if (settings.menu_order && settings.menu_order.length > 0) {
       const ordered = settings.menu_order
@@ -105,7 +103,7 @@ const Sidebar = () => {
           {isCollapsed ? (
             // Exibe favicon quando recolhida - aumentado o tamanho
             <img 
-              src={settings.custom_favicon_url || "/lovable-uploads/644ccf9e-389e-4a0e-9608-ac9326a8d64a.png"} 
+              src={settings.custom_favicon_url || "/lovable-uploads/0c75d1d1-909f-4115-842d-d70fcbc73365.png"} 
               alt="Logo" 
               className="h-12 w-12 object-contain transition-all duration-300"
             />
@@ -122,7 +120,7 @@ const Sidebar = () => {
                 // Logo padrão ElloSuit sempre visível quando não há custom_logo_url
                 <>
                   <img 
-                    src="/lovable-uploads/ed54eb39-e51c-4ba2-817b-41de8affc95c.png" 
+                    src="/lovable-uploads/0c75d1d1-909f-4115-842d-d70fcbc73365.png" 
                     alt="ElloSuit Logo" 
                     className="h-10 w-auto transition-all duration-300"
                   />

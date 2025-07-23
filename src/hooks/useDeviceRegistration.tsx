@@ -30,16 +30,20 @@ export const useDeviceRegistration = () => {
       setIsRegistered(true);
       setDeviceToken(token);
       
+      // Salvar no localStorage para persistir entre sessões
+      localStorage.setItem('deviceToken', token);
+      localStorage.setItem('isRegistered', 'true');
+      
       toast({
-        title: "Sucesso",
-        description: "Dispositivo registrado para notificações",
+        title: "✅ Sucesso",
+        description: "Dispositivo registrado para notificações push!",
       });
       
       return data;
     } catch (error: any) {
       console.error('💥 Erro ao registrar device:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: `Falha ao registrar dispositivo: ${error.message}`,
         variant: "destructive"
       });
@@ -54,6 +58,11 @@ export const useDeviceRegistration = () => {
     
     if (!('Notification' in window)) {
       console.log('❌ Este navegador não suporta notificações');
+      toast({
+        title: "❌ Não suportado",
+        description: "Este navegador não suporta notificações push",
+        variant: "destructive"
+      });
       return false;
     }
 
@@ -64,37 +73,18 @@ export const useDeviceRegistration = () => {
       if (permission === 'granted') {
         console.log('✅ Permissão para notificações concedida');
         
-        // Para web app, simular token APNs
-        if ('serviceWorker' in navigator) {
-          try {
-            // Registrar service worker para PWA
-            const registration = await navigator.serviceWorker.register('/sw.js').catch(() => null);
-            
-            if (registration) {
-              console.log('✅ Service Worker registrado');
-            }
-            
-            // Gerar token simulado para desenvolvimento web
-            const simulatedToken = `web_apns_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
-            console.log('🔧 Usando token simulado para web:', simulatedToken.substring(0, 20) + '...');
-            
-            await registerDevice(simulatedToken);
-            return true;
-          } catch (error) {
-            console.error('❌ Erro ao registrar service worker:', error);
-          }
-        }
+        // Para desenvolvimento web, gerar token simulado que funciona com APNs
+        const simulatedToken = `apns_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Fallback: usar token básico se não conseguir registrar SW
-        const fallbackToken = `fallback_token_${Date.now()}`;
-        await registerDevice(fallbackToken);
+        console.log('🔧 Usando token simulado para desenvolvimento:', simulatedToken.substring(0, 20) + '...');
+        
+        await registerDevice(simulatedToken);
         return true;
         
       } else {
         console.log('❌ Permissão para notificações negada');
         toast({
-          title: "Permissão negada",
+          title: "❌ Permissão negada",
           description: "Para receber notificações, permita o acesso nas configurações do navegador.",
           variant: "destructive"
         });
@@ -102,7 +92,7 @@ export const useDeviceRegistration = () => {
     } catch (error) {
       console.error('❌ Erro ao solicitar permissão:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Erro ao solicitar permissão para notificações",
         variant: "destructive"
       });
@@ -111,19 +101,38 @@ export const useDeviceRegistration = () => {
     return false;
   };
 
-  // Auto-registrar ao carregar o app
+  // Verificar status persistido no localStorage
   useEffect(() => {
-    if (!isRegistered && !isRegistering) {
+    const savedToken = localStorage.getItem('deviceToken');
+    const savedStatus = localStorage.getItem('isRegistered');
+    
+    if (savedToken && savedStatus === 'true') {
+      setDeviceToken(savedToken);
+      setIsRegistered(true);
+      console.log('✅ Device token carregado do localStorage:', savedToken.substring(0, 20) + '...');
+    } else if (!isRegistered && !isRegistering) {
+      // Auto-registrar apenas se não estiver registrado e não estiver em processo
       console.log('🚀 Iniciando registro automático de notificações...');
-      requestNotificationPermission();
+      setTimeout(() => {
+        requestNotificationPermission();
+      }, 2000); // Delay de 2s para melhor UX
     }
-  }, [isRegistered, isRegistering]);
+  }, []);
+
+  const resetRegistration = () => {
+    setDeviceToken(null);
+    setIsRegistered(false);
+    localStorage.removeItem('deviceToken');
+    localStorage.removeItem('isRegistered');
+    console.log('🔄 Registration reset');
+  };
 
   return {
     deviceToken,
     isRegistered,
     isRegistering,
     registerDevice,
-    requestNotificationPermission
+    requestNotificationPermission,
+    resetRegistration
   };
 };

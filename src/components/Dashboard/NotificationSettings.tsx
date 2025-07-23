@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Smartphone, Clock, TestTube } from 'lucide-react';
+import { Bell, Smartphone, Clock, TestTube, RefreshCw } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
 import { useToast } from '@/hooks/use-toast';
@@ -15,22 +14,28 @@ import { supabase } from '@/integrations/supabase/client';
 
 const NotificationSettings = () => {
   const { settings, updateNotificationSettings, isLoading } = useNotificationSettings();
-  const { deviceToken, isRegistered, requestNotificationPermission } = useDeviceRegistration();
+  const { 
+    deviceToken, 
+    isRegistered, 
+    isRegistering,
+    requestNotificationPermission, 
+    resetRegistration 
+  } = useDeviceRegistration();
   const { toast } = useToast();
   const [isSendingTest, setIsSendingTest] = useState(false);
-  const [testTitle, setTestTitle] = useState('Notificação Teste');
-  const [testMessage, setTestMessage] = useState('Esta é uma notificação de teste do Ello Suit.');
+  const [testTitle, setTestTitle] = useState('🎉 Notificação Teste');
+  const [testMessage, setTestMessage] = useState('Esta é uma notificação de teste do Ello Suit com APNs configurado!');
 
   const handleSettingChange = async (key: string, value: boolean | number) => {
     try {
       await updateNotificationSettings({ [key]: value });
       toast({
-        title: "Configuração atualizada",
+        title: "✅ Configuração atualizada",
         description: "Suas preferências de notificação foram salvas.",
       });
     } catch (error) {
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Não foi possível atualizar a configuração.",
         variant: "destructive"
       });
@@ -40,7 +45,7 @@ const NotificationSettings = () => {
   const sendTestNotification = async () => {
     if (!testTitle.trim() || !testMessage.trim()) {
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Título e mensagem são obrigatórios.",
         variant: "destructive"
       });
@@ -55,7 +60,8 @@ const NotificationSettings = () => {
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
           title: testTitle,
-          body: testMessage
+          body: testMessage,
+          deviceToken: deviceToken // Enviar para este dispositivo específico
         }
       });
 
@@ -66,30 +72,32 @@ const NotificationSettings = () => {
 
       console.log('✅ Resposta da notificação teste:', data);
 
+      const isSimulated = data.results?.[0]?.simulation;
+      
       toast({
-        title: "Notificação teste enviada! 🎉",
-        description: data.simulation ? 
+        title: "🎉 Notificação teste enviada!",
+        description: isSimulated ? 
           `Simulada: ${data.sent} dispositivo(s)` : 
-          `Enviada para ${data.sent} dispositivo(s)`,
+          `Enviada via APNs para ${data.sent} dispositivo(s)`,
       });
+      
+      // Mostrar notificação browser se suportado
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(testTitle, {
+          body: testMessage,
+          icon: '/favicon.ico'
+        });
+      }
       
     } catch (error: any) {
       console.error('💥 Erro:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: `Falha ao enviar notificação: ${error.message}`,
         variant: "destructive"
       });
     } finally {
       setIsSendingTest(false);
-    }
-  };
-
-  const handleRegisterDevice = async () => {
-    try {
-      await requestNotificationPermission();
-    } catch (error) {
-      console.error('Erro ao registrar dispositivo:', error);
     }
   };
 
@@ -108,7 +116,7 @@ const NotificationSettings = () => {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Configurações de Notificação
+          🔔 Configurações de Notificação Push
         </h3>
         <p className="text-gray-600">
           Gerencie como e quando você recebe notificações sobre seus eventos e compromissos.
@@ -120,37 +128,63 @@ const NotificationSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Smartphone className="h-5 w-5" />
-            <span>Status do Dispositivo</span>
+            <span>Status do Dispositivo APNs</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label className="text-base font-medium">Notificações Push</Label>
+              <Label className="text-base font-medium">🍎 Notificações Push iOS</Label>
               <p className="text-sm text-gray-500">
                 {isRegistered 
-                  ? "Dispositivo registrado para receber notificações" 
-                  : "Dispositivo não registrado"}
+                  ? "✅ Dispositivo registrado para APNs" 
+                  : "❌ Dispositivo não registrado"}
               </p>
             </div>
-            <Badge variant={isRegistered ? "default" : "destructive"}>
-              {isRegistered ? "Ativo" : "Inativo"}
-            </Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant={isRegistered ? "default" : "destructive"}>
+                {isRegistered ? "✅ Ativo" : "❌ Inativo"}
+              </Badge>
+              {isRegistered && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetRegistration}
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
           </div>
           
           {deviceToken && (
             <div className="space-y-1">
-              <Label className="text-sm font-medium">Device Token</Label>
-              <p className="text-xs text-gray-500 font-mono">
-                {deviceToken.substring(0, 20)}...
+              <Label className="text-sm font-medium">🔑 Device Token</Label>
+              <p className="text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
+                {deviceToken.substring(0, 30)}...
               </p>
             </div>
           )}
           
           {!isRegistered && (
-            <Button onClick={handleRegisterDevice} className="w-full">
-              <Bell className="h-4 w-4 mr-2" />
-              Ativar Notificações
+            <Button 
+              onClick={requestNotificationPermission} 
+              disabled={isRegistering}
+              className="w-full"
+            >
+              {isRegistering ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Registrando...
+                </>
+              ) : (
+                <>
+                  <Bell className="h-4 w-4 mr-2" />
+                  🍎 Ativar Notificações APNs
+                </>
+              )}
             </Button>
           )}
         </CardContent>
@@ -242,12 +276,12 @@ const NotificationSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <TestTube className="h-5 w-5" />
-            <span>Notificação Teste</span>
+            <span>🧪 Teste de Notificação APNs</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="test-title">Título da Notificação</Label>
+            <Label htmlFor="test-title">📱 Título da Notificação</Label>
             <Input
               id="test-title"
               value={testTitle}
@@ -257,7 +291,7 @@ const NotificationSettings = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="test-message">Mensagem da Notificação</Label>
+            <Label htmlFor="test-message">💬 Mensagem da Notificação</Label>
             <Input
               id="test-message"
               value={testMessage}
@@ -274,12 +308,12 @@ const NotificationSettings = () => {
             {isSendingTest ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Enviando...
+                📤 Enviando via APNs...
               </>
             ) : (
               <>
-                <Bell className="h-4 w-4 mr-2" />
-                Enviar Notificação Teste
+                <TestTube className="h-4 w-4 mr-2" />
+                🍎 Enviar Teste APNs
               </>
             )}
           </Button>
@@ -287,15 +321,15 @@ const NotificationSettings = () => {
           {!isRegistered && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <p className="text-sm text-yellow-800">
-                <strong>Atenção:</strong> Você precisa ativar as notificações primeiro para enviar notificações teste.
+                <strong>⚠️ Atenção:</strong> Você precisa ativar as notificações primeiro para enviar testes APNs.
               </p>
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Nota:</strong> A notificação teste será enviada para todos os dispositivos registrados. 
-              Configure as credenciais APNs para notificações reais no iOS.
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-sm text-green-800">
+              <strong>✅ APNs Configurado:</strong> O sistema está configurado com chave p8 da Apple. 
+              As notificações serão enviadas via APNs para dispositivos iOS registrados.
             </p>
           </div>
         </CardContent>

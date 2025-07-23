@@ -34,9 +34,9 @@ export const useTarefas = () => {
       event_type: (event.event_type as 'meeting' | 'appointment' | 'reminder') || 'reminder',
       attendees: event.attendees || undefined,
       status: 'pending' as const,
-      created_at: event.created_at,
-      updated_at: event.updated_at,
-      user_id: event.user_id
+      created_at: undefined, // Eventos de calendário não têm created_at
+      updated_at: undefined, // Eventos de calendário não têm updated_at
+      user_id: undefined // Eventos de calendário não têm user_id direto
     }));
     
     // Separar tarefas ativas das excluídas

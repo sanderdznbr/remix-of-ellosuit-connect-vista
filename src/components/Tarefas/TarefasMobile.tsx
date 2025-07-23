@@ -116,14 +116,14 @@ const TarefasMobile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{ marginTop: '-20px' }}>
-      {/* Enhanced iOS Header with Dynamic Island Effect */}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Enhanced iOS Header with Logo */}
       <div 
         className="ios-header mobile-safe-top sticky top-0 z-40 bg-white dark:bg-gray-900 backdrop-blur-md"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{ paddingTop: '20px' }}
+        style={{ paddingTop: '8px' }}
       >
         {/* Pull-to-Refresh Indicator */}
         <div 
@@ -138,6 +138,13 @@ const TarefasMobile = () => {
             <span className="ios-footnote">
               {isRefreshing ? 'Atualizando...' : 'Puxe para atualizar'}
             </span>
+          </div>
+        </div>
+
+        {/* Logo da Ellosuit */}
+        <div className="flex justify-center mb-4">
+          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg">
+            <span className="font-bold text-lg">Ellosuit</span>
           </div>
         </div>
 
@@ -171,8 +178,8 @@ const TarefasMobile = () => {
             )}
           </div>
 
-          {/* Enhanced Filter Pills */}
-          <div className="flex space-x-3 mb-4">
+          {/* Enhanced Filter Pills with Better Visibility */}
+          <div className="flex space-x-2 mb-4">
             {getFilterOptions().map((option) => (
               <button
                 key={option.id}
@@ -181,18 +188,18 @@ const TarefasMobile = () => {
                   vibrate(30);
                 }}
                 className={cn(
-                  "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200",
+                  "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200 px-4 py-2 rounded-full border-2 font-medium",
                   activeFilter === option.id 
-                    ? "bg-blue-500 text-white border-blue-500" 
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                    ? "bg-blue-600 text-white border-blue-600 shadow-lg" 
+                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 )}
               >
-                <span className="ios-callout font-medium">{option.label}</span>
+                <span className="ios-callout font-semibold">{option.label}</span>
                 <span className={cn(
-                  "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
+                  "text-xs px-2 py-1 rounded-full min-w-[22px] h-6 flex items-center justify-center font-bold",
                   activeFilter === option.id 
-                    ? "bg-white/20 text-white" 
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                    ? "bg-white/25 text-white" 
+                    : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
                 )}>
                   {option.count}
                 </span>
@@ -231,7 +238,7 @@ const TarefasMobile = () => {
             setShowNovoLembrete(true);
             vibrate(50);
           }}
-          className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg ios-haptic-feedback"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg ios-haptic-feedback"
         >
           <Plus className="h-6 w-6" />
         </button>

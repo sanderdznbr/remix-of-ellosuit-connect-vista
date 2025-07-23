@@ -2,19 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useCalendarData } from './useCalendarData';
 import { useToast } from './use-toast';
+import { CalendarEvent } from '@/integrations/supabase/types';
 
-interface TarefaItem {
+interface TarefaItem extends CalendarEvent {
   id: string;
-  title: string;
-  description?: string;
-  start_date: string;
-  end_date?: string;
-  event_type: 'meeting' | 'appointment' | 'reminder';
-  attendees?: string[];
   status: 'pending' | 'completed' | 'deleted';
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
 }
 
 export const useTarefas = () => {
@@ -26,17 +18,9 @@ export const useTarefas = () => {
   useEffect(() => {
     // Converter eventos do calendário para o formato de tarefas
     const tarefasFormatted: TarefaItem[] = events.map(event => ({
+      ...event,
       id: event.id,
-      title: event.title,
-      description: event.description || undefined,
-      start_date: event.start_date,
-      end_date: event.end_date || undefined,
-      event_type: (event.event_type as 'meeting' | 'appointment' | 'reminder') || 'reminder',
-      attendees: event.attendees || undefined,
-      status: 'pending' as const,
-      created_at: undefined, // Eventos de calendário não têm created_at
-      updated_at: undefined, // Eventos de calendário não têm updated_at
-      user_id: undefined // Eventos de calendário não têm user_id direto
+      status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending'
     }));
     
     // Separar tarefas ativas das excluídas

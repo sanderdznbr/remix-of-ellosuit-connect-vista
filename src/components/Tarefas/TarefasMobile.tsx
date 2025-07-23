@@ -98,8 +98,8 @@ const TarefasMobile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="ios-header mobile-safe-top px-4 py-3">
+      <div className="min-h-screen bg-gray-50">
+        <div className="ios-header mobile-safe-top px-4 py-6">
           <div className="mobile-skeleton h-8 w-48 mb-2"></div>
           <div className="mobile-skeleton h-4 w-32"></div>
         </div>
@@ -116,19 +116,18 @@ const TarefasMobile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Enhanced iOS Header with Logo */}
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--ios-bg-grouped)' }}>
+      {/* Enhanced iOS Header with Dynamic Island Effect */}
       <div 
-        className="ios-header mobile-safe-top sticky top-0 z-40 bg-white dark:bg-gray-900 backdrop-blur-md"
+        className="ios-header mobile-safe-top sticky top-0 z-40"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{ paddingTop: '8px' }}
       >
         {/* Pull-to-Refresh Indicator */}
         <div 
           className={cn(
-            "ios-pull-indicator transition-all duration-300 text-gray-500 dark:text-gray-400",
+            "ios-pull-indicator transition-all duration-300",
             isPulling ? "opacity-100" : "opacity-0"
           )}
           style={{ transform: `translateY(${Math.min(pullDistance - 60, 20)}px)` }}
@@ -141,18 +140,11 @@ const TarefasMobile = () => {
           </div>
         </div>
 
-        {/* Logo da Ellosuit */}
-        <div className="flex justify-center mb-4">
-          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg">
-            <span className="font-bold text-lg">Ellosuit</span>
-          </div>
-        </div>
-
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-4">
+        <div className="px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="ios-large-title mb-1 text-gray-900 dark:text-white">Lembretes</h1>
-              <p className="ios-subheadline text-gray-600 dark:text-gray-400">
+              <h1 className="ios-large-title mb-1">Lembretes</h1>
+              <p className="ios-subheadline">
                 {new Date().toLocaleDateString('pt-BR', { 
                   weekday: 'long', 
                   day: 'numeric', 
@@ -168,9 +160,9 @@ const TarefasMobile = () => {
                   setShowDeleted(!showDeleted);
                   vibrate(30);
                 }}
-                className="ios-button ios-button-ghost p-2 w-12 h-12 rounded-full relative"
+                className="ios-button ios-button-ghost p-2 w-12 h-12 rounded-full"
               >
-                <Trash2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <Trash2 className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {deletedTarefas.length}
                 </span>
@@ -178,8 +170,8 @@ const TarefasMobile = () => {
             )}
           </div>
 
-          {/* Enhanced Filter Pills with Better Visibility */}
-          <div className="flex space-x-2 mb-4">
+          {/* Enhanced Filter Pills */}
+          <div className="flex space-x-3 mb-4">
             {getFilterOptions().map((option) => (
               <button
                 key={option.id}
@@ -188,18 +180,16 @@ const TarefasMobile = () => {
                   vibrate(30);
                 }}
                 className={cn(
-                  "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200 px-4 py-2 rounded-full border-2 font-medium",
-                  activeFilter === option.id 
-                    ? "bg-blue-600 text-white border-blue-600 shadow-lg" 
-                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200",
+                  activeFilter === option.id ? "ios-pill-active" : ""
                 )}
               >
-                <span className="ios-callout font-semibold">{option.label}</span>
+                <span className="ios-callout font-medium">{option.label}</span>
                 <span className={cn(
-                  "text-xs px-2 py-1 rounded-full min-w-[22px] h-6 flex items-center justify-center font-bold",
+                  "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
                   activeFilter === option.id 
-                    ? "bg-white/25 text-white" 
-                    : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                    ? "bg-white/20 text-white" 
+                    : "bg-gray-200 text-gray-600"
                 )}>
                   {option.count}
                 </span>
@@ -212,7 +202,7 @@ const TarefasMobile = () => {
       {/* Content with iOS Section Styling */}
       <div className="px-4 pb-32 ios-scroll">
         {showDeleted ? (
-          <div className="ios-card-section bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="ios-card-section">
             <DeletedTarefasList 
               deletedTarefas={deletedTarefas}
               onRestore={restoreTarefa}
@@ -220,7 +210,7 @@ const TarefasMobile = () => {
             />
           </div>
         ) : (
-          <div className="ios-card-section bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="ios-card-section">
             <TarefasList
               tarefas={tarefas.filter(t => t.status !== 'deleted')}
               onUpdate={updateTarefa}
@@ -238,7 +228,7 @@ const TarefasMobile = () => {
             setShowNovoLembrete(true);
             vibrate(50);
           }}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg ios-haptic-feedback"
+          className="ios-floating-button ios-haptic-feedback shadow-2xl"
         >
           <Plus className="h-6 w-6" />
         </button>
@@ -262,12 +252,12 @@ const DeletedTarefasList: React.FC<{
 }> = ({ deletedTarefas, onRestore, onClose }) => {
   return (
     <div className="ios-fade-in">
-      <div className="ios-section-header bg-gray-50 dark:bg-gray-900">
+      <div className="ios-section-header">
         <div className="flex items-center justify-between">
-          <h2 className="ios-title-2 text-gray-900 dark:text-white">Itens Excluídos</h2>
+          <h2 className="ios-title-2">Itens Excluídos</h2>
           <button
             onClick={onClose}
-            className="ios-button ios-button-ghost px-4 py-2 text-blue-500 dark:text-blue-400"
+            className="ios-button ios-button-ghost px-4 py-2"
           >
             <span className="ios-callout">Fechar</span>
           </button>
@@ -278,16 +268,16 @@ const DeletedTarefasList: React.FC<{
         {deletedTarefas.map((tarefa, index) => (
           <div 
             key={tarefa.id} 
-            className="ios-list-item ios-fade-in bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+            className="ios-list-item ios-fade-in"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="ios-headline line-through opacity-60 mb-1 text-gray-900 dark:text-white">
+                <h3 className="ios-headline line-through opacity-60 mb-1">
                   {tarefa.title}
                 </h3>
                 {tarefa.description && (
-                  <p className="ios-subheadline opacity-60 text-gray-600 dark:text-gray-400">
+                  <p className="ios-subheadline opacity-60">
                     {tarefa.description}
                   </p>
                 )}
@@ -299,7 +289,7 @@ const DeletedTarefasList: React.FC<{
                 }}
                 className="ios-button ios-button-ghost ml-4 p-2 rounded-full"
               >
-                <RotateCcw className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <RotateCcw className="h-4 w-4 text-green-600" />
               </button>
             </div>
           </div>
@@ -309,8 +299,8 @@ const DeletedTarefasList: React.FC<{
       {deletedTarefas.length === 0 && (
         <div className="text-center py-12 ios-fade-in">
           <div className="text-6xl mb-4">🗑️</div>
-          <h3 className="ios-title-3 mb-2 text-gray-900 dark:text-white">Nenhum item excluído</h3>
-          <p className="ios-subheadline text-gray-600 dark:text-gray-400">Os itens excluídos aparecerão aqui</p>
+          <h3 className="ios-title-3 mb-2">Nenhum item excluído</h3>
+          <p className="ios-subheadline">Os itens excluídos aparecerão aqui</p>
         </div>
       )}
     </div>

@@ -52,31 +52,29 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting':
-        return 'var(--ios-blue)';
+        return '#007AFF';
       case 'appointment':
-        return 'var(--ios-green)';
+        return '#34C759';
       case 'reminder':
-        return 'var(--ios-orange)';
+        return '#FF9500';
       default:
-        return 'var(--ios-gray-500)';
+        return '#8E8E93';
     }
   };
 
   return (
     <>
-      <div className="relative mb-1 overflow-hidden" style={{ borderRadius: 'var(--ios-radius-medium)' }}>
+      <div className="relative mb-1 overflow-hidden rounded-xl">
         {/* Delete Button Background */}
         <div 
           className={cn(
-            "absolute right-0 top-0 h-full w-20 flex items-center justify-center transition-all duration-200",
+            "absolute right-0 top-0 h-full w-20 flex items-center justify-center transition-all duration-200 bg-red-500",
             swipeDistance < -20 ? "opacity-100" : "opacity-0"
           )}
-          style={{ backgroundColor: 'var(--ios-red)' }}
         >
           <button
             onClick={handleDeleteClick}
-            className="p-3 rounded-full hover:bg-red-600 transition-colors ios-haptic-feedback"
-            style={{ color: 'white' }}
+            className="p-3 rounded-full hover:bg-red-600 transition-colors ios-haptic-feedback text-white"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -85,13 +83,10 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
         {/* Main Content */}
         <div
           className={cn(
-            "ios-list-item transition-all duration-200 ease-out cursor-pointer",
+            "ios-list-item transition-all duration-200 ease-out cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
             isCompleted && "opacity-75"
           )}
-          style={{ 
-            transform: `translateX(${swipeDistance}px)`,
-            background: 'var(--ios-bg-primary)'
-          }}
+          style={{ transform: `translateX(${swipeDistance}px)` }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -104,13 +99,9 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
               className={cn(
                 "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0 ios-haptic-feedback",
                 isCompleted
-                  ? "border-blue-500"
-                  : "border-gray-300 hover:border-gray-400"
+                  ? "bg-blue-500 border-blue-500"
+                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
               )}
-              style={{
-                backgroundColor: isCompleted ? 'var(--ios-blue)' : 'transparent',
-                borderColor: isCompleted ? 'var(--ios-blue)' : 'var(--ios-gray-300)'
-              }}
             >
               {isCompleted && (
                 <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
@@ -124,7 +115,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className={cn(
-                    "ios-headline leading-snug mb-1",
+                    "ios-headline leading-snug mb-1 text-gray-900 dark:text-white",
                     isCompleted && "line-through opacity-60"
                   )}>
                     {tarefa.title}
@@ -132,7 +123,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
                   
                   {tarefa.description && (
                     <p className={cn(
-                      "ios-subheadline line-clamp-2 mb-2",
+                      "ios-subheadline line-clamp-2 mb-2 text-gray-600 dark:text-gray-400",
                       isCompleted && "line-through opacity-60"
                     )}>
                       {tarefa.description}
@@ -151,23 +142,23 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
               <div className="flex items-center space-x-4 mt-2">
                 {formatTimeMobile(tarefa.start_date) && (
                   <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4" style={{ color: 'var(--ios-gray-400)' }} />
-                    <span className="ios-footnote font-medium" style={{ color: 'var(--ios-gray-600)' }}>
+                    <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="ios-footnote font-medium text-gray-600 dark:text-gray-400">
                       {formatTimeMobile(tarefa.start_date)}
                     </span>
                   </div>
                 )}
                 
                 {formatDateMobile(tarefa.start_date) !== 'Hoje' && (
-                  <span className="ios-footnote font-medium" style={{ color: 'var(--ios-red)' }}>
+                  <span className="ios-footnote font-medium text-red-500 dark:text-red-400">
                     {formatDateMobile(tarefa.start_date)}
                   </span>
                 )}
                 
                 {tarefa.attendees && tarefa.attendees.length > 0 && (
                   <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" style={{ color: 'var(--ios-gray-400)' }} />
-                    <span className="ios-footnote" style={{ color: 'var(--ios-gray-600)' }}>
+                    <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="ios-footnote text-gray-600 dark:text-gray-400">
                       {tarefa.attendees.length}
                     </span>
                   </div>

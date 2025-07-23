@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useTarefas } from '@/hooks/useTarefas';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import NotificationSettingsModal from './NotificationSettingsModal';
@@ -12,35 +13,38 @@ import NotificationSettingsModal from './NotificationSettingsModal';
 type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 
 const TarefasMobile = () => {
-  const { user, logout } = useAuth();
-  const { tarefas, loading, criarTarefa, atualizarTarefa, excluirTarefa, refreshTarefas } = useTarefas();
+  const { user, signOut } = useAuth();
+  const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, refreshEvents } = useTarefas();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [filtroAtivo, setFiltroAtivo] = useState<FilterType>('hoje');
 
+  const {
+    isRegistered,
+    isRegistering,
+    permissionStatus,
+    isIOSWebView,
+    requestPermissions,
+    sendTestNotification
+  } = useIOSPushNotifications();
+
   // Hook de swipe navigation
-  const { swipeHandlers } = useSwipeNavigation({
-    onSwipeLeft: () => {
-      const filters: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
-      const currentIndex = filters.indexOf(filtroAtivo);
-      if (currentIndex < filters.length - 1) {
-        setFiltroAtivo(filters[currentIndex + 1]);
-      }
-    },
-    onSwipeRight: () => {
-      const filters: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
-      const currentIndex = filters.indexOf(filtroAtivo);
-      if (currentIndex > 0) {
-        setFiltroAtivo(filters[currentIndex - 1]);
-      }
-    }
+  const {
+    isSwipeGesturing,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  } = useSwipeNavigation({
+    filters: ['hoje', 'amanha', 'semana', 'mes'],
+    activeFilter: filtroAtivo,
+    onFilterChange: setFiltroAtivo
   });
 
   const handleCriarTarefa = async (novaTarefa: any) => {
     try {
-      await criarTarefa(novaTarefa);
+      await createTarefa(novaTarefa);
       setIsModalOpen(false);
-      await refreshTarefas();
+      await refreshEvents();
     } catch (error) {
       console.error('Erro ao criar tarefa:', error);
     }
@@ -48,10 +52,18 @@ const TarefasMobile = () => {
 
   const handleExcluirTarefa = async (id: string) => {
     try {
-      await excluirTarefa(id);
-      await refreshTarefas();
+      await deleteTarefa(id);
+      await refreshEvents();
     } catch (error) {
       console.error('Erro ao excluir tarefa:', error);
+    }
+  };
+
+  const handleActivateNotifications = async () => {
+    if (isRegistered) {
+      await sendTestNotification();
+    } else {
+      await requestPermissions();
     }
   };
 
@@ -62,7 +74,7 @@ const TarefasMobile = () => {
     amanha.setDate(amanha.getDate() + 1);
     
     return tarefas.filter(tarefa => {
-      const dataTarefa = new Date(tarefa.data_hora);
+      const dataTarefa = new Date(tarefa.start_date);
       
       switch (filtro) {
         case 'hoje':
@@ -101,70 +113,72 @@ const TarefasMobile = () => {
     return filtrarTarefas(tarefas, filtro).length;
   };
 
+  const getCurrentDate = () => {
+    const agora = new Date();
+    return agora.toLocaleDateString('pt-BR', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    });
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-lg">Carregando tarefas...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-600 text-lg">Carregando tarefas...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white" {...swipeHandlers}>
+    <div 
+      className="min-h-screen bg-white text-gray-900"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-sm font-bold">T</span>
-          </div>
-          <h1 className="text-xl font-bold">Tarefas</h1>
-        </div>
-        
-        <div className="flex items-center space-x-2">
+      <div className="px-6 pt-12 pb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">Lembretes</h1>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsNotificationModalOpen(true)}
-            className="text-gray-400 hover:text-white p-2"
+            className="text-gray-600 hover:text-gray-900 p-2"
           >
             <Settings size={20} />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            className="text-red-400 hover:text-red-300 text-sm"
-          >
-            Sair
-          </Button>
         </div>
+        <p className="text-gray-500 text-sm">{getCurrentDate()}</p>
       </div>
 
       {/* Filtros com swipe */}
-      <div className="flex justify-center py-4 border-b border-gray-800">
-        <div className="flex space-x-4">
+      <div className="px-6 pb-6">
+        <div className="flex space-x-2 overflow-x-auto">
           {(['hoje', 'amanha', 'semana', 'mes'] as FilterType[]).map((filtro) => (
             <button
               key={filtro}
               onClick={() => setFiltroAtivo(filtro)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 filtroAtivo === filtro
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {getTituloFiltro(filtro)} ({getContadorFiltro(filtro)})
+              {getTituloFiltro(filtro)} {getContadorFiltro(filtro)}
             </button>
           ))}
         </div>
       </div>
 
       {/* Lista de Tarefas */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 px-6">
         <TarefasList
           tarefas={tarefasFiltradas}
-          onExcluirTarefa={handleExcluirTarefa}
-          onAtualizarTarefa={atualizarTarefa}
+          onUpdate={updateTarefa}
+          onDelete={handleExcluirTarefa}
+          filter={filtroAtivo}
         />
       </div>
 
@@ -172,7 +186,7 @@ const TarefasMobile = () => {
       <div className="fixed bottom-6 right-6">
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 p-0 shadow-lg"
+          className="bg-blue-500 hover:bg-blue-600 rounded-full w-14 h-14 p-0 shadow-lg"
         >
           <Plus size={24} />
         </Button>
@@ -188,6 +202,11 @@ const TarefasMobile = () => {
       <NotificationSettingsModal
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
+        onActivateNotifications={handleActivateNotifications}
+        isRegistered={isRegistered}
+        isRegistering={isRegistering}
+        permissionStatus={permissionStatus}
+        isIOSWebView={isIOSWebView}
       />
     </div>
   );

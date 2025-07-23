@@ -2,10 +2,6 @@ import React, { useState } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw } from 'lucide-react';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
-import InlineReminderEditor from './InlineReminderEditor';
-import KeyboardToolbar from './KeyboardToolbar';
-import QuickDateTimeModal from './QuickDateTimeModal';
-import TarefaDetailsModal from './TarefaDetailsModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
 import { cn } from '@/lib/utils';
@@ -19,23 +15,6 @@ const TarefasMobile = () => {
   const [showNovoLembrete, setShowNovoLembrete] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
-  const [isInlineEditing, setIsInlineEditing] = useState(false);
-  const [showKeyboardToolbar, setShowKeyboardToolbar] = useState(false);
-  const [showQuickDateTime, setShowQuickDateTime] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedTarefa, setSelectedTarefa] = useState<any>(null);
-  const [currentEditingData, setCurrentEditingData] = useState<{
-    title: string;
-    date: string;
-    time: string;
-    location: string;
-  }>({
-    title: '',
-    date: new Date().toISOString().split('T')[0],
-    time: '09:00',
-    location: ''
-  });
-
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
 
   const {
@@ -134,76 +113,6 @@ const TarefasMobile = () => {
     return { morning, afternoon, evening };
   };
 
-  const handleStartInlineEditing = () => {
-    setIsInlineEditing(true);
-    setCurrentEditingData({
-      title: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00',
-      location: ''
-    });
-  };
-
-  const handleInlineEditorFocus = () => {
-    setShowKeyboardToolbar(true);
-  };
-
-  const handleInlineEditorBlur = () => {
-    // Don't hide toolbar immediately to allow toolbar button clicks
-    setTimeout(() => {
-      if (!showQuickDateTime && !showDetailsModal) {
-        setShowKeyboardToolbar(false);
-      }
-    }, 100);
-  };
-
-  const handleSaveInlineReminder = async (title: string) => {
-    if (!title.trim()) return;
-
-    const startDateTime = `${currentEditingData.date}T${currentEditingData.time}:00`;
-    const endDateTime = new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString();
-
-    const tarefaData = {
-      title: title.trim(),
-      description: currentEditingData.location ? `📍 Local: ${currentEditingData.location}` : '',
-      start_date: startDateTime,
-      end_date: endDateTime,
-      event_type: 'reminder',
-      is_all_day: false,
-      status: 'pending'
-    };
-
-    await handleCreateTarefa(tarefaData);
-    setIsInlineEditing(false);
-    setShowKeyboardToolbar(false);
-    setCurrentEditingData({
-      title: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00',
-      location: ''
-    });
-  };
-
-  const handleCancelInlineEditing = () => {
-    setIsInlineEditing(false);
-    setShowKeyboardToolbar(false);
-    setCurrentEditingData({
-      title: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00',
-      location: ''
-    });
-  };
-
-  const handleDateTimeChange = (date: string, time: string) => {
-    setCurrentEditingData(prev => ({ ...prev, date, time }));
-  };
-
-  const handleTarefaClick = (tarefa: any) => {
-    setSelectedTarefa(tarefa);
-    setShowDetailsModal(true);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -237,6 +146,7 @@ const TarefasMobile = () => {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
+        {/* Pull-to-Refresh Indicator */}
         <div 
           className={cn(
             "absolute top-10 left-1/2 transform -translate-x-1/2 transition-all duration-300",
@@ -310,7 +220,7 @@ const TarefasMobile = () => {
       </div>
 
       {/* Content */}
-      <div className={cn("px-4", showKeyboardToolbar ? "pb-80" : "pb-32")}>
+      <div className="px-4 pb-32">
         {showDeleted ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <DeletedTarefasList 
@@ -321,21 +231,9 @@ const TarefasMobile = () => {
           </div>
         ) : (
           <>
-            {/* Inline Editor */}
-            {isInlineEditing && (
-              <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100">
-                <InlineReminderEditor
-                  onSave={handleSaveInlineReminder}
-                  onCancel={handleCancelInlineEditing}
-                  onFocus={handleInlineEditorFocus}
-                  onBlur={handleInlineEditorBlur}
-                  placeholder="Novo lembrete"
-                />
-              </div>
-            )}
-
             {activeFilter === 'hoje' && groupedTarefas ? (
               <div className="space-y-6">
+                {/* Manhã */}
                 {groupedTarefas.morning.length > 0 && (
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
@@ -347,7 +245,6 @@ const TarefasMobile = () => {
                         tarefas={groupedTarefas.morning}
                         onUpdate={updateTarefa}
                         onDelete={deleteTarefa}
-                        onTarefaClick={handleTarefaClick}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -355,6 +252,7 @@ const TarefasMobile = () => {
                   </div>
                 )}
 
+                {/* Tarde */}
                 {groupedTarefas.afternoon.length > 0 && (
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
@@ -366,7 +264,6 @@ const TarefasMobile = () => {
                         tarefas={groupedTarefas.afternoon}
                         onUpdate={updateTarefa}
                         onDelete={deleteTarefa}
-                        onTarefaClick={handleTarefaClick}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -374,6 +271,7 @@ const TarefasMobile = () => {
                   </div>
                 )}
 
+                {/* Noite */}
                 {groupedTarefas.evening.length > 0 && (
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
@@ -385,7 +283,6 @@ const TarefasMobile = () => {
                         tarefas={groupedTarefas.evening}
                         onUpdate={updateTarefa}
                         onDelete={deleteTarefa}
-                        onTarefaClick={handleTarefaClick}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -393,6 +290,7 @@ const TarefasMobile = () => {
                   </div>
                 )}
 
+                {/* Empty state para hoje */}
                 {filteredTarefas.length === 0 && (
                   <div className="text-center py-16">
                     <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
@@ -409,7 +307,6 @@ const TarefasMobile = () => {
                   tarefas={filteredTarefas}
                   onUpdate={updateTarefa}
                   onDelete={deleteTarefa}
-                  onTarefaClick={handleTarefaClick}
                   filter={activeFilter}
                 />
               </div>
@@ -422,7 +319,7 @@ const TarefasMobile = () => {
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => {
-            handleStartInlineEditing();
+            setShowNovoLembrete(true);
             vibrate(50);
           }}
           className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 active:scale-95 transition-all duration-200 flex items-center justify-center"
@@ -431,49 +328,17 @@ const TarefasMobile = () => {
         </button>
       </div>
 
-      {/* Keyboard Toolbar */}
-      <KeyboardToolbar
-        isVisible={showKeyboardToolbar}
-        onDateTimeClick={() => setShowQuickDateTime(true)}
-        onLocationClick={() => {
-          // TODO: Implement location picker
-          vibrate(30);
-        }}
-        onDetailsClick={() => setShowDetailsModal(true)}
-        onDone={() => {
-          setShowKeyboardToolbar(false);
-          vibrate(30);
-        }}
-        hasDate={currentEditingData.date !== new Date().toISOString().split('T')[0]}
-        hasTime={currentEditingData.time !== '09:00'}
-        hasLocation={!!currentEditingData.location}
+      {/* Modal */}
+      <NovoLembreteModal
+        isOpen={showNovoLembrete}
+        onClose={() => setShowNovoLembrete(false)}
+        onSave={handleCreateTarefa}
       />
-
-      {/* Modals */}
-      <QuickDateTimeModal
-        isOpen={showQuickDateTime}
-        onClose={() => setShowQuickDateTime(false)}
-        onSave={handleDateTimeChange}
-        initialDate={currentEditingData.date}
-        initialTime={currentEditingData.time}
-      />
-
-      {selectedTarefa && (
-        <TarefaDetailsModal
-          isOpen={showDetailsModal}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedTarefa(null);
-          }}
-          tarefa={selectedTarefa}
-          onUpdate={updateTarefa}
-          onDelete={deleteTarefa}
-        />
-      )}
     </div>
   );
 };
 
+// Component para itens excluídos
 const DeletedTarefasList: React.FC<{
   deletedTarefas: any[];
   onRestore: (id: string) => void;

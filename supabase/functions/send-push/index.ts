@@ -2,6 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
+import { jose } from "https://deno.land/x/jose@v4.15.5/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,35 +17,59 @@ const apnsKeyId = Deno.env.get('APNS_KEY_ID');
 const apnsKey = Deno.env.get('APNS_KEY');
 
 // Function to create JWT for APNs authentication
-function createApnsJwt() {
+async function createApnsJwt() {
   if (!apnsKey || !apnsKeyId || !apnsTeamId) {
     throw new Error('APNs credentials not configured');
   }
 
-  const header = {
-    alg: "ES256",
-    kid: apnsKeyId
-  };
+  try {
+    // Decode the base64 private key
+    const privateKeyPem = apnsKey.replace(/\\n/g, '\n');
+    
+    // Import the private key
+    const privateKey = await jose.importPKCS8(privateKeyPem, 'ES256');
+    
+    const payload = {
+      iss: apnsTeamId,
+      iat: Math.floor(Date.now() / 1000)
+    };
 
-  const payload = {
-    iss: apnsTeamId,
-    iat: Math.floor(Date.now() / 1000)
-  };
+    // Create and sign the JWT
+    const jwt = await new jose.SignJWT(payload)
+      .setProtectedHeader({ alg: 'ES256', kid: apnsKeyId })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey);
 
-  // For production, you would use a proper JWT library with ES256 signing
-  // This is a simplified version for demonstration
-  console.log('🔑 APNs JWT created for team:', apnsTeamId);
-  return "mock-jwt-token"; // In production, implement proper ES256 JWT signing
+    console.log('🔑 APNs JWT created successfully for team:', apnsTeamId);
+    return jwt;
+  } catch (error) {
+    console.error('💥 Error creating APNs JWT:', error);
+    throw error;
+  }
+}
+
+function isNativeToken(token: string): boolean {
+  // Tokens nativos são hexadecimais de 64 caracteres
+  return /^[a-fA-F0-9]{64}$/.test(token);
 }
 
 async function sendApnsPushNotification(deviceToken: string, title: string, body: string) {
   try {
-    if (!apnsBundleId || !apnsTeamId || !apnsKeyId || !apnsKey) {
-      console.log('⚠️ APNs credentials incomplete, simulating notification');
-      return { success: true, simulation: true };
+    const isNative = isNativeToken(deviceToken);
+    console.log(`📱 Enviando notificação para token ${isNative ? 'nativo' : 'simulado'}:`, deviceToken.substring(0, 20) + '...');
+
+    if (!isNative) {
+      console.log('⚠️ Token simulado detectado, enviando resposta simulada');
+      return { success: true, simulation: true, message: 'Simulação para desenvolvimento web' };
     }
 
-    const jwt = createApnsJwt();
+    if (!apnsBundleId || !apnsTeamId || !apnsKeyId || !apnsKey) {
+      console.log('⚠️ APNs credentials incomplete, cannot send real notification');
+      return { success: false, error: 'APNs credentials not configured' };
+    }
+
+    const jwt = await createApnsJwt();
     
     const payload = {
       aps: {
@@ -53,12 +78,20 @@ async function sendApnsPushNotification(deviceToken: string, title: string, body
           body: body
         },
         sound: "default",
-        badge: 1
+        badge: 1,
+        "mutable-content": 1
+      },
+      data: {
+        type: "reminder",
+        timestamp: Date.now()
       }
     };
 
-    // APNs endpoint (sandbox or production)
-    const apnsUrl = `https://api.sandbox.push.apple.com/3/device/${deviceToken}`;
+    // APNs endpoint (production)
+    const apnsUrl = `https://api.push.apple.com/3/device/${deviceToken}`;
+    
+    console.log('📤 Enviando para APNs:', apnsUrl);
+    console.log('📋 Payload:', JSON.stringify(payload, null, 2));
     
     const response = await fetch(apnsUrl, {
       method: 'POST',
@@ -66,18 +99,27 @@ async function sendApnsPushNotification(deviceToken: string, title: string, body
         'Authorization': `Bearer ${jwt}`,
         'apns-topic': apnsBundleId,
         'apns-push-type': 'alert',
+        'apns-priority': '10',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
 
+    const responseText = await response.text();
+    console.log('📥 APNs Response Status:', response.status);
+    console.log('📥 APNs Response:', responseText);
+
     if (response.ok) {
       console.log('✅ APNs notification sent successfully');
-      return { success: true, simulation: false };
+      return { success: true, simulation: false, apnsResponse: responseText };
     } else {
-      const errorText = await response.text();
-      console.error('❌ APNs error:', response.status, errorText);
-      return { success: false, error: `APNs error: ${response.status}` };
+      console.error('❌ APNs error:', response.status, responseText);
+      return { 
+        success: false, 
+        error: `APNs error: ${response.status} - ${responseText}`,
+        apnsStatus: response.status,
+        apnsResponse: responseText
+      };
     }
   } catch (error) {
     console.error('💥 Error sending APNs notification:', error);
@@ -146,7 +188,9 @@ serve(async (req) => {
             token: token.substring(0, 10) + '...',
             success: result.success,
             simulation: result.simulation || false,
-            error: result.error
+            error: result.error,
+            apnsStatus: result.apnsStatus,
+            isNative: isNativeToken(token)
           });
           
           if (result.success) {
@@ -157,7 +201,8 @@ serve(async (req) => {
           results.push({
             token: token.substring(0, 10) + '...',
             success: false,
-            error: error.message
+            error: error.message,
+            isNative: isNativeToken(token)
           });
         }
       }
@@ -169,7 +214,8 @@ serve(async (req) => {
         message: `Notifications sent to ${sentCount}/${tokens.length} devices`,
         sent: sentCount,
         total: tokens.length,
-        results: results
+        results: results,
+        apnsConfigured: !!(apnsBundleId && apnsTeamId && apnsKeyId && apnsKey)
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -189,7 +235,7 @@ serve(async (req) => {
       success: false,
       error: error.message
     }), {
-    status: 500,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }

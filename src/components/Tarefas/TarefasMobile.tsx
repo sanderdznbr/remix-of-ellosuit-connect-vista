@@ -4,7 +4,7 @@ import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
-import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
+import { useNativePushNotifications } from '@/hooks/useNativePushNotifications';
 import { cn } from '@/lib/utils';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,7 +18,13 @@ const TarefasMobile = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
-  const { requestNotificationPermission, isRegistering } = useDeviceRegistration();
+  const { 
+    isRegistered, 
+    isRegistering, 
+    isNativePlatform,
+    requestPermissions,
+    sendTestNotification 
+  } = useNativePushNotifications();
   const { toast } = useToast();
 
   const {
@@ -42,15 +48,31 @@ const TarefasMobile = () => {
 
   const handleNotificationSettings = async () => {
     try {
-      await requestNotificationPermission();
-      toast({
-        title: "Notificações ativadas",
-        description: "Você receberá notificações sobre seus lembretes!",
-      });
+      if (!isNativePlatform) {
+        toast({
+          title: "ℹ️ Aviso",
+          description: "Para notificações completas, use o app nativo no seu iPhone",
+        });
+        return;
+      }
+
+      if (isRegistered) {
+        // Se já está registrado, enviar teste
+        await sendTestNotification();
+      } else {
+        // Solicitar permissões
+        const granted = await requestPermissions();
+        if (granted) {
+          toast({
+            title: "✅ Notificações ativadas",
+            description: "Você receberá notificações no seu iPhone!",
+          });
+        }
+      }
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível ativar as notificações",
+        title: "❌ Erro",
+        description: "Não foi possível configurar as notificações",
         variant: "destructive"
       });
     }
@@ -199,9 +221,19 @@ const TarefasMobile = () => {
                   vibrate(30);
                 }}
                 disabled={isRegistering}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className={cn(
+                  "p-2 rounded-full transition-colors disabled:opacity-50",
+                  isRegistered && isNativePlatform
+                    ? "bg-green-100 hover:bg-green-200 text-green-600"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                )}
               >
-                <Settings className="h-5 w-5 text-gray-600" />
+                <Settings className="h-5 w-5" />
+                {isRegistered && isNativePlatform && (
+                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
+                    ✓
+                  </span>
+                )}
               </button>
               
               {/* Deleted Items Button */}

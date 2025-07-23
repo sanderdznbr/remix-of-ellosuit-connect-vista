@@ -1,100 +1,124 @@
-
 import React from 'react';
 import TarefaItem from './TarefaItem';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 interface TarefasListProps {
   tarefas: any[];
-  onUpdate: (id: string, updates: any) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  filter: 'hoje' | 'semana' | 'mes';
+  onUpdate: (id: string, updates: any) => void;
+  onDelete: (id: string) => void;
+  onTarefaClick?: (tarefa: any) => void;
+  filter?: string;
   showPeriodDivision?: boolean;
 }
 
-const TarefasList: React.FC<TarefasListProps> = ({ 
-  tarefas, 
-  onUpdate, 
-  onDelete, 
-  filter, 
-  showPeriodDivision = true 
+const TarefasList: React.FC<TarefasListProps> = ({
+  tarefas,
+  onUpdate,
+  onDelete,
+  onTarefaClick,
+  filter = 'hoje',
+  showPeriodDivision = true
 }) => {
-  const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
-
-  const getFilteredTarefas = () => {
-    // Filtrar apenas tarefas ativas (não excluídas)
-    const activeTarefas = tarefas.filter(tarefa => tarefa.status !== 'deleted');
+  const groupTarefasByPeriod = (tarefas: any[]) => {
+    const morning = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 6 && hour < 12;
+    });
     
-    switch (filter) {
-      case 'hoje':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(todayString)
-        );
-      
-      case 'semana':
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Domingo
-        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
-          } catch {
-            return false;
-          }
-        });
-      
-      case 'mes':
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
-          } catch {
-            return false;
-          }
-        });
-      
-      default:
-        return activeTarefas;
-    }
+    const afternoon = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 12 && hour < 18;
+    });
+    
+    const evening = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 18 || hour < 6;
+    });
+
+    return { morning, afternoon, evening };
   };
 
-  const getEmptyMessage = () => {
-    switch (filter) {
-      case 'hoje':
-        return 'Nenhuma tarefa para hoje';
-      case 'semana':
-        return 'Nenhuma tarefa para esta semana';
-      case 'mes':
-        return 'Nenhuma tarefa para este mês';
-      default:
-        return 'Nenhuma tarefa encontrada';
-    }
-  };
+  const renderTarefaItem = (tarefa: any, index: number, isLast: boolean) => (
+    <TarefaItem
+      key={tarefa.id}
+      tarefa={tarefa}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+      onClick={onTarefaClick}
+      filter={filter}
+      isLast={isLast}
+    />
+  );
 
-  const filteredTarefas = showPeriodDivision ? getFilteredTarefas() : tarefas;
+  if (tarefas.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📝</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma tarefa</h3>
+        <p className="text-gray-500">Suas tarefas aparecerão aqui</p>
+      </div>
+    );
+  }
+
+  if (filter === 'hoje' && showPeriodDivision) {
+    const { morning, afternoon, evening } = groupTarefasByPeriod(tarefas);
+    
+    return (
+      <div>
+        {morning.length > 0 && (
+          <div>
+            <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
+              <h3 className="text-sm font-medium text-yellow-800 flex items-center">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                Manhã
+              </h3>
+            </div>
+            <div>
+              {morning.map((tarefa, index) => 
+                renderTarefaItem(tarefa, index, index === morning.length - 1)
+              )}
+            </div>
+          </div>
+        )}
+
+        {afternoon.length > 0 && (
+          <div>
+            <div className="px-4 py-3 bg-orange-50 border-b border-orange-100">
+              <h3 className="text-sm font-medium text-orange-800 flex items-center">
+                <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                Tarde
+              </h3>
+            </div>
+            <div>
+              {afternoon.map((tarefa, index) => 
+                renderTarefaItem(tarefa, index, index === afternoon.length - 1)
+              )}
+            </div>
+          </div>
+        )}
+
+        {evening.length > 0 && (
+          <div>
+            <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+              <h3 className="text-sm font-medium text-purple-800 flex items-center">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                Noite
+              </h3>
+            </div>
+            <div>
+              {evening.map((tarefa, index) => 
+                renderTarefaItem(tarefa, index, index === evening.length - 1)
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="divide-y divide-gray-100">
-      {filteredTarefas.map((tarefa, index) => (
-        <div key={tarefa.id} className={index === 0 ? '' : ''}>
-          <TarefaItem
-            tarefa={tarefa}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-          />
-        </div>
-      ))}
-      
-      {filteredTarefas.length === 0 && showPeriodDivision && (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <span className="text-4xl">📝</span>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{getEmptyMessage()}</h3>
-          <p className="text-gray-500">Adicione um novo lembrete para começar</p>
-        </div>
+    <div>
+      {tarefas.map((tarefa, index) => 
+        renderTarefaItem(tarefa, index, index === tarefas.length - 1)
       )}
     </div>
   );

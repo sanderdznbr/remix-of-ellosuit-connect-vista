@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
 import MobileBottomNavigation from './MobileBottomNavigation';
 import MobileHome from './MobileHome';
 import MobileCalendarView from './MobileCalendarView';
@@ -15,7 +16,15 @@ import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 const MobileDashboard = () => {
   const { user } = useAuth();
   const { isMobile } = useIsMobile();
+  const { requestNotificationPermission } = useDeviceRegistration();
   const [activeItem, setActiveItem] = useState('home');
+
+  useEffect(() => {
+    // Auto-registrar para notificações quando entrar no dashboard mobile
+    if (user && isMobile) {
+      requestNotificationPermission();
+    }
+  }, [user, isMobile]);
 
   if (!user) {
     return <Navigate to="/auth" replace />;

@@ -278,8 +278,10 @@ export const useNotificationSettings = () => {
   return {
     settings,
     settingsLoading,
+    isLoading: settingsLoading,
     settingsError,
     updateNotificationSettings,
+    updateSettings: updateNotificationSettings,
     getEventNotificationSettings,
     updateEventNotificationSettings
   };

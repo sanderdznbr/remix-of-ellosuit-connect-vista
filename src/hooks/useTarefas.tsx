@@ -44,7 +44,7 @@ export const useTarefas = () => {
         [],
       is_all_day: event.is_all_day,
       color: event.color,
-      status: event.status || 'pending',
+      status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending',
       google_event_id: event.google_event_id,
       source: event.source || 'local',
       location: event.description?.includes('Local:') ? 

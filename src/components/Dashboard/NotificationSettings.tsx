@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const NotificationSettings = () => {
-  const { settings, updateSettings, isLoading } = useNotificationSettings();
+  const { settings, updateNotificationSettings, isLoading } = useNotificationSettings();
   const { toast } = useToast();
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testTitle, setTestTitle] = useState('Notificação Teste');
@@ -21,7 +21,7 @@ const NotificationSettings = () => {
 
   const handleSettingChange = async (key: string, value: boolean | number) => {
     try {
-      await updateSettings({ [key]: value });
+      await updateNotificationSettings({ [key]: value });
       toast({
         title: "Configuração atualizada",
         description: "Suas preferências de notificação foram salvas.",

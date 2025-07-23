@@ -23,7 +23,7 @@ interface TarefaItem {
 }
 
 export const useTarefas = () => {
-  const { events, loading, createEvent, refreshEvents } = useCalendarData();
+  const { events, loading, createEvent, updateEvent, deleteEvent, refreshEvents } = useCalendarData();
   const { toast } = useToast();
   const [tarefas, setTarefas] = useState<TarefaItem[]>([]);
   const [deletedTarefas, setDeletedTarefas] = useState<TarefaItem[]>([]);
@@ -42,7 +42,7 @@ export const useTarefas = () => {
       attendees: event.attendees,
       is_all_day: event.is_all_day,
       color: event.color,
-      status: 'pending',
+      status: event.status || 'pending',
       google_event_id: event.google_event_id,
       source: event.source,
       location: event.description?.includes('Local:') ? 
@@ -50,7 +50,7 @@ export const useTarefas = () => {
       notes: event.description
     }));
     
-    // Separar tarefas ativas das excluídas
+    // Separar tarefas ativas das excluídas baseado no status real do banco
     const activeTarefas = tarefasFormatted.filter(t => t.status !== 'deleted');
     const deletedItems = tarefasFormatted.filter(t => t.status === 'deleted');
     
@@ -78,15 +78,15 @@ export const useTarefas = () => {
 
   const updateTarefa = async (id: string, updates: any) => {
     try {
-      // Atualizar localmente primeiro para feedback imediato
+      // Atualizar no banco de dados
+      await updateEvent(id, updates);
+      
+      // Atualizar localmente para feedback imediato
       setTarefas(prev => 
         prev.map(tarefa => 
           tarefa.id === id ? { ...tarefa, ...updates } : tarefa
         )
       );
-
-      // Aqui você implementaria a atualização no banco
-      // Por enquanto, vamos apenas atualizar o estado local
       
       if (updates.status === 'completed') {
         toast({
@@ -94,6 +94,9 @@ export const useTarefas = () => {
           description: "Tarefa marcada como concluída!",
         });
       }
+      
+      // Refresh para sincronizar com o banco
+      await refreshEvents();
     } catch (error) {
       toast({
         title: "Erro",
@@ -105,7 +108,10 @@ export const useTarefas = () => {
 
   const deleteTarefa = async (id: string) => {
     try {
-      // Mover para lista de excluídos em vez de remover completamente
+      // Marcar como deletado no banco de dados
+      await updateEvent(id, { status: 'deleted' });
+      
+      // Atualizar localmente para feedback imediato
       const tarefaToDelete = tarefas.find(t => t.id === id);
       if (tarefaToDelete) {
         const deletedTarefa = {
@@ -121,6 +127,9 @@ export const useTarefas = () => {
         title: "Lembrete removido",
         description: "O lembrete foi movido para excluídos",
       });
+      
+      // Refresh para sincronizar com o banco
+      await refreshEvents();
     } catch (error) {
       toast({
         title: "Erro",
@@ -132,6 +141,10 @@ export const useTarefas = () => {
 
   const restoreTarefa = async (id: string) => {
     try {
+      // Restaurar no banco de dados
+      await updateEvent(id, { status: 'pending' });
+      
+      // Atualizar localmente para feedback imediato
       const tarefaToRestore = deletedTarefas.find(t => t.id === id);
       if (tarefaToRestore) {
         const restoredTarefa = {
@@ -147,6 +160,9 @@ export const useTarefas = () => {
         title: "Lembrete restaurado",
         description: "O lembrete foi restaurado com sucesso",
       });
+      
+      // Refresh para sincronizar com o banco
+      await refreshEvents();
     } catch (error) {
       toast({
         title: "Erro",

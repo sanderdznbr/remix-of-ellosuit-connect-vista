@@ -31,8 +31,21 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      const startDateTime = `${selectedDate}T${selectedTime}:00`;
-      const endDateTime = new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString();
+      // Criar data/hora local sem conversão de fuso horário
+      const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+      
+      // Usar a data/hora local diretamente sem conversão UTC
+      const startDateTime = localDateTime.toISOString();
+      
+      // Adicionar 1 hora para o fim do evento
+      const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
+
+      console.log('📅 Criando lembrete:');
+      console.log('- Data selecionada:', selectedDate);
+      console.log('- Hora selecionada:', selectedTime);
+      console.log('- DateTime local:', localDateTime);
+      console.log('- Start ISO:', startDateTime);
+      console.log('- End ISO:', endDateTime);
 
       const tarefaData = {
         title: title.trim(),
@@ -64,6 +77,17 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
   const handleClose = () => {
     onClose();
     vibrate(30);
+  };
+
+  // Função para exibir a data/hora corretamente no preview
+  const getPreviewDateTime = () => {
+    const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+    return localDateTime.toLocaleDateString('pt-BR', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -136,12 +160,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                   <p className="text-sm text-gray-600 mb-2">{description}</p>
                 )}
                 <p className="text-sm text-blue-600 font-medium">
-                  {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
-                    day: 'numeric',
-                    month: 'long',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+                  {getPreviewDateTime()}
                 </p>
               </div>
             </div>

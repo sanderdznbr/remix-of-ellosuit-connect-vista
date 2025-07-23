@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,6 +10,9 @@ declare global {
       messageHandlers?: {
         iosNotifications?: {
           postMessage: (message: any) => void;
+        };
+        usuarioLogado?: {
+          postMessage: (message: string) => void;
         };
       };
     };

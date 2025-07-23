@@ -21,7 +21,6 @@ interface CalendarEvent {
   is_all_day?: boolean;
   meeting_data?: any;
   color?: string;
-  status?: 'pending' | 'completed' | 'deleted';
 }
 
 export const useCalendarData = () => {
@@ -237,8 +236,7 @@ export const useCalendarData = () => {
           meeting_provider: event.meeting_provider,
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
-          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF'),
-          status: event.status || 'pending'
+          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF')
         };
       });
       
@@ -277,8 +275,7 @@ export const useCalendarData = () => {
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false,
           color: eventData.color || '#3600FF',
-          google_event_id: eventData.google_event_id,
-          status: eventData.status || 'pending'
+          google_event_id: eventData.google_event_id
         })
         .select()
         .single();

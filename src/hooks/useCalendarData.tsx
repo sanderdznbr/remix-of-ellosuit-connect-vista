@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -320,7 +321,7 @@ export const useCalendarData = () => {
         .from('calendar_events')
         .update(updates)
         .eq('id', eventId)
-        .eq('created_by', user.id);
+        .eq('company_id', companyId);
 
       if (error) {
         toast({
@@ -367,7 +368,7 @@ export const useCalendarData = () => {
         .from('calendar_events')
         .delete()
         .eq('id', eventId)
-        .eq('created_by', user.id);
+        .eq('company_id', companyId);
 
       if (error) {
         toast({

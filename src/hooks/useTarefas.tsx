@@ -50,12 +50,11 @@ export const useTarefas = () => {
       notes: event.description
     }));
     
-    // Separar tarefas ativas das excluídas baseado no status real do banco
+    // Manter apenas as tarefas ativas (não mostrar excluídas)
     const activeTarefas = tarefasFormatted.filter(t => t.status !== 'deleted');
-    const deletedItems = tarefasFormatted.filter(t => t.status === 'deleted');
     
     setTarefas(activeTarefas);
-    setDeletedTarefas(deletedItems);
+    setDeletedTarefas([]); // Limpar array de deletados já que não vamos mais usar
   }, [events]);
 
   const createTarefa = async (tarefaData: any) => {
@@ -108,24 +107,15 @@ export const useTarefas = () => {
 
   const deleteTarefa = async (id: string) => {
     try {
-      // Marcar como deletado no banco de dados
-      await updateEvent(id, { status: 'deleted' });
+      // Deletar permanentemente do banco de dados
+      await deleteEvent(id);
       
-      // Atualizar localmente para feedback imediato
-      const tarefaToDelete = tarefas.find(t => t.id === id);
-      if (tarefaToDelete) {
-        const deletedTarefa = {
-          ...tarefaToDelete,
-          status: 'deleted' as const
-        };
-        
-        setTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
-        setDeletedTarefas(prev => [...prev, deletedTarefa]);
-      }
+      // Remover localmente para feedback imediato
+      setTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
       
       toast({
-        title: "Lembrete removido",
-        description: "O lembrete foi movido para excluídos",
+        title: "Lembrete excluído",
+        description: "O lembrete foi excluído permanentemente",
       });
       
       // Refresh para sincronizar com o banco
@@ -133,43 +123,20 @@ export const useTarefas = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível remover o lembrete",
+        description: "Não foi possível excluir o lembrete",
         variant: "destructive"
       });
     }
   };
 
+  // Função de restaurar removida pois não há mais tarefas "deletadas"
   const restoreTarefa = async (id: string) => {
-    try {
-      // Restaurar no banco de dados
-      await updateEvent(id, { status: 'pending' });
-      
-      // Atualizar localmente para feedback imediato
-      const tarefaToRestore = deletedTarefas.find(t => t.id === id);
-      if (tarefaToRestore) {
-        const restoredTarefa = {
-          ...tarefaToRestore,
-          status: 'pending' as const
-        };
-        
-        setDeletedTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
-        setTarefas(prev => [...prev, restoredTarefa]);
-      }
-      
-      toast({
-        title: "Lembrete restaurado",
-        description: "O lembrete foi restaurado com sucesso",
-      });
-      
-      // Refresh para sincronizar com o banco
-      await refreshEvents();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível restaurar o lembrete",
-        variant: "destructive"
-      });
-    }
+    // Esta função não é mais necessária pois deletamos permanentemente
+    toast({
+      title: "Erro",
+      description: "Não é possível restaurar lembretes excluídos",
+      variant: "destructive"
+    });
   };
 
   return {

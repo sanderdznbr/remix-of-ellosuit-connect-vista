@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,31 @@ export const useAuth = () => {
     }
   };
 
+  // Função para autenticar com token do localStorage
+  const authenticateWithNativeToken = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      try {
+        console.log('🔐 Token nativo encontrado, autenticando...');
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: localStorage.getItem('refreshToken') || ''
+        });
+        
+        if (!error && data.session) {
+          console.log('✅ Autenticação nativa bem-sucedida');
+          setSession(data.session);
+          setUser(data.session.user);
+          setLoading(false);
+          return true;
+        }
+      } catch (error) {
+        console.error('❌ Erro na autenticação nativa:', error);
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -36,6 +62,19 @@ export const useAuth = () => {
         notifyIOSLoginSuccess();
       }
     };
+
+    // Escutar evento de autenticação nativa
+    const handleAuthReady = async () => {
+      console.log('📱 Evento authReady recebido');
+      const authenticated = await authenticateWithNativeToken();
+      if (!authenticated) {
+        // Fallback para autenticação normal
+        getInitialSession();
+      }
+    };
+
+    // Adicionar listener para evento authReady
+    window.addEventListener('authReady', handleAuthReady);
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -63,6 +102,13 @@ export const useAuth = () => {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        // Primeiro tentar autenticação nativa
+        const nativeAuthenticated = await authenticateWithNativeToken();
+        if (nativeAuthenticated) {
+          return;
+        }
+
+        // Fallback para sessão do Supabase
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('❌ Error getting session:', error);
@@ -77,11 +123,23 @@ export const useAuth = () => {
       }
     };
 
-    getInitialSession();
+    // Verificar imediatamente se há token nativo
+    const checkNativeToken = async () => {
+      const hasNativeToken = localStorage.getItem('accessToken');
+      if (hasNativeToken) {
+        console.log('🔐 Token nativo detectado no carregamento');
+        await authenticateWithNativeToken();
+      } else {
+        getInitialSession();
+      }
+    };
+
+    checkNativeToken();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('authReady', handleAuthReady);
     };
   }, []);
 
@@ -142,6 +200,11 @@ export const useAuth = () => {
     setLoading(true);
     
     try {
+      // Limpar tokens nativos
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('deviceToken');
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {

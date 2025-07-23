@@ -70,7 +70,7 @@ const TarefasPublica = () => {
         </div>
 
         {/* Auth Section */}
-        <div className="bg-gray-50 rounded-2xl p-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
               Faça login para continuar
@@ -80,7 +80,7 @@ const TarefasPublica = () => {
             </p>
           </div>
 
-          <AuthScreen returnTo="tarefas" />
+          <AuthScreen />
         </div>
       </div>
 

@@ -1,541 +1,194 @@
 
-import React, { useState } from 'react';
-import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { useTarefas } from '@/hooks/useTarefas';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import NotificationSettingsModal from './NotificationSettingsModal';
-import { useTarefas } from '@/hooks/useTarefas';
-import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
-import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
-import { cn } from '@/lib/utils';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { vibrate } from '@/utils/mobile-helpers';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 
 type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 
 const TarefasMobile = () => {
-  const [showNovoLembrete, setShowNovoLembrete] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
-  const [showDeleted, setShowDeleted] = useState(false);
-  const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa, refreshEvents } = useTarefas();
-  const { user } = useAuth();
-  const { 
-    isRegistered, 
-    isRegistering, 
-    isIOSWebView,
-    permissionStatus,
-    requestPermissions,
-    sendTestNotification 
-  } = useIOSPushNotifications();
-  const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const { tarefas, loading, criarTarefa, atualizarTarefa, excluirTarefa, refreshTarefas } = useTarefas();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [filtroAtivo, setFiltroAtivo] = useState<FilterType>('hoje');
 
-  const filterOptions: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
-  
-  const {
-    isSwipeGesturing,
-    swipeProgress,
-    onTouchStart: onSwipeStart,
-    onTouchMove: onSwipeMove,
-    onTouchEnd: onSwipeEnd
-  } = useSwipeNavigation({
-    filters: filterOptions,
-    activeFilter,
-    onFilterChange: setActiveFilter
-  });
-
-  const {
-    isPulling,
-    isRefreshing,
-    pullDistance,
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd
-  } = usePullToRefresh({
-    onRefresh: async () => {
-      vibrate(50);
-      await refreshEvents();
+  // Hook de swipe navigation
+  const { swipeHandlers } = useSwipeNavigation({
+    onSwipeLeft: () => {
+      const filters: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
+      const currentIndex = filters.indexOf(filtroAtivo);
+      if (currentIndex < filters.length - 1) {
+        setFiltroAtivo(filters[currentIndex + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      const filters: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
+      const currentIndex = filters.indexOf(filtroAtivo);
+      if (currentIndex > 0) {
+        setFiltroAtivo(filters[currentIndex - 1]);
+      }
     }
   });
 
-  const handleCreateTarefa = async (tarefaData: any) => {
-    await createTarefa(tarefaData);
-    vibrate(30);
-    await refreshEvents(); // Refresh após criar
-  };
-
-  const handleUpdateTarefa = async (id: string, updates: any) => {
-    await updateTarefa(id, updates);
-    vibrate(30);
-  };
-
-  const handleDeleteTarefa = async (id: string) => {
-    await deleteTarefa(id);
-    vibrate([50, 100, 50]);
-  };
-
-  const handleNotificationSettings = async () => {
+  const handleCriarTarefa = async (novaTarefa: any) => {
     try {
-      if (!user) {
-        toast({
-          title: "Login necessário",
-          description: "Faça login para ativar as notificações",
-        });
-        return;
-      }
-
-      if (!isIOSWebView) {
-        toast({
-          title: "Aviso",
-          description: "Para notificações push, use o app iOS nativo",
-        });
-        return;
-      }
-
-      if (isRegistered) {
-        await sendTestNotification();
-      } else if (permissionStatus === 'denied') {
-        toast({
-          title: "Notificações desativadas",
-          description: "Vá em Configurações > Notificações > [Nome do App] e ative as notificações",
-          variant: "destructive"
-        });
-      } else {
-        const granted = await requestPermissions();
-        if (granted) {
-          toast({
-            title: "Solicitação enviada",
-            description: "Aguarde a resposta do iOS...",
-          });
-        }
-      }
+      await criarTarefa(novaTarefa);
+      setIsModalOpen(false);
+      await refreshTarefas();
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível configurar as notificações",
-        variant: "destructive"
-      });
+      console.error('Erro ao criar tarefa:', error);
     }
   };
 
-  const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    const tomorrow = addDays(today, 1);
-    const tomorrowString = tomorrow.toISOString().split('T')[0];
-    const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
-
-    switch (filter) {
-      case 'hoje':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(todayString)
-        );
-      
-      case 'amanha':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(tomorrowString)
-        );
-      
-      case 'semana':
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
-          } catch {
-            return false;
-          }
-        });
-      
-      case 'mes':
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
-          } catch {
-            return false;
-          }
-        });
-      
-      default:
-        return activeTarefas;
+  const handleExcluirTarefa = async (id: string) => {
+    try {
+      await excluirTarefa(id);
+      await refreshTarefas();
+    } catch (error) {
+      console.error('Erro ao excluir tarefa:', error);
     }
   };
 
-  const getFilterOptions = () => [
-    { 
-      id: 'hoje' as FilterType, 
-      label: 'Hoje', 
-      count: getFilteredTarefas(tarefas, 'hoje').length
-    },
-    { 
-      id: 'amanha' as FilterType, 
-      label: 'Amanhã', 
-      count: getFilteredTarefas(tarefas, 'amanha').length
-    },
-    { 
-      id: 'semana' as FilterType, 
-      label: 'Semana', 
-      count: getFilteredTarefas(tarefas, 'semana').length
-    },
-    { 
-      id: 'mes' as FilterType, 
-      label: 'Mês', 
-      count: getFilteredTarefas(tarefas, 'mes').length
+  const filtrarTarefas = (tarefas: any[], filtro: FilterType) => {
+    const agora = new Date();
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+    
+    return tarefas.filter(tarefa => {
+      const dataTarefa = new Date(tarefa.data_hora);
+      
+      switch (filtro) {
+        case 'hoje':
+          return dataTarefa >= hoje && dataTarefa < amanha;
+        case 'amanha':
+          const depoisAmanha = new Date(amanha);
+          depoisAmanha.setDate(depoisAmanha.getDate() + 1);
+          return dataTarefa >= amanha && dataTarefa < depoisAmanha;
+        case 'semana':
+          const fimSemana = new Date(hoje);
+          fimSemana.setDate(fimSemana.getDate() + 7);
+          return dataTarefa >= hoje && dataTarefa < fimSemana;
+        case 'mes':
+          const fimMes = new Date(hoje);
+          fimMes.setMonth(fimMes.getMonth() + 1);
+          return dataTarefa >= hoje && dataTarefa < fimMes;
+        default:
+          return true;
+      }
+    });
+  };
+
+  const tarefasFiltradas = filtrarTarefas(tarefas, filtroAtivo);
+
+  const getTituloFiltro = (filtro: FilterType) => {
+    switch (filtro) {
+      case 'hoje': return 'Hoje';
+      case 'amanha': return 'Amanhã';
+      case 'semana': return 'Semana';
+      case 'mes': return 'Mês';
+      default: return 'Hoje';
     }
-  ];
+  };
 
-  const groupTarefasByPeriod = (tarefas: any[]) => {
-    const morning = tarefas.filter(t => {
-      const hour = new Date(t.start_date).getHours();
-      return hour >= 6 && hour < 12;
-    });
-    
-    const afternoon = tarefas.filter(t => {
-      const hour = new Date(t.start_date).getHours();
-      return hour >= 12 && hour < 18;
-    });
-    
-    const evening = tarefas.filter(t => {
-      const hour = new Date(t.start_date).getHours();
-      return hour >= 18 || hour < 6;
-    });
-
-    return { morning, afternoon, evening };
+  const getContadorFiltro = (filtro: FilterType) => {
+    return filtrarTarefas(tarefas, filtro).length;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4">
-          <div className="px-4">
-            <div className="h-8 w-48 bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
-            <div className="h-4 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
-        </div>
-        <div className="px-4 pt-4 space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <div className="h-4 w-full bg-gray-200 rounded mb-2 animate-pulse"></div>
-              <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ))}
-        </div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-lg">Carregando tarefas...</div>
       </div>
     );
   }
 
-  const filteredTarefas = getFilteredTarefas(tarefas, activeFilter);
-  const groupedTarefas = activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-black text-white" {...swipeHandlers}>
       {/* Header */}
-      <div 
-        className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {/* Pull-to-Refresh Indicator */}
-        <div 
-          className={cn(
-            "absolute top-10 left-1/2 transform -translate-x-1/2 transition-all duration-300",
-            isPulling ? "opacity-100" : "opacity-0"
-          )}
-          style={{ transform: `translateX(-50%) translateY(${Math.min(pullDistance - 60, 20)}px)` }}
-        >
-          <div className="flex items-center justify-center space-x-2 text-gray-500">
-            <ArrowDown className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-            <span className="text-sm">
-              {isRefreshing ? 'Atualizando...' : 'Puxe para atualizar'}
-            </span>
+      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-sm font-bold">T</span>
           </div>
+          <h1 className="text-xl font-bold">Tarefas</h1>
         </div>
-
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Lembretes</h1>
-              <p className="text-gray-500 text-sm">
-                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {/* Notifications Settings Button */}
-              {user && (
-                <button
-                  onClick={() => {
-                    setShowNotificationSettings(true);
-                    vibrate(30);
-                  }}
-                  className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  <Settings className="h-5 w-5 text-gray-600" />
-                </button>
-              )}
-              
-              {/* Deleted Items Button */}
-              {deletedTarefas.length > 0 && (
-                <button
-                  onClick={() => {
-                    setShowDeleted(!showDeleted);
-                    vibrate(30);
-                  }}
-                  className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  <Trash2 className="h-5 w-5 text-gray-600" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {deletedTarefas.length}
-                  </span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filter Pills with Swipe */}
-          <div 
-            className="relative overflow-hidden"
-            onTouchStart={onSwipeStart}
-            onTouchMove={onSwipeMove}
-            onTouchEnd={onSwipeEnd}
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsNotificationModalOpen(true)}
+            className="text-gray-400 hover:text-white p-2"
           >
-            <div 
-              className={cn(
-                "flex space-x-2 mb-4 transition-transform duration-200",
-                isSwipeGesturing && "transition-none"
-              )}
-              style={{ 
-                transform: `translateX(${swipeProgress * 20}px)` 
-              }}
-            >
-              {getFilterOptions().map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => {
-                    setActiveFilter(option.id);
-                    vibrate(30);
-                  }}
-                  className={cn(
-                    "flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap",
-                    activeFilter === option.id 
-                      ? "bg-blue-500 text-white shadow-lg" 
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  )}
-                >
-                  <span className="font-medium">{option.label}</span>
-                  <span className={cn(
-                    "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
-                    activeFilter === option.id 
-                      ? "bg-white/20 text-white" 
-                      : "bg-gray-200 text-gray-600"
-                  )}>
-                    {option.count}
-                  </span>
-                </button>
-              ))}
-            </div>
-            
-            {/* Swipe Hint */}
-            {!isSwipeGesturing && (
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="text-xs text-gray-400 text-center">
-                  ← arraste para navegar →
-                </div>
-              </div>
-            )}
-          </div>
+            <Settings size={20} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="text-red-400 hover:text-red-300 text-sm"
+          >
+            Sair
+          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 pb-32">
-        {showDeleted ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <DeletedTarefasList 
-              deletedTarefas={deletedTarefas}
-              onRestore={restoreTarefa}
-              onClose={() => setShowDeleted(false)}
-            />
-          </div>
-        ) : (
-          <>
-            {activeFilter === 'hoje' && groupedTarefas ? (
-              <div className="space-y-6">
-                {/* Manhã */}
-                {groupedTarefas.morning.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                      Manhã
-                    </h2>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                      <TarefasList
-                        tarefas={groupedTarefas.morning}
-                        onUpdate={handleUpdateTarefa}
-                        onDelete={handleDeleteTarefa}
-                        filter={activeFilter}
-                        showPeriodDivision={false}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Tarde */}
-                {groupedTarefas.afternoon.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
-                      Tarde
-                    </h2>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                      <TarefasList
-                        tarefas={groupedTarefas.afternoon}
-                        onUpdate={handleUpdateTarefa}
-                        onDelete={handleDeleteTarefa}
-                        filter={activeFilter}
-                        showPeriodDivision={false}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Noite */}
-                {groupedTarefas.evening.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
-                      Noite
-                    </h2>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                      <TarefasList
-                        tarefas={groupedTarefas.evening}
-                        onUpdate={handleUpdateTarefa}
-                        onDelete={handleDeleteTarefa}
-                        filter={activeFilter}
-                        showPeriodDivision={false}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state para hoje */}
-                {filteredTarefas.length === 0 && (
-                  <div className="text-center py-16">
-                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-                      <span className="text-4xl">📝</span>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma tarefa para hoje</h3>
-                    <p className="text-gray-500">Adicione um novo lembrete para começar</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <TarefasList
-                  tarefas={filteredTarefas}
-                  onUpdate={handleUpdateTarefa}
-                  onDelete={handleDeleteTarefa}
-                  filter={activeFilter}
-                />
-              </div>
-            )}
-          </>
-        )}
+      {/* Filtros com swipe */}
+      <div className="flex justify-center py-4 border-b border-gray-800">
+        <div className="flex space-x-4">
+          {(['hoje', 'amanha', 'semana', 'mes'] as FilterType[]).map((filtro) => (
+            <button
+              key={filtro}
+              onClick={() => setFiltroAtivo(filtro)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                filtroAtivo === filtro
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {getTituloFiltro(filtro)} ({getContadorFiltro(filtro)})
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={() => {
-            setShowNovoLembrete(true);
-            vibrate(50);
-          }}
-          className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 active:scale-95 transition-all duration-200 flex items-center justify-center"
+      {/* Lista de Tarefas */}
+      <div className="flex-1 p-4">
+        <TarefasList
+          tarefas={tarefasFiltradas}
+          onExcluirTarefa={handleExcluirTarefa}
+          onAtualizarTarefa={atualizarTarefa}
+        />
+      </div>
+
+      {/* Botão Adicionar */}
+      <div className="fixed bottom-6 right-6">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 p-0 shadow-lg"
         >
-          <Plus className="h-6 w-6" />
-        </button>
+          <Plus size={24} />
+        </Button>
       </div>
 
-      {/* Modals */}
+      {/* Modais */}
       <NovoLembreteModal
-        isOpen={showNovoLembrete}
-        onClose={() => setShowNovoLembrete(false)}
-        onSave={handleCreateTarefa}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleCriarTarefa}
       />
 
       <NotificationSettingsModal
-        isOpen={showNotificationSettings}
-        onClose={() => setShowNotificationSettings(false)}
-        onActivateNotifications={handleNotificationSettings}
-        isRegistered={isRegistered}
-        isRegistering={isRegistering}
-        permissionStatus={permissionStatus}
-        isIOSWebView={isIOSWebView}
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
       />
-    </div>
-  );
-};
-
-// Component para itens excluídos
-const DeletedTarefasList: React.FC<{
-  deletedTarefas: any[];
-  onRestore: (id: string) => void;
-  onClose: () => void;
-}> = ({ deletedTarefas, onRestore, onClose }) => {
-  return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Itens Excluídos</h2>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          Fechar
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {deletedTarefas.map((tarefa) => (
-          <div key={tarefa.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex-1">
-              <h3 className="font-medium text-gray-900 line-through opacity-60 mb-1">
-                {tarefa.title}
-              </h3>
-              {tarefa.description && (
-                <p className="text-sm text-gray-500 line-through opacity-60">
-                  {tarefa.description}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                onRestore(tarefa.id);
-                vibrate([50, 100, 50]);
-              }}
-              className="ml-4 p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors"
-            >
-              <RotateCcw className="h-4 w-4 text-green-600" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {deletedTarefas.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🗑️</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum item excluído</h3>
-          <p className="text-gray-500">Os itens excluídos aparecerão aqui</p>
-        </div>
-      )}
     </div>
   );
 };

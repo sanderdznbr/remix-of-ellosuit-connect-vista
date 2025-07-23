@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, ArrowDown, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
+import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
 import { cn } from '@/lib/utils';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
+import { useToast } from '@/hooks/use-toast';
 
 type FilterType = 'hoje' | 'semana' | 'mes';
 
@@ -16,6 +18,8 @@ const TarefasMobile = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
+  const { requestNotificationPermission, isRegistering } = useDeviceRegistration();
+  const { toast } = useToast();
 
   const {
     isPulling,
@@ -34,6 +38,22 @@ const TarefasMobile = () => {
   const handleCreateTarefa = async (tarefaData: any) => {
     await createTarefa(tarefaData);
     vibrate(30);
+  };
+
+  const handleNotificationSettings = async () => {
+    try {
+      await requestNotificationPermission();
+      toast({
+        title: "Notificações ativadas",
+        description: "Você receberá notificações sobre seus lembretes!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível ativar as notificações",
+        variant: "destructive"
+      });
+    }
   };
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
@@ -171,21 +191,35 @@ const TarefasMobile = () => {
               </p>
             </div>
             
-            {/* Deleted Items Button */}
-            {deletedTarefas.length > 0 && (
+            <div className="flex items-center space-x-2">
+              {/* Settings Icon for Notifications */}
               <button
                 onClick={() => {
-                  setShowDeleted(!showDeleted);
+                  handleNotificationSettings();
                   vibrate(30);
                 }}
-                className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                disabled={isRegistering}
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
-                <Trash2 className="h-5 w-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {deletedTarefas.length}
-                </span>
+                <Settings className="h-5 w-5 text-gray-600" />
               </button>
-            )}
+              
+              {/* Deleted Items Button */}
+              {deletedTarefas.length > 0 && (
+                <button
+                  onClick={() => {
+                    setShowDeleted(!showDeleted);
+                    vibrate(30);
+                  }}
+                  className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <Trash2 className="h-5 w-5 text-gray-600" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {deletedTarefas.length}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filter Pills */}

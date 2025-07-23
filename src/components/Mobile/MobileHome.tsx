@@ -4,8 +4,8 @@ import { Calendar, Mail, Users, BarChart3 } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import { useClients } from '@/hooks/useClients';
 import MobileStatsCard from './MobileStatsCard';
-import MobileEmailCard from './MobileEmailCard';
-import MobileCalendarCard from './MobileCalendarCard';
+import MobileCalendarPreview from './MobileCalendarPreview';
+import MobileEmailPreview from './MobileEmailPreview';
 import MobileHeader from './MobileHeader';
 
 interface MobileHomeProps {
@@ -14,7 +14,7 @@ interface MobileHomeProps {
 
 const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
   const { events, isLoading: eventsLoading } = useCalendarData();
-  const { clients, isLoading: clientsLoading } = useClients();
+  const { clients, loading: clientsLoading } = useClients();
 
   const today = new Date();
   const todayEvents = events.filter(event => {
@@ -29,14 +29,18 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MobileHeader />
+      <MobileHeader 
+        title="Dashboard"
+        showSearch={true}
+        showNotifications={true}
+      />
       
       <div className="p-4 space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
           <MobileStatsCard
             title="Eventos Hoje"
-            value={eventsLoading ? "..." : todayEvents.length}
+            value={eventsLoading ? "..." : todayEvents.length.toString()}
             icon={<Calendar className="h-5 w-5" />}
             color="blue"
             onClick={() => onNavigate('calendar')}
@@ -52,7 +56,7 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
           
           <MobileStatsCard
             title="Clientes"
-            value={clientsLoading ? "..." : clients.length}
+            value={clientsLoading ? "..." : clients.length.toString()}
             icon={<Users className="h-5 w-5" />}
             color="purple"
             onClick={() => onNavigate('clients')}
@@ -68,14 +72,14 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
         </div>
 
         {/* Calendar Preview */}
-        <MobileCalendarCard
+        <MobileCalendarPreview
           todayEvents={todayEvents}
           upcomingEvents={upcomingEvents}
           onNavigate={onNavigate}
         />
 
         {/* Email Preview */}
-        <MobileEmailCard onNavigate={onNavigate} />
+        <MobileEmailPreview onNavigate={onNavigate} />
       </div>
     </div>
   );

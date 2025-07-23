@@ -7,13 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Smartphone, Clock, Calendar, TestTube } from 'lucide-react';
+import { Bell, Smartphone, Clock, TestTube } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const NotificationSettings = () => {
   const { settings, updateNotificationSettings, isLoading } = useNotificationSettings();
+  const { deviceToken, isRegistered, requestNotificationPermission } = useDeviceRegistration();
   const { toast } = useToast();
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testTitle, setTestTitle] = useState('Notificação Teste');
@@ -48,7 +50,7 @@ const NotificationSettings = () => {
     setIsSendingTest(true);
     
     try {
-      console.log('🔔 Sending test notification...');
+      console.log('🔔 Enviando notificação teste...');
       
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
@@ -58,21 +60,21 @@ const NotificationSettings = () => {
       });
 
       if (error) {
-        console.error('❌ Error sending test notification:', error);
+        console.error('❌ Erro ao enviar notificação teste:', error);
         throw error;
       }
 
-      console.log('✅ Test notification response:', data);
+      console.log('✅ Resposta da notificação teste:', data);
 
       toast({
         title: "Notificação teste enviada! 🎉",
         description: data.simulation ? 
-          "Notificação simulada (APNs não configurado)" : 
+          `Simulada: ${data.sent} dispositivo(s)` : 
           `Enviada para ${data.sent} dispositivo(s)`,
       });
       
     } catch (error: any) {
-      console.error('💥 Error:', error);
+      console.error('💥 Erro:', error);
       toast({
         title: "Erro",
         description: `Falha ao enviar notificação: ${error.message}`,
@@ -80,6 +82,14 @@ const NotificationSettings = () => {
       });
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  const handleRegisterDevice = async () => {
+    try {
+      await requestNotificationPermission();
+    } catch (error) {
+      console.error('Erro ao registrar dispositivo:', error);
     }
   };
 
@@ -104,6 +114,47 @@ const NotificationSettings = () => {
           Gerencie como e quando você recebe notificações sobre seus eventos e compromissos.
         </p>
       </div>
+
+      {/* Device Registration Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Smartphone className="h-5 w-5" />
+            <span>Status do Dispositivo</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Notificações Push</Label>
+              <p className="text-sm text-gray-500">
+                {isRegistered 
+                  ? "Dispositivo registrado para receber notificações" 
+                  : "Dispositivo não registrado"}
+              </p>
+            </div>
+            <Badge variant={isRegistered ? "default" : "destructive"}>
+              {isRegistered ? "Ativo" : "Inativo"}
+            </Badge>
+          </div>
+          
+          {deviceToken && (
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">Device Token</Label>
+              <p className="text-xs text-gray-500 font-mono">
+                {deviceToken.substring(0, 20)}...
+              </p>
+            </div>
+          )}
+          
+          {!isRegistered && (
+            <Button onClick={handleRegisterDevice} className="w-full">
+              <Bell className="h-4 w-4 mr-2" />
+              Ativar Notificações
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* General Notification Settings */}
       <Card>
@@ -217,7 +268,7 @@ const NotificationSettings = () => {
 
           <Button
             onClick={sendTestNotification}
-            disabled={isSendingTest || !testTitle.trim() || !testMessage.trim()}
+            disabled={isSendingTest || !testTitle.trim() || !testMessage.trim() || !isRegistered}
             className="w-full"
           >
             {isSendingTest ? (
@@ -233,40 +284,18 @@ const NotificationSettings = () => {
             )}
           </Button>
 
+          {!isRegistered && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>Atenção:</strong> Você precisa ativar as notificações primeiro para enviar notificações teste.
+              </p>
+            </div>
+          )}
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
               <strong>Nota:</strong> A notificação teste será enviada para todos os dispositivos registrados. 
-              Se as credenciais do APNs não estiverem configuradas, a notificação será simulada.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Device Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Smartphone className="h-5 w-5" />
-            <span>Informações do Dispositivo</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Status de Notificações Push</span>
-              <Badge variant="outline" className="text-green-600 border-green-600">
-                Configurado
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Plataforma</span>
-              <Badge variant="secondary">
-                {navigator.userAgent.includes('iPhone') ? 'iOS' : 
-                 navigator.userAgent.includes('Android') ? 'Android' : 'Web'}
-              </Badge>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              As notificações push funcionam melhor quando o app está instalado na tela inicial do seu dispositivo.
+              Configure as credenciais APNs para notificações reais no iOS.
             </p>
           </div>
         </CardContent>

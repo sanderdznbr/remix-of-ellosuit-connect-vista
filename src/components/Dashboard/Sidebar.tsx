@@ -1,245 +1,192 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  Calendar, 
-  Mail, 
-  Home, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
+
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import {
+  Home,
+  Calendar,
+  CheckSquare,
+  Users,
+  Mail,
+  Settings,
   LogOut,
-  Edit3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Video,
+  Clock,
+  Link
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebarSettings } from '@/hooks/useSidebarSettings';
+import { cn } from '@/lib/utils';
 
 const Sidebar = () => {
-  const location = useLocation();
   const { user, signOut } = useAuth();
-  const { settings, loading, isColorDark } = useSidebarSettings();
+  const { settings, isColorDark } = useSidebarSettings();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  const defaultMenuItems = [
-    { id: 'home', path: '/dashboard', icon: Home, label: 'Home' },
-    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
-    { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' },
-    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-    { id: 'documents', path: '/dashboard/documentos', icon: FileText, label: 'Documentos' },
-    { id: 'analytics', path: '/dashboard/analises', icon: BarChart3, label: 'Análises' },
-    { id: 'edit', path: '/dashboard/editar', icon: Edit3, label: 'Editar' },
-    { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+
+  const menuItems = [
+    { icon: Home, label: 'Home', path: '/dashboard' },
+    { icon: Calendar, label: 'Agenda', path: '/dashboard/agenda', hasSubmenu: true },
+    { icon: CheckSquare, label: 'Tarefas', path: '/dashboard/tarefas' },
+    { icon: Users, label: 'Clientes', path: '/dashboard/clientes' },
+    { icon: Mail, label: 'E-mail', path: '/dashboard/email' },
+    { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes' },
   ];
 
-  const orderedMenuItems = () => {
-    if (settings.menu_order && settings.menu_order.length > 0) {
-      const ordered = settings.menu_order
-        .map(id => defaultMenuItems.find(item => item.id === id))
-        .filter(Boolean) as typeof defaultMenuItems;
-      
-      // Add any new items that weren't in the saved order
-      const remaining = defaultMenuItems.filter(
-        item => !settings.menu_order.includes(item.id)
-      );
-      
-      return [...ordered, ...remaining];
-    }
-    return defaultMenuItems;
+  const agendaSubmenuItems = [
+    { icon: Calendar, label: 'Calendário', path: '/dashboard/agenda/calendario' },
+    { icon: Video, label: 'Start Meet', path: '/dashboard/agenda/start-meet' },
+    { icon: Clock, label: 'Meus Horários', path: '/dashboard/agenda/horarios' },
+  ];
+
+  const currentPath = location.pathname;
+  const isAgendaPath = currentPath.startsWith('/dashboard/agenda');
+
+  const handleLogout = async () => {
+    await signOut();
   };
 
-  const menuItems = orderedMenuItems();
-
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard' || location.pathname === '/dashboard/';
-    }
-    return location.pathname.startsWith(path);
+  const sidebarStyle = {
+    backgroundColor: settings.sidebar_background_color || '#3600FF',
+    color: isColorDark(settings.sidebar_color || '#3000E3') ? '#ffffff' : '#000000',
   };
 
-  // Escutar mudanças nas configurações
-  useEffect(() => {
-    const handleSettingsUpdate = (event: CustomEvent) => {
-      // As configurações já são atualizadas automaticamente pelo hook
-      console.log('Configurações da sidebar atualizadas:', event.detail);
-      // Forçar uma atualização da UI
-      window.location.reload = () => window.location.reload();
-    };
+  const linkStyle = (isActive: boolean) => ({
+    color: isActive ? '#ffffff' : (isColorDark(settings.sidebar_color || '#3000E3') ? '#e5e7eb' : '#6b7280'),
+    backgroundColor: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+  });
 
-    window.addEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
-    };
-  }, []);
-
-  // Determinar cor do texto baseado na cor de fundo
-  const backgroundColor = settings.sidebar_background_color || '#3600FF';
-  const textColor = isColorDark(backgroundColor) ? 'text-white' : 'text-gray-900';
-  const subtleTextColor = isColorDark(backgroundColor) ? 'text-gray-200' : 'text-gray-600';
-
-  if (loading) {
-    return (
-      <div className={`${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex flex-col transition-all duration-300`}>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
-            <div className="space-y-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-10 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleAgendaClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Se já está na agenda, não faz nada, deixa o submenu visível
+    if (!isAgendaPath) {
+      // Se não está na agenda, navega para a primeira opção do submenu
+      window.location.href = '/dashboard/agenda/calendario';
+    }
+  };
 
   return (
-    <div 
-      className={`${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex flex-col transition-all duration-300 relative`}
-      style={{ backgroundColor }}
+    <div
+      className={cn(
+        "h-screen flex flex-col transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+      style={sidebarStyle}
     >
-      {/* Collapse Toggle Button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`absolute -right-3 top-6 z-10 w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center transition-colors ${
-          isColorDark(backgroundColor) ? 'bg-white text-gray-600 hover:bg-gray-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        }`}
-      >
-        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-      </button>
-
-      {/* Logo */}
-      <div className={`${isCollapsed ? 'p-2 pt-4' : 'p-6 pb-4'}`}>
-        <div className="flex items-center justify-center">
-          {isCollapsed ? (
-            // Container menor verticalmente para logo 1:1 quando recolhida
-            <div className="w-12 h-10 flex items-center justify-center">
-              <img 
-                src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
-                alt="Logo" 
-                className="w-[90%] h-[90%] object-contain transition-all duration-300"
-                onError={(e) => {
-                  e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
-                }}
-              />
-            </div>
-          ) : (
-            // Exibe logo completa quando expandida
+      {/* Header */}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
             <div className="flex items-center space-x-3">
               {settings.custom_logo_url ? (
                 <img 
                   src={settings.custom_logo_url} 
                   alt="Logo" 
-                  className="h-10 w-auto transition-all duration-300"
-                  onError={(e) => {
-                    e.currentTarget.src = "/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png";
-                  }}
+                  className="w-8 h-8 rounded"
                 />
               ) : (
-                // Logo padrão ElloSuit sempre visível quando não há custom_logo_url
-                <>
-                  <img 
-                    src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                    alt="ElloSuit Logo" 
-                    className="h-10 w-auto transition-all duration-300"
-                    onError={(e) => {
-                      console.error('Erro ao carregar logo padrão:', e);
-                      // Fallback para texto se a imagem não carregar
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                  <span className={`text-xl font-bold ${textColor} transition-opacity duration-300`}>
-                    ElloSuit
+                <div className="w-8 h-8 rounded bg-white/20 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </span>
-                </>
+                </div>
               )}
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">
+                  {user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário'}
+                </span>
+                <span className="text-xs opacity-70">
+                  {user?.email}
+                </span>
+              </div>
             </div>
           )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+          >
+            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.path);
+          const isActive = item.path === '/dashboard/agenda' ? isAgendaPath : currentPath === item.path;
+          
           return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                active
-                  ? `${textColor} shadow-lg transform scale-105`
-                  : `${subtleTextColor} hover:bg-black/10 hover:${textColor}`
-              }`}
-              style={active ? { 
-                backgroundColor: settings.sidebar_color || '#3000E3',
-                boxShadow: `0 4px 14px 0 ${settings.sidebar_color || '#3000E3'}40`
-              } : {}}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300">{item.label}</span>
+            <div key={item.path}>
+              {item.hasSubmenu && item.path === '/dashboard/agenda' ? (
+                <button
+                  onClick={handleAgendaClick}
+                  className={cn(
+                    "w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                    "hover:bg-white/10"
+                  )}
+                  style={linkStyle(isActive)}
+                >
+                  <Icon size={20} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </button>
+              ) : (
+                <NavLink
+                  to={item.path}
+                  className={cn(
+                    "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                    "hover:bg-white/10"
+                  )}
+                  style={linkStyle(isActive)}
+                >
+                  <Icon size={20} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </NavLink>
               )}
-            </Link>
+              
+              {/* Submenu da Agenda */}
+              {item.hasSubmenu && item.path === '/dashboard/agenda' && isAgendaPath && !isCollapsed && (
+                <div className="ml-6 mt-2 space-y-1">
+                  {agendaSubmenuItems.map((subItem) => {
+                    const SubIcon = subItem.icon;
+                    const isSubActive = currentPath === subItem.path;
+                    
+                    return (
+                      <NavLink
+                        key={subItem.path}
+                        to={subItem.path}
+                        className={cn(
+                          "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                          "hover:bg-white/10"
+                        )}
+                        style={linkStyle(isSubActive)}
+                      >
+                        <SubIcon size={16} />
+                        <span>{subItem.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
 
-      {/* User Profile */}
-      <div className="p-4">
-        {!isCollapsed ? (
-          <>
-            <div className="flex items-center space-x-3 mb-4">
-              <Avatar>
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-gray-100 text-gray-600">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${textColor} truncate`}>
-                  {user?.user_metadata?.full_name || user?.email}
-                </p>
-                <p className={`text-xs ${subtleTextColor} truncate`}>
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border-0 hover:border-0 bg-transparent hover:bg-transparent`}
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sair</span>
-            </Button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center space-y-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-                {user?.email?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border-0 hover:border-0 bg-transparent hover:bg-transparent`}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+      {/* Footer */}
+      <div className="p-4 border-t border-white/10">
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+            "hover:bg-white/10"
+          )}
+          style={linkStyle(false)}
+        >
+          <LogOut size={20} />
+          {!isCollapsed && <span>Sair</span>}
+        </button>
       </div>
     </div>
   );

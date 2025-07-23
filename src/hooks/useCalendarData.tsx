@@ -21,6 +21,7 @@ interface CalendarEvent {
   is_all_day?: boolean;
   meeting_data?: any;
   color?: string;
+  status?: 'pending' | 'completed' | 'deleted';
 }
 
 export const useCalendarData = () => {
@@ -236,7 +237,8 @@ export const useCalendarData = () => {
           meeting_provider: event.meeting_provider,
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
-          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF')
+          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF'),
+          status: event.status || 'pending'
         };
       });
       
@@ -275,7 +277,8 @@ export const useCalendarData = () => {
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false,
           color: eventData.color || '#3600FF',
-          google_event_id: eventData.google_event_id // Para eventos criados via Google
+          google_event_id: eventData.google_event_id,
+          status: eventData.status || 'pending'
         })
         .select()
         .single();
@@ -304,6 +307,62 @@ export const useCalendarData = () => {
     }
   };
 
+  const updateEvent = async (id: string, updates: any) => {
+    if (!companyId || !user) {
+      toast({
+        title: "Erro",
+        description: "Usuário deve estar associado a uma empresa para atualizar eventos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update(updates)
+        .eq('id', id)
+        .eq('company_id', companyId);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Evento atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar evento:', error);
+      throw error;
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!companyId || !user) {
+      toast({
+        title: "Erro",
+        description: "Usuário deve estar associado a uma empresa para deletar eventos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', companyId);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Evento deletado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao deletar evento:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (user && session) {
       checkUserCompany(user.id);
@@ -321,6 +380,8 @@ export const useCalendarData = () => {
     hasCompany,
     companyId,
     createEvent,
+    updateEvent,
+    deleteEvent,
     refreshEvents: () => companyId && fetchEvents(companyId)
   };
 };

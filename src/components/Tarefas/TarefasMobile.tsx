@@ -98,8 +98,8 @@ const TarefasMobile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="ios-header mobile-safe-top px-4 py-4 -mt-4">
+      <div className="min-h-screen bg-gray-50">
+        <div className="ios-header mobile-safe-top px-4 py-6">
           <div className="mobile-skeleton h-8 w-48 mb-2"></div>
           <div className="mobile-skeleton h-4 w-32"></div>
         </div>
@@ -116,10 +116,10 @@ const TarefasMobile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header com margem negativa para dark mode */}
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--ios-bg-grouped)' }}>
+      {/* Enhanced iOS Header with Dynamic Island Effect */}
       <div 
-        className="ios-header mobile-safe-top sticky top-0 z-40 -mt-4 pt-4 bg-white dark:bg-gray-900"
+        className="ios-header mobile-safe-top sticky top-0 z-40"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -133,18 +133,18 @@ const TarefasMobile = () => {
           style={{ transform: `translateY(${Math.min(pullDistance - 60, 20)}px)` }}
         >
           <div className="flex items-center justify-center space-x-2">
-            <ArrowDown className={cn("h-4 w-4 text-gray-600 dark:text-gray-400", isRefreshing && "animate-spin")} />
-            <span className="ios-footnote text-gray-600 dark:text-gray-400">
+            <ArrowDown className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            <span className="ios-footnote">
               {isRefreshing ? 'Atualizando...' : 'Puxe para atualizar'}
             </span>
           </div>
         </div>
 
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="ios-large-title mb-1 text-gray-900 dark:text-white">Lembretes</h1>
-              <p className="ios-subheadline text-gray-600 dark:text-gray-400">
+              <h1 className="ios-large-title mb-1">Lembretes</h1>
+              <p className="ios-subheadline">
                 {new Date().toLocaleDateString('pt-BR', { 
                   weekday: 'long', 
                   day: 'numeric', 
@@ -160,9 +160,9 @@ const TarefasMobile = () => {
                   setShowDeleted(!showDeleted);
                   vibrate(30);
                 }}
-                className="ios-button ios-button-ghost p-2 w-12 h-12 rounded-full relative"
+                className="ios-button ios-button-ghost p-2 w-12 h-12 rounded-full"
               >
-                <Trash2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <Trash2 className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {deletedTarefas.length}
                 </span>
@@ -181,18 +181,15 @@ const TarefasMobile = () => {
                 }}
                 className={cn(
                   "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200",
-                  activeFilter === option.id ? "ios-pill-active" : "bg-gray-200 dark:bg-gray-700"
+                  activeFilter === option.id ? "ios-pill-active" : ""
                 )}
               >
-                <span className={cn(
-                  "ios-callout font-medium",
-                  activeFilter === option.id ? "text-white" : "text-gray-700 dark:text-gray-300"
-                )}>{option.label}</span>
+                <span className="ios-callout font-medium">{option.label}</span>
                 <span className={cn(
                   "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
                   activeFilter === option.id 
                     ? "bg-white/20 text-white" 
-                    : "bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
+                    : "bg-gray-200 text-gray-600"
                 )}>
                   {option.count}
                 </span>
@@ -224,14 +221,14 @@ const TarefasMobile = () => {
         )}
       </div>
 
-      {/* Botão + centralizado */}
-      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+      {/* iOS-style Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => {
             setShowNovoLembrete(true);
             vibrate(50);
           }}
-          className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center ios-haptic-feedback transition-all duration-200"
+          className="ios-floating-button ios-haptic-feedback shadow-2xl"
         >
           <Plus className="h-6 w-6" />
         </button>
@@ -257,12 +254,12 @@ const DeletedTarefasList: React.FC<{
     <div className="ios-fade-in">
       <div className="ios-section-header">
         <div className="flex items-center justify-between">
-          <h2 className="ios-title-2 text-gray-900 dark:text-white">Itens Excluídos</h2>
+          <h2 className="ios-title-2">Itens Excluídos</h2>
           <button
             onClick={onClose}
             className="ios-button ios-button-ghost px-4 py-2"
           >
-            <span className="ios-callout text-gray-600 dark:text-gray-400">Fechar</span>
+            <span className="ios-callout">Fechar</span>
           </button>
         </div>
       </div>
@@ -271,16 +268,16 @@ const DeletedTarefasList: React.FC<{
         {deletedTarefas.map((tarefa, index) => (
           <div 
             key={tarefa.id} 
-            className="ios-list-item ios-fade-in bg-white dark:bg-gray-800"
+            className="ios-list-item ios-fade-in"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="ios-headline line-through opacity-60 mb-1 text-gray-900 dark:text-white">
+                <h3 className="ios-headline line-through opacity-60 mb-1">
                   {tarefa.title}
                 </h3>
                 {tarefa.description && (
-                  <p className="ios-subheadline opacity-60 text-gray-600 dark:text-gray-400">
+                  <p className="ios-subheadline opacity-60">
                     {tarefa.description}
                   </p>
                 )}
@@ -302,8 +299,8 @@ const DeletedTarefasList: React.FC<{
       {deletedTarefas.length === 0 && (
         <div className="text-center py-12 ios-fade-in">
           <div className="text-6xl mb-4">🗑️</div>
-          <h3 className="ios-title-3 mb-2 text-gray-900 dark:text-white">Nenhum item excluído</h3>
-          <p className="ios-subheadline text-gray-600 dark:text-gray-400">Os itens excluídos aparecerão aqui</p>
+          <h3 className="ios-title-3 mb-2">Nenhum item excluído</h3>
+          <p className="ios-subheadline">Os itens excluídos aparecerão aqui</p>
         </div>
       )}
     </div>

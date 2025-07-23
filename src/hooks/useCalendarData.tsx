@@ -13,7 +13,7 @@ interface CalendarEvent {
   end_date: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
-  meeting_provider?: string;
+  meeting_provider?: 'google_meet' | 'zoom' | 'teams';
   attendees?: string[];
   is_all_day?: boolean;
   color?: string;
@@ -22,6 +22,10 @@ interface CalendarEvent {
   created_by: string;
   google_event_id?: string;
   status?: string;
+  source?: string;
+  meeting_data?: any;
+  updated_at?: string;
+  created_at?: string;
 }
 
 export const useCalendarData = () => {
@@ -64,8 +68,11 @@ export const useCalendarData = () => {
       
       return data?.map(event => ({
         ...event,
-        attendees: Array.isArray(event.attendees) ? event.attendees : [],
-        status: event.status || 'pending'
+        attendees: Array.isArray(event.attendees) ? 
+          (event.attendees as any[]).map(a => typeof a === 'string' ? a : String(a)) : 
+          [],
+        status: event.status || 'pending',
+        source: event.source || 'local'
       })) || [];
     },
     enabled: !!user,
@@ -104,7 +111,8 @@ export const useCalendarData = () => {
           created_by: user.id,
           attendees: eventData.attendees || [],
           color: eventData.color || '#3600FF',
-          status: eventData.status || 'pending'
+          status: eventData.status || 'pending',
+          source: eventData.source || 'local'
         })
         .select()
         .single();
@@ -150,13 +158,19 @@ export const useCalendarData = () => {
     try {
       console.log('📝 Atualizando evento:', eventId, updates);
 
+      const updateData: any = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      // Converter attendees para o formato correto
+      if (updates.attendees) {
+        updateData.attendees = updates.attendees;
+      }
+
       const { data, error } = await supabase
         .from('calendar_events')
-        .update({
-          ...updates,
-          attendees: updates.attendees || [],
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', eventId)
         .eq('created_by', user.id)
         .select()
@@ -267,6 +281,7 @@ export const useCalendarData = () => {
   return {
     events,
     isLoading,
+    loading: isLoading, // Alias para compatibilidade
     error,
     selectedDate,
     setSelectedDate,

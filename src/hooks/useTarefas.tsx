@@ -11,7 +11,7 @@ interface TarefaItem {
   end_date: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
-  meeting_provider?: string;
+  meeting_provider?: 'google_meet' | 'zoom' | 'teams';
   attendees?: string[];
   is_all_day?: boolean;
   color?: string;
@@ -23,7 +23,7 @@ interface TarefaItem {
 }
 
 export const useTarefas = () => {
-  const { events, loading, createEvent, updateEvent, deleteEvent, refreshEvents } = useCalendarData();
+  const { events, isLoading, createEvent, updateEvent, deleteEvent, refreshEvents } = useCalendarData();
   const { toast } = useToast();
   const [tarefas, setTarefas] = useState<TarefaItem[]>([]);
   const [deletedTarefas, setDeletedTarefas] = useState<TarefaItem[]>([]);
@@ -39,12 +39,14 @@ export const useTarefas = () => {
       event_type: event.event_type,
       meeting_link: event.meeting_link,
       meeting_provider: event.meeting_provider,
-      attendees: event.attendees,
+      attendees: Array.isArray(event.attendees) ? 
+        event.attendees.map(a => typeof a === 'string' ? a : String(a)) : 
+        [],
       is_all_day: event.is_all_day,
       color: event.color,
       status: event.status || 'pending',
       google_event_id: event.google_event_id,
-      source: event.source,
+      source: event.source || 'local',
       location: event.description?.includes('Local:') ? 
         event.description.split('Local:')[1]?.split('\n')[0]?.trim() : '',
       notes: event.description
@@ -57,7 +59,11 @@ export const useTarefas = () => {
 
   const createTarefa = async (tarefaData: any) => {
     try {
-      await createEvent(tarefaData);
+      await createEvent({
+        ...tarefaData,
+        source: 'local',
+        status: 'pending'
+      });
       await refreshEvents();
       
       toast({
@@ -65,6 +71,7 @@ export const useTarefas = () => {
         description: "Seu lembrete foi adicionado com sucesso!",
       });
     } catch (error) {
+      console.error('Error creating tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível criar o lembrete",
@@ -142,7 +149,7 @@ export const useTarefas = () => {
   return {
     tarefas,
     deletedTarefas,
-    loading,
+    loading: isLoading,
     createTarefa,
     updateTarefa,
     deleteTarefa,

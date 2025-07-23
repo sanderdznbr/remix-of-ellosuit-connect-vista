@@ -1,270 +1,246 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, Clock, MapPin, Users, Video, ChevronRight, Bell, CheckCircle, X } from 'lucide-react';
+
+import React, { useState, useMemo } from 'react';
+import { Calendar, Clock, Plus, Bell, Users, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { useCalendarData } from '@/hooks/useCalendarData';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useClients } from '@/hooks/useClients';
+import MobileStatsCard from './MobileStatsCard';
+import MobileCalendarCard from './MobileCalendarCard';
+import CalendarSkeleton from '../Dashboard/CalendarSkeleton';
 
-interface MobileHomeProps {
-  onNavigate: (page: string) => void;
-}
+const MobileHome = () => {
+  const { events, isLoading } = useCalendarData();
+  const { clients } = useClients();
+  const [currentDate] = useState(new Date());
 
-const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
-  const { events, loading } = useCalendarData();
-  const { isConnected } = useGoogleCalendar();
-  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  // Get today's events
+  const todayEvents = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date).toISOString().split('T')[0];
+      return eventDate === today;
+    });
+  }, [events]);
 
-  // Filtrar eventos de hoje
-  const today = new Date().toISOString().split('T')[0];
-  const todayEvents = events.filter(event => {
-    const eventDate = new Date(event.start_date).toISOString().split('T')[0];
-    return eventDate === today;
-  });
+  // Get upcoming events (next 5)
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return events
+      .filter(event => new Date(event.start_date) > now)
+      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 5);
+  }, [events]);
 
-  // Próximos eventos (próximos 7 dias)
-  const nextWeek = new Date();
-  nextWeek.setDate(nextWeek.getDate() + 7);
-  const upcomingEvents = events.filter(event => {
-    const eventDate = new Date(event.start_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return eventDate > today && eventDate <= nextWeek;
-  }).slice(0, 3);
+  // Get this week's events
+  const thisWeekEvents = useMemo(() => {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
 
-  const getEventIcon = (eventType: string) => {
-    switch (eventType) {
-      case 'meeting':
-        return <Video className="h-4 w-4" />;
-      case 'appointment':
-        return <Calendar className="h-4 w-4" />;
-      case 'reminder':
-        return <Bell className="h-4 w-4" />;
-      default:
-        return <Calendar className="h-4 w-4" />;
-    }
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date);
+      return eventDate >= startOfWeek && eventDate <= endOfWeek;
+    });
+  }, [events, currentDate]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const completedToday = events.filter(event => 
+      event.start_date.startsWith(today) && event.status === 'completed'
+    ).length;
+
+    return {
+      todayEvents: todayEvents.length,
+      upcomingEvents: upcomingEvents.length,
+      thisWeekEvents: thisWeekEvents.length,
+      totalClients: clients.length,
+      completedToday
+    };
+  }, [todayEvents, upcomingEvents, thisWeekEvents, clients, events]);
+
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const getEventColor = (eventType: string) => {
-    switch (eventType) {
-      case 'meeting':
-        return 'bg-blue-500';
-      case 'appointment':
-        return 'bg-green-500';
-      case 'reminder':
-        return 'bg-orange-500';
-      default:
-        return 'bg-gray-500';
-    }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia! ☀️';
+    if (hour < 18) return 'Boa tarde! 🌤️';
+    return 'Boa noite! 🌙';
   };
 
-  const formatEventTime = (dateStr: string) => {
-    return format(new Date(dateStr), 'HH:mm', { locale: ptBR });
-  };
-
-  const formatEventDate = (dateStr: string) => {
-    return format(new Date(dateStr), 'dd/MM', { locale: ptBR });
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="p-4 space-y-4">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="h-16 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="p-4 space-y-6">
+        <CalendarSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Olá! 👋
-          </h1>
-          <p className="text-gray-600">
-            {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </p>
-        </div>
-        <Button
-          onClick={() => onNavigate('calendar')}
-          className="bg-[#3600FF] hover:bg-[#3600FF]/90 rounded-xl"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo
-        </Button>
+    <div className="p-4 space-y-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+      {/* Greeting Header */}
+      <div className="text-center py-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {getGreeting()}
+        </h1>
+        <p className="text-gray-600">
+          {new Date().toLocaleDateString('pt-BR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </p>
       </div>
 
-      {/* Google Calendar Status */}
-      {!isConnected && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-orange-900">Google Calendar</p>
-                  <p className="text-sm text-orange-700">Conecte para sincronizar</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onNavigate('settings')}
-                className="border-orange-300 text-orange-700 hover:bg-orange-100"
-              >
-                Conectar
-              </Button>
-            </div>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <MobileStatsCard
+          title="Hoje"
+          value={stats.todayEvents}
+          icon={Calendar}
+          color="bg-blue-500"
+          subtitle="eventos"
+        />
+        <MobileStatsCard
+          title="Próximos"
+          value={stats.upcomingEvents}
+          icon={Clock}
+          color="bg-green-500"
+          subtitle="eventos"
+        />
+        <MobileStatsCard
+          title="Esta Semana"
+          value={stats.thisWeekEvents}
+          icon={TrendingUp}
+          color="bg-purple-500"
+          subtitle="eventos"
+        />
+        <MobileStatsCard
+          title="Clientes"
+          value={stats.totalClients}
+          icon={Users}
+          color="bg-orange-500"
+          subtitle="total"
+        />
+      </div>
+
+      {/* Today's Events */}
+      {todayEvents.length > 0 && (
+        <Card className="border-0 shadow-lg rounded-3xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Calendar className="h-5 w-5 text-blue-500" />
+              <span>Hoje</span>
+              <Badge variant="secondary" className="ml-auto">
+                {todayEvents.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {todayEvents.map(event => (
+              <MobileCalendarCard
+                key={event.id}
+                event={{
+                  ...event,
+                  start: event.start_date,
+                  end: event.end_date,
+                  type: event.event_type as any,
+                  attendees: Array.isArray(event.attendees) ? 
+                    event.attendees.map(a => typeof a === 'string' ? a : String(a)) : 
+                    []
+                }}
+              />
+            ))}
           </CardContent>
         </Card>
       )}
 
-      {/* Eventos de Hoje */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Hoje</h2>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-            {todayEvents.length}
-          </Badge>
-        </div>
-
-        {todayEvents.length === 0 ? (
-          <Card className="border-dashed border-2 border-gray-200">
-            <CardContent className="p-6 text-center">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Nenhum evento hoje</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {todayEvents.map((event) => (
-              <Card key={event.id} className="border-l-4 border-l-[#3600FF]">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className={cn("w-2 h-2 rounded-full", getEventColor(event.event_type))} />
-                        <h3 className="font-medium text-gray-900">{event.title}</h3>
-                        {event.source === 'google' && (
-                          <Badge variant="secondary" className="text-xs">Google</Badge>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatEventTime(event.start_date)}</span>
-                          {event.end_date && (
-                            <>
-                              <span>-</span>
-                              <span>{formatEventTime(event.end_date)}</span>
-                            </>
-                          )}
-                        </div>
-                        
-                        {event.meeting_link && (
-                          <div className="flex items-center space-x-1">
-                            <Video className="h-3 w-3" />
-                            <span className="text-blue-600 truncate">Link da reunião</span>
-                          </div>
-                        )}
-                        
-                        {event.attendees && event.attendees.length > 0 && (
-                          <div className="flex items-center space-x-1">
-                            <Users className="h-3 w-3" />
-                            <span>{event.attendees.length} participante(s)</span>
-                          </div>
-                        )}
-                        
-                        {event.description && (
-                          <p className="text-gray-500 text-xs mt-1 line-clamp-2">
-                            {event.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      {getEventIcon(event.event_type)}
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Próximos Eventos */}
+      {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900">Próximos</h2>
-          <div className="space-y-2">
-            {upcomingEvents.map((event) => (
-              <Card key={event.id} className="bg-white">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className={cn("w-2 h-2 rounded-full", getEventColor(event.event_type))} />
-                        <h3 className="font-medium text-gray-900">{event.title}</h3>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatEventDate(event.start_date)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatEventTime(event.start_date)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      {getEventIcon(event.event_type)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <Card className="border-0 shadow-lg rounded-3xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Clock className="h-5 w-5 text-green-500" />
+              <span>Próximos Eventos</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingEvents.map(event => (
+              <MobileCalendarCard
+                key={event.id}
+                event={{
+                  ...event,
+                  start: event.start_date,
+                  end: event.end_date,
+                  type: event.event_type as any,
+                  attendees: Array.isArray(event.attendees) ? 
+                    event.attendees.map(a => typeof a === 'string' ? a : String(a)) : 
+                    []
+                }}
+              />
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button
-          onClick={() => onNavigate('calendar')}
-          className="h-14 bg-[#3600FF] hover:bg-[#3600FF]/90 flex-col rounded-xl"
-        >
-          <Calendar className="h-5 w-5 mb-1" />
-          <span className="text-sm">Calendário</span>
-        </Button>
-        
-        <Button
-          onClick={() => onNavigate('tarefas')}
-          className="h-14 bg-green-600 hover:bg-green-700 flex-col rounded-xl"
-        >
-          <Bell className="h-5 w-5 mb-1" />
-          <span className="text-sm">Lembretes</span>
-        </Button>
-      </div>
+      <Card className="border-0 shadow-lg rounded-3xl bg-white/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center space-x-2 text-lg">
+            <Plus className="h-5 w-5 text-[#3600FF]" />
+            <span>Ações Rápidas</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="outline" 
+              className="h-14 flex-col space-y-2 rounded-2xl border-2 border-dashed border-gray-300 hover:border-[#3600FF] hover:bg-[#3600FF]/5"
+            >
+              <Calendar className="h-5 w-5" />
+              <span className="text-xs">Novo Evento</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-14 flex-col space-y-2 rounded-2xl border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50"
+            >
+              <Users className="h-5 w-5" />
+              <span className="text-xs">Novo Cliente</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* No Events Message */}
+      {todayEvents.length === 0 && upcomingEvents.length === 0 && (
+        <Card className="border-0 shadow-lg rounded-3xl bg-white/80 backdrop-blur-sm">
+          <CardContent className="py-12 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Tudo em dia! 🎉
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Você não tem eventos programados para hoje.
+            </p>
+            <Button className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] rounded-xl">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Evento
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

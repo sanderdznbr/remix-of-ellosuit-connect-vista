@@ -69,7 +69,9 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule: string | null
+          source: string | null
           start_date: string
+          status: string | null
           sync_status: string | null
           title: string
           updated_at: string
@@ -92,7 +94,9 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule?: string | null
+          source?: string | null
           start_date: string
+          status?: string | null
           sync_status?: string | null
           title: string
           updated_at?: string
@@ -115,7 +119,9 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule?: string | null
+          source?: string | null
           start_date?: string
+          status?: string | null
           sync_status?: string | null
           title?: string
           updated_at?: string

@@ -1,10 +1,12 @@
 
 import React, { useState } from 'react';
-import { Plus, Calendar, Clock, X } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { vibrate } from '@/utils/mobile-helpers';
+import MobileModal from '@/components/ui/mobile-modal';
 
 interface NovoLembreteModalProps {
   isOpen: boolean;
@@ -17,31 +19,46 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
   const [description, setDescription] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('09:00');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      vibrate(100);
+      return;
+    }
 
-    const startDateTime = `${selectedDate}T${selectedTime}:00`;
-    const endDateTime = new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString();
-
-    const tarefaData = {
-      title: title.trim(),
-      description: description.trim(),
-      start_date: startDateTime,
-      end_date: endDateTime,
-      event_type: 'reminder',
-      is_all_day: false,
-      status: 'pending'
-    };
-
-    await onSave(tarefaData);
+    setIsLoading(true);
     vibrate(30);
-    
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setSelectedDate(new Date().toISOString().split('T')[0]);
-    setSelectedTime('09:00');
+
+    try {
+      const startDateTime = `${selectedDate}T${selectedTime}:00`;
+      const endDateTime = new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString();
+
+      const tarefaData = {
+        title: title.trim(),
+        description: description.trim(),
+        start_date: startDateTime,
+        end_date: endDateTime,
+        event_type: 'reminder',
+        is_all_day: false,
+        status: 'pending'
+      };
+
+      await onSave(tarefaData);
+      
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setSelectedTime('09:00');
+      
+      onClose();
+    } catch (error) {
+      console.error('Error saving reminder:', error);
+      vibrate([100, 50, 100]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -49,120 +66,114 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-end md:items-center md:justify-center">
-      <div className="ios-modal w-full max-h-[90vh] flex flex-col ios-slide-up">
-        {/* Drag Handle */}
-        <div className="flex justify-center py-3 md:hidden">
-          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--ios-gray-300)' }}></div>
-        </div>
+    <MobileModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Novo Lembrete"
+      size="lg"
+    >
+      <div className="px-6 pb-6 space-y-6">
+        {/* Form Fields */}
+        <div className="space-y-4">
+          <div>
+            <Input
+              placeholder="Título do lembrete"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-lg font-medium border-0 bg-gray-50 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+              autoFocus
+            />
+          </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--ios-gray-200)' }}>
-          <button
-            onClick={handleClose}
-            className="ios-button ios-button-ghost p-2 w-10 h-10 rounded-full"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          
-          <h2 className="ios-title-2">Novo Lembrete</h2>
-          
-          <button
-            onClick={handleSave}
-            disabled={!title.trim()}
-            className={cn(
-              "ios-button px-4 py-2 rounded-full",
-              title.trim() ? "ios-button-primary" : "ios-button-secondary opacity-50"
-            )}
-          >
-            <span className="ios-callout font-medium">Salvar</span>
-          </button>
-        </div>
+          <div>
+            <Textarea
+              placeholder="Adicione uma descrição..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="border-0 bg-gray-50 rounded-xl px-4 py-3 resize-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+              rows={4}
+            />
+          </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 ios-scroll">
-          {/* Form */}
-          <div className="space-y-4">
-            <div>
-              <Input
-                placeholder="Título do lembrete"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="ios-input ios-title-3 font-medium"
-                style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
-              />
-            </div>
-
-            <div>
-              <Textarea
-                placeholder="Descrição (opcional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="ios-input min-h-[100px] resize-none ios-body"
-                style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
-              />
-            </div>
-
-            {/* Date & Time Selection */}
-            <div className="space-y-4">
-              <div className="ios-card p-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <Calendar className="h-5 w-5" style={{ color: 'var(--ios-gray-600)' }} />
-                  <span className="ios-headline">Data</span>
-                </div>
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="ios-input"
-                  style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
-                />
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <Calendar className="h-5 w-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Data</span>
               </div>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="border-0 bg-transparent text-sm p-0 focus:ring-0"
+              />
+            </div>
 
-              <div className="ios-card p-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <Clock className="h-5 w-5" style={{ color: 'var(--ios-gray-600)' }} />
-                  <span className="ios-headline">Hora</span>
-                </div>
-                <Input
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="ios-input"
-                  style={{ backgroundColor: 'var(--ios-bg-secondary)' }}
-                />
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <Clock className="h-5 w-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Hora</span>
+              </div>
+              <Input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="border-0 bg-transparent text-sm p-0 focus:ring-0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Preview */}
+        {title && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-3 h-3 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <h3 className="font-medium text-gray-900 mb-1">{title}</h3>
+                {description && (
+                  <p className="text-sm text-gray-600 mb-2">{description}</p>
+                )}
+                <p className="text-sm text-blue-600 font-medium">
+                  {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
+                    day: 'numeric',
+                    month: 'long',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Preview */}
-          {title && (
-            <div className="ios-card p-4" style={{ backgroundColor: 'var(--ios-blue-light)', borderColor: 'var(--ios-blue)' }}>
-              <div className="flex items-start space-x-3">
-                <div className="w-3 h-3 rounded-full mt-2 flex-shrink-0" style={{ backgroundColor: 'var(--ios-orange)' }}></div>
-                <div>
-                  <h3 className="ios-headline mb-1">{title}</h3>
-                  {description && (
-                    <p className="ios-subheadline mb-2">{description}</p>
-                  )}
-                  <p className="ios-footnote" style={{ color: 'var(--ios-blue)' }}>
-                    {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString('pt-BR', {
-                      day: 'numeric',
-                      month: 'long',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Actions */}
+        <div className="flex gap-3 pt-4">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="flex-1 py-3 rounded-xl"
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!title.trim() || isLoading}
+            className={cn(
+              "flex-1 py-3 rounded-xl font-medium transition-all",
+              title.trim() 
+                ? "bg-blue-500 hover:bg-blue-600 text-white" 
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            )}
+          >
+            {isLoading ? 'Salvando...' : 'Salvar'}
+          </Button>
         </div>
       </div>
-    </div>
+    </MobileModal>
   );
 };
 

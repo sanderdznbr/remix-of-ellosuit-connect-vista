@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw } from 'lucide-react';
 import TarefasList from './TarefasList';
@@ -34,7 +33,6 @@ const TarefasMobile = () => {
 
   const handleCreateTarefa = async (tarefaData: any) => {
     await createTarefa(tarefaData);
-    setShowNovoLembrete(false);
     vibrate(30);
   };
 
@@ -118,7 +116,7 @@ const TarefasMobile = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 pt-12 pb-4">
+        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4">
           <div className="px-4">
             <div className="h-8 w-48 bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
             <div className="h-4 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
@@ -141,9 +139,9 @@ const TarefasMobile = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header com espaçamento reduzido */}
+      {/* Header */}
       <div 
-        className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 pt-12 pb-4"
+        className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -151,7 +149,7 @@ const TarefasMobile = () => {
         {/* Pull-to-Refresh Indicator */}
         <div 
           className={cn(
-            "absolute top-8 left-1/2 transform -translate-x-1/2 transition-all duration-300",
+            "absolute top-10 left-1/2 transform -translate-x-1/2 transition-all duration-300",
             isPulling ? "opacity-100" : "opacity-0"
           )}
           style={{ transform: `translateX(-50%) translateY(${Math.min(pullDistance - 60, 20)}px)` }}
@@ -167,8 +165,8 @@ const TarefasMobile = () => {
         <div className="px-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Lembretes</h1>
-              <p className="text-gray-500">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Lembretes</h1>
+              <p className="text-gray-500 text-sm">
                 {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
               </p>
             </div>
@@ -190,7 +188,7 @@ const TarefasMobile = () => {
             )}
           </div>
 
-          {/* Filter Pills - Melhor visibilidade */}
+          {/* Filter Pills */}
           <div className="flex space-x-2 mb-4">
             {getFilterOptions().map((option) => (
               <button
@@ -200,10 +198,10 @@ const TarefasMobile = () => {
                   vibrate(30);
                 }}
                 className={cn(
-                  "flex items-center space-x-2 px-4 py-2 rounded-full border transition-all duration-200",
+                  "flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200",
                   activeFilter === option.id 
-                    ? "bg-blue-500 text-white border-blue-500 shadow-md" 
-                    : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    ? "bg-blue-500 text-white shadow-lg" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 )}
               >
                 <span className="font-medium">{option.label}</span>
@@ -324,7 +322,7 @@ const TarefasMobile = () => {
             setShowNovoLembrete(true);
             vibrate(50);
           }}
-          className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-200 flex items-center justify-center"
+          className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 active:scale-95 transition-all duration-200 flex items-center justify-center"
         >
           <Plus className="h-6 w-6" />
         </button>

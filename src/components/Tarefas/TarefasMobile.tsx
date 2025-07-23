@@ -4,7 +4,7 @@ import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
-import { useNativePushNotifications } from '@/hooks/useNativePushNotifications';
+import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
 import { cn } from '@/lib/utils';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,11 +21,11 @@ const TarefasMobile = () => {
   const { 
     isRegistered, 
     isRegistering, 
-    isNativePlatform,
-    isWebViewWithBridge,
+    isIOSWebView,
+    permissionStatus,
     requestPermissions,
     sendTestNotification 
-  } = useNativePushNotifications();
+  } = useIOSPushNotifications();
   const { toast } = useToast();
 
   const {
@@ -49,10 +49,10 @@ const TarefasMobile = () => {
 
   const handleNotificationSettings = async () => {
     try {
-      if (!isNativePlatform && !isWebViewWithBridge) {
+      if (!isIOSWebView) {
         toast({
           title: "ℹ️ Aviso",
-          description: "Para notificações completas, use o app nativo no seu iPhone",
+          description: "Para notificações push, use o app iOS nativo",
         });
         return;
       }
@@ -60,15 +60,20 @@ const TarefasMobile = () => {
       if (isRegistered) {
         // Se já está registrado, enviar teste
         await sendTestNotification();
+      } else if (permissionStatus === 'denied') {
+        // Se foi negado, orientar para configurações
+        toast({
+          title: "🔔 Notificações desativadas",
+          description: "Vá em Configurações > Notificações > [Nome do App] e ative as notificações",
+          variant: "destructive"
+        });
       } else {
         // Solicitar permissões
         const granted = await requestPermissions();
         if (granted) {
           toast({
-            title: "✅ Notificações ativadas",
-            description: isWebViewWithBridge 
-              ? "Notificações ativadas via bridge JavaScript-Native!" 
-              : "Você receberá notificações no seu iPhone!",
+            title: "✅ Solicitação enviada",
+            description: "Aguarde a resposta do iOS...",
           });
         }
       }
@@ -78,6 +83,34 @@ const TarefasMobile = () => {
         description: "Não foi possível configurar as notificações",
         variant: "destructive"
       });
+    }
+  };
+
+  const getNotificationButtonStyle = () => {
+    if (!isIOSWebView) {
+      return "bg-gray-100 hover:bg-gray-200 text-gray-600";
+    }
+    
+    switch (permissionStatus) {
+      case 'granted':
+        return "bg-green-100 hover:bg-green-200 text-green-600";
+      case 'denied':
+        return "bg-red-100 hover:bg-red-200 text-red-600";
+      default:
+        return "bg-blue-100 hover:bg-blue-200 text-blue-600";
+    }
+  };
+
+  const getNotificationIcon = () => {
+    if (!isIOSWebView) return '🌐';
+    
+    switch (permissionStatus) {
+      case 'granted':
+        return isRegistered ? '✅' : '🔔';
+      case 'denied':
+        return '❌';
+      default:
+        return '🔔';
     }
   };
 
@@ -217,7 +250,7 @@ const TarefasMobile = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Settings Icon for Notifications */}
+              {/* iOS Notifications Button */}
               <button
                 onClick={() => {
                   handleNotificationSettings();
@@ -226,21 +259,26 @@ const TarefasMobile = () => {
                 disabled={isRegistering}
                 className={cn(
                   "relative p-2 rounded-full transition-colors disabled:opacity-50",
-                  isRegistered && (isNativePlatform || isWebViewWithBridge)
-                    ? "bg-green-100 hover:bg-green-200 text-green-600"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                  getNotificationButtonStyle()
                 )}
+                title={
+                  !isIOSWebView 
+                    ? "Use o app iOS para notificações" 
+                    : permissionStatus === 'denied' 
+                      ? "Notificações desativadas - Toque para orientações"
+                      : isRegistered 
+                        ? "Notificações ativas - Toque para testar"
+                        : "Toque para ativar notificações"
+                }
               >
                 <Settings className="h-5 w-5" />
-                {isRegistered && (isNativePlatform || isWebViewWithBridge) && (
-                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
-                    ✓
-                  </span>
-                )}
-                {/* Indicador de Bridge */}
-                {isWebViewWithBridge && (
-                  <span className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
-                    🌉
+                <span className="absolute -top-1 -right-1 text-xs">
+                  {getNotificationIcon()}
+                </span>
+                {/* Indicador iOS */}
+                {isIOSWebView && (
+                  <span className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
+                    🍎
                   </span>
                 )}
               </button>

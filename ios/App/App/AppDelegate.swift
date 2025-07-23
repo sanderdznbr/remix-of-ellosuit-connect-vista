@@ -6,13 +6,12 @@ import Capacitor
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private var pushBridge: PushNotificationsBridge?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         
         // Configurar notificações push
-        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().delegate = PushNotificationManager.shared
         
         return true
     }
@@ -33,6 +32,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        
+        // Verificar status das notificações quando o app ficar ativo
+        PushNotificationManager.shared.checkPermissionStatus()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -52,34 +54,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
-        let token = tokenParts.joined()
-        print("Device Token: \(token)")
-        
-        // Enviar token para o WebView via bridge
-        if let bridge = findPushBridge() {
-            bridge.setDeviceToken(token)
-        }
+        PushNotificationManager.shared.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Failed to register for remote notifications: \(error)")
-        
-        // Enviar erro para o WebView via bridge
-        if let bridge = findPushBridge() {
-            bridge.call("sendMessageToWebView", options: [
-                "type": "pushError",
-                "data": ["error": error.localizedDescription]
-            ])
-        }
-    }
-    
-    private func findPushBridge() -> PushNotificationsBridge? {
-        // Encontrar a instância do bridge no CAPBridge
-        if let viewController = window?.rootViewController as? CAPBridgeViewController {
-            return viewController.bridge?.plugin(withName: "PushNotificationsBridge") as? PushNotificationsBridge
-        }
-        return nil
+        PushNotificationManager.shared.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
     }
 }
 

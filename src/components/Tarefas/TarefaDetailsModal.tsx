@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2 } from 'lucide-react';
+import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2, MapPin, FileText, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -85,7 +84,28 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
     }
   };
 
+  const extractLocationFromDescription = (description: string) => {
+    if (!description) return '';
+    const locationMatch = description.match(/📍 Local: (.+)/);
+    return locationMatch ? locationMatch[1].split('\n')[0] : '';
+  };
+
+  const extractNotesFromDescription = (description: string) => {
+    if (!description) return '';
+    // Remove location and meeting link info to show just the notes
+    return description
+      .replace(/📍 Local: .+/g, '')
+      .replace(/💻 Link da reunião: .+/g, '')
+      .replace(/👥 Participantes: .+/g, '')
+      .replace(/🎯 Organizador: .+/g, '')
+      .replace(/\n\n+/g, '\n\n')
+      .trim();
+  };
+
   if (!tarefa) return null;
+
+  const location = extractLocationFromDescription(tarefa.description);
+  const notes = extractNotesFromDescription(tarefa.description);
 
   return (
     <MobileModal 
@@ -95,12 +115,12 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
       showCloseButton={false}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
         <MobileButton
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="text-gray-600"
+          className="text-gray-600 dark:text-gray-400"
         >
           Fechar
         </MobileButton>
@@ -129,35 +149,18 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-white dark:bg-gray-900">
         {/* Title */}
         <div>
           {isEditing ? (
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mobile-input text-xl font-semibold"
+              className="mobile-input text-xl font-semibold dark:bg-gray-800 dark:text-white"
               placeholder="Título da tarefa"
             />
           ) : (
-            <h2 className="text-2xl font-bold text-gray-900">{tarefa.title}</h2>
-          )}
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">Descrição</label>
-          {isEditing ? (
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mobile-input min-h-[100px] resize-none"
-              placeholder="Adicione uma descrição..."
-            />
-          ) : (
-            <p className="text-gray-700 text-base leading-relaxed">
-              {tarefa.description || 'Nenhuma descrição adicionada'}
-            </p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{tarefa.title}</h2>
           )}
         </div>
 
@@ -165,35 +168,48 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
         <div className="space-y-4">
           {/* Event Type */}
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <div className={cn("w-5 h-5 rounded-full", getEventTypeColor(tarefa.event_type))} />
             </div>
             <div>
-              <p className="text-gray-900 font-semibold">{getEventTypeLabel(tarefa.event_type)}</p>
-              <p className="text-sm text-gray-500">Tipo do evento</p>
+              <p className="text-gray-900 dark:text-white font-semibold">{getEventTypeLabel(tarefa.event_type)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Tipo do evento</p>
             </div>
           </div>
 
           {/* Date and Time */}
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-gray-600" />
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </div>
             <div>
-              <p className="text-gray-900 font-semibold">{formatDateTime(tarefa.start_date)}</p>
-              <p className="text-sm text-gray-500">Data e horário</p>
+              <p className="text-gray-900 dark:text-white font-semibold">{formatDateTime(tarefa.start_date)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Data e horário</p>
             </div>
           </div>
+
+          {/* Location */}
+          {location && (
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <p className="text-gray-900 dark:text-white font-semibold">{location}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Local</p>
+              </div>
+            </div>
+          )}
 
           {/* Attendees */}
           {tarefa.attendees && tarefa.attendees.length > 0 && (
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <Users className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <Users className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
-                <p className="text-gray-900 font-semibold">{tarefa.attendees.join(', ')}</p>
-                <p className="text-sm text-gray-500">Participantes</p>
+                <p className="text-gray-900 dark:text-white font-semibold">{tarefa.attendees.join(', ')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Participantes</p>
               </div>
             </div>
           )}
@@ -201,8 +217,8 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
           {/* Meeting Link */}
           {tarefa.meeting_link && (
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <LinkIcon className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <LinkIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
                 <a
@@ -213,15 +229,50 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
                 >
                   Link da reunião
                 </a>
-                <p className="text-sm text-gray-500">Clique para acessar</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Clique para acessar</p>
               </div>
+            </div>
+          )}
+
+          {/* Source */}
+          {tarefa.source === 'google' && (
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <Globe className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <p className="text-gray-900 dark:text-white font-semibold">Google Calendar</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Sincronizado do Google</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notes/Description */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block flex items-center">
+            <FileText className="w-4 h-4 mr-2" />
+            Observações
+          </label>
+          {isEditing ? (
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mobile-input min-h-[100px] resize-none dark:bg-gray-800 dark:text-white"
+              placeholder="Adicione observações..."
+            />
+          ) : (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-wrap">
+                {notes || 'Nenhuma observação adicionada'}
+              </p>
             </div>
           )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="p-6 border-t border-gray-100">
+      <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <MobileButton
           variant="danger"
           fullWidth

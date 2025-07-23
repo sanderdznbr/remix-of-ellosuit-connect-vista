@@ -179,6 +179,7 @@ const TarefasMobile = () => {
           onUpdate={updateTarefa}
           onDelete={handleExcluirTarefa}
           filter={filtroAtivo}
+          showPeriodDivision={true}
         />
       </div>
 

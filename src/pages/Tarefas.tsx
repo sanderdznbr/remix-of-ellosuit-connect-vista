@@ -4,6 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 import TarefasDesktop from '@/components/Tarefas/TarefasDesktop';
+import TarefasPublica from '@/components/Tarefas/TarefasPublica';
 
 const Tarefas = () => {
   const { user, loading: authLoading } = useAuth();
@@ -18,8 +19,12 @@ const Tarefas = () => {
     );
   }
 
-  // Para a rota /tasks, sempre mostrar a interface de tarefas
-  // A autenticação agora é feita nativamente pelo app iOS
+  // Se não há usuário autenticado, mostrar página pública
+  if (!user) {
+    return <TarefasPublica />;
+  }
+
+  // Se há usuário autenticado, mostrar tarefas normais
   return isMobile ? <TarefasMobile /> : <TarefasDesktop />;
 };
 

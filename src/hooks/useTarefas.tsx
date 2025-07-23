@@ -2,21 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useCalendarData } from './useCalendarData';
 import { useToast } from './use-toast';
+import { CalendarEvent } from '@/integrations/supabase/types';
 
-interface TarefaItem {
+interface TarefaItem extends CalendarEvent {
   id: string;
-  title: string;
-  description?: string;
-  start_date: string;
-  end_date: string;
-  event_type: 'meeting' | 'appointment' | 'reminder';
-  meeting_link?: string;
-  location?: string;
-  attendees?: any[];
   status: 'pending' | 'completed' | 'deleted';
-  color?: string;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export const useTarefas = () => {
@@ -28,19 +18,9 @@ export const useTarefas = () => {
   useEffect(() => {
     // Converter eventos do calendário para o formato de tarefas
     const tarefasFormatted: TarefaItem[] = events.map(event => ({
+      ...event,
       id: event.id,
-      title: event.title,
-      description: event.description,
-      start_date: event.start,
-      end_date: event.end,
-      event_type: event.event_type as 'meeting' | 'appointment' | 'reminder',
-      meeting_link: event.meeting_link,
-      location: event.location,
-      attendees: event.attendees,
-      status: 'pending', // Default status since events don't have status
-      color: event.color,
-      created_at: event.created_at,
-      updated_at: event.updated_at
+      status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending'
     }));
     
     // Separar tarefas ativas das excluídas

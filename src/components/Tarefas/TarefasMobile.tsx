@@ -6,9 +6,9 @@ import NovoLembreteModal from './NovoLembreteModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
 import { cn } from '@/lib/utils';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
-import '@/styles/ios-mobile-theme.css';
 
 type FilterType = 'hoje' | 'semana' | 'mes';
 
@@ -96,18 +96,39 @@ const TarefasMobile = () => {
     }
   ];
 
+  const groupTarefasByPeriod = (tarefas: any[]) => {
+    const morning = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 6 && hour < 12;
+    });
+    
+    const afternoon = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 12 && hour < 18;
+    });
+    
+    const evening = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 18 || hour < 6;
+    });
+
+    return { morning, afternoon, evening };
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="ios-header mobile-safe-top px-4 py-6">
-          <div className="mobile-skeleton h-8 w-48 mb-2"></div>
-          <div className="mobile-skeleton h-4 w-32"></div>
+      <div className="min-h-screen bg-white">
+        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 pt-12 pb-4">
+          <div className="px-4">
+            <div className="h-8 w-48 bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
+            <div className="h-4 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
         </div>
         <div className="px-4 pt-4 space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="ios-card p-4 ios-fade-in">
-              <div className="mobile-skeleton h-4 w-full mb-2"></div>
-              <div className="mobile-skeleton h-3 w-3/4"></div>
+            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="h-4 w-full bg-gray-200 rounded mb-2 animate-pulse"></div>
+              <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse"></div>
             </div>
           ))}
         </div>
@@ -115,11 +136,14 @@ const TarefasMobile = () => {
     );
   }
 
+  const filteredTarefas = getFilteredTarefas(tarefas, activeFilter);
+  const groupedTarefas = activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--ios-bg-grouped)' }}>
-      {/* Enhanced iOS Header with Dynamic Island Effect */}
+    <div className="min-h-screen bg-white">
+      {/* Header com espaçamento reduzido */}
       <div 
-        className="ios-header mobile-safe-top sticky top-0 z-40"
+        className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 pt-12 pb-4"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -127,29 +151,25 @@ const TarefasMobile = () => {
         {/* Pull-to-Refresh Indicator */}
         <div 
           className={cn(
-            "ios-pull-indicator transition-all duration-300",
+            "absolute top-8 left-1/2 transform -translate-x-1/2 transition-all duration-300",
             isPulling ? "opacity-100" : "opacity-0"
           )}
-          style={{ transform: `translateY(${Math.min(pullDistance - 60, 20)}px)` }}
+          style={{ transform: `translateX(-50%) translateY(${Math.min(pullDistance - 60, 20)}px)` }}
         >
-          <div className="flex items-center justify-center space-x-2">
+          <div className="flex items-center justify-center space-x-2 text-gray-500">
             <ArrowDown className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-            <span className="ios-footnote">
+            <span className="text-sm">
               {isRefreshing ? 'Atualizando...' : 'Puxe para atualizar'}
             </span>
           </div>
         </div>
 
-        <div className="px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="px-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="ios-large-title mb-1">Lembretes</h1>
-              <p className="ios-subheadline">
-                {new Date().toLocaleDateString('pt-BR', { 
-                  weekday: 'long', 
-                  day: 'numeric', 
-                  month: 'long' 
-                })}
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">Lembretes</h1>
+              <p className="text-gray-500">
+                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
               </p>
             </div>
             
@@ -160,9 +180,9 @@ const TarefasMobile = () => {
                   setShowDeleted(!showDeleted);
                   vibrate(30);
                 }}
-                className="ios-button ios-button-ghost p-2 w-12 h-12 rounded-full"
+                className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-5 w-5 text-gray-600" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {deletedTarefas.length}
                 </span>
@@ -170,8 +190,8 @@ const TarefasMobile = () => {
             )}
           </div>
 
-          {/* Enhanced Filter Pills */}
-          <div className="flex space-x-3 mb-4">
+          {/* Filter Pills - Melhor visibilidade */}
+          <div className="flex space-x-2 mb-4">
             {getFilterOptions().map((option) => (
               <button
                 key={option.id}
@@ -180,11 +200,13 @@ const TarefasMobile = () => {
                   vibrate(30);
                 }}
                 className={cn(
-                  "ios-pill ios-haptic-feedback flex items-center space-x-2 transition-all duration-200",
-                  activeFilter === option.id ? "ios-pill-active" : ""
+                  "flex items-center space-x-2 px-4 py-2 rounded-full border transition-all duration-200",
+                  activeFilter === option.id 
+                    ? "bg-blue-500 text-white border-blue-500 shadow-md" 
+                    : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
                 )}
               >
-                <span className="ios-callout font-medium">{option.label}</span>
+                <span className="font-medium">{option.label}</span>
                 <span className={cn(
                   "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
                   activeFilter === option.id 
@@ -199,10 +221,10 @@ const TarefasMobile = () => {
         </div>
       </div>
 
-      {/* Content with iOS Section Styling */}
-      <div className="px-4 pb-32 ios-scroll">
+      {/* Content */}
+      <div className="px-4 pb-32">
         {showDeleted ? (
-          <div className="ios-card-section">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <DeletedTarefasList 
               deletedTarefas={deletedTarefas}
               onRestore={restoreTarefa}
@@ -210,31 +232,105 @@ const TarefasMobile = () => {
             />
           </div>
         ) : (
-          <div className="ios-card-section">
-            <TarefasList
-              tarefas={tarefas.filter(t => t.status !== 'deleted')}
-              onUpdate={updateTarefa}
-              onDelete={deleteTarefa}
-              filter={activeFilter}
-            />
-          </div>
+          <>
+            {activeFilter === 'hoje' && groupedTarefas ? (
+              <div className="space-y-6">
+                {/* Manhã */}
+                {groupedTarefas.morning.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                      Manhã
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.morning}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tarde */}
+                {groupedTarefas.afternoon.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                      Tarde
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.afternoon}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Noite */}
+                {groupedTarefas.evening.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                      Noite
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.evening}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state para hoje */}
+                {filteredTarefas.length === 0 && (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-4xl">📝</span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma tarefa para hoje</h3>
+                    <p className="text-gray-500">Adicione um novo lembrete para começar</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <TarefasList
+                  tarefas={filteredTarefas}
+                  onUpdate={updateTarefa}
+                  onDelete={deleteTarefa}
+                  filter={activeFilter}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* iOS-style Floating Action Button */}
+      {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => {
             setShowNovoLembrete(true);
             vibrate(50);
           }}
-          className="ios-floating-button ios-haptic-feedback shadow-2xl"
+          className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-200 flex items-center justify-center"
         >
           <Plus className="h-6 w-6" />
         </button>
       </div>
 
-      {/* Enhanced Modal */}
+      {/* Modal */}
       <NovoLembreteModal
         isOpen={showNovoLembrete}
         onClose={() => setShowNovoLembrete(false)}
@@ -244,63 +340,55 @@ const TarefasMobile = () => {
   );
 };
 
-// Enhanced iOS-style Deleted Items Component
+// Component para itens excluídos
 const DeletedTarefasList: React.FC<{
   deletedTarefas: any[];
   onRestore: (id: string) => void;
   onClose: () => void;
 }> = ({ deletedTarefas, onRestore, onClose }) => {
   return (
-    <div className="ios-fade-in">
-      <div className="ios-section-header">
-        <div className="flex items-center justify-between">
-          <h2 className="ios-title-2">Itens Excluídos</h2>
-          <button
-            onClick={onClose}
-            className="ios-button ios-button-ghost px-4 py-2"
-          >
-            <span className="ios-callout">Fechar</span>
-          </button>
-        </div>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Itens Excluídos</h2>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          Fechar
+        </button>
       </div>
 
-      <div className="space-y-1">
-        {deletedTarefas.map((tarefa, index) => (
-          <div 
-            key={tarefa.id} 
-            className="ios-list-item ios-fade-in"
-            style={{ animationDelay: `${index * 0.1}s` }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="ios-headline line-through opacity-60 mb-1">
-                  {tarefa.title}
-                </h3>
-                {tarefa.description && (
-                  <p className="ios-subheadline opacity-60">
-                    {tarefa.description}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  onRestore(tarefa.id);
-                  vibrate([50, 100, 50]);
-                }}
-                className="ios-button ios-button-ghost ml-4 p-2 rounded-full"
-              >
-                <RotateCcw className="h-4 w-4 text-green-600" />
-              </button>
+      <div className="space-y-3">
+        {deletedTarefas.map((tarefa) => (
+          <div key={tarefa.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 line-through opacity-60 mb-1">
+                {tarefa.title}
+              </h3>
+              {tarefa.description && (
+                <p className="text-sm text-gray-500 line-through opacity-60">
+                  {tarefa.description}
+                </p>
+              )}
             </div>
+            <button
+              onClick={() => {
+                onRestore(tarefa.id);
+                vibrate([50, 100, 50]);
+              }}
+              className="ml-4 p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors"
+            >
+              <RotateCcw className="h-4 w-4 text-green-600" />
+            </button>
           </div>
         ))}
       </div>
 
       {deletedTarefas.length === 0 && (
-        <div className="text-center py-12 ios-fade-in">
+        <div className="text-center py-12">
           <div className="text-6xl mb-4">🗑️</div>
-          <h3 className="ios-title-3 mb-2">Nenhum item excluído</h3>
-          <p className="ios-subheadline">Os itens excluídos aparecerão aqui</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum item excluído</h3>
+          <p className="text-gray-500">Os itens excluídos aparecerão aqui</p>
         </div>
       )}
     </div>

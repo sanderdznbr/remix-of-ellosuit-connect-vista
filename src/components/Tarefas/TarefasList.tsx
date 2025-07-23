@@ -8,9 +8,16 @@ interface TarefasListProps {
   onUpdate: (id: string, updates: any) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   filter: 'hoje' | 'semana' | 'mes';
+  showPeriodDivision?: boolean;
 }
 
-const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, filter }) => {
+const TarefasList: React.FC<TarefasListProps> = ({ 
+  tarefas, 
+  onUpdate, 
+  onDelete, 
+  filter, 
+  showPeriodDivision = true 
+}) => {
   const today = new Date();
   const todayString = today.toISOString().split('T')[0];
 
@@ -53,8 +60,6 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
     }
   };
 
-  const filteredTarefas = getFilteredTarefas();
-
   const getEmptyMessage = () => {
     switch (filter) {
       case 'hoje':
@@ -68,20 +73,23 @@ const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, 
     }
   };
 
+  const filteredTarefas = showPeriodDivision ? getFilteredTarefas() : tarefas;
+
   return (
-    <div className="space-y-0">
-      {filteredTarefas.map((tarefa) => (
-        <TarefaItem
-          key={tarefa.id}
-          tarefa={tarefa}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-        />
+    <div className="divide-y divide-gray-100">
+      {filteredTarefas.map((tarefa, index) => (
+        <div key={tarefa.id} className={index === 0 ? '' : ''}>
+          <TarefaItem
+            tarefa={tarefa}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />
+        </div>
       ))}
       
-      {filteredTarefas.length === 0 && (
-        <div className="mobile-empty-state">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+      {filteredTarefas.length === 0 && showPeriodDivision && (
+        <div className="text-center py-16">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
             <span className="text-4xl">📝</span>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">{getEmptyMessage()}</h3>

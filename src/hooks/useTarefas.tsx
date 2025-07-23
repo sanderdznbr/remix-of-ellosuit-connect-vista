@@ -50,11 +50,9 @@ export const useTarefas = () => {
       notes: event.description
     }));
     
-    // Manter apenas as tarefas ativas (não mostrar excluídas)
-    const activeTarefas = tarefasFormatted.filter(t => t.status !== 'deleted');
-    
-    setTarefas(activeTarefas);
-    setDeletedTarefas([]); // Limpar array de deletados já que não vamos mais usar
+    // Incluir todas as tarefas, incluindo as concluídas
+    setTarefas(tarefasFormatted);
+    setDeletedTarefas([]);
   }, [events]);
 
   const createTarefa = async (tarefaData: any) => {
@@ -77,6 +75,8 @@ export const useTarefas = () => {
 
   const updateTarefa = async (id: string, updates: any) => {
     try {
+      console.log('Updating tarefa with:', { id, updates });
+      
       // Atualizar no banco de dados
       await updateEvent(id, updates);
       
@@ -97,6 +97,7 @@ export const useTarefas = () => {
       // Refresh para sincronizar com o banco
       await refreshEvents();
     } catch (error) {
+      console.error('Error updating tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar a tarefa",
@@ -121,6 +122,7 @@ export const useTarefas = () => {
       // Refresh para sincronizar com o banco
       await refreshEvents();
     } catch (error) {
+      console.error('Error deleting tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível excluir o lembrete",
@@ -129,9 +131,7 @@ export const useTarefas = () => {
     }
   };
 
-  // Função de restaurar removida pois não há mais tarefas "deletadas"
   const restoreTarefa = async (id: string) => {
-    // Esta função não é mais necessária pois deletamos permanentemente
     toast({
       title: "Erro",
       description: "Não é possível restaurar lembretes excluídos",

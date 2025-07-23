@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -75,7 +74,6 @@ export const useCalendarData = () => {
         setCompanyId(companyUser.company_id);
         await fetchEvents(companyUser.company_id);
         
-        // Configurar realtime subscription para novos eventos
         setupRealtimeSubscription(companyUser.company_id);
       } else {
         await createUserCompany(userId);
@@ -102,7 +100,6 @@ export const useCalendarData = () => {
         },
         (payload) => {
           console.log('📡 Evento em tempo real recebido:', payload);
-          // Refetch events when there are changes
           fetchEvents(userCompanyId);
         }
       )
@@ -238,7 +235,7 @@ export const useCalendarData = () => {
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
           color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF'),
-          status: 'pending'
+          status: event.status || 'pending'
         };
       });
       
@@ -277,7 +274,8 @@ export const useCalendarData = () => {
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false,
           color: eventData.color || '#3600FF',
-          google_event_id: eventData.google_event_id // Para eventos criados via Google
+          google_event_id: eventData.google_event_id,
+          status: eventData.status || 'pending'
         })
         .select()
         .single();
@@ -296,7 +294,6 @@ export const useCalendarData = () => {
         description: "Evento criado com sucesso!"
       });
 
-      // Não precisa chamar fetchEvents pois o realtime subscription já vai atualizar
     } catch (error) {
       toast({
         title: "Erro",
@@ -317,6 +314,8 @@ export const useCalendarData = () => {
     }
 
     try {
+      console.log('Updating event in database:', { eventId, updates });
+      
       const { error } = await supabase
         .from('calendar_events')
         .update(updates)
@@ -324,6 +323,7 @@ export const useCalendarData = () => {
         .eq('company_id', companyId);
 
       if (error) {
+        console.error('Database update error:', error);
         toast({
           title: "Erro",
           description: "Erro ao atualizar evento: " + error.message,
@@ -332,6 +332,8 @@ export const useCalendarData = () => {
         return;
       }
 
+      console.log('Event updated successfully in database');
+
       // Atualizar localmente para feedback imediato
       setEvents(prev => 
         prev.map(event => 
@@ -339,12 +341,8 @@ export const useCalendarData = () => {
         )
       );
 
-      toast({
-        title: "Sucesso",
-        description: "Evento atualizado com sucesso!"
-      });
-
     } catch (error) {
+      console.error('Update event error:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao atualizar evento",
@@ -381,11 +379,6 @@ export const useCalendarData = () => {
 
       // Atualizar localmente para feedback imediato
       setEvents(prev => prev.filter(event => event.id !== eventId));
-
-      toast({
-        title: "Sucesso",
-        description: "Evento deletado com sucesso!"
-      });
 
     } catch (error) {
       toast({

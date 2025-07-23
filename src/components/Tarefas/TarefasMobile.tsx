@@ -1,25 +1,29 @@
+
 import React, { useState } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
+import NotificationSettingsModal from './NotificationSettingsModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
 import { cn } from '@/lib/utils';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
-type FilterType = 'hoje' | 'semana' | 'mes';
+type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 
 const TarefasMobile = () => {
   const [showNovoLembrete, setShowNovoLembrete] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
-  const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
-  const { user } = useAuth(); // Adicionar verificação de usuário
+  const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa, refreshEvents } = useTarefas();
+  const { user } = useAuth();
   const { 
     isRegistered, 
     isRegistering, 
@@ -29,6 +33,20 @@ const TarefasMobile = () => {
     sendTestNotification 
   } = useIOSPushNotifications();
   const { toast } = useToast();
+
+  const filterOptions: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
+  
+  const {
+    isSwipeGesturing,
+    swipeProgress,
+    onTouchStart: onSwipeStart,
+    onTouchMove: onSwipeMove,
+    onTouchEnd: onSwipeEnd
+  } = useSwipeNavigation({
+    filters: filterOptions,
+    activeFilter,
+    onFilterChange: setActiveFilter
+  });
 
   const {
     isPulling,
@@ -40,21 +58,31 @@ const TarefasMobile = () => {
   } = usePullToRefresh({
     onRefresh: async () => {
       vibrate(50);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await refreshEvents();
     }
   });
 
   const handleCreateTarefa = async (tarefaData: any) => {
     await createTarefa(tarefaData);
     vibrate(30);
+    await refreshEvents(); // Refresh após criar
+  };
+
+  const handleUpdateTarefa = async (id: string, updates: any) => {
+    await updateTarefa(id, updates);
+    vibrate(30);
+  };
+
+  const handleDeleteTarefa = async (id: string) => {
+    await deleteTarefa(id);
+    vibrate([50, 100, 50]);
   };
 
   const handleNotificationSettings = async () => {
     try {
-      // Verificar se o usuário está logado antes de solicitar notificações
       if (!user) {
         toast({
-          title: "🔐 Login necessário",
+          title: "Login necessário",
           description: "Faça login para ativar as notificações",
         });
         return;
@@ -62,102 +90,54 @@ const TarefasMobile = () => {
 
       if (!isIOSWebView) {
         toast({
-          title: "ℹ️ Aviso",
+          title: "Aviso",
           description: "Para notificações push, use o app iOS nativo",
         });
         return;
       }
 
       if (isRegistered) {
-        // Se já está registrado, enviar teste
         await sendTestNotification();
       } else if (permissionStatus === 'denied') {
-        // Se foi negado, orientar para configurações
         toast({
-          title: "🔔 Notificações desativadas",
+          title: "Notificações desativadas",
           description: "Vá em Configurações > Notificações > [Nome do App] e ative as notificações",
           variant: "destructive"
         });
       } else {
-        // Solicitar permissões
         const granted = await requestPermissions();
         if (granted) {
           toast({
-            title: "✅ Solicitação enviada",
+            title: "Solicitação enviada",
             description: "Aguarde a resposta do iOS...",
           });
         }
       }
     } catch (error) {
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: "Não foi possível configurar as notificações",
         variant: "destructive"
       });
     }
   };
 
-  const getNotificationButtonStyle = () => {
-    if (!user) {
-      return "bg-gray-100 hover:bg-gray-200 text-gray-600";
-    }
-    
-    if (!isIOSWebView) {
-      return "bg-gray-100 hover:bg-gray-200 text-gray-600";
-    }
-    
-    switch (permissionStatus) {
-      case 'granted':
-        return "bg-green-100 hover:bg-green-200 text-green-600";
-      case 'denied':
-        return "bg-red-100 hover:bg-red-200 text-red-600";
-      default:
-        return "bg-blue-100 hover:bg-blue-200 text-blue-600";
-    }
-  };
-
-  const getNotificationIcon = () => {
-    if (!user) return '🔐';
-    if (!isIOSWebView) return '🌐';
-    
-    switch (permissionStatus) {
-      case 'granted':
-        return isRegistered ? '✅' : '🔔';
-      case 'denied':
-        return '❌';
-      default:
-        return '🔔';
-    }
-  };
-
-  const getNotificationTitle = () => {
-    if (!user) {
-      return "Faça login para ativar notificações";
-    }
-    
-    if (!isIOSWebView) {
-      return "Use o app iOS para notificações";
-    }
-    
-    switch (permissionStatus) {
-      case 'granted':
-        return isRegistered ? "Notificações ativas - Toque para testar" : "Configurando notificações...";
-      case 'denied':
-        return "Notificações desativadas - Toque para orientações";
-      default:
-        return "Toque para ativar notificações";
-    }
-  };
-
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
     const today = new Date();
     const todayString = today.toISOString().split('T')[0];
+    const tomorrow = addDays(today, 1);
+    const tomorrowString = tomorrow.toISOString().split('T')[0];
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 
     switch (filter) {
       case 'hoje':
         return activeTarefas.filter(tarefa => 
           tarefa.start_date.startsWith(todayString)
+        );
+      
+      case 'amanha':
+        return activeTarefas.filter(tarefa => 
+          tarefa.start_date.startsWith(tomorrowString)
         );
       
       case 'semana':
@@ -194,6 +174,11 @@ const TarefasMobile = () => {
       id: 'hoje' as FilterType, 
       label: 'Hoje', 
       count: getFilteredTarefas(tarefas, 'hoje').length
+    },
+    { 
+      id: 'amanha' as FilterType, 
+      label: 'Amanhã', 
+      count: getFilteredTarefas(tarefas, 'amanha').length
     },
     { 
       id: 'semana' as FilterType, 
@@ -285,30 +270,16 @@ const TarefasMobile = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* iOS Notifications Button - só mostrar se usuário estiver logado */}
+              {/* Notifications Settings Button */}
               {user && (
                 <button
                   onClick={() => {
-                    handleNotificationSettings();
+                    setShowNotificationSettings(true);
                     vibrate(30);
                   }}
-                  disabled={isRegistering}
-                  className={cn(
-                    "relative p-2 rounded-full transition-colors disabled:opacity-50",
-                    getNotificationButtonStyle()
-                  )}
-                  title={getNotificationTitle()}
+                  className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
-                  <Settings className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 text-xs">
-                    {getNotificationIcon()}
-                  </span>
-                  {/* Indicador iOS */}
-                  {isIOSWebView && (
-                    <span className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
-                      🍎
-                    </span>
-                  )}
+                  <Settings className="h-5 w-5 text-gray-600" />
                 </button>
               )}
               
@@ -330,33 +301,57 @@ const TarefasMobile = () => {
             </div>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex space-x-2 mb-4">
-            {getFilterOptions().map((option) => (
-              <button
-                key={option.id}
-                onClick={() => {
-                  setActiveFilter(option.id);
-                  vibrate(30);
-                }}
-                className={cn(
-                  "flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200",
-                  activeFilter === option.id 
-                    ? "bg-blue-500 text-white shadow-lg" 
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                )}
-              >
-                <span className="font-medium">{option.label}</span>
-                <span className={cn(
-                  "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
-                  activeFilter === option.id 
-                    ? "bg-white/20 text-white" 
-                    : "bg-gray-200 text-gray-600"
-                )}>
-                  {option.count}
-                </span>
-              </button>
-            ))}
+          {/* Filter Pills with Swipe */}
+          <div 
+            className="relative overflow-hidden"
+            onTouchStart={onSwipeStart}
+            onTouchMove={onSwipeMove}
+            onTouchEnd={onSwipeEnd}
+          >
+            <div 
+              className={cn(
+                "flex space-x-2 mb-4 transition-transform duration-200",
+                isSwipeGesturing && "transition-none"
+              )}
+              style={{ 
+                transform: `translateX(${swipeProgress * 20}px)` 
+              }}
+            >
+              {getFilterOptions().map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    setActiveFilter(option.id);
+                    vibrate(30);
+                  }}
+                  className={cn(
+                    "flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap",
+                    activeFilter === option.id 
+                      ? "bg-blue-500 text-white shadow-lg" 
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  )}
+                >
+                  <span className="font-medium">{option.label}</span>
+                  <span className={cn(
+                    "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
+                    activeFilter === option.id 
+                      ? "bg-white/20 text-white" 
+                      : "bg-gray-200 text-gray-600"
+                  )}>
+                    {option.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+            
+            {/* Swipe Hint */}
+            {!isSwipeGesturing && (
+              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                <div className="text-xs text-gray-400 text-center">
+                  ← arraste para navegar →
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -385,8 +380,8 @@ const TarefasMobile = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
                       <TarefasList
                         tarefas={groupedTarefas.morning}
-                        onUpdate={updateTarefa}
-                        onDelete={deleteTarefa}
+                        onUpdate={handleUpdateTarefa}
+                        onDelete={handleDeleteTarefa}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -404,8 +399,8 @@ const TarefasMobile = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
                       <TarefasList
                         tarefas={groupedTarefas.afternoon}
-                        onUpdate={updateTarefa}
-                        onDelete={deleteTarefa}
+                        onUpdate={handleUpdateTarefa}
+                        onDelete={handleDeleteTarefa}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -423,8 +418,8 @@ const TarefasMobile = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
                       <TarefasList
                         tarefas={groupedTarefas.evening}
-                        onUpdate={updateTarefa}
-                        onDelete={deleteTarefa}
+                        onUpdate={handleUpdateTarefa}
+                        onDelete={handleDeleteTarefa}
                         filter={activeFilter}
                         showPeriodDivision={false}
                       />
@@ -447,8 +442,8 @@ const TarefasMobile = () => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100">
                 <TarefasList
                   tarefas={filteredTarefas}
-                  onUpdate={updateTarefa}
-                  onDelete={deleteTarefa}
+                  onUpdate={handleUpdateTarefa}
+                  onDelete={handleDeleteTarefa}
                   filter={activeFilter}
                 />
               </div>
@@ -470,11 +465,21 @@ const TarefasMobile = () => {
         </button>
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       <NovoLembreteModal
         isOpen={showNovoLembrete}
         onClose={() => setShowNovoLembrete(false)}
         onSave={handleCreateTarefa}
+      />
+
+      <NotificationSettingsModal
+        isOpen={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
+        onActivateNotifications={handleNotificationSettings}
+        isRegistered={isRegistered}
+        isRegistering={isRegistering}
+        permissionStatus={permissionStatus}
+        isIOSWebView={isIOSWebView}
       />
     </div>
   );

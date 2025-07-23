@@ -29,7 +29,6 @@ export const useTarefas = () => {
   const [deletedTarefas, setDeletedTarefas] = useState<TarefaItem[]>([]);
 
   useEffect(() => {
-    // Converter eventos do calendário para o formato de tarefas
     const tarefasFormatted: TarefaItem[] = events.map(event => ({
       id: event.id,
       title: event.title,
@@ -52,7 +51,6 @@ export const useTarefas = () => {
       notes: event.description
     }));
     
-    // Incluir todas as tarefas, incluindo as concluídas
     setTarefas(tarefasFormatted);
     setDeletedTarefas([]);
   }, [events]);
@@ -64,7 +62,6 @@ export const useTarefas = () => {
         source: 'local',
         status: 'pending'
       });
-      await refreshEvents();
       
       toast({
         title: "Lembrete criado",
@@ -84,10 +81,8 @@ export const useTarefas = () => {
     try {
       console.log('Updating tarefa with:', { id, updates });
       
-      // Atualizar no banco de dados
       await updateEvent(id, updates);
       
-      // Atualizar localmente para feedback imediato
       setTarefas(prev => 
         prev.map(tarefa => 
           tarefa.id === id ? { ...tarefa, ...updates } : tarefa
@@ -96,13 +91,10 @@ export const useTarefas = () => {
       
       if (updates.status === 'completed') {
         toast({
-          title: "✅ Concluído",
+          title: "Concluído",
           description: "Tarefa marcada como concluída!",
         });
       }
-      
-      // Refresh para sincronizar com o banco
-      await refreshEvents();
     } catch (error) {
       console.error('Error updating tarefa:', error);
       toast({
@@ -115,19 +107,14 @@ export const useTarefas = () => {
 
   const deleteTarefa = async (id: string) => {
     try {
-      // Deletar permanentemente do banco de dados
       await deleteEvent(id);
       
-      // Remover localmente para feedback imediato
       setTarefas(prev => prev.filter(tarefa => tarefa.id !== id));
       
       toast({
         title: "Lembrete excluído",
         description: "O lembrete foi excluído permanentemente",
       });
-      
-      // Refresh para sincronizar com o banco
-      await refreshEvents();
     } catch (error) {
       console.error('Error deleting tarefa:', error);
       toast({
@@ -153,6 +140,7 @@ export const useTarefas = () => {
     createTarefa,
     updateTarefa,
     deleteTarefa,
-    restoreTarefa
+    restoreTarefa,
+    refreshEvents
   };
 };

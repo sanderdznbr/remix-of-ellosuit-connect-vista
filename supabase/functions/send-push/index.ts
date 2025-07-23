@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
-import { jose } from "https://deno.land/x/jose@v4.15.5/index.ts";
+import * as jose from "https://deno.land/x/jose@v4.15.5/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -2,17 +2,16 @@
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 import TarefasDesktop from '@/components/Tarefas/TarefasDesktop';
 import TarefasPublica from '@/components/Tarefas/TarefasPublica';
 
 const Tarefas = () => {
-  const { user } = useAuth();
-  const { isMobile, isLoading } = useIsMobile();
+  const { user, loading: authLoading } = useAuth();
+  const { isMobile, isLoading: deviceLoading } = useIsMobile();
 
-  // Exibir loading durante a verificação do dispositivo
-  if (isLoading) {
+  // Exibir loading durante verificações iniciais
+  if (authLoading || deviceLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-lg">Carregando...</div>

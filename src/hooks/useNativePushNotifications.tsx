@@ -7,19 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 
 type PermissionStatus = 'prompt' | 'granted' | 'denied';
 
-// Bridge para comunicação com app nativo via postMessage
-declare global {
-  interface Window {
-    webkit?: {
-      messageHandlers?: {
-        pushNotifications?: {
-          postMessage: (message: any) => void;
-        };
-      };
-    };
-  }
-}
-
 export const useNativePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -29,13 +16,13 @@ export const useNativePushNotifications = () => {
 
   // Verificar se está rodando em WebView com bridge nativo
   const isWebViewWithBridge = () => {
-    return window.webkit?.messageHandlers?.pushNotifications;
+    return window.webkit?.messageHandlers?.iosNotifications;
   };
 
   // Enviar mensagem para o app nativo via bridge
   const sendMessageToNative = (message: any) => {
     if (isWebViewWithBridge()) {
-      window.webkit?.messageHandlers?.pushNotifications?.postMessage(message);
+      window.webkit?.messageHandlers?.iosNotifications?.postMessage(message);
       return true;
     }
     return false;

@@ -10,6 +10,7 @@ import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, par
 import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 type FilterType = 'hoje' | 'semana' | 'mes';
 
@@ -18,6 +19,7 @@ const TarefasMobile = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
+  const { user } = useAuth(); // Adicionar verificação de usuário
   const { 
     isRegistered, 
     isRegistering, 
@@ -49,6 +51,15 @@ const TarefasMobile = () => {
 
   const handleNotificationSettings = async () => {
     try {
+      // Verificar se o usuário está logado antes de solicitar notificações
+      if (!user) {
+        toast({
+          title: "🔐 Login necessário",
+          description: "Faça login para ativar as notificações",
+        });
+        return;
+      }
+
       if (!isIOSWebView) {
         toast({
           title: "ℹ️ Aviso",
@@ -87,6 +98,10 @@ const TarefasMobile = () => {
   };
 
   const getNotificationButtonStyle = () => {
+    if (!user) {
+      return "bg-gray-100 hover:bg-gray-200 text-gray-600";
+    }
+    
     if (!isIOSWebView) {
       return "bg-gray-100 hover:bg-gray-200 text-gray-600";
     }
@@ -102,6 +117,7 @@ const TarefasMobile = () => {
   };
 
   const getNotificationIcon = () => {
+    if (!user) return '🔐';
     if (!isIOSWebView) return '🌐';
     
     switch (permissionStatus) {
@@ -111,6 +127,25 @@ const TarefasMobile = () => {
         return '❌';
       default:
         return '🔔';
+    }
+  };
+
+  const getNotificationTitle = () => {
+    if (!user) {
+      return "Faça login para ativar notificações";
+    }
+    
+    if (!isIOSWebView) {
+      return "Use o app iOS para notificações";
+    }
+    
+    switch (permissionStatus) {
+      case 'granted':
+        return isRegistered ? "Notificações ativas - Toque para testar" : "Configurando notificações...";
+      case 'denied':
+        return "Notificações desativadas - Toque para orientações";
+      default:
+        return "Toque para ativar notificações";
     }
   };
 
@@ -250,38 +285,32 @@ const TarefasMobile = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* iOS Notifications Button */}
-              <button
-                onClick={() => {
-                  handleNotificationSettings();
-                  vibrate(30);
-                }}
-                disabled={isRegistering}
-                className={cn(
-                  "relative p-2 rounded-full transition-colors disabled:opacity-50",
-                  getNotificationButtonStyle()
-                )}
-                title={
-                  !isIOSWebView 
-                    ? "Use o app iOS para notificações" 
-                    : permissionStatus === 'denied' 
-                      ? "Notificações desativadas - Toque para orientações"
-                      : isRegistered 
-                        ? "Notificações ativas - Toque para testar"
-                        : "Toque para ativar notificações"
-                }
-              >
-                <Settings className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 text-xs">
-                  {getNotificationIcon()}
-                </span>
-                {/* Indicador iOS */}
-                {isIOSWebView && (
-                  <span className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
-                    🍎
+              {/* iOS Notifications Button - só mostrar se usuário estiver logado */}
+              {user && (
+                <button
+                  onClick={() => {
+                    handleNotificationSettings();
+                    vibrate(30);
+                  }}
+                  disabled={isRegistering}
+                  className={cn(
+                    "relative p-2 rounded-full transition-colors disabled:opacity-50",
+                    getNotificationButtonStyle()
+                  )}
+                  title={getNotificationTitle()}
+                >
+                  <Settings className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 text-xs">
+                    {getNotificationIcon()}
                   </span>
-                )}
-              </button>
+                  {/* Indicador iOS */}
+                  {isIOSWebView && (
+                    <span className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
+                      🍎
+                    </span>
+                  )}
+                </button>
+              )}
               
               {/* Deleted Items Button */}
               {deletedTarefas.length > 0 && (

@@ -4,6 +4,19 @@ import { useToast } from '@/hooks/use-toast';
 
 type PermissionStatus = 'prompt' | 'granted' | 'denied';
 
+// Declaração global consolidada para TypeScript
+declare global {
+  interface Window {
+    webkit?: {
+      messageHandlers?: {
+        iosNotifications?: {
+          postMessage: (message: any) => void;
+        };
+      };
+    };
+  }
+}
+
 export const useIOSPushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -13,7 +26,7 @@ export const useIOSPushNotifications = () => {
 
   // Verificar se está rodando em WebView iOS
   const isIOSWebView = () => {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
   };
 
   // Enviar mensagem para o iOS nativo
@@ -198,16 +211,3 @@ export const useIOSPushNotifications = () => {
     resetRegistration
   };
 };
-
-// Declaração global para TypeScript
-declare global {
-  interface Window {
-    webkit?: {
-      messageHandlers?: {
-        iosNotifications?: {
-          postMessage: (message: any) => void;
-        };
-      };
-    };
-  }
-}

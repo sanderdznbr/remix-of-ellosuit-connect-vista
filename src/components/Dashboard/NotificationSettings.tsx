@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -7,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Calendar, Clock, Settings, Smartphone } from 'lucide-react';
+import { Bell, Calendar, Clock, Settings, Smartphone, Send } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const NotificationSettings = () => {
   const { 
@@ -23,6 +24,7 @@ const NotificationSettings = () => {
   } = useNotificationSettings();
   
   const { events } = useCalendarData();
+  const { toast } = useToast();
   
   const [localSettings, setLocalSettings] = useState({
     calendar_notifications_enabled: true,
@@ -34,6 +36,13 @@ const NotificationSettings = () => {
   const [saving, setSaving] = useState(false);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [eventSettings, setEventSettings] = useState<Record<string, any>>({});
+  
+  // Estado para teste de notificação
+  const [testNotification, setTestNotification] = useState({
+    title: 'Teste de Notificação',
+    message: 'Esta é uma notificação de teste do seu app!'
+  });
+  const [sendingTest, setSendingTest] = useState(false);
 
   // Sincronizar com settings do servidor
   useEffect(() => {
@@ -103,6 +112,48 @@ const NotificationSettings = () => {
     }
   };
 
+  // Função para enviar notificação teste
+  const sendTestNotification = async () => {
+    setSendingTest(true);
+    try {
+      console.log('🔔 Enviando notificação teste...');
+      
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          title: testNotification.title,
+          body: testNotification.message,
+          data: {
+            type: 'test',
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Notificação teste enviada:', data);
+      
+      toast({
+        title: "✅ Notificação Enviada",
+        description: "Notificação de teste enviada com sucesso!",
+        duration: 3000
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erro ao enviar notificação teste:', error);
+      
+      toast({
+        title: "❌ Erro ao Enviar",
+        description: `Erro: ${error.message || 'Falha ao enviar notificação'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const reminderOptions = [
     { value: 5, label: '5 minutos' },
     { value: 10, label: '10 minutos' },
@@ -138,6 +189,69 @@ const NotificationSettings = () => {
         <Bell className="h-6 w-6 text-blue-600" />
         <h1 className="text-2xl font-bold">Configurações de Notificação</h1>
       </div>
+
+      {/* Teste de Notificação */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Send className="h-5 w-5" />
+            <span>Teste de Notificação</span>
+          </CardTitle>
+          <CardDescription>
+            Envie uma notificação de teste para verificar se está funcionando
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="test-title">Título da Notificação</Label>
+            <Input
+              id="test-title"
+              value={testNotification.title}
+              onChange={(e) => 
+                setTestNotification(prev => ({ ...prev, title: e.target.value }))
+              }
+              placeholder="Digite o título da notificação"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="test-message">Mensagem da Notificação</Label>
+            <Input
+              id="test-message"
+              value={testNotification.message}
+              onChange={(e) => 
+                setTestNotification(prev => ({ ...prev, message: e.target.value }))
+              }
+              placeholder="Digite a mensagem da notificação"
+            />
+          </div>
+
+          <Button 
+            onClick={sendTestNotification}
+            disabled={sendingTest || !testNotification.title || !testNotification.message}
+            className="w-full sm:w-auto"
+          >
+            {sendingTest ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar Notificação Teste
+              </>
+            )}
+          </Button>
+
+          <div className="text-sm text-gray-600 mt-4">
+            <p>
+              ℹ️ Certifique-se de que você permitiu notificações no seu dispositivo 
+              e que o device token foi registrado corretamente.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Configurações Gerais */}
       <Card>

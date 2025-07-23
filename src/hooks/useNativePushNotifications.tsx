@@ -5,18 +5,85 @@ import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } fro
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+type PermissionStatus = 'prompt' | 'granted' | 'denied';
+
+// Bridge para comunicação com app nativo via postMessage
+declare global {
+  interface Window {
+    webkit?: {
+      messageHandlers?: {
+        pushNotifications?: {
+          postMessage: (message: any) => void;
+        };
+      };
+    };
+  }
+}
+
 export const useNativePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('prompt');
   const { toast } = useToast();
+
+  // Verificar se está rodando em WebView com bridge nativo
+  const isWebViewWithBridge = () => {
+    return window.webkit?.messageHandlers?.pushNotifications;
+  };
+
+  // Enviar mensagem para o app nativo via bridge
+  const sendMessageToNative = (message: any) => {
+    if (isWebViewWithBridge()) {
+      window.webkit?.messageHandlers?.pushNotifications?.postMessage(message);
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     initializePushNotifications();
+    
+    // Listener para mensagens do app nativo
+    const handleNativeMessage = (event: MessageEvent) => {
+      const { type, data } = event.data;
+      
+      switch (type) {
+        case 'pushToken':
+          console.log('✅ Token recebido do app nativo:', data.token);
+          setDeviceToken(data.token);
+          setIsRegistered(true);
+          registerDeviceToken(data.token);
+          break;
+        case 'pushPermission':
+          console.log('🔔 Permissão recebida do app nativo:', data.status);
+          setPermissionStatus(data.status as PermissionStatus);
+          break;
+        case 'pushError':
+          console.error('❌ Erro do app nativo:', data.error);
+          setIsRegistering(false);
+          toast({
+            title: "❌ Erro",
+            description: data.error,
+            variant: "destructive"
+          });
+          break;
+      }
+    };
+
+    window.addEventListener('message', handleNativeMessage);
+    return () => window.removeEventListener('message', handleNativeMessage);
   }, []);
 
   const initializePushNotifications = async () => {
+    // Tentar bridge primeiro (para WebView)
+    if (isWebViewWithBridge()) {
+      console.log('🌉 Usando bridge JavaScript-Native');
+      sendMessageToNative({ type: 'initialize' });
+      return;
+    }
+
+    // Fallback para Capacitor nativo
     if (!Capacitor.isNativePlatform()) {
       console.log('📱 Não é uma plataforma nativa, usando notificações web');
       return;
@@ -24,67 +91,80 @@ export const useNativePushNotifications = () => {
 
     console.log('🍎 Inicializando notificações push nativas...');
 
-    // Verificar status da permissão
-    const permResult = await PushNotifications.checkPermissions();
-    setPermissionStatus(permResult.receive);
-    console.log('🔔 Status atual da permissão:', permResult.receive);
+    try {
+      // Verificar status da permissão
+      const permResult = await PushNotifications.checkPermissions();
+      const status = permResult.receive === 'prompt-with-rationale' ? 'prompt' : permResult.receive as PermissionStatus;
+      setPermissionStatus(status);
+      console.log('🔔 Status atual da permissão:', status);
 
-    // Se já tem permissão, registrar automaticamente
-    if (permResult.receive === 'granted') {
-      await registerForPushNotifications();
+      // Se já tem permissão, registrar automaticamente
+      if (status === 'granted') {
+        await registerForPushNotifications();
+      }
+
+      // Listeners para eventos de notificação
+      PushNotifications.addListener('registration', (token: Token) => {
+        console.log('✅ Token de push registrado:', token.value);
+        setDeviceToken(token.value);
+        setIsRegistered(true);
+        registerDeviceToken(token.value);
+      });
+
+      PushNotifications.addListener('registrationError', (error: any) => {
+        console.error('❌ Erro no registro de push:', error);
+        setIsRegistering(false);
+        toast({
+          title: "❌ Erro",
+          description: "Falha ao registrar para notificações push",
+          variant: "destructive"
+        });
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+        console.log('📱 Notificação recebida:', notification);
+        toast({
+          title: notification.title || "Nova notificação",
+          description: notification.body || "",
+        });
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
+        console.log('👆 Notificação tocada:', notification);
+      });
+    } catch (error) {
+      console.error('💥 Erro ao inicializar:', error);
     }
-
-    // Listeners para eventos de notificação
-    PushNotifications.addListener('registration', (token: Token) => {
-      console.log('✅ Token de push registrado:', token.value);
-      setDeviceToken(token.value);
-      setIsRegistered(true);
-      registerDeviceToken(token.value);
-    });
-
-    PushNotifications.addListener('registrationError', (error: any) => {
-      console.error('❌ Erro no registro de push:', error);
-      setIsRegistering(false);
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao registrar para notificações push",
-        variant: "destructive"
-      });
-    });
-
-    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-      console.log('📱 Notificação recebida:', notification);
-      toast({
-        title: notification.title || "Nova notificação",
-        description: notification.body || "",
-      });
-    });
-
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
-      console.log('👆 Notificação tocada:', notification);
-    });
   };
 
   const requestPermissions = async () => {
-    if (!Capacitor.isNativePlatform()) {
-      toast({
-        title: "ℹ️ Aviso",
-        description: "Notificações push só funcionam em dispositivos móveis nativos",
-        variant: "destructive"
-      });
-      return false;
-    }
-
     setIsRegistering(true);
     console.log('🔔 Solicitando permissões para notificações push...');
 
     try {
+      // Tentar bridge primeiro
+      if (isWebViewWithBridge()) {
+        console.log('🌉 Solicitando permissão via bridge');
+        sendMessageToNative({ type: 'requestPermission' });
+        return true;
+      }
+
+      if (!Capacitor.isNativePlatform()) {
+        toast({
+          title: "ℹ️ Aviso",
+          description: "Notificações push só funcionam em dispositivos móveis nativos",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       const permResult = await PushNotifications.requestPermissions();
       console.log('📋 Resultado da permissão:', permResult);
       
-      setPermissionStatus(permResult.receive);
+      const status = permResult.receive === 'prompt-with-rationale' ? 'prompt' : permResult.receive as PermissionStatus;
+      setPermissionStatus(status);
 
-      if (permResult.receive === 'granted') {
+      if (status === 'granted') {
         console.log('✅ Permissão concedida! Registrando para notificações...');
         await registerForPushNotifications();
         return true;
@@ -169,8 +249,8 @@ export const useNativePushNotifications = () => {
       
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
-          title: "🎉 Teste iOS",
-          body: "Notificação push funcionando no seu iPhone!",
+          title: "🎉 Teste iOS Bridge",
+          body: "Notificação push funcionando via bridge JavaScript-Native!",
           deviceToken: deviceToken
         }
       });
@@ -211,7 +291,8 @@ export const useNativePushNotifications = () => {
     isRegistering,
     deviceToken,
     permissionStatus,
-    isNativePlatform: Capacitor.isNativePlatform(),
+    isNativePlatform: Capacitor.isNativePlatform() || isWebViewWithBridge(),
+    isWebViewWithBridge: isWebViewWithBridge(),
     requestPermissions,
     sendTestNotification,
     resetRegistration

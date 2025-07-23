@@ -22,6 +22,7 @@ const TarefasMobile = () => {
     isRegistered, 
     isRegistering, 
     isNativePlatform,
+    isWebViewWithBridge,
     requestPermissions,
     sendTestNotification 
   } = useNativePushNotifications();
@@ -48,7 +49,7 @@ const TarefasMobile = () => {
 
   const handleNotificationSettings = async () => {
     try {
-      if (!isNativePlatform) {
+      if (!isNativePlatform && !isWebViewWithBridge) {
         toast({
           title: "ℹ️ Aviso",
           description: "Para notificações completas, use o app nativo no seu iPhone",
@@ -65,7 +66,9 @@ const TarefasMobile = () => {
         if (granted) {
           toast({
             title: "✅ Notificações ativadas",
-            description: "Você receberá notificações no seu iPhone!",
+            description: isWebViewWithBridge 
+              ? "Notificações ativadas via bridge JavaScript-Native!" 
+              : "Você receberá notificações no seu iPhone!",
           });
         }
       }
@@ -222,16 +225,22 @@ const TarefasMobile = () => {
                 }}
                 disabled={isRegistering}
                 className={cn(
-                  "p-2 rounded-full transition-colors disabled:opacity-50",
-                  isRegistered && isNativePlatform
+                  "relative p-2 rounded-full transition-colors disabled:opacity-50",
+                  isRegistered && (isNativePlatform || isWebViewWithBridge)
                     ? "bg-green-100 hover:bg-green-200 text-green-600"
                     : "bg-gray-100 hover:bg-gray-200 text-gray-600"
                 )}
               >
                 <Settings className="h-5 w-5" />
-                {isRegistered && isNativePlatform && (
+                {isRegistered && (isNativePlatform || isWebViewWithBridge) && (
                   <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
                     ✓
+                  </span>
+                )}
+                {/* Indicador de Bridge */}
+                {isWebViewWithBridge && (
+                  <span className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
+                    🌉
                   </span>
                 )}
               </button>

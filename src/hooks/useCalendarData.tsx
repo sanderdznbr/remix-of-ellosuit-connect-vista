@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -21,6 +20,7 @@ interface CalendarEvent {
   is_all_day?: boolean;
   meeting_data?: any;
   color?: string;
+  status?: 'pending' | 'completed' | 'deleted';
 }
 
 export const useCalendarData = () => {
@@ -236,7 +236,8 @@ export const useCalendarData = () => {
           meeting_provider: event.meeting_provider,
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
-          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF')
+          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF'),
+          status: 'pending'
         };
       });
       
@@ -304,6 +305,96 @@ export const useCalendarData = () => {
     }
   };
 
+  const updateEvent = async (eventId: string, updates: any) => {
+    if (!companyId || !user) {
+      toast({
+        title: "Erro",
+        description: "Usuário deve estar associado a uma empresa para atualizar eventos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update(updates)
+        .eq('id', eventId)
+        .eq('created_by', user.id);
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar evento: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Atualizar localmente para feedback imediato
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId ? { ...event, ...updates } : event
+        )
+      );
+
+      toast({
+        title: "Sucesso",
+        description: "Evento atualizado com sucesso!"
+      });
+
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao atualizar evento",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    if (!companyId || !user) {
+      toast({
+        title: "Erro",
+        description: "Usuário deve estar associado a uma empresa para deletar eventos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', eventId)
+        .eq('created_by', user.id);
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao deletar evento: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Atualizar localmente para feedback imediato
+      setEvents(prev => prev.filter(event => event.id !== eventId));
+
+      toast({
+        title: "Sucesso",
+        description: "Evento deletado com sucesso!"
+      });
+
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao deletar evento",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     if (user && session) {
       checkUserCompany(user.id);
@@ -321,6 +412,8 @@ export const useCalendarData = () => {
     hasCompany,
     companyId,
     createEvent,
+    updateEvent,
+    deleteEvent,
     refreshEvents: () => companyId && fetchEvents(companyId)
   };
 };

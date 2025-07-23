@@ -77,7 +77,9 @@ export const useTarefas = () => {
 
   const updateTarefa = async (id: string, updates: any) => {
     try {
-      // Atualizar no banco de dados
+      console.log('📝 Atualizando tarefa:', id, updates);
+      
+      // Atualizar no banco de dados através do useCalendarData
       await updateEvent(id, updates);
       
       // Atualizar localmente para feedback imediato
@@ -97,6 +99,7 @@ export const useTarefas = () => {
       // Refresh para sincronizar com o banco
       await refreshEvents();
     } catch (error) {
+      console.error('❌ Erro ao atualizar tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar a tarefa",
@@ -107,6 +110,8 @@ export const useTarefas = () => {
 
   const deleteTarefa = async (id: string) => {
     try {
+      console.log('🗑️ Deletando tarefa:', id);
+      
       // Deletar permanentemente do banco de dados
       await deleteEvent(id);
       
@@ -121,6 +126,7 @@ export const useTarefas = () => {
       // Refresh para sincronizar com o banco
       await refreshEvents();
     } catch (error) {
+      console.error('❌ Erro ao excluir tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível excluir o lembrete",

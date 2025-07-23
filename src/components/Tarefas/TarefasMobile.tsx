@@ -1,229 +1,393 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Calendar, Clock, Filter, ArrowLeft } from 'lucide-react';
-import { useTarefas } from '@/hooks/useTarefas';
-import { useAuth } from '@/hooks/useAuth';
-import TarefaItem from './TarefaItem';
+import React, { useState } from 'react';
+import { Plus, ArrowDown, Trash2, RotateCcw } from 'lucide-react';
+import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
-import TarefaDetailsModal from './TarefaDetailsModal';
-import { useNavigate } from 'react-router-dom';
-import NotificationSettingsButton from './NotificationSettingsButton';
+import { useTarefas } from '@/hooks/useTarefas';
+import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
+import { cn } from '@/lib/utils';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { vibrate } from '@/utils/mobile-helpers';
+
+type FilterType = 'hoje' | 'semana' | 'mes';
 
 const TarefasMobile = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
-  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [showNovoLembrete, setShowNovoLembrete] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
+  const [showDeleted, setShowDeleted] = useState(false);
+  const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa } = useTarefas();
 
   const {
-    tarefas,
-    loading,
-    createTarefa,
-    updateTarefa,
-    deleteTarefa,
-    markAsCompleted
-  } = useTarefas();
-
-  // Filtrar tarefas baseado no termo de busca e status
-  const filteredTarefas = tarefas.filter(tarefa => {
-    const matchesSearch = tarefa.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tarefa.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' ||
-                         (filterStatus === 'completed' && tarefa.completed) ||
-                         (filterStatus === 'pending' && !tarefa.completed);
-    
-    return matchesSearch && matchesStatus;
+    isPulling,
+    isRefreshing,
+    pullDistance,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
+  } = usePullToRefresh({
+    onRefresh: async () => {
+      vibrate(50);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   });
 
-  const pendingCount = tarefas.filter(t => !t.completed).length;
-  const completedCount = tarefas.filter(t => t.completed).length;
-
-  const handleCreateTask = async (taskData: any) => {
-    await createTarefa(taskData);
-    setIsNewTaskModalOpen(false);
+  const handleCreateTarefa = async (tarefaData: any) => {
+    await createTarefa(tarefaData);
+    vibrate(30);
   };
 
-  const handleTaskClick = (tarefa: any) => {
-    setSelectedTask(tarefa);
-  };
+  const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 
-  const handleUpdateTask = async (taskData: any) => {
-    if (selectedTask) {
-      await updateTarefa(selectedTask.id, taskData);
-      setSelectedTask(null);
+    switch (filter) {
+      case 'hoje':
+        return activeTarefas.filter(tarefa => 
+          tarefa.start_date.startsWith(todayString)
+        );
+      
+      case 'semana':
+        const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+        return activeTarefas.filter(tarefa => {
+          try {
+            const tarefaDate = parseISO(tarefa.start_date);
+            return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+          } catch {
+            return false;
+          }
+        });
+      
+      case 'mes':
+        const monthStart = startOfMonth(today);
+        const monthEnd = endOfMonth(today);
+        return activeTarefas.filter(tarefa => {
+          try {
+            const tarefaDate = parseISO(tarefa.start_date);
+            return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+          } catch {
+            return false;
+          }
+        });
+      
+      default:
+        return activeTarefas;
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    await deleteTarefa(taskId);
-    setSelectedTask(null);
+  const getFilterOptions = () => [
+    { 
+      id: 'hoje' as FilterType, 
+      label: 'Hoje', 
+      count: getFilteredTarefas(tarefas, 'hoje').length
+    },
+    { 
+      id: 'semana' as FilterType, 
+      label: 'Semana', 
+      count: getFilteredTarefas(tarefas, 'semana').length
+    },
+    { 
+      id: 'mes' as FilterType, 
+      label: 'Mês', 
+      count: getFilteredTarefas(tarefas, 'mes').length
+    }
+  ];
+
+  const groupTarefasByPeriod = (tarefas: any[]) => {
+    const morning = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 6 && hour < 12;
+    });
+    
+    const afternoon = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 12 && hour < 18;
+    });
+    
+    const evening = tarefas.filter(t => {
+      const hour = new Date(t.start_date).getHours();
+      return hour >= 18 || hour < 6;
+    });
+
+    return { morning, afternoon, evening };
   };
 
-  const handleMarkCompleted = async (taskId: string) => {
-    await markAsCompleted(taskId);
-  };
-
-  if (!user) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Acesso Restrito</h2>
-            <p className="text-gray-600 mb-4">Você precisa estar logado para acessar suas tarefas.</p>
-            <Button onClick={() => navigate('/')} className="w-full">
-              Fazer Login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-white">
+        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4">
+          <div className="px-4">
+            <div className="h-8 w-48 bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
+            <div className="h-4 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+        <div className="px-4 pt-4 space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="h-4 w-full bg-gray-200 rounded mb-2 animate-pulse"></div>
+              <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
+  const filteredTarefas = getFilteredTarefas(tarefas, activeFilter);
+  const groupedTarefas = activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-                className="p-2"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-xl font-bold text-gray-900">Tarefas</h1>
+      <div 
+        className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 pt-14 pb-4"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Pull-to-Refresh Indicator */}
+        <div 
+          className={cn(
+            "absolute top-10 left-1/2 transform -translate-x-1/2 transition-all duration-300",
+            isPulling ? "opacity-100" : "opacity-0"
+          )}
+          style={{ transform: `translateX(-50%) translateY(${Math.min(pullDistance - 60, 20)}px)` }}
+        >
+          <div className="flex items-center justify-center space-x-2 text-gray-500">
+            <ArrowDown className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            <span className="text-sm">
+              {isRefreshing ? 'Atualizando...' : 'Puxe para atualizar'}
+            </span>
+          </div>
+        </div>
+
+        <div className="px-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Lembretes</h1>
+              <p className="text-gray-500 text-sm">
+                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+              </p>
             </div>
-            <div className="flex items-center space-x-2">
-              <NotificationSettingsButton />
-              <Button
-                onClick={() => setIsNewTaskModalOpen(true)}
-                size="sm"
-                className="rounded-full"
+            
+            {/* Deleted Items Button */}
+            {deletedTarefas.length > 0 && (
+              <button
+                onClick={() => {
+                  setShowDeleted(!showDeleted);
+                  vibrate(30);
+                }}
+                className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+                <Trash2 className="h-5 w-5 text-gray-600" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {deletedTarefas.length}
+                </span>
+              </button>
+            )}
           </div>
 
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Buscar tarefas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-lg border-gray-200 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Filter Buttons */}
-          <div className="flex space-x-2">
-            <Button
-              variant={filterStatus === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('all')}
-              className="rounded-full text-xs"
-            >
-              Todas ({tarefas.length})
-            </Button>
-            <Button
-              variant={filterStatus === 'pending' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('pending')}
-              className="rounded-full text-xs"
-            >
-              Pendentes ({pendingCount})
-            </Button>
-            <Button
-              variant={filterStatus === 'completed' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus('completed')}
-              className="rounded-full text-xs"
-            >
-              Concluídas ({completedCount})
-            </Button>
+          {/* Filter Pills */}
+          <div className="flex space-x-2 mb-4">
+            {getFilterOptions().map((option) => (
+              <button
+                key={option.id}
+                onClick={() => {
+                  setActiveFilter(option.id);
+                  vibrate(30);
+                }}
+                className={cn(
+                  "flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200",
+                  activeFilter === option.id 
+                    ? "bg-blue-500 text-white shadow-lg" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                )}
+              >
+                <span className="font-medium">{option.label}</span>
+                <span className={cn(
+                  "text-xs px-2 py-1 rounded-full min-w-[20px] text-center",
+                  activeFilter === option.id 
+                    ? "bg-white/20 text-white" 
+                    : "bg-gray-200 text-gray-600"
+                )}>
+                  {option.count}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 pb-20">
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg p-4 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
+      <div className="px-4 pb-32">
+        {showDeleted ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <DeletedTarefasList 
+              deletedTarefas={deletedTarefas}
+              onRestore={restoreTarefa}
+              onClose={() => setShowDeleted(false)}
+            />
           </div>
-        ) : filteredTarefas.length === 0 ? (
-          <Card className="bg-white">
-            <CardContent className="p-8 text-center">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm || filterStatus !== 'all' 
-                  ? 'Nenhuma tarefa encontrada' 
-                  : 'Nenhuma tarefa ainda'
-                }
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {searchTerm || filterStatus !== 'all'
-                  ? 'Tente ajustar os filtros ou termo de busca'
-                  : 'Comece criando sua primeira tarefa'
-                }
-              </p>
-              {!searchTerm && filterStatus === 'all' && (
-                <Button
-                  onClick={() => setIsNewTaskModalOpen(true)}
-                  className="rounded-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Tarefa
-                </Button>
-              )}
-            </CardContent>
-          </Card>
         ) : (
-          <div className="space-y-3">
-            {filteredTarefas.map((tarefa) => (
-              <TarefaItem
-                key={tarefa.id}
-                tarefa={tarefa}
-                onClick={() => handleTaskClick(tarefa)}
-                onMarkCompleted={handleMarkCompleted}
-              />
-            ))}
-          </div>
+          <>
+            {activeFilter === 'hoje' && groupedTarefas ? (
+              <div className="space-y-6">
+                {/* Manhã */}
+                {groupedTarefas.morning.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                      Manhã
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.morning}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tarde */}
+                {groupedTarefas.afternoon.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                      Tarde
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.afternoon}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Noite */}
+                {groupedTarefas.evening.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                      Noite
+                    </h2>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                      <TarefasList
+                        tarefas={groupedTarefas.evening}
+                        onUpdate={updateTarefa}
+                        onDelete={deleteTarefa}
+                        filter={activeFilter}
+                        showPeriodDivision={false}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state para hoje */}
+                {filteredTarefas.length === 0 && (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-4xl">📝</span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhuma tarefa para hoje</h3>
+                    <p className="text-gray-500">Adicione um novo lembrete para começar</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <TarefasList
+                  tarefas={filteredTarefas}
+                  onUpdate={updateTarefa}
+                  onDelete={deleteTarefa}
+                  filter={activeFilter}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Modals */}
-      <NovoLembreteModal
-        isOpen={isNewTaskModalOpen}
-        onClose={() => setIsNewTaskModalOpen(false)}
-        onSave={handleCreateTask}
-      />
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={() => {
+            setShowNovoLembrete(true);
+            vibrate(50);
+          }}
+          className="w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      </div>
 
-      {selectedTask && (
-        <TarefaDetailsModal
-          tarefa={selectedTask}
-          isOpen={!!selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdate={handleUpdateTask}
-          onDelete={handleDeleteTask}
-        />
+      {/* Modal */}
+      <NovoLembreteModal
+        isOpen={showNovoLembrete}
+        onClose={() => setShowNovoLembrete(false)}
+        onSave={handleCreateTarefa}
+      />
+    </div>
+  );
+};
+
+// Component para itens excluídos
+const DeletedTarefasList: React.FC<{
+  deletedTarefas: any[];
+  onRestore: (id: string) => void;
+  onClose: () => void;
+}> = ({ deletedTarefas, onRestore, onClose }) => {
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Itens Excluídos</h2>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {deletedTarefas.map((tarefa) => (
+          <div key={tarefa.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 line-through opacity-60 mb-1">
+                {tarefa.title}
+              </h3>
+              {tarefa.description && (
+                <p className="text-sm text-gray-500 line-through opacity-60">
+                  {tarefa.description}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                onRestore(tarefa.id);
+                vibrate([50, 100, 50]);
+              }}
+              className="ml-4 p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors"
+            >
+              <RotateCcw className="h-4 w-4 text-green-600" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {deletedTarefas.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🗑️</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum item excluído</h3>
+          <p className="text-gray-500">Os itens excluídos aparecerão aqui</p>
+        </div>
       )}
     </div>
   );

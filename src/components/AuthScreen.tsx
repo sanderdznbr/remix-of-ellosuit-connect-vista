@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,6 +21,7 @@ const AuthScreen = () => {
   
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +41,7 @@ const AuthScreen = () => {
             title: "Login realizado com sucesso!",
             description: "Bem-vindo de volta!"
           });
+          navigate('/dashboard');
         }
       } else {
         if (!username.trim()) {
@@ -73,6 +75,12 @@ const AuthScreen = () => {
             description: "Verifique sua caixa de entrada para confirmar seu email antes de fazer login."
           });
           setIsLogin(true);
+        } else {
+          toast({
+            title: "Cadastro realizado com sucesso!",
+            description: "Bem-vindo!"
+          });
+          navigate('/dashboard');
         }
       }
     } catch (error: any) {
@@ -96,6 +104,8 @@ const AuthScreen = () => {
           description: error.message,
           variant: "destructive"
         });
+      } else {
+        navigate('/dashboard');
       }
     } catch (error: any) {
       toast({

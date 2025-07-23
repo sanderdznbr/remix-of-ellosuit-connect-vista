@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -237,7 +238,7 @@ export const useCalendarData = () => {
           is_all_day: event.is_all_day || false,
           meeting_data: event.meeting_data || {},
           color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF'),
-          status: event.status || 'pending'
+          status: 'pending'
         };
       });
       
@@ -276,8 +277,7 @@ export const useCalendarData = () => {
           attendees: eventData.attendees || [],
           is_all_day: eventData.is_all_day || false,
           color: eventData.color || '#3600FF',
-          status: eventData.status || 'pending',
-          google_event_id: eventData.google_event_id
+          google_event_id: eventData.google_event_id // Para eventos criados via Google
         })
         .select()
         .single();
@@ -317,19 +317,13 @@ export const useCalendarData = () => {
     }
 
     try {
-      console.log('📝 Atualizando evento:', eventId, updates);
-      
       const { error } = await supabase
         .from('calendar_events')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', eventId)
         .eq('company_id', companyId);
 
       if (error) {
-        console.error('❌ Erro ao atualizar evento:', error);
         toast({
           title: "Erro",
           description: "Erro ao atualizar evento: " + error.message,
@@ -345,17 +339,12 @@ export const useCalendarData = () => {
         )
       );
 
-      console.log('✅ Evento atualizado com sucesso');
-      
-      if (updates.status === 'completed') {
-        toast({
-          title: "✅ Concluído",
-          description: "Tarefa marcada como concluída!"
-        });
-      }
+      toast({
+        title: "Sucesso",
+        description: "Evento atualizado com sucesso!"
+      });
 
     } catch (error) {
-      console.error('💥 Erro inesperado ao atualizar evento:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao atualizar evento",
@@ -375,8 +364,6 @@ export const useCalendarData = () => {
     }
 
     try {
-      console.log('🗑️ Deletando evento permanentemente:', eventId);
-      
       const { error } = await supabase
         .from('calendar_events')
         .delete()
@@ -384,7 +371,6 @@ export const useCalendarData = () => {
         .eq('company_id', companyId);
 
       if (error) {
-        console.error('❌ Erro ao deletar evento:', error);
         toast({
           title: "Erro",
           description: "Erro ao deletar evento: " + error.message,
@@ -396,15 +382,12 @@ export const useCalendarData = () => {
       // Atualizar localmente para feedback imediato
       setEvents(prev => prev.filter(event => event.id !== eventId));
 
-      console.log('✅ Evento deletado permanentemente');
-      
       toast({
         title: "Sucesso",
         description: "Evento deletado com sucesso!"
       });
 
     } catch (error) {
-      console.error('💥 Erro inesperado ao deletar evento:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao deletar evento",

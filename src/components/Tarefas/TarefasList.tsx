@@ -25,11 +25,22 @@ const TarefasList: React.FC<TarefasListProps> = ({
     // Filtrar apenas tarefas ativas (não excluídas)
     const activeTarefas = tarefas.filter(tarefa => tarefa.status !== 'deleted');
     
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowString = tomorrow.toISOString().split('T')[0];
+    
     switch (filter) {
       case 'hoje':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(todayString)
-        );
+        return activeTarefas.filter(tarefa => {
+          const tarefaDateString = tarefa.start_date.split('T')[0];
+          return tarefaDateString === todayString;
+        });
+      
+      case 'amanha':
+        return activeTarefas.filter(tarefa => {
+          const tarefaDateString = tarefa.start_date.split('T')[0];
+          return tarefaDateString === tomorrowString;
+        });
       
       case 'semana':
         const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Domingo

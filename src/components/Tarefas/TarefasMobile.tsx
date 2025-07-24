@@ -124,21 +124,27 @@ const TarefasMobile = () => {
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset para início do dia
     const todayString = today.toISOString().split('T')[0];
-    const tomorrow = addDays(today, 1);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowString = tomorrow.toISOString().split('T')[0];
+    
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 
     switch (filter) {
       case 'hoje':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(todayString)
-        );
+        return activeTarefas.filter(tarefa => {
+          const tarefaDateString = tarefa.start_date.split('T')[0];
+          return tarefaDateString === todayString;
+        });
       
       case 'amanha':
-        return activeTarefas.filter(tarefa => 
-          tarefa.start_date.startsWith(tomorrowString)
-        );
+        return activeTarefas.filter(tarefa => {
+          const tarefaDateString = tarefa.start_date.split('T')[0];
+          return tarefaDateString === tomorrowString;
+        });
       
       case 'semana':
         const weekStart = startOfWeek(today, { weekStartsOn: 0 });

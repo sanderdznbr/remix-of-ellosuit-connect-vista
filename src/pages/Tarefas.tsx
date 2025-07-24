@@ -12,6 +12,7 @@ const Tarefas = () => {
 
   console.log('Tarefas Page - Debug Info:', {
     user: user ? 'User exists' : 'No user',
+    userId: user?.id,
     authLoading,
     deviceLoading,
     isMobile,
@@ -22,8 +23,8 @@ const Tarefas = () => {
   if (authLoading || deviceLoading) {
     console.log('Tarefas Page - Showing loading state');
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-lg">Carregando...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-900 text-lg">Carregando...</div>
       </div>
     );
   }
@@ -37,25 +38,11 @@ const Tarefas = () => {
   // Se há usuário autenticado, mostrar tarefas normais
   console.log('Tarefas Page - User authenticated, showing tasks interface');
   
-  try {
-    return isMobile ? <TarefasMobile /> : <TarefasDesktop />;
-  } catch (error) {
-    console.error('Tarefas Page - Error rendering tasks component:', error);
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-red-600 mb-4">Erro ao carregar tarefas</h1>
-          <p className="text-gray-600 mb-4">Ocorreu um erro inesperado. Tente recarregar a página.</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Recarregar página
-          </button>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen bg-white">
+      {isMobile ? <TarefasMobile /> : <TarefasDesktop />}
+    </div>
+  );
 };
 
 export default Tarefas;

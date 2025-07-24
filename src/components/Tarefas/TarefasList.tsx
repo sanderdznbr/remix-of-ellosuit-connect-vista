@@ -76,7 +76,8 @@ const TarefasList: React.FC<TarefasListProps> = ({
     }
   };
 
-  const filteredTarefas = showPeriodDivision ? getFilteredTarefas() : tarefas;
+  // Sempre filtrar as tarefas independentemente do showPeriodDivision
+  const filteredTarefas = getFilteredTarefas();
 
   return (
     <div className="divide-y divide-gray-100">
@@ -90,7 +91,7 @@ const TarefasList: React.FC<TarefasListProps> = ({
         </div>
       ))}
       
-      {filteredTarefas.length === 0 && showPeriodDivision && (
+      {filteredTarefas.length === 0 && (
         <div className="text-center py-16">
           <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
             <span className="text-4xl">📝</span>

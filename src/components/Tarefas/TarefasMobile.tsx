@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
@@ -156,12 +155,20 @@ const TarefasMobile = () => {
 
     switch (filter) {
       case 'hoje':
-        const todayTarefas = activeTarefas.filter(tarefa => isToday(tarefa.start_date));
+        const todayTarefas = activeTarefas.filter(tarefa => {
+          const isValidToday = isToday(tarefa.start_date);
+          console.log('Checking today for tarefa:', tarefa.title, tarefa.start_date, isValidToday);
+          return isValidToday;
+        });
         console.log('Today tarefas found:', todayTarefas.length);
         return todayTarefas;
       
       case 'amanha':
-        const tomorrowTarefas = activeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
+        const tomorrowTarefas = activeTarefas.filter(tarefa => {
+          const isValidTomorrow = isTomorrow(tarefa.start_date);
+          console.log('Checking tomorrow for tarefa:', tarefa.title, tarefa.start_date, isValidTomorrow);
+          return isValidTomorrow;
+        });
         console.log('Tomorrow tarefas found:', tomorrowTarefas.length);
         return tomorrowTarefas;
       
@@ -172,7 +179,8 @@ const TarefasMobile = () => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
             return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
-          } catch {
+          } catch (error) {
+            console.error('Error parsing date for week filter:', tarefa.start_date, error);
             return false;
           }
         });
@@ -184,7 +192,8 @@ const TarefasMobile = () => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
             return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
-          } catch {
+          } catch (error) {
+            console.error('Error parsing date for month filter:', tarefa.start_date, error);
             return false;
           }
         });

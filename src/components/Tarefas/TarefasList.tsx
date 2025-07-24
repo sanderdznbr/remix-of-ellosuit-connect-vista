@@ -1,3 +1,4 @@
+
 import React from 'react';
 import TarefaItem from './TarefaItem';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
@@ -22,14 +23,18 @@ const TarefasList: React.FC<TarefasListProps> = ({
 
   const getFilteredTarefas = () => {
     try {
-      console.log('TarefasList: Filtering tarefas...', { filter, totalTarefas: tarefas?.length || 0 });
+      console.log('TarefasList: Filtering tarefas...', { 
+        filter, 
+        totalTarefas: tarefas?.length || 0,
+        serverDate: serverDate.toISOString()
+      });
       
       if (!Array.isArray(tarefas)) {
         console.warn('TarefasList: tarefas is not an array:', tarefas);
         return [];
       }
       
-      // Filtrar apenas tarefas ativas (não excluídas)
+      // Filter only active tasks (not deleted)
       const activeTarefas = tarefas.filter(tarefa => {
         if (!tarefa || !tarefa.start_date) {
           console.warn('TarefasList: Invalid tarefa skipped:', tarefa);
@@ -40,58 +45,93 @@ const TarefasList: React.FC<TarefasListProps> = ({
       
       console.log('TarefasList: Active tarefas:', activeTarefas.length);
       
+      let filteredResults = [];
+      
       switch (filter) {
         case 'hoje':
-          const todayTarefas = activeTarefas.filter(tarefa => {
+          filteredResults = activeTarefas.filter(tarefa => {
             const result = isToday(tarefa.start_date);
-            console.log('TarefasList: isToday check for', tarefa.title, ':', result);
+            console.log(`TarefasList: isToday check for "${tarefa.title}":`, {
+              result,
+              start_date: tarefa.start_date,
+              id: tarefa.id
+            });
             return result;
           });
-          console.log('TarefasList: Today tarefas found:', todayTarefas.length);
-          return todayTarefas;
+          break;
         
         case 'amanha':
-          const tomorrowTarefas = activeTarefas.filter(tarefa => {
+          filteredResults = activeTarefas.filter(tarefa => {
             const result = isTomorrow(tarefa.start_date);
-            console.log('TarefasList: isTomorrow check for', tarefa.title, ':', result);
+            console.log(`TarefasList: isTomorrow check for "${tarefa.title}":`, {
+              result,
+              start_date: tarefa.start_date,
+              id: tarefa.id
+            });
             return result;
           });
-          console.log('TarefasList: Tomorrow tarefas found:', tomorrowTarefas.length);
-          return tomorrowTarefas;
+          break;
         
         case 'semana':
-          const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Domingo
+          const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Sunday
           const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
-          const weekTarefas = activeTarefas.filter(tarefa => {
+          console.log('TarefasList: Week filter range:', {
+            weekStart: weekStart.toISOString(),
+            weekEnd: weekEnd.toISOString()
+          });
+          
+          filteredResults = activeTarefas.filter(tarefa => {
             try {
               const tarefaDate = parseISO(tarefa.start_date);
-              return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+              const isInWeek = isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+              console.log(`TarefasList: Week check for "${tarefa.title}":`, {
+                isInWeek,
+                tarefaDate: tarefaDate.toISOString(),
+                start_date: tarefa.start_date
+              });
+              return isInWeek;
             } catch (error) {
               console.error('TarefasList: Error parsing date for week filter:', tarefa.start_date, error);
               return false;
             }
           });
-          console.log('TarefasList: Week tarefas found:', weekTarefas.length);
-          return weekTarefas;
+          break;
         
         case 'mes':
           const monthStart = startOfMonth(serverDate);
           const monthEnd = endOfMonth(serverDate);
-          const monthTarefas = activeTarefas.filter(tarefa => {
+          console.log('TarefasList: Month filter range:', {
+            monthStart: monthStart.toISOString(),
+            monthEnd: monthEnd.toISOString()
+          });
+          
+          filteredResults = activeTarefas.filter(tarefa => {
             try {
               const tarefaDate = parseISO(tarefa.start_date);
-              return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+              const isInMonth = isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+              console.log(`TarefasList: Month check for "${tarefa.title}":`, {
+                isInMonth,
+                tarefaDate: tarefaDate.toISOString(),
+                start_date: tarefa.start_date
+              });
+              return isInMonth;
             } catch (error) {
               console.error('TarefasList: Error parsing date for month filter:', tarefa.start_date, error);
               return false;
             }
           });
-          console.log('TarefasList: Month tarefas found:', monthTarefas.length);
-          return monthTarefas;
+          break;
         
         default:
-          return activeTarefas;
+          filteredResults = activeTarefas;
       }
+      
+      console.log(`TarefasList: Filter "${filter}" results:`, {
+        count: filteredResults.length,
+        titles: filteredResults.map(t => t.title)
+      });
+      
+      return filteredResults;
     } catch (error) {
       console.error('TarefasList: Error in getFilteredTarefas:', error);
       return [];
@@ -113,17 +153,20 @@ const TarefasList: React.FC<TarefasListProps> = ({
     }
   };
 
-  // Sempre filtrar as tarefas independentemente do showPeriodDivision
+  // Always filter tasks regardless of showPeriodDivision
   const filteredTarefas = React.useMemo(() => {
     try {
       const result = getFilteredTarefas();
-      console.log('TarefasList: Final filtered result:', result?.length || 0);
+      console.log('TarefasList: Final filtered result:', {
+        count: result?.length || 0,
+        filter
+      });
       return result || [];
     } catch (error) {
       console.error('TarefasList: Error in useMemo filtering:', error);
       return [];
     }
-  }, [tarefas, filter]);
+  }, [tarefas, filter, serverDate]);
 
   if (!Array.isArray(filteredTarefas)) {
     console.error('TarefasList: filteredTarefas is not an array:', filteredTarefas);
@@ -134,6 +177,18 @@ const TarefasList: React.FC<TarefasListProps> = ({
         </div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">Erro ao carregar tarefas</h3>
         <p className="text-gray-500">Tente atualizar a página</p>
+      </div>
+    );
+  }
+
+  if (filteredTarefas.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+          <span className="text-4xl">📝</span>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">{getEmptyMessage()}</h3>
+        <p className="text-gray-500">Adicione um novo lembrete para começar</p>
       </div>
     );
   }
@@ -156,16 +211,6 @@ const TarefasList: React.FC<TarefasListProps> = ({
           </div>
         );
       })}
-      
-      {filteredTarefas.length === 0 && (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <span className="text-4xl">📝</span>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{getEmptyMessage()}</h3>
-          <p className="text-gray-500">Adicione um novo lembrete para começar</p>
-        </div>
-      )}
     </div>
   );
 };

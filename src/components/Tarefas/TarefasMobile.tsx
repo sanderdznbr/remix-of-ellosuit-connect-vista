@@ -9,7 +9,6 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
 import { cn } from '@/lib/utils';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,18 +45,26 @@ const TarefasMobile = () => {
     tarefas: Array.isArray(tarefas) ? tarefas.length : 'not array',
     loading,
     activeFilter,
-    user: user ? 'exists' : 'none'
+    user: user ? 'exists' : 'none',
+    serverDate: getServerDate().toISOString(),
+    todayString: getServerTodayString(),
+    tomorrowString: getServerTomorrowString()
   });
 
   // Initialize server date when component mounts
   useEffect(() => {
     try {
-      console.log('TarefasMobile mounted, current server date:', getServerDate());
+      console.log('TarefasMobile mounted, current server date:', getServerDate().toISOString());
       console.log('Today string:', getServerTodayString());
       console.log('Tomorrow string:', getServerTomorrowString());
       
       if (Array.isArray(tarefas) && tarefas.length > 0) {
         initializeServerDateFromEvents(tarefas);
+        
+        // Log all tasks with their dates for debugging
+        tarefas.forEach(tarefa => {
+          console.log(`Task debug: "${tarefa.title}" - start_date: ${tarefa.start_date} - isToday: ${isToday(tarefa.start_date)} - isTomorrow: ${isTomorrow(tarefa.start_date)}`);
+        });
       }
     } catch (error) {
       console.error('TarefasMobile - Error in useEffect:', error);
@@ -94,6 +101,7 @@ const TarefasMobile = () => {
 
   const handleCreateTarefa = async (tarefaData: any) => {
     try {
+      console.log('TarefasMobile - Creating tarefa:', tarefaData);
       await createTarefa(tarefaData);
       vibrate(30);
       await refreshEvents();
@@ -189,43 +197,93 @@ const TarefasMobile = () => {
       console.log('TarefasMobile - Active tarefas for filtering:', safeTarefas.length);
 
       const serverDate = getServerDate();
+      let filteredResults = [];
 
       switch (filter) {
         case 'hoje':
-          return safeTarefas.filter(tarefa => isToday(tarefa.start_date));
+          filteredResults = safeTarefas.filter(tarefa => {
+            const result = isToday(tarefa.start_date);
+            console.log(`TarefasMobile: isToday check for "${tarefa.title}":`, {
+              result,
+              start_date: tarefa.start_date,
+              id: tarefa.id
+            });
+            return result;
+          });
+          break;
         
         case 'amanha':
-          return safeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
+          filteredResults = safeTarefas.filter(tarefa => {
+            const result = isTomorrow(tarefa.start_date);
+            console.log(`TarefasMobile: isTomorrow check for "${tarefa.title}":`, {
+              result,
+              start_date: tarefa.start_date,
+              id: tarefa.id
+            });
+            return result;
+          });
+          break;
         
         case 'semana':
           const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 });
           const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
-          return safeTarefas.filter(tarefa => {
+          console.log('TarefasMobile: Week filter range:', {
+            weekStart: weekStart.toISOString(),
+            weekEnd: weekEnd.toISOString()
+          });
+          
+          filteredResults = safeTarefas.filter(tarefa => {
             try {
               const tarefaDate = parseISO(tarefa.start_date);
-              return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+              const isInWeek = isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+              console.log(`TarefasMobile: Week check for "${tarefa.title}":`, {
+                isInWeek,
+                tarefaDate: tarefaDate.toISOString(),
+                start_date: tarefa.start_date
+              });
+              return isInWeek;
             } catch (error) {
               console.error('TarefasMobile - Error parsing date for week:', error);
               return false;
             }
           });
+          break;
         
         case 'mes':
           const monthStart = startOfMonth(serverDate);
           const monthEnd = endOfMonth(serverDate);
-          return safeTarefas.filter(tarefa => {
+          console.log('TarefasMobile: Month filter range:', {
+            monthStart: monthStart.toISOString(),
+            monthEnd: monthEnd.toISOString()
+          });
+          
+          filteredResults = safeTarefas.filter(tarefa => {
             try {
               const tarefaDate = parseISO(tarefa.start_date);
-              return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+              const isInMonth = isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+              console.log(`TarefasMobile: Month check for "${tarefa.title}":`, {
+                isInMonth,
+                tarefaDate: tarefaDate.toISOString(),
+                start_date: tarefa.start_date
+              });
+              return isInMonth;
             } catch (error) {
               console.error('TarefasMobile - Error parsing date for month:', error);
               return false;
             }
           });
+          break;
         
         default:
-          return safeTarefas;
+          filteredResults = safeTarefas;
       }
+      
+      console.log(`TarefasMobile: Filter "${filter}" results:`, {
+        count: filteredResults.length,
+        titles: filteredResults.map(t => t.title)
+      });
+      
+      return filteredResults;
     } catch (error) {
       console.error('TarefasMobile - Error in getFilteredTarefas:', error);
       return [];
@@ -319,6 +377,17 @@ const TarefasMobile = () => {
   const safeTarefas = Array.isArray(tarefas) ? tarefas : [];
   const filteredTarefas = getFilteredTarefas(safeTarefas, activeFilter);
   const groupedTarefas = activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
+
+  console.log('TarefasMobile - Render state:', {
+    safeTarefas: safeTarefas.length,
+    filteredTarefas: filteredTarefas.length,
+    activeFilter,
+    groupedTarefas: groupedTarefas ? {
+      morning: groupedTarefas.morning.length,
+      afternoon: groupedTarefas.afternoon.length,
+      evening: groupedTarefas.evening.length
+    } : null
+  });
 
   return (
     <div className="min-h-screen bg-white">

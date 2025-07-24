@@ -34,14 +34,20 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar data/hora local sem conversão de fuso horário
-      const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+      // Criar data/hora no fuso horário do Brasil (UTC-3)
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const [hour, minute] = selectedTime.split(':').map(Number);
       
-      // Usar a data/hora local diretamente sem conversão UTC
-      const startDateTime = localDateTime.toISOString();
+      // Criar date object com timezone do Brasil
+      const localDateTime = new Date(year, month - 1, day, hour, minute);
+      
+      // Converter para UTC considerando o offset do Brasil (-3h)
+      const brazilOffset = -3 * 60; // -3 horas em minutos
+      const utcTime = localDateTime.getTime() - (brazilOffset * 60 * 1000);
+      const startDateTime = new Date(utcTime).toISOString();
       
       // Adicionar 1 hora para o fim do evento
-      const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
+      const endDateTime = new Date(utcTime + 60 * 60 * 1000).toISOString();
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
@@ -108,7 +114,10 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
 
   // Função para exibir a data/hora corretamente no preview
   const getPreviewDateTime = () => {
-    const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const [hour, minute] = selectedTime.split(':').map(Number);
+    const localDateTime = new Date(year, month - 1, day, hour, minute);
+    
     return localDateTime.toLocaleDateString('pt-BR', {
       day: 'numeric',
       month: 'long',

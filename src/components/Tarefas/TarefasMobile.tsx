@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { getServerDate, getServerTodayString, getServerTomorrowString, initializeServerDateFromEvents } from '@/utils/date-server';
 
 type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 
@@ -33,6 +34,13 @@ const TarefasMobile = () => {
     sendTestNotification 
   } = useIOSPushNotifications();
   const { toast } = useToast();
+
+  // Initialize server date offset when tarefas load
+  useEffect(() => {
+    if (tarefas.length > 0) {
+      initializeServerDateFromEvents(tarefas);
+    }
+  }, [tarefas]);
 
   const filterOptions: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
   
@@ -123,12 +131,10 @@ const TarefasMobile = () => {
   };
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowString = tomorrow.toISOString().split('T')[0];
+    // Use server-synchronized date functions
+    const todayString = getServerTodayString();
+    const tomorrowString = getServerTomorrowString();
+    const serverDate = getServerDate();
     
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 
@@ -146,8 +152,8 @@ const TarefasMobile = () => {
         });
       
       case 'semana':
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+        const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -158,8 +164,8 @@ const TarefasMobile = () => {
         });
       
       case 'mes':
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
+        const monthStart = startOfMonth(serverDate);
+        const monthEnd = endOfMonth(serverDate);
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -270,7 +276,7 @@ const TarefasMobile = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-1">Lembretes</h1>
               <p className="text-gray-500 text-sm">
-                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+                {format(getServerDate(), "EEEE, d 'de' MMMM", { locale: ptBR })}
               </p>
             </div>
             

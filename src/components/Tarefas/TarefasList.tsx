@@ -22,42 +22,80 @@ const TarefasList: React.FC<TarefasListProps> = ({
   const serverDate = getServerDate();
 
   const getFilteredTarefas = () => {
-    // Filtrar apenas tarefas ativas (não excluídas)
-    const activeTarefas = tarefas.filter(tarefa => tarefa.status !== 'deleted');
-    
-    switch (filter) {
-      case 'hoje':
-        return activeTarefas.filter(tarefa => isToday(tarefa.start_date));
+    try {
+      console.log('TarefasList: Filtering tarefas...', { filter, totalTarefas: tarefas.length });
       
-      case 'amanha':
-        return activeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
+      if (!Array.isArray(tarefas)) {
+        console.warn('TarefasList: tarefas is not an array:', tarefas);
+        return [];
+      }
       
-      case 'semana':
-        const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Domingo
-        const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
-          } catch {
-            return false;
-          }
-        });
+      // Filtrar apenas tarefas ativas (não excluídas)
+      const activeTarefas = tarefas.filter(tarefa => {
+        if (!tarefa || !tarefa.start_date) {
+          console.warn('TarefasList: Invalid tarefa skipped:', tarefa);
+          return false;
+        }
+        return tarefa.status !== 'deleted';
+      });
       
-      case 'mes':
-        const monthStart = startOfMonth(serverDate);
-        const monthEnd = endOfMonth(serverDate);
-        return activeTarefas.filter(tarefa => {
-          try {
-            const tarefaDate = parseISO(tarefa.start_date);
-            return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
-          } catch {
-            return false;
-          }
-        });
+      console.log('TarefasList: Active tarefas:', activeTarefas.length);
       
-      default:
-        return activeTarefas;
+      switch (filter) {
+        case 'hoje':
+          const todayTarefas = activeTarefas.filter(tarefa => {
+            const result = isToday(tarefa.start_date);
+            console.log('TarefasList: isToday check for', tarefa.title, ':', result);
+            return result;
+          });
+          console.log('TarefasList: Today tarefas found:', todayTarefas.length);
+          return todayTarefas;
+        
+        case 'amanha':
+          const tomorrowTarefas = activeTarefas.filter(tarefa => {
+            const result = isTomorrow(tarefa.start_date);
+            console.log('TarefasList: isTomorrow check for', tarefa.title, ':', result);
+            return result;
+          });
+          console.log('TarefasList: Tomorrow tarefas found:', tomorrowTarefas.length);
+          return tomorrowTarefas;
+        
+        case 'semana':
+          const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Domingo
+          const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
+          const weekTarefas = activeTarefas.filter(tarefa => {
+            try {
+              const tarefaDate = parseISO(tarefa.start_date);
+              return isWithinInterval(tarefaDate, { start: weekStart, end: weekEnd });
+            } catch (error) {
+              console.error('TarefasList: Error parsing date for week filter:', tarefa.start_date, error);
+              return false;
+            }
+          });
+          console.log('TarefasList: Week tarefas found:', weekTarefas.length);
+          return weekTarefas;
+        
+        case 'mes':
+          const monthStart = startOfMonth(serverDate);
+          const monthEnd = endOfMonth(serverDate);
+          const monthTarefas = activeTarefas.filter(tarefa => {
+            try {
+              const tarefaDate = parseISO(tarefa.start_date);
+              return isWithinInterval(tarefaDate, { start: monthStart, end: monthEnd });
+            } catch (error) {
+              console.error('TarefasList: Error parsing date for month filter:', tarefa.start_date, error);
+              return false;
+            }
+          });
+          console.log('TarefasList: Month tarefas found:', monthTarefas.length);
+          return monthTarefas;
+        
+        default:
+          return activeTarefas;
+      }
+    } catch (error) {
+      console.error('TarefasList: Error in getFilteredTarefas:', error);
+      return [];
     }
   };
 

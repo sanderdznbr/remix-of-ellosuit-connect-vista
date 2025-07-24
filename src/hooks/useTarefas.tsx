@@ -29,30 +29,56 @@ export const useTarefas = () => {
   const [deletedTarefas, setDeletedTarefas] = useState<TarefaItem[]>([]);
 
   useEffect(() => {
-    const tarefasFormatted: TarefaItem[] = events.map(event => ({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      event_type: event.event_type,
-      meeting_link: event.meeting_link,
-      meeting_provider: event.meeting_provider,
-      attendees: Array.isArray(event.attendees) ? 
-        event.attendees.map(a => typeof a === 'string' ? a : String(a)) : 
-        [],
-      is_all_day: event.is_all_day,
-      color: event.color,
-      status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending',
-      google_event_id: event.google_event_id,
-      source: event.source || 'local',
-      location: event.description?.includes('Local:') ? 
-        event.description.split('Local:')[1]?.split('\n')[0]?.trim() : '',
-      notes: event.description
-    }));
-    
-    setTarefas(tarefasFormatted);
-    setDeletedTarefas([]);
+    try {
+      console.log('useTarefas: Processing events...', events.length);
+      
+      if (!Array.isArray(events)) {
+        console.warn('useTarefas: events is not an array:', events);
+        setTarefas([]);
+        setDeletedTarefas([]);
+        return;
+      }
+
+      const tarefasFormatted: TarefaItem[] = events
+        .filter(event => {
+          // Validate required fields
+          if (!event || !event.id || !event.title || !event.start_date) {
+            console.warn('useTarefas: Invalid event skipped:', event);
+            return false;
+          }
+          return true;
+        })
+        .map(event => ({
+          id: event.id,
+          title: event.title || 'Sem título',
+          description: event.description || '',
+          start_date: event.start_date,
+          end_date: event.end_date || event.start_date,
+          event_type: event.event_type || 'reminder',
+          meeting_link: event.meeting_link,
+          meeting_provider: event.meeting_provider,
+          attendees: Array.isArray(event.attendees) ? 
+            event.attendees.map(a => typeof a === 'string' ? a : String(a)) : 
+            [],
+          is_all_day: event.is_all_day,
+          color: event.color,
+          status: (event.status as 'pending' | 'completed' | 'deleted') || 'pending',
+          google_event_id: event.google_event_id,
+          source: event.source || 'local',
+          location: event.description?.includes('Local:') ? 
+            event.description.split('Local:')[1]?.split('\n')[0]?.trim() : '',
+          notes: event.description
+        }));
+      
+      console.log('useTarefas: Formatted tarefas:', tarefasFormatted.length);
+      
+      setTarefas(tarefasFormatted);
+      setDeletedTarefas([]);
+    } catch (error) {
+      console.error('useTarefas: Error processing events:', error);
+      setTarefas([]);
+      setDeletedTarefas([]);
+    }
   }, [events]);
 
   const createTarefa = async (tarefaData: any) => {

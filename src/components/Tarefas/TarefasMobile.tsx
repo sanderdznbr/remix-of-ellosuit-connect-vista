@@ -123,9 +123,7 @@ const TarefasMobile = () => {
   };
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
-    const now = new Date();
-    // Configurar para timezone local
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const today = new Date();
     const todayString = today.toISOString().split('T')[0];
     
     const tomorrow = new Date(today);

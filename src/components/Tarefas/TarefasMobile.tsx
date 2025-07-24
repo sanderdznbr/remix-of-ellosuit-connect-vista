@@ -123,13 +123,21 @@ const TarefasMobile = () => {
   };
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset para início do dia
+    const now = new Date();
+    // Configurar para timezone local
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayString = today.toISOString().split('T')[0];
     
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowString = tomorrow.toISOString().split('T')[0];
+    
+    console.log('Debug dates:', { 
+      today: todayString, 
+      tomorrow: tomorrowString,
+      now: now.toISOString(),
+      tarefas: tarefasList.map(t => ({ id: t.id, title: t.title, start_date: t.start_date }))
+    });
     
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 

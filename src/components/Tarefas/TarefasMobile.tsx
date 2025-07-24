@@ -344,14 +344,6 @@ const TarefasMobile = () => {
               ))}
             </div>
             
-            {/* Swipe Hint */}
-            {!isSwipeGesturing && (
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="text-xs text-gray-400 text-center">
-                  ← arraste para navegar →
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

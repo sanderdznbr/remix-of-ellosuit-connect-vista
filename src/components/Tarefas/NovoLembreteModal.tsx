@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { vibrate } from '@/utils/mobile-helpers';
 import MobileModal from '@/components/ui/mobile-modal';
+import { getServerTodayString } from '@/utils/date-server';
 
 interface NovoLembreteModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ interface NovoLembreteModalProps {
 const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getServerTodayString());
   const [selectedTime, setSelectedTime] = useState('09:00');
   const [eventType, setEventType] = useState<'reminder' | 'meeting' | 'appointment'>('reminder');
   const [location, setLocation] = useState('');
@@ -34,19 +35,22 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar data/hora local (horário de Brasília) sem conversão
+      // Criar data/hora local (horário de Brasília)
       const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
       
-      // Usar a data/hora local diretamente (já está no fuso horário do usuário)
-      const startDateTime = localDateTime.toISOString();
+      // Compensar o fuso horário do Brasil (UTC-3) adicionando 3 horas antes de converter para UTC
+      // Isso garante que o horário salvo seja correto no fuso horário brasileiro
+      const compensatedDateTime = new Date(localDateTime.getTime() + (3 * 60 * 60 * 1000));
+      const startDateTime = compensatedDateTime.toISOString();
       
       // Adicionar 1 hora para o fim do evento
-      const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
+      const endDateTime = new Date(compensatedDateTime.getTime() + 60 * 60 * 1000).toISOString();
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
       console.log('- Hora selecionada:', selectedTime);
       console.log('- DateTime local:', localDateTime);
+      console.log('- DateTime compensado (+3h):', compensatedDateTime);
       console.log('- Start ISO:', startDateTime);
       console.log('- End ISO:', endDateTime);
 
@@ -86,7 +90,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
       // Reset form
       setTitle('');
       setDescription('');
-      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setSelectedDate(getServerTodayString());
       setSelectedTime('09:00');
       setEventType('reminder');
       setLocation('');

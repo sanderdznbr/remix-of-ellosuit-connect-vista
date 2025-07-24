@@ -109,126 +109,19 @@ export const parseBrazilDate = (dateString: string): Date => {
 };
 
 /**
- * Extract date part from ISO string for comparison
- */
-export const extractDatePart = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  try {
-    // Handle both ISO strings and date-only strings
-    if (dateString.includes('T')) {
-      return dateString.split('T')[0];
-    }
-    
-    // If it's already in YYYY-MM-DD format
-    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return dateString;
-    }
-    
-    // Try to parse and format
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      console.warn('Invalid date string:', dateString);
-      return '';
-    }
-    
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  } catch (error) {
-    console.error('Error extracting date part:', error, 'dateString:', dateString);
-    return '';
-  }
-};
-
-/**
  * Check if a date string matches today in Brazil timezone
  */
 export const isToday = (dateString: string): boolean => {
-  try {
-    if (!dateString) {
-      console.warn('isToday: dateString is empty or null');
-      return false;
-    }
-    
-    const todayString = getServerTodayString();
-    const eventDateString = extractDatePart(dateString);
-    
-    console.log('isToday check:', { 
-      eventDateString, 
-      todayString, 
-      match: eventDateString === todayString,
-      originalDateString: dateString
-    });
-    
-    return eventDateString === todayString;
-  } catch (error) {
-    console.error('Error in isToday:', error, 'dateString:', dateString);
-    return false;
-  }
+  const todayString = getServerTodayString();
+  const eventDateString = dateString.split('T')[0];
+  return eventDateString === todayString;
 };
 
 /**
  * Check if a date string matches tomorrow in Brazil timezone
  */
 export const isTomorrow = (dateString: string): boolean => {
-  try {
-    if (!dateString) {
-      console.warn('isTomorrow: dateString is empty or null');
-      return false;
-    }
-    
-    const tomorrowString = getServerTomorrowString();
-    const eventDateString = extractDatePart(dateString);
-    
-    console.log('isTomorrow check:', { 
-      eventDateString, 
-      tomorrowString, 
-      match: eventDateString === tomorrowString,
-      originalDateString: dateString
-    });
-    
-    return eventDateString === tomorrowString;
-  } catch (error) {
-    console.error('Error in isTomorrow:', error, 'dateString:', dateString);
-    return false;
-  }
-};
-
-/**
- * Check if a date string matches yesterday in Brazil timezone
- */
-export const isYesterday = (dateString: string): boolean => {
-  try {
-    if (!dateString) {
-      console.warn('isYesterday: dateString is empty or null');
-      return false;
-    }
-    
-    const yesterdayString = getServerYesterdayString();
-    const eventDateString = extractDatePart(dateString);
-    
-    return eventDateString === yesterdayString;
-  } catch (error) {
-    console.error('Error in isYesterday:', error, 'dateString:', dateString);
-    return false;
-  }
-};
-
-/**
- * Create a date string in Brazil timezone for saving
- */
-export const createBrazilDateString = (date: Date): string => {
-  try {
-    // Convert to Brazil timezone
-    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-    const brazilTime = new Date(utc + (-3 * 3600000));
-    
-    // Return ISO string
-    return brazilTime.toISOString();
-  } catch (error) {
-    console.error('Error creating Brazil date string:', error);
-    return date.toISOString();
-  }
+  const tomorrowString = getServerTomorrowString();
+  const eventDateString = dateString.split('T')[0];
+  return eventDateString === tomorrowString;
 };

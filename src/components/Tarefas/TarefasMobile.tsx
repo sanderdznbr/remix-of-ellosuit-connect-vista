@@ -132,13 +132,6 @@ const TarefasMobile = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowString = tomorrow.toISOString().split('T')[0];
     
-    console.log('Debug dates:', { 
-      today: todayString, 
-      tomorrow: tomorrowString,
-      now: now.toISOString(),
-      tarefas: tarefasList.map(t => ({ id: t.id, title: t.title, start_date: t.start_date }))
-    });
-    
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
 
     switch (filter) {

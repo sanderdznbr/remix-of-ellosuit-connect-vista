@@ -167,7 +167,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
                 {tarefa.meeting_link && (
                   <div className="flex items-center space-x-1">
                     <Link className="h-4 w-4" />
-                    <span>Link</span>
+                    <span className="truncate max-w-[80px]">Meet</span>
                   </div>
                 )}
                 

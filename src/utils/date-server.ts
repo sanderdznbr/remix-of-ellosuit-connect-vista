@@ -114,16 +114,12 @@ export const parseBrazilDate = (dateString: string): Date => {
 export const isToday = (dateString: string): boolean => {
   const todayString = getServerTodayString();
   
-  // Parse a data ISO para Date e depois converter para string de data local do Brasil
-  const eventDate = new Date(dateString);
-  // Subtrair 3 horas para compensar o fuso horário (já que salvamos com +3h)
-  const localEventDate = new Date(eventDate.getTime() - (3 * 60 * 60 * 1000));
-  const eventDateString = localEventDate.toISOString().split('T')[0];
+  // Agora usamos o formato direto sem conversão de fuso horário
+  // O dateString vem no formato YYYY-MM-DDTHH:mm:ss
+  const eventDateString = dateString.split('T')[0];
   
   console.log('🔍 isToday check:');
   console.log('- Today string:', todayString);
-  console.log('- Event ISO date:', dateString);
-  console.log('- Event local date:', localEventDate);
   console.log('- Event date string:', eventDateString);
   console.log('- Is today?:', eventDateString === todayString);
   
@@ -136,16 +132,12 @@ export const isToday = (dateString: string): boolean => {
 export const isTomorrow = (dateString: string): boolean => {
   const tomorrowString = getServerTomorrowString();
   
-  // Parse a data ISO para Date e depois converter para string de data local do Brasil
-  const eventDate = new Date(dateString);
-  // Subtrair 3 horas para compensar o fuso horário (já que salvamos com +3h)
-  const localEventDate = new Date(eventDate.getTime() - (3 * 60 * 60 * 1000));
-  const eventDateString = localEventDate.toISOString().split('T')[0];
+  // Agora usamos o formato direto sem conversão de fuso horário
+  // O dateString vem no formato YYYY-MM-DDTHH:mm:ss
+  const eventDateString = dateString.split('T')[0];
   
   console.log('🔍 isTomorrow check:');
   console.log('- Tomorrow string:', tomorrowString);
-  console.log('- Event ISO date:', dateString);
-  console.log('- Event local date:', localEventDate);
   console.log('- Event date string:', eventDateString);
   console.log('- Is tomorrow?:', eventDateString === tomorrowString);
   

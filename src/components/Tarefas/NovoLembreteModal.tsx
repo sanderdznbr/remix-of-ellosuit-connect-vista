@@ -35,24 +35,26 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar data/hora local (horário de Brasília)
-      const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+      // Criar data/hora diretamente no formato ISO com o horário local
+      // Não adicionar ou subtrair fuso horário - manter o horário exato que o usuário escolheu
+      const localDateTimeString = `${selectedDate}T${selectedTime}:00`;
+      const localDateTime = new Date(localDateTimeString);
       
-      // Compensar o fuso horário do Brasil (UTC-3) adicionando 3 horas antes de converter para UTC
-      // Isso garante que o horário salvo seja correto no fuso horário brasileiro
-      const compensatedDateTime = new Date(localDateTime.getTime() + (3 * 60 * 60 * 1000));
-      const startDateTime = compensatedDateTime.toISOString();
+      // Usar o horário local sem conversão para UTC - mantém o horário exato
+      const startDateTime = localDateTimeString;
       
       // Adicionar 1 hora para o fim do evento
-      const endDateTime = new Date(compensatedDateTime.getTime() + 60 * 60 * 1000).toISOString();
+      const endTime = selectedTime.split(':');
+      const endHour = parseInt(endTime[0]) + 1;
+      const endMinute = endTime[1];
+      const endDateTime = `${selectedDate}T${endHour.toString().padStart(2, '0')}:${endMinute}:00`;
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
       console.log('- Hora selecionada:', selectedTime);
-      console.log('- DateTime local:', localDateTime);
-      console.log('- DateTime compensado (+3h):', compensatedDateTime);
-      console.log('- Start ISO:', startDateTime);
-      console.log('- End ISO:', endDateTime);
+      console.log('- DateTime local string:', localDateTimeString);
+      console.log('- Start DateTime:', startDateTime);
+      console.log('- End DateTime:', endDateTime);
 
       let finalDescription = description.trim();
       let meetingLink = '';

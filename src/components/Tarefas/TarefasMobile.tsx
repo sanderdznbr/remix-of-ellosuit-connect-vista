@@ -301,8 +301,27 @@ const TarefasMobile = () => {
     );
   }
 
-  const filteredTarefas = getFilteredTarefas(tarefas, activeFilter);
-  const groupedTarefas = activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
+  console.log('TarefasMobile: Before filtering - tarefas:', tarefas?.length, 'activeFilter:', activeFilter);
+  
+  const filteredTarefas = React.useMemo(() => {
+    try {
+      const result = getFilteredTarefas(tarefas || [], activeFilter);
+      console.log('TarefasMobile: Filtered result:', result?.length || 0, 'for filter:', activeFilter);
+      return result || [];
+    } catch (error) {
+      console.error('TarefasMobile: Error filtering tarefas:', error);
+      return [];
+    }
+  }, [tarefas, activeFilter]);
+  
+  const groupedTarefas = React.useMemo(() => {
+    try {
+      return activeFilter === 'hoje' ? groupTarefasByPeriod(filteredTarefas) : null;
+    } catch (error) {
+      console.error('TarefasMobile: Error grouping tarefas:', error);
+      return null;
+    }
+  }, [activeFilter, filteredTarefas]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -499,14 +518,31 @@ const TarefasMobile = () => {
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <TarefasList
-                  tarefas={filteredTarefas}
-                  onUpdate={handleUpdateTarefa}
-                  onDelete={handleDeleteTarefa}
-                  filter={activeFilter}
-                />
-              </div>
+              <>
+                {filteredTarefas && filteredTarefas.length > 0 ? (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                    <TarefasList
+                      tarefas={filteredTarefas}
+                      onUpdate={handleUpdateTarefa}
+                      onDelete={handleDeleteTarefa}
+                      filter={activeFilter}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-4xl">📝</span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {activeFilter === 'amanha' ? 'Nenhuma tarefa para amanhã' : 
+                       activeFilter === 'semana' ? 'Nenhuma tarefa para esta semana' :
+                       activeFilter === 'mes' ? 'Nenhuma tarefa para este mês' :
+                       'Nenhuma tarefa encontrada'}
+                    </h3>
+                    <p className="text-gray-500">Adicione um novo lembrete para começar</p>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

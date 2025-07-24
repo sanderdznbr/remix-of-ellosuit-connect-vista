@@ -1,4 +1,3 @@
-
 import React from 'react';
 import TarefaItem from './TarefaItem';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
@@ -23,7 +22,7 @@ const TarefasList: React.FC<TarefasListProps> = ({
 
   const getFilteredTarefas = () => {
     try {
-      console.log('TarefasList: Filtering tarefas...', { filter, totalTarefas: tarefas.length });
+      console.log('TarefasList: Filtering tarefas...', { filter, totalTarefas: tarefas?.length || 0 });
       
       if (!Array.isArray(tarefas)) {
         console.warn('TarefasList: tarefas is not an array:', tarefas);
@@ -115,19 +114,48 @@ const TarefasList: React.FC<TarefasListProps> = ({
   };
 
   // Sempre filtrar as tarefas independentemente do showPeriodDivision
-  const filteredTarefas = getFilteredTarefas();
+  const filteredTarefas = React.useMemo(() => {
+    try {
+      const result = getFilteredTarefas();
+      console.log('TarefasList: Final filtered result:', result?.length || 0);
+      return result || [];
+    } catch (error) {
+      console.error('TarefasList: Error in useMemo filtering:', error);
+      return [];
+    }
+  }, [tarefas, filter]);
+
+  if (!Array.isArray(filteredTarefas)) {
+    console.error('TarefasList: filteredTarefas is not an array:', filteredTarefas);
+    return (
+      <div className="text-center py-16">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+          <span className="text-4xl">⚠️</span>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Erro ao carregar tarefas</h3>
+        <p className="text-gray-500">Tente atualizar a página</p>
+      </div>
+    );
+  }
 
   return (
     <div className="divide-y divide-gray-100">
-      {filteredTarefas.map((tarefa, index) => (
-        <div key={tarefa.id} className={index === 0 ? '' : ''}>
-          <TarefaItem
-            tarefa={tarefa}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-          />
-        </div>
-      ))}
+      {filteredTarefas.map((tarefa, index) => {
+        if (!tarefa || !tarefa.id) {
+          console.warn('TarefasList: Invalid tarefa in render:', tarefa);
+          return null;
+        }
+        
+        return (
+          <div key={tarefa.id} className={index === 0 ? '' : ''}>
+            <TarefaItem
+              tarefa={tarefa}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+            />
+          </div>
+        );
+      })}
       
       {filteredTarefas.length === 0 && (
         <div className="text-center py-16">

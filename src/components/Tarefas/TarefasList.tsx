@@ -7,7 +7,7 @@ interface TarefasListProps {
   tarefas: any[];
   onUpdate: (id: string, updates: any) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  filter: 'hoje' | 'semana' | 'mes';
+  filter: 'hoje' | 'amanha' | 'semana' | 'mes';
   showPeriodDivision?: boolean;
 }
 

@@ -4,7 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 import TarefasDesktop from '@/components/Tarefas/TarefasDesktop';
-import TarefasPublica from '@/components/Tarefas/TarefasPublica';
+import TaskLogin from '@/components/Tarefas/TaskLogin';
 
 const Tarefas = () => {
   const { user, loading: authLoading } = useAuth();
@@ -19,9 +19,9 @@ const Tarefas = () => {
     );
   }
 
-  // Se não há usuário autenticado, mostrar página pública
+  // Se não há usuário autenticado, mostrar tela de login
   if (!user) {
-    return <TarefasPublica />;
+    return <TaskLogin />;
   }
 
   // Se há usuário autenticado, mostrar tarefas normais

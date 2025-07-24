@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2, MapPin, FileText, Globe } from 'lucide-react';
+import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2, MapPin, FileText, Globe, Video } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -25,13 +25,49 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(tarefa?.title || '');
   const [description, setDescription] = useState(tarefa?.description || '');
+  const [eventType, setEventType] = useState<'reminder' | 'meeting' | 'appointment'>(tarefa?.event_type || 'reminder');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (tarefa?.start_date) {
+      return new Date(tarefa.start_date).toISOString().split('T')[0];
+    }
+    return new Date().toISOString().split('T')[0];
+  });
+  const [selectedTime, setSelectedTime] = useState(() => {
+    if (tarefa?.start_date) {
+      return new Date(tarefa.start_date).toTimeString().slice(0, 5);
+    }
+    return '09:00';
+  });
+  const [location, setLocation] = useState(() => {
+    return extractLocationFromDescription(tarefa?.description || '');
+  });
+  const [attendees, setAttendees] = useState(() => {
+    return tarefa?.attendees ? tarefa.attendees.join(', ') : '';
+  });
 
   const handleSave = async () => {
     if (!tarefa) return;
     
+    const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
+    const startDateTime = localDateTime.toISOString();
+    const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
+    
+    let finalDescription = description.trim();
+    let meetingLink = tarefa.meeting_link;
+    
+    if (eventType === 'meeting' && !meetingLink) {
+      meetingLink = `https://meet.google.com/${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}`;
+    }
+    
     await onUpdate(tarefa.id, {
       title: title.trim(),
-      description: description.trim()
+      description: finalDescription,
+      event_type: eventType,
+      start_date: startDateTime,
+      end_date: endDateTime,
+      location: eventType === 'appointment' ? location.trim() : undefined,
+      meeting_link: eventType === 'meeting' ? meetingLink : undefined,
+      attendees: eventType === 'meeting' && attendees.trim() ? attendees.split(',').map(email => email.trim()) : undefined
     });
     
     setIsEditing(false);

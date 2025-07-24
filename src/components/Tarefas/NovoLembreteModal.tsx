@@ -34,20 +34,14 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar data/hora no fuso horário do Brasil (UTC-3)
-      const [year, month, day] = selectedDate.split('-').map(Number);
-      const [hour, minute] = selectedTime.split(':').map(Number);
+      // Criar data/hora local (horário de Brasília) sem conversão
+      const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
       
-      // Criar date object com timezone do Brasil
-      const localDateTime = new Date(year, month - 1, day, hour, minute);
-      
-      // Converter para UTC considerando o offset do Brasil (-3h)
-      const brazilOffset = -3 * 60; // -3 horas em minutos
-      const utcTime = localDateTime.getTime() - (brazilOffset * 60 * 1000);
-      const startDateTime = new Date(utcTime).toISOString();
+      // Usar a data/hora local diretamente (já está no fuso horário do usuário)
+      const startDateTime = localDateTime.toISOString();
       
       // Adicionar 1 hora para o fim do evento
-      const endDateTime = new Date(utcTime + 60 * 60 * 1000).toISOString();
+      const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
@@ -114,9 +108,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
 
   // Função para exibir a data/hora corretamente no preview
   const getPreviewDateTime = () => {
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const [hour, minute] = selectedTime.split(':').map(Number);
-    const localDateTime = new Date(year, month - 1, day, hour, minute);
+    const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
     
     return localDateTime.toLocaleDateString('pt-BR', {
       day: 'numeric',
@@ -137,12 +129,13 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
         {/* Form Fields */}
         <div className="space-y-4">
           <div>
-            <Input
-              placeholder="Título do lembrete"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-lg font-medium border-0 bg-gray-50 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
-            />
+              <Input
+                placeholder="Título do lembrete"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-lg font-medium border-0 bg-gray-50 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                style={{ fontSize: '16px' }}
+              />
           </div>
 
           <div>
@@ -152,6 +145,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
               onChange={(e) => setDescription(e.target.value)}
               className="border-0 bg-gray-50 rounded-xl px-4 py-3 resize-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
               rows={4}
+              style={{ fontSize: '16px' }}
             />
           </div>
 
@@ -167,6 +161,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="border-0 bg-transparent text-sm p-0 focus:ring-0"
+                style={{ fontSize: '16px' }}
               />
             </div>
 
@@ -180,6 +175,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={selectedTime}
                 onChange={(e) => setSelectedTime(e.target.value)}
                 className="border-0 bg-transparent text-sm p-0 focus:ring-0"
+                style={{ fontSize: '16px' }}
               />
             </div>
           </div>
@@ -246,6 +242,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="border-0 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 transition-all"
+                style={{ fontSize: '16px' }}
               />
             </div>
           )}
@@ -261,6 +258,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={attendees}
                 onChange={(e) => setAttendees(e.target.value)}
                 className="border-0 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                style={{ fontSize: '16px' }}
               />
               <p className="text-xs text-gray-500 mt-2">
                 Link do Google Meet será gerado automaticamente

@@ -2,6 +2,7 @@
 import React from 'react';
 import TarefaItem from './TarefaItem';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { getServerDate, isToday, isTomorrow } from '@/utils/date-server';
 
 interface TarefasListProps {
   tarefas: any[];
@@ -18,33 +19,22 @@ const TarefasList: React.FC<TarefasListProps> = ({
   filter, 
   showPeriodDivision = true 
 }) => {
-  const today = new Date();
-  const todayString = today.toISOString().split('T')[0];
+  const serverDate = getServerDate();
 
   const getFilteredTarefas = () => {
     // Filtrar apenas tarefas ativas (não excluídas)
     const activeTarefas = tarefas.filter(tarefa => tarefa.status !== 'deleted');
     
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowString = tomorrow.toISOString().split('T')[0];
-    
     switch (filter) {
       case 'hoje':
-        return activeTarefas.filter(tarefa => {
-          const tarefaDateString = tarefa.start_date.split('T')[0];
-          return tarefaDateString === todayString;
-        });
+        return activeTarefas.filter(tarefa => isToday(tarefa.start_date));
       
       case 'amanha':
-        return activeTarefas.filter(tarefa => {
-          const tarefaDateString = tarefa.start_date.split('T')[0];
-          return tarefaDateString === tomorrowString;
-        });
+        return activeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
       
       case 'semana':
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Domingo
-        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+        const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Domingo
+        const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -55,8 +45,8 @@ const TarefasList: React.FC<TarefasListProps> = ({
         });
       
       case 'mes':
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
+        const monthStart = startOfMonth(serverDate);
+        const monthEnd = endOfMonth(serverDate);
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -75,6 +65,8 @@ const TarefasList: React.FC<TarefasListProps> = ({
     switch (filter) {
       case 'hoje':
         return 'Nenhuma tarefa para hoje';
+      case 'amanha':
+        return 'Nenhuma tarefa para amanhã';
       case 'semana':
         return 'Nenhuma tarefa para esta semana';
       case 'mes':

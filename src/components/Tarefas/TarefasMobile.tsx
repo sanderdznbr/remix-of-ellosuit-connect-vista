@@ -9,12 +9,20 @@ import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { useIOSPushNotifications } from '@/hooks/useIOSPushNotifications';
 import { cn } from '@/lib/utils';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, format, addDays } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { getServerDate, getServerTodayString, getServerTomorrowString, initializeServerDateFromEvents } from '@/utils/date-server';
+import { 
+  getServerDate, 
+  getServerTodayString, 
+  getServerTomorrowString, 
+  initializeServerDateFromEvents,
+  formatBrazilDate,
+  isToday,
+  isTomorrow
+} from '@/utils/date-server';
 
 type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 
@@ -35,8 +43,12 @@ const TarefasMobile = () => {
   } = useIOSPushNotifications();
   const { toast } = useToast();
 
-  // Initialize server date offset when tarefas load
+  // Initialize server date when component mounts
   useEffect(() => {
+    console.log('TarefasMobile mounted, current server date:', getServerDate());
+    console.log('Today string:', getServerTodayString());
+    console.log('Tomorrow string:', getServerTomorrowString());
+    
     if (tarefas.length > 0) {
       initializeServerDateFromEvents(tarefas);
     }
@@ -73,7 +85,7 @@ const TarefasMobile = () => {
   const handleCreateTarefa = async (tarefaData: any) => {
     await createTarefa(tarefaData);
     vibrate(30);
-    await refreshEvents(); // Refresh após criar
+    await refreshEvents();
   };
 
   const handleUpdateTarefa = async (id: string, updates: any) => {
@@ -131,25 +143,27 @@ const TarefasMobile = () => {
   };
 
   const getFilteredTarefas = (tarefasList: any[], filter: FilterType) => {
-    // Use server-synchronized date functions
-    const todayString = getServerTodayString();
-    const tomorrowString = getServerTomorrowString();
     const serverDate = getServerDate();
-    
     const activeTarefas = tarefasList.filter(tarefa => tarefa.status !== 'deleted');
+
+    console.log('Filtering tarefas:', {
+      filter,
+      serverDate,
+      totalTarefas: activeTarefas.length,
+      todayString: getServerTodayString(),
+      tomorrowString: getServerTomorrowString()
+    });
 
     switch (filter) {
       case 'hoje':
-        return activeTarefas.filter(tarefa => {
-          const tarefaDateString = tarefa.start_date.split('T')[0];
-          return tarefaDateString === todayString;
-        });
+        const todayTarefas = activeTarefas.filter(tarefa => isToday(tarefa.start_date));
+        console.log('Today tarefas found:', todayTarefas.length);
+        return todayTarefas;
       
       case 'amanha':
-        return activeTarefas.filter(tarefa => {
-          const tarefaDateString = tarefa.start_date.split('T')[0];
-          return tarefaDateString === tomorrowString;
-        });
+        const tomorrowTarefas = activeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
+        console.log('Tomorrow tarefas found:', tomorrowTarefas.length);
+        return tomorrowTarefas;
       
       case 'semana':
         const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 });
@@ -276,7 +290,7 @@ const TarefasMobile = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-1">Lembretes</h1>
               <p className="text-gray-500 text-sm">
-                {format(getServerDate(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+                {formatBrazilDate(getServerDate())}
               </p>
             </div>
             
@@ -354,7 +368,6 @@ const TarefasMobile = () => {
                 </button>
               ))}
             </div>
-            
           </div>
         </div>
       </div>

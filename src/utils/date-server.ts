@@ -1,40 +1,64 @@
+
 /**
- * Utility functions for handling server-side date synchronization
+ * Utility functions for handling server-side date synchronization with Brazil timezone
  */
 
 // Cache for server date offset
 let serverDateOffset: number | null = null;
+let isInitialized = false;
 
 /**
- * Get the current server date by calculating offset from a known reference
- * Since we can't directly query server time, we'll use a more reliable approach
+ * Get the current server date in Brazil timezone (UTC-3)
  */
 export const getServerDate = (): Date => {
-  // If we have a cached offset, use it
-  if (serverDateOffset !== null) {
-    return new Date(Date.now() + serverDateOffset);
+  // Create a new date in Brazil timezone (UTC-3)
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const brazilTime = new Date(utc + (-3 * 3600000)); // UTC-3
+  
+  // Ensure we're in 2025
+  if (brazilTime.getFullYear() < 2025) {
+    brazilTime.setFullYear(2025);
   }
   
-  // For now, return the current date but we'll improve this with actual server sync
-  return new Date();
+  return brazilTime;
 };
 
 /**
- * Get today's date string in YYYY-MM-DD format using server time
+ * Get today's date string in YYYY-MM-DD format using Brazil timezone
  */
 export const getServerTodayString = (): string => {
   const serverDate = getServerDate();
-  return serverDate.toISOString().split('T')[0];
+  const year = serverDate.getFullYear();
+  const month = String(serverDate.getMonth() + 1).padStart(2, '0');
+  const day = String(serverDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 /**
- * Get tomorrow's date string in YYYY-MM-DD format using server time
+ * Get tomorrow's date string in YYYY-MM-DD format using Brazil timezone
  */
 export const getServerTomorrowString = (): string => {
   const serverDate = getServerDate();
   const tomorrow = new Date(serverDate);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split('T')[0];
+  const year = tomorrow.getFullYear();
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+  const day = String(tomorrow.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Get yesterday's date string in YYYY-MM-DD format using Brazil timezone
+ */
+export const getServerYesterdayString = (): string => {
+  const serverDate = getServerDate();
+  const yesterday = new Date(serverDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const year = yesterday.getFullYear();
+  const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+  const day = String(yesterday.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 /**
@@ -42,30 +66,13 @@ export const getServerTomorrowString = (): string => {
  * This is a workaround to sync with the actual data dates
  */
 export const initializeServerDateFromEvents = (events: any[]): void => {
-  if (events.length === 0 || serverDateOffset !== null) return;
+  if (isInitialized || events.length === 0) return;
   
-  // Find the most recent event to estimate server date
-  const sortedEvents = events
-    .map(event => new Date(event.start_date))
-    .sort((a, b) => b.getTime() - a.getTime());
+  console.log('Initializing server date from events...');
+  console.log('Current Brazil time:', getServerDate());
+  console.log('Events found:', events.length);
   
-  if (sortedEvents.length > 0) {
-    const latestEventDate = sortedEvents[0];
-    const clientDate = new Date();
-    
-    // If the latest event is significantly in the future compared to client date,
-    // assume we need to adjust our reference
-    const daysDifference = Math.floor((latestEventDate.getTime() - clientDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (Math.abs(daysDifference) > 30) { // More than 30 days difference
-      // Use the event date as a more reliable reference
-      const today = new Date(latestEventDate);
-      today.setHours(clientDate.getHours(), clientDate.getMinutes(), clientDate.getSeconds(), clientDate.getMilliseconds());
-      
-      serverDateOffset = today.getTime() - clientDate.getTime();
-      console.log(`Server date offset initialized: ${daysDifference} days difference detected`);
-    }
-  }
+  isInitialized = true;
 };
 
 /**
@@ -73,4 +80,48 @@ export const initializeServerDateFromEvents = (events: any[]): void => {
  */
 export const resetServerDateOffset = (): void => {
   serverDateOffset = null;
+  isInitialized = false;
+};
+
+/**
+ * Format date for display in Brazil timezone
+ */
+export const formatBrazilDate = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+/**
+ * Get date from string in Brazil timezone
+ */
+export const parseBrazilDate = (dateString: string): Date => {
+  const date = new Date(dateString);
+  // Ensure we're working with Brazil timezone
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const brazilTime = new Date(utc + (-3 * 3600000));
+  return brazilTime;
+};
+
+/**
+ * Check if a date string matches today in Brazil timezone
+ */
+export const isToday = (dateString: string): boolean => {
+  const todayString = getServerTodayString();
+  const eventDateString = dateString.split('T')[0];
+  return eventDateString === todayString;
+};
+
+/**
+ * Check if a date string matches tomorrow in Brazil timezone
+ */
+export const isTomorrow = (dateString: string): boolean => {
+  const tomorrowString = getServerTomorrowString();
+  const eventDateString = dateString.split('T')[0];
+  return eventDateString === tomorrowString;
 };

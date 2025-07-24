@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2, MapPin, FileText, Globe, Video } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { formatDateMobile, formatTimeMobile, vibrate } from '@/utils/mobile-helpers';
 import MobileModal from '@/components/ui/mobile-modal';
@@ -38,7 +40,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
     }
     return '09:00';
   });
-  const [location, setLocation] = useState(() => {
+  const [locationState, setLocationState] = useState(() => {
     return extractLocationFromDescription(tarefa?.description || '');
   });
   const [attendees, setAttendees] = useState(() => {
@@ -65,7 +67,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
       event_type: eventType,
       start_date: startDateTime,
       end_date: endDateTime,
-      location: eventType === 'appointment' ? location.trim() : undefined,
+      location: eventType === 'appointment' ? locationState.trim() : undefined,
       meeting_link: eventType === 'meeting' ? meetingLink : undefined,
       attendees: eventType === 'meeting' && attendees.trim() ? attendees.split(',').map(email => email.trim()) : undefined
     });
@@ -128,7 +130,6 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
 
   const extractNotesFromDescription = (description: string) => {
     if (!description) return '';
-    // Remove location and meeting link info to show just the notes
     return description
       .replace(/📍 Local: .+/g, '')
       .replace(/💻 Link da reunião: .+/g, '')
@@ -200,89 +201,144 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
           )}
         </div>
 
-        {/* Event Details */}
-        <div className="space-y-4">
-          {/* Event Type */}
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <div className={cn("w-5 h-5 rounded-full", getEventTypeColor(tarefa.event_type))} />
-            </div>
-            <div>
-              <p className="text-gray-900 dark:text-white font-semibold">{getEventTypeLabel(tarefa.event_type)}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Tipo do evento</p>
-            </div>
+        {/* Event Type */}
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <div className={cn("w-5 h-5 rounded-full", getEventTypeColor(isEditing ? eventType : tarefa.event_type))} />
           </div>
-
-          {/* Date and Time */}
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            </div>
-            <div>
-              <p className="text-gray-900 dark:text-white font-semibold">{formatDateTime(tarefa.start_date)}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Data e horário</p>
-            </div>
+          <div className="flex-1">
+            {isEditing ? (
+              <Select value={eventType} onValueChange={(value: 'reminder' | 'meeting' | 'appointment') => setEventType(value)}>
+                <SelectTrigger className="mobile-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reminder">Lembrete</SelectItem>
+                  <SelectItem value="meeting">Reunião</SelectItem>
+                  <SelectItem value="appointment">Compromisso</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div>
+                <p className="text-gray-900 dark:text-white font-semibold">{getEventTypeLabel(tarefa.event_type)}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Tipo do evento</p>
+              </div>
+            )}
           </div>
-
-          {/* Location */}
-          {location && (
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <p className="text-gray-900 dark:text-white font-semibold">{location}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Local</p>
-              </div>
-            </div>
-          )}
-
-          {/* Attendees */}
-          {tarefa.attendees && tarefa.attendees.length > 0 && (
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <Users className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <p className="text-gray-900 dark:text-white font-semibold">{tarefa.attendees.join(', ')}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Participantes</p>
-              </div>
-            </div>
-          )}
-
-          {/* Meeting Link */}
-          {tarefa.meeting_link && (
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <LinkIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <a
-                  href={tarefa.meeting_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 font-semibold hover:underline"
-                >
-                  Link da reunião
-                </a>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Clique para acessar</p>
-              </div>
-            </div>
-          )}
-
-          {/* Source */}
-          {tarefa.source === 'google' && (
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <Globe className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <p className="text-gray-900 dark:text-white font-semibold">Google Calendar</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Sincronizado do Google</p>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Date and Time */}
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+          </div>
+          <div className="flex-1">
+            {isEditing ? (
+              <div className="space-y-2">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="mobile-input"
+                />
+                <Input
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="mobile-input"
+                />
+              </div>
+            ) : (
+              <div>
+                <p className="text-gray-900 dark:text-white font-semibold">{formatDateTime(tarefa.start_date)}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Data e horário</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Location - Only show for appointments */}
+        {(eventType === 'appointment' || tarefa.event_type === 'appointment') && (
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <MapPin className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div className="flex-1">
+              {isEditing ? (
+                <Input
+                  value={locationState}
+                  onChange={(e) => setLocationState(e.target.value)}
+                  className="mobile-input"
+                  placeholder="Local do compromisso"
+                />
+              ) : (
+                <div>
+                  <p className="text-gray-900 dark:text-white font-semibold">{location || 'Local não definido'}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Local</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Attendees - Only show for meetings */}
+        {(eventType === 'meeting' || tarefa.event_type === 'meeting') && (
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Users className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div className="flex-1">
+              {isEditing ? (
+                <Input
+                  value={attendees}
+                  onChange={(e) => setAttendees(e.target.value)}
+                  className="mobile-input"
+                  placeholder="emails@exemplo.com, outro@exemplo.com"
+                />
+              ) : (
+                <div>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {tarefa.attendees && tarefa.attendees.length > 0 ? tarefa.attendees.join(', ') : 'Nenhum participante'}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Participantes</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Meeting Link */}
+        {tarefa.meeting_link && (
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <LinkIcon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div>
+              <a
+                href={tarefa.meeting_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 font-semibold hover:underline"
+              >
+                Link da reunião
+              </a>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Clique para acessar</p>
+            </div>
+          </div>
+        )}
+
+        {/* Source */}
+        {tarefa.source === 'google' && (
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Globe className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div>
+              <p className="text-gray-900 dark:text-white font-semibold">Google Calendar</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Sincronizado do Google</p>
+            </div>
+          </div>
+        )}
 
         {/* Notes/Description */}
         <div>

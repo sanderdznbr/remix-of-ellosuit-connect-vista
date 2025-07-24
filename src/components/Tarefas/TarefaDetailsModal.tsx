@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Clock, Calendar, Users, LinkIcon, Edit3, Trash2, MapPin, FileText, Globe, Video } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
     }
     return '09:00';
   });
-  const [location, setLocation] = useState(() => {
+  const [locationText, setLocationText] = useState(() => {
     return extractLocationFromDescription(tarefa?.description || '');
   });
   const [attendees, setAttendees] = useState(() => {
@@ -65,7 +66,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
       event_type: eventType,
       start_date: startDateTime,
       end_date: endDateTime,
-      location: eventType === 'appointment' ? location.trim() : undefined,
+      location: eventType === 'appointment' ? locationText.trim() : undefined,
       meeting_link: eventType === 'meeting' ? meetingLink : undefined,
       attendees: eventType === 'meeting' && attendees.trim() ? attendees.split(',').map(email => email.trim()) : undefined
     });
@@ -140,7 +141,7 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
 
   if (!tarefa) return null;
 
-  const location = extractLocationFromDescription(tarefa.description);
+  const extractedLocation = extractLocationFromDescription(tarefa.description);
   const notes = extractNotesFromDescription(tarefa.description);
 
   return (
@@ -225,13 +226,13 @@ const TarefaDetailsModal: React.FC<TarefaDetailsModalProps> = ({
           </div>
 
           {/* Location */}
-          {location && (
+          {extractedLocation && (
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 <MapPin className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
-                <p className="text-gray-900 dark:text-white font-semibold">{location}</p>
+                <p className="text-gray-900 dark:text-white font-semibold">{extractedLocation}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Local</p>
               </div>
             </div>

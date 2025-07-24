@@ -50,6 +50,9 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
       console.log('- DateTime local:', localDateTime);
       console.log('- Start DateTime:', startDateTime);
       console.log('- End DateTime:', endDateTime);
+      console.log('- Event Type:', eventType);
+      console.log('- Location:', location);
+      console.log('- Attendees:', attendees);
 
       let finalDescription = description.trim();
       let meetingLink = '';
@@ -81,7 +84,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
         event_type: eventType,
         is_all_day: false,
         status: 'pending',
-        location: eventType === 'appointment' ? location.trim() : undefined,
         meeting_link: eventType === 'meeting' ? meetingLink : undefined,
         attendees: eventType === 'meeting' && attendees.trim() ? attendees.split(',').map(email => email.trim()) : undefined
       };

@@ -57,23 +57,30 @@ export const useTarefas = () => {
 
   const createTarefa = async (tarefaData: any) => {
     try {
-      await createEvent({
+      console.log('🔵 useTarefas - createTarefa chamado com:', tarefaData);
+      
+      const eventData = {
         ...tarefaData,
         source: 'local',
         status: 'pending'
-      });
+      };
+      
+      console.log('🔵 useTarefas - dados finais para createEvent:', eventData);
+      
+      await createEvent(eventData);
       
       toast({
         title: "Lembrete criado",
         description: "Seu lembrete foi adicionado com sucesso!",
       });
     } catch (error) {
-      console.error('Error creating tarefa:', error);
+      console.error('❌ useTarefas - Error creating tarefa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível criar o lembrete",
         variant: "destructive"
       });
+      throw error; // Re-throw para o modal saber que falhou
     }
   };
 

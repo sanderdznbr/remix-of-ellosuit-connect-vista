@@ -35,24 +35,21 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar data/hora diretamente no formato ISO com o horário local
-      // Não adicionar ou subtrair fuso horário - manter o horário exato que o usuário escolheu
-      const localDateTimeString = `${selectedDate}T${selectedTime}:00`;
-      const localDateTime = new Date(localDateTimeString);
+      // Criar a data/hora exata que o usuário selecionou, sem conversões de fuso horário
+      const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
       
-      // Usar o horário local sem conversão para UTC - mantém o horário exato
-      const startDateTime = localDateTimeString;
+      // Converter para UTC mantendo o horário correto (compensar timezone do Brasil)
+      const utcStartDateTime = new Date(localDateTime.getTime() - (localDateTime.getTimezoneOffset() * 60000));
+      const startDateTime = utcStartDateTime.toISOString();
       
-      // Adicionar 1 hora para o fim do evento
-      const endTime = selectedTime.split(':');
-      const endHour = parseInt(endTime[0]) + 1;
-      const endMinute = endTime[1];
-      const endDateTime = `${selectedDate}T${endHour.toString().padStart(2, '0')}:${endMinute}:00`;
+      // Criar fim do evento (1 hora depois)
+      const utcEndDateTime = new Date(utcStartDateTime.getTime() + (60 * 60 * 1000));
+      const endDateTime = utcEndDateTime.toISOString();
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
       console.log('- Hora selecionada:', selectedTime);
-      console.log('- DateTime local string:', localDateTimeString);
+      console.log('- DateTime local:', localDateTime);
       console.log('- Start DateTime:', startDateTime);
       console.log('- End DateTime:', endDateTime);
 
@@ -61,7 +58,11 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
       
       // Gerar link do Google Meet para reuniões
       if (eventType === 'meeting') {
-        meetingLink = `https://meet.google.com/${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}`;
+        // Gerar código de reunião mais realista
+        const meetingCode = Math.random().toString(36).substring(2, 5) + '-' + 
+                           Math.random().toString(36).substring(2, 6) + '-' + 
+                           Math.random().toString(36).substring(2, 5);
+        meetingLink = `https://meet.google.com/${meetingCode}`;
         
         if (attendees.trim()) {
           finalDescription += `\n\nParticipantes: ${attendees.trim()}`;

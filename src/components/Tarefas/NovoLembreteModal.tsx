@@ -35,16 +35,18 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar a data/hora exata que o usuário selecionou, sem conversões de fuso horário
+      // Criar a data/hora exata que o usuário selecionou no fuso horário local
       const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
       
-      // Converter para UTC mantendo o horário correto (compensar timezone do Brasil)
-      const utcStartDateTime = new Date(localDateTime.getTime() - (localDateTime.getTimezoneOffset() * 60000));
-      const startDateTime = utcStartDateTime.toISOString();
+      // Salvar exatamente no horário local sem conversão de timezone
+      // Usar o ISO string diretamente do horário local selecionado
+      const startDateTime = `${selectedDate}T${selectedTime}:00.000Z`;
       
       // Criar fim do evento (1 hora depois)
-      const utcEndDateTime = new Date(utcStartDateTime.getTime() + (60 * 60 * 1000));
-      const endDateTime = utcEndDateTime.toISOString();
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const endHours = hours + 1;
+      const endTimeFormatted = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      const endDateTime = `${selectedDate}T${endTimeFormatted}:00.000Z`;
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);

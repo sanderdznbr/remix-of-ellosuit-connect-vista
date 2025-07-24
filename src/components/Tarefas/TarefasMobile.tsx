@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
@@ -484,7 +485,7 @@ const TarefasMobile = () => {
       <NovoLembreteModal
         isOpen={showNovoLembrete}
         onClose={() => setShowNovoLembrete(false)}
-        onSubmit={handleCreateTarefa}
+        onSave={handleCreateTarefa}
       />
 
       <NotificationSettingsModal

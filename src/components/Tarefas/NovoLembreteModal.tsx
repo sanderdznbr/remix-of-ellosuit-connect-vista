@@ -100,6 +100,11 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({
     }
   };
 
+  const handleCreateClick = () => {
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleSubmit(fakeEvent);
+  };
+
   const eventTypes = [
     { value: 'reminder', label: 'Lembrete', icon: Bell, color: 'bg-orange-500' },
     { value: 'meeting', label: 'Reunião', icon: Video, color: 'bg-blue-500' },
@@ -133,7 +138,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({
             variant="primary"
             size="sm"
             disabled={!title.trim() || isSubmitting}
-            onClick={handleSubmit}
+            onClick={handleCreateClick}
           >
             {isSubmitting ? 'Criando...' : 'Criar'}
           </MobileButton>

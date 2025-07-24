@@ -117,7 +117,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <MobileButton
-            type="button"
             variant="ghost"
             size="sm"
             onClick={onClose}
@@ -131,10 +130,10 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({
           </h2>
           
           <MobileButton
-            type="submit"
             variant="primary"
             size="sm"
             disabled={!title.trim() || isSubmitting}
+            onClick={handleSubmit}
           >
             {isSubmitting ? 'Criando...' : 'Criar'}
           </MobileButton>

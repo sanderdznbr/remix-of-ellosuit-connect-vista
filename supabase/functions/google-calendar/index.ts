@@ -491,7 +491,7 @@ serve(async (req) => {
         return new Response(null, {
           status: 302,
           headers: {
-            'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=${error}`
+            'Location': `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard?error=${error}`
           }
         });
     }
@@ -501,7 +501,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=no_code`
+          'Location': `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard?error=no_code`
         }
       });
     }
@@ -512,7 +512,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=invalid_state`
+          'Location': `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard?error=invalid_state`
         }
       });
     }
@@ -521,7 +521,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?code=${code}&state=${state}`
+        'Location': `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard?code=${code}&state=${state}`
       }
     });
 
@@ -541,7 +541,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=${encodeURIComponent(error.message)}`
+        'Location': `https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com/dashboard?error=${encodeURIComponent(error.message)}`
       }
     });
   }

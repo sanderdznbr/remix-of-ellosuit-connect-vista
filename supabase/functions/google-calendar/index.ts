@@ -488,12 +488,12 @@ serve(async (req) => {
 
     if (error) {
       console.error('❌ OAuth error:', error);
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': `https://ellosuit.online/dashboard?error=${error}`
-        }
-      });
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=${error}`
+          }
+        });
     }
 
     if (!code) {
@@ -501,7 +501,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          'Location': `https://ellosuit.online/dashboard?error=no_code`
+          'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=no_code`
         }
       });
     }
@@ -512,7 +512,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          'Location': `https://ellosuit.online/dashboard?error=invalid_state`
+          'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=invalid_state`
         }
       });
     }
@@ -521,7 +521,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://ellosuit.online/dashboard?code=${code}&state=${state}`
+        'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?code=${code}&state=${state}`
       }
     });
 
@@ -541,7 +541,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://ellosuit.online/dashboard?error=${encodeURIComponent(error.message)}`
+        'Location': `https://jwddiyuezqrpuakazvgg.supabase.co/dashboard?error=${encodeURIComponent(error.message)}`
       }
     });
   }

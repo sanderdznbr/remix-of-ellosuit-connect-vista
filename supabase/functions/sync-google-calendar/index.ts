@@ -72,7 +72,10 @@ serve(async (req) => {
           error: 'Google Calendar not connected'
         }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
         });
       }
 
@@ -183,7 +186,10 @@ serve(async (req) => {
           updated: 0,
           deleted: 0
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
         });
       }
 
@@ -226,59 +232,21 @@ serve(async (req) => {
           meetingProvider = 'google_meet';
         }
 
-        // Extract location and additional info from description
-        let location = googleEvent.location || '';
-        let notes = googleEvent.description || '';
-        let enhancedDescription = '';
-
-        // Build enhanced description with all available information
-        if (googleEvent.description) {
-          enhancedDescription += googleEvent.description;
-        }
-        
-        if (location) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `📍 Local: ${location}`;
-        }
-        
-        if (googleEvent.hangoutLink) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `💻 Link da reunião: ${googleEvent.hangoutLink}`;
-        }
-        
-        if (googleEvent.attendees && googleEvent.attendees.length > 0) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `👥 Participantes: ${googleEvent.attendees.map(a => a.email).join(', ')}`;
-        }
-
-        if (googleEvent.creator) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `🎯 Organizador: ${googleEvent.creator.email}`;
-        }
-
         const eventData = {
           title: googleEvent.summary || 'Evento sem título',
-          description: enhancedDescription,
+          description: googleEvent.description || '',
           start_date: googleEvent.start?.dateTime || googleEvent.start?.date,
           end_date: googleEvent.end?.dateTime || googleEvent.end?.date,
-          event_type: 'meeting' as const,
+          event_type: 'meeting',
           meeting_link: googleEvent.hangoutLink || null,
           meeting_provider: meetingProvider,
-          attendees: googleEvent.attendees ? googleEvent.attendees.map((a: any) => a.email) : [],
+          attendees: googleEvent.attendees ? googleEvent.attendees.map((a) => a.email) : [],
           is_all_day: !googleEvent.start?.dateTime,
           google_event_id: googleEvent.id,
           company_id: companyData.company_id,
           created_by: user.id,
           color: '#4285F4',
-          updated_at: new Date().toISOString(),
-          meeting_data: {
-            location: location,
-            notes: notes,
-            creator: googleEvent.creator?.email || '',
-            status: googleEvent.status || 'confirmed',
-            htmlLink: googleEvent.htmlLink || '',
-            visibility: googleEvent.visibility || 'default'
-          }
+          updated_at: new Date().toISOString()
         };
 
         if (!existingEvent) {
@@ -375,7 +343,10 @@ serve(async (req) => {
         deleted: eventsToDelete.length,
         total_processed: allEvents.length
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -383,7 +354,10 @@ serve(async (req) => {
       error: 'Method not allowed'
     }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
 
   } catch (error) {
@@ -394,7 +368,10 @@ serve(async (req) => {
       error: error.message
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
   }
 });

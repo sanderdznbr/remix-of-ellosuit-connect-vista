@@ -235,17 +235,51 @@ export const useGoogleCalendar = () => {
         if (data?.success) {
           console.log('✅ Google Calendar conectado com sucesso');
           
+          // Limpar parâmetros da URL
           window.history.replaceState({}, document.title, '/dashboard');
           
+          // Aguardar um momento para garantir que a integração foi salva
           await new Promise(resolve => setTimeout(resolve, 1000));
           
+          // Verificar conexão
           await checkConnection();
           
-          toast({
-            title: "✅ Google Calendar Conectado!",
-            description: "Google Calendar foi conectado com sucesso! Sincronizando eventos...",
-            duration: 5000,
+          // Mostrar página de sucesso
+          const successModal = document.createElement('div');
+          successModal.className = 'fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4';
+          successModal.innerHTML = `
+            <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+              <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                Conexão Realizada com Sucesso!
+              </h2>
+              <p class="text-gray-600 mb-6">
+                Seu Google Calendar foi conectado com sucesso. Agora você pode criar reuniões com Google Meet automaticamente.
+              </p>
+              <button id="closeSuccessModal" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+                Continuar
+              </button>
+            </div>
+          `;
+          
+          document.body.appendChild(successModal);
+          
+          // Fechar modal ao clicar no botão
+          successModal.querySelector('#closeSuccessModal')?.addEventListener('click', () => {
+            document.body.removeChild(successModal);
           });
+          
+          // Também fechar ao clicar fora do modal
+          successModal.addEventListener('click', (e) => {
+            if (e.target === successModal) {
+              document.body.removeChild(successModal);
+            }
+          });
+          
         } else {
           throw new Error('Falha na conexão com Google Calendar');
         }

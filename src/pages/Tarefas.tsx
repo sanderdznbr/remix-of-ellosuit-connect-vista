@@ -2,16 +2,17 @@
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 import TarefasDesktop from '@/components/Tarefas/TarefasDesktop';
-import TaskLogin from '@/components/Tarefas/TaskLogin';
+import TarefasPublica from '@/components/Tarefas/TarefasPublica';
 
 const Tarefas = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { isMobile, isLoading: deviceLoading } = useIsMobile();
+  const { user } = useAuth();
+  const { isMobile, isLoading } = useIsMobile();
 
-  // Exibir loading durante verificações iniciais
-  if (authLoading || deviceLoading) {
+  // Exibir loading durante a verificação do dispositivo
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-lg">Carregando...</div>
@@ -19,9 +20,9 @@ const Tarefas = () => {
     );
   }
 
-  // Se não há usuário autenticado, mostrar tela de login
+  // Se não há usuário autenticado, mostrar página pública
   if (!user) {
-    return <TaskLogin />;
+    return <TarefasPublica />;
   }
 
   // Se há usuário autenticado, mostrar tarefas normais

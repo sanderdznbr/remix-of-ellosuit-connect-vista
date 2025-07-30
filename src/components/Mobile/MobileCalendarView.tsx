@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 const MobileCalendarView = React.memo(() => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
-  const { events, isLoading } = useCalendarData();
+  const { events, loading } = useCalendarData();
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('pt-BR', {
@@ -56,7 +56,7 @@ const MobileCalendarView = React.memo(() => {
   const getEventsForDay = (day: number) => {
     if (!day) return [];
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.start_date.startsWith(dateStr));
+    return events.filter(event => event.start.startsWith(dateStr));
   };
 
   const isToday = (day: number) => {
@@ -71,14 +71,14 @@ const MobileCalendarView = React.memo(() => {
 
   const todayEvents = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return events.filter(event => event.start_date.startsWith(today));
+    return events.filter(event => event.start.startsWith(today));
   }, [events]);
 
   const upcomingEvents = useMemo(() => {
     return events.slice(0, 5);
   }, [events]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="p-4">
         <CalendarSkeleton />
@@ -146,8 +146,6 @@ const MobileCalendarView = React.memo(() => {
               key={event.id}
               event={{
                 ...event,
-                start: event.start_date,
-                end: event.end_date,
                 type: event.event_type as any
               }}
             />
@@ -212,8 +210,6 @@ const MobileCalendarView = React.memo(() => {
             key={event.id}
             event={{
               ...event,
-              start: event.start_date,
-              end: event.end_date,
               type: event.event_type as any
             }}
           />

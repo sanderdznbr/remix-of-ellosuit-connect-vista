@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Trash2, Clock, Users, MapPin, Link } from 'lucide-react';
+import { Trash2, Clock, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSwipeGesture } from '@/hooks/use-mobile-gestures';
 import { formatDateMobile, formatTimeMobile, vibrate } from '@/utils/mobile-helpers';
@@ -52,29 +52,29 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'meeting':
-        return 'bg-blue-100 text-blue-800';
+        return '#007AFF';
       case 'appointment':
-        return 'bg-green-100 text-green-800';
+        return '#34C759';
       case 'reminder':
-        return 'bg-orange-100 text-orange-800';
+        return '#FF9500';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return '#8E8E93';
     }
   };
 
   return (
     <>
-      <div className="relative overflow-hidden">
+      <div className="relative mb-1 overflow-hidden rounded-xl">
         {/* Delete Button Background */}
         <div 
           className={cn(
-            "absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center transition-all duration-200",
+            "absolute right-0 top-0 h-full w-20 flex items-center justify-center transition-all duration-200 bg-red-500",
             swipeDistance < -20 ? "opacity-100" : "opacity-0"
           )}
         >
           <button
             onClick={handleDeleteClick}
-            className="p-3 rounded-full text-white hover:bg-red-600 transition-colors"
+            className="p-3 rounded-full hover:bg-red-600 transition-colors ios-haptic-feedback text-white"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -83,7 +83,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
         {/* Main Content */}
         <div
           className={cn(
-            "bg-white transition-all duration-200 ease-out cursor-pointer p-4 hover:bg-gray-50",
+            "ios-list-item transition-all duration-200 ease-out cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700",
             isCompleted && "opacity-75"
           )}
           style={{ transform: `translateX(${swipeDistance}px)` }}
@@ -92,15 +92,15 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
           onTouchEnd={onTouchEnd}
           onClick={handleItemClick}
         >
-          <div className="flex items-start space-x-3">
-            {/* Checkbox */}
+          <div className="flex items-start space-x-4">
+            {/* iOS-style Checkbox */}
             <button
               onClick={handleToggleComplete}
               className={cn(
-                "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0",
+                "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-all flex-shrink-0 ios-haptic-feedback",
                 isCompleted
                   ? "bg-blue-500 border-blue-500"
-                  : "border-gray-300 hover:border-gray-400"
+                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
               )}
             >
               {isCompleted && (
@@ -115,7 +115,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className={cn(
-                    "text-base font-medium text-gray-900 leading-snug mb-1",
+                    "ios-headline leading-snug mb-1 text-gray-900 dark:text-white",
                     isCompleted && "line-through opacity-60"
                   )}>
                     {tarefa.title}
@@ -123,7 +123,7 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
                   
                   {tarefa.description && (
                     <p className={cn(
-                      "text-sm text-gray-600 line-clamp-2 mb-2",
+                      "ios-subheadline line-clamp-2 mb-2 text-gray-600 dark:text-gray-400",
                       isCompleted && "line-through opacity-60"
                     )}>
                       {tarefa.description}
@@ -131,50 +131,36 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
                   )}
                 </div>
 
-                {/* Event Type Badge */}
-                <span className={cn(
-                  "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-3 flex-shrink-0",
-                  getEventTypeColor(tarefa.event_type)
-                )}>
-                  {tarefa.event_type === 'meeting' && 'Reunião'}
-                  {tarefa.event_type === 'appointment' && 'Compromisso'}
-                  {tarefa.event_type === 'reminder' && 'Lembrete'}
-                </span>
+                {/* Event Type Indicator */}
+                <div 
+                  className="w-3 h-3 rounded-full flex-shrink-0 ml-3 mt-1"
+                  style={{ backgroundColor: getEventTypeColor(tarefa.event_type) }}
+                />
               </div>
 
               {/* Meta Information */}
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 mt-2">
                 {formatTimeMobile(tarefa.start_date) && (
                   <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatTimeMobile(tarefa.start_date)}</span>
+                    <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="ios-footnote font-medium text-gray-600 dark:text-gray-400">
+                      {formatTimeMobile(tarefa.start_date)}
+                    </span>
                   </div>
                 )}
                 
                 {formatDateMobile(tarefa.start_date) !== 'Hoje' && (
-                  <span className="text-red-500 font-medium">
+                  <span className="ios-footnote font-medium text-red-500 dark:text-red-400">
                     {formatDateMobile(tarefa.start_date)}
                   </span>
                 )}
                 
-                {tarefa.location && (
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate max-w-[120px]">{tarefa.location}</span>
-                  </div>
-                )}
-                
-                {tarefa.meeting_link && (
-                  <div className="flex items-center space-x-1">
-                    <Link className="h-4 w-4" />
-                    <span>Link</span>
-                  </div>
-                )}
-                
                 {tarefa.attendees && tarefa.attendees.length > 0 && (
                   <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" />
-                    <span>{tarefa.attendees.length}</span>
+                    <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="ios-footnote text-gray-600 dark:text-gray-400">
+                      {tarefa.attendees.length}
+                    </span>
                   </div>
                 )}
               </div>

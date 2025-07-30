@@ -1,296 +1,326 @@
 
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from './use-toast';
 
 interface CalendarEvent {
   id: string;
   title: string;
-  description?: string;
+  start: string;
+  end: string;
   start_date: string;
   end_date: string;
+  description?: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
-  meeting_provider?: 'google_meet' | 'zoom' | 'teams';
-  attendees?: string[];
-  is_all_day?: boolean;
-  color?: string;
-  recurrence_rule?: string;
-  company_id: string;
-  created_by: string;
   google_event_id?: string;
-  status?: string;
   source?: string;
+  attendees?: string[];
+  meeting_provider?: string;
+  is_all_day?: boolean;
   meeting_data?: any;
-  updated_at?: string;
-  created_at?: string;
+  color?: string;
 }
 
 export const useCalendarData = () => {
-  const { user } = useAuth();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasCompany, setHasCompany] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const { user, session } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Buscar eventos do calendário
-  const { data: events = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['calendar-events', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-
-      console.log('🔍 Buscando eventos do calendário para usuário:', user.id);
-
-      const { data: companyData } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!companyData) {
-        console.log('❌ Usuário não está associado a uma empresa');
+  const parseAttendees = (attendees: any): string[] => {
+    if (!attendees) return [];
+    if (Array.isArray(attendees)) {
+      return attendees.filter(item => typeof item === 'string');
+    }
+    if (typeof attendees === 'string') {
+      try {
+        const parsed = JSON.parse(attendees);
+        return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+      } catch {
         return [];
       }
+    }
+    return [];
+  };
 
+  const checkUserCompany = async (userId: string) => {
+    try {
+      const { data: companyUser, error } = await supabase
+        .from('company_users')
+        .select(`
+          company_id,
+          role,
+          companies!inner (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        setHasCompany(false);
+        setCompanyId(null);
+        setLoading(false);
+        return;
+      }
+
+      if (companyUser && companyUser.company_id) {
+        setHasCompany(true);
+        setCompanyId(companyUser.company_id);
+        await fetchEvents(companyUser.company_id);
+        
+        // Configurar realtime subscription para novos eventos
+        setupRealtimeSubscription(companyUser.company_id);
+      } else {
+        await createUserCompany(userId);
+      }
+    } catch (error) {
+      setHasCompany(false);
+      setCompanyId(null);
+      setLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscription = (userCompanyId: string) => {
+    console.log('📡 Configurando subscription em tempo real para eventos...');
+    
+    const channel = supabase
+      .channel('calendar-events-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_events',
+          filter: `company_id=eq.${userCompanyId}`
+        },
+        (payload) => {
+          console.log('📡 Evento em tempo real recebido:', payload);
+          // Refetch events when there are changes
+          fetchEvents(userCompanyId);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Status da subscription:', status);
+      });
+
+    return () => {
+      console.log('📡 Removendo subscription em tempo real');
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const createUserCompany = async (userId: string) => {
+    try {
+      const { data: existingCompany } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingCompany) {
+        setHasCompany(true);
+        setCompanyId(existingCompany.company_id);
+        await fetchEvents(existingCompany.company_id);
+        setupRealtimeSubscription(existingCompany.company_id);
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email || '';
+      const userMetadata = userData.user?.user_metadata || {};
+      
+      const companyName = userMetadata.company_name || 
+                         userMetadata.username || 
+                         userEmail.split('@')[0] + ' Company';
+
+      const { data: newCompany, error: companyError } = await supabase
+        .from('companies')
+        .insert({
+          name: companyName,
+          domain: null,
+          settings: {}
+        })
+        .select()
+        .single();
+
+      if (companyError) {
+        throw companyError;
+      }
+
+      const { error: associationError } = await supabase
+        .from('company_users')
+        .insert({
+          company_id: newCompany.id,
+          user_id: userId,
+          role: 'admin'
+        });
+
+      if (associationError) {
+        throw associationError;
+      }
+
+      setHasCompany(true);
+      setCompanyId(newCompany.id);
+      await fetchEvents(newCompany.id);
+      setupRealtimeSubscription(newCompany.id);
+
+    } catch (error) {
+      setHasCompany(false);
+      setCompanyId(null);
+      setLoading(false);
+      
+      toast({
+        title: "Erro",
+        description: "Erro ao configurar empresa do usuário",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchEvents = async (userCompanyId: string) => {
+    try {
+      console.log('📅 Buscando eventos do banco de dados...');
+      
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
-        .eq('company_id', companyData.company_id)
+        .eq('company_id', userCompanyId)
         .order('start_date', { ascending: true });
 
       if (error) {
         console.error('❌ Erro ao buscar eventos:', error);
-        throw error;
+        setEvents([]);
+        return;
       }
 
-      console.log(`✅ Encontrados ${data?.length || 0} eventos`);
-      
-      return data?.map(event => ({
-        ...event,
-        attendees: Array.isArray(event.attendees) ? 
-          (event.attendees as any[]).map(a => typeof a === 'string' ? a : String(a)) : 
-          [],
-        status: event.status || 'pending',
-        source: event.source || 'local'
-      })) || [];
-    },
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutos
-  });
+      if (!data || data.length === 0) {
+        console.log('📅 Nenhum evento encontrado no banco');
+        setEvents([]);
+        return;
+      }
 
-  // Criar evento
-  const createEvent = async (eventData: Omit<CalendarEvent, 'id' | 'company_id' | 'created_by'>) => {
-    if (!user) {
+      console.log(`📅 ${data.length} eventos encontrados no banco`);
+
+      const formattedEvents: CalendarEvent[] = data.map((event) => {
+        let startDate = event.start_date;
+        let endDate = event.end_date;
+
+        if (startDate && !startDate.endsWith('Z') && !startDate.includes('+')) {
+          startDate = startDate + 'Z';
+        }
+        if (endDate && !endDate.endsWith('Z') && !endDate.includes('+')) {
+          endDate = endDate + 'Z';
+        }
+
+        const attendeesList = parseAttendees(event.attendees);
+
+        return {
+          id: event.id,
+          title: event.title || 'Evento sem título',
+          start: startDate,
+          end: endDate,
+          start_date: startDate,
+          end_date: endDate,
+          description: event.description || '',
+          event_type: event.event_type || 'meeting',
+          meeting_link: event.meeting_link,
+          google_event_id: event.google_event_id,
+          source: event.google_event_id ? 'google' : 'local',
+          attendees: attendeesList,
+          meeting_provider: event.meeting_provider,
+          is_all_day: event.is_all_day || false,
+          meeting_data: event.meeting_data || {},
+          color: event.color || (event.google_event_id ? '#4285F4' : '#3600FF')
+        };
+      });
+      
+      setEvents(formattedEvents);
+    } catch (error) {
+      console.error('💥 Erro ao formatar eventos:', error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createEvent = async (eventData: any) => {
+    if (!companyId || !user) {
       toast({
         title: "Erro",
-        description: "Usuário não autenticado",
+        description: "Usuário deve estar associado a uma empresa para criar eventos",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      console.log('📅 Criando evento:', eventData.title);
-
-      const { data: companyData } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!companyData) {
-        throw new Error('Usuário não está associado a uma empresa');
-      }
-
       const { data, error } = await supabase
         .from('calendar_events')
         .insert({
-          ...eventData,
-          company_id: companyData.company_id,
+          title: eventData.title,
+          description: eventData.description,
+          start_date: eventData.start_date,
+          end_date: eventData.end_date,
+          event_type: eventData.event_type,
+          company_id: companyId,
           created_by: user.id,
+          meeting_link: eventData.meeting_link,
+          meeting_provider: eventData.meeting_provider,
           attendees: eventData.attendees || [],
+          is_all_day: eventData.is_all_day || false,
           color: eventData.color || '#3600FF',
-          status: eventData.status || 'pending',
-          source: eventData.source || 'local'
+          google_event_id: eventData.google_event_id // Para eventos criados via Google
         })
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Erro ao criar evento:', error);
-        throw error;
+        toast({
+          title: "Erro",
+          description: "Erro ao criar evento: " + error.message,
+          variant: "destructive"
+        });
+        return;
       }
 
-      console.log('✅ Evento criado com sucesso:', data.id);
-      
-      // Invalidar e refetch dos eventos
-      await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
-      
       toast({
         title: "Sucesso",
         description: "Evento criado com sucesso!"
       });
 
-      return data;
-    } catch (error: any) {
-      console.error('💥 Erro ao criar evento:', error);
+      // Não precisa chamar fetchEvents pois o realtime subscription já vai atualizar
+    } catch (error) {
       toast({
         title: "Erro",
-        description: `Erro ao criar evento: ${error.message}`,
+        description: "Erro inesperado ao criar evento",
         variant: "destructive"
       });
-      throw error;
     }
   };
 
-  // Atualizar evento
-  const updateEvent = async (eventId: string, updates: Partial<CalendarEvent>) => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      console.log('📝 Atualizando evento:', eventId, updates);
-
-      const updateData: any = {
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
-
-      // Converter attendees para o formato correto
-      if (updates.attendees) {
-        updateData.attendees = updates.attendees;
-      }
-
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .update(updateData)
-        .eq('id', eventId)
-        .eq('created_by', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Erro ao atualizar evento:', error);
-        throw error;
-      }
-
-      console.log('✅ Evento atualizado com sucesso:', data.id);
-      
-      // Invalidar e refetch dos eventos
-      await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento atualizado com sucesso!"
-      });
-
-      return data;
-    } catch (error: any) {
-      console.error('💥 Erro ao atualizar evento:', error);
-      toast({
-        title: "Erro",
-        description: `Erro ao atualizar evento: ${error.message}`,
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-
-  // Deletar evento
-  const deleteEvent = async (eventId: string) => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      console.log('🗑️ Deletando evento:', eventId);
-
-      const { error } = await supabase
-        .from('calendar_events')
-        .delete()
-        .eq('id', eventId)
-        .eq('created_by', user.id);
-
-      if (error) {
-        console.error('❌ Erro ao deletar evento:', error);
-        throw error;
-      }
-
-      console.log('✅ Evento deletado com sucesso');
-      
-      // Invalidar e refetch dos eventos
-      await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento deletado com sucesso!"
-      });
-    } catch (error: any) {
-      console.error('💥 Erro ao deletar evento:', error);
-      toast({
-        title: "Erro",
-        description: `Erro ao deletar evento: ${error.message}`,
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-
-  // Buscar eventos por data
-  const getEventsByDate = (date: Date) => {
-    const targetDate = date.toISOString().split('T')[0];
-    return events.filter(event => {
-      const eventDate = new Date(event.start_date).toISOString().split('T')[0];
-      return eventDate === targetDate;
-    });
-  };
-
-  // Buscar próximos eventos
-  const getUpcomingEvents = (limit = 5) => {
-    const now = new Date();
-    return events
-      .filter(event => new Date(event.start_date) >= now)
-      .slice(0, limit);
-  };
-
-  // Refrescar dados
-  const refreshEvents = async () => {
-    console.log('🔄 Refreshing calendar events...');
-    await refetch();
-  };
-
-  // Log para debug
   useEffect(() => {
-    if (events?.length) {
-      console.log('📅 Eventos carregados:', events.length);
+    if (user && session) {
+      checkUserCompany(user.id);
+    } else {
+      setEvents([]);
+      setHasCompany(false);
+      setCompanyId(null);
+      setLoading(false);
     }
-  }, [events]);
+  }, [user, session]);
 
   return {
     events,
-    isLoading,
-    loading: isLoading, // Alias para compatibilidade
-    error,
-    selectedDate,
-    setSelectedDate,
+    loading,
+    hasCompany,
+    companyId,
     createEvent,
-    updateEvent,
-    deleteEvent,
-    getEventsByDate,
-    getUpcomingEvents,
-    refreshEvents,
-    refetch
+    refreshEvents: () => companyId && fetchEvents(companyId)
   };
 };

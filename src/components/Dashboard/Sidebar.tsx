@@ -130,7 +130,7 @@ const Sidebar = () => {
             </div>
           ) : (
             // Exibe logo completa quando expandida
-            <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-3">
               {settings.custom_logo_url ? (
                 <img 
                   src={settings.custom_logo_url} 
@@ -141,16 +141,22 @@ const Sidebar = () => {
                   }}
                 />
               ) : (
-                // Apenas logo padrão, sem texto
-                <img 
-                  src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                  alt="Logo" 
-                  className="h-10 w-auto transition-all duration-300"
-                  onError={(e) => {
-                    console.error('Erro ao carregar logo padrão:', e);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+                // Logo padrão ElloSuit sempre visível quando não há custom_logo_url
+                <>
+                  <img 
+                    src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
+                    alt="ElloSuit Logo" 
+                    className="h-10 w-auto transition-all duration-300"
+                    onError={(e) => {
+                      console.error('Erro ao carregar logo padrão:', e);
+                      // Fallback para texto se a imagem não carregar
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <span className={`text-xl font-bold ${textColor} transition-opacity duration-300`}>
+                    ElloSuit
+                  </span>
+                </>
               )}
             </div>
           )}

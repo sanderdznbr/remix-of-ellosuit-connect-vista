@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
@@ -226,39 +227,9 @@ serve(async (req) => {
           meetingProvider = 'google_meet';
         }
 
-        // Extract location and additional info from description
-        let location = googleEvent.location || '';
-        let notes = googleEvent.description || '';
-        let enhancedDescription = '';
-
-        // Build enhanced description with all available information
-        if (googleEvent.description) {
-          enhancedDescription += googleEvent.description;
-        }
-        
-        if (location) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `📍 Local: ${location}`;
-        }
-        
-        if (googleEvent.hangoutLink) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `💻 Link da reunião: ${googleEvent.hangoutLink}`;
-        }
-        
-        if (googleEvent.attendees && googleEvent.attendees.length > 0) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `👥 Participantes: ${googleEvent.attendees.map(a => a.email).join(', ')}`;
-        }
-
-        if (googleEvent.creator) {
-          enhancedDescription += enhancedDescription ? '\n\n' : '';
-          enhancedDescription += `🎯 Organizador: ${googleEvent.creator.email}`;
-        }
-
         const eventData = {
           title: googleEvent.summary || 'Evento sem título',
-          description: enhancedDescription,
+          description: googleEvent.description || '',
           start_date: googleEvent.start?.dateTime || googleEvent.start?.date,
           end_date: googleEvent.end?.dateTime || googleEvent.end?.date,
           event_type: 'meeting' as const,
@@ -270,15 +241,7 @@ serve(async (req) => {
           company_id: companyData.company_id,
           created_by: user.id,
           color: '#4285F4',
-          updated_at: new Date().toISOString(),
-          meeting_data: {
-            location: location,
-            notes: notes,
-            creator: googleEvent.creator?.email || '',
-            status: googleEvent.status || 'confirmed',
-            htmlLink: googleEvent.htmlLink || '',
-            visibility: googleEvent.visibility || 'default'
-          }
+          updated_at: new Date().toISOString()
         };
 
         if (!existingEvent) {

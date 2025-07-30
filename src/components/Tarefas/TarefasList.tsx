@@ -1,25 +1,19 @@
 
 import React from 'react';
 import TarefaItem from './TarefaItem';
+import TarefasByTime from './TarefasByTime';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { getServerDate, isToday, isTomorrow } from '@/utils/date-server';
 
 interface TarefasListProps {
   tarefas: any[];
   onUpdate: (id: string, updates: any) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  filter: 'hoje' | 'amanha' | 'semana' | 'mes';
-  showPeriodDivision?: boolean;
+  filter: 'hoje' | 'semana' | 'mes';
 }
 
-const TarefasList: React.FC<TarefasListProps> = ({ 
-  tarefas, 
-  onUpdate, 
-  onDelete, 
-  filter, 
-  showPeriodDivision = true 
-}) => {
-  const serverDate = getServerDate();
+const TarefasList: React.FC<TarefasListProps> = ({ tarefas, onUpdate, onDelete, filter }) => {
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0];
 
   const getFilteredTarefas = () => {
     // Filtrar apenas tarefas ativas (não excluídas)
@@ -27,14 +21,13 @@ const TarefasList: React.FC<TarefasListProps> = ({
     
     switch (filter) {
       case 'hoje':
-        return activeTarefas.filter(tarefa => isToday(tarefa.start_date));
-      
-      case 'amanha':
-        return activeTarefas.filter(tarefa => isTomorrow(tarefa.start_date));
+        return activeTarefas.filter(tarefa => 
+          tarefa.start_date.startsWith(todayString)
+        );
       
       case 'semana':
-        const weekStart = startOfWeek(serverDate, { weekStartsOn: 0 }); // Domingo
-        const weekEnd = endOfWeek(serverDate, { weekStartsOn: 0 });
+        const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Domingo
+        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -45,8 +38,8 @@ const TarefasList: React.FC<TarefasListProps> = ({
         });
       
       case 'mes':
-        const monthStart = startOfMonth(serverDate);
-        const monthEnd = endOfMonth(serverDate);
+        const monthStart = startOfMonth(today);
+        const monthEnd = endOfMonth(today);
         return activeTarefas.filter(tarefa => {
           try {
             const tarefaDate = parseISO(tarefa.start_date);
@@ -61,12 +54,12 @@ const TarefasList: React.FC<TarefasListProps> = ({
     }
   };
 
+  const filteredTarefas = getFilteredTarefas();
+
   const getEmptyMessage = () => {
     switch (filter) {
       case 'hoje':
         return 'Nenhuma tarefa para hoje';
-      case 'amanha':
-        return 'Nenhuma tarefa para amanhã';
       case 'semana':
         return 'Nenhuma tarefa para esta semana';
       case 'mes':
@@ -76,23 +69,32 @@ const TarefasList: React.FC<TarefasListProps> = ({
     }
   };
 
-  const filteredTarefas = showPeriodDivision ? getFilteredTarefas() : tarefas;
+  // Se for filtro "hoje", usar o componente de separação por horário
+  if (filter === 'hoje') {
+    return (
+      <TarefasByTime 
+        tarefas={filteredTarefas}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />
+    );
+  }
 
+  // Para outros filtros, usar a lista normal
   return (
-    <div className="divide-y divide-gray-100">
-      {filteredTarefas.map((tarefa, index) => (
-        <div key={tarefa.id} className={index === 0 ? '' : ''}>
-          <TarefaItem
-            tarefa={tarefa}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-          />
-        </div>
+    <div className="space-y-0">
+      {filteredTarefas.map((tarefa) => (
+        <TarefaItem
+          key={tarefa.id}
+          tarefa={tarefa}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
       ))}
       
-      {filteredTarefas.length === 0 && showPeriodDivision && (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+      {filteredTarefas.length === 0 && (
+        <div className="mobile-empty-state">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <span className="text-4xl">📝</span>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">{getEmptyMessage()}</h3>

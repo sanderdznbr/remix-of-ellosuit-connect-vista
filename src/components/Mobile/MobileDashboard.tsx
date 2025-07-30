@@ -1,74 +1,88 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
-import MobileBottomNavigation from './MobileBottomNavigation';
+import MobileLayout from './MobileLayout';
 import MobileHome from './MobileHome';
 import MobileCalendarView from './MobileCalendarView';
 import MobileEmailDashboard from './MobileEmailDashboard';
 import MobileClientsManager from './MobileClientsManager';
-import MobileAnalytics from './MobileAnalytics';
-import MobileSettings from './MobileSettings';
-import TarefasMobile from '@/components/Tarefas/TarefasMobile';
 
 const MobileDashboard = () => {
-  const { user } = useAuth();
-  const { isMobile } = useIsMobile();
-  const { requestNotificationPermission } = useDeviceRegistration();
   const [activeItem, setActiveItem] = useState('home');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isMobile } = useIsMobile();
+
+  // Mapear rotas para items da navegação mobile
+  const routeToItem = {
+    '/dashboard': 'home',
+    '/dashboard/': 'home',
+    '/dashboard/agenda': 'agenda',
+    '/dashboard/email': 'email',
+    '/dashboard/clientes': 'clientes'
+  };
 
   useEffect(() => {
-    // Auto-registrar para notificações quando entrar no dashboard mobile
-    if (user && isMobile) {
-      requestNotificationPermission();
-    }
-  }, [user, isMobile]);
+    const currentItem = routeToItem[location.pathname] || 'home';
+    setActiveItem(currentItem);
+  }, [location.pathname]);
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  if (!isMobile) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const handleNavigation = (item: string) => {
+  const handleItemClick = (item: string) => {
     setActiveItem(item);
+    
+    const itemToRoute = {
+      'home': '/dashboard',
+      'agenda': '/dashboard/agenda',
+      'email': '/dashboard/email',
+      'clientes': '/dashboard/clientes'
+    };
+    
+    navigate(itemToRoute[item] || '/dashboard');
+  };
+
+  const getTitleForItem = (item: string) => {
+    const titles = {
+      'home': 'Dashboard',
+      'agenda': 'Minha Agenda',
+      'email': 'Email Marketing',
+      'clientes': 'Clientes'
+    };
+    return titles[item] || 'Dashboard';
   };
 
   const renderContent = () => {
     switch (activeItem) {
       case 'home':
-        return <MobileHome onNavigate={handleNavigation} />;
-      case 'calendar':
+        return <MobileHome />;
+      case 'agenda':
         return <MobileCalendarView />;
       case 'email':
         return <MobileEmailDashboard />;
-      case 'clients':
+      case 'clientes':
         return <MobileClientsManager />;
-      case 'analytics':
-        return <MobileAnalytics />;
-      case 'settings':
-        return <MobileSettings />;
-      case 'tasks':
-        return <TarefasMobile />;
       default:
-        return <MobileHome onNavigate={handleNavigation} />;
+        return <MobileHome />;
     }
   };
 
+  if (!isMobile) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="pb-20">
-        {renderContent()}
-      </main>
-      <MobileBottomNavigation
-        activeItem={activeItem}
-        onItemClick={handleNavigation}
-      />
-    </div>
+    <MobileLayout
+      title={getTitleForItem(activeItem)}
+      activeItem={activeItem}
+      onItemClick={handleItemClick}
+      showSearch={['home', 'clientes', 'email'].includes(activeItem)}
+      showAddButton={['agenda', 'clientes'].includes(activeItem)}
+      onAddClick={() => {
+        console.log('Add clicked for:', activeItem);
+      }}
+    >
+      {renderContent()}
+    </MobileLayout>
   );
 };
 

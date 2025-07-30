@@ -1,7 +1,8 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MobileButton from './mobile-button';
 
 interface MobileModalProps {
   isOpen: boolean;
@@ -47,24 +48,6 @@ const MobileModal: React.FC<MobileModalProps> = ({
     setIsDragging(false);
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
   const sizeClasses = {
     sm: 'max-h-[50vh]',
     md: 'max-h-[75vh]',
@@ -75,19 +58,13 @@ const MobileModal: React.FC<MobileModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div 
-      className={cn(
-        "fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center transition-all duration-300",
-        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}
-      onClick={handleBackdropClick}
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-end md:items-center md:justify-center">
       <div 
         ref={modalRef}
         className={cn(
-          'bg-white w-full flex flex-col rounded-t-3xl md:rounded-2xl shadow-2xl transition-all duration-300 ease-out',
+          'mobile-modal-content w-full flex flex-col',
           sizeClasses[size],
-          'md:max-w-md md:mx-auto md:max-h-[80vh]'
+          'md:max-w-md md:mx-auto md:rounded-2xl md:max-h-[80vh]'
         )}
         style={{ 
           transform: `translateY(${currentY}px)`,
@@ -96,7 +73,6 @@ const MobileModal: React.FC<MobileModalProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
         <div className="flex justify-center py-3 md:hidden">
@@ -105,21 +81,20 @@ const MobileModal: React.FC<MobileModalProps> = ({
 
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 pb-4 pt-2">
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
-            )}
-            
-            <h2 className="text-xl font-semibold text-gray-900 flex-1 text-center">
+          <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900">
               {title || ''}
             </h2>
-            
-            <div className="w-9 h-9"></div> {/* Spacer for centering */}
+            {showCloseButton && (
+              <MobileButton
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-10 w-10 p-0"
+              >
+                <X className="h-5 w-5" />
+              </MobileButton>
+            )}
           </div>
         )}
 

@@ -6,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -17,6 +17,7 @@ import EventClusterModal from './EventClusterModal';
 import CalendarSkeleton from './CalendarSkeleton';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { useRealtimeGoogleSync } from '@/hooks/useRealtimeGoogleSync';
 import './calendar-styles.css';
 
 interface MyCalendarProps {
@@ -34,11 +35,11 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [clusterEvents, setClusterEvents] = useState<any[]>([]);
   const [currentView, setCurrentView] = useState('dayGridMonth');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, refreshEvents } = useCalendarData();
-  const { fullResyncCalendar, isConnected, autoSyncCalendar } = useGoogleCalendar();
+  const { isConnected } = useGoogleCalendar();
+  const { lastSyncTime, syncGoogleCalendar } = useRealtimeGoogleSync();
   const { toast } = useToast();
 
   const handleDateClick = (arg: any) => {
@@ -103,7 +104,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const handleCreateEvent = async (eventData: any) => {
     try {
       await createEvent(eventData);
-      // Immediately refresh events after creation to show the new event
       await refreshEvents();
       handleCloseAllModals();
     } catch (error) {
@@ -120,46 +120,12 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setSelectedRange(null);
   };
 
-  const handleRefreshCalendar = async () => {
-    setIsRefreshing(true);
-    try {
-      if (isConnected) {
-        console.log('🔄 Iniciando sincronização manual...');
-        const result = await fullResyncCalendar();
-        
-        toast({
-          title: "✅ Sincronização Completa",
-          description: `${result.created} eventos sincronizados do Google Calendar`,
-          duration: 5000
-        });
-      } else {
-        // Se não conectado, apenas atualizar eventos locais
-        await refreshEvents();
-        toast({
-          title: "✅ Calendário Atualizado",
-          description: "Eventos locais foram atualizados",
-          duration: 3000
-        });
-      }
-    } catch (error) {
-      console.error('Error synchronizing:', error);
-      toast({
-        title: "❌ Erro na Sincronização", 
-        description: "Erro ao sincronizar eventos do Google Calendar",
-        variant: "destructive"
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Executar sincronização automática quando o componente carregar
+  // Atualizar eventos quando houver mudanças na sincronização
   useEffect(() => {
-    if (isConnected) {
-      console.log('🔄 Executando sincronização automática ao carregar calendário...');
-      autoSyncCalendar();
+    if (lastSyncTime) {
+      refreshEvents();
     }
-  }, [isConnected, autoSyncCalendar]);
+  }, [lastSyncTime, refreshEvents]);
 
   const formatEventsForCalendar = (events: any[]) => {
     return events.map((event) => {
@@ -238,16 +204,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
         
         <div className="flex space-x-3">
-          <Button 
-            onClick={handleRefreshCalendar}
-            disabled={isRefreshing}
-            variant="outline"
-            className="rounded-xl border-[#3600FF]/20 hover:bg-[#3600FF]/5"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Sincronizando...' : 'Sincronizar'}
-          </Button>
-          
           <Button 
             onClick={() => setShowTypeSelector(true)}
             className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90 rounded-xl shadow-lg"

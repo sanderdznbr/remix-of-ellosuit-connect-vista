@@ -53,6 +53,7 @@ export type Database = {
       calendar_events: {
         Row: {
           attendees: Json | null
+          audio_url: string | null
           color: string | null
           company_id: string
           created_at: string
@@ -69,13 +70,17 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule: string | null
+          source: string | null
           start_date: string
+          status: string | null
           sync_status: string | null
           title: string
+          transcript: string | null
           updated_at: string
         }
         Insert: {
           attendees?: Json | null
+          audio_url?: string | null
           color?: string | null
           company_id: string
           created_at?: string
@@ -92,13 +97,17 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule?: string | null
+          source?: string | null
           start_date: string
+          status?: string | null
           sync_status?: string | null
           title: string
+          transcript?: string | null
           updated_at?: string
         }
         Update: {
           attendees?: Json | null
+          audio_url?: string | null
           color?: string | null
           company_id?: string
           created_at?: string
@@ -115,9 +124,12 @@ export type Database = {
             | Database["public"]["Enums"]["meeting_provider"]
             | null
           recurrence_rule?: string | null
+          source?: string | null
           start_date?: string
+          status?: string | null
           sync_status?: string | null
           title?: string
+          transcript?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -352,6 +364,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      device_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          token: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          token?: string
+        }
+        Relationships: []
       }
       document_files: {
         Row: {
@@ -698,6 +728,42 @@ export type Database = {
           },
         ]
       }
+      event_notification_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          event_id: string
+          id: string
+          notification_at_start: boolean
+          notifications_enabled: boolean
+          reminder_minutes: number[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          notification_at_start?: boolean
+          notifications_enabled?: boolean
+          reminder_minutes?: number[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          notification_at_start?: boolean
+          notifications_enabled?: boolean
+          reminder_minutes?: number[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       holidays: {
         Row: {
           company_id: string
@@ -780,6 +846,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_settings: {
+        Row: {
+          calendar_notifications_enabled: boolean
+          company_id: string
+          created_at: string
+          default_reminder_minutes: number
+          event_start_notifications: boolean
+          id: string
+          reminder_notifications_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calendar_notifications_enabled?: boolean
+          company_id: string
+          created_at?: string
+          default_reminder_minutes?: number
+          event_start_notifications?: boolean
+          id?: string
+          reminder_notifications_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calendar_notifications_enabled?: boolean
+          company_id?: string
+          created_at?: string
+          default_reminder_minutes?: number
+          event_start_notifications?: boolean
+          id?: string
+          reminder_notifications_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       public_booking_links: {
         Row: {
@@ -882,6 +984,24 @@ export type Database = {
           },
         ]
       }
+      secret_config: {
+        Row: {
+          id: number
+          key: string | null
+          value: string | null
+        }
+        Insert: {
+          id?: number
+          key?: string | null
+          value?: string | null
+        }
+        Update: {
+          id?: number
+          key?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       user_email_accounts: {
         Row: {
           access_token: string | null
@@ -942,9 +1062,11 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          custom_favicon_url: string | null
           custom_logo_url: string | null
           id: string
           menu_order: Json | null
+          sidebar_background_color: string | null
           sidebar_color: string | null
           updated_at: string
           user_id: string
@@ -952,9 +1074,11 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null
+          sidebar_background_color?: string | null
           sidebar_color?: string | null
           updated_at?: string
           user_id: string
@@ -962,9 +1086,11 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
           menu_order?: Json | null
+          sidebar_background_color?: string | null
           sidebar_color?: string | null
           updated_at?: string
           user_id?: string

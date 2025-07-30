@@ -27,6 +27,12 @@ verify_jwt = false
 [functions.google-calendar]
 verify_jwt = false
 
+[functions.sync-google-calendar]
+verify_jwt = true
+
+[functions.register-device]
+verify_jwt = false
+
 [db]
 enabled = true
 port = 54322

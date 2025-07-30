@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Calendar, Mail, Users, BarChart3, Video, FileText } from 'lucide-react';
+import { Home, Calendar, Mail, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileBottomNavigationProps {
@@ -13,40 +14,34 @@ const MobileBottomNavigation: React.FC<MobileBottomNavigationProps> = ({
 }) => {
   const navItems = [
     { 
-      id: 'my-calendar', 
+      id: 'home', 
+      icon: Home, 
+      label: 'Início',
+      color: 'text-blue-600'
+    },
+    { 
+      id: 'agenda', 
       icon: Calendar, 
       label: 'Agenda',
-      color: 'text-blue-500'
+      color: 'text-blue-600'
     },
     { 
-      id: 'mail-tracking', 
+      id: 'email', 
       icon: Mail, 
       label: 'Email',
-      color: 'text-green-500'
+      color: 'text-blue-600'
     },
     { 
-      id: 'start-meet', 
-      icon: Video, 
-      label: 'Meet',
-      color: 'text-purple-500'
-    },
-    { 
-      id: 'clients', 
+      id: 'clientes', 
       icon: Users, 
       label: 'Clientes',
-      color: 'text-orange-500'
-    },
-    { 
-      id: 'analytics', 
-      icon: BarChart3, 
-      label: 'Análises',
-      color: 'text-red-500'
+      color: 'text-blue-600'
     },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 md:hidden">
-      <div className="flex items-center justify-around px-2 py-1">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 mobile-safe-bottom md:hidden">
+      <div className="flex items-center justify-around px-2 py-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.id;
@@ -56,22 +51,22 @@ const MobileBottomNavigation: React.FC<MobileBottomNavigationProps> = ({
               key={item.id}
               onClick={() => onItemClick(item.id)}
               className={cn(
-                "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px]",
+                "flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all duration-200 min-w-[70px] mobile-touch-feedback",
                 isActive 
-                  ? "bg-primary/10 scale-105" 
-                  : "hover:bg-gray-100 active:scale-95"
+                  ? "bg-blue-50 scale-105" 
+                  : "hover:bg-gray-50"
               )}
             >
               <Icon 
                 className={cn(
                   "h-6 w-6 mb-1 transition-colors",
-                  isActive ? "text-primary" : "text-gray-500"
+                  isActive ? "text-blue-600" : "text-gray-400"
                 )} 
               />
               <span 
                 className={cn(
                   "text-xs font-medium transition-colors",
-                  isActive ? "text-primary" : "text-gray-500"
+                  isActive ? "text-blue-600" : "text-gray-400"
                 )}
               >
                 {item.label}

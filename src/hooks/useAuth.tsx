@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +6,18 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Função para notificar iOS sobre login bem-sucedido
+  const notifyIOSLoginSuccess = () => {
+    try {
+      if (window.webkit?.messageHandlers?.usuarioLogado) {
+        window.webkit.messageHandlers.usuarioLogado.postMessage("ok");
+        console.log('✅ iOS notificado sobre login bem-sucedido');
+      }
+    } catch (error) {
+      console.log('📱 Notificação iOS não disponível:', error);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -19,6 +30,11 @@ export const useAuth = () => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Notificar iOS quando usuário faz login
+      if (session?.user) {
+        notifyIOSLoginSuccess();
+      }
     };
 
     // Set up auth state listener
@@ -32,6 +48,12 @@ export const useAuth = () => {
           setUser(null);
           setLoading(false);
           return;
+        }
+        
+        // Notificar iOS especificamente no evento SIGNED_IN
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🔐 Login bem-sucedido, notificando iOS...');
+          notifyIOSLoginSuccess();
         }
         
         updateAuthState(session);
@@ -81,6 +103,12 @@ export const useAuth = () => {
     });
     
     console.log('📝 SignUp result:', data?.user?.email || 'Failed', error?.message || 'Success');
+    
+    // Notificar iOS após signup bem-sucedido
+    if (data?.user && !error) {
+      notifyIOSLoginSuccess();
+    }
+    
     return { data, error };
   };
 
@@ -93,6 +121,12 @@ export const useAuth = () => {
     });
     
     console.log('🔑 SignIn result:', data?.user?.email || 'Failed', error?.message || 'Success');
+    
+    // Notificar iOS após signin bem-sucedido
+    if (data?.user && !error) {
+      notifyIOSLoginSuccess();
+    }
+    
     return { data, error };
   };
 

@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Menu, Bell, Search, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import MobileButton from '@/components/ui/mobile-button';
 import {
   Drawer,
   DrawerClose,
@@ -36,15 +38,15 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   return (
     <>
       {/* Header Principal */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 md:hidden">
+      <div className="fixed top-0 left-0 right-0 z-50 mobile-header-blur mobile-safe-top md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Lado Esquerdo */}
           <div className="flex items-center space-x-3">
             <Drawer>
               <DrawerTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
+                <MobileButton variant="ghost" size="sm" className="h-10 w-10 p-0">
                   <Menu className="h-5 w-5" />
-                </Button>
+                </MobileButton>
               </DrawerTrigger>
               <DrawerContent className="h-[80vh]">
                 <DrawerHeader>
@@ -76,7 +78,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           {/* Lado Direito */}
           <div className="flex items-center space-x-2">
             {showSearch && (
-              <Button
+              <MobileButton
                 variant="ghost"
                 size="sm"
                 className="h-10 w-10 p-0"
@@ -87,26 +89,27 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
                 ) : (
                   <Search className="h-5 w-5" />
                 )}
-              </Button>
+              </MobileButton>
             )}
             
             {showNotifications && (
-              <Button variant="ghost" size="sm" className="h-10 w-10 p-0 relative">
+              <MobileButton variant="ghost" size="sm" className="h-10 w-10 p-0 relative">
                 <Bell className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500">
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500 border-0">
                   3
                 </Badge>
-              </Button>
+              </MobileButton>
             )}
             
             {showAddButton && (
-              <Button 
+              <MobileButton 
+                variant="primary"
                 size="sm" 
-                className="h-10 w-10 p-0 bg-primary rounded-full"
+                className="h-10 w-10 p-0 rounded-full"
                 onClick={onAddClick}
               >
                 <Plus className="h-5 w-5" />
-              </Button>
+              </MobileButton>
             )}
           </div>
         </div>
@@ -116,7 +119,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           <div className="px-4 pb-3 animate-in slide-in-from-top-2 duration-200">
             <Input
               placeholder="Buscar..."
-              className="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white"
+              className="mobile-input"
               autoFocus
             />
           </div>
@@ -124,7 +127,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
       </div>
 
       {/* Spacer para o header fixo */}
-      <div className="h-16 md:hidden" />
+      <div className="h-20 md:hidden" />
     </>
   );
 };
@@ -142,11 +145,11 @@ const MobileMenuContent = () => {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       {menuItems.map((item, index) => (
         <div
           key={index}
-          className="flex items-center space-x-4 p-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          className="mobile-list-item flex items-center space-x-4 rounded-xl cursor-pointer mobile-touch-feedback"
         >
           <div className="text-2xl">{item.icon}</div>
           <div className="flex-1">

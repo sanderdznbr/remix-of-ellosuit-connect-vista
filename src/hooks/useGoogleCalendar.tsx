@@ -48,9 +48,9 @@ export const useGoogleCalendar = () => {
 
       if (error) {
         console.error('❌ Erro ao verificar integração Google Calendar:', error);
+        setError('Erro ao verificar conexão com Google Calendar');
         setIsConnected(false);
         setIntegration(null);
-        setError(error.message);
         return;
       }
 

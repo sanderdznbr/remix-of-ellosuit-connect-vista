@@ -2,10 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Mail, Eye, Clock } from 'lucide-react';
+import { Mail, Eye, Clock, Search, Filter } from 'lucide-react';
 
 interface Email {
   id: string;
@@ -22,152 +24,118 @@ interface Email {
 
 const EmailList = () => {
   const [emails, setEmails] = useState<Email[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchEmails();
+  }, []);
 
   const fetchEmails = async () => {
     try {
       const { data, error } = await supabase
         .from('emails')
         .select(`
-          id,
-          recipient_email,
-          recipient_name,
-          subject,
-          sent_at,
-          status,
+          *,
           email_events (
             event_type,
             timestamp
           )
         `)
-        .order('sent_at', { ascending: false })
-        .limit(20);
+        .order('sent_at', { ascending: false });
 
       if (error) throw error;
-      
       setEmails(data || []);
     } catch (error) {
-      console.error('Error fetching emails:', error);
+      console.error('Erro ao buscar emails:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchEmails();
+  const filteredEmails = emails.filter(email =>
+    email.recipient_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    email.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    // Configurar atualização em tempo real
-    const channel = supabase
-      .channel('email-list')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'emails'
-      }, () => {
-        fetchEmails();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'email_events'
-      }, () => {
-        fetchEmails();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const getEmailStatus = (email: Email) => {
-    const hasOpened = email.email_events.some(event => event.event_type === 'opened');
-    const hasClicked = email.email_events.some(event => event.event_type === 'clicked');
-    
-    if (hasClicked) return { label: 'Clicado', color: 'bg-green-500' };
-    if (hasOpened) return { label: 'Aberto', color: 'bg-blue-500' };
-    return { label: 'Enviado', color: 'bg-gray-500' };
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Emails Recentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-16 bg-gray-200 rounded mb-2"></div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="animate-pulse bg-gray-200 h-8 rounded"></div>
+        <div className="animate-pulse bg-gray-200 h-32 rounded"></div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Emails Recentes
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {emails.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum email enviado ainda</p>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Histórico de Emails</h2>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar emails..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-64"
+            />
           </div>
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Filtros
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {filteredEmails.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Mail className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600">Nenhum email encontrado</p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-4">
-            {emails.map((email) => {
-              const status = getEmailStatus(email);
-              const openEvent = email.email_events.find(e => e.event_type === 'opened');
-              
-              return (
-                <div key={email.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{email.subject}</h4>
-                      <p className="text-sm text-gray-600">
-                        Para: {email.recipient_name || email.recipient_email}
-                      </p>
+          filteredEmails.map((email) => (
+            <Card key={email.id}>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="font-medium">{email.recipient_email}</span>
+                      <Badge variant={email.status === 'sent' ? 'default' : 'destructive'}>
+                        {email.status}
+                      </Badge>
                     </div>
-                    <Badge className={`${status.color} text-white`}>
-                      {status.label}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(email.sent_at), { 
-                        addSuffix: true,
-                        locale: ptBR 
-                      })}
-                    </div>
-                    
-                    {openEvent && (
+                    <h3 className="font-semibold mb-2">{email.subject}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        Aberto {formatDistanceToNow(new Date(openEvent.timestamp), { 
-                          addSuffix: true,
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(email.sent_at), { 
+                          addSuffix: true, 
                           locale: ptBR 
                         })}
                       </div>
-                    )}
+                      {email.email_events.some(e => e.event_type === 'opened') && (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <Eye className="h-3 w-3" />
+                          Aberto
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  <Button variant="outline" size="sm">
+                    Ver Detalhes
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
+              </CardContent>
+            </Card>
+          ))
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

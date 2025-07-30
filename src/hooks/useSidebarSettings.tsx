@@ -9,13 +9,14 @@ interface SidebarSettings {
   sidebar_color: string;
   sidebar_background_color?: string;
   custom_logo_url?: string;
+  custom_favicon_url?: string;
   menu_order: string[];
 }
 
 export const useSidebarSettings = () => {
   const [settings, setSettings] = useState<SidebarSettings>({
-    sidebar_color: '#3600FF',
-    sidebar_background_color: '#ffffff',
+    sidebar_color: '#3000E3',
+    sidebar_background_color: '#3600FF',
     menu_order: []
   });
   const [loading, setLoading] = useState(true);
@@ -53,13 +54,16 @@ export const useSidebarSettings = () => {
           menuOrder = data.menu_order.map((item: any) => String(item));
         }
 
-        setSettings({
+        const newSettings = {
           id: data.id,
-          sidebar_color: data.sidebar_color || '#3600FF',
-          sidebar_background_color: data.sidebar_background_color || '#ffffff',
+          sidebar_color: data.sidebar_color || '#3000E3',
+          sidebar_background_color: data.sidebar_background_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
+          custom_favicon_url: data.custom_favicon_url,
           menu_order: menuOrder
-        });
+        };
+
+        setSettings(newSettings);
       }
     } catch (error) {
       console.error('Error fetching sidebar settings:', error);
@@ -91,6 +95,7 @@ export const useSidebarSettings = () => {
             sidebar_color: updatedSettings.sidebar_color,
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
+            custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order
           })
           .eq('id', settings.id);
@@ -106,6 +111,7 @@ export const useSidebarSettings = () => {
             sidebar_color: updatedSettings.sidebar_color,
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
+            custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order
           })
           .select()
@@ -115,7 +121,13 @@ export const useSidebarSettings = () => {
         updatedSettings.id = data.id;
       }
 
+      // Atualiza o estado imediatamente para reflexão instantânea
       setSettings(updatedSettings);
+      
+      // Disparar evento customizado para atualizar outras partes da aplicação
+      window.dispatchEvent(new CustomEvent('sidebarSettingsUpdated', { 
+        detail: updatedSettings 
+      }));
       
       toast({
         title: "Sucesso",
@@ -131,6 +143,16 @@ export const useSidebarSettings = () => {
     }
   };
 
+  // Função para determinar se uma cor é escura
+  const isColorDark = (color: string) => {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return brightness < 128;
+  };
+
   useEffect(() => {
     if (user) {
       fetchSettings();
@@ -141,6 +163,7 @@ export const useSidebarSettings = () => {
     settings,
     loading,
     updateSettings,
-    refetch: fetchSettings
+    refetch: fetchSettings,
+    isColorDark
   };
 };

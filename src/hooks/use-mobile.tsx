@@ -1,16 +1,9 @@
-
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    // Inicializar com valor correto para evitar flash
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < MOBILE_BREAKPOINT;
-    }
-    return false;
-  })
+  const [isMobile, setIsMobile] = React.useState<boolean>(false)
   const [isLoading, setIsLoading] = React.useState<boolean>(true)
 
   React.useEffect(() => {
@@ -19,7 +12,7 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     
-    // Set initial value and mark as loaded
+    // Set initial value
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     setIsLoading(false)
     

@@ -22,9 +22,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Upload, Palette, Settings, Image, RotateCcw, Save } from 'lucide-react';
+import { GripVertical, Upload, Palette, Settings, Image } from 'lucide-react';
 import { useSidebarSettings } from '@/hooks/useSidebarSettings';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import ColorWheel from './ColorWheel';
 
 const defaultMenuItems = [
@@ -73,18 +72,11 @@ function SortableItem({ id, label, icon }: SortableItemProps) {
 }
 
 const SidebarEditor = () => {
-  const { settings, loading, updateSettings, refetch } = useSidebarSettings();
-  const { uploadFile, uploading } = useFileUpload();
+  const { settings, loading, updateSettings } = useSidebarSettings();
   const [menuItems, setMenuItems] = useState(defaultMenuItems);
   const [customLogoFile, setCustomLogoFile] = useState<File | null>(null);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showBackgroundColorPicker, setShowBackgroundColorPicker] = useState(false);
-  const [sidebarColor, setSidebarColor] = useState(settings.sidebar_color || '#3000E3');
-  const [backgroundColor, setBackgroundColor] = useState(settings.sidebar_background_color || '#3600FF');
-  const [sidebarColorHex, setSidebarColorHex] = useState(settings.sidebar_color || '#3000E3');
-  const [backgroundColorHex, setBackgroundColorHex] = useState(settings.sidebar_background_color || '#3600FF');
-  const [pendingChanges, setPendingChanges] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -107,13 +99,6 @@ const SidebarEditor = () => {
     }
   }, [settings]);
 
-  React.useEffect(() => {
-    setSidebarColor(settings.sidebar_color || '#3000E3');
-    setBackgroundColor(settings.sidebar_background_color || '#3600FF');
-    setSidebarColorHex(settings.sidebar_color || '#3000E3');
-    setBackgroundColorHex(settings.sidebar_background_color || '#3600FF');
-  }, [settings]);
-
   function handleDragEnd(event: any) {
     const { active, over } = event;
 
@@ -134,105 +119,30 @@ const SidebarEditor = () => {
   }
 
   const handleSidebarColorChange = (color: string) => {
-    setSidebarColor(color);
-    setSidebarColorHex(color);
-    setPendingChanges(true);
+    updateSettings({
+      sidebar_color: color
+    });
   };
 
   const handleBackgroundColorChange = (color: string) => {
-    setBackgroundColor(color);
-    setBackgroundColorHex(color);
-    setPendingChanges(true);
+    updateSettings({
+      sidebar_background_color: color
+    });
   };
 
-  const handleSidebarColorHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSidebarColorHex(value);
-    if (value.match(/^#[0-9A-Fa-f]{6}$/)) {
-      setSidebarColor(value);
-      setPendingChanges(true);
-    }
+  const handleLogoUpload = async () => {
+    if (!customLogoFile) return;
+
+    const logoUrl = URL.createObjectURL(customLogoFile);
+    updateSettings({
+      custom_logo_url: logoUrl
+    });
   };
 
-  const handleBackgroundColorHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setBackgroundColorHex(value);
-    if (value.match(/^#[0-9A-Fa-f]{6}$/)) {
-      setBackgroundColor(value);
-      setPendingChanges(true);
-    }
-  };
-
-  const handleRestoreDefaultColors = () => {
-    setSidebarColor('#3000E3');
-    setBackgroundColor('#3600FF');
-    setSidebarColorHex('#3000E3');
-    setBackgroundColorHex('#3600FF');
-    setPendingChanges(true);
-  };
-
-  const handleLogoFileChange = (file: File | null) => {
-    setCustomLogoFile(file);
-    setPendingChanges(true);
-  };
-
-  const handleFaviconFileChange = (file: File | null) => {
-    setFaviconFile(file);
-    setPendingChanges(true);
-  };
-
-  const handleSaveAllChanges = async () => {
-    try {
-      let logoUrl = settings.custom_logo_url;
-      let faviconUrl = settings.custom_favicon_url;
-
-      // Upload da logo se houver arquivo selecionado
-      if (customLogoFile) {
-        const uploadedLogoUrl = await uploadFile(customLogoFile, 'logos');
-        if (uploadedLogoUrl) {
-          logoUrl = uploadedLogoUrl;
-        }
-        setCustomLogoFile(null);
-      }
-
-      // Upload do favicon se houver arquivo selecionado
-      if (faviconFile) {
-        const uploadedFaviconUrl = await uploadFile(faviconFile, 'logos');
-        if (uploadedFaviconUrl) {
-          faviconUrl = uploadedFaviconUrl;
-        }
-        setFaviconFile(null);
-      }
-
-      // Salvar todas as configurações de uma vez
-      await updateSettings({
-        sidebar_color: sidebarColor,
-        sidebar_background_color: backgroundColor,
-        custom_logo_url: logoUrl,
-        custom_favicon_url: faviconUrl
-      });
-
-      // Recarregar as configurações para garantir que estão atualizadas
-      await refetch();
-
-      setPendingChanges(false);
-    } catch (error) {
-      console.error('Erro ao salvar alterações:', error);
-    }
-  };
-
-  const resetToDefaultLogo = async () => {
-    await updateSettings({
+  const resetToDefaultLogo = () => {
+    updateSettings({
       custom_logo_url: undefined
     });
-    await refetch();
-  };
-
-  const resetToDefaultFavicon = async () => {
-    await updateSettings({
-      custom_favicon_url: undefined
-    });
-    await refetch();
   };
 
   if (loading) {
@@ -247,21 +157,10 @@ const SidebarEditor = () => {
 
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      {/* Header com botão de salvar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Editar Sidebar</h1>
-          <p className="text-base text-gray-600 mt-2">Personalize a aparência e ordem do menu lateral</p>
-        </div>
-        <Button
-          onClick={handleSaveAllChanges}
-          disabled={!pendingChanges || uploading}
-          className="flex items-center gap-2 px-6 py-3 text-base"
-          size="lg"
-        >
-          <Save className="h-5 w-5" />
-          {uploading ? 'Salvando...' : 'Salvar Alterações'}
-        </Button>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Editar Sidebar</h1>
+        <p className="text-base text-gray-600 mt-2">Personalize a aparência e ordem do menu lateral</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -295,20 +194,9 @@ const SidebarEditor = () => {
           {/* Accent Color Picker */}
           <Card className="border-none shadow-lg rounded-2xl bg-white">
             <CardHeader className="p-6">
-              <CardTitle className="flex items-center gap-2 justify-between">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Cor dos Itens Selecionados
-                </div>
-                <Button
-                  onClick={handleRestoreDefaultColors}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Restaurar Padrão
-                </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Cor Principal da Sidebar
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 pt-0">
@@ -318,25 +206,19 @@ const SidebarEditor = () => {
                     <button
                       onClick={() => setShowColorPicker(!showColorPicker)}
                       className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
-                      style={{ backgroundColor: sidebarColor }}
+                      style={{ backgroundColor: settings.sidebar_color }}
                     />
                     {showColorPicker && (
                       <ColorWheel
-                        color={sidebarColor}
+                        color={settings.sidebar_color}
                         onChange={handleSidebarColorChange}
                         onClose={() => setShowColorPicker(false)}
                       />
                     )}
                   </div>
                   <div className="flex-1">
-                    <Label>Código HEX</Label>
-                    <Input
-                      type="text"
-                      value={sidebarColorHex}
-                      onChange={handleSidebarColorHexChange}
-                      placeholder="#3000E3"
-                      className="mt-1"
-                    />
+                    <Label>Cor Selecionada</Label>
+                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_color}</div>
                   </div>
                 </div>
               </div>
@@ -358,25 +240,19 @@ const SidebarEditor = () => {
                     <button
                       onClick={() => setShowBackgroundColorPicker(!showBackgroundColorPicker)}
                       className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
-                      style={{ backgroundColor: backgroundColor }}
+                      style={{ backgroundColor: settings.sidebar_background_color || '#ffffff' }}
                     />
                     {showBackgroundColorPicker && (
                       <ColorWheel
-                        color={backgroundColor}
+                        color={settings.sidebar_background_color || '#ffffff'}
                         onChange={handleBackgroundColorChange}
                         onClose={() => setShowBackgroundColorPicker(false)}
                       />
                     )}
                   </div>
                   <div className="flex-1">
-                    <Label>Código HEX</Label>
-                    <Input
-                      type="text"
-                      value={backgroundColorHex}
-                      onChange={handleBackgroundColorHexChange}
-                      placeholder="#3600FF"
-                      className="mt-1"
-                    />
+                    <Label>Cor de Fundo Selecionada</Label>
+                    <div className="text-sm text-gray-600 mt-1">{settings.sidebar_background_color || '#ffffff'}</div>
                   </div>
                 </div>
               </div>
@@ -393,20 +269,11 @@ const SidebarEditor = () => {
             </CardHeader>
             <CardContent className="p-6 pt-0">
               <div className="space-y-4">
-                <div>
-                  <Label>Logo Completa</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setCustomLogoFile(file);
-                      setPendingChanges(true);
-                    }}
-                    className="mt-1"
-                    disabled={uploading}
-                  />
-                </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCustomLogoFile(e.target.files?.[0] || null)}
+                />
                 {settings.custom_logo_url ? (
                   <div className="p-4 border rounded-lg">
                     <img 
@@ -419,7 +286,6 @@ const SidebarEditor = () => {
                       variant="outline"
                       size="sm"
                       className="w-full"
-                      disabled={uploading}
                     >
                       Usar Logo Padrão
                     </Button>
@@ -427,87 +293,23 @@ const SidebarEditor = () => {
                 ) : (
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center space-x-3 mb-2">
-                      <img 
-                        src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                        alt="ElloSuit Logo" 
-                        className="h-10 w-auto"
-                        onError={(e) => {
-                          console.error('Erro ao carregar logo padrão no editor:', e);
-                        }}
-                      />
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600"
+                      >
+                        E
+                      </div>
                       <span className="text-lg font-bold text-gray-900">ElloSuit</span>
                     </div>
                     <p className="text-sm text-gray-500">Logo padrão da ElloSuit</p>
                   </div>
                 )}
-                {customLogoFile && (
-                  <p className="text-sm text-green-600">
-                    Arquivo selecionado: {customLogoFile.name}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Favicon Upload */}
-          <Card className="border-none shadow-lg rounded-2xl bg-white">
-            <CardHeader className="p-6">
-              <CardTitle className="flex items-center gap-2">
-                <Image className="h-5 w-5" />
-                Favicon (Logo 1:1)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <div className="space-y-4">
-                <div>
-                  <Label>Favicon para Sidebar Recolhida (formato quadrado 1:1)</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setFaviconFile(file);
-                      setPendingChanges(true);
-                    }}
-                    className="mt-1"
-                    disabled={uploading}
-                  />
-                </div>
-                {settings.custom_favicon_url ? (
-                  <div className="p-4 border rounded-lg">
-                    <img 
-                      src={settings.custom_favicon_url} 
-                      alt="Custom Favicon" 
-                      className="h-12 w-12 object-contain mb-2"
-                    />
-                    <Button
-                      onClick={resetToDefaultFavicon}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      disabled={uploading}
-                    >
-                      Usar Favicon Padrão
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="p-4 border rounded-lg">
-                    <img 
-                      src="/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png" 
-                      alt="ElloSuit Favicon" 
-                      className="h-12 w-12 object-contain mb-2"
-                      onError={(e) => {
-                        console.error('Erro ao carregar favicon padrão no editor:', e);
-                      }}
-                    />
-                    <p className="text-sm text-gray-500">Favicon padrão da ElloSuit</p>
-                  </div>
-                )}
-                {faviconFile && (
-                  <p className="text-sm text-green-600">
-                    Arquivo selecionado: {faviconFile.name}
-                  </p>
-                )}
+                <Button 
+                  onClick={handleLogoUpload} 
+                  disabled={!customLogoFile}
+                  className="w-full"
+                >
+                  Fazer Upload da Logo
+                </Button>
               </div>
             </CardContent>
           </Card>

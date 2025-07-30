@@ -193,6 +193,8 @@ export const useGoogleCalendar = () => {
     const code = urlParams.get('code');
     const state = urlParams.get('state');
     const error = urlParams.get('error');
+    
+    console.log('🔍 Verificando callback:', { code: !!code, state, error, url: window.location.href });
 
     if (error) {
       console.error('❌ Erro OAuth Google:', error);

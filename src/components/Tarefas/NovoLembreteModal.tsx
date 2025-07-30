@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { vibrate } from '@/utils/mobile-helpers';
 import MobileModal from '@/components/ui/mobile-modal';
-import { getServerTodayString } from '@/utils/date-server';
 
 interface NovoLembreteModalProps {
   isOpen: boolean;
@@ -18,7 +17,7 @@ interface NovoLembreteModalProps {
 const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedDate, setSelectedDate] = useState(getServerTodayString());
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('09:00');
   const [eventType, setEventType] = useState<'reminder' | 'meeting' | 'appointment'>('reminder');
   const [location, setLocation] = useState('');
@@ -35,35 +34,28 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
     vibrate(30);
 
     try {
-      // Criar a data/hora exata que o usuário selecionou no fuso horário local
-      const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+      // Criar data/hora local sem conversão de fuso horário
+      const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
       
-      // Converter corretamente para UTC - o JavaScript fará a conversão automática
+      // Usar a data/hora local diretamente sem conversão UTC
       const startDateTime = localDateTime.toISOString();
       
-      // Criar fim do evento (1 hora depois)
-      const endDateTime = new Date(localDateTime.getTime() + (60 * 60 * 1000)).toISOString();
+      // Adicionar 1 hora para o fim do evento
+      const endDateTime = new Date(localDateTime.getTime() + 60 * 60 * 1000).toISOString();
 
       console.log('📅 Criando lembrete:');
       console.log('- Data selecionada:', selectedDate);
       console.log('- Hora selecionada:', selectedTime);
       console.log('- DateTime local:', localDateTime);
-      console.log('- Start DateTime:', startDateTime);
-      console.log('- End DateTime:', endDateTime);
-      console.log('- Event Type:', eventType);
-      console.log('- Location:', location);
-      console.log('- Attendees:', attendees);
+      console.log('- Start ISO:', startDateTime);
+      console.log('- End ISO:', endDateTime);
 
       let finalDescription = description.trim();
       let meetingLink = '';
       
       // Gerar link do Google Meet para reuniões
       if (eventType === 'meeting') {
-        // Gerar código de reunião mais realista
-        const meetingCode = Math.random().toString(36).substring(2, 5) + '-' + 
-                           Math.random().toString(36).substring(2, 6) + '-' + 
-                           Math.random().toString(36).substring(2, 5);
-        meetingLink = `https://meet.google.com/${meetingCode}`;
+        meetingLink = `https://meet.google.com/${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}-${Math.random().toString(36).substring(2, 12)}`;
         
         if (attendees.trim()) {
           finalDescription += `\n\nParticipantes: ${attendees.trim()}`;
@@ -84,6 +76,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
         event_type: eventType,
         is_all_day: false,
         status: 'pending',
+        location: eventType === 'appointment' ? location.trim() : undefined,
         meeting_link: eventType === 'meeting' ? meetingLink : undefined,
         attendees: eventType === 'meeting' && attendees.trim() ? attendees.split(',').map(email => email.trim()) : undefined
       };
@@ -93,7 +86,7 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
       // Reset form
       setTitle('');
       setDescription('');
-      setSelectedDate(getServerTodayString());
+      setSelectedDate(new Date().toISOString().split('T')[0]);
       setSelectedTime('09:00');
       setEventType('reminder');
       setLocation('');
@@ -116,7 +109,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
   // Função para exibir a data/hora corretamente no preview
   const getPreviewDateTime = () => {
     const localDateTime = new Date(selectedDate + 'T' + selectedTime + ':00');
-    
     return localDateTime.toLocaleDateString('pt-BR', {
       day: 'numeric',
       month: 'long',
@@ -136,13 +128,12 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
         {/* Form Fields */}
         <div className="space-y-4">
           <div>
-              <Input
-                placeholder="Título do lembrete"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-lg font-medium border-0 bg-gray-50 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
-                style={{ fontSize: '16px' }}
-              />
+            <Input
+              placeholder="Título do lembrete"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-lg font-medium border-0 bg-gray-50 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+            />
           </div>
 
           <div>
@@ -152,7 +143,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
               onChange={(e) => setDescription(e.target.value)}
               className="border-0 bg-gray-50 rounded-xl px-4 py-3 resize-none placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
               rows={4}
-              style={{ fontSize: '16px' }}
             />
           </div>
 
@@ -168,7 +158,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="border-0 bg-transparent text-sm p-0 focus:ring-0"
-                style={{ fontSize: '16px' }}
               />
             </div>
 
@@ -182,7 +171,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={selectedTime}
                 onChange={(e) => setSelectedTime(e.target.value)}
                 className="border-0 bg-transparent text-sm p-0 focus:ring-0"
-                style={{ fontSize: '16px' }}
               />
             </div>
           </div>
@@ -249,7 +237,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="border-0 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 transition-all"
-                style={{ fontSize: '16px' }}
               />
             </div>
           )}
@@ -265,7 +252,6 @@ const NovoLembreteModal: React.FC<NovoLembreteModalProps> = ({ isOpen, onClose, 
                 value={attendees}
                 onChange={(e) => setAttendees(e.target.value)}
                 className="border-0 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                style={{ fontSize: '16px' }}
               />
               <p className="text-xs text-gray-500 mt-2">
                 Link do Google Meet será gerado automaticamente

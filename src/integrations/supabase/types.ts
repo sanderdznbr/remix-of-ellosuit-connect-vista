@@ -53,7 +53,6 @@ export type Database = {
       calendar_events: {
         Row: {
           attendees: Json | null
-          audio_url: string | null
           color: string | null
           company_id: string
           created_at: string
@@ -75,12 +74,10 @@ export type Database = {
           status: string | null
           sync_status: string | null
           title: string
-          transcript: string | null
           updated_at: string
         }
         Insert: {
           attendees?: Json | null
-          audio_url?: string | null
           color?: string | null
           company_id: string
           created_at?: string
@@ -102,12 +99,10 @@ export type Database = {
           status?: string | null
           sync_status?: string | null
           title: string
-          transcript?: string | null
           updated_at?: string
         }
         Update: {
           attendees?: Json | null
-          audio_url?: string | null
           color?: string | null
           company_id?: string
           created_at?: string
@@ -129,7 +124,6 @@ export type Database = {
           status?: string | null
           sync_status?: string | null
           title?: string
-          transcript?: string | null
           updated_at?: string
         }
         Relationships: [

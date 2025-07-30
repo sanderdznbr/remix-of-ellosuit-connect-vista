@@ -133,19 +133,17 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
 
                 {/* Event Type Badge */}
                 <span className={cn(
-                  "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 max-w-[80px] overflow-hidden",
+                  "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-3 flex-shrink-0",
                   getEventTypeColor(tarefa.event_type)
                 )}>
-                  <span className="truncate">
-                    {tarefa.event_type === 'meeting' && 'Reunião'}
-                    {tarefa.event_type === 'appointment' && 'Compromisso'}
-                    {tarefa.event_type === 'reminder' && 'Lembrete'}
-                  </span>
+                  {tarefa.event_type === 'meeting' && 'Reunião'}
+                  {tarefa.event_type === 'appointment' && 'Compromisso'}
+                  {tarefa.event_type === 'reminder' && 'Lembrete'}
                 </span>
               </div>
 
               {/* Meta Information */}
-              <div className="flex items-center flex-wrap gap-2 mt-2 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                 {formatTimeMobile(tarefa.start_date) && (
                   <div className="flex items-center space-x-1">
                     <Clock className="h-4 w-4" />
@@ -168,16 +166,8 @@ const TarefaItem: React.FC<TarefaItemProps> = ({ tarefa, onUpdate, onDelete }) =
                 
                 {tarefa.meeting_link && (
                   <div className="flex items-center space-x-1">
-                    <Link className="h-4 w-4 text-blue-600" />
-                    <a 
-                      href={tarefa.meeting_link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Meet
-                    </a>
+                    <Link className="h-4 w-4" />
+                    <span>Link</span>
                   </div>
                 )}
                 

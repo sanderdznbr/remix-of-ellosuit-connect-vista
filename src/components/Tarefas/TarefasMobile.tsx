@@ -4,7 +4,6 @@ import { Plus, ArrowDown, Trash2, RotateCcw, Settings } from 'lucide-react';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
 import NotificationSettingsModal from './NotificationSettingsModal';
-import GoogleCalendarConnectionModal from './GoogleCalendarConnectionModal';
 import { useTarefas } from '@/hooks/useTarefas';
 import { usePullToRefresh } from '@/hooks/use-mobile-gestures';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
@@ -15,7 +14,6 @@ import { ptBR } from 'date-fns/locale';
 import { vibrate } from '@/utils/mobile-helpers';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { 
   getServerDate, 
   getServerTodayString, 
@@ -31,12 +29,10 @@ type FilterType = 'hoje' | 'amanha' | 'semana' | 'mes';
 const TarefasMobile = () => {
   const [showNovoLembrete, setShowNovoLembrete] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showGoogleCalendarModal, setShowGoogleCalendarModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('hoje');
   const [showDeleted, setShowDeleted] = useState(false);
   const { tarefas, loading, createTarefa, updateTarefa, deleteTarefa, deletedTarefas, restoreTarefa, refreshEvents } = useTarefas();
   const { user } = useAuth();
-  const { isConnected: isGoogleConnected } = useGoogleCalendar();
   const { 
     isRegistered, 
     isRegistering, 
@@ -57,34 +53,6 @@ const TarefasMobile = () => {
       initializeServerDateFromEvents(tarefas);
     }
   }, [tarefas]);
-
-  // Check Google Calendar connection and show modal if needed
-  useEffect(() => {
-    const hasShownModal = localStorage.getItem('google-calendar-modal-shown');
-    
-    if (user && !isGoogleConnected && !hasShownModal) {
-      // Show modal after a small delay to let the page load
-      const timer = setTimeout(() => {
-        setShowGoogleCalendarModal(true);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [user, isGoogleConnected]);
-
-  // Close modal when Google Calendar gets connected
-  useEffect(() => {
-    if (isGoogleConnected && showGoogleCalendarModal) {
-      setShowGoogleCalendarModal(false);
-      localStorage.setItem('google-calendar-modal-shown', 'true');
-    }
-  }, [isGoogleConnected, showGoogleCalendarModal]);
-
-  const handleGoogleCalendarModalClose = () => {
-    setShowGoogleCalendarModal(false);
-    // Mark that the modal has been shown to avoid showing it again
-    localStorage.setItem('google-calendar-modal-shown', 'true');
-  };
 
   const filterOptions: FilterType[] = ['hoje', 'amanha', 'semana', 'mes'];
   
@@ -528,11 +496,6 @@ const TarefasMobile = () => {
         isRegistering={isRegistering}
         permissionStatus={permissionStatus}
         isIOSWebView={isIOSWebView}
-      />
-
-      <GoogleCalendarConnectionModal
-        isOpen={showGoogleCalendarModal}
-        onClose={handleGoogleCalendarModalClose}
       />
     </div>
   );

@@ -113,16 +113,7 @@ export const parseBrazilDate = (dateString: string): Date => {
  */
 export const isToday = (dateString: string): boolean => {
   const todayString = getServerTodayString();
-  
-  // Agora usamos o formato direto sem conversão de fuso horário
-  // O dateString vem no formato YYYY-MM-DDTHH:mm:ss
   const eventDateString = dateString.split('T')[0];
-  
-  console.log('🔍 isToday check:');
-  console.log('- Today string:', todayString);
-  console.log('- Event date string:', eventDateString);
-  console.log('- Is today?:', eventDateString === todayString);
-  
   return eventDateString === todayString;
 };
 
@@ -131,15 +122,6 @@ export const isToday = (dateString: string): boolean => {
  */
 export const isTomorrow = (dateString: string): boolean => {
   const tomorrowString = getServerTomorrowString();
-  
-  // Agora usamos o formato direto sem conversão de fuso horário
-  // O dateString vem no formato YYYY-MM-DDTHH:mm:ss
   const eventDateString = dateString.split('T')[0];
-  
-  console.log('🔍 isTomorrow check:');
-  console.log('- Tomorrow string:', tomorrowString);
-  console.log('- Event date string:', eventDateString);
-  console.log('- Is tomorrow?:', eventDateString === tomorrowString);
-  
   return eventDateString === tomorrowString;
 };

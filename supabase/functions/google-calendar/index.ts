@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
@@ -35,10 +36,7 @@ serve(async (req) => {
           client_id: googleClientId,
           success: true
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -59,10 +57,7 @@ serve(async (req) => {
           authUrl,
           success: true
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -137,10 +132,7 @@ serve(async (req) => {
           success: true,
           message: 'Google Meet connected successfully'
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -255,10 +247,7 @@ serve(async (req) => {
           success: true,
           events: eventsData.items || []
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -310,7 +299,7 @@ serve(async (req) => {
         }
 
         const meetLink = eventResult.conferenceData?.entryPoints?.find(
-          (entry) => entry.entryPointType === 'video'
+          (entry: any) => entry.entryPointType === 'video'
         )?.uri;
 
         console.log('✅ Google Calendar event created with Meet link');
@@ -320,10 +309,7 @@ serve(async (req) => {
           googleEventId: eventResult.id,
           meetLink: meetLink
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -422,10 +408,7 @@ serve(async (req) => {
           success: true,
           message: 'Event deleted from Google Calendar successfully'
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -483,10 +466,7 @@ serve(async (req) => {
           success: true,
           access_token: tokenData.access_token
         }), {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -494,10 +474,7 @@ serve(async (req) => {
         error: 'Unknown action'
       }), {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -507,11 +484,7 @@ serve(async (req) => {
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
 
-    console.log('🔗 OAuth callback received:', {
-      code: !!code,
-      state,
-      error
-    });
+    console.log('🔗 OAuth callback received:', { code: !!code, state, error });
 
     if (error) {
       console.error('❌ OAuth error:', error);
@@ -561,13 +534,10 @@ serve(async (req) => {
         error: error.message
       }), {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
+
     return new Response(null, {
       status: 302,
       headers: {

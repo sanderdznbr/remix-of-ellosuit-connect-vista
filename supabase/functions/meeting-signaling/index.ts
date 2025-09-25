@@ -6,68 +6,61 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type RoomState = {
+  sockets: Set<WebSocket>;
+  peers: Map<string, WebSocket>; // peerId -> socket
+  participants: Map<WebSocket, { participantId: string | null; peerId: string; userId: string | null }>; // per socket
+};
+
+const rooms = new Map<string, RoomState>(); // roomId -> state
+
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    // Initialize Supabase client
+    const upgradeHeader = req.headers.get('upgrade') || '';
+    if (upgradeHeader.toLowerCase() !== 'websocket') {
+      return new Response('Expected WebSocket connection', { status: 400, headers: corsHeaders });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { headers } = req;
-    const upgradeHeader = headers.get("upgrade") || "";
-
-    if (upgradeHeader.toLowerCase() !== "websocket") {
-      return new Response("Expected WebSocket connection", { 
-        status: 400,
-        headers: corsHeaders 
-      });
-    }
-
     const { socket, response } = Deno.upgradeWebSocket(req);
-    
+
     let roomId: string | null = null;
     let participantId: string | null = null;
     let peerId: string | null = null;
+    let userId: string | null = null;
 
     socket.onopen = () => {
-      console.log("🔌 WebSocket connection opened");
+      console.log('🔌 WebSocket opened');
     };
 
     socket.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("📨 Received message:", data.type);
-
         switch (data.type) {
-          case 'join-room':
-            const { roomCode, displayName, userId } = data;
-            
-            // Find room by code
+          case 'join-room': {
+            const roomCode: string = data.roomCode;
+            const displayName: string = data.displayName;
+            userId = data.userId ?? null;
+
             const { data: room, error: roomError } = await supabase
               .from('meeting_rooms')
               .select('*')
               .eq('room_code', roomCode)
               .eq('is_active', true)
               .single();
-
             if (roomError || !room) {
-              socket.send(JSON.stringify({
-                type: 'error',
-                message: 'Room not found or inactive'
-              }));
+              socket.send(JSON.stringify({ type: 'error', message: 'Room not found or inactive' }));
               return;
             }
 
-            // Generate unique peer ID
-            peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
             roomId = room.id;
+            peerId = `peer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-            // Add participant to database
             const { data: participant, error: participantError } = await supabase
               .from('room_participants')
               .insert({
@@ -75,216 +68,124 @@ serve(async (req) => {
                 user_id: userId,
                 display_name: displayName,
                 peer_id: peerId,
-                is_host: room.created_by === userId,
+                is_host: userId ? room.created_by === userId : false,
                 connection_status: 'connected',
               })
               .select()
               .single();
-
-            if (participantError) {
-              console.error("Error adding participant:", participantError);
-              socket.send(JSON.stringify({
-                type: 'error',
-                message: 'Failed to join room'
-              }));
+            if (participantError || !participant) {
+              console.error('Error adding participant', participantError);
+              socket.send(JSON.stringify({ type: 'error', message: 'Failed to join room' }));
               return;
             }
-
             participantId = participant.id;
 
-            // Send join confirmation
+            // ensure room state
+            const state: RoomState = rooms.get(roomId) ?? { sockets: new Set(), peers: new Map(), participants: new Map() };
+            rooms.set(roomId, state);
+            state.sockets.add(socket);
+            state.peers.set(peerId, socket);
+            state.participants.set(socket, { participantId, peerId, userId });
+
+            // other active participants (exclude this one)
+            const { data: others } = await supabase
+              .from('room_participants')
+              .select('id, peer_id, display_name')
+              .eq('room_id', roomId)
+              .is('left_at', null)
+              .neq('id', participantId);
+
             socket.send(JSON.stringify({
               type: 'joined-room',
-              room: room,
-              participant: participant,
-              peerId: peerId
+              room,
+              participant,
+              peerId,
+              otherParticipants: others ?? [],
             }));
 
-            // Notify other participants
-            const { data: otherParticipants } = await supabase
-              .from('room_participants')
-              .select('*')
-              .eq('room_id', roomId)
-              .neq('id', participantId)
-              .is('left_at', null);
-
-            // Broadcast to room channel
-            await supabase
-              .channel(`room_${roomId}`)
-              .send({
-                type: 'broadcast',
-                event: 'participant-joined',
-                payload: {
-                  participant: participant,
-                  totalParticipants: (otherParticipants?.length || 0) + 1
-                }
-              });
-
+            // notify others
+            for (const s of state.sockets) {
+              if (s !== socket) {
+                try {
+                  s.send(JSON.stringify({ type: 'participant-joined', participant }));
+                } catch (_) {}
+              }
+            }
             break;
+          }
 
           case 'webrtc-offer':
           case 'webrtc-answer':
-          case 'webrtc-ice-candidate':
-            // Forward WebRTC signaling messages to target peer
-            if (roomId && data.targetPeerId) {
-              await supabase
-                .channel(`room_${roomId}`)
-                .send({
-                  type: 'broadcast',
-                  event: 'webrtc-signal',
-                  payload: {
-                    type: data.type,
-                    data: data,
-                    fromPeerId: peerId,
-                    targetPeerId: data.targetPeerId
-                  }
-                });
+          case 'webrtc-ice-candidate': {
+            if (!roomId || !peerId) return;
+            const targetPeerId: string = data.targetPeerId;
+            const state = rooms.get(roomId);
+            const targetSocket = state?.peers.get(targetPeerId);
+            if (targetSocket) {
+              try {
+                targetSocket.send(JSON.stringify({
+                  type: data.type,
+                  fromPeerId: peerId,
+                  data,
+                }));
+              } catch (_) {}
             }
             break;
+          }
 
-          case 'media-state-change':
-            // Update participant media state
-            if (participantId) {
-              await supabase
-                .from('room_participants')
-                .update({
-                  audio_enabled: data.audioEnabled,
-                  video_enabled: data.videoEnabled,
-                  screen_sharing: data.screenSharing
-                })
-                .eq('id', participantId);
-
-              // Broadcast state change
-              if (roomId) {
-                await supabase
-                  .channel(`room_${roomId}`)
-                  .send({
-                    type: 'broadcast',
-                    event: 'media-state-changed',
-                    payload: {
-                      peerId: peerId,
-                      audioEnabled: data.audioEnabled,
-                      videoEnabled: data.videoEnabled,
-                      screenSharing: data.screenSharing
-                    }
-                  });
+          case 'chat-message': {
+            if (!roomId || !participantId) return;
+            const { data: message, error } = await supabase
+              .from('room_chat_messages')
+              .insert({ room_id: roomId, participant_id: participantId, message: data.message, message_type: 'text' })
+              .select('id, message, created_at')
+              .single();
+            if (!error) {
+              const state = rooms.get(roomId);
+              for (const s of state?.sockets ?? []) {
+                try { s.send(JSON.stringify({ type: 'chat-message', message })); } catch (_) {}
               }
             }
             break;
-
-          case 'chat-message':
-            // Save chat message to database
-            if (participantId && roomId) {
-              const { data: message, error: messageError } = await supabase
-                .from('room_chat_messages')
-                .insert({
-                  room_id: roomId,
-                  participant_id: participantId,
-                  message: data.message,
-                  message_type: 'text'
-                })
-                .select(`
-                  *,
-                  room_participants (display_name)
-                `)
-                .single();
-
-              if (!messageError && message) {
-                // Broadcast chat message
-                await supabase
-                  .channel(`room_${roomId}`)
-                  .send({
-                    type: 'broadcast',
-                    event: 'chat-message',
-                    payload: {
-                      id: message.id,
-                      message: message.message,
-                      participantName: message.room_participants.display_name,
-                      timestamp: message.created_at,
-                      fromPeerId: peerId
-                    }
-                  });
-              }
-            }
-            break;
-
-          case 'reaction':
-            // Save reaction to database
-            if (participantId && roomId) {
-              await supabase
-                .from('room_reactions')
-                .insert({
-                  room_id: roomId,
-                  participant_id: participantId,
-                  reaction_type: data.reactionType
-                });
-
-              // Broadcast reaction
-              await supabase
-                .channel(`room_${roomId}`)
-                .send({
-                  type: 'broadcast',
-                  event: 'participant-reaction',
-                  payload: {
-                    peerId: peerId,
-                    reactionType: data.reactionType,
-                    timestamp: new Date().toISOString()
-                  }
-                });
-            }
-            break;
+          }
         }
-      } catch (error) {
-        console.error("Error processing message:", error);
-        socket.send(JSON.stringify({
-          type: 'error',
-          message: 'Failed to process message'
-        }));
+      } catch (e) {
+        console.error('onmessage error', e);
+        try { socket.send(JSON.stringify({ type: 'error', message: 'Failed to process message' })); } catch (_) {}
       }
     };
 
     socket.onclose = async () => {
-      console.log("🔌 WebSocket connection closed");
-      
-      // Update participant as disconnected
-      if (participantId) {
-        await supabase
-          .from('room_participants')
-          .update({
-            left_at: new Date().toISOString(),
-            connection_status: 'disconnected'
-          })
-          .eq('id', participantId);
-
-        // Notify room about participant leaving
+      try {
         if (roomId) {
-          await supabase
-            .channel(`room_${roomId}`)
-            .send({
-              type: 'broadcast',
-              event: 'participant-left',
-              payload: {
-                peerId: peerId,
-                participantId: participantId
-              }
-            });
+          const state = rooms.get(roomId);
+          const p = state?.participants.get(socket);
+          if (state) {
+            state.sockets.delete(socket);
+            if (p) state.peers.delete(p.peerId);
+            state.participants.delete(socket);
+          }
+          if (participantId) {
+            await supabase
+              .from('room_participants')
+              .update({ left_at: new Date().toISOString(), connection_status: 'disconnected' })
+              .eq('id', participantId);
+          }
+          // notify others
+          for (const s of state?.sockets ?? []) {
+            try { s.send(JSON.stringify({ type: 'participant-left', participantId })); } catch (_) {}
+          }
         }
+      } catch (e) {
+        console.error('onclose error', e);
       }
     };
 
-    socket.onerror = (error) => {
-      console.error("❌ WebSocket error:", error);
-    };
+    socket.onerror = (err) => console.error('❌ WebSocket error', err);
 
     return response;
   } catch (error) {
-    console.error("❌ Server error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 
-        ...corsHeaders, 
-        'Content-Type': 'application/json' 
-      },
-    });
+    console.error('❌ Server error:', error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

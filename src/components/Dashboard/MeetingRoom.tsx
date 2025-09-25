@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useMeetingRooms, type RoomParticipant } from '@/hooks/useMeetingRooms';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
@@ -29,13 +30,15 @@ const MeetingRoom = () => {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { currentRoom, participants, joinRoom, leaveRoom, updateParticipantStatus } = useMeetingRooms();
+  const { currentRoom, participants, leaveRoom, updateParticipantStatus, fetchParticipants } = useMeetingRooms();
   const { toast } = useToast();
 
   const [isConnected, setIsConnected] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [showNameDialog, setShowNameDialog] = useState(true);
   const [currentParticipant, setCurrentParticipant] = useState<RoomParticipant | null>(null);
+  const [roomInfo, setRoomInfo] = useState<{ id: string; title: string } | null>(null);
+  const [localPeerId, setLocalPeerId] = useState<string | null>(null);
   
   // Estados dos controles de mídia
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -57,6 +60,10 @@ const MeetingRoom = () => {
   const remoteVideosRef = useRef<{ [key: string]: HTMLVideoElement }>({});
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const peersRef = useRef<Record<string, RTCPeerConnection>>({});
+  const targetMapRef = useRef<Record<string, string>>({});
 
   // Solicitar permissões de mídia
   const requestMediaPermissions = useCallback(async () => {
@@ -81,6 +88,7 @@ const MeetingRoom = () => {
       });
     } catch (error) {
       console.error('Error accessing media devices:', error);
+      setPermissionsRequested(true); // evitar overlay infinito
       toast({
         title: "Erro de permissões",
         description: "Não foi possível acessar a câmera ou microfone. Verifique as permissões.",
@@ -96,28 +104,140 @@ const MeetingRoom = () => {
     }
   }, [isConnected, permissionsRequested, requestMediaPermissions]);
 
+  const ensureLocalStream = useCallback(async () => {
+    if (!localStreamRef.current) {
+      await requestMediaPermissions();
+    }
+  }, [requestMediaPermissions]);
+
+  const createPeerConnection = (peerId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+      ]
+    });
+
+    pc.ontrack = (event) => {
+      const stream = event.streams[0];
+      const videoEl = remoteVideosRef.current[peerId];
+      if (videoEl) {
+        videoEl.srcObject = stream;
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && wsRef.current && targetMapRef.current[peerId]) {
+        wsRef.current.send(JSON.stringify({
+          type: 'webrtc-ice-candidate',
+          targetPeerId: targetMapRef.current[peerId],
+          candidate: event.candidate
+        }));
+      }
+    };
+
+    peersRef.current[peerId] = pc;
+    return pc;
+  };
+
+  const attachLocalTracks = async (pc: RTCPeerConnection) => {
+    await ensureLocalStream();
+    const stream = localStreamRef.current!;
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+  };
+
   const joinMeeting = async () => {
     if (!roomCode || !displayName.trim()) return;
-    
-    const result = await joinRoom(roomCode, displayName);
-    if (result) {
-      setCurrentParticipant(result.participant);
-      setIsConnected(true);
-      setShowNameDialog(false);
-      
-      toast({
-        title: "Conectado!",
-        description: `Você entrou na reunião "${result.room.title}"`,
-      });
-    }
+
+    // Abrir WebSocket para o servidor de sinalização
+    const ws = new WebSocket('wss://jwddiyuezqrpuakazvgg.functions.supabase.co/meeting-signaling');
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: 'join-room',
+        roomCode: (roomCode as string).toUpperCase(),
+        displayName,
+        userId: user?.id || null,
+      }));
+    };
+
+    ws.onmessage = async (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'joined-room') {
+        setIsConnected(true);
+        setShowNameDialog(false);
+        setCurrentParticipant(msg.participant);
+        setRoomInfo({ id: msg.room.id, title: msg.room.title });
+        setLocalPeerId(msg.peerId);
+        await fetchParticipants(msg.room.id);
+
+        // Assinar canal realtime para sinais
+        const channel = supabase
+          .channel(`room_${msg.room.id}`)
+          .on('broadcast', { event: 'webrtc-signal' }, async (payload: any) => {
+            const { type, data, fromPeerId, targetPeerId } = payload.payload || payload;
+            if (!localPeerId || targetPeerId !== localPeerId) return;
+
+            if (type === 'webrtc-offer') {
+              const pc = createPeerConnection(fromPeerId);
+              await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+              await attachLocalTracks(pc);
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              targetMapRef.current[fromPeerId] = fromPeerId; // responses go back
+              ws.send(JSON.stringify({ type: 'webrtc-answer', targetPeerId: fromPeerId, answer }));
+            } else if (type === 'webrtc-answer') {
+              const pc = peersRef.current[fromPeerId];
+              if (pc && !pc.currentRemoteDescription) {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+              }
+            } else if (type === 'webrtc-ice-candidate') {
+              const pc = peersRef.current[fromPeerId];
+              if (pc) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch {}
+              }
+            }
+          })
+          .on('broadcast', { event: 'participant-joined' }, async (payload: any) => {
+            const p = payload.payload?.participant || payload.participant;
+            if (!p || !localPeerId) return;
+            // Nós (participantes existentes) enviamos offer para o novo
+            const pc = createPeerConnection(p.peer_id);
+            targetMapRef.current[p.peer_id] = p.peer_id;
+            await attachLocalTracks(pc);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: 'webrtc-offer', targetPeerId: p.peer_id, offer }));
+          })
+          .on('broadcast', { event: 'participant-left' }, async () => {
+            await fetchParticipants(msg.room.id);
+          })
+          .subscribe();
+        channelRef.current = channel;
+
+        toast({ title: 'Conectado!', description: `Você entrou na reunião "${msg.room.title}"` });
+      } else if (msg.type === 'error') {
+        toast({ title: 'Erro', description: msg.message, variant: 'destructive' });
+      }
+    };
+
+    ws.onclose = () => {
+      // cleanup parcial
+    };
   };
 
   const leaveMeeting = async () => {
+    // encerrar rtc
+    Object.values(peersRef.current).forEach(pc => pc.close());
+    peersRef.current = {};
+    if (channelRef.current) supabase.removeChannel(channelRef.current);
+    if (wsRef.current) wsRef.current.close();
+
     if (currentParticipant) {
       await leaveRoom(currentParticipant.id);
-      setIsConnected(false);
-      navigate('/dashboard/reunioes');
     }
+    setIsConnected(false);
+    navigate('/dashboard/reunioes');
   };
 
   const toggleAudio = async () => {
@@ -161,62 +281,62 @@ const MeetingRoom = () => {
   const toggleScreenShare = async () => {
     try {
       if (!screenSharing) {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true
-        });
-        
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
         screenStreamRef.current = screenStream;
         setScreenSharing(true);
-        
-        // Substituir vídeo local pelo compartilhamento de tela
+
+        // Mostrar a tela localmente
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = screenStream;
         }
-        
-        // Quando parar de compartilhar
+
+        // Trocar a track de vídeo enviada para todos os peers
+        Object.values(peersRef.current).forEach((pc) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          const track = screenStream.getVideoTracks()[0];
+          if (sender && track) sender.replaceTrack(track);
+        });
+
+        // Voltar quando parar o compartilhamento
         screenStream.getVideoTracks()[0].addEventListener('ended', () => {
           setScreenSharing(false);
           if (localVideoRef.current && localStreamRef.current) {
             localVideoRef.current.srcObject = localStreamRef.current;
           }
+          Object.values(peersRef.current).forEach((pc) => {
+            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+            const track = localStreamRef.current?.getVideoTracks()[0] || null;
+            if (sender) sender.replaceTrack(track);
+          });
           if (currentParticipant) {
             updateParticipantStatus(currentParticipant.id, { screen_sharing: false });
           }
         });
-        
-        toast({
-          title: "Compartilhamento iniciado",
-          description: "Sua tela está sendo compartilhada",
-        });
+
+        toast({ title: 'Compartilhamento iniciado', description: 'Sua tela está sendo compartilhada' });
       } else {
         if (screenStreamRef.current) {
           screenStreamRef.current.getTracks().forEach(track => track.stop());
           screenStreamRef.current = null;
         }
         setScreenSharing(false);
-        
-        // Voltar para câmera normal
         if (localVideoRef.current && localStreamRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
         }
-        
-        toast({
-          title: "Compartilhamento parado",
-          description: "Compartilhamento de tela foi interrompido",
+        // Voltar a track de vídeo para os peers
+        Object.values(peersRef.current).forEach((pc) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          const track = localStreamRef.current?.getVideoTracks()[0] || null;
+          if (sender) sender.replaceTrack(track);
         });
+        toast({ title: 'Compartilhamento parado', description: 'Compartilhamento de tela foi interrompido' });
       }
-      
       if (currentParticipant) {
         await updateParticipantStatus(currentParticipant.id, { screen_sharing: !screenSharing });
       }
     } catch (error) {
       console.error('Error toggling screen share:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível compartilhar a tela",
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Não foi possível compartilhar a tela', variant: 'destructive' });
     }
   };
 
@@ -304,9 +424,9 @@ const MeetingRoom = () => {
         <div className="flex items-center gap-4">
           <img src={ellosuitLogo} alt="Ellosuit" className="h-8" />
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">{currentRoom?.title || `Reunião ${roomCode}`}</h1>
+            <h1 className="text-lg font-semibold text-gray-900">{roomInfo?.title || currentRoom?.title || `Reunião ${roomCode}`}</h1>
             <p className="text-sm text-gray-600">
-              {participants.length} participante{participants.length !== 1 ? 's' : ''}
+            {participants.length} participante{participants.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -559,6 +679,7 @@ const MeetingRoom = () => {
         >
           {speakerEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
         </Button>
+        
         
         <Separator orientation="vertical" className="h-8 bg-blue-200" />
         

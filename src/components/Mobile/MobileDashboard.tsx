@@ -12,6 +12,8 @@ import MobileClientsManager from './MobileClientsManager';
 import MobileAnalytics from './MobileAnalytics';
 import MobileSettings from './MobileSettings';
 import TarefasMobile from '@/components/Tarefas/TarefasMobile';
+import MobileAgendaAberta from './MobileAgendaAberta';
+import MobileDriveManager from './MobileDriveManager';
 
 const MobileDashboard = () => {
   const { user } = useAuth();
@@ -52,6 +54,10 @@ const MobileDashboard = () => {
         return <MobileAnalytics />;
       case 'settings':
         return <MobileSettings />;
+      case 'documents':
+        return <MobileDriveManager />;
+      case 'agenda-aberta':
+        return <MobileAgendaAberta />;
       case 'tasks':
         return <TarefasMobile />;
       default:

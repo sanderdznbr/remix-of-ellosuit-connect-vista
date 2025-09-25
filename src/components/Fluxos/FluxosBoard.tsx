@@ -299,7 +299,36 @@ const FluxosBoard: React.FC = () => {
   const [workflowName, setWorkflowName] = useState('');
   const [columnName, setColumnName] = useState('');
 
-  const companyId = user?.user_metadata?.company_id;
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // Get company ID from company_users table
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching company ID:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar informações da empresa',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (data?.company_id) {
+        setCompanyId(data.company_id);
+      }
+    };
+    
+    fetchCompanyId();
+  }, [user?.id, toast]);
 
   // Load data
   const loadGroups = async () => {

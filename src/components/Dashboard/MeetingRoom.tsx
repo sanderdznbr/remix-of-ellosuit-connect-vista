@@ -507,12 +507,64 @@ const MeetingRoom = () => {
     const savedAudio = localStorage.getItem('selectedAudioDevice');
     const savedVideo = localStorage.getItem('selectedVideoDevice');
 
-    const constraints: MediaStreamConstraints = {
-      audio: savedAudio ? { deviceId: { exact: savedAudio } } : true,
-      video: savedVideo ? { deviceId: { exact: savedVideo } } : true
-    };
+    try {
+      console.log('🎥 Requesting user media permissions...');
+      
+      // Enhanced constraints with fallback
+      const constraints: MediaStreamConstraints = {
+        audio: savedAudio ? { 
+          deviceId: { exact: savedAudio },
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } : {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: savedVideo ? { 
+          deviceId: { exact: savedVideo },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        } : {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        }
+      };
 
-    return await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Media stream obtained with enhanced settings');
+      return stream;
+    } catch (error) {
+      console.warn('⚠️ Enhanced constraints failed, trying basic:', error);
+      
+      // Fallback to basic constraints
+      try {
+        const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log('✅ Media stream obtained with basic settings');
+        return basicStream;
+      } catch (basicError) {
+        console.error('❌ All media access failed:', basicError);
+        
+        // Show user-friendly error based on error type
+        if (basicError.name === 'NotAllowedError') {
+          toast({
+            title: "⚠️ Permissão Necessária",
+            description: "Clique em 'Permitir' para acessar câmera e microfone. Sem isso a reunião não funcionará.",
+            variant: "destructive",
+          });
+        } else if (basicError.name === 'NotFoundError') {
+          toast({
+            title: "🔍 Dispositivos Não Encontrados",
+            description: "Verifique se câmera e microfone estão conectados.",
+            variant: "destructive",
+          });
+        }
+        throw basicError;
+      }
+    }
   };
 
   const setupRealtimeChannel = async (roomId: string, peerId: string) => {
@@ -1020,12 +1072,39 @@ const MeetingRoom = () => {
     }
   };
 
-  const activateAudio = () => {
-    const videoElements = document.querySelectorAll('video');
-    videoElements.forEach(video => {
-      video.play().catch(console.error);
-    });
-    setShowAudioPrompt(false);
+  const activateAudio = async () => {
+    try {
+      // Request media permissions again
+      const stream = await getUserMedia();
+      if (localVideoRef.current && stream) {
+        localVideoRef.current.srcObject = stream;
+        await localVideoRef.current.play();
+      }
+      
+      // Try to play all remote videos
+      const videoElements = document.querySelectorAll('video');
+      for (const video of videoElements) {
+        try {
+          await video.play();
+        } catch (error) {
+          console.warn('Could not play video:', error);
+        }
+      }
+      
+      setShowAudioPrompt(false);
+      
+      toast({
+        title: "✅ Mídia Ativada",
+        description: "Câmera e áudio foram ativados com sucesso!"
+      });
+    } catch (error) {
+      console.error('Failed to activate media:', error);
+      toast({
+        title: "Erro ao Ativar Mídia", 
+        description: "Verifique as permissões do navegador",
+        variant: "destructive"
+      });
+    }
   };
 
   // DnD handler
@@ -1130,15 +1209,26 @@ const MeetingRoom = () => {
   // Meeting interface
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col overflow-hidden">
-      {/* Audio activation prompt */}
+      {/* Media Permission Banner */}
       {showAudioPrompt && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <Card className="bg-blue-600 text-white border-0">
-            <CardContent className="p-4 flex items-center gap-4">
-              <Volume2 className="h-5 w-5" />
-              <p className="text-sm">Clique para ativar o áudio</p>
-              <Button 
-                variant="secondary" 
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md">
+          <Card className="bg-red-600 text-white border-0 shadow-2xl">
+            <CardContent className="p-6">
+              <div className="space-y-4 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Camera className="h-6 w-6" />
+                  <Mic className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg mb-2">🔒 Permissões Necessárias</h3>
+                  <p className="text-sm opacity-90 mb-4">
+                    Para ver e ouvir outros participantes, permita o acesso à câmera e microfone
+                  </p>
+                </div>
+                <Button 
+                  onClick={activateAudio}
+                  variant="secondary" 
+                  className="w-full bg-white text-red-600 hover:bg-gray-100"
                 size="sm"
                 onClick={activateAudio}
                 className="ml-auto"

@@ -144,8 +144,8 @@ const DocumentsManager = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Documentos</h1>
-          <p className="text-base text-gray-600 mt-2">Gerencie seus arquivos e pastas</p>
+          <h1 className="text-3xl font-bold text-gray-900">🗂️ DRIVE</h1>
+          <p className="text-base text-gray-600 mt-2">Seu armazenamento em nuvem - organize, compartilhe e colabore</p>
         </div>
         
         <div className="flex items-center gap-4">

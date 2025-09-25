@@ -16,6 +16,7 @@ import FluxosBoard from '@/components/Fluxos/FluxosBoard';
 import TarefasWeb from '@/components/Tarefas/TarefasWeb';
 import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
+import AgendaAberta from './AgendaAberta';
 
 const Dashboard = () => {
   const { isMobile } = useIsMobile();
@@ -41,7 +42,8 @@ const Dashboard = () => {
           <Route path="/reunioes" element={<MeetingRooms />} />
           <Route path="/email/*" element={<EmailDashboard />} />
           <Route path="/clientes" element={<ClientsManager />} />
-          <Route path="/documentos" element={<DocumentsManager />} />
+          <Route path="/drive" element={<DocumentsManager />} />
+          <Route path="/agenda-aberta" element={<AgendaAberta />} />
           <Route path="/analises" element={<Navigate to="/dashboard/email" replace />} />
           <Route path="/editar" element={<SidebarEditor />} />
           <Route path="/configuracoes" element={<Settings />} />

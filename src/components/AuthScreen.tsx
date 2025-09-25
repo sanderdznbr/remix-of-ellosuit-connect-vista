@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, Building, AlertCircle, Loader2 } from 'lucide-react';
+import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 const AuthScreen = () => {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
@@ -170,16 +171,33 @@ const AuthScreen = () => {
   return (
     <div className={containerClass}>
       <Card className={cardClass}>
-        <CardHeader className="space-y-1">
-          <CardTitle className={`text-2xl font-bold text-center ${titleColor}`}>
-            {isTarefasLogin ? 'Acesse suas Tarefas' : 'ELLOsuit Connect'}
-          </CardTitle>
-          <CardDescription className={`text-center ${descriptionColor}`}>
-            {isTarefasLogin 
-              ? 'Faça login para ver seus lembretes e tarefas' 
-              : 'Sua plataforma de produtividade empresarial'
-            }
-          </CardDescription>
+        <CardHeader className="space-y-6">
+          {/* Logo Section */}
+          <div className="flex justify-center mb-4">
+            <div className="w-32 h-16 flex items-center justify-center">
+              <img 
+                src={ellosuitLogo} 
+                alt="ELLOsuit Logo" 
+                className="h-12 w-auto object-contain"
+                onError={(e) => {
+                  console.error('Error loading Ellosuit logo');
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <CardTitle className={`text-3xl font-bold text-center ${titleColor} bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent`}>
+              {isTarefasLogin ? 'Acesse suas Tarefas' : 'ELLOsuit Connect'}
+            </CardTitle>
+            <CardDescription className={`text-center ${descriptionColor} text-lg`}>
+              {isTarefasLogin 
+                ? 'Faça login para ver seus lembretes e tarefas' 
+                : 'Sua plataforma completa de produtividade empresarial'
+              }
+            </CardDescription>
+          </div>
         </CardHeader>
         
         <CardContent>

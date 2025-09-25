@@ -352,7 +352,7 @@ const ImprovedBookingPublic = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
           {/* Coluna 1: Seleção de Data */}
           <Card className="shadow-lg rounded-2xl">
             <CardHeader className="pb-4">

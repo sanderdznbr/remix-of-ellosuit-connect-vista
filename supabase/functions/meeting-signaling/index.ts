@@ -147,6 +147,13 @@ serve(async (req) => {
             }
             break;
           }
+          
+          case 'ping': {
+            try {
+              socket.send(JSON.stringify({ type: 'pong' }));
+            } catch (_) {}
+            break;
+          }
         }
       } catch (e) {
         console.error('onmessage error', e);

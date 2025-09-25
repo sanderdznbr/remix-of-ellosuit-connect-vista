@@ -1,5 +1,5 @@
 
-project_id = "84320702-4971-42e0-bb91-6756570feabc"
+project_id = "jwddiyuezqrpuakazvgg"
 
 [api]
 enabled = true
@@ -31,6 +31,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.register-device]
+verify_jwt = false
+
+[functions.meeting-signaling]
 verify_jwt = false
 
 [db]

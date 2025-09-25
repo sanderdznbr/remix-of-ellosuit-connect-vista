@@ -64,15 +64,15 @@ const MeetingRooms = () => {
       return;
     }
 
-    const result = await joinRoom(roomCode.toUpperCase(), displayName);
-    if (result) {
-      setShowJoinDialog(false);
-      setRoomCode('');
-      setDisplayName('');
-      
-      // Redirecionar para a sala
-      window.open(`/meeting/${roomCode.toUpperCase()}`, '_blank');
-    }
+    // Não inserir participante aqui - deixar para MeetingRoom fazer via WebSocket
+    setShowJoinDialog(false);
+    const code = roomCode.toUpperCase();
+    const name = displayName;
+    setRoomCode('');
+    setDisplayName('');
+    
+    // Redirecionar para a sala passando o nome como parâmetro
+    window.open(`/meeting/${code}?name=${encodeURIComponent(name)}`, '_blank');
   };
 
   const copyRoomLink = (roomCode: string) => {

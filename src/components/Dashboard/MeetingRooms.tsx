@@ -13,10 +13,12 @@ import { useMeetingRooms } from '@/hooks/useMeetingRooms';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import MeetingRecordings from './MeetingRecordings';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [showRecordingsDialog, setShowRecordingsDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
@@ -102,14 +104,20 @@ const MeetingRooms = () => {
         </div>
         
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => window.open('/dashboard/reunioes/gravacoes', '_blank')}
-            className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50"
-          >
-            <Play className="h-4 w-4" />
-            Ver Gravações
-          </Button>
+          <Dialog open={showRecordingsDialog} onOpenChange={setShowRecordingsDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50"
+              >
+                <Play className="h-4 w-4" />
+                Ver Gravações
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+              <MeetingRecordings />
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
             <DialogTrigger asChild>

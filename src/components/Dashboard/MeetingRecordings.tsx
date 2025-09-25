@@ -138,7 +138,7 @@ const MeetingRecordings: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -181,7 +181,7 @@ const MeetingRecordings: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto">
           {filteredRecordings.map((recording) => (
             <Card key={recording.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">

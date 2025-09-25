@@ -59,8 +59,8 @@ serve(async (req) => {
     console.error('❌ Erro no teste de secrets:', error);
     
     return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack
+      error: (error as any).message,
+      stack: (error as any).stack
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

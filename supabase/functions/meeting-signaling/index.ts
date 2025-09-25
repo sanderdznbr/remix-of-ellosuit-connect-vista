@@ -80,9 +80,8 @@ serve(async (req) => {
             }
             participantId = participant.id;
 
-            // ensure room state
-            const state: RoomState = rooms.get(roomId) ?? { sockets: new Set(), peers: new Map(), participants: new Map() };
-            rooms.set(roomId, state);
+            const state: RoomState = rooms.get(roomId!) ?? { sockets: new Set(), peers: new Map(), participants: new Map() };
+            rooms.set(roomId!, state);
             state.sockets.add(socket);
             state.peers.set(peerId, socket);
             state.participants.set(socket, { participantId, peerId, userId });

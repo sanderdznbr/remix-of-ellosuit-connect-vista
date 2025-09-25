@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID') || '';
+const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -310,7 +310,7 @@ serve(async (req) => {
         }
 
         const meetLink = eventResult.conferenceData?.entryPoints?.find(
-          (entry) => entry.entryPointType === 'video'
+          (entry: any) => entry.entryPointType === 'video'
         )?.uri;
 
         console.log('✅ Google Calendar event created with Meet link');
@@ -558,7 +558,7 @@ serve(async (req) => {
     if (req.method === 'POST') {
       return new Response(JSON.stringify({
         success: false,
-        error: error.message
+        error: (error as any).message
       }), {
         status: 500,
         headers: {
@@ -571,7 +571,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `https://ellosuit.online/dashboard?error=${encodeURIComponent(error.message)}`
+        'Location': `https://ellosuit.online/dashboard?error=${encodeURIComponent((error as any).message)}`
       }
     });
   }

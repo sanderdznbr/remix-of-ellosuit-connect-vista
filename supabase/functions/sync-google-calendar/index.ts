@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID') || '';
+const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -21,7 +21,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     if (req.method === 'POST') {
       const body = await req.json();
@@ -94,8 +94,8 @@ serve(async (req) => {
             'Content-Type': 'application/x-www-form-urlencoded'
           },
           body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
+            client_id: googleClientId as string,
+            client_secret: googleClientSecret as string,
             refresh_token: integration.refresh_token,
             grant_type: 'refresh_token'
           })
@@ -240,7 +240,7 @@ serve(async (req) => {
           event_type: 'meeting',
           meeting_link: googleEvent.hangoutLink || null,
           meeting_provider: meetingProvider,
-          attendees: googleEvent.attendees ? googleEvent.attendees.map((a) => a.email) : [],
+          attendees: googleEvent.attendees ? googleEvent.attendees.map((a: any) => a.email) : [],
           is_all_day: !googleEvent.start?.dateTime,
           google_event_id: googleEvent.id,
           company_id: companyData.company_id,
@@ -365,7 +365,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: (error as any).message
     }), {
       status: 500,
       headers: {

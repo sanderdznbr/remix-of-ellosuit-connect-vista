@@ -9,8 +9,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const apnsBundleId = Deno.env.get('APNS_BUNDLE_ID');
 const apnsTeamId = Deno.env.get('APNS_TEAM_ID');
 const apnsKeyId = Deno.env.get('APNS_KEY_ID');
@@ -123,7 +123,7 @@ async function sendApnsPushNotification(deviceToken: string, title: string, body
     }
   } catch (error) {
     console.error('💥 Error sending APNs notification:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: (error as any).message };
   }
 }
 
@@ -136,7 +136,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     if (req.method === 'POST') {
       const { title, body, deviceToken } = await req.json();
@@ -201,7 +201,7 @@ serve(async (req) => {
           results.push({
             token: token.substring(0, 10) + '...',
             success: false,
-            error: error.message,
+            error: (error as any).message,
             isNative: isNativeToken(token)
           });
         }
@@ -233,7 +233,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: (error as any).message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

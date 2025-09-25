@@ -124,10 +124,16 @@ export const useSidebarSettings = () => {
       // Atualiza o estado imediatamente para reflexão instantânea
       setSettings(updatedSettings);
       
-      // Disparar evento customizado para atualizar outras partes da aplicação
+      // Atualizar interface imediatamente sem recarregar página
       window.dispatchEvent(new CustomEvent('sidebarSettingsUpdated', { 
         detail: updatedSettings 
       }));
+      
+      // Aplicar mudanças visuais imediatamente
+      const sidebar = document.querySelector('[data-sidebar]') as HTMLElement;
+      if (sidebar) {
+        sidebar.style.backgroundColor = updatedSettings.sidebar_background_color || '';
+      }
       
       toast({
         title: "Sucesso",

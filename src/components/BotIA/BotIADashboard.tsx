@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import BotIAChat from './BotIAChat';
 
 interface AIAgent {
   id: string;
@@ -111,7 +112,7 @@ const BotIADashboard: React.FC = () => {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showTestModal, setShowTestModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
   
   // Form states
@@ -122,9 +123,6 @@ const BotIADashboard: React.FC = () => {
   const [agentModel, setAgentModel] = useState('gpt-4o-mini');
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
 
-  // Test conversation
-  const [testMessage, setTestMessage] = useState('');
-  const [testConversation, setTestConversation] = useState<Array<{role: string, content: string}>>([]);
 
   const companyId = user?.user_metadata?.company_id;
 
@@ -224,75 +222,10 @@ const BotIADashboard: React.FC = () => {
     });
   };
 
-  // Test agent with real AI chat
-  const testAgent = (agent: AIAgent) => {
+  // Chat with agent
+  const chatWithAgent = (agent: AIAgent) => {
     setSelectedAgent(agent);
-    setTestConversation([
-      { role: 'assistant', content: `Olá! Eu sou ${agent.name}. ${agent.description || 'Como posso ajudá-lo hoje?'}` }
-    ]);
-    setShowTestModal(true);
-  };
-
-  // Send test message to real AI
-  const sendTestMessage = async () => {
-    if (!testMessage.trim() || !selectedAgent) return;
-    
-    const userMessage = testMessage;
-    setTestMessage('');
-    
-    // Add user message to conversation
-    const updatedConversation = [
-      ...testConversation,
-      { role: 'user', content: userMessage }
-    ];
-    setTestConversation(updatedConversation);
-
-    try {
-      // Call AI chat function
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: userMessage,
-          personality: selectedAgent.personality,
-          instructions: selectedAgent.instructions,
-          model: selectedAgent.model
-        }
-      });
-
-      if (error) {
-        console.error('AI chat error:', error);
-        toast({ 
-          title: 'Erro', 
-          description: 'Erro ao comunicar com a IA. Verifique sua configuração.',
-          variant: 'destructive' 
-        });
-        
-        // Add error message
-        setTestConversation(prev => [
-          ...prev,
-          { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Verifique se a chave da OpenAI está configurada.' }
-        ]);
-        return;
-      }
-
-      // Add AI response to conversation
-      setTestConversation(prev => [
-        ...prev,
-        { role: 'assistant', content: data.response }
-      ]);
-
-    } catch (error) {
-      console.error('Chat error:', error);
-      toast({ 
-        title: 'Erro', 
-        description: 'Erro inesperado ao conversar com a IA',
-        variant: 'destructive' 
-      });
-      
-      setTestConversation(prev => [
-        ...prev,
-        { role: 'assistant', content: 'Desculpe, ocorreu um erro inesperado. Tente novamente.' }
-      ]);
-    }
+    setShowChatModal(true);
   };
 
   if (loading) {
@@ -307,14 +240,14 @@ const BotIADashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 page-content">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Bot className="h-8 w-8 text-blue-600" />
+          <Bot className="h-8 w-8 text-gray-900" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bot IA</h1>
-            <p className="text-gray-600">Crie e gerencie agentes de IA inteligentes</p>
+            <h1 className="text-2xl font-bold text-gray-900">Agentes de IA</h1>
+            <p className="text-gray-600">Crie e gerencie agentes de IA inteligentes para automação</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -449,10 +382,10 @@ const BotIADashboard: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => testAgent(agent)}
+                          onClick={() => chatWithAgent(agent)}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
-                          Testar
+                          Conversar
                         </Button>
                         
                         <div className="flex gap-1">
@@ -645,49 +578,15 @@ const BotIADashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Test Agent Modal */}
-      <Dialog open={showTestModal} onOpenChange={setShowTestModal}>
-        <DialogContent className="max-w-2xl h-[600px] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              Testar: {selectedAgent?.name}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="flex-1 flex flex-col">
-            <ScrollArea className="flex-1 p-4 border rounded-md bg-gray-50">
-              <div className="space-y-3">
-                {testConversation.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white border'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            
-            <div className="flex gap-2 mt-4">
-              <Input
-                value={testMessage}
-                onChange={(e) => setTestMessage(e.target.value)}
-                placeholder="Digite sua mensagem..."
-                onKeyPress={(e) => e.key === 'Enter' && sendTestMessage()}
-              />
-              <Button onClick={sendTestMessage} disabled={!testMessage.trim()}>
-                Enviar
-              </Button>
-            </div>
-          </div>
+      {/* Chat Modal */}
+      <Dialog open={showChatModal} onOpenChange={setShowChatModal}>
+        <DialogContent className="max-w-4xl w-full h-[80vh] p-0">
+          {selectedAgent && (
+            <BotIAChat 
+              agent={selectedAgent}
+              onClose={() => setShowChatModal(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

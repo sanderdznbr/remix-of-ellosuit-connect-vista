@@ -30,17 +30,17 @@ const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const defaultMenuItems = [
-    { id: 'home', path: '/dashboard', icon: Home, label: 'Home' },
-    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
-    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões' },
-    { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' },
-    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+    { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
+    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
     { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
-    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Aberta' },
-    { id: 'fluxos', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos' },
-    { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tasks' },
-    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
-    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Bot IA' },
+    { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
+    { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
+    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
+    { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
+    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
+    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' },
+    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' },
     { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
   ];
 
@@ -69,13 +69,11 @@ const Sidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Escutar mudanças nas configurações
+  // Escutar mudanças nas configurações para atualização em tempo real
   useEffect(() => {
     const handleSettingsUpdate = (event: CustomEvent) => {
-      // As configurações já são atualizadas automaticamente pelo hook
-      console.log('Configurações da sidebar atualizadas:', event.detail);
-      // Forçar uma atualização da UI
-      window.location.reload = () => window.location.reload();
+      // Não fazer nada aqui, o hook já atualiza automaticamente
+      console.log('Configurações da sidebar atualizadas em tempo real:', event.detail);
     };
 
     window.addEventListener('sidebarSettingsUpdated', handleSettingsUpdate as EventListener);
@@ -111,6 +109,7 @@ const Sidebar = () => {
     <div 
       className={`${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex flex-col transition-all duration-300 relative`}
       style={{ backgroundColor }}
+      data-sidebar
     >
       {/* Collapse Toggle Button */}
       <button

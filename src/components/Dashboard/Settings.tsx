@@ -14,9 +14,9 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('appearance');
 
   return (
-    <div className="p-6">
+    <div className="p-6 page-content">
       <div className="flex items-center space-x-2 mb-6">
-        <SettingsIcon className="h-6 w-6 text-blue-600" />
+        <SettingsIcon className="h-6 w-6 text-gray-900" />
         <h1 className="text-2xl font-bold">Configurações</h1>
       </div>
 

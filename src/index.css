@@ -82,9 +82,42 @@
   * {
     @apply border-border;
   }
-  body {
+  html, body, #root {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+  
+  /* Padronização global de fontes e estilos */
+  h1 {
+    @apply text-2xl font-bold text-gray-900;
+  }
+  
+  h2 {
+    @apply text-xl font-semibold text-gray-900;
+  }
+  
+  h3 {
+    @apply text-lg font-medium text-gray-900;
+  }
+  
+  p {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Remove cores azuis das páginas, mantém apenas na sidebar */
+  .page-content {
+    @apply text-gray-900;
+  }
+  
+  .page-content h1, 
+  .page-content h2, 
+  .page-content h3 {
+    @apply text-gray-900;
+  }
+  
+  .page-content .text-blue-600 {
+    @apply text-gray-900;
   }
 }
 

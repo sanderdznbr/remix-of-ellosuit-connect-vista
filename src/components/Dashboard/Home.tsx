@@ -209,7 +209,7 @@ const Home = ({ onNavigate }: HomeProps) => {
   };
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen page-content">{/* ... keep existing code (all content) */}
       {/* Frase Inspiradora no Topo */}
       <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl">
         <CardContent className="p-8">

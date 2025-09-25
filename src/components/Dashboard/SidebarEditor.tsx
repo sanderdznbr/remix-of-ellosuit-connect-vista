@@ -28,16 +28,17 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import ColorWheel from './ColorWheel';
 
 const defaultMenuItems = [
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'calendar', label: 'Agenda', icon: '📅' },
-  { id: 'meetings', label: 'Reuniões', icon: '📹' },
-  { id: 'email', label: 'Email', icon: '📧' },
-  { id: 'clients', label: 'Clientes', icon: '👥' },
-  { id: 'documents', label: 'Documentos', icon: '📁' },
-  { id: 'flows', label: 'Fluxos', icon: '📊' },
-  { id: 'tasks', label: 'Tasks', icon: '✅' },
-  { id: 'crm-whatsapp', label: 'CRM WhatsApp', icon: '💬' },
-  { id: 'bot-ia', label: 'Bot IA', icon: '🤖' },
+  { id: 'home', label: 'Dashboard', icon: '🏠' },
+  { id: 'calendar', label: 'Agendamentos', icon: '📅' },
+  { id: 'clients', label: 'Contatos', icon: '👥' },
+  { id: 'documents', label: 'Arquivos', icon: '📁' },
+  { id: 'tasks', label: 'Tarefas', icon: '✅' },
+  { id: 'flows', label: 'Fluxos de produção', icon: '📊' },
+  { id: 'crm-whatsapp', label: 'Whatsapp CRM', icon: '💬' },
+  { id: 'email', label: 'Email Marketing', icon: '📧' },
+  { id: 'agenda-aberta', label: 'Agendamento Online', icon: '🗓️' },
+  { id: 'meetings', label: 'Reuniões Ello', icon: '📹' },
+  { id: 'bot-ia', label: 'Agentes de IA', icon: '🤖' },
   { id: 'settings', label: 'Configurações', icon: '⚙️' }
 ];
 

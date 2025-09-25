@@ -13,7 +13,9 @@ import {
   ChevronRight,
   Video,
   LayoutDashboard,
-  CheckSquare
+  CheckSquare,
+  MessageSquare,
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,6 +37,8 @@ const Sidebar = () => {
     { id: 'documents', path: '/dashboard/documentos', icon: FileText, label: 'Documentos' },
     { id: 'flows', path: '/dashboard/fluxos', icon: LayoutDashboard, label: 'Fluxos' },
     { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tasks' },
+    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
+    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Bot IA' },
     { id: 'edit', path: '/dashboard/editar', icon: Edit3, label: 'Editar' },
     { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
   ];

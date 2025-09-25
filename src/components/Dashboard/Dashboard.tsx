@@ -14,6 +14,8 @@ import MeetingRooms from './MeetingRooms';
 import MobileDashboard from '@/components/Mobile/MobileDashboard';
 import FluxosBoard from '@/components/Fluxos/FluxosBoard';
 import TarefasWeb from '@/components/Tarefas/TarefasWeb';
+import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
+import BotIADashboard from '@/components/BotIA/BotIADashboard';
 
 const Dashboard = () => {
   const { isMobile } = useIsMobile();
@@ -45,6 +47,8 @@ const Dashboard = () => {
           <Route path="/configuracoes" element={<Settings />} />
           <Route path="/fluxos" element={<FluxosBoard />} />
           <Route path="/tasks" element={<TarefasWeb />} />
+          <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
+          <Route path="/bot-ia" element={<BotIADashboard />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

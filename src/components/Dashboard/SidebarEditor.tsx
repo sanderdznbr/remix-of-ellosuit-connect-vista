@@ -30,10 +30,14 @@ import ColorWheel from './ColorWheel';
 const defaultMenuItems = [
   { id: 'home', label: 'Home', icon: '🏠' },
   { id: 'calendar', label: 'Agenda', icon: '📅' },
+  { id: 'meetings', label: 'Reuniões', icon: '📹' },
   { id: 'email', label: 'Email', icon: '📧' },
   { id: 'clients', label: 'Clientes', icon: '👥' },
   { id: 'documents', label: 'Documentos', icon: '📁' },
-  { id: 'analytics', label: 'Análises', icon: '📊' },
+  { id: 'flows', label: 'Fluxos', icon: '📊' },
+  { id: 'tasks', label: 'Tasks', icon: '✅' },
+  { id: 'crm-whatsapp', label: 'CRM WhatsApp', icon: '💬' },
+  { id: 'bot-ia', label: 'Bot IA', icon: '🤖' },
   { id: 'settings', label: 'Configurações', icon: '⚙️' }
 ];
 

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import DeviceSettings from './DeviceSettings';
 import {
   DndContext,
   closestCenter,
@@ -148,6 +149,10 @@ const MeetingRoom = () => {
   const [videoOrder, setVideoOrder] = useState<string[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [heartbeatInterval, setHeartbeatInterval] = useState<NodeJS.Timeout | null>(null);
+  const [realtimeChannel, setRealtimeChannel] = useState<any>(null);
+  const [participantsChannel, setParticipantsChannel] = useState<any>(null);
+  const [iceCandidateQueue, setIceCandidateQueue] = useState<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const [showAudioPrompt, setShowAudioPrompt] = useState(false);
 
   // Refs
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -254,6 +259,100 @@ const MeetingRoom = () => {
     fetchRoom();
   }, [code, navigate, toast]);
 
+  // Setup real-time participants subscription
+  useEffect(() => {
+    if (!room?.id || !isConnected) return;
+
+    console.log('🔔 Setting up participants subscription for room:', room.id);
+    
+    const channel = supabase
+      .channel(`participants_${room.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_participants',
+          filter: `room_id=eq.${room.id}`,
+        },
+        (payload) => {
+          console.log('👤 New participant added:', payload.new);
+          const newParticipant = payload.new as any;
+          
+          // Skip our own participant
+          if (newParticipant.peer_id === myPeerId) return;
+          
+          setParticipants(prev => [
+            ...prev.filter(p => p.peerId !== newParticipant.peer_id),
+            {
+              id: newParticipant.id,
+              peerId: newParticipant.peer_id,
+              displayName: newParticipant.display_name,
+              isHost: newParticipant.is_host,
+              audioEnabled: true,
+              videoEnabled: true,  
+              stream: null
+            }
+          ]);
+
+          // Create peer connection for new participant and send offer if we have local stream
+          if (localStream && realtimeChannel) {
+            console.log('🤝 Creating peer connection and sending offer to new participant:', newParticipant.peer_id);
+            createPeerConnectionAndOffer(newParticipant.peer_id);
+          }
+
+          toast({
+            title: "Participante entrou",
+            description: `${newParticipant.display_name} entrou na reunião`,
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'room_participants',
+          filter: `room_id=eq.${room.id}`,
+        },
+        (payload) => {
+          console.log('📝 Participant updated:', payload.new);
+          const updatedParticipant = payload.new as any;
+          
+          // If participant left
+          if (updatedParticipant.left_at && updatedParticipant.peer_id !== myPeerId) {
+            console.log('👋 Participant left:', updatedParticipant.display_name);
+            
+            setParticipants(prev => prev.filter(p => p.peerId !== updatedParticipant.peer_id));
+            
+            // Clean up peer connection
+            const pc = peerConnections.get(updatedParticipant.peer_id);
+            if (pc) {
+              pc.close();
+              setPeerConnections(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(updatedParticipant.peer_id);
+                return newMap;
+              });
+            }
+            
+            toast({
+              title: "Participante saiu",
+              description: `${updatedParticipant.display_name} saiu da reunião`,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    setParticipantsChannel(channel);
+
+    return () => {
+      console.log('🧹 Cleaning up participants subscription');
+      supabase.removeChannel(channel);  
+    };
+  }, [room?.id, isConnected, myPeerId, localStream, realtimeChannel, peerConnections]);
+
   const joinMeeting = async (nameOverride?: string) => {
     try {
       const name = nameOverride || displayName;
@@ -267,12 +366,13 @@ const MeetingRoom = () => {
       }
 
       setIsConnecting(true);
+      console.log('🚀 Starting meeting join process...');
       
-      // Create WebSocket connection
-      const ws = new WebSocket(`wss://jwddiyuezqrpuakazvgg.functions.supabase.co/meeting-signaling`);
+      // Create WebSocket connection  
+      const ws = new WebSocket(`wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/meeting-signaling`);
       
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('❌ WebSocket error:', error);
         if (!isConnected) {
           toast({
             title: "Falha ao Conectar",
@@ -284,7 +384,7 @@ const MeetingRoom = () => {
       };
 
       ws.onclose = () => {
-        console.log('WebSocket connection closed');
+        console.log('🔌 WebSocket connection closed');
         setIsConnected(false);
         setIsConnecting(false);
         
@@ -303,7 +403,7 @@ const MeetingRoom = () => {
       };
 
       ws.onopen = () => {
-        console.log('WebSocket connected, joining room...');
+        console.log('✅ WebSocket connected, joining room...');
         ws.send(JSON.stringify({
           type: 'join-room',
           roomCode: code,
@@ -322,34 +422,32 @@ const MeetingRoom = () => {
 
       ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-        console.log('Received message:', data);
+        console.log('📨 Received WebSocket message:', data.type, data);
 
-        switch (data.type) {
-          case 'joined-room':
-            setRoom(data.room);
-            setMyPeerId(data.peerId);
-            setIsConnected(true);
-            setIsConnecting(false);
-            setShowNamePrompt(false);
+        if (data.type === 'joined-room') {
+          console.log('🎉 Successfully joined room!');
+          setRoom(data.room);
+          setMyPeerId(data.peerId);
+          setIsConnected(true);
+          setIsConnecting(false);
+          setShowNamePrompt(false);
+          
+          // Set up local media
+          try {
+            console.log('🎥 Requesting user media...');
+            const stream = await getUserMedia();
+            setLocalStream(stream);
             
-            // Set up local media
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-              });
-              setLocalStream(stream);
-              
-              if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-              }
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = stream;
+            }
 
-              // Setup VAD for local audio
-              setupVAD(stream);
-              
-            // Update participant list with existing participants
+            // Setup VAD for local audio
+            setupVAD(stream);
+            
+            // Set up existing participants
             if (data.otherParticipants?.length > 0) {
-              console.log('Found existing participants:', data.otherParticipants);
+              console.log('👥 Found existing participants:', data.otherParticipants.length);
               setParticipants(data.otherParticipants.map((p: any) => ({
                 id: p.id,
                 peerId: p.peer_id,
@@ -360,112 +458,38 @@ const MeetingRoom = () => {
                 stream: null
               })));
             }
-            } catch (error) {
-              console.error('Error accessing media:', error);
-              toast({
-                title: "Erro de Mídia",
-                description: "Não foi possível acessar câmera/microfone",
-                variant: "destructive",
-              });
-            }
-            
-            // Create peer connections for existing participants after media is ready
+
+            // Setup Realtime channel for WebRTC signaling
+            await setupRealtimeChannel(data.room.id, data.peerId);
+
+            // Create peer connections for existing participants after a small delay
             if (data.otherParticipants?.length > 0) {
-              for (const participant of data.otherParticipants) {
-                console.log('Creating peer connection for existing participant:', participant.peer_id);
-                setTimeout(async () => {
-                  if (localStream) {
-                    await createPeerConnectionAndOffer(participant.peer_id, ws, localStream);
-                  }
-                }, 500); // Small delay to ensure everything is ready
-              }
-            }
-            break;
-            
-          case 'participant-joined':
-            console.log('New participant joined:', data.participant);
-            setParticipants(prev => [
-              ...prev.filter(p => p.peerId !== data.participant.peer_id),
-              {
-                id: data.participant.id,
-                peerId: data.participant.peer_id,
-                displayName: data.participant.display_name,
-                isHost: data.participant.is_host,
-                audioEnabled: true,
-                videoEnabled: true,
-                stream: null
-              }
-            ]);
-            
-            // Create peer connection for new participant and send offer
-            if (localStream && ws.readyState === WebSocket.OPEN) {
-              console.log('Creating peer connection and sending offer to:', data.participant.peer_id);
-              await createPeerConnectionAndOffer(data.participant.peer_id, ws, localStream);
+              setTimeout(() => {
+                for (const participant of data.otherParticipants) {
+                  console.log('🤝 Creating peer connection for existing participant:', participant.peer_id);
+                  createPeerConnectionAndOffer(participant.peer_id);
+                }
+              }, 1000);
             }
             
+          } catch (error) {
+            console.error('❌ Error accessing media:', error);
             toast({
-              title: "Participante entrou",
-              description: `${data.participant.display_name} entrou na reunião`,
+              title: "Erro de Mídia",
+              description: "Não foi possível acessar câmera/microfone",
+              variant: "destructive",
             });
-            break;
-            
-          case 'participant-left':
-            console.log('Participant left:', data.participantId);
-            setParticipants(prev => prev.filter(p => p.id !== data.participantId));
-            // Clean up peer connection
-            const leavingParticipant = participants.find(p => p.id === data.participantId);
-            if (leavingParticipant) {
-              const pc = peerConnections.get(leavingParticipant.peerId);
-              if (pc) {
-                pc.close();
-                setPeerConnections(prev => {
-                  const newMap = new Map(prev);
-                  newMap.delete(leavingParticipant.peerId);
-                  return newMap;
-                });
-              }
-              
-              toast({
-                title: "Participante saiu",
-                description: `${leavingParticipant.displayName} saiu da reunião`,
-              });
-            }
-            break;
-            
-          case 'webrtc-offer':
-            console.log('Received WebRTC offer from:', data.fromPeerId);
-            await handleWebRTCOffer(data, ws);
-            break;
-            
-          case 'webrtc-answer':
-            console.log('Received WebRTC answer from:', data.fromPeerId);
-            await handleWebRTCAnswer(data);
-            break;
-            
-          case 'webrtc-ice-candidate':
-            console.log('Received ICE candidate from:', data.fromPeerId);
-            await handleWebRTCIceCandidate(data);
-            break;
-            
-          case 'chat-message':
-            setMessages(prev => [...prev, {
-              id: data.message.id,
-              message: data.message.message,
-              timestamp: data.message.created_at,
-              senderName: 'Participante'
-            }]);
-            break;
-            
-          case 'pong':
-            // Heartbeat response received
-            break;
+          }
+        } else if (data.type === 'pong') {
+          // Heartbeat response received
+          console.log('💓 Pong received');
         }
       };
 
       setSocket(ws);
       
     } catch (error) {
-      console.error('Error joining meeting:', error);
+      console.error('❌ Error joining meeting:', error);
       setIsConnecting(false);
       toast({
         title: "Erro",
@@ -475,24 +499,83 @@ const MeetingRoom = () => {
     }
   };
 
+  const getUserMedia = async () => {
+    const savedAudio = localStorage.getItem('selectedAudioDevice');
+    const savedVideo = localStorage.getItem('selectedVideoDevice');
+
+    const constraints: MediaStreamConstraints = {
+      audio: savedAudio ? { deviceId: { exact: savedAudio } } : true,
+      video: savedVideo ? { deviceId: { exact: savedVideo } } : true
+    };
+
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  };
+
+  const setupRealtimeChannel = async (roomId: string, peerId: string) => {
+    console.log('📡 Setting up Realtime channel for room:', roomId);
+    
+    const channel = supabase
+      .channel(`webrtc_${roomId}`)
+      .on('broadcast', { event: 'webrtc-offer' }, async (payload) => {
+        if (payload.payload.targetPeerId === peerId) {
+          console.log('📞 Received WebRTC offer from:', payload.payload.fromPeerId);
+          await handleWebRTCOffer(payload.payload);
+        }
+      })
+      .on('broadcast', { event: 'webrtc-answer' }, async (payload) => {
+        if (payload.payload.targetPeerId === peerId) {
+          console.log('📞 Received WebRTC answer from:', payload.payload.fromPeerId);
+          await handleWebRTCAnswer(payload.payload);
+        }
+      })
+      .on('broadcast', { event: 'webrtc-ice-candidate' }, async (payload) => {
+        if (payload.payload.targetPeerId === peerId) {
+          console.log('🧊 Received ICE candidate from:', payload.payload.fromPeerId);
+          await handleWebRTCIceCandidate(payload.payload);
+        }
+      })
+      .on('broadcast', { event: 'chat-message' }, (payload) => {
+        console.log('💬 Received chat message:', payload.payload);
+        setMessages(prev => [...prev, {
+          id: Math.random().toString(),
+          message: payload.payload.message,
+          timestamp: new Date().toISOString(),
+          senderName: payload.payload.senderName
+        }]);
+      })
+      .subscribe();
+
+    setRealtimeChannel(channel);
+    console.log('✅ Realtime channel setup complete');
+  };
+
   // Helper function to create peer connection and send offer
-  const createPeerConnectionAndOffer = async (peerId: string, ws: WebSocket, stream: MediaStream) => {
-    const pc = await createPeerConnection(peerId, ws, stream);
+  const createPeerConnectionAndOffer = async (peerId: string) => {
+    if (!localStream || !realtimeChannel) {
+      console.log('⚠️ Cannot create peer connection: missing localStream or realtimeChannel');
+      return;
+    }
+
+    const pc = await createPeerConnection(peerId);
     
     // Create and send offer
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     
-    console.log('Sending offer to:', peerId);
-    ws.send(JSON.stringify({
-      type: 'webrtc-offer',
-      targetPeerId: peerId,
-      offer: offer
-    }));
+    console.log('📤 Sending offer to:', peerId);
+    await realtimeChannel.send({
+      type: 'broadcast',
+      event: 'webrtc-offer',
+      payload: {
+        targetPeerId: peerId,
+        fromPeerId: myPeerId,
+        offer: offer
+      }
+    });
   };
 
-  const createPeerConnection = async (peerId: string, ws: WebSocket, stream: MediaStream) => {
-    console.log(`Creating peer connection for ${peerId}`);
+  const createPeerConnection = async (peerId: string) => {
+    console.log(`🔗 Creating peer connection for ${peerId}`);
     
     const pc = new RTCPeerConnection({
       iceServers: [
@@ -502,21 +585,29 @@ const MeetingRoom = () => {
     });
 
     // Add local stream tracks
-    stream.getTracks().forEach(track => {
-      console.log('Adding local track:', track.kind);
-      pc.addTrack(track, stream);
-    });
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        console.log('➕ Adding local track:', track.kind);
+        pc.addTrack(track, localStream);
+      });
+    }
 
     // Handle incoming stream
     pc.ontrack = (event) => {
-      console.log('Received remote track from', peerId, event.streams[0]);
+      console.log('📺 Received remote track from', peerId, event.streams[0]);
       const remoteStream = event.streams[0];
       
       // Find remote video element for this peer
       const remoteVideoRef = getRemoteVideoRef(peerId);
       if (remoteVideoRef?.current) {
-        console.log('Setting remote stream to video element for', peerId);
+        console.log('🎬 Setting remote stream to video element for', peerId);
         remoteVideoRef.current.srcObject = remoteStream;
+        
+        // Try to play and handle autoplay restrictions
+        remoteVideoRef.current.play().catch((error) => {
+          console.log('⚠️ Autoplay blocked, showing audio prompt');
+          setShowAudioPrompt(true);
+        });
       }
       
       // Update participant with stream
@@ -527,54 +618,86 @@ const MeetingRoom = () => {
 
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
-      if (event.candidate && ws.readyState === WebSocket.OPEN) {
-        console.log('Sending ICE candidate to:', peerId);
-        ws.send(JSON.stringify({
-          type: 'webrtc-ice-candidate',
-          targetPeerId: peerId,
-          candidate: event.candidate
-        }));
+      if (event.candidate && realtimeChannel) {
+        console.log('🧊 Sending ICE candidate to:', peerId);
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'webrtc-ice-candidate',
+          payload: {
+            targetPeerId: peerId,
+            fromPeerId: myPeerId,
+            candidate: event.candidate
+          }
+        });
       }
     };
 
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
-      console.log(`Peer connection state for ${peerId}:`, pc.connectionState);
+      console.log(`🔌 Peer connection state for ${peerId}:`, pc.connectionState);
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        console.log(`❌ Peer connection failed for ${peerId}`);
+        toast({
+          title: "Conexão perdida",
+          description: `Conexão com ${peerId} foi perdida`,
+          variant: "destructive",
+        });
+      }
     };
 
     setPeerConnections(prev => new Map(prev.set(peerId, pc)));
     return pc;
   };
 
-  const handleWebRTCOffer = async (data: any, ws: WebSocket) => {
+  const handleWebRTCOffer = async (data: any) => {
     const fromPeerId = data.fromPeerId;
-    console.log('Handling WebRTC offer from:', fromPeerId);
+    console.log('🤝 Handling WebRTC offer from:', fromPeerId);
     
     // Create new peer connection if it doesn't exist
     let pc = peerConnections.get(fromPeerId);
     if (!pc && localStream) {
-      pc = await createPeerConnection(fromPeerId, ws, localStream);
+      pc = await createPeerConnection(fromPeerId);
     }
     
     if (!pc) {
-      console.error('No peer connection available for:', fromPeerId);
+      console.error('❌ No peer connection available for:', fromPeerId);
       return;
     }
 
-    await pc.setRemoteDescription(data.data.offer);
-    console.log('Set remote description for offer from:', fromPeerId);
+    await pc.setRemoteDescription(data.offer);
+    console.log('✅ Set remote description for offer from:', fromPeerId);
+    
+    // Process queued ICE candidates
+    const queuedCandidates = iceCandidateQueue.get(fromPeerId) || [];
+    for (const candidate of queuedCandidates) {
+      try {
+        await pc.addIceCandidate(candidate);
+        console.log('✅ Added queued ICE candidate from:', fromPeerId);
+      } catch (error) {
+        console.error('❌ Error adding queued ICE candidate:', error);
+      }
+    }
+    setIceCandidateQueue(prev => {
+      const newQueue = new Map(prev);
+      newQueue.delete(fromPeerId);
+      return newQueue;
+    });
     
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    console.log('Created and set local answer for:', fromPeerId);
+    console.log('✅ Created and set local answer for:', fromPeerId);
 
-    if (ws.readyState === WebSocket.OPEN) {
-      console.log('Sending answer to:', fromPeerId);
-      ws.send(JSON.stringify({
-        type: 'webrtc-answer',
-        targetPeerId: fromPeerId,
-        answer: answer
-      }));
+    if (realtimeChannel) {
+      console.log('📤 Sending answer to:', fromPeerId);
+      await realtimeChannel.send({
+        type: 'broadcast',
+        event: 'webrtc-answer',
+        payload: {
+          targetPeerId: fromPeerId,
+          fromPeerId: myPeerId,
+          answer: answer
+        }
+      });
     }
   };
 
@@ -583,10 +706,10 @@ const MeetingRoom = () => {
     const pc = peerConnections.get(fromPeerId);
     
     if (pc && pc.signalingState !== 'stable') {
-      console.log('Setting remote description for answer from:', fromPeerId);
-      await pc.setRemoteDescription(data.data.answer);
+      console.log('✅ Setting remote description for answer from:', fromPeerId);
+      await pc.setRemoteDescription(data.answer);
     } else {
-      console.warn('Cannot set remote description, peer connection not in expected state:', fromPeerId, pc?.signalingState);
+      console.warn('⚠️ Cannot set remote description, peer connection not in expected state:', fromPeerId, pc?.signalingState);
     }
   };
 
@@ -595,19 +718,37 @@ const MeetingRoom = () => {
     const pc = peerConnections.get(fromPeerId);
     
     if (pc && pc.remoteDescription) {
-      console.log('Adding ICE candidate from:', fromPeerId);
+      console.log('✅ Adding ICE candidate from:', fromPeerId);
       try {
-        await pc.addIceCandidate(data.data.candidate);
+        await pc.addIceCandidate(data.candidate);
       } catch (error) {
-        console.error('Error adding ICE candidate:', error);
+        console.error('❌ Error adding ICE candidate:', error);
       }
     } else {
-      console.warn('Cannot add ICE candidate, no remote description set for:', fromPeerId);
+      console.log('⏳ Queueing ICE candidate from:', fromPeerId);
+      setIceCandidateQueue(prev => {
+        const newQueue = new Map(prev);
+        const existing = newQueue.get(fromPeerId) || [];
+        newQueue.set(fromPeerId, [...existing, data.candidate]);
+        return newQueue;
+      });
     }
   };
 
   const leaveMeeting = async () => {
-    // Cleanup
+    console.log('👋 Leaving meeting...');
+    
+    // Cleanup channels
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      setRealtimeChannel(null);
+    }
+    if (participantsChannel) {
+      supabase.removeChannel(participantsChannel);
+      setParticipantsChannel(null);
+    }
+    
+    // Cleanup heartbeat
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
       setHeartbeatInterval(null);
@@ -722,12 +863,17 @@ const MeetingRoom = () => {
   };
 
   const sendChatMessage = () => {
-    if (!newMessage.trim() || !socket) return;
+    if (!newMessage.trim() || !realtimeChannel || !displayName) return;
     
-    socket.send(JSON.stringify({
-      type: 'chat-message',
-      message: newMessage
-    }));
+    console.log('💬 Sending chat message:', newMessage);
+    realtimeChannel.send({
+      type: 'broadcast',
+      event: 'chat-message',
+      payload: {
+        message: newMessage,
+        senderName: displayName
+      }
+    });
     
     setNewMessage('');
   };
@@ -739,6 +885,76 @@ const MeetingRoom = () => {
       title: "Link copiado!",
       description: "O link da reunião foi copiado para a área de transferência",
     });
+  };
+
+  const handleDeviceChange = async (deviceType: 'audio' | 'video' | 'speaker', deviceId: string) => {
+    try {
+      if (deviceType === 'speaker') {
+        // Set speaker for all video elements
+        const videoElements = document.querySelectorAll('video');
+        videoElements.forEach(video => {
+          if ('setSinkId' in video) {
+            (video as any).setSinkId(deviceId);
+          }
+        });
+        return;
+      }
+
+      if (!localStream) return;
+
+      // Get new stream with selected device
+      const constraints: MediaStreamConstraints = {
+        audio: deviceType === 'audio' ? { deviceId: { exact: deviceId } } : localStream.getAudioTracks().length > 0,
+        video: deviceType === 'video' ? { deviceId: { exact: deviceId } } : localStream.getVideoTracks().length > 0
+      };
+
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Replace tracks in all peer connections
+      peerConnections.forEach((pc) => {
+        const trackKind = deviceType === 'audio' ? 'audio' : 'video';
+        const sender = pc.getSenders().find(s => s.track?.kind === trackKind);
+        const newTrack = deviceType === 'audio' ? newStream.getAudioTracks()[0] : newStream.getVideoTracks()[0];
+        
+        if (sender && newTrack) {
+          sender.replaceTrack(newTrack);
+        }
+      });
+
+      // Update local stream
+      const oldTrack = deviceType === 'audio' ? localStream.getAudioTracks()[0] : localStream.getVideoTracks()[0];
+      const newTrack = deviceType === 'audio' ? newStream.getAudioTracks()[0] : newStream.getVideoTracks()[0];
+      
+      if (oldTrack) {
+        localStream.removeTrack(oldTrack);
+        oldTrack.stop();
+      }
+      
+      if (newTrack) {
+        localStream.addTrack(newTrack);
+      }
+
+      // Update local video element
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+      }
+
+    } catch (error) {
+      console.error('Error changing device:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível alterar o dispositivo',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const activateAudio = () => {
+    const videoElements = document.querySelectorAll('video');
+    videoElements.forEach(video => {
+      video.play().catch(console.error);
+    });
+    setShowAudioPrompt(false);
   };
 
   // DnD handler
@@ -771,7 +987,7 @@ const MeetingRoom = () => {
     ...participants.filter(p => p.peerId !== myPeerId)
   ];
 
-  console.log('Current video participants:', videoParticipants.length, videoParticipants.map(p => ({
+  console.log('📊 Current video participants:', videoParticipants.length, videoParticipants.map(p => ({
     id: p.id,
     peerId: p.peerId,
     displayName: p.displayName
@@ -843,6 +1059,26 @@ const MeetingRoom = () => {
   // Meeting interface
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+      {/* Audio activation prompt */}
+      {showAudioPrompt && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <Card className="bg-blue-600 text-white border-0">
+            <CardContent className="p-4 flex items-center gap-4">
+              <Volume2 className="h-5 w-5" />
+              <p className="text-sm">Clique para ativar o áudio</p>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={activateAudio}
+                className="ml-auto"
+              >
+                Ativar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-blue-100 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
@@ -857,6 +1093,8 @@ const MeetingRoom = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          <DeviceSettings onDeviceChange={handleDeviceChange} />
+          
           <Button
             variant="ghost"
             size="sm"

@@ -85,16 +85,29 @@ const ImprovedBookingPublic = () => {
 
       setBookingLink(linkData);
 
-      // Load availability
-      const { data: availabilityData, error: availabilityError } = await supabase
+      // Load availability (fallback between availability_schedules and user_availability)
+      const { data: schedules, error: schedulesError } = await supabase
         .from('availability_schedules')
         .select('*')
         .eq('user_id', linkData.user_id)
         .eq('is_active', true)
         .order('day_of_week');
 
-      if (!availabilityError) {
-        setAvailability(availabilityData || []);
+      if (schedulesError || !schedules || schedules.length === 0) {
+        const { data: userAvail, error: userAvailError } = await supabase
+          .from('user_availability')
+          .select('*')
+          .eq('user_id', linkData.user_id)
+          .eq('is_active', true)
+          .order('day_of_week');
+
+        if (!userAvailError) {
+          setAvailability(userAvail || []);
+        } else {
+          setAvailability([]);
+        }
+      } else {
+        setAvailability(schedules || []);
       }
 
     } catch (error) {
@@ -377,23 +390,29 @@ const ImprovedBookingPublic = () => {
                   <h4 className="font-semibold text-gray-900 mb-3">
                     Horários disponíveis para {format(selectedDate, 'dd/MM', { locale: ptBR })}
                   </h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        className={cn(
-                          "text-sm py-2",
-                          selectedTime === time 
-                            ? "bg-blue-600 hover:bg-blue-700" 
-                            : "hover:bg-blue-50"
-                        )}
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
+                  {timeSlots.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {timeSlots.map((time) => (
+                        <Button
+                          key={time}
+                          variant={selectedTime === time ? "default" : "outline"}
+                          className={cn(
+                            "text-sm py-2",
+                            selectedTime === time
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : "hover:bg-blue-50"
+                          )}
+                          onClick={() => setSelectedTime(time)}
+                        >
+                          {time}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                      Nenhum horário disponível para esta data. Tente outro dia.
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -414,29 +414,59 @@ const WhatsAppCRM: React.FC = () => {
             <CardContent>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Configuração da API</h3>
+                  <h3 className="text-lg font-medium mb-2">Conexão via QR Code</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Para conectar o WhatsApp Business, você precisa:
+                    Para conectar o WhatsApp usando QR Code, você pode usar bibliotecas como:
                   </p>
                   <ul className="list-disc list-inside space-y-2 text-sm text-gray-600 mb-4">
-                    <li>Ter uma conta WhatsApp Business verificada</li>
-                    <li>Configurar o WhatsApp Business API</li>
-                    <li>Obter o token de acesso da Meta Developer</li>
-                    <li>Configurar os webhooks para receber mensagens</li>
+                    <li><strong>whatsapp-web.js</strong> - Para conexão via WhatsApp Web</li>
+                    <li><strong>Baileys</strong> - Biblioteca completa para WhatsApp</li>
+                    <li><strong>Venom-bot</strong> - Bot para WhatsApp Web</li>
+                    <li>Integração com serviços como ChatWoot, Evolution API</li>
                   </ul>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    Documentação da Meta
-                  </Button>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <div className="w-4 h-4 bg-yellow-400 rounded-full flex-shrink-0 mt-0.5"></div>
+                      <div>
+                        <h4 className="font-medium text-yellow-800 mb-1">Implementação Necessária</h4>
+                        <p className="text-sm text-yellow-700">
+                          Para conectar via QR Code, é necessário implementar um backend em Node.js 
+                          com uma das bibliotecas mencionadas. Isso requer infraestrutura adicional.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      WhatsApp Business API (Meta)
+                    </Button>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      Evolution API
+                    </Button>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      ChatWoot
+                    </Button>
+                  </div>
                 </div>
                 
                 <Separator />
                 
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Automações</h3>
-                  <p className="text-sm text-gray-600">
-                    Configure respostas automáticas e regras de negócio
+                  <h3 className="text-lg font-medium mb-2">WhatsApp Business API</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Para implementação oficial da Meta (recomendado para empresas):
                   </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 mb-4">
+                    <li>Criar conta no Meta Business</li>
+                    <li>Configurar aplicativo WhatsApp Business</li>
+                    <li>Verificar número de telefone</li>
+                    <li>Configurar webhooks</li>
+                  </ul>
                 </div>
               </div>
             </CardContent>

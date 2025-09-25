@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2 } from 'lucide-react';
+import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -102,6 +102,15 @@ const MeetingRooms = () => {
         </div>
         
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => window.open('/dashboard/reunioes/gravacoes', '_blank')}
+            className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50"
+          >
+            <Play className="h-4 w-4" />
+            Ver Gravações
+          </Button>
+          
           <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50">

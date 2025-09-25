@@ -224,7 +224,7 @@ const BotIADashboard: React.FC = () => {
     });
   };
 
-  // Test agent (simulate conversation)
+  // Test agent with real AI chat
   const testAgent = (agent: AIAgent) => {
     setSelectedAgent(agent);
     setTestConversation([
@@ -233,18 +233,66 @@ const BotIADashboard: React.FC = () => {
     setShowTestModal(true);
   };
 
-  // Send test message
-  const sendTestMessage = () => {
+  // Send test message to real AI
+  const sendTestMessage = async () => {
     if (!testMessage.trim() || !selectedAgent) return;
     
-    const newConversation = [
-      ...testConversation,
-      { role: 'user', content: testMessage },
-      { role: 'assistant', content: `Esta é uma resposta simulada do agente "${selectedAgent.name}". Em uma implementação real, esta mensagem seria processada pela IA com base na personalidade: "${selectedAgent.personality}" e nas instruções configuradas.` }
-    ];
-    
-    setTestConversation(newConversation);
+    const userMessage = testMessage;
     setTestMessage('');
+    
+    // Add user message to conversation
+    const updatedConversation = [
+      ...testConversation,
+      { role: 'user', content: userMessage }
+    ];
+    setTestConversation(updatedConversation);
+
+    try {
+      // Call AI chat function
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: userMessage,
+          personality: selectedAgent.personality,
+          instructions: selectedAgent.instructions,
+          model: selectedAgent.model
+        }
+      });
+
+      if (error) {
+        console.error('AI chat error:', error);
+        toast({ 
+          title: 'Erro', 
+          description: 'Erro ao comunicar com a IA. Verifique sua configuração.',
+          variant: 'destructive' 
+        });
+        
+        // Add error message
+        setTestConversation(prev => [
+          ...prev,
+          { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Verifique se a chave da OpenAI está configurada.' }
+        ]);
+        return;
+      }
+
+      // Add AI response to conversation
+      setTestConversation(prev => [
+        ...prev,
+        { role: 'assistant', content: data.response }
+      ]);
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Erro inesperado ao conversar com a IA',
+        variant: 'destructive' 
+      });
+      
+      setTestConversation(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Desculpe, ocorreu um erro inesperado. Tente novamente.' }
+      ]);
+    }
   };
 
   if (loading) {

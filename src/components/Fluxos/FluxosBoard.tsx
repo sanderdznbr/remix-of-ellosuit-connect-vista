@@ -546,130 +546,293 @@ const FluxosBoard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Fluxos</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Fluxos de Trabalho</h1>
+          <p className="text-gray-600 mt-1">Organize seus projetos em quadros e fluxos intuitivos</p>
+        </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Selecionar grupo..." />
-            </SelectTrigger>
-            <SelectContent>
-              {groups.map(group => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {groups.length > 0 && (
+            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+              <SelectTrigger className="w-64 bg-white shadow-sm border-gray-200">
+                <SelectValue placeholder="📋 Selecionar Quadro..." />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map(group => (
+                  <SelectItem key={group.id} value={group.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: group.color }}
+                      />
+                      {group.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           
-          <Button onClick={() => setShowGroupModal(true)} variant="outline">
+          <Button 
+            onClick={() => setShowGroupModal(true)} 
+            variant="outline"
+            className="bg-white shadow-sm border-gray-200 hover:bg-gray-50"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Novo Grupo
+            Novo Quadro
           </Button>
         </div>
       </div>
 
-      {/* Workflow Selection */}
-      {selectedGroup && (
-        <div className="flex items-center gap-3 mb-6">
-          <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Selecionar fluxo..." />
-            </SelectTrigger>
-            <SelectContent>
-              {workflows.map(workflow => (
-                <SelectItem key={workflow.id} value={workflow.id}>
-                  {workflow.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Button onClick={() => setShowWorkflowModal(true)} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Fluxo
-          </Button>
-          
-          <Button onClick={() => setShowColumnModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Coluna
-          </Button>
+      {/* No Groups State */}
+      {groups.length === 0 ? (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-md">
+            <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Calendar className="h-10 w-10 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              Bem-vindo aos Fluxos!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Crie seu primeiro quadro para organizar projetos, tarefas e fluxos de trabalho de forma visual e intuitiva.
+            </p>
+            <Button 
+              onClick={() => setShowGroupModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Criar Primeiro Quadro
+            </Button>
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Workflow Selection */}
+          {selectedGroup && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Fluxo Atual
+                    </label>
+                    <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="🔄 Selecionar fluxo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workflows.map(workflow => (
+                          <SelectItem key={workflow.id} value={workflow.id}>
+                            {workflow.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {workflows.length === 0 && (
+                    <div className="text-sm text-gray-500 py-2">
+                      Crie um fluxo para começar a organizar suas tarefas
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setShowWorkflowModal(true)} 
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Fluxo
+                  </Button>
+                  
+                  {selectedWorkflow && (
+                    <Button 
+                      onClick={() => setShowColumnModal(true)}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Coluna
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Kanban Board */}
-      {selectedWorkflow && (
+      {selectedWorkflow ? (
         <ScrollArea className="w-full">
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex gap-6 pb-8 min-h-[70vh]">
-              {columns.map(column => (
-                <Card key={column.id} className="w-80 bg-white shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium" style={{ color: column.color }}>
-                        {column.name}
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedColumnId(column.id);
-                          setSelectedCard(null);
-                          setShowCardModal(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+            <div className="flex gap-6 pb-8 min-h-[60vh]">
+              {columns.length === 0 ? (
+                <div className="flex items-center justify-center w-full min-h-[40vh] bg-white rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center">
+                    <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MoreHorizontal className="h-8 w-8 text-gray-400" />
                     </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <SortableContext 
-                      items={cards.filter(c => c.column_id === column.id).map(c => c.id)} 
-                      strategy={verticalListSortingStrategy}
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Nenhuma coluna criada
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Adicione colunas para organizar seus cards (ex: A Fazer, Em Progresso, Concluído)
+                    </p>
+                    <Button 
+                      onClick={() => setShowColumnModal(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      <div className="space-y-3">
-                        {cards
-                          .filter(card => card.column_id === column.id)
-                          .map(card => (
-                            <SortableCard
-                              key={card.id}
-                              card={card}
-                              onEdit={() => {
-                                setSelectedCard(card);
-                                setShowCardModal(true);
-                              }}
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Primeira Coluna
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {columns.map(column => (
+                    <Card key={column.id} className="w-80 bg-white shadow-sm border-0 shadow-lg">
+                      <CardHeader className="pb-3 bg-gradient-to-r from-gray-50 to-white">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: column.color }}
                             />
-                          ))}
-                      </div>
-                    </SortableContext>
-                  </CardContent>
-                </Card>
-              ))}
+                            <CardTitle className="text-sm font-semibold text-gray-800">
+                              {column.name}
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs">
+                              {cards.filter(c => c.column_id === column.id).length}
+                            </Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedColumnId(column.id);
+                              setSelectedCard(null);
+                              setShowCardModal(true);
+                            }}
+                            className="h-8 w-8 hover:bg-blue-100 hover:text-blue-600"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent>
+                        <SortableContext 
+                          items={cards.filter(c => c.column_id === column.id).map(c => c.id)} 
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-3">
+                            {cards
+                              .filter(card => card.column_id === column.id)
+                              .map(card => (
+                                <SortableCard
+                                  key={card.id}
+                                  card={card}
+                                  onEdit={() => {
+                                    setSelectedCard(card);
+                                    setShowCardModal(true);
+                                  }}
+                                />
+                              ))}
+                          </div>
+                        </SortableContext>
+                        
+                        {cards.filter(c => c.column_id === column.id).length === 0 && (
+                          <div className="text-center py-8 text-gray-400 text-sm">
+                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
+                              Arraste cards aqui ou clique em + para adicionar
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Add Column Button */}
+                  <div className="w-80 flex-shrink-0">
+                    <Card 
+                      className="h-fit bg-gray-50 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+                      onClick={() => setShowColumnModal(true)}
+                    >
+                      <CardContent className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <Plus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Adicionar Coluna</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
             </div>
           </DndContext>
         </ScrollArea>
+      ) : selectedGroup && workflows.length === 0 && (
+        <div className="flex items-center justify-center min-h-[40vh] bg-white rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nenhum fluxo criado
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Crie um fluxo para começar a organizar suas tarefas neste quadro
+            </p>
+            <Button 
+              onClick={() => setShowWorkflowModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeiro Fluxo
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Modals */}
       <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Grupo de Fluxo</DialogTitle>
+            <DialogTitle>📋 Novo Quadro de Trabalho</DialogTitle>
+            <p className="text-sm text-gray-600">
+              Quadros ajudam a organizar diferentes projetos ou áreas de trabalho
+            </p>
           </DialogHeader>
           <div className="space-y-4">
-            <Input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Nome do grupo..."
-            />
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Nome do Quadro
+              </label>
+              <Input
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="Ex: Projeto Website, Marketing, Vendas..."
+                className="w-full"
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowGroupModal(false)}>
                 Cancelar
               </Button>
-              <Button onClick={createGroup}>Criar</Button>
+              <Button 
+                onClick={createGroup}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={!groupName.trim()}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Quadro
+              </Button>
             </div>
           </div>
         </DialogContent>

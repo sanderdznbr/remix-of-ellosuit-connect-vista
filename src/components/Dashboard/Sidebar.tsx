@@ -11,7 +11,8 @@ import {
   LogOut,
   Edit3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,6 +28,7 @@ const Sidebar = () => {
   const defaultMenuItems = [
     { id: 'home', path: '/dashboard', icon: Home, label: 'Home' },
     { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
+    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões' },
     { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' },
     { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
     { id: 'documents', path: '/dashboard/documentos', icon: FileText, label: 'Documentos' },

@@ -13,6 +13,7 @@ import Team from "./pages/Team";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Tarefas from "./pages/Tarefas";
+import MeetingRoom from "./components/Dashboard/MeetingRoom";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/tasks" element={<Tarefas />} />
             <Route path="/booking/:slug" element={<BookingPage />} />

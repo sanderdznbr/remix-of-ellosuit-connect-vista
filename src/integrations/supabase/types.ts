@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -847,6 +847,66 @@ export type Database = {
           },
         ]
       }
+      meeting_rooms: {
+        Row: {
+          chat_enabled: boolean | null
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          is_locked: boolean | null
+          max_participants: number | null
+          password_hash: string | null
+          recording_enabled: boolean | null
+          room_code: string
+          screen_sharing_enabled: boolean | null
+          started_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          chat_enabled?: boolean | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_locked?: boolean | null
+          max_participants?: number | null
+          password_hash?: string | null
+          recording_enabled?: boolean | null
+          room_code: string
+          screen_sharing_enabled?: boolean | null
+          started_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          chat_enabled?: boolean | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_locked?: boolean | null
+          max_participants?: number | null
+          password_hash?: string | null
+          recording_enabled?: boolean | null
+          room_code?: string
+          screen_sharing_enabled?: boolean | null
+          started_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           calendar_notifications_enabled: boolean
@@ -980,6 +1040,143 @@ export type Database = {
             columns: ["booking_link_id"]
             isOneToOne: false
             referencedRelation: "public_booking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          message_type: string | null
+          participant_id: string
+          room_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          message_type?: string | null
+          participant_id: string
+          room_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          message_type?: string | null
+          participant_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_chat_messages_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "room_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_participants: {
+        Row: {
+          audio_enabled: boolean | null
+          connection_status: string | null
+          display_name: string
+          id: string
+          is_host: boolean | null
+          is_moderator: boolean | null
+          joined_at: string
+          left_at: string | null
+          peer_id: string
+          room_id: string
+          screen_sharing: boolean | null
+          user_id: string | null
+          video_enabled: boolean | null
+        }
+        Insert: {
+          audio_enabled?: boolean | null
+          connection_status?: string | null
+          display_name: string
+          id?: string
+          is_host?: boolean | null
+          is_moderator?: boolean | null
+          joined_at?: string
+          left_at?: string | null
+          peer_id: string
+          room_id: string
+          screen_sharing?: boolean | null
+          user_id?: string | null
+          video_enabled?: boolean | null
+        }
+        Update: {
+          audio_enabled?: boolean | null
+          connection_status?: string | null
+          display_name?: string
+          id?: string
+          is_host?: boolean | null
+          is_moderator?: boolean | null
+          joined_at?: string
+          left_at?: string | null
+          peer_id?: string
+          room_id?: string
+          screen_sharing?: boolean | null
+          user_id?: string | null
+          video_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          reaction_type: string
+          room_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          reaction_type: string
+          room_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          reaction_type?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_reactions_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "room_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_reactions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rooms"
             referencedColumns: ["id"]
           },
         ]

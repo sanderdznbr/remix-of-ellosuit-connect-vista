@@ -1,0 +1,323 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+
+export interface MeetingRoom {
+  id: string;
+  company_id: string;
+  created_by: string;
+  room_code: string;
+  title: string;
+  description?: string;
+  max_participants: number;
+  is_active: boolean;
+  is_locked: boolean;
+  recording_enabled: boolean;
+  chat_enabled: boolean;
+  screen_sharing_enabled: boolean;
+  started_at?: string;
+  ended_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoomParticipant {
+  id: string;
+  room_id: string;
+  user_id?: string;
+  display_name: string;
+  peer_id: string;
+  is_host: boolean;
+  is_moderator: boolean;
+  audio_enabled: boolean;
+  video_enabled: boolean;
+  screen_sharing: boolean;
+  connection_status: string;
+  joined_at: string;
+  left_at?: string;
+}
+
+export const useMeetingRooms = () => {
+  const [rooms, setRooms] = useState<MeetingRoom[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<MeetingRoom | null>(null);
+  const [participants, setParticipants] = useState<RoomParticipant[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Buscar salas da empresa
+  const fetchRooms = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('meeting_rooms')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRooms(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar salas:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as salas de reunião",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Criar nova sala
+  const createRoom = async (roomData: {
+    title: string;
+    description?: string;
+    max_participants?: number;
+    recording_enabled?: boolean;
+    chat_enabled?: boolean;
+    screen_sharing_enabled?: boolean;
+  }) => {
+    if (!user) return null;
+
+    try {
+      // Gerar código único da sala
+      const roomCode = Math.random().toString(36).substring(2, 12).toUpperCase();
+      
+      const { data, error } = await supabase
+        .from('meeting_rooms')
+        .insert({
+          title: roomData.title,
+          description: roomData.description,
+          room_code: roomCode,
+          max_participants: roomData.max_participants || 50,
+          recording_enabled: roomData.recording_enabled || false,
+          chat_enabled: roomData.chat_enabled !== false,
+          screen_sharing_enabled: roomData.screen_sharing_enabled !== false,
+          company_id: user.user_metadata?.company_id || 'default',
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sala criada!",
+        description: `Sala "${roomData.title}" criada com sucesso`,
+      });
+
+      fetchRooms();
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar sala:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a sala",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  // Entrar em uma sala
+  const joinRoom = async (roomCode: string, displayName: string) => {
+    if (!user) return null;
+
+    try {
+      // Buscar sala pelo código
+      const { data: room, error: roomError } = await supabase
+        .from('meeting_rooms')
+        .select('*')
+        .eq('room_code', roomCode)
+        .eq('is_active', true)
+        .single();
+
+      if (roomError) throw roomError;
+      if (!room) {
+        toast({
+          title: "Sala não encontrada",
+          description: "Verifique o código da sala e tente novamente",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Gerar peer ID único
+      const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+      // Adicionar participante
+      const { data: participant, error: participantError } = await supabase
+        .from('room_participants')
+        .insert({
+          room_id: room.id,
+          user_id: user.id,
+          display_name: displayName,
+          peer_id: peerId,
+          is_host: room.created_by === user.id,
+          connection_status: 'connecting',
+        })
+        .select()
+        .single();
+
+      if (participantError) throw participantError;
+
+      setCurrentRoom(room);
+      
+      toast({
+        title: "Entrando na reunião",
+        description: `Conectando à sala "${room.title}"`,
+      });
+
+      return { room, participant };
+    } catch (error) {
+      console.error('Erro ao entrar na sala:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível entrar na sala",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  // Sair da sala
+  const leaveRoom = async (participantId: string) => {
+    try {
+      await supabase
+        .from('room_participants')
+        .update({ 
+          left_at: new Date().toISOString(),
+          connection_status: 'disconnected'
+        })
+        .eq('id', participantId);
+
+      setCurrentRoom(null);
+      setParticipants([]);
+    } catch (error) {
+      console.error('Erro ao sair da sala:', error);
+    }
+  };
+
+  // Buscar participantes da sala atual
+  const fetchParticipants = async (roomId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('room_participants')
+        .select('*')
+        .eq('room_id', roomId)
+        .is('left_at', null)
+        .order('joined_at', { ascending: true });
+
+      if (error) throw error;
+      setParticipants(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar participantes:', error);
+    }
+  };
+
+  // Atualizar status do participante
+  const updateParticipantStatus = async (participantId: string, updates: {
+    audio_enabled?: boolean;
+    video_enabled?: boolean;
+    screen_sharing?: boolean;
+    connection_status?: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from('room_participants')
+        .update(updates)
+        .eq('id', participantId);
+
+      if (error) throw error;
+      
+      if (currentRoom) {
+        fetchParticipants(currentRoom.id);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+    }
+  };
+
+  // Encerrar sala (apenas host)
+  const endRoom = async (roomId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('meeting_rooms')
+        .update({ 
+          is_active: false,
+          ended_at: new Date().toISOString()
+        })
+        .eq('id', roomId)
+        .eq('created_by', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Reunião encerrada",
+        description: "A reunião foi encerrada com sucesso",
+      });
+
+      setCurrentRoom(null);
+      setParticipants([]);
+      fetchRooms();
+    } catch (error) {
+      console.error('Erro ao encerrar sala:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível encerrar a reunião",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Configurar real-time para participantes
+  useEffect(() => {
+    if (!currentRoom) return;
+
+    const channel = supabase
+      .channel(`room_${currentRoom.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_participants',
+          filter: `room_id=eq.${currentRoom.id}`,
+        },
+        () => {
+          fetchParticipants(currentRoom.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentRoom]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRooms();
+    }
+  }, [user]);
+
+  return {
+    rooms,
+    currentRoom,
+    participants,
+    loading,
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    endRoom,
+    updateParticipantStatus,
+    fetchRooms,
+    fetchParticipants,
+  };
+};

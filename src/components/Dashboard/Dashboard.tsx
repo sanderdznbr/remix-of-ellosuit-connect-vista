@@ -10,6 +10,7 @@ import DocumentsManager from './DocumentsManager';
 import Analytics from './Analytics';
 import Settings from './Settings';
 import SidebarEditor from './SidebarEditor';
+import MeetingRooms from './MeetingRooms';
 import MobileDashboard from '@/components/Mobile/MobileDashboard';
 
 const Dashboard = () => {
@@ -33,6 +34,7 @@ const Dashboard = () => {
         <Routes>
           <Route path="/" element={<Home onNavigate={handleNavigate} />} />
           <Route path="/agenda" element={<MyCalendar />} />
+          <Route path="/reunioes" element={<MeetingRooms />} />
           <Route path="/email/*" element={<EmailDashboard />} />
           <Route path="/clientes" element={<ClientsManager />} />
           <Route path="/documentos" element={<DocumentsManager />} />

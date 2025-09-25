@@ -102,11 +102,15 @@ serve(async (req) => {
               otherParticipants: others ?? [],
             }));
 
+            console.log(`New participant joined: ${displayName} (${peerId}) in room ${roomId}`);
+            console.log(`Room now has ${state.sockets.size} sockets and ${state.peers.size} peers`);
+
             // notify others
             for (const s of state.sockets) {
               if (s !== socket) {
                 try {
                   s.send(JSON.stringify({ type: 'participant-joined', participant }));
+                  console.log(`Notified existing participant about new join: ${displayName}`);
                 } catch (_) {}
               }
             }
@@ -118,6 +122,8 @@ serve(async (req) => {
           case 'webrtc-ice-candidate': {
             if (!roomId || !peerId) return;
             const targetPeerId: string = data.targetPeerId;
+            console.log(`Routing ${data.type} from ${peerId} to ${targetPeerId}`);
+            
             const state = rooms.get(roomId);
             const targetSocket = state?.peers.get(targetPeerId);
             if (targetSocket) {
@@ -127,7 +133,12 @@ serve(async (req) => {
                   fromPeerId: peerId,
                   data,
                 }));
-              } catch (_) {}
+                console.log(`Successfully routed ${data.type} to ${targetPeerId}`);
+              } catch (e) {
+                console.error(`Failed to route ${data.type} to ${targetPeerId}:`, e);
+              }
+            } else {
+              console.error(`Target peer ${targetPeerId} not found in room ${roomId}`);
             }
             break;
           }

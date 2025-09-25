@@ -100,26 +100,40 @@ const DriveManager = () => {
   }, [companyId, currentFolder]);
 
   const loadFolders = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('document_folders')
       .select('*')
-      .eq('parent_folder_id', currentFolder)
       .order('name');
+
+    if (currentFolder === null) {
+      // Root level
+      query = query.is('parent_folder_id', null);
+    } else {
+      query = query.eq('parent_folder_id', currentFolder);
+    }
+
+    const { data, error } = await query;
     
     if (!error) setFolders(data || []);
     setLoading(false);
   };
 
   const loadFiles = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('documents')
       .select('*')
-      .eq('folder_id', currentFolder)
       .order('name');
+
+    if (currentFolder === null) {
+      query = query.is('folder_id', null);
+    } else {
+      query = query.eq('folder_id', currentFolder);
+    }
+
+    const { data, error } = await query;
     
     if (!error) setFiles(data || []);
   };
-
   const createFolder = async () => {
     if (!user?.id || !companyId) return;
 

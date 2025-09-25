@@ -23,7 +23,9 @@ import {
   Filter,
   Star,
   Clock,
-  Eye
+  Eye,
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +67,7 @@ const DriveManager = () => {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<Array<{id: string, name: string}>>([]);
   
   const [folderForm, setFolderForm] = useState({
     name: '',
@@ -100,9 +103,12 @@ const DriveManager = () => {
   }, [companyId, currentFolder]);
 
   const loadFolders = async () => {
+    if (!companyId) return;
+
     let query = supabase
       .from('document_folders')
       .select('*')
+      .eq('company_id', companyId)
       .order('name');
 
     if (currentFolder === null) {
@@ -119,9 +125,12 @@ const DriveManager = () => {
   };
 
   const loadFiles = async () => {
+    if (!companyId) return;
+
     let query = supabase
       .from('documents')
       .select('*')
+      .eq('company_id', companyId)
       .order('name');
 
     if (currentFolder === null) {
@@ -271,10 +280,47 @@ const DriveManager = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">💾 DRIVE</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            <File className="inline-block mr-2 h-8 w-8" />
+            Arquivos
+          </h1>
           <p className="text-base text-gray-600 mt-2">
             Organize seus arquivos e documentos de forma inteligente
           </p>
+          
+          {/* Breadcrumb Navigation */}
+          {folderPath.length > 0 && (
+            <nav className="flex items-center space-x-2 mt-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setCurrentFolder(null);
+                  setFolderPath([]);
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                <Home className="h-4 w-4 mr-1" />
+                Início
+              </Button>
+              {folderPath.map((folder, index) => (
+                <React.Fragment key={folder.id}>
+                  <span className="text-gray-400">/</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCurrentFolder(folder.id);
+                      setFolderPath(folderPath.slice(0, index + 1));
+                    }}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    {folder.name}
+                  </Button>
+                </React.Fragment>
+              ))}
+            </nav>
+          )}
         </div>
         
         <div className="flex gap-2">
@@ -393,10 +439,13 @@ const DriveManager = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-4">📁 Pastas</h3>
             <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4' : 'space-y-2'}>
               {filteredFolders.map((folder) => (
-                <Card 
+                 <Card 
                   key={folder.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow rounded-2xl"
-                  onClick={() => setCurrentFolder(folder.id)}
+                  onClick={() => {
+                    setCurrentFolder(folder.id);
+                    setFolderPath([...folderPath, { id: folder.id, name: folder.name }]);
+                  }}
                 >
                   <CardContent className="p-4">
                     {viewMode === 'grid' ? (

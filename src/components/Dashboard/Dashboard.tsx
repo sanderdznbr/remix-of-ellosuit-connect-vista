@@ -18,6 +18,7 @@ import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
 import DriveManager from './DriveManager';
 import ImprovedAgendaAberta from './ImprovedAgendaAberta';
+import MeetingRecordings from './MeetingRecordings';
 
 const Dashboard = () => {
   const { isMobile } = useIsMobile();
@@ -41,6 +42,7 @@ const Dashboard = () => {
           <Route path="/" element={<Home onNavigate={handleNavigate} />} />
           <Route path="/agenda" element={<MyCalendar />} />
           <Route path="/reunioes" element={<MeetingRooms />} />
+          <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />
           <Route path="/email/*" element={<EmailDashboard />} />
           <Route path="/clientes" element={<ClientsManager />} />
           <Route path="/drive" element={<DriveManager />} />

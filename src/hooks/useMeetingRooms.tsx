@@ -146,19 +146,18 @@ export const useMeetingRooms = () => {
 
   // Entrar em uma sala
   const joinRoom = async (roomCode: string, displayName: string) => {
-    if (!user) return null;
-
     try {
-      // Buscar sala pelo código
+      // Buscar sala pelo código (case-insensitive usando código em maiúsculas)
+      const code = (roomCode || '').toUpperCase();
       const { data: room, error: roomError } = await supabase
         .from('meeting_rooms')
         .select('*')
-        .eq('room_code', roomCode)
+        .eq('room_code', code)
         .eq('is_active', true)
         .single();
 
-      if (roomError) throw roomError;
-      if (!room) {
+      if (roomError || !room) {
+        console.error('Sala não encontrada:', roomError);
         toast({
           title: "Sala não encontrada",
           description: "Verifique o código da sala e tente novamente",
@@ -170,27 +169,31 @@ export const useMeetingRooms = () => {
       // Gerar peer ID único
       const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-      // Adicionar participante
+      // Adicionar participante (permitir anônimo)
       const { data: participant, error: participantError } = await supabase
         .from('room_participants')
         .insert({
           room_id: room.id,
-          user_id: user.id,
+          user_id: user?.id || null,
           display_name: displayName,
           peer_id: peerId,
-          is_host: room.created_by === user.id,
-          connection_status: 'connecting',
+          is_host: user ? room.created_by === user.id : false,
+          connection_status: 'connected',
         })
         .select()
         .single();
 
-      if (participantError) throw participantError;
+      if (participantError) {
+        console.error('Erro ao adicionar participante:', participantError);
+        throw participantError;
+      }
 
       setCurrentRoom(room);
+      await fetchParticipants(room.id);
       
       toast({
-        title: "Entrando na reunião",
-        description: `Conectando à sala "${room.title}"`,
+        title: "Conectado",
+        description: `Você entrou na sala "${room.title}"`,
       });
 
       return { room, participant };

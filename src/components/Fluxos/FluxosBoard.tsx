@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, MoreHorizontal, Users, Calendar, Paperclip, MessageSquare, Tag } from 'lucide-react';
+import { Plus, MoreHorizontal, Users, Calendar, Paperclip, MessageSquare, Tag, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -579,8 +579,11 @@ const FluxosBoard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Fluxos de Trabalho</h1>
-          <p className="text-gray-600 mt-1">Organize seus projetos em quadros e fluxos intuitivos</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <Zap className="h-8 w-8 text-purple-600" />
+            Fluxos
+          </h1>
+          <p className="text-gray-600 mt-2">Organize seus projetos em quadros Kanban</p>
         </div>
         <div className="flex items-center gap-3">
           {groups.length > 0 && (

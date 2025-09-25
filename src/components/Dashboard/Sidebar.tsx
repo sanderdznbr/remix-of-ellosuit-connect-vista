@@ -35,7 +35,7 @@ const Sidebar = () => {
     { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões' },
     { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' },
     { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-    { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'DRIVE' },
+    { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
     { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Aberta' },
     { id: 'fluxos', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos' },
     { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tasks' },

@@ -252,9 +252,12 @@ const MobileDriveManager = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b p-4">
-        <h1 className="text-2xl font-bold text-center">💾 DRIVE</h1>
+        <h1 className="text-2xl font-bold text-center flex items-center justify-center gap-2">
+          <File className="h-6 w-6" />
+          Arquivos
+        </h1>
         <p className="text-sm text-gray-600 text-center mt-1">
-          Seus arquivos organizados
+          Seus documentos organizados
         </p>
       </div>
 
@@ -293,7 +296,10 @@ const MobileDriveManager = () => {
         {/* Folders */}
         {filteredFolders.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">📁 Pastas</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Folder className="h-5 w-5" />
+              Pastas
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               {filteredFolders.map((folder) => (
                 <Card 
@@ -322,7 +328,10 @@ const MobileDriveManager = () => {
         {/* Files */}
         {filteredFiles.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">📄 Arquivos</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <File className="h-5 w-5" />
+              Arquivos
+            </h3>
             <div className="space-y-3">
               {filteredFiles.map((file) => (
                 <Card key={file.id}>
@@ -354,10 +363,10 @@ const MobileDriveManager = () => {
                 <File className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="font-medium text-gray-900 mb-2">
-                DRIVE vazio
+                Arquivos vazio
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                Crie uma pasta ou faça upload
+                Crie uma pasta ou faça upload de documentos
               </p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => setActiveView('create-folder')} size="sm">

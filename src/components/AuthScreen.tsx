@@ -169,10 +169,10 @@ const AuthScreen = () => {
   const descriptionColor = isTarefasLogin ? "text-gray-300" : "text-gray-600";
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white order-2 md:order-1">
+        <div className="w-full max-w-md space-y-6 md:space-y-8">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">
               Bem vindo novamente!
@@ -351,12 +351,12 @@ const AuthScreen = () => {
       </div>
 
       {/* Right side - Brand */}
-      <div className="flex-1 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
-        <div className="text-center">
+      <div className="flex-1 flex items-center justify-center order-1 md:order-2 min-h-[200px] md:min-h-screen" style={{ backgroundColor: '#3600FF' }}>
+        <div className="text-center p-4">
           <img 
             src={ellosuitLogo} 
             alt="ELLOsuit Logo" 
-            className="h-16 w-auto object-contain mx-auto filter brightness-0 invert"
+            className="h-12 md:h-16 w-auto object-contain mx-auto filter brightness-0 invert"
             onError={(e) => {
               console.error('Error loading Ellosuit logo');
               e.currentTarget.style.display = 'none';

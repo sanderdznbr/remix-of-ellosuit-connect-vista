@@ -6,13 +6,14 @@ import {
   Home, 
   Users, 
   FileText, 
-  BarChart3, 
   Settings, 
   LogOut,
   Edit3,
   ChevronLeft,
   ChevronRight,
-  Video
+  Video,
+  LayoutDashboard,
+  CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,7 +33,8 @@ const Sidebar = () => {
     { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' },
     { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
     { id: 'documents', path: '/dashboard/documentos', icon: FileText, label: 'Documentos' },
-    { id: 'analytics', path: '/dashboard/analises', icon: BarChart3, label: 'Análises' },
+    { id: 'flows', path: '/dashboard/fluxos', icon: LayoutDashboard, label: 'Fluxos' },
+    { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tasks' },
     { id: 'edit', path: '/dashboard/editar', icon: Edit3, label: 'Editar' },
     { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
   ];

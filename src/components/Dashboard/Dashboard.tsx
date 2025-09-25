@@ -12,6 +12,8 @@ import Settings from './Settings';
 import SidebarEditor from './SidebarEditor';
 import MeetingRooms from './MeetingRooms';
 import MobileDashboard from '@/components/Mobile/MobileDashboard';
+import FluxosBoard from '@/components/Fluxos/FluxosBoard';
+import TarefasWeb from '@/components/Tarefas/TarefasWeb';
 
 const Dashboard = () => {
   const { isMobile } = useIsMobile();
@@ -38,9 +40,11 @@ const Dashboard = () => {
           <Route path="/email/*" element={<EmailDashboard />} />
           <Route path="/clientes" element={<ClientsManager />} />
           <Route path="/documentos" element={<DocumentsManager />} />
-          <Route path="/analises" element={<Analytics onNavigate={handleNavigate} />} />
+          <Route path="/analises" element={<Navigate to="/dashboard/email" replace />} />
           <Route path="/editar" element={<SidebarEditor />} />
           <Route path="/configuracoes" element={<Settings />} />
+          <Route path="/fluxos" element={<FluxosBoard />} />
+          <Route path="/tasks" element={<TarefasWeb />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

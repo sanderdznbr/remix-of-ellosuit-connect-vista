@@ -153,6 +153,7 @@ const MeetingRoom = () => {
   const [participantsChannel, setParticipantsChannel] = useState<any>(null);
   const [iceCandidateQueue, setIceCandidateQueue] = useState<Map<string, RTCIceCandidateInit[]>>(new Map());
   const [showAudioPrompt, setShowAudioPrompt] = useState(false);
+  const [realtimeReady, setRealtimeReady] = useState(false);
 
   // Refs
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -543,7 +544,12 @@ const MeetingRoom = () => {
           senderName: payload.payload.senderName
         }]);
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📶 Realtime channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          setRealtimeReady(true);
+        }
+      });
 
     setRealtimeChannel(channel);
     console.log('✅ Realtime channel setup complete');
@@ -553,6 +559,12 @@ const MeetingRoom = () => {
   const createPeerConnectionAndOffer = async (peerId: string) => {
     if (!localStream || !realtimeChannel) {
       console.log('⚠️ Cannot create peer connection: missing localStream or realtimeChannel');
+      return;
+    }
+
+    if (!realtimeReady) {
+      console.log('⏳ Realtime not ready yet, retrying offer in 300ms...');
+      setTimeout(() => createPeerConnectionAndOffer(peerId), 300);
       return;
     }
 
@@ -747,6 +759,7 @@ const MeetingRoom = () => {
       supabase.removeChannel(participantsChannel);
       setParticipantsChannel(null);
     }
+    setRealtimeReady(false);
     
     // Cleanup heartbeat
     if (heartbeatInterval) {
@@ -1058,7 +1071,7 @@ const MeetingRoom = () => {
 
   // Meeting interface
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col overflow-hidden">
       {/* Audio activation prompt */}
       {showAudioPrompt && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
@@ -1124,7 +1137,7 @@ const MeetingRoom = () => {
       {/* Main content */}
       <div className="flex-1 flex">
         {/* Video area */}
-        <div className="flex-1 relative bg-gradient-to-br from-gray-100 to-blue-100 p-6">
+        <div className="flex-1 relative bg-gradient-to-br from-gray-100 to-blue-100 p-0 md:p-6 pb-24 overflow-hidden">
           {videoParticipants.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <Card className="w-80 bg-white shadow-lg">
@@ -1215,7 +1228,7 @@ const MeetingRoom = () => {
       </div>
 
       {/* Controls */}
-      <div className="bg-white border-t border-blue-200 px-6 py-4 flex items-center justify-center gap-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-blue-200 px-6 py-3 flex items-center justify-center gap-3 z-50">
         <Button
           variant={isAudioEnabled ? "default" : "destructive"}
           size="lg"

@@ -85,7 +85,7 @@ const SortableVideo: React.FC<SortableVideoProps> = ({ participant, videoRef, is
       {...listeners}
       className={`
         relative bg-gray-900 rounded-lg overflow-hidden cursor-move
-        ${isMainView ? 'w-full h-full' : 'aspect-video'}
+        ${isMainView ? 'w-full aspect-video max-h-[60vh]' : 'aspect-video'}
         ${isDragging ? 'shadow-2xl scale-105' : ''}
         transition-all duration-200
       `}

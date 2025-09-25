@@ -37,8 +37,28 @@ const MeetingRecordings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecording, setSelectedRecording] = useState<MeetingRecording | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
-  const companyId = user?.user_metadata?.company_id;
+  // Get company ID
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!error && data?.company_id) {
+        setCompanyId(data.company_id);
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    fetchCompanyId();
+  }, [user?.id]);
 
   const loadRecordings = async () => {
     if (!companyId) return;
@@ -72,7 +92,9 @@ const MeetingRecordings: React.FC = () => {
   };
 
   useEffect(() => {
-    loadRecordings();
+    if (companyId) {
+      loadRecordings();
+    }
   }, [companyId]);
 
   const formatFileSize = (bytes: number): string => {

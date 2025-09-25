@@ -493,13 +493,56 @@ const DriveManager = () => {
                 <Card key={file.id} className="hover:shadow-lg transition-shadow rounded-2xl">
                   <CardContent className="p-4">
                     {viewMode === 'grid' ? (
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-xl mx-auto mb-2 flex items-center justify-center text-2xl">
-                          {getFileIcon(file.file_type)}
-                        </div>
-                        <p className="font-medium text-sm truncate">{file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
-                      </div>
+                       <div className="text-center">
+                         <div className="w-16 h-16 bg-gray-100 rounded-xl mx-auto mb-2 flex items-center justify-center text-2xl">
+                           {getFileIcon(file.file_type)}
+                         </div>
+                         <p className="font-medium text-sm truncate">{file.name}</p>
+                         <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
+                         
+                         <div className="flex justify-center gap-1 mt-2">
+                           {file.file_url && (
+                             <>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-6 w-6 text-blue-600 hover:text-blue-700"
+                                 onClick={() => window.open(file.file_url, '_blank')}
+                                 title="Visualizar"
+                               >
+                                 <Eye className="h-3 w-3" />
+                               </Button>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-6 w-6 text-green-600 hover:text-green-700"
+                                 onClick={() => {
+                                   const link = document.createElement('a');
+                                   link.href = file.file_url!;
+                                   link.download = file.name;
+                                   link.click();
+                                 }}
+                                 title="Baixar"
+                               >
+                                 <Download className="h-3 w-3" />
+                               </Button>
+                             </>
+                           )}
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-6 w-6 text-red-600 hover:text-red-700"
+                             onClick={() => {
+                               if (confirm('Deseja excluir este arquivo?')) {
+                                 console.log('Excluir arquivo:', file.id);
+                               }
+                             }}
+                             title="Excluir"
+                           >
+                             <Trash2 className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -509,16 +552,49 @@ const DriveManager = () => {
                           <p className="font-medium">{file.name}</p>
                           <p className="text-sm text-gray-500">{formatFileSize(file.file_size)}</p>
                         </div>
-                        <div className="flex gap-1">
-                          {file.file_url && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </div>
+                       <div className="flex gap-1">
+                           {file.file_url && (
+                             <>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-8 w-8"
+                                 onClick={() => window.open(file.file_url, '_blank')}
+                                 title="Visualizar"
+                               >
+                                 <Eye className="h-4 w-4" />
+                               </Button>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-8 w-8"
+                                 onClick={() => {
+                                   const link = document.createElement('a');
+                                   link.href = file.file_url!;
+                                   link.download = file.name;
+                                   link.click();
+                                 }}
+                                 title="Baixar"
+                               >
+                                 <Download className="h-4 w-4" />
+                               </Button>
+                             </>
+                           )}
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-8 w-8 text-red-600 hover:text-red-700"
+                             onClick={() => {
+                               if (confirm('Deseja excluir este arquivo?')) {
+                                 // Função de exclusão aqui
+                                 console.log('Excluir arquivo:', file.id);
+                               }
+                             }}
+                             title="Excluir"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
                       </div>
                     )}
                   </CardContent>

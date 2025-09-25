@@ -58,6 +58,8 @@ const ImprovedAgendaAberta = () => {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAvailabilityDialog, setShowAvailabilityDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -123,6 +125,12 @@ const ImprovedAgendaAberta = () => {
 
   const getPublicUrl = (linkSlug: string, companyName?: string) => {
     return `https://www.ellosuit.online/${companyName || 'agendamentos'}/${linkSlug}`;
+  };
+
+  const handlePreviewLink = (linkSlug: string, companyName?: string) => {
+    const url = getPublicUrl(linkSlug, companyName);
+    setPreviewUrl(url);
+    setShowPreviewDialog(true);
   };
 
   if (loading) {
@@ -402,24 +410,35 @@ const ImprovedAgendaAberta = () => {
                         )}
                       </div>
                       
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => copyLinkToClipboard(link.link_slug)}
-                          className="rounded-xl hover:bg-blue-50"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => window.open(getPublicUrl(link.link_slug), '_blank')}
-                          className="rounded-xl hover:bg-green-50"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
+                       <div className="flex gap-2">
+                         <Button
+                           variant="outline"
+                           size="icon"
+                           onClick={() => handlePreviewLink(link.link_slug)}
+                           className="rounded-xl hover:bg-purple-50"
+                           title="Pré-visualizar"
+                         >
+                           <Eye className="h-4 w-4" />
+                         </Button>
+                         <Button
+                           variant="outline"
+                           size="icon"
+                           onClick={() => copyLinkToClipboard(link.link_slug)}
+                           className="rounded-xl hover:bg-blue-50"
+                           title="Copiar link"
+                         >
+                           <Copy className="h-4 w-4" />
+                         </Button>
+                         <Button
+                           variant="outline"
+                           size="icon"
+                           onClick={() => window.open(getPublicUrl(link.link_slug), '_blank')}
+                           className="rounded-xl hover:bg-green-50"
+                           title="Abrir em nova aba"
+                         >
+                           <ExternalLink className="h-4 w-4" />
+                         </Button>
+                       </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-gray-50 to-blue-50 p4 rounded-2xl">
@@ -510,6 +529,30 @@ const ImprovedAgendaAberta = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-purple-600" />
+              Pré-visualização do Link Público
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            <div className="bg-gray-100 rounded-lg p-2 mb-4">
+              <p className="text-sm text-gray-600 truncate">{previewUrl}</p>
+            </div>
+            <div className="border rounded-lg overflow-hidden" style={{ height: '70vh' }}>
+              <iframe
+                src={previewUrl}
+                className="w-full h-full"
+                title="Preview do link público"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

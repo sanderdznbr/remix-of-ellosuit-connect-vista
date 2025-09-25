@@ -351,12 +351,12 @@ const AuthScreen = () => {
       </div>
 
       {/* Right side - Brand */}
-      <div className="flex-1 flex items-center justify-center order-1 md:order-2 min-h-[200px] md:min-h-screen" style={{ backgroundColor: '#3600FF' }}>
+      <div className="flex-1 flex items-center justify-center order-1 md:order-2 min-h-[200px] md:min-h-screen bg-ellosuit-gradient text-white">
         <div className="text-center p-4">
           <img 
             src={ellosuitLogo} 
             alt="ELLOsuit Logo" 
-            className="h-12 md:h-16 w-auto object-contain mx-auto filter brightness-0 invert"
+            className="h-12 md:h-16 w-auto object-contain mx-auto"
             onError={(e) => {
               console.error('Error loading Ellosuit logo');
               e.currentTarget.style.display = 'none';

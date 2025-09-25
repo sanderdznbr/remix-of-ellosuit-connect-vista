@@ -1219,20 +1219,19 @@ const MeetingRoom = () => {
                   <Camera className="h-6 w-6" />
                   <Mic className="h-6 w-6" />
                 </div>
+                </div>
                 <div>
                   <h3 className="font-bold text-lg mb-2">🔒 Permissões Necessárias</h3>
                   <p className="text-sm opacity-90 mb-4">
                     Para ver e ouvir outros participantes, permita o acesso à câmera e microfone
                   </p>
                 </div>
-                <Button 
+                <Button
                   onClick={activateAudio}
                   variant="secondary" 
+                  size="sm"
                   className="w-full bg-white text-red-600 hover:bg-gray-100"
-                size="sm"
-                onClick={activateAudio}
-                className="ml-auto"
-              >
+                >
                 Ativar
               </Button>
             </CardContent>

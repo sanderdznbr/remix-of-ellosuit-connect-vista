@@ -136,11 +136,11 @@ const ImprovedAgendaAberta = () => {
   }
 
   return (
-    <div className="p-6 space-y-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-gray-900">
             📅 Agenda Aberta
           </h1>
           <p className="text-lg text-gray-700 mt-2">

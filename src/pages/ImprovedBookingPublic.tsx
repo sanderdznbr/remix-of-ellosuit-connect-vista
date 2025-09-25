@@ -204,7 +204,7 @@ const ImprovedBookingPublic = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -212,7 +212,7 @@ const ImprovedBookingPublic = () => {
 
   if (!bookingLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md shadow-2xl rounded-3xl">
           <CardContent className="text-center py-16">
             <div className="w-20 h-20 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -232,7 +232,7 @@ const ImprovedBookingPublic = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-lg w-full shadow-2xl rounded-3xl overflow-hidden">
           <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white p-8 text-center">
             <CheckCircle className="h-20 w-20 mx-auto mb-4" />
@@ -296,7 +296,7 @@ const ImprovedBookingPublic = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-4 sm:py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">

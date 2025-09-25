@@ -82,9 +82,6 @@
   * {
     @apply border-border;
   }
-  html, body, #root {
-    min-height: 100%;
-  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;

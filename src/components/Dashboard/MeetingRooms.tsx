@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMeetingRooms } from '@/hooks/useMeetingRooms';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -89,19 +89,22 @@ const MeetingRooms = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-blue-50 to-white min-h-screen">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Reuniões</h1>
-          <p className="text-muted-foreground">
-            Crie e gerencie suas reuniões online em tempo real
-          </p>
+        <div className="flex items-center gap-4">
+          <img src={ellosuitLogo} alt="Ellosuit" className="h-10" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Reuniões</h1>
+            <p className="text-gray-600">
+              Crie e gerencie suas reuniões online em tempo real
+            </p>
+          </div>
         </div>
         
         <div className="flex gap-3">
           <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50">
                 <ExternalLink className="h-4 w-4" />
                 Entrar em Reunião
               </Button>
@@ -141,7 +144,7 @@ const MeetingRooms = () => {
                 <Button variant="outline" onClick={() => setShowJoinDialog(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleJoinRoom}>
+                <Button onClick={handleJoinRoom} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Entrar na Reunião
                 </Button>
               </div>
@@ -210,7 +213,7 @@ const MeetingRooms = () => {
                 <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleCreateRoom}>
+                <Button onClick={handleCreateRoom} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Criar Reunião
                 </Button>
               </div>
@@ -235,19 +238,19 @@ const MeetingRooms = () => {
           ))}
         </div>
       ) : rooms.length === 0 ? (
-        <Card className="text-center py-12">
+        <Card className="text-center py-12 shadow-lg bg-white border-0">
           <CardContent>
-            <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <CardTitle className="mb-2">Nenhuma reunião ativa</CardTitle>
-            <CardDescription className="mb-4">
+            <Video className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <CardTitle className="mb-2 text-gray-900">Nenhuma reunião ativa</CardTitle>
+            <CardDescription className="mb-4 text-gray-600">
               Crie sua primeira reunião ou entre em uma existente usando o código
             </CardDescription>
             <div className="flex justify-center gap-3">
-              <Button onClick={() => setShowCreateDialog(true)}>
+              <Button onClick={() => setShowCreateDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Reunião
               </Button>
-              <Button variant="outline" onClick={() => setShowJoinDialog(true)}>
+              <Button variant="outline" onClick={() => setShowJoinDialog(true)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Entrar em Reunião
               </Button>
@@ -257,25 +260,25 @@ const MeetingRooms = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms.map((room) => (
-            <Card key={room.id} className="hover:shadow-lg transition-shadow">
+            <Card key={room.id} className="hover:shadow-xl transition-all duration-300 bg-white border-0 shadow-lg">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{room.title}</CardTitle>
-                    <CardDescription>
-                      Código: <span className="font-mono font-semibold">{room.room_code}</span>
+                    <CardTitle className="text-lg text-gray-900">{room.title}</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      Código: <span className="font-mono font-semibold text-blue-600">{room.room_code}</span>
                     </CardDescription>
                   </div>
-                  <Badge variant={room.is_active ? 'default' : 'secondary'}>
+                  <Badge className={room.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
                     {room.is_active ? 'Ativa' : 'Inativa'}
                   </Badge>
                 </div>
               </CardHeader>
               
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
-                    <Settings className="h-4 w-4" />
+                    <Settings className="h-4 w-4 text-blue-600" />
                     {[
                       room.chat_enabled && 'Chat',
                       room.screen_sharing_enabled && 'Tela',
@@ -284,7 +287,7 @@ const MeetingRooms = () => {
                   </div>
                 </div>
                 
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-gray-500">
                   Criada em {format(new Date(room.created_at), 'dd/MM/yyyy às HH:mm', { locale: ptBR })}
                 </div>
                 
@@ -292,7 +295,7 @@ const MeetingRooms = () => {
                   <Button 
                     size="sm" 
                     onClick={() => joinExistingRoom(room.room_code)}
-                    className="flex-1"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Video className="h-4 w-4 mr-2" />
                     Entrar
@@ -301,6 +304,7 @@ const MeetingRooms = () => {
                     size="sm" 
                     variant="outline"
                     onClick={() => copyRoomLink(room.room_code)}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -312,6 +316,7 @@ const MeetingRooms = () => {
                         deleteRoom(room.id);
                       }
                     }}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

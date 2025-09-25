@@ -161,6 +161,7 @@ const MeetingRoom = () => {
   
   // Participantes
   const [showParticipants, setShowParticipants] = useState(false);
+  const [isHost, setIsHost] = useState(false);
   
   // Estados para VAD e DnD
   const [videoParticipants, setVideoParticipants] = useState<VideoParticipant[]>([]);
@@ -169,6 +170,13 @@ const MeetingRoom = () => {
   // Refs para vídeo
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideosRef = useRef<{ [key: string]: HTMLVideoElement }>({});
+  const remoteVideoRefsMapRef = useRef<Record<string, React.RefObject<HTMLVideoElement>>>({});
+  const getRemoteVideoRef = useCallback((peerId: string) => {
+    if (!remoteVideoRefsMapRef.current[peerId]) {
+      remoteVideoRefsMapRef.current[peerId] = React.createRef<HTMLVideoElement>();
+    }
+    return remoteVideoRefsMapRef.current[peerId];
+  }, []);
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -267,6 +275,34 @@ const MeetingRoom = () => {
     }
   }, [isConnected, permissionsRequested, requestMediaPermissions]);
 
+  // Se o usuário for o criador da sala, não pedir nome e entrar automaticamente
+  useEffect(() => {
+    const checkHostAndAutoJoin = async () => {
+      if (!roomCode || !user || isConnected) return;
+      try {
+        const code = (roomCode as string).toUpperCase();
+        const { data: room } = await supabase
+          .from('meeting_rooms')
+          .select('id,title,created_by')
+          .eq('room_code', code)
+          .eq('is_active', true)
+          .single();
+        if (room) {
+          setRoomInfo({ id: room.id, title: room.title });
+          if (room.created_by === user.id) {
+            setIsHost(true);
+            const defaultName = (user as any)?.user_metadata?.full_name || (user?.email?.split('@')[0] ?? 'Anfitrião');
+            setDisplayName(defaultName);
+            await joinMeeting(defaultName);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao checar anfitrião', e);
+      }
+    };
+    checkHostAndAutoJoin();
+  }, [roomCode, user, isConnected]);
+
   const ensureLocalStream = useCallback(async () => {
     if (!localStreamRef.current) {
       await requestMediaPermissions();
@@ -338,9 +374,10 @@ const MeetingRoom = () => {
 
     pc.ontrack = (event) => {
       const stream = event.streams[0];
-      const videoEl = remoteVideosRef.current[peerId];
+      const videoElRef = getRemoteVideoRef(peerId);
+      const videoEl = videoElRef.current;
       if (videoEl) {
-        videoEl.srcObject = stream;
+        (videoEl as any).srcObject = stream;
         
         // Configurar VAD para participante remoto
         try {
@@ -391,20 +428,26 @@ const MeetingRoom = () => {
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
   };
 
-  const joinMeeting = async () => {
-    if (!roomCode || !displayName.trim()) return;
+  const joinMeeting = async (nameOverride?: string) => {
+    const nameToUse = (nameOverride ?? displayName).trim();
+    if (!roomCode || !nameToUse) return;
 
-    // Abrir WebSocket para o servidor de sinalização
-    const ws = new WebSocket('wss://jwddiyuezqrpuakazvgg.functions.supabase.co/meeting-signaling');
+    // Abrir WebSocket para o servidor de sinalização (EDGE FUNCTION)
+    const ws = new WebSocket('wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/meeting-signaling');
     wsRef.current = ws;
 
     ws.onopen = () => {
       ws.send(JSON.stringify({
         type: 'join-room',
         roomCode: (roomCode as string).toUpperCase(),
-        displayName,
+        displayName: nameToUse,
         userId: user?.id || null,
       }));
+    };
+
+    ws.onerror = (e) => {
+      console.error('WebSocket error:', e);
+      toast({ title: 'Falha ao conectar', description: 'Não foi possível conectar à reunião.', variant: 'destructive' });
     };
 
     ws.onmessage = async (event) => {
@@ -467,8 +510,11 @@ const MeetingRoom = () => {
       }
     };
 
-    ws.onclose = () => {
-      // cleanup parcial
+    ws.onclose = (ev) => {
+      console.log('WebSocket closed', ev.code, ev.reason);
+      if (!isConnected) {
+        toast({ title: 'Conexão encerrada', description: 'A conexão com a reunião foi encerrada.' });
+      }
     };
   };
 
@@ -662,7 +708,7 @@ const MeetingRoom = () => {
                 Cancelar
               </Button>
               <Button 
-                onClick={joinMeeting} 
+                onClick={() => joinMeeting()}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" 
                 disabled={!displayName.trim()}
               >
@@ -781,7 +827,7 @@ const MeetingRoom = () => {
                       videoRef={
                         participant.isLocal 
                           ? localVideoRef 
-                          : { current: remoteVideosRef.current[participant.peerId] || null }
+                          : getRemoteVideoRef(participant.peerId)
                       }
                       isMainView={videoParticipants.length === 1}
                     />

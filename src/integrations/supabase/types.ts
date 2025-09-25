@@ -1303,6 +1303,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      can_view_room_participants: {
+        Args: { p_room_id: string; p_user_id: string }
+        Returns: boolean
+      }
       cleanup_meeting_rooms: {
         Args: Record<PropertyKey, never>
         Returns: undefined

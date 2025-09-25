@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -21,8 +21,6 @@ const MeetingRooms = () => {
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
     title: '',
-    description: '',
-    max_participants: 50,
     recording_enabled: false,
     chat_enabled: true,
     screen_sharing_enabled: true,
@@ -46,8 +44,6 @@ const MeetingRooms = () => {
       setShowCreateDialog(false);
       setNewRoom({
         title: '',
-        description: '',
-        max_participants: 50,
         recording_enabled: false,
         chat_enabled: true,
         screen_sharing_enabled: true,
@@ -178,29 +174,6 @@ const MeetingRooms = () => {
                   />
                 </div>
                 
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Descreva o objetivo da reunião..."
-                    value={newRoom.description}
-                    onChange={(e) => setNewRoom({...newRoom, description: e.target.value})}
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="maxParticipants">Máximo de Participantes</Label>
-                  <Input
-                    id="maxParticipants"
-                    type="number"
-                    min="2"
-                    max="100"
-                    value={newRoom.max_participants}
-                    onChange={(e) => setNewRoom({...newRoom, max_participants: parseInt(e.target.value)})}
-                  />
-                </div>
-                
                 <Separator />
                 
                 <div className="grid gap-4">
@@ -300,17 +273,7 @@ const MeetingRooms = () => {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {room.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {room.description}
-                  </p>
-                )}
-                
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {room.max_participants} máx
-                  </div>
                   <div className="flex items-center gap-1">
                     <Settings className="h-4 w-4" />
                     {[

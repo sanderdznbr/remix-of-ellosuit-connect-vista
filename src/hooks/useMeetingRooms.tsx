@@ -75,15 +75,37 @@ export const useMeetingRooms = () => {
   // Criar nova sala
   const createRoom = async (roomData: {
     title: string;
-    description?: string;
-    max_participants?: number;
     recording_enabled?: boolean;
     chat_enabled?: boolean;
     screen_sharing_enabled?: boolean;
   }) => {
-    if (!user) return null;
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para criar uma sala",
+        variant: "destructive",
+      });
+      return null;
+    }
 
     try {
+      // Buscar dados da empresa do usuário
+      const { data: companyUser, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (companyError) {
+        console.error('Erro ao buscar empresa:', companyError);
+        toast({
+          title: "Erro",
+          description: "Não foi possível encontrar sua empresa",
+          variant: "destructive",
+        });
+        return null;
+      }
+
       // Gerar código único da sala
       const roomCode = Math.random().toString(36).substring(2, 12).toUpperCase();
       
@@ -91,13 +113,12 @@ export const useMeetingRooms = () => {
         .from('meeting_rooms')
         .insert({
           title: roomData.title,
-          description: roomData.description,
           room_code: roomCode,
-          max_participants: roomData.max_participants || 50,
+          max_participants: 50,
           recording_enabled: roomData.recording_enabled || false,
           chat_enabled: roomData.chat_enabled !== false,
           screen_sharing_enabled: roomData.screen_sharing_enabled !== false,
-          company_id: user.user_metadata?.company_id || 'default',
+          company_id: companyUser.company_id,
           created_by: user.id,
         })
         .select()
@@ -107,7 +128,7 @@ export const useMeetingRooms = () => {
 
       toast({
         title: "Sala criada!",
-        description: `Sala "${roomData.title}" criada com sucesso`,
+        description: `Sala "${roomData.title}" criada com código ${roomCode}`,
       });
 
       fetchRooms();

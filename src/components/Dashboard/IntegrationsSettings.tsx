@@ -3,7 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw, Plug } from 'lucide-react';
+import { Video, ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw, Plug, MessageSquare, Slack } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 
@@ -161,7 +162,12 @@ const IntegrationsSettings = () => {
               {googleConnected ? (
                 <p>✅ Conectado - Reuniões automáticas ativadas</p>
               ) : googleError ? (
-                <p className="text-red-600">❌ {googleError}</p>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    ❌ {googleError}
+                  </AlertDescription>
+                </Alert>
               ) : googleProcessingOAuth ? (
                 <p className="text-blue-600">🔄 Processando conexão...</p>
               ) : (
@@ -230,6 +236,58 @@ const IntegrationsSettings = () => {
               ) : (
                 <p>Conecte para criar reuniões Zoom automaticamente</p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Business - Coming Soon */}
+        <Card className="shadow-lg border-0 rounded-2xl opacity-70">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-50">
+                <MessageSquare className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-700">WhatsApp Business</h3>
+                <p className="text-sm text-gray-500">Automação de mensagens</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline">Em Breve</Badge>
+              <Button disabled className="min-w-[120px]">
+                Em Desenvolvimento
+              </Button>
+            </div>
+            <div className="text-sm text-gray-500">
+              <p>Integração com WhatsApp Business API para automação de mensagens e atendimento.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Slack - Coming Soon */}
+        <Card className="shadow-lg border-0 rounded-2xl opacity-70">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-50">
+                <Slack className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-700">Slack</h3>
+                <p className="text-sm text-gray-500">Notificações e comandos</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline">Em Breve</Badge>
+              <Button disabled className="min-w-[120px]">
+                Em Desenvolvimento
+              </Button>
+            </div>
+            <div className="text-sm text-gray-500">
+              <p>Receba notificações e gerencie reuniões diretamente no Slack.</p>
             </div>
           </CardContent>
         </Card>

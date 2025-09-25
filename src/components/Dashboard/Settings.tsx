@@ -6,6 +6,9 @@ import SidebarEditor from './SidebarEditor';
 import IntegrationsSettings from './IntegrationsSettings';
 import NotificationSettings from './NotificationSettings';
 import { Settings as SettingsIcon, Palette, Link, Bell } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('appearance');
@@ -60,18 +63,137 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Gerais</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-gray-600">
-                  Configurações gerais do sistema em breve...
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Informações da Conta */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  <span>Informações da Conta</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    disabled
+                    className="bg-gray-50"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Email não pode ser alterado aqui
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="nome">Nome de Display</Label>
+                  <Input
+                    id="nome"
+                    type="text"
+                    placeholder="Seu Nome"
+                  />
+                </div>
+                
+                <Button className="w-full">
+                  Salvar Alterações
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Configurações de Segurança */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  <span>Segurança</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="outline" className="w-full justify-start">
+                  Alterar Senha
+                </Button>
+                
+                <Button variant="outline" className="w-full justify-start">
+                  Configurar 2FA
+                </Button>
+                
+                <Button variant="outline" className="w-full justify-start">
+                  Sessões Ativas
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Preferências do Sistema */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  <span>Preferências</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Tema Escuro</Label>
+                    <p className="text-sm text-gray-500">Ativar modo escuro</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Toggle
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Idioma</Label>
+                    <p className="text-sm text-gray-500">Português (BR)</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Alterar
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Fuso Horário</Label>
+                    <p className="text-sm text-gray-500">GMT-3 (Brasília)</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Alterar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dados e Backup */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  <span>Dados e Backup</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="outline" className="w-full justify-start">
+                  Exportar Dados
+                </Button>
+                
+                <Button variant="outline" className="w-full justify-start">
+                  Importar Dados
+                </Button>
+                
+                <div className="border-t pt-4">
+                  <Button variant="destructive" className="w-full">
+                    Excluir Conta
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Esta ação não pode ser desfeita
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

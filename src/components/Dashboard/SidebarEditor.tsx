@@ -192,23 +192,40 @@ const SidebarEditor = () => {
 
       // Upload da logo se houver arquivo selecionado
       if (customLogoFile) {
+        console.log('Iniciando upload da logo:', customLogoFile.name);
         const uploadedLogoUrl = await uploadFile(customLogoFile, 'logos');
         if (uploadedLogoUrl) {
+          console.log('Logo uploadada com sucesso:', uploadedLogoUrl);
           logoUrl = uploadedLogoUrl;
+        } else {
+          console.error('Falha no upload da logo');
+          return; // Não continuar se o upload falhar
         }
         setCustomLogoFile(null);
       }
 
       // Upload do favicon se houver arquivo selecionado
       if (faviconFile) {
+        console.log('Iniciando upload do favicon:', faviconFile.name);
         const uploadedFaviconUrl = await uploadFile(faviconFile, 'logos');
         if (uploadedFaviconUrl) {
+          console.log('Favicon uploadado com sucesso:', uploadedFaviconUrl);
           faviconUrl = uploadedFaviconUrl;
+        } else {
+          console.error('Falha no upload do favicon');
+          return; // Não continuar se o upload falhar
         }
         setFaviconFile(null);
       }
 
       // Salvar todas as configurações de uma vez
+      console.log('Salvando configurações:', {
+        sidebar_color: sidebarColor,
+        sidebar_background_color: backgroundColor,
+        custom_logo_url: logoUrl,
+        custom_favicon_url: faviconUrl
+      });
+
       await updateSettings({
         sidebar_color: sidebarColor,
         sidebar_background_color: backgroundColor,
@@ -220,6 +237,7 @@ const SidebarEditor = () => {
       await refetch();
 
       setPendingChanges(false);
+      console.log('Todas as configurações salvas com sucesso');
     } catch (error) {
       console.error('Erro ao salvar alterações:', error);
     }

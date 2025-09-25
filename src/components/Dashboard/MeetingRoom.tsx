@@ -154,6 +154,9 @@ const MeetingRoom = () => {
   const [iceCandidateQueue, setIceCandidateQueue] = useState<Map<string, RTCIceCandidateInit[]>>(new Map());
   const [showAudioPrompt, setShowAudioPrompt] = useState(false);
   const [realtimeReady, setRealtimeReady] = useState(false);
+  const [iceConfig, setIceConfig] = useState<{ iceServers: RTCIceServer[] }>({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  });
 
   // Refs
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -590,21 +593,76 @@ const MeetingRoom = () => {
     console.log(`🔗 Creating peer connection for ${peerId}`);
     
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
+      iceServers: iceConfig.iceServers
     });
 
     // Add local stream tracks
     if (localStream) {
-      localStream.getTracks().forEach(track => {
-        console.log('➕ Adding local track:', track.kind);
+      for (const track of localStream.getTracks()) {
         pc.addTrack(track, localStream);
-      });
+      }
     }
 
-    // Handle incoming stream
+    // Handle remote stream
+    pc.ontrack = (event) => {
+      console.log(`🎵 Remote track received from ${peerId}`);
+      const [remoteStream] = event.streams;
+      
+      const videoRef = getRemoteVideoRef(peerId);
+      if (videoRef.current) {
+        videoRef.current.srcObject = remoteStream;
+        
+        // Handle autoplay blocking
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.warn('⚠️ Autoplay blocked, showing audio prompt:', error);
+            setShowAudioPrompt(true);
+          });
+        }
+      }
+
+      // Update participant with stream
+      setParticipants(prev => prev.map(p => 
+        p.peerId === peerId ? { ...p, stream: remoteStream } : p
+      ));
+    };
+
+    // ICE handling
+    pc.onicecandidate = (event) => {
+      if (event.candidate && realtimeChannel) {
+        console.log(`🧊 Sending ICE candidate to ${peerId}`);
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'webrtc-ice-candidate',
+          payload: {
+            targetPeerId: peerId,
+            fromPeerId: myPeerId,
+            candidate: event.candidate
+          }
+        });
+      }
+    };
+
+    // Connection state monitoring
+    pc.oniceconnectionstatechange = () => {
+      console.log(`🧊 ICE connection state for ${peerId}:`, pc.iceConnectionState);
+      
+      if (pc.iceConnectionState === 'failed') {
+        console.log(`🔄 Attempting ICE restart for ${peerId}`);
+        pc.restartIce();
+      }
+    };
+
+    // Handle negotiation needed
+    pc.onnegotiationneeded = async () => {
+      console.log(`🤝 Negotiation needed for ${peerId}`);
+      if (pc.signalingState === 'stable') {
+        await createPeerConnectionAndOffer(peerId);
+      }
+    };
+
+    // Store the connection
     pc.ontrack = (event) => {
       console.log('📺 Received remote track from', peerId, event.streams[0]);
       const remoteStream = event.streams[0];
@@ -1272,6 +1330,30 @@ const MeetingRoom = () => {
         >
           <PhoneOff className="h-5 w-5" />
         </Button>
+        {showAudioPrompt && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4" />
+              <span>Clique para ativar o áudio</span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  // Try to play all remote videos
+                  Object.values(remoteVideoRefsMapRef.current).forEach(ref => {
+                    if (ref.current) {
+                      ref.current.play().catch(console.warn);
+                    }
+                  });
+                  setShowAudioPrompt(false);
+                }}
+              >
+                Ativar
+              </Button>
+            </div>
+          </div>
+        )}
+        
       </div>
     </div>
   );

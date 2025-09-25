@@ -37,152 +37,146 @@ serve(async (req) => {
         const data = JSON.parse(event.data);
         console.log('📨 Received:', data.type);
 
-        switch (data.type) {
-          case 'join-room': {
-            const roomCode: string = data.roomCode;
-            const displayName: string = data.displayName;
-            const userId = data.userId ?? null;
+        if (data.type === 'join-room') {
+          const roomCode: string = data.roomCode;
+          const displayName: string = data.displayName;
+          const userId = data.userId ?? null;
 
-            // Get room
-            const { data: room, error: roomError } = await supabase
-              .from('meeting_rooms')
-              .select('*')
-              .eq('room_code', roomCode)
-              .eq('is_active', true)
-              .single();
-            
-            if (roomError || !room) {
-              socket.send(JSON.stringify({ type: 'error', message: 'Room not found or inactive' }));
-              return;
-            }
+          // Get room
+          const { data: room, error: roomError } = await supabase
+            .from('meeting_rooms')
+            .select('*')
+            .eq('room_code', roomCode)
+            .eq('is_active', true)
+            .single();
+          
+          if (roomError || !room) {
+            socket.send(JSON.stringify({ type: 'error', message: 'Room not found or inactive' }));
+            return;
+          }
 
-            // Generate peer ID
-            peerId = `peer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            roomId = room.id;
+          // Generate peer ID
+          peerId = `peer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          roomId = room.id;
+          
+          if (!roomId) {
+            socket.send(JSON.stringify({ type: 'error', message: 'Invalid room ID' }));
+            return;
+          }
 
-            // Add participant
-            const { data: participant, error: participantError } = await supabase
-              .from('room_participants')
-              .insert({
-                room_id: room.id,
-                user_id: userId,
-                display_name: displayName,
+          // Add participant
+          const { data: participant, error: participantError } = await supabase
+            .from('room_participants')
+            .insert({
+              room_id: room.id,
+              user_id: userId,
+              display_name: displayName,
+              peer_id: peerId,
+              is_host: userId ? room.created_by === userId : false,
+              connection_status: 'connected',
+            })
+            .select()
+            .single();
+          
+          if (participantError || !participant) {
+            console.error('❌ Error adding participant:', participantError);
+            socket.send(JSON.stringify({ type: 'error', message: 'Failed to join room' }));
+            return;
+          }
+
+          // Store connection
+          if (!roomConnections.has(roomId)) {
+            roomConnections.set(roomId, new Map());
+          }
+          roomConnections.get(roomId)!.set(peerId, socket);
+
+          // Get other active participants (exclude this one)
+          const { data: others } = await supabase
+            .from('room_participants')
+            .select('id, peer_id, display_name, is_host')
+            .eq('room_id', room.id)
+            .is('left_at', null)
+            .neq('id', participant.id);
+
+          // Send success response
+          socket.send(JSON.stringify({
+            type: 'joined-room',
+            room,
+            participant,
+            peerId,
+            otherParticipants: others ?? [],
+          }));
+
+          // Notify other participants
+          const roomSockets = roomConnections.get(roomId);
+          if (roomSockets) {
+            const newParticipantMessage = JSON.stringify({
+              type: 'participant-joined',
+              participant: {
+                id: participant.id,
                 peer_id: peerId,
-                is_host: userId ? room.created_by === userId : false,
-                connection_status: 'connected',
-              })
-              .select()
-              .single();
-            
-            if (participantError || !participant) {
-              console.error('❌ Error adding participant:', participantError);
-              socket.send(JSON.stringify({ type: 'error', message: 'Failed to join room' }));
-              return;
-            }
+                display_name: displayName,
+                is_host: participant.is_host
+              }
+            });
 
-            // Store connection
-            if (!roomConnections.has(roomId)) {
-              roomConnections.set(roomId, new Map());
-            }
-            roomConnections.get(roomId)!.set(peerId, socket);
-
-            // Get other active participants (exclude this one)
-            const { data: others } = await supabase
-              .from('room_participants')
-              .select('id, peer_id, display_name, is_host')
-              .eq('room_id', room.id)
-              .is('left_at', null)
-              .neq('id', participant.id);
-
-            // Send success response
-            socket.send(JSON.stringify({
-              type: 'joined-room',
-              room,
-              participant,
-              peerId,
-              otherParticipants: others ?? [],
-            }));
-
-            // Notify other participants
-            const roomSockets = roomConnections.get(roomId);
-            if (roomSockets) {
-              const newParticipantMessage = JSON.stringify({
-                type: 'participant-joined',
-                participant: {
-                  id: participant.id,
-                  peer_id: peerId,
-                  display_name: displayName,
-                  is_host: participant.is_host
-                }
-              });
-
-              for (const [otherPeerId, otherSocket] of roomSockets) {
-                if (otherPeerId !== peerId && otherSocket.readyState === WebSocket.OPEN) {
-                  otherSocket.send(newParticipantMessage);
-                }
+            for (const [otherPeerId, otherSocket] of roomSockets) {
+              if (otherPeerId !== peerId && otherSocket.readyState === WebSocket.OPEN) {
+                otherSocket.send(newParticipantMessage);
               }
             }
-
-            console.log(`✅ Participant joined: ${displayName} (${peerId}) in room ${room.id}`);
-            break;
           }
 
-          case 'webrtc-offer':
-          case 'webrtc-answer':
-          case 'webrtc-ice-candidate': {
-            // Forward WebRTC signaling messages to specific peer
-            if (!roomId || !peerId) {
-              socket.send(JSON.stringify({ type: 'error', message: 'Not joined to any room' }));
-              return;
-            }
+          console.log(`✅ Participant joined: ${displayName} (${peerId}) in room ${room.id}`);
 
-            const targetPeerId = data.targetPeerId;
-            const roomSockets = roomConnections.get(roomId);
-            
-            if (roomSockets && roomSockets.has(targetPeerId)) {
-              const targetSocket = roomSockets.get(targetPeerId);
-              if (targetSocket && targetSocket.readyState === WebSocket.OPEN) {
-                // Forward the message with sender info
-                const forwardedMessage = {
-                  ...data,
-                  fromPeerId: peerId
-                };
-                targetSocket.send(JSON.stringify(forwardedMessage));
-                console.log(`📤 Forwarded ${data.type} from ${peerId} to ${targetPeerId}`);
-              }
-            }
-            break;
+        } else if (data.type === 'webrtc-offer' || data.type === 'webrtc-answer' || data.type === 'webrtc-ice-candidate') {
+          // Forward WebRTC signaling messages to specific peer
+          if (!roomId || !peerId) {
+            socket.send(JSON.stringify({ type: 'error', message: 'Not joined to any room' }));
+            return;
           }
 
-          case 'chat-message': {
-            // Broadcast chat message to all participants in room
-            if (!roomId || !peerId) {
-              socket.send(JSON.stringify({ type: 'error', message: 'Not joined to any room' }));
-              return;
+          const targetPeerId = data.targetPeerId;
+          const roomSockets = roomConnections.get(roomId);
+          
+          if (roomSockets && roomSockets.has(targetPeerId)) {
+            const targetSocket = roomSockets.get(targetPeerId);
+            if (targetSocket && targetSocket.readyState === WebSocket.OPEN) {
+              // Forward the message with sender info
+              const forwardedMessage = {
+                ...data,
+                fromPeerId: peerId
+              };
+              targetSocket.send(JSON.stringify(forwardedMessage));
+              console.log(`📤 Forwarded ${data.type} from ${peerId} to ${targetPeerId}`);
             }
+          }
 
-            const roomSockets = roomConnections.get(roomId);
-            if (roomSockets) {
-              const chatMessage = JSON.stringify({
-                type: 'chat-message',
-                message: data.message,
-                senderName: data.senderName,
-                timestamp: new Date().toISOString()
-              });
+        } else if (data.type === 'chat-message') {
+          // Broadcast chat message to all participants in room
+          if (!roomId || !peerId) {
+            socket.send(JSON.stringify({ type: 'error', message: 'Not joined to any room' }));
+            return;
+          }
 
-              for (const [otherPeerId, otherSocket] of roomSockets) {
-                if (otherPeerId !== peerId && otherSocket.readyState === WebSocket.OPEN) {
-                  otherSocket.send(chatMessage);
-                }
+          const roomSockets = roomConnections.get(roomId);
+          if (roomSockets) {
+            const chatMessage = JSON.stringify({
+              type: 'chat-message',
+              message: data.message,
+              senderName: data.senderName,
+              timestamp: new Date().toISOString()
+            });
+
+            for (const [otherPeerId, otherSocket] of roomSockets) {
+              if (otherPeerId !== peerId && otherSocket.readyState === WebSocket.OPEN) {
+                otherSocket.send(chatMessage);
               }
             }
-            break;
           }
           
-          case 'ping': {
-            socket.send(JSON.stringify({ type: 'pong' }));
-            break;
-          }
+        } else if (data.type === 'ping') {
+          socket.send(JSON.stringify({ type: 'pong' }));
         }
       } catch (e) {
         console.error('❌ onmessage error:', e);

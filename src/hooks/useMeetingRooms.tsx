@@ -46,16 +46,16 @@ export const useMeetingRooms = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Buscar salas da empresa
+  // Buscar salas recentes (ativas e criadas na última hora)
   const fetchRooms = async () => {
-    if (!user) return;
-    
     setLoading(true);
     try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('meeting_rooms')
         .select('*')
         .eq('is_active', true)
+        .gt('created_at', oneHourAgo)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -147,8 +147,10 @@ export const useMeetingRooms = () => {
   // Entrar em uma sala
   const joinRoom = async (roomCode: string, displayName: string) => {
     try {
-      // Buscar sala pelo código (case-insensitive usando código em maiúsculas)
       const code = (roomCode || '').toUpperCase();
+      console.log('🔍 Tentando entrar na sala:', { code, displayName, hasUser: !!user });
+
+      // Buscar sala pelo código
       const { data: room, error: roomError } = await supabase
         .from('meeting_rooms')
         .select('*')
@@ -157,7 +159,7 @@ export const useMeetingRooms = () => {
         .single();
 
       if (roomError || !room) {
-        console.error('Sala não encontrada:', roomError);
+        console.error('❌ Sala não encontrada:', roomError);
         toast({
           title: "Sala não encontrada",
           description: "Verifique o código da sala e tente novamente",
@@ -169,7 +171,7 @@ export const useMeetingRooms = () => {
       // Gerar peer ID único
       const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-      // Adicionar participante (permitir anônimo)
+      // Adicionar participante (permite convidados)
       const { data: participant, error: participantError } = await supabase
         .from('room_participants')
         .insert({
@@ -184,25 +186,30 @@ export const useMeetingRooms = () => {
         .single();
 
       if (participantError) {
-        console.error('Erro ao adicionar participante:', participantError);
-        throw participantError;
+        console.error('❌ Erro ao adicionar participante:', participantError);
+        toast({
+          title: 'Erro',
+          description: participantError.message || 'Falha ao entrar na sala',
+          variant: 'destructive',
+        });
+        return null;
       }
 
       setCurrentRoom(room);
       await fetchParticipants(room.id);
-      
+
       toast({
-        title: "Conectado",
+        title: 'Conectado',
         description: `Você entrou na sala "${room.title}"`,
       });
 
       return { room, participant };
     } catch (error) {
-      console.error('Erro ao entrar na sala:', error);
+      console.error('❌ Erro inesperado ao entrar na sala:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível entrar na sala",
-        variant: "destructive",
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível entrar na sala',
+        variant: 'destructive',
       });
       return null;
     }
@@ -343,5 +350,19 @@ export const useMeetingRooms = () => {
     updateParticipantStatus,
     fetchRooms,
     fetchParticipants,
+    deleteRoom: async (roomId: string) => {
+      try {
+        const { error } = await supabase
+          .from('meeting_rooms')
+          .delete()
+          .eq('id', roomId);
+        if (error) throw error;
+        toast({ title: 'Sala excluída' });
+        fetchRooms();
+      } catch (error) {
+        console.error('Erro ao excluir sala:', error);
+        toast({ title: 'Erro', description: 'Não foi possível excluir a sala', variant: 'destructive' });
+      }
+    }
   };
 };

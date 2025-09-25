@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Video, Users, Settings, ExternalLink, Copy } from 'lucide-react';
+import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,7 +26,7 @@ const MeetingRooms = () => {
     screen_sharing_enabled: true,
   });
 
-  const { rooms, loading, createRoom, joinRoom } = useMeetingRooms();
+  const { rooms, loading, createRoom, joinRoom, deleteRoom } = useMeetingRooms();
   const { toast } = useToast();
 
   const handleCreateRoom = async () => {
@@ -303,6 +303,17 @@ const MeetingRooms = () => {
                     onClick={() => copyRoomLink(room.room_code)}
                   >
                     <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm('Deseja excluir esta reunião?')) {
+                        deleteRoom(room.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

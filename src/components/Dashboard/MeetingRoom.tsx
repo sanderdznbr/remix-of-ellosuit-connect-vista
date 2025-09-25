@@ -17,6 +17,25 @@ import { useMeetingRooms, type RoomParticipant } from '@/hooks/useMeetingRooms';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ChatMessage {
   id: string;
@@ -25,6 +44,94 @@ interface ChatMessage {
   timestamp: string;
   isOwn: boolean;
 }
+
+interface VideoParticipant {
+  id: string;
+  name: string;
+  peerId: string;
+  isLocal: boolean;
+  isSpeaking: boolean;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+  screenSharing: boolean;
+}
+
+interface SortableVideoProps {
+  participant: VideoParticipant;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  isMainView?: boolean;
+}
+
+// Componente SortableVideo 
+const SortableVideo: React.FC<SortableVideoProps> = ({ participant, videoRef, isMainView = false }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: participant.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`
+        relative bg-gray-900 rounded-lg overflow-hidden cursor-move
+        ${isMainView ? 'w-full h-full' : 'aspect-video'}
+        ${participant.isSpeaking ? 'ring-4 ring-blue-500 ring-opacity-70 shadow-lg shadow-blue-500/30' : ''}
+        ${isDragging ? 'shadow-2xl scale-105' : ''}
+        transition-all duration-200
+      `}
+    >
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={participant.isLocal}
+        className="w-full h-full object-cover"
+      />
+      
+      {/* Nome e status */}
+      <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm flex items-center gap-2">
+        <span>{participant.name}{participant.isLocal ? ' (Você)' : ''}</span>
+        {!participant.audioEnabled && <MicOff className="h-3 w-3" />}
+        {!participant.videoEnabled && <VideoOff className="h-3 w-3" />}
+        {participant.screenSharing && <Monitor className="h-3 w-3" />}
+      </div>
+      
+      {/* Indicador de fala */}
+      {participant.isSpeaking && (
+        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
+          Falando
+        </div>
+      )}
+      
+      {/* Overlay quando vídeo está desativado */}
+      {!participant.videoEnabled && (
+        <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-2xl font-bold">
+                {participant.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <p className="text-sm">{participant.name}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MeetingRoom = () => {
   const { roomCode } = useParams();
@@ -55,6 +162,10 @@ const MeetingRoom = () => {
   // Participantes
   const [showParticipants, setShowParticipants] = useState(false);
   
+  // Estados para VAD e DnD
+  const [videoParticipants, setVideoParticipants] = useState<VideoParticipant[]>([]);
+  const [speakingStates, setSpeakingStates] = useState<Record<string, boolean>>({});
+  
   // Refs para vídeo
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideosRef = useRef<{ [key: string]: HTMLVideoElement }>({});
@@ -64,6 +175,55 @@ const MeetingRoom = () => {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const peersRef = useRef<Record<string, RTCPeerConnection>>({});
   const targetMapRef = useRef<Record<string, string>>({});
+  
+  // Refs para VAD
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const vadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // VAD - Voice Activity Detection
+  const setupVAD = useCallback(async () => {
+    if (!localStreamRef.current) return;
+    
+    try {
+      audioContextRef.current = new AudioContext();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      
+      const source = audioContextRef.current.createMediaStreamSource(localStreamRef.current);
+      source.connect(analyserRef.current);
+      
+      analyserRef.current.fftSize = 256;
+      const bufferLength = analyserRef.current.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      const detectSpeaking = () => {
+        if (!analyserRef.current) return;
+        
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Calcular média do volume
+        const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+        const isSpeaking = average > 30 && audioEnabled; // threshold para detectar fala
+        
+        setSpeakingStates(prev => ({
+          ...prev,
+          local: isSpeaking
+        }));
+      };
+      
+      vadIntervalRef.current = setInterval(detectSpeaking, 100);
+    } catch (error) {
+      console.error('Error setting up VAD:', error);
+    }
+  }, [audioEnabled]);
 
   // Solicitar permissões de mídia
   const requestMediaPermissions = useCallback(async () => {
@@ -82,6 +242,9 @@ const MeetingRoom = () => {
       setVideoEnabled(true);
       setPermissionsRequested(true);
       
+      // Configurar VAD
+      await setupVAD();
+      
       toast({
         title: "Permissões concedidas",
         description: "Câmera e microfone foram ativados",
@@ -95,7 +258,7 @@ const MeetingRoom = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, setupVAD]);
 
   // Inicializar mídia quando conectar
   useEffect(() => {
@@ -110,6 +273,62 @@ const MeetingRoom = () => {
     }
   }, [requestMediaPermissions]);
 
+  // Atualizar lista de participantes de vídeo
+  const updateVideoParticipants = useCallback(() => {
+    const videoParticipantsList: VideoParticipant[] = [];
+    
+    // Adicionar participante local
+    if (localPeerId && displayName) {
+      videoParticipantsList.push({
+        id: 'local',
+        name: displayName,
+        peerId: localPeerId,
+        isLocal: true,
+        isSpeaking: speakingStates.local || false,
+        audioEnabled,
+        videoEnabled,
+        screenSharing,
+      });
+    }
+    
+    // Adicionar participantes remotos
+    participants.forEach(participant => {
+      if (participant.peer_id !== localPeerId) {
+        videoParticipantsList.push({
+          id: participant.id,
+          name: participant.display_name,
+          peerId: participant.peer_id,
+          isLocal: false,
+          isSpeaking: speakingStates[participant.peer_id] || false,
+          audioEnabled: participant.audio_enabled ?? true,
+          videoEnabled: participant.video_enabled ?? true,
+          screenSharing: participant.screen_sharing ?? false,
+        });
+      }
+    });
+    
+    setVideoParticipants(videoParticipantsList);
+  }, [participants, localPeerId, displayName, speakingStates, audioEnabled, videoEnabled, screenSharing]);
+  
+  // Atualizar participantes quando states mudarem
+  useEffect(() => {
+    updateVideoParticipants();
+  }, [updateVideoParticipants]);
+
+  // DnD handler
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setVideoParticipants((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
   const createPeerConnection = (peerId: string) => {
     const pc = new RTCPeerConnection({
       iceServers: [
@@ -122,6 +341,33 @@ const MeetingRoom = () => {
       const videoEl = remoteVideosRef.current[peerId];
       if (videoEl) {
         videoEl.srcObject = stream;
+        
+        // Configurar VAD para participante remoto
+        try {
+          const audioContext = new AudioContext();
+          const analyser = audioContext.createAnalyser();
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+          
+          analyser.fftSize = 256;
+          const bufferLength = analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          
+          const detectRemoteSpeaking = () => {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+            const isSpeaking = average > 30;
+            
+            setSpeakingStates(prev => ({
+              ...prev,
+              [peerId]: isSpeaking
+            }));
+          };
+          
+          setInterval(detectRemoteSpeaking, 100);
+        } catch (error) {
+          console.error('Error setting up remote VAD:', error);
+        }
       }
     };
 
@@ -227,6 +473,14 @@ const MeetingRoom = () => {
   };
 
   const leaveMeeting = async () => {
+    // Cleanup VAD
+    if (vadIntervalRef.current) {
+      clearInterval(vadIntervalRef.current);
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+    }
+    
     // encerrar rtc
     Object.values(peersRef.current).forEach(pc => pc.close());
     peersRef.current = {};
@@ -247,6 +501,11 @@ const MeetingRoom = () => {
     if (audioTrack) {
       audioTrack.enabled = !audioEnabled;
       setAudioEnabled(!audioEnabled);
+      
+      // Reconfigurar VAD quando audio muda
+      if (!audioEnabled) {
+        await setupVAD();
+      }
       
       if (currentParticipant) {
         await updateParticipantStatus(currentParticipant.id, { audio_enabled: !audioEnabled });
@@ -471,7 +730,7 @@ const MeetingRoom = () => {
       {/* Main content */}
       <div className="flex-1 flex">
         {/* Video area */}
-        <div className="flex-1 relative bg-gradient-to-br from-gray-100 to-blue-100 flex items-center justify-center">
+        <div className="flex-1 relative bg-gradient-to-br from-gray-100 to-blue-100 p-6">
           {!permissionsRequested && (
             <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
               <Card className="w-80 shadow-xl">
@@ -489,62 +748,48 @@ const MeetingRoom = () => {
             </div>
           )}
 
-          {/* Local video */}
-          <div className="absolute top-4 right-4 w-56 h-42 bg-white rounded-xl overflow-hidden border-2 border-blue-200 shadow-lg">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
-              Você {!audioEnabled && <MicOff className="inline h-3 w-3 ml-1" />}
+          {videoParticipants.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <Card className="w-80 bg-white shadow-lg">
+                <CardContent className="p-8 text-center">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <CardTitle className="mb-2 text-gray-700">Aguardando outros participantes</CardTitle>
+                  <p className="text-gray-500">
+                    Compartilhe o código <span className="font-mono font-semibold text-blue-600">{roomCode}</span> para convidar pessoas
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-            {screenSharing && (
-              <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-full text-xs">
-                Compartilhando
-              </div>
-            )}
-          </div>
-
-          {/* Remote videos grid */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-            {participants.filter(p => p.id !== currentParticipant?.id).length === 0 ? (
-              <div className="col-span-full flex items-center justify-center">
-                <Card className="w-80 bg-white shadow-lg">
-                  <CardContent className="p-8 text-center">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <CardTitle className="mb-2 text-gray-700">Aguardando outros participantes</CardTitle>
-                    <p className="text-gray-500">
-                      Compartilhe o código <span className="font-mono font-semibold text-blue-600">{roomCode}</span> para convidar pessoas
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              participants.filter(p => p.id !== currentParticipant?.id).map((participant) => (
-                <div key={participant.id} className="aspect-video bg-white rounded-xl overflow-hidden relative shadow-lg border border-blue-200">
-                  <video
-                    ref={(el) => {
-                      if (el) remoteVideosRef.current[participant.peer_id] = el;
-                    }}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
-                    {participant.display_name}
-                    {!participant.audio_enabled && <MicOff className="inline h-3 w-3 ml-1" />}
-                  </div>
-                  <div className="absolute top-2 right-2">
-                    {participant.is_host && <Badge className="text-xs bg-green-600">Host</Badge>}
-                    {participant.screen_sharing && <Badge className="text-xs bg-orange-600 ml-1">Tela</Badge>}
-                  </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={videoParticipants.map(p => p.id)} strategy={rectSortingStrategy}>
+                <div className={`
+                  w-full h-full grid gap-4 
+                  ${videoParticipants.length === 1 ? 'grid-cols-1' : 
+                    videoParticipants.length === 2 ? 'grid-cols-2' : 
+                    videoParticipants.length <= 4 ? 'grid-cols-2 grid-rows-2' : 
+                    'grid-cols-3 grid-rows-3'}
+                `}>
+                  {videoParticipants.map((participant) => (
+                    <SortableVideo
+                      key={participant.id}
+                      participant={participant}
+                      videoRef={
+                        participant.isLocal 
+                          ? localVideoRef 
+                          : { current: remoteVideosRef.current[participant.peerId] || null }
+                      }
+                      isMainView={videoParticipants.length === 1}
+                    />
+                  ))}
                 </div>
-              ))
-            )}
-          </div>
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
 
         {/* Sidebar */}

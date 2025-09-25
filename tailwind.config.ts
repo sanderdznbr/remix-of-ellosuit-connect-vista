@@ -64,12 +64,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				ellosuit: {
-					purple: '#6B46C1',
-					'purple-dark': '#5B21B6',
-					'purple-light': '#8B5CF6',
+					purple: 'hsl(252, 56%, 57%)',
+					'purple-dark': 'hsl(258, 70%, 42%)',
+					'purple-light': 'hsl(258, 90%, 66%)',
 					gradient: {
-						from: '#6B46C1',
-						to: '#8B5CF6'
+						from: 'hsl(252, 56%, 57%)',
+						to: 'hsl(258, 90%, 66%)'
 					}
 				}
 			},
@@ -123,8 +123,8 @@ export default {
 				'slide-in': 'slide-in 0.6s ease-out'
 			},
 			backgroundImage: {
-				'ellosuit-gradient': 'linear-gradient(135deg, #6B46C1 0%, #8B5CF6 100%)',
-				'ellosuit-gradient-hover': 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)'
+				'ellosuit-gradient': 'linear-gradient(135deg, hsl(252, 56%, 57%) 0%, hsl(258, 90%, 66%) 100%)',
+				'ellosuit-gradient-hover': 'linear-gradient(135deg, hsl(258, 70%, 42%) 0%, hsl(262, 83%, 58%) 100%)'
 			}
 		}
 	},

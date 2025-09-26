@@ -274,19 +274,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     );
   }
 
-  // Not ready state
-  if (!token || !serverUrl) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-muted-foreground">Preparando sala...</p>
-          <Button onClick={() => generateToken(participantName || 'Convidado')} variant="outline" size="sm">
-            Recarregar
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="zoom-meeting-layout-light">

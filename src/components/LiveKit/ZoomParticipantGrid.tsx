@@ -52,7 +52,7 @@ const ZoomParticipantGrid: React.FC = () => {
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                className="w-full aspect-video bg-black rounded-lg overflow-hidden"
+                className="w-full aspect-video bg-background rounded-lg overflow-hidden"
               >
                 <ResizableVideoTile
                   trackRef={trackRef}
@@ -71,7 +71,7 @@ const ZoomParticipantGrid: React.FC = () => {
                 {cameraTracks.map((trackRef: TrackReference, index: number) => (
                   <div
                     key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                    className="flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden bg-gray-900"
+                    className="flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden bg-background"
                   >
                     <ResizableVideoTile
                       trackRef={trackRef}
@@ -96,7 +96,7 @@ const ZoomParticipantGrid: React.FC = () => {
           {cameraTracks.map((trackRef: TrackReference, index: number) => (
             <div
               key={`camera-${trackRef.participant.identity}-${index}`}
-              className="aspect-video bg-gray-900 rounded-lg overflow-hidden"
+              className="aspect-video bg-background rounded-lg overflow-hidden"
             >
               <ResizableVideoTile
                 trackRef={trackRef}

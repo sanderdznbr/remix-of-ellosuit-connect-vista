@@ -4,6 +4,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+}
+
+interface MenuGroup {
+  id: string;
+  label: string;
+  items: MenuItem[];
+  color?: string;
+}
+
 interface SidebarSettings {
   id?: string;
   sidebar_color: string;
@@ -11,13 +25,15 @@ interface SidebarSettings {
   custom_logo_url?: string;
   custom_favicon_url?: string;
   menu_order: string[];
+  menu_groups?: MenuGroup[];
 }
 
 export const useSidebarSettings = () => {
   const [settings, setSettings] = useState<SidebarSettings>({
     sidebar_color: '#3000E3',
     sidebar_background_color: '#3600FF',
-    menu_order: []
+    menu_order: [],
+    menu_groups: []
   });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -54,13 +70,20 @@ export const useSidebarSettings = () => {
           menuOrder = data.menu_order.map((item: any) => String(item));
         }
 
+        // Handle menu_groups safely
+        let menuGroups: MenuGroup[] = [];
+        if (data.menu_groups && Array.isArray(data.menu_groups)) {
+          menuGroups = data.menu_groups;
+        }
+
         const newSettings = {
           id: data.id,
           sidebar_color: data.sidebar_color || '#3000E3',
           sidebar_background_color: data.sidebar_background_color || '#3600FF',
           custom_logo_url: data.custom_logo_url,
           custom_favicon_url: data.custom_favicon_url,
-          menu_order: menuOrder
+          menu_order: menuOrder,
+          menu_groups: menuGroups
         };
 
         setSettings(newSettings);
@@ -96,7 +119,8 @@ export const useSidebarSettings = () => {
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
             custom_favicon_url: updatedSettings.custom_favicon_url,
-            menu_order: updatedSettings.menu_order
+            menu_order: updatedSettings.menu_order,
+            menu_groups: updatedSettings.menu_groups
           })
           .eq('id', settings.id);
 
@@ -112,7 +136,8 @@ export const useSidebarSettings = () => {
             sidebar_background_color: updatedSettings.sidebar_background_color,
             custom_logo_url: updatedSettings.custom_logo_url,
             custom_favicon_url: updatedSettings.custom_favicon_url,
-            menu_order: updatedSettings.menu_order
+            menu_order: updatedSettings.menu_order,
+            menu_groups: updatedSettings.menu_groups
           })
           .select()
           .single();
@@ -173,3 +198,5 @@ export const useSidebarSettings = () => {
     isColorDark
   };
 };
+
+export type { MenuItem, MenuGroup, SidebarSettings };

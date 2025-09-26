@@ -21,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { useSidebarSettings } from '@/hooks/useSidebarSettings';
+import { useSidebarSettings, MenuItem, MenuGroup } from '@/hooks/useSidebarSettings';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -29,38 +29,63 @@ const Sidebar = () => {
   const { settings, loading, isColorDark } = useSidebarSettings();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  const defaultMenuItems = [
-    { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
-    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
-    { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
-    { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
-    { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
-    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
-    { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
-    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
-    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' },
-    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' },
-    { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+  const defaultGroups: MenuGroup[] = [
+    {
+      id: 'sistema',
+      label: 'Sistema',
+      color: '#64748B',
+      items: [
+        { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+        { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+      ]
+    },
+    {
+      id: 'agendamentos',
+      label: 'Agendamentos',
+      color: '#3B82F6',
+      items: [
+        { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
+        { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
+        { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' }
+      ]
+    },
+    {
+      id: 'marketing',
+      label: 'Marketing',
+      color: '#10B981',
+      items: [
+        { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
+        { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' }
+      ]
+    },
+    {
+      id: 'producao',
+      label: 'Produção',
+      color: '#F59E0B',
+      items: [
+        { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
+        { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
+        { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
+        { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
+        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' }
+      ]
+    }
   ];
 
-  const orderedMenuItems = () => {
-    if (settings.menu_order && settings.menu_order.length > 0) {
-      const ordered = settings.menu_order
-        .map(id => defaultMenuItems.find(item => item.id === id))
-        .filter(Boolean) as typeof defaultMenuItems;
-      
-      // Add any new items that weren't in the saved order
-      const remaining = defaultMenuItems.filter(
-        item => !settings.menu_order.includes(item.id)
-      );
-      
-      return [...ordered, ...remaining];
+  const getMenuGroups = (): MenuGroup[] => {
+    if (settings.menu_groups && settings.menu_groups.length > 0) {
+      return settings.menu_groups.map(group => ({
+        ...group,
+        items: group.items.map(item => ({
+          ...item,
+          icon: defaultMenuItems.find(defaultItem => defaultItem.id === item.id)?.icon || Home
+        }))
+      }));
     }
-    return defaultMenuItems;
+    return defaultGroups;
   };
 
-  const menuItems = orderedMenuItems();
+  const menuGroups = getMenuGroups();
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {

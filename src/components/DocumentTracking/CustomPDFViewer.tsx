@@ -64,12 +64,41 @@ const CustomPDFViewer: React.FC<CustomPDFViewerProps> = ({ document }) => {
     }
   }, [document.id]);
 
-  const loadPDF = async () => {
+const loadPDF = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch the PDF to avoid CORS/worker issues and parse on main thread
+      // 1) Try to load pre-extracted images from storage first (fast path)
+      const { data: extracted, error: listError } = await supabase.storage
+        .from('trackable-documents')
+        .list(`pages/${document.id}`, { limit: 500, sortBy: { column: 'name', order: 'asc' } });
+
+      if (!listError && extracted && extracted.length > 0) {
+        const urls = extracted
+          .filter((f) => f.name.endsWith('.webp') || f.name.endsWith('.png') || f.name.endsWith('.jpg'))
+          .map((f) => supabase.storage.from('trackable-documents').getPublicUrl(`pages/${document.id}/${f.name}`).data.publicUrl);
+
+        if (urls.length > 0) {
+          setPageImages(urls);
+          setTotalPages(urls.length);
+
+          // Track document open silently
+          await trackEvent('document_open', 1, {
+            title: document.title,
+            filename: document.original_filename,
+            totalPages: urls.length,
+            sessionStartTime: sessionStartTime
+          });
+
+          setPageStartTime({ 1: Date.now() });
+          await trackEvent('page_view', 1);
+          setLoading(false);
+          return; // no need to render PDF client-side
+        }
+      }
+
+// 2) Fallback: fetch and render the PDF client-side
       const response = await fetch(document.file_url, { mode: 'cors' });
       if (!response.ok) throw new Error('Falha ao baixar PDF');
       const arrayBuffer = await response.arrayBuffer();

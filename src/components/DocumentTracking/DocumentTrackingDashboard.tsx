@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { extractAndUploadPdfPages } from '@/utils/pdf-extractor';
 
 interface TrackableDocument {
   id: string;
@@ -161,10 +162,24 @@ const DocumentTrackingDashboard = () => {
 
       if (error) throw error;
 
-      toast({
+toast({
         title: 'Sucesso',
         description: 'Documento enviado e preparado para rastreamento',
       });
+
+      // Extract pages to images and upload to storage
+      try {
+        toast({ title: 'Extraindo páginas', description: 'Convertendo PDF em imagens...' });
+        const pages = await extractAndUploadPdfPages(publicUrl, data.id);
+        toast({ title: 'Páginas extraídas', description: `${pages} páginas processadas com sucesso.` });
+      } catch (extractionError) {
+        console.error('Erro na extração de páginas:', extractionError);
+        // Non-blocking warning
+        toast({
+          title: 'Aviso',
+          description: 'Não foi possível extrair as páginas agora. A visualização direta continuará funcionando.',
+        });
+      }
 
       // Show the shareable link
       const shareableUrl = `${window.location.origin}/document/${data.public_link_id}`;

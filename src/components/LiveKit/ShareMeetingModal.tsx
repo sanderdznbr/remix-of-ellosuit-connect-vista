@@ -27,7 +27,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const meetingLink = `${window.location.origin}/livekit-meeting/${roomName}`;
+  const meetingLink = `https://www.ellosuit.online/livekit/${roomName}`;
 
   const copyToClipboard = async () => {
     try {

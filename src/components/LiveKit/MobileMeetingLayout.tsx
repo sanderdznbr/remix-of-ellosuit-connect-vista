@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useParticipants, useLocalParticipant, useRoomContext } from '@livekit/components-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import ResizableVideoTile from './ResizableVideoTile';
 import { useTracks, TrackReference } from '@livekit/components-react';
 import { Track } from 'livekit-client';
@@ -29,6 +30,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [videoScale, setVideoScale] = useState(1);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [messages, setMessages] = useState<Array<{
     id: string;
     sender: string;
@@ -41,6 +43,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
@@ -145,50 +148,34 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
 
   return (
     <div className="mobile-meeting-layout">
-      {/* Mobile Header */}
+      {/* Mobile Header - Simplified with centered logo */}
       <div className="mobile-meeting-header bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-full">
           <img 
             src={logoEllosuit} 
             alt="ELLOSUIT" 
-            className="h-8 w-auto object-contain"
+            className="h-10 w-auto object-contain"
           />
-          <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-gray-800">Reunião ELLOSUIT</h2>
-            <p className="text-xs text-gray-500">{roomName}</p>
-          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setVideoScale(Math.max(0.5, videoScale - 0.1))}
-              size="sm"
-              variant="outline"
-              className="h-8 w-8 p-0"
-            >
-              <ZoomOut className="h-3 w-3" />
-            </Button>
-            <Button
-              onClick={() => setVideoScale(Math.min(2, videoScale + 0.1))}
-              size="sm"
-              variant="outline"
-              className="h-8 w-8 p-0"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </Button>
-          </div>
+        
+        {/* Zoom Controls - Discrete corner position */}
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           <Button
-            onClick={onShareMeeting}
+            onClick={() => setVideoScale(Math.max(0.5, videoScale - 0.1))}
             size="sm"
-            className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1"
+            variant="ghost"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
           >
-            <Share2 className="h-3 w-3 mr-1" />
-            Convidar
+            <ZoomOut className="h-3 w-3" />
           </Button>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-gray-600">Online</span>
-          </div>
+          <Button
+            onClick={() => setVideoScale(Math.min(2, videoScale + 0.1))}
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+          >
+            <ZoomIn className="h-3 w-3" />
+          </Button>
         </div>
       </div>
 
@@ -264,7 +251,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         </Button>
       </div>
 
-      {/* Mobile Controls - Simplified and Larger */}
+      {/* Mobile Controls - Updated with Invite Icon */}
       <div className="mobile-controls bg-white border-t border-gray-200 shadow-lg">
         <div className="flex items-center justify-center gap-6 p-4">
           <Button
@@ -301,6 +288,13 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             )}
           >
             <Monitor className="h-6 w-6" />
+          </Button>
+
+          <Button
+            onClick={() => setShowInviteModal(true)}
+            className="w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-500 shadow-lg transition-all duration-200"
+          >
+            <Share2 className="h-6 w-6" />
           </Button>
 
           <Button
@@ -425,8 +419,63 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                         <div className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center">
                           <VideoOff className="w-3 h-3 text-white" />
                         </div>
-                      )}
-                    </div>
+      )}
+
+      {/* Invite Link Modal */}
+      {showInviteModal && (
+        <div className="mobile-modal-overlay">
+          <div className="mobile-modal">
+            <div className="modal-header">
+              <h3 className="text-lg font-semibold">Convidar Participantes</h3>
+              <Button
+                onClick={() => setShowInviteModal(false)}
+                variant="ghost"
+                size="sm"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="modal-content p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Link da Reunião
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={`https://www.ellosuit.online/livekit/${roomName}`}
+                      readOnly
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://www.ellosuit.online/livekit/${roomName}`);
+                        toast({
+                          title: "Link copiado!",
+                          description: "O link da reunião foi copiado para a área de transferência",
+                          duration: 2000,
+                        });
+                      }}
+                      size="sm"
+                      className="px-3"
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    Compartilhe este link com os participantes para que eles possam entrar na reunião.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
                   </div>
                 ))}
               </div>

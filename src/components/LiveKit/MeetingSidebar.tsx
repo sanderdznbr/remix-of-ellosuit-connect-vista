@@ -111,7 +111,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
     <div className="zoom-meeting-sidebar">
       <div className="h-full flex flex-col">
         <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
             <TabsTrigger 
               value="participants" 
               className="flex items-center gap-2"
@@ -155,7 +155,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                         {isHost && <Crown className="h-4 w-4 text-yellow-500" />}
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">
-                            {participant.identity || 'Participante'}
+                            {(participant.name as string | undefined) || participant.identity || 'Participante'}
                             {isHost && ' (Você)'}
                           </span>
                         </div>

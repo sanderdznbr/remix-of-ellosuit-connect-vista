@@ -93,7 +93,8 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
           body: {
             action: 'stop',
             recordingId,
-            livekitRecordingId
+            livekitRecordingId,
+            roomName: roomCode
           }
         });
 

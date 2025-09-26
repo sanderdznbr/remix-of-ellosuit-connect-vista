@@ -1,6 +1,50 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
-import { AccessToken } from 'https://esm.sh/livekit-server-sdk@2.13.3';
+
+// Robust auth for LiveKit Egress: try JWT first, then fall back to key:secret pair
+async function egressFetch(url: string, body: any, opts: { apiKey: string; apiSecret: string }) {
+  const { apiKey, apiSecret } = opts;
+
+  // Build a minimal JWT compatible with LiveKit REST using HMAC-SHA256
+  const token = await buildJwt(apiKey, apiSecret, { video: { roomRecord: true } });
+
+  let res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (res.ok) return res;
+
+  // Fallback: Bearer apiKey:apiSecret (supported by Twirp endpoints)
+  res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}:${apiSecret}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return res;
+}
+
+// Small JWT builder (Deno compatible)
+async function buildJwt(apiKey: string, apiSecret: string, payloadExt: Record<string, unknown>) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = { iss: apiKey, iat: now, exp: now + 60 * 10, ...payloadExt };
+  const enc = (obj: any) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/g, '');
+  const data = `${enc(header)}.${enc(payload)}`;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(apiSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  const signature = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/g, '');
+  return `${data}.${signature}`;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,9 +56,9 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-const LIVEKIT_API_KEY = Deno.env.get('LIVEKIT_API_KEY');
-const LIVEKIT_API_SECRET = Deno.env.get('LIVEKIT_API_SECRET');
-const LIVEKIT_URL = Deno.env.get('LIVEKIT_URL')?.replace('wss://', 'https://');
+const LIVEKIT_API_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? '';
+const LIVEKIT_API_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? '';
+const LIVEKIT_URL = (Deno.env.get('LIVEKIT_URL') ?? '').replace('wss://', 'https://');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,35 +67,31 @@ serve(async (req) => {
 
   try {
     const { action, roomName, userId, companyId, recordingId, livekitRecordingId } = await req.json();
-    console.log('Recording action:', { action, roomName, userId, companyId });
+    console.log('Recording action:', { action, roomName, userId, companyId, recordingId, livekitRecordingId });
+
+    if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+      throw new Error('LiveKit credentials are not configured');
+    }
 
     if (action === 'start') {
-      // Create proper JWT token for LiveKit API
-      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-        identity: `recorder-${Date.now()}`,
-      });
-      at.addGrant({ roomRecord: true });
-      const token = at.toJwt();
-
-      // Start recording via LiveKit Recording API
-      const recordingResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StartRoomCompositeEgress`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const egressBody = {
+        room_name: roomName,
+        layout: 'speaker-dark',
+        audio_only: false,
+        video_only: false,
+        custom_base_url: '',
+        file: {
+          filepath: `recordings/${roomName}-${Date.now()}.mp4`,
+          output: 'MP4',
         },
-        body: JSON.stringify({
-          room_name: roomName,
-          layout: "speaker-dark",
-          audio_only: false,
-          video_only: false,
-          custom_base_url: "",
-          file: {
-            filepath: `recordings/${roomName}-${Date.now()}.mp4`,
-            output: "MP4"
-          }
-        })
-      });
+      };
+
+      // Start recording via LiveKit Recording API with robust auth
+      let recordingResponse = await egressFetch(
+        `${LIVEKIT_URL}/twirp/livekit.Egress/StartRoomCompositeEgress`,
+        egressBody,
+        { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
+      );
 
       if (!recordingResponse.ok) {
         const errorText = await recordingResponse.text();
@@ -89,34 +129,25 @@ serve(async (req) => {
       });
 
     } else if (action === 'stop') {
-      // Create proper JWT token for LiveKit API
-      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-        identity: `recorder-${Date.now()}`,
-      });
-      at.addGrant({ roomRecord: true });
-      const token = at.toJwt();
+      const stopBody = { egress_id: livekitRecordingId };
 
-      // Stop recording via LiveKit API
-      const stopResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          egress_id: livekitRecordingId
-        })
-      });
+      // Stop recording via LiveKit API with robust auth
+      const stopResponse = await egressFetch(
+        `${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`,
+        stopBody,
+        { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
+      );
 
       if (!stopResponse.ok) {
-        console.error('Failed to stop LiveKit recording');
+        const t = await stopResponse.text();
+        console.error('Failed to stop LiveKit recording:', t);
       }
 
       // Update recording status
       const { error } = await supabase
         .from('meeting_recordings')
         .update({ 
-          file_url: `recordings/${roomName}-recording.mp4`,
+          file_url: `recordings/${roomName || 'room'}-recording.mp4`,
           duration_seconds: 0 // Will be updated by webhook
         })
         .eq('id', recordingId);

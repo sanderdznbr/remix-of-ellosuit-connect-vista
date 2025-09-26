@@ -18,8 +18,8 @@ const ResizableVideoTile: React.FC<ResizableVideoTileProps> = ({
   defaultHeight = 180,
 }) => {
   const [dimensions, setDimensions] = useState({
-    width: isScreenShare ? 640 : defaultWidth,
-    height: isScreenShare ? 360 : defaultHeight,
+    width: isScreenShare ? Math.min(800, defaultWidth * 1.5) : defaultWidth,
+    height: isScreenShare ? Math.min(600, defaultHeight * 1.5) : defaultHeight,
   });
   const [isResizing, setIsResizing] = useState(false);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -73,9 +73,11 @@ const ResizableVideoTile: React.FC<ResizableVideoTileProps> = ({
     <div
       ref={tileRef}
       className={cn(
-        "relative bg-white rounded-2xl overflow-hidden border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl",
-        isResizing && "border-blue-500 shadow-2xl",
-        isScreenShare && "border-green-300 shadow-green-100"
+        "relative rounded-2xl overflow-hidden border-2 transition-all duration-300",
+        isScreenShare 
+          ? "bg-black border-green-400 shadow-xl shadow-green-100/50 hover:border-green-500" 
+          : "bg-black border-gray-300 hover:border-blue-400 shadow-lg hover:shadow-xl",
+        isResizing && "border-blue-500 shadow-2xl"
       )}
       style={{
         width: dimensions.width,
@@ -86,17 +88,20 @@ const ResizableVideoTile: React.FC<ResizableVideoTileProps> = ({
       {trackRef.publication?.kind === Track.Kind.Video ? (
         <VideoTrack 
           trackRef={trackRef} 
-          className="w-full h-full object-cover"
+          className={cn(
+            "w-full h-full",
+            isScreenShare ? "object-contain" : "object-contain bg-black"
+          )}
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-3 mx-auto shadow-lg">
               <span className="text-white text-xl font-bold">
                 {getParticipantName(participant).charAt(0).toUpperCase()}
               </span>
             </div>
-            <p className="text-gray-700 text-sm font-medium">
+            <p className="text-white text-sm font-medium">
               {getParticipantName(participant)}
             </p>
           </div>

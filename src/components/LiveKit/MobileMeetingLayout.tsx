@@ -150,8 +150,8 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             <span className="text-white text-sm font-bold">E</span>
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Reunião ELLOSUIT</h2>
-            <p className="text-xs text-gray-500">{roomName}</p>
+            <h2 className="text-sm font-semibold text-white">Reunião ELLOSUIT</h2>
+            <p className="text-xs text-gray-300">{roomName}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           </Button>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-gray-600">Online</span>
+            <span className="text-xs text-gray-300">Online</span>
           </div>
         </div>
       </div>
@@ -197,8 +197,8 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
               key={`camera-mobile-${trackRef.participant.identity}-${index}`}
               trackRef={trackRef}
               isScreenShare={false}
-              defaultWidth={hasScreenShare ? 120 : 180}
-              defaultHeight={hasScreenShare ? 90 : 120}
+              defaultWidth={hasScreenShare ? 160 : 170}
+              defaultHeight={hasScreenShare ? 120 : 128}
             />
           ))}
         </div>

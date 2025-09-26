@@ -54,8 +54,8 @@ const ZoomParticipantGrid: React.FC = () => {
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
                 trackRef={trackRef}
                 isScreenShare={true}
-                defaultWidth={640}
-                defaultHeight={360}
+                defaultWidth={800}
+                defaultHeight={450}
               />
             ))}
           </div>
@@ -72,8 +72,8 @@ const ZoomParticipantGrid: React.FC = () => {
             key={`camera-${trackRef.participant.identity}-${index}`}
             trackRef={trackRef}
             isScreenShare={false}
-            defaultWidth={hasScreenShare ? 200 : 320}
-            defaultHeight={hasScreenShare ? 150 : 180}
+            defaultWidth={hasScreenShare ? 240 : 320}
+            defaultHeight={hasScreenShare ? 180 : 240}
           />
         ))}
 

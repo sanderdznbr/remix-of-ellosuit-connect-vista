@@ -46,6 +46,7 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const retryRef = useRef(0);
+  const intentionalDisconnectRef = useRef(false);
 
   useEffect(() => {
     const generateToken = async () => {
@@ -131,9 +132,18 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4 text-center">
           <p className="text-destructive">Erro: {error}</p>
-          <Button onClick={onLeave} variant="outline">
-            Voltar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => {
+              setError('');
+              setLoading(true);
+              regenerateToken();
+            }} variant="outline">
+              Tentar novamente
+            </Button>
+            <Button onClick={onLeave} variant="outline">
+              Voltar
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -168,6 +178,8 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
           }}
           onConnected={() => {
             console.log('Connected to LiveKit room');
+            retryRef.current = 0; // Reset retry counter on successful connection
+            intentionalDisconnectRef.current = false;
             toast({
               title: "Conectado",
               description: "Você entrou na sala de reunião",
@@ -175,20 +187,49 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
           }}
           onDisconnected={(reason) => {
             console.log('Disconnected from LiveKit room:', reason);
-            toast({
-              title: "Desconectado",
-              description: "Você saiu da sala de reunião",
-            });
-            onLeave();
+            
+            // Only show disconnect toast and leave if it was intentional
+            if (intentionalDisconnectRef.current) {
+              toast({
+                title: "Desconectado",
+                description: "Você saiu da sala de reunião",
+              });
+              onLeave();
+            }
+            // For unintentional disconnects, we'll handle in onError
           }}
           onError={async (error) => {
             console.error('LiveKit room error:', error);
             const msg = (error as any)?.message ? String((error as any).message) : String(error);
-            if (/token|expire|disconnect|401|403/i.test(msg) && retryRef.current < 3) {
+            
+            // Handle "Client initiated disconnect" specially
+            if (msg.includes('Client initiated disconnect')) {
+              // This usually means the user closed the tab or navigated away
+              // Don't show it as an error, just disconnect gracefully
+              console.log('Client initiated disconnect - treating as normal disconnect');
+              if (!intentionalDisconnectRef.current) {
+                toast({
+                  title: "Desconectado", 
+                  description: "Conexão encerrada"
+                });
+                setTimeout(() => onLeave(), 1000);
+              }
+              return;
+            }
+            
+            // For other token/auth errors, try to regenerate
+            if (/token|expire|401|403|unauthorized/i.test(msg) && retryRef.current < 2) {
               retryRef.current += 1;
+              console.log(`Retrying connection attempt ${retryRef.current}`);
+              toast({
+                title: "Reconectando...",
+                description: `Tentativa ${retryRef.current} de reconexão`
+              });
               await regenerateToken();
               return;
             }
+            
+            // Show other errors
             setError(msg);
             toast({
               title: "Erro na chamada",
@@ -223,7 +264,15 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
                   Compartilhar
                 </Button>
                 
-                <Button variant="destructive" size="sm" onClick={onLeave} className="gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => {
+                    intentionalDisconnectRef.current = true;
+                    onLeave();
+                  }} 
+                  className="gap-2"
+                >
                   <PhoneOff className="h-4 w-4" />
                   Sair
                 </Button>

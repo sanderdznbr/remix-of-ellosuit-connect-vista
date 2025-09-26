@@ -51,6 +51,26 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isChatOpen, setIsChatOpen] = useState(true); // Auto-open chat
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [companyId, setCompanyId] = useState<string>('');
+
+  useEffect(() => {
+    const getCompanyId = async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (user.user) {
+        const { data: companyUsers } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.user.id)
+          .limit(1);
+        
+        if (companyUsers && companyUsers.length > 0) {
+          setCompanyId(companyUsers[0].company_id);
+        }
+      }
+    };
+    
+    getCompanyId();
+  }, []);
   const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('chat'); // Default to chat
   const { user } = useAuth();
   const { toast } = useToast();
@@ -351,6 +371,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                       onLeave={onLeave}
                       isChatOpen={isChatOpen}
                       isParticipantsOpen={isParticipantsOpen}
+                      roomCode={roomName}
+                      companyId={companyId}
                     />
                   </div>
 

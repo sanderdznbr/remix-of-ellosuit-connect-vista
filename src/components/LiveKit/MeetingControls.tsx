@@ -5,7 +5,9 @@ import {
   Video, 
   VideoOff, 
   Monitor, 
-  Phone
+  Phone,
+  Circle,
+  Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,6 +16,8 @@ import {
   useRoomContext
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface MeetingControlsProps {
   onToggleChat: () => void;
@@ -22,6 +26,8 @@ interface MeetingControlsProps {
   onLeave: () => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
+  roomCode: string;
+  companyId: string;
 }
 
 const MeetingControls: React.FC<MeetingControlsProps> = ({
@@ -30,12 +36,18 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   onShareMeeting,
   onLeave,
   isChatOpen,
-  isParticipantsOpen
+  isParticipantsOpen,
+  roomCode,
+  companyId
 }) => {
   const { localParticipant } = useLocalParticipant();
+  const { toast } = useToast();
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingId, setRecordingId] = useState<string>('');
+  const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
 
   const toggleMic = async () => {
     if (localParticipant) {
@@ -71,14 +83,76 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
     }
   };
 
+  const handleRecording = async () => {
+    try {
+      if (isRecording) {
+        // Stop recording
+        const { error } = await supabase.functions.invoke('meeting-recording', {
+          body: {
+            action: 'stop',
+            recordingId,
+            livekitRecordingId
+          }
+        });
+
+        if (error) throw error;
+
+        setIsRecording(false);
+        setRecordingId('');
+        setLivekitRecordingId('');
+        
+        toast({
+          title: "Gravação finalizada",
+          description: "A gravação foi salva e estará disponível em breve",
+        });
+      } else {
+        // Start recording
+        const { data: user } = await supabase.auth.getUser();
+        if (!user.user) throw new Error('User not authenticated');
+
+        const { data, error } = await supabase.functions.invoke('meeting-recording', {
+          body: {
+            action: 'start',
+            roomName: roomCode,
+            userId: user.user.id,
+            companyId
+          }
+        });
+
+        if (error) throw error;
+
+        setIsRecording(true);
+        setRecordingId(data.recording_id);
+        setLivekitRecordingId(data.livekit_recording_id);
+        
+        toast({
+          title: "Gravação iniciada",
+          description: "A reunião está sendo gravada",
+        });
+      }
+    } catch (error) {
+      console.error('Recording error:', error);
+      toast({
+        title: "Erro na gravação",
+        description: "Não foi possível iniciar/parar a gravação",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="meeting-controls">
       <div className="meeting-controls-container">
         {/* Left side - Meeting info */}
         <div className="meeting-controls-left">
           <div className="flex items-center gap-2">
-            <div className="recording-indicator" />
-            <span className="text-sm text-gray-700 font-medium">Conectado</span>
+            <div className={cn(
+              "recording-indicator",
+              isRecording && "recording-active"
+            )} />
+            <span className="text-sm text-gray-700 font-medium">
+              {isRecording ? "Gravando" : "Conectado"}
+            </span>
           </div>
         </div>
 
@@ -118,6 +192,22 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             size="lg"
           >
             <Monitor className="h-5 w-5" />
+          </Button>
+
+          {/* Recording Control */}
+          <Button
+            onClick={handleRecording}
+            className={cn(
+              "control-button",
+              isRecording && "control-button-recording"
+            )}
+            size="lg"
+          >
+            {isRecording ? (
+              <Square className="h-5 w-5 fill-current" />
+            ) : (
+              <Circle className="h-5 w-5" />
+            )}
           </Button>
 
           {/* End Call */}

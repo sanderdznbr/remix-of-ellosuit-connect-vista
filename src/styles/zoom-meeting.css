@@ -268,6 +268,37 @@
   @apply p-4 border-t border-gray-200 bg-gray-50/50;
 }
 
+/* Recording button styles */
+.control-button-recording {
+  background: hsl(var(--destructive)) !important;
+  animation: recording-pulse 2s infinite;
+}
+
+.control-button-recording:hover {
+  background: hsl(var(--destructive) / 0.9) !important;
+}
+
+.recording-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground));
+}
+
+.recording-indicator.recording-active {
+  background: hsl(var(--destructive));
+  animation: recording-pulse 2s infinite;
+}
+
+@keyframes recording-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* Mobile Meeting Layout */
 .mobile-meeting-layout {
   @apply h-screen w-full bg-gray-900 flex flex-col overflow-hidden;

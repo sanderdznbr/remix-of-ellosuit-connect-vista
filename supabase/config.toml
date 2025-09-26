@@ -39,6 +39,12 @@ verify_jwt = false
 [functions.livekit-token]
 verify_jwt = false
 
+[functions.meeting-recording]
+verify_jwt = false
+
+[functions.realtime-transcription]
+verify_jwt = false
+
 [db]
 enabled = true
 port = 54322

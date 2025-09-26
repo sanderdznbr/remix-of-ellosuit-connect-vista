@@ -82,7 +82,8 @@ const Sidebar = () => {
         { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
         { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
         { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
-        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' }
+        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
+        { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de Documento' }
       ]
     }
   ];
@@ -123,10 +124,10 @@ const Sidebar = () => {
     };
   }, []);
 
-  // Determinar cor do texto baseado na cor de fundo
+  // Sempre usar texto branco como padrão
   const backgroundColor = settings.sidebar_background_color || '#3600FF';
-  const textColor = isColorDark(backgroundColor) ? 'text-white' : 'text-gray-900';
-  const subtleTextColor = isColorDark(backgroundColor) ? 'text-gray-200' : 'text-gray-600';
+  const textColor = 'text-white';
+  const subtleTextColor = 'text-gray-200';
 
   if (loading) {
     return (
@@ -273,19 +274,8 @@ const Sidebar = () => {
           ))}
         </div>
 
-        {/* User Profile and Actions */}
+        {/* User Profile */}
         <div className="border-t border-white/10 p-3">
-          {/* Settings Link */}
-          <div className="mb-3">
-            <Link
-              to="/dashboard/configuracoes"
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${textColor} hover:bg-white/10`}
-              title={isCollapsed ? 'Configurações' : ''}
-            >
-              <Edit3 className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0`} />
-              {!isCollapsed && 'Reorganizar Sidebar'}
-            </Link>
-          </div>
 
           {/* User Profile */}
           {user && (

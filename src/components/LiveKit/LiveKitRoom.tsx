@@ -10,14 +10,13 @@ import {
   useTracks,
   useParticipants,
 } from '@livekit/components-react';
-import '@livekit/components-styles';
-import '@/styles/livekit.css';
 import { Track, Room } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Video, VideoOff, Mic, MicOff, Monitor, PhoneOff } from 'lucide-react';
+import '@/styles/livekit.css';
 
 interface LiveKitRoomProps {
   roomName: string;

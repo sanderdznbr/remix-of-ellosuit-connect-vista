@@ -56,14 +56,14 @@ const ZoomParticipantGrid: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-3 mx-auto">
-                    <span className="text-white text-xl font-semibold">
+                  <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4 mx-auto shadow-lg">
+                    <span className="text-white text-2xl font-bold">
                       {getParticipantName(participant).charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-white text-sm">
+                  <p className="text-gray-700 text-base font-medium">
                     {getParticipantName(participant)}
                   </p>
                 </div>
@@ -93,7 +93,7 @@ const ZoomParticipantGrid: React.FC = () => {
 
             {/* Speaking Indicator */}
             {!isMuted && participant.isSpeaking && (
-              <div className="absolute inset-0 border-2 border-green-400 rounded-xl animate-pulse" />
+              <div className="zoom-speaking-indicator" />
             )}
           </div>
         );
@@ -101,10 +101,11 @@ const ZoomParticipantGrid: React.FC = () => {
 
       {/* Show message if no participants */}
       {participants.length === 0 && (
-        <div className="col-span-full flex items-center justify-center h-full text-white/60">
+        <div className="col-span-full flex items-center justify-center h-full text-gray-500">
           <div className="text-center">
-            <Wifi className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Aguardando participantes...</p>
+            <Wifi className="h-16 w-16 mx-auto mb-6 text-gray-400" />
+            <p className="text-xl font-medium">Aguardando participantes...</p>
+            <p className="text-gray-400 mt-2">Convide pessoas para se juntar à reunião</p>
           </div>
         </div>
       )}

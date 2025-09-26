@@ -1,12 +1,16 @@
-/* Zoom-Style Meeting Layout */
+/* Modern Video Meeting Layout - Light Theme */
 
-/* Meeting Layout - Light version for PreJoin */
+/* Meeting Layout - Light Theme */
 .zoom-meeting-layout-light {
-  @apply h-screen w-full bg-gray-50 flex flex-col relative overflow-hidden;
+  @apply h-screen w-full bg-gradient-to-br from-slate-50 to-gray-100 flex flex-col relative overflow-hidden;
 }
 
 .zoom-meeting-header {
-  @apply flex items-center justify-between p-4 bg-gray-900 border-b border-gray-700 z-10;
+  @apply flex items-center justify-between p-4 bg-white/90 backdrop-blur-sm border-b border-gray-200 z-10 shadow-sm;
+}
+
+.zoom-meeting-logo {
+  @apply h-8 w-auto object-contain;
 }
 
 .zoom-meeting-main {
@@ -14,7 +18,7 @@
 }
 
 .zoom-meeting-content {
-  @apply flex-1 flex flex-col relative;
+  @apply flex-1 flex flex-col relative bg-gradient-to-br from-slate-50 to-gray-100;
 }
 
 /* Pre-Join Styles - Dark Theme */
@@ -91,9 +95,9 @@
   @apply bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500;
 }
 
-/* Participant Grid */
+/* Modern Participant Grid - Light Theme */
 .zoom-participant-grid {
-  @apply flex-1 p-4 flex flex-wrap justify-center items-center gap-4 overflow-hidden;
+  @apply flex-1 p-6 flex flex-wrap justify-center items-center gap-6 overflow-hidden;
 }
 
 .zoom-participant-grid.grid-1 {
@@ -101,37 +105,38 @@
 }
 
 .zoom-participant-grid.grid-1 .zoom-participant-tile {
-  @apply w-80; /* 320px width - aspect-video will handle height */
+  @apply w-96 h-56 max-w-[24rem] max-h-[14rem]; /* Fixed 16:9 ratio, resizable */
 }
 
 .zoom-participant-grid.grid-2 {
-  @apply flex justify-center items-center gap-6;
+  @apply flex justify-center items-center gap-8;
 }
 
 .zoom-participant-grid.grid-2 .zoom-participant-tile {
-  @apply w-72 h-40; /* 288px x 162px - 16:9 ratio */
+  @apply w-80 h-48 max-w-[20rem] max-h-[12rem]; /* Fixed 16:9 ratio */
 }
 
 .zoom-participant-grid.grid-3,
 .zoom-participant-grid.grid-4 {
-  @apply grid grid-cols-2 gap-4 justify-items-center;
+  @apply grid grid-cols-2 gap-6 justify-items-center max-w-4xl mx-auto;
 }
 
 .zoom-participant-grid.grid-3 .zoom-participant-tile,
 .zoom-participant-grid.grid-4 .zoom-participant-tile {
-  @apply w-64 h-36; /* 256px x 144px - 16:9 ratio */
+  @apply w-72 h-40 max-w-[18rem] max-h-[10rem]; /* Fixed 16:9 ratio */
 }
 
 .zoom-participant-grid.grid-many {
-  @apply grid grid-cols-3 gap-3 justify-items-center;
+  @apply grid grid-cols-3 gap-4 justify-items-center max-w-6xl mx-auto;
 }
 
 .zoom-participant-grid.grid-many .zoom-participant-tile {
-  @apply w-56 h-32; /* 224px x 128px - 16:9 ratio */
+  @apply w-64 h-36 max-w-[16rem] max-h-[9rem]; /* Fixed 16:9 ratio */
 }
 
 .zoom-participant-tile {
-  @apply relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-500 transition-colors aspect-video;
+  @apply relative bg-white rounded-2xl overflow-hidden border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02];
+  aspect-ratio: 16/9; /* Enforce 16:9 ratio */
 }
 
 .zoom-participant-tile video {
@@ -139,7 +144,7 @@
 }
 
 .zoom-participant-name {
-  @apply absolute bottom-3 left-3 bg-black/60 text-white text-sm px-2 py-1 rounded backdrop-blur-sm;
+  @apply absolute bottom-3 left-3 bg-white/90 text-gray-800 text-sm px-3 py-1.5 rounded-lg backdrop-blur-sm font-medium shadow-sm;
 }
 
 .zoom-participant-controls {
@@ -147,66 +152,72 @@
 }
 
 .zoom-mute-indicator {
-  @apply absolute top-3 left-3 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center;
+  @apply absolute top-3 left-3 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center shadow-lg;
 }
 
-/* Meeting Controls */
+.zoom-speaking-indicator {
+  @apply absolute inset-0 border-4 border-green-400 rounded-2xl animate-pulse;
+}
+
+/* Modern Meeting Controls - Light Theme */
 .meeting-controls {
-  @apply absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 to-transparent;
+  @apply absolute bottom-0 left-0 right-0 z-20 p-6;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.95), transparent);
+  backdrop-filter: blur(10px);
 }
 
 .meeting-controls-container {
-  @apply flex items-center justify-between max-w-6xl mx-auto;
+  @apply flex items-center justify-between max-w-7xl mx-auto;
 }
 
 .meeting-controls-left,
 .meeting-controls-right {
-  @apply flex items-center gap-3;
+  @apply flex items-center gap-4;
 }
 
 .meeting-controls-center {
-  @apply flex items-center gap-2;
+  @apply flex items-center gap-3;
 }
 
 .control-button {
-  @apply w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white border-0 transition-all duration-200 flex items-center justify-center;
+  @apply w-12 h-12 rounded-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl;
 }
 
 .control-button-muted {
-  @apply bg-red-500 hover:bg-red-600;
+  @apply bg-red-500 hover:bg-red-600 text-white border-red-500;
 }
 
 .control-button-active {
-  @apply bg-blue-500 hover:bg-blue-600;
+  @apply bg-blue-500 hover:bg-blue-600 text-white border-blue-500;
 }
 
 .control-button-share {
-  @apply bg-gray-700 hover:bg-gray-600 px-4 w-auto h-12 rounded-full;
+  @apply bg-white hover:bg-gray-50 px-4 w-auto h-12 rounded-full border-2 border-gray-200 hover:border-gray-300;
 }
 
 .control-button-leave {
-  @apply bg-red-500 hover:bg-red-600;
+  @apply bg-red-500 hover:bg-red-600 text-white border-red-500;
 }
 
 .recording-indicator {
-  @apply w-3 h-3 bg-red-500 rounded-full animate-pulse;
+  @apply w-3 h-3 bg-green-500 rounded-full animate-pulse;
 }
 
-/* Meeting Sidebar */
+/* Meeting Sidebar - Light Theme */
 .meeting-sidebar {
-  @apply w-80 bg-gray-800 border-l border-gray-700 flex flex-col h-full;
+  @apply w-80 bg-white border-l border-gray-200 flex flex-col h-full shadow-xl;
 }
 
 .meeting-sidebar-header {
-  @apply p-4 border-b border-gray-700 relative;
+  @apply p-4 border-b border-gray-200 bg-gray-50/50;
 }
 
 .meeting-sidebar-content {
-  @apply flex-1 overflow-hidden;
+  @apply flex-1 overflow-hidden bg-white;
 }
 
 .participant-item {
-  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-700/50 transition-colors;
+  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors;
 }
 
 .chat-message {
@@ -214,13 +225,13 @@
 }
 
 .chat-input {
-  @apply p-4 border-t border-gray-700;
+  @apply p-4 border-t border-gray-200 bg-gray-50/50;
 }
 
-/* Responsive Design */
+/* Responsive Design - Light Theme */
 @media (max-width: 768px) {
   .meeting-controls-container {
-    @apply flex-col gap-3;
+    @apply flex-col gap-4 px-4;
   }
   
   .meeting-controls-center {
@@ -233,19 +244,23 @@
   }
   
   .meeting-sidebar {
-    @apply w-full absolute top-0 right-0 bottom-0 z-30;
+    @apply w-full absolute top-0 right-0 bottom-0 z-30 bg-white;
   }
   
   .control-button {
-    @apply w-10 h-10;
+    @apply w-11 h-11;
   }
   
   .zoom-participant-grid {
-    @apply p-2 gap-1;
+    @apply p-3 gap-2;
   }
   
   .zoom-participant-grid.grid-many {
     @apply grid-cols-2;
+  }
+  
+  .zoom-meeting-header {
+    @apply p-3;
   }
 }
 
@@ -277,13 +292,13 @@
   animation: fadeIn 0.3s ease-out;
 }
 
-/* Loading States */
+/* Loading States - Light Theme */
 .meeting-loading {
-  @apply flex items-center justify-center h-full bg-gray-900 text-white;
+  @apply flex items-center justify-center h-full bg-gray-50 text-gray-700;
 }
 
 .meeting-error {
-  @apply flex flex-col items-center justify-center h-full bg-gray-900 text-white p-8 text-center;
+  @apply flex flex-col items-center justify-center h-full bg-gray-50 text-gray-700 p-8 text-center;
 }
 
 /* Connection Quality Indicators */

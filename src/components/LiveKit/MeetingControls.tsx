@@ -71,7 +71,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         <div className="meeting-controls-left">
           <div className="flex items-center gap-2">
             <div className="recording-indicator" />
-            <span className="text-sm text-white/80">Gravando</span>
+            <span className="text-sm text-gray-700 font-medium">Conectado</span>
           </div>
         </div>
 
@@ -161,7 +161,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             size="lg"
           >
             <Share2 className="h-4 w-4" />
-            <span className="ml-2 text-sm">Convidar</span>
+            <span className="ml-2 text-sm font-medium">Convidar</span>
           </Button>
 
           <Button

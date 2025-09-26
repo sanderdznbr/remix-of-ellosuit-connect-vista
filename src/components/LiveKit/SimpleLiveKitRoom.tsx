@@ -16,6 +16,7 @@ import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
 import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
+import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -206,32 +207,53 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onCancel={onLeave}
           />
         ) : (
-          <div className="zoom-meeting-main">
-            <div className="zoom-meeting-content">
-              <ZoomParticipantGrid />
-              
-              <MeetingControls
-                onToggleChat={() => toggleSidebar('chat')}
-                onToggleParticipants={() => toggleSidebar('participants')}
-                onShareMeeting={() => setShowShareModal(true)}
-                onLeave={onLeave}
-                isChatOpen={isChatOpen}
-                isParticipantsOpen={isParticipantsOpen}
-              />
+          <>
+            {/* Meeting Header with Logo */}
+            <div className="zoom-meeting-header">
+              <div className="flex items-center gap-4">
+                <img 
+                  src={logoEllo} 
+                  alt="ELLOSUIT" 
+                  className="zoom-meeting-logo"
+                />
+                <div className="flex flex-col">
+                  <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
+                  <span className="text-sm text-gray-500">Sala: {roomName}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span>Conectado</span>
+              </div>
             </div>
 
-            {(isChatOpen || isParticipantsOpen) && (
-              <MeetingSidebar
-                isOpen={isChatOpen || isParticipantsOpen}
-                onClose={() => {
-                  setIsChatOpen(false);
-                  setIsParticipantsOpen(false);
-                }}
-                activeTab={sidebarTab}
-                onTabChange={setSidebarTab}
-              />
-            )}
-          </div>
+            <div className="zoom-meeting-main">
+              <div className="zoom-meeting-content">
+                <ZoomParticipantGrid />
+                
+                <MeetingControls
+                  onToggleChat={() => toggleSidebar('chat')}
+                  onToggleParticipants={() => toggleSidebar('participants')}
+                  onShareMeeting={() => setShowShareModal(true)}
+                  onLeave={onLeave}
+                  isChatOpen={isChatOpen}
+                  isParticipantsOpen={isParticipantsOpen}
+                />
+              </div>
+
+              {(isChatOpen || isParticipantsOpen) && (
+                <MeetingSidebar
+                  isOpen={isChatOpen || isParticipantsOpen}
+                  onClose={() => {
+                    setIsChatOpen(false);
+                    setIsParticipantsOpen(false);
+                  }}
+                  activeTab={sidebarTab}
+                  onTabChange={setSidebarTab}
+                />
+              )}
+            </div>
+          </>
         )}
 
         <ShareMeetingModal

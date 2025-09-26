@@ -1,8 +1,8 @@
 
-import AuthScreen from '@/components/AuthScreen';
+import ResponsiveAuthScreen from '@/components/ResponsiveAuthScreen';
 
 const Index = () => {
-  return <AuthScreen />;
+  return <ResponsiveAuthScreen />;
 };
 
 export default Index;

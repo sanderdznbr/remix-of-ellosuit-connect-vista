@@ -29,7 +29,7 @@ const MobileDashboard = () => {
   }, [user, isMobile]);
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (!isMobile) {
@@ -66,8 +66,8 @@ const MobileDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="pb-20">
+    <div className="min-h-screen bg-gray-50 mobile-safe-area">
+      <main className="pb-20 mobile-safe-bottom">
         {renderContent()}
       </main>
       <MobileBottomNavigation

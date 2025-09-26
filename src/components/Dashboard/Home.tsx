@@ -209,19 +209,19 @@ const Home = ({ onNavigate }: HomeProps) => {
   };
 
   return (
-    <div className="p-6 space-y-8 bg-gray-50 min-h-screen page-content">{/* ... keep existing code (all content) */}
+    <div className="container mx-auto mobile-container desktop-container space-y-4 sm:space-y-6 lg:space-y-8 bg-gray-50 min-h-screen page-content">
       {/* Frase Inspiradora no Topo */}
-      <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl">
-        <CardContent className="p-8">
-          <div className="flex items-start gap-4">
-            <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-              <Quote className="h-6 w-6 text-white" />
+      <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl sm:rounded-2xl">
+        <CardContent className="p-4 sm:p-6 lg:p-8">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg flex-shrink-0">
+              <Quote className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-3 text-lg">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base lg:text-lg">
                 💡 Inspiração do Momento
               </h3>
-              <p className="text-gray-700 text-xl italic leading-relaxed">
+              <p className="text-gray-700 text-sm sm:text-lg lg:text-xl italic leading-relaxed">
                 "{currentQuote}"
               </p>
             </div>
@@ -230,62 +230,62 @@ const Home = ({ onNavigate }: HomeProps) => {
       </Card>
 
       {/* Estatísticas Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+      <div className="responsive-grid">
+        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-xl sm:rounded-2xl bg-white">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">E-mails Hoje</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.emails}</p>
-                <p className="text-sm text-gray-500 mt-1">vs. ontem</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">E-mails Hoje</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{stats.emails}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">vs. ontem</p>
               </div>
-              <div className="p-4 rounded-full bg-blue-50">
-                <Mail className="h-6 w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-blue-50 flex-shrink-0">
+                <Mail className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-xl sm:rounded-2xl bg-white">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Reuniões Hoje</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.meetings}</p>
-                <p className="text-sm text-gray-500 mt-1">agendadas</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Reuniões Hoje</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{stats.meetings}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">agendadas</p>
               </div>
-              <div className="p-4 rounded-full bg-green-50">
-                <Calendar className="h-6 w-6 text-green-600" />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-green-50 flex-shrink-0">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-xl sm:rounded-2xl bg-white">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Clientes</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.clients}</p>
-                <p className="text-sm text-gray-500 mt-1">cadastrados</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Clientes</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{stats.clients}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">cadastrados</p>
               </div>
-              <div className="p-4 rounded-full bg-purple-50">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-purple-50 flex-shrink-0">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-2xl bg-white">
-          <CardContent className="p-6">
+        <Card className="hover:shadow-xl transition-all duration-300 border-none shadow-lg rounded-xl sm:rounded-2xl bg-white">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Produtividade</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.productivity}%</p>
-                <p className="text-sm text-gray-500 mt-1">do objetivo</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Produtividade</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{stats.productivity}%</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">do objetivo</p>
               </div>
-              <div className="p-4 rounded-full bg-orange-50">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-orange-50 flex-shrink-0">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -293,28 +293,28 @@ const Home = ({ onNavigate }: HomeProps) => {
       </div>
 
       {/* Próximos Compromissos e Atividades Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="responsive-flex">
         {/* Próximos Compromissos */}
-        <Card className="border-none shadow-lg rounded-2xl bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+        <Card className="border-none shadow-lg rounded-xl sm:rounded-2xl bg-white flex-1">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               Próximos Compromissos
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-3 sm:space-y-4">
               {loading ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : upcomingEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhum compromisso agendado</p>
+                <div className="text-center py-6 sm:py-8 text-gray-500">
+                  <Calendar className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-sm sm:text-base">Nenhum compromisso agendado</p>
                   <Button 
                     variant="outline" 
-                    className="mt-4 rounded-xl"
+                    className="mt-4 rounded-xl text-xs sm:text-sm"
                     onClick={() => onNavigate('my-calendar')}
                   >
                     Ver Calendário
@@ -322,20 +322,20 @@ const Home = ({ onNavigate }: HomeProps) => {
                 </div>
               ) : (
                 upcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors">
-                    <div className="p-2 rounded-lg bg-blue-100">
-                      <Calendar className="h-4 w-4 text-blue-600" />
+                  <div key={event.id} className="flex items-start gap-3 p-3 sm:p-4 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div className="p-2 rounded-lg bg-blue-100 flex-shrink-0">
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{event.title}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-gray-900 truncate text-sm sm:text-base">{event.title}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">
                         {new Date(event.start_date).toLocaleDateString('pt-BR')} às{' '}
                         {new Date(event.start_date).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </p>
-                      <Badge variant="secondary" className="mt-1 rounded-full">
+                      <Badge variant="secondary" className="mt-1 rounded-full text-xs">
                         {event.event_type}
                       </Badge>
                     </div>
@@ -347,39 +347,39 @@ const Home = ({ onNavigate }: HomeProps) => {
         </Card>
 
         {/* Atividades Recentes */}
-        <Card className="border-none shadow-lg rounded-2xl bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+        <Card className="border-none shadow-lg rounded-xl sm:rounded-2xl bg-white flex-1">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
               Atividades Recentes
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-3 sm:space-y-4">
               {loading ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : recentActivities.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhuma atividade recente</p>
-                  <p className="text-sm mt-1">Comece usando o sistema para ver suas atividades aqui</p>
+                <div className="text-center py-6 sm:py-8 text-gray-500">
+                  <Activity className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-sm sm:text-base">Nenhuma atividade recente</p>
+                  <p className="text-xs sm:text-sm mt-1">Comece usando o sistema para ver suas atividades aqui</p>
                 </div>
               ) : (
                 recentActivities.map((activity) => {
                   const Icon = getActivityIcon(activity.type);
                   return (
-                    <div key={activity.id} className="flex items-start gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Icon className="h-4 w-4 text-gray-600" />
+                    <div key={activity.id} className="flex items-start gap-3 p-3 sm:p-4 rounded-xl hover:bg-gray-50 transition-colors">
+                      <div className="p-2 rounded-lg bg-gray-100 flex-shrink-0">
+                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{activity.title}</p>
-                        <p className="text-sm text-gray-600 truncate">{activity.description}</p>
+                        <p className="font-medium text-gray-900 truncate text-sm sm:text-base">{activity.title}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">{activity.description}</p>
                         <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
                       </div>
-                      <Badge className={`${getStatusColor(activity.status)} rounded-full`}>
+                      <Badge className={`${getStatusColor(activity.status)} rounded-full text-xs flex-shrink-0`}>
                         {getStatusLabel(activity.status)}
                       </Badge>
                     </div>

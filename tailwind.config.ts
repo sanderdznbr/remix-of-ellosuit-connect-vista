@@ -13,10 +13,28 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: {
+				DEFAULT: '1rem',
+				sm: '1.5rem',
+				lg: '2rem',
+				xl: '2.5rem',
+				'2xl': '3rem',
+			},
 			screens: {
+				sm: '640px',
+				md: '768px',
+				lg: '1024px',
+				xl: '1280px',
 				'2xl': '1400px'
 			}
+		},
+		screens: {
+			'xs': '375px',
+			'sm': '640px',
+			'md': '768px',
+			'lg': '1024px',
+			'xl': '1280px',
+			'2xl': '1536px',
 		},
 		extend: {
 			colors: {
@@ -121,6 +139,15 @@ export default {
 			backgroundImage: {
 				'ellosuit-gradient': 'linear-gradient(135deg, #6B46C1 0%, #8B5CF6 100%)',
 				'ellosuit-gradient-hover': 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)'
+			},
+			spacing: {
+				'safe-top': 'env(safe-area-inset-top)',
+				'safe-bottom': 'env(safe-area-inset-bottom)',
+				'safe-left': 'env(safe-area-inset-left)',
+				'safe-right': 'env(safe-area-inset-right)',
+			},
+			minHeight: {
+				'screen-safe': 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
 			}
 		}
 	},

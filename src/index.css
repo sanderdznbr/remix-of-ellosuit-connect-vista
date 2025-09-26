@@ -86,6 +86,30 @@
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
+    width: 100%;
+  }
+  
+  /* Mobile-first responsive design */
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Ensure proper touch handling on mobile */
+  @media (max-width: 768px) {
+    body {
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    input, textarea, select {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
   }
   
   /* Padronização global de fontes e estilos */
@@ -127,5 +151,46 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  
+  /* Mobile-first utilities */
+  .mobile-container {
+    @apply w-full max-w-full overflow-hidden;
+  }
+  
+  .desktop-container {
+    @apply md:max-w-none;
+  }
+  
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+  
+  .responsive-flex {
+    @apply flex flex-col lg:flex-row gap-4;
+  }
+  
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .mobile-safe-bottom {
+    padding-bottom: max(80px, env(safe-area-inset-bottom) + 80px);
+  }
+  
+  .mobile-header-height {
+    height: max(60px, env(safe-area-inset-top) + 60px);
+  }
+  
+  /* Improved touch targets */
+  .touch-target {
+    @apply min-h-11 min-w-11 flex items-center justify-center;
+  }
+  
+  /* Better scrolling on mobile */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }

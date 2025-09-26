@@ -273,8 +273,8 @@ const SidebarEditor = () => {
       {/* Header com botão de salvar */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Editar Sidebar</h1>
-          <p className="text-base text-gray-600 mt-2">Personalize a aparência e ordem do menu lateral</p>
+          <h1 className="text-3xl font-bold">Reorganizar Sidebar</h1>
+          <p className="text-base mt-2">Personalize a aparência e ordem do menu lateral</p>
         </div>
         <Button
           onClick={handleSaveAllChanges}

@@ -7,7 +7,7 @@ import { useToast } from './use-toast';
 interface MenuItem {
   id: string;
   label: string;
-  icon: string;
+  icon: any; // React component or string
   path: string;
 }
 
@@ -73,7 +73,7 @@ export const useSidebarSettings = () => {
         // Handle menu_groups safely
         let menuGroups: MenuGroup[] = [];
         if (data.menu_groups && Array.isArray(data.menu_groups)) {
-          menuGroups = data.menu_groups;
+          menuGroups = data.menu_groups as unknown as MenuGroup[];
         }
 
         const newSettings = {
@@ -120,7 +120,7 @@ export const useSidebarSettings = () => {
             custom_logo_url: updatedSettings.custom_logo_url,
             custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order,
-            menu_groups: updatedSettings.menu_groups
+            menu_groups: updatedSettings.menu_groups as any
           })
           .eq('id', settings.id);
 
@@ -137,7 +137,7 @@ export const useSidebarSettings = () => {
             custom_logo_url: updatedSettings.custom_logo_url,
             custom_favicon_url: updatedSettings.custom_favicon_url,
             menu_order: updatedSettings.menu_order,
-            menu_groups: updatedSettings.menu_groups
+            menu_groups: updatedSettings.menu_groups as any
           })
           .select()
           .single();

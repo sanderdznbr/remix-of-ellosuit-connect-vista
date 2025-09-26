@@ -29,6 +29,21 @@ const Sidebar = () => {
   const { settings, loading, isColorDark } = useSidebarSettings();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
+  const defaultMenuItems = [
+    { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
+    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
+    { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
+    { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
+    { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
+    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
+    { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
+    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
+    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' },
+    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' },
+    { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+  ];
+
   const defaultGroups: MenuGroup[] = [
     {
       id: 'sistema',
@@ -132,141 +147,179 @@ const Sidebar = () => {
 
   return (
     <div 
-      className={`${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex flex-col transition-all duration-300 relative`}
+      className={`${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex flex-col transition-all duration-300`}
       style={{ backgroundColor }}
-      data-sidebar
+      data-sidebar="true"
     >
-      {/* Collapse Toggle Button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`absolute -right-3 top-6 z-10 w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center transition-colors ${
-          isColorDark(backgroundColor) ? 'bg-white text-gray-600 hover:bg-gray-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        }`}
-      >
-        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-      </button>
-
-      {/* Logo */}
-      <div className={`${isCollapsed ? 'p-2 pt-4' : 'p-6 pb-4'}`}>
-        <div className="flex items-center justify-center">
-          {isCollapsed ? (
-            // Container menor verticalmente para logo 1:1 quando recolhida
-            <div className="w-12 h-10 flex items-center justify-center">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4">
+        {/* Logo/Brand */}
+        {isCollapsed ? (
+          <Link 
+            to="/dashboard"
+            className="text-2xl font-bold flex items-center justify-center"
+            style={{ color: settings.sidebar_color }}
+          >
+            {settings.custom_favicon_url ? (
               <img 
-                src={settings.custom_favicon_url || "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png"} 
+                src={settings.custom_favicon_url} 
                 alt="Logo" 
-                className="w-[90%] h-[90%] object-contain transition-all duration-300"
+                className="h-8 w-8 object-contain"
                 onError={(e) => {
-                  e.currentTarget.src = "/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png";
+                  console.error('Erro ao carregar favicon personalizado:', e);
+                  e.currentTarget.style.display = 'none';
                 }}
               />
-            </div>
-          ) : (
-            // Exibe logo completa quando expandida
-            <div className="flex items-center justify-center">
-              {settings.custom_logo_url ? (
-                <img 
-                  src={settings.custom_logo_url} 
-                  alt="Logo" 
-                  className="h-10 w-auto transition-all duration-300"
-                  onError={(e) => {
-                    e.currentTarget.src = "/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png";
-                  }}
-                />
-              ) : (
-                // Apenas logo padrão, sem texto
+            ) : (
+              <img 
+                src="/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png" 
+                alt="ElloSuit" 
+                className="h-8 w-8 object-contain"
+                onError={(e) => {
+                  console.error('Erro ao carregar favicon padrão:', e);
+                }}
+              />
+            )}
+          </Link>
+        ) : (
+          <Link 
+            to="/dashboard"
+            className="flex items-center space-x-3"
+          >
+            {settings.custom_logo_url ? (
+              <img 
+                src={settings.custom_logo_url} 
+                alt="Custom Logo" 
+                className="h-10 w-auto object-contain"
+                onError={(e) => {
+                  console.error('Erro ao carregar logo personalizada:', e);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <>
                 <img 
                   src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                  alt="Logo" 
-                  className="h-10 w-auto transition-all duration-300"
+                  alt="ElloSuit Logo" 
+                  className="h-10 w-auto"
                   onError={(e) => {
                     console.error('Erro ao carregar logo padrão:', e);
-                    e.currentTarget.style.display = 'none';
                   }}
                 />
+                <span className={`text-xl font-bold ${textColor}`}>ElloSuit</span>
+              </>
+            )}
+          </Link>
+        )}
+        
+        {/* Collapse Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`${textColor} hover:bg-white/10`}
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Menu Groups */}
+        <div className="flex-1 px-2 pt-4">
+          {menuGroups.map((group) => (
+            <div key={group.id} className="mb-4">
+              {/* Group Header */}
+              {!isCollapsed && (
+                <div className="px-1 mb-1">
+                  <h3 
+                    className="text-xs font-semibold uppercase tracking-wider opacity-75"
+                    style={{ color: group.color }}
+                  >
+                    {group.label}
+                  </h3>
+                </div>
               )}
+              
+              {/* Group Items */}
+              <nav className="space-y-1">
+                {group.items.map((item) => {
+                  const IconComponent = item.icon;
+                  const active = isActive(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      className={`
+                        flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                        ${active 
+                          ? `text-white` 
+                          : `${textColor} hover:bg-white/10`
+                        }
+                      `}
+                      style={active ? { backgroundColor: settings.sidebar_color } : {}}
+                      title={isCollapsed ? item.label : ''}
+                    >
+                      <IconComponent className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0`} />
+                      {!isCollapsed && (
+                        <span className="truncate">{item.label}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
+        </div>
+
+        {/* User Profile and Actions */}
+        <div className="border-t border-white/10 p-3">
+          {/* Settings Link */}
+          <div className="mb-3">
+            <Link
+              to="/dashboard/configuracoes"
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${textColor} hover:bg-white/10`}
+              title={isCollapsed ? 'Configurações' : ''}
+            >
+              <Edit3 className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0`} />
+              {!isCollapsed && 'Reorganizar Sidebar'}
+            </Link>
+          </div>
+
+          {/* User Profile */}
+          {user && (
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} p-2`}>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.user_metadata?.avatar_url} />
+                <AvatarFallback className="bg-white/20 text-white text-xs">
+                  {user.email?.substring(0, 2).toUpperCase() || 'US'}
+                </AvatarFallback>
+              </Avatar>
+              
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${textColor} truncate`}>
+                    {user.user_metadata?.full_name || 'Usuário'}
+                  </p>
+                  <p className={`text-xs ${subtleTextColor} truncate`}>
+                    {user.email}
+                  </p>
+                </div>
+              )}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className={`${textColor} hover:bg-white/10 ${isCollapsed ? 'p-1' : 'p-2'}`}
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.path);
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                active
-                  ? `${textColor} shadow-lg transform scale-105`
-                  : `${subtleTextColor} hover:bg-black/10 hover:${textColor}`
-              }`}
-              style={active ? { 
-                backgroundColor: settings.sidebar_color || '#3000E3',
-                boxShadow: `0 4px 14px 0 ${settings.sidebar_color || '#3000E3'}40`
-              } : {}}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300">{item.label}</span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User Profile */}
-      <div className="p-4">
-        {!isCollapsed ? (
-          <>
-            <div className="flex items-center space-x-3 mb-4">
-              <Avatar>
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-gray-100 text-gray-600">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${textColor} truncate`}>
-                  {user?.user_metadata?.full_name || user?.email}
-                </p>
-                <p className={`text-xs ${subtleTextColor} truncate`}>
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className={`w-full flex items-center justify-center space-x-2 ${subtleTextColor} hover:${textColor} rounded-xl border-0 hover:border-0 bg-transparent hover:bg-transparent`}
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sair</span>
-            </Button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center space-y-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-                {user?.email?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className={`w-8 h-8 p-0 ${subtleTextColor} hover:${textColor} rounded border-0 hover:border-0 bg-transparent hover:bg-transparent`}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

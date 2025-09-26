@@ -1497,6 +1497,7 @@ export type Database = {
           custom_favicon_url: string | null
           custom_logo_url: string | null
           id: string
+          menu_groups: Json | null
           menu_order: Json | null
           sidebar_background_color: string | null
           sidebar_color: string | null
@@ -1509,6 +1510,7 @@ export type Database = {
           custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
+          menu_groups?: Json | null
           menu_order?: Json | null
           sidebar_background_color?: string | null
           sidebar_color?: string | null
@@ -1521,6 +1523,7 @@ export type Database = {
           custom_favicon_url?: string | null
           custom_logo_url?: string | null
           id?: string
+          menu_groups?: Json | null
           menu_order?: Json | null
           sidebar_background_color?: string | null
           sidebar_color?: string | null

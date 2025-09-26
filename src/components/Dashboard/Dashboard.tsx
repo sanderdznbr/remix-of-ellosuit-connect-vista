@@ -9,7 +9,7 @@ import ClientsManager from './ClientsManager';
 import DocumentsManager from './DocumentsManager';
 import Analytics from './Analytics';
 import Settings from './Settings';
-import SidebarEditor from './SidebarEditor';
+import GroupedSidebarEditor from './GroupedSidebarEditor';
 import MeetingRooms from './MeetingRooms';
 import MobileDashboard from '@/components/Mobile/MobileDashboard';
 import FluxosBoard from '@/components/Fluxos/FluxosBoard';
@@ -48,8 +48,8 @@ const Dashboard = () => {
           <Route path="/drive" element={<DriveManager />} />
           <Route path="/agenda-aberta" element={<ImprovedAgendaAberta />} />
           <Route path="/analises" element={<Navigate to="/dashboard/email" replace />} />
-          <Route path="/editar" element={<SidebarEditor />} />
-          <Route path="/configuracoes" element={<Settings />} />
+          <Route path="/editar" element={<GroupedSidebarEditor />} />
+          <Route path="/configuracoes" element={<GroupedSidebarEditor />} />
           <Route path="/fluxos" element={<FluxosBoard />} />
           <Route path="/tasks" element={<TarefasWeb />} />
           <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />

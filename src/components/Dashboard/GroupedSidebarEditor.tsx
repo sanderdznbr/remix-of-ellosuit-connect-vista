@@ -486,7 +486,7 @@ const GroupedSidebarEditor = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Editar Sidebar</h1>
+          <h1 className="text-3xl font-bold">Reorganizar Sidebar</h1>
           <p className="text-base mt-2">Organize as funções em grupos e personalize a aparência</p>
         </div>
         <Button

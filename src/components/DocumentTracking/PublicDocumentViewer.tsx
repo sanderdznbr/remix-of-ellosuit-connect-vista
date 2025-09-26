@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertCircle, FileText, Eye } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TrackableDocument {
@@ -18,10 +17,11 @@ interface PublicDocumentViewerProps {
 }
 
 const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) => {
-  const [document, setDocument] = useState<TrackableDocument | null>(null);
+  const [trackableDoc, setTrackableDoc] = useState<TrackableDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageStartTime, setPageStartTime] = useState<Record<number, number>>({});
   const sessionId = useRef<string>(Math.random().toString(36).substring(7));
   const visitorId = useRef<string>(
     localStorage.getItem('visitor_id') || 
@@ -37,69 +37,127 @@ const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) =
   }, [linkId]);
 
   useEffect(() => {
-    if (document) {
+    if (trackableDoc) {
       // Track document open
       trackEvent('document_open', 1, {
-        title: document.title,
-        filename: document.original_filename
+        title: trackableDoc.title,
+        filename: trackableDoc.original_filename
       });
+
+      // Set start time for current page
+      const now = Date.now();
+      setPageStartTime(prev => ({ ...prev, [currentPage]: now }));
 
       // Track page view
       trackEvent('page_view', currentPage);
 
-      // Track time spent on page
-      const startTime = Date.now();
-      const interval = setInterval(() => {
-        trackEvent('time_spent', currentPage, {
-          duration: Date.now() - startTime
-        });
-      }, 30000); // Track every 30 seconds
+      // Track time spent on page every 30 seconds
+      const timeInterval = setInterval(() => {
+        const startTime = pageStartTime[currentPage];
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          trackEvent('time_spent', currentPage, { duration });
+        }
+      }, 30000);
 
-      return () => clearInterval(interval);
+      // Track when user leaves the page/document
+      const handleBeforeUnload = () => {
+        const startTime = pageStartTime[currentPage];
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          trackEvent('session_end', currentPage, { 
+            totalDuration: duration,
+            finalPage: currentPage 
+          });
+        }
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        clearInterval(timeInterval);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        
+        // Track final time on page when component unmounts
+        const startTime = pageStartTime[currentPage];
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          trackEvent('time_spent', currentPage, { duration });
+        }
+      };
     }
-  }, [document, currentPage]);
+  }, [trackableDoc, currentPage]);
 
   useEffect(() => {
-    // Track scroll events
+    // Track scroll events (throttled)
     const handleScroll = () => {
+      const scrollPercent = Math.round((window.scrollY / (window.document.documentElement.scrollHeight - window.innerHeight)) * 100);
       trackEvent('scroll', currentPage, {
         scrollY: window.scrollY,
-        scrollPercent: Math.round((window.scrollY / (window.document.documentElement.scrollHeight - window.innerHeight)) * 100)
+        scrollPercent: Math.min(100, Math.max(0, scrollPercent))
       });
     };
 
-    // Track click events
+    // Track click events with more details
     const handleClick = (e: MouseEvent) => {
+      const target = e.target as Element;
       trackEvent('click', currentPage, {
         x: e.clientX,
         y: e.clientY,
-        target: (e.target as Element)?.tagName
+        target: target?.tagName,
+        className: target?.className,
+        pageX: e.pageX,
+        pageY: e.pageY
       });
     };
 
-    // Track window focus/blur
-    const handleFocus = () => trackEvent('focus', currentPage);
-    const handleBlur = () => trackEvent('blur', currentPage);
+    // Track window focus/blur for engagement
+    const handleVisibilityChange = () => {
+      if (window.document.hidden) {
+        trackEvent('page_blur', currentPage, {
+          timestamp: Date.now()
+        });
+      } else {
+        trackEvent('page_focus', currentPage, {
+          timestamp: Date.now()
+        });
+      }
+    };
+
+    // Track mouse movement heatmap (sampled)
+    let mouseMoveCounter = 0;
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseMoveCounter++;
+      // Only track every 50th mouse movement to avoid spam
+      if (mouseMoveCounter % 50 === 0) {
+        trackEvent('mouse_move', currentPage, {
+          x: e.clientX,
+          y: e.clientY,
+          pageX: e.pageX,
+          pageY: e.pageY
+        });
+      }
+    };
 
     let scrollTimeout: NodeJS.Timeout;
     const throttledScroll = () => {
       clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(handleScroll, 500); // Throttle scroll events
+      scrollTimeout = setTimeout(handleScroll, 1000); // Throttle to 1 second
     };
 
     window.addEventListener('scroll', throttledScroll);
     window.document.addEventListener('click', handleClick);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
+    window.document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       window.removeEventListener('scroll', throttledScroll);
       window.document.removeEventListener('click', handleClick);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
+      window.document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('mousemove', handleMouseMove);
       clearTimeout(scrollTimeout);
     };
-  }, [document, currentPage]);
+  }, [trackableDoc, currentPage]);
 
   const fetchDocument = async () => {
     try {
@@ -118,7 +176,7 @@ const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) =
         return;
       }
 
-      setDocument(data);
+      setTrackableDoc(data);
     } catch (err) {
       console.error('Error fetching document:', err);
       setError('Erro ao carregar documento');
@@ -128,12 +186,12 @@ const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) =
   };
 
   const trackEvent = async (eventType: string, pageNumber: number, data?: any) => {
-    if (!document) return;
+    if (!trackableDoc) return;
 
     try {
       await supabase.functions.invoke('document-tracking', {
         body: {
-          documentId: document.id,
+          documentId: trackableDoc.id,
           sessionId: sessionId.current,
           eventType,
           pageNumber,
@@ -159,7 +217,7 @@ const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) =
     );
   }
 
-  if (error || !document) {
+  if (error || !trackableDoc) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-96">
@@ -175,44 +233,18 @@ const PublicDocumentViewer: React.FC<PublicDocumentViewerProps> = ({ linkId }) =
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <FileText className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-xl font-semibold">{document.title}</h1>
-              <p className="text-sm text-gray-600">{document.original_filename}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Document Viewer */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            <div className="w-full h-screen">
-              <iframe
-                src={document.file_url}
-                className="w-full h-full border-0"
-                title={document.title}
-                onLoad={() => trackEvent('iframe_load', 1)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Footer */}
-      <div className="bg-white border-t mt-8">
-        <div className="max-w-6xl mx-auto px-4 py-4 text-center">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <Eye className="h-4 w-4" />
-            <span>Documento visualizado através do ElloSuit</span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-black">
+      {/* Full Screen Document Viewer */}
+      <div className="w-full h-screen">
+        <iframe
+          src={trackableDoc.file_url}
+          className="w-full h-full border-0"
+          title={`Document ${trackableDoc.id}`}
+          onLoad={() => trackEvent('iframe_load', 1)}
+          style={{
+            backgroundColor: 'white'
+          }}
+        />
       </div>
     </div>
   );

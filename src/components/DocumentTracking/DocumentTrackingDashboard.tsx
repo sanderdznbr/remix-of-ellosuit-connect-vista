@@ -183,16 +183,22 @@ const DocumentTrackingDashboard = () => {
     try {
       setStatsLoading(true);
       
-      const { data, error } = await supabase.functions.invoke('document-tracking', {
-        body: {},
+      // Create URL with documentId parameter
+      const functionUrl = `https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/document-tracking?documentId=${document.id}`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZGRpeXVlenFycHVha2F6dmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNDIzNTgsImV4cCI6MjA2NjkxODM1OH0.CrUu3HGCfWh6cPfGsbDXGQNG5AWOsi9X2GGix1-7izg`,
           'Content-Type': 'application/json'
-        },
-        method: 'GET'
+        }
       });
 
-      if (error) throw error;
-      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       setDocumentStats(data);
     } catch (error) {
       console.error('Error fetching document stats:', error);
@@ -372,36 +378,43 @@ const DocumentTrackingDashboard = () => {
                     <div className="text-center py-8">Carregando estatísticas...</div>
                   ) : documentStats ? (
                     <div className="space-y-6">
-                      {/* Overview Stats */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold">{documentStats.totalSessions}</div>
-                          <div className="text-sm text-muted-foreground">Sessões</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold">{documentStats.uniqueVisitors}</div>
-                          <div className="text-sm text-muted-foreground">Visitantes</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold">{documentStats.totalEvents}</div>
-                          <div className="text-sm text-muted-foreground">Eventos</div>
-                        </div>
-                      </div>
+                                      {/* Overview Stats */}
+                                      <div className="grid grid-cols-3 gap-4 mb-6">
+                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                          <div className="text-3xl font-bold text-blue-600">{documentStats.totalSessions}</div>
+                                          <div className="text-sm text-blue-600 font-medium">Sessões Total</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                                          <div className="text-3xl font-bold text-green-600">{documentStats.uniqueVisitors}</div>
+                                          <div className="text-sm text-green-600 font-medium">Visitantes Únicos</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                          <div className="text-3xl font-bold text-purple-600">{documentStats.totalEvents}</div>
+                                          <div className="text-sm text-purple-600 font-medium">Total de Interações</div>
+                                        </div>
+                                      </div>
 
                       {/* Page Stats */}
                       {documentStats.pageStats.length > 0 && (
                         <div>
-                          <h4 className="font-medium mb-3">Páginas Mais Visualizadas</h4>
-                          <div className="space-y-2">
+                          <h4 className="font-medium mb-3">📊 Análise Detalhada por Página</h4>
+                          <div className="space-y-3">
                             {documentStats.pageStats
-                              .sort((a, b) => b.views - a.views)
-                              .slice(0, 5)
+                              .slice(0, 10) // Show top 10 pages
                               .map((page) => (
-                                <div key={page.page} className="flex justify-between items-center p-2 bg-muted rounded">
-                                  <span>Página {page.page}</span>
-                                  <div className="text-sm">
-                                    <span className="font-medium">{page.views} visualizações</span>
-                                    <span className="text-muted-foreground ml-2">• {page.uniqueVisitors} visitantes</span>
+                                <div key={page.page} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                      <span className="text-sm font-medium text-primary">{page.page}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Página {page.page}</span>
+                                      <p className="text-sm text-muted-foreground">{page.uniqueVisitors} visitante{page.uniqueVisitors !== 1 ? 's' : ''}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-medium">{Math.round(page.timeSpent / 60)}m {page.timeSpent % 60}s</div>
+                                    <div className="text-sm text-muted-foreground">{page.views} visualizações</div>
                                   </div>
                                 </div>
                               ))

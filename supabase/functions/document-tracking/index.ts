@@ -75,7 +75,7 @@ serve(async (req) => {
       const documentId = url.searchParams.get('documentId');
 
       if (!documentId) {
-        throw new Error('documentId is required');
+        throw new Error('documentId is required for GET requests');
       }
 
       // Get document stats
@@ -114,13 +114,42 @@ serve(async (req) => {
         return acc;
       }, {} as Record<number, { views: number, timeSpent: number, visitors: Set<string> }>);
 
+      // Process stats to calculate time spent per page
+      const timeSpentEvents = stats?.filter(s => s.event_type === 'time_spent') || [];
+      const timeByPage = timeSpentEvents.reduce((acc, event) => {
+        const page = event.page_number || 1;
+        const duration = event.data?.duration || 0;
+        if (!acc[page]) {
+          acc[page] = { totalTime: 0, sessions: new Set() };
+        }
+        acc[page].totalTime = Math.max(acc[page].totalTime, duration); // Take the maximum time for each session
+        if (event.session_id) {
+          acc[page].sessions.add(event.session_id);
+        }
+        return acc;
+      }, {} as Record<number, { totalTime: number, sessions: Set<string> }>);
+
+      // Merge page stats with time data
+      Object.entries(timeByPage).forEach(([page, timeData]) => {
+        const pageNum = parseInt(page);
+        if (pageStats[pageNum]) {
+          pageStats[pageNum].timeSpent = Math.round(timeData.totalTime / 1000); // Convert to seconds
+        } else {
+          pageStats[pageNum] = {
+            views: 0,
+            timeSpent: Math.round(timeData.totalTime / 1000),
+            visitors: new Set()
+          };
+        }
+      });
+
       // Convert sets to arrays for JSON serialization
       const processedPageStats = Object.entries(pageStats).map(([page, data]) => ({
         page: parseInt(page),
         views: data.views,
         uniqueVisitors: data.visitors.size,
         timeSpent: data.timeSpent
-      }));
+      })).sort((a, b) => b.timeSpent - a.timeSpent); // Sort by time spent descending
 
       const response = {
         totalSessions: sessionIds.length,

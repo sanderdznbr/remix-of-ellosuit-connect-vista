@@ -318,6 +318,7 @@
 
 .mobile-video-area {
   @apply flex-1 p-4 flex flex-col gap-4 overflow-hidden bg-gray-50;
+  padding-bottom: calc(90px + 1rem);
 }
 
 .mobile-screenshare {
@@ -342,8 +343,9 @@
 
 /* Mobile Controls - Updated for new design */
 .mobile-controls {
-  @apply flex items-center justify-center bg-white border-t border-gray-200 shadow-lg;
+  @apply fixed bottom-0 left-0 right-0 flex items-center justify-center bg-white border-t border-gray-200 shadow-lg z-20;
   height: 90px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .mobile-control-btn {
@@ -364,7 +366,8 @@
 
 /* Floating Action Buttons */
 .mobile-floating-buttons {
-  @apply fixed right-4 bottom-24 flex flex-col gap-3 z-30;
+  @apply fixed right-4 flex flex-col gap-3 z-30;
+  bottom: calc(90px + 1rem + env(safe-area-inset-bottom));
 }
 
 .mobile-fab {

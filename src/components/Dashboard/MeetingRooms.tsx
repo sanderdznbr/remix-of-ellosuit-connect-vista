@@ -51,8 +51,8 @@ const MeetingRooms = () => {
         screen_sharing_enabled: true,
       });
       
-      // Redirecionar para a sala criada
-      window.open(`/meeting/${room.room_code}`, '_blank');
+      // Redirecionar para a sala criada com LiveKit
+      window.open(`/livekit/${room.room_code}`, '_blank');
     }
   };
 
@@ -73,12 +73,12 @@ const MeetingRooms = () => {
     setRoomCode('');
     setDisplayName('');
     
-    // Redirecionar para a sala passando o nome como parâmetro
-    window.open(`/meeting/${code}?name=${encodeURIComponent(name)}`, '_blank');
+    // Redirecionar para a sala LiveKit passando o nome como parâmetro
+    window.open(`/livekit/${code}?name=${encodeURIComponent(name)}`, '_blank');
   };
 
   const copyRoomLink = (roomCode: string) => {
-    const link = `${window.location.origin}/meeting/${roomCode}`;
+    const link = `${window.location.origin}/livekit/${roomCode}`;
     navigator.clipboard.writeText(link);
     toast({
       title: "Link copiado!",
@@ -87,7 +87,7 @@ const MeetingRooms = () => {
   };
 
   const joinExistingRoom = (roomCode: string) => {
-    window.open(`/meeting/${roomCode}`, '_blank');
+    window.open(`/livekit/${roomCode}`, '_blank');
   };
 
   return (

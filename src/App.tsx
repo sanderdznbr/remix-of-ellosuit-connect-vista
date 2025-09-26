@@ -17,6 +17,7 @@ import BookingPublic from '@/pages/BookingPublic';
 import ImprovedBookingPublic from '@/pages/ImprovedBookingPublic';
 import ImprovedBookingCalendar from '@/pages/ImprovedBookingCalendar';
 import MeetingRoom from "./components/Dashboard/MeetingRoom";
+import LiveKitMeeting from "./pages/LiveKitMeeting";
 import DocumentViewer from './pages/DocumentViewer';
 import SharedContent from './pages/SharedContent';
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
+            <Route path="/livekit/:roomCode" element={<LiveKitMeeting />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/tasks" element={<Tarefas />} />
             <Route path="/booking-public/:slug" element={<ImprovedBookingPublic />} />

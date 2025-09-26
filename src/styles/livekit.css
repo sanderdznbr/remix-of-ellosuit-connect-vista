@@ -1,0 +1,131 @@
+/* LiveKit Components Styles Override */
+@import '@livekit/components-styles';
+
+.lk-video-conference {
+  height: 100vh !important;
+  background: hsl(var(--background));
+}
+
+.lk-grid-layout {
+  gap: 0.5rem;
+}
+
+.lk-participant-tile {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.lk-participant-tile video {
+  border-radius: 0.5rem;
+}
+
+.lk-control-bar {
+  background: hsl(var(--background) / 0.8) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  margin: 1rem;
+  padding: 0.5rem;
+}
+
+.lk-button {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.lk-button:hover {
+  background: hsl(var(--accent));
+}
+
+.lk-chat {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+}
+
+.lk-chat-entry {
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+}
+
+.lk-participant-name {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.lk-focus-layout .lk-focus-layout-wrapper {
+  gap: 0.5rem;
+}
+
+.lk-grid-layout > * {
+  border-radius: 0.5rem;
+}
+
+/* Custom loading state */
+.lk-room-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: hsl(var(--background));
+}
+
+/* Media controls styling */
+.lk-media-button-group {
+  gap: 0.5rem;
+}
+
+.lk-media-button {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--secondary-foreground));
+}
+
+.lk-media-button:hover {
+  background: hsl(var(--secondary) / 0.8);
+}
+
+.lk-media-button.lk-button-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Screen share styling */
+.lk-screen-share-overlay {
+  background: hsl(var(--background) / 0.9);
+}
+
+/* Audio visualization */
+.lk-audio-visualizer {
+  border: 2px solid hsl(var(--primary));
+  border-radius: 50%;
+}
+
+/* Custom responsive breakpoints */
+@media (max-width: 768px) {
+  .lk-control-bar {
+    margin: 0.5rem;
+    padding: 0.375rem;
+  }
+  
+  .lk-grid-layout {
+    gap: 0.25rem;
+  }
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .lk-video-conference {
+  --lk-bg: hsl(var(--background));
+  --lk-fg: hsl(var(--foreground));
+}
+
+/* Connection status indicator */
+.lk-connection-quality {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}

@@ -20,7 +20,6 @@ import ZoomParticipantGrid from './ZoomParticipantGrid';
 import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
-import { useParticipants } from '@livekit/components-react';
 
 interface SimpleLiveKitRoomProps {
   roomName: string;
@@ -53,7 +52,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('chat'); // Default to chat
   const { user } = useAuth();
   const { toast } = useToast();
-  const participants = useParticipants(); // Get real participants
 
   // Enhanced connection management to prevent disconnections
   useEffect(() => {
@@ -314,7 +312,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     )}
                   >
                     <Users className="h-4 w-4" />
-                    <span className="ml-2 text-sm">Participantes ({participants.length})</span>
+                    <span className="ml-2 text-sm">Participantes</span>
                   </Button>
                   <Button
                     onClick={() => toggleSidebar('chat')}

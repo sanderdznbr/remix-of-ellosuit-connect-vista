@@ -83,7 +83,14 @@ const Sidebar = () => {
         { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
         { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
         { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
-        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
+        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' }
+      ]
+    },
+    {
+      id: 'rastreamento',
+      label: 'Rastreamento',
+      color: '#8B5CF6',
+      items: [
         { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de Documento' }
       ]
     }
@@ -188,29 +195,17 @@ const Sidebar = () => {
             to="/dashboard"
             className="flex items-center space-x-3"
           >
-            {settings.custom_logo_url ? (
+            <>
               <img 
-                src={settings.custom_logo_url} 
-                alt="Custom Logo" 
-                className="h-10 w-auto object-contain"
+                src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
+                alt="ElloSuit Logo" 
+                className="h-10 w-auto"
                 onError={(e) => {
-                  console.error('Erro ao carregar logo personalizada:', e);
-                  e.currentTarget.style.display = 'none';
+                  console.error('Erro ao carregar logo padrão:', e);
                 }}
               />
-            ) : (
-              <>
-                <img 
-                  src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                  alt="ElloSuit Logo" 
-                  className="h-10 w-auto"
-                  onError={(e) => {
-                    console.error('Erro ao carregar logo padrão:', e);
-                  }}
-                />
-                <span className={`text-xl font-bold ${textColor}`}>ElloSuit</span>
-              </>
-            )}
+              <span className={`text-xl font-bold ${textColor}`}>ElloSuit</span>
+            </>
           </Link>
         )}
         

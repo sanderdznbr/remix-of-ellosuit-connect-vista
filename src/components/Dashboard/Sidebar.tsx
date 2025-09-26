@@ -195,17 +195,14 @@ const Sidebar = () => {
             to="/dashboard"
             className="flex items-center space-x-3"
           >
-            <>
-              <img 
-                src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                alt="ElloSuit Logo" 
-                className="h-10 w-auto"
-                onError={(e) => {
-                  console.error('Erro ao carregar logo padrão:', e);
-                }}
-              />
-              <span className={`text-xl font-bold ${textColor}`}>ElloSuit</span>
-            </>
+            <img 
+              src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
+              alt="ElloSuit Logo" 
+              className="h-10 w-auto"
+              onError={(e) => {
+                console.error('Erro ao carregar logo padrão:', e);
+              }}
+            />
           </Link>
         )}
         

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import ellosuitLogo from '@/assets/logoellosuit.png';
 
 const MobileAuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);

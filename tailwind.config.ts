@@ -64,16 +64,9 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				ellosuit: {
-					purple: '#6B46C1',
-					'purple-dark': '#5B21B6',
-					'purple-light': '#8B5CF6',
-					blue: 'hsl(var(--ellosuit-blue))',
-					'blue-hover': 'hsl(var(--ellosuit-blue-hover))',
-					'blue-light': 'hsl(var(--ellosuit-blue-light))',
-					gradient: {
-						from: '#6B46C1',
-						to: '#8B5CF6'
-					}
+					blue: 'hsl(var(--primary))',
+					'blue-hover': 'hsl(var(--primary) / 0.9)',
+					'blue-light': 'hsl(var(--primary) / 0.8)',
 				}
 			},
 			borderRadius: {

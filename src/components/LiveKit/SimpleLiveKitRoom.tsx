@@ -1,17 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   LiveKitRoom,
-  VideoConference,
-  useToken,
-  PreJoin,
-  LocalUserChoices,
+  RoomAudioRenderer,
+  useTracks,
+  TrackReference,
 } from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import MeetingControls from './MeetingControls';
+import MeetingSidebar from './MeetingSidebar';
+import ShareMeetingModal from './ShareMeetingModal';
+import ZoomPreJoin from './ZoomPreJoin';
+import ZoomParticipantGrid from './ZoomParticipantGrid';
 import '@/styles/livekit.css';
+import '@/styles/zoom-meeting.css';
 
 interface SimpleLiveKitRoomProps {
   roomName: string;
@@ -36,7 +42,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [serverUrl, setServerUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [preJoinChoices, setPreJoinChoices] = useState<LocalUserChoices | undefined>();
+  const [preJoinChoices, setPreJoinChoices] = useState<any>();
+  const [showPreJoin, setShowPreJoin] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('participants');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -88,10 +99,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     }
   }, [generateToken]);
 
-  const handlePreJoinSubmit = useCallback((values: LocalUserChoices) => {
+  const handlePreJoinSubmit = useCallback((values: any) => {
     console.log('PreJoin submitted with values:', values);
     setPreJoinChoices(values);
+    setShowPreJoin(false);
   }, []);
+
+  const toggleSidebar = (tab: 'chat' | 'participants') => {
+    if (tab === 'chat') {
+      setIsChatOpen(!isChatOpen);
+      setIsParticipantsOpen(false);
+    } else {
+      setIsParticipantsOpen(!isParticipantsOpen);
+      setIsChatOpen(false);
+    }
+    setSidebarTab(tab);
+  };
 
   const handleDisconnected = useCallback(() => {
     console.log('Disconnected from room');
@@ -163,46 +186,59 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }
 
   return (
-    <div className="h-screen w-full bg-background">
+    <div className="zoom-meeting-layout">
       <LiveKitRoom
-        video={true}
-        audio={true}
+        video={preJoinChoices?.videoEnabled ?? true}
+        audio={preJoinChoices?.audioEnabled ?? true}
         token={token}
         serverUrl={serverUrl}
         data-lk-theme="default"
         onDisconnected={handleDisconnected}
         onError={handleError}
-        style={{ height: '100vh' }}
       >
-        {!preJoinChoices ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="bg-card border rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-semibold mb-4 text-center">
-                Entrar na Sala {roomName}
-              </h2>
-              <PreJoin 
-                onSubmit={handlePreJoinSubmit}
-                defaults={{
-                  username: participantName,
-                  videoEnabled: true,
-                  audioEnabled: true,
-                }}
-              />
-              <div className="mt-4 pt-4 border-t">
-                <Button 
-                  onClick={onLeave} 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </div>
+        <RoomAudioRenderer />
+        
+        {showPreJoin ? (
+          <ZoomPreJoin 
+            roomName={roomName}
+            participantName={participantName}
+            onSubmit={handlePreJoinSubmit}
+            onCancel={onLeave}
+          />
         ) : (
-          <VideoConference />
+          <div className="zoom-meeting-main">
+            <div className="zoom-meeting-content">
+              <ZoomParticipantGrid />
+              
+              <MeetingControls
+                onToggleChat={() => toggleSidebar('chat')}
+                onToggleParticipants={() => toggleSidebar('participants')}
+                onShareMeeting={() => setShowShareModal(true)}
+                onLeave={onLeave}
+                isChatOpen={isChatOpen}
+                isParticipantsOpen={isParticipantsOpen}
+              />
+            </div>
+
+            {(isChatOpen || isParticipantsOpen) && (
+              <MeetingSidebar
+                isOpen={isChatOpen || isParticipantsOpen}
+                onClose={() => {
+                  setIsChatOpen(false);
+                  setIsParticipantsOpen(false);
+                }}
+                activeTab={sidebarTab}
+                onTabChange={setSidebarTab}
+              />
+            )}
+          </div>
         )}
+
+        <ShareMeetingModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          roomName={roomName}
+        />
       </LiveKitRoom>
     </div>
   );

@@ -81,11 +81,11 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				ellosuit: {
-					blue: 'hsl(var(--primary))',
-					'blue-hover': 'hsl(var(--primary) / 0.9)',
-					'blue-light': 'hsl(var(--primary) / 0.8)',
-				}
+			ellosuit: {
+				blue: 'hsl(214, 100%, 47%)',
+				'blue-hover': 'hsl(214, 100%, 42%)',
+				'blue-light': 'hsl(214, 100%, 52%)',
+			}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -137,8 +137,8 @@ export default {
 				'slide-in': 'slide-in 0.6s ease-out'
 			},
 			backgroundImage: {
-				'ellosuit-gradient': 'linear-gradient(135deg, #6B46C1 0%, #8B5CF6 100%)',
-				'ellosuit-gradient-hover': 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)'
+				'ellosuit-gradient': 'linear-gradient(135deg, hsl(214, 100%, 47%) 0%, hsl(214, 100%, 52%) 100%)',
+				'ellosuit-gradient-hover': 'linear-gradient(135deg, hsl(214, 100%, 42%) 0%, hsl(214, 100%, 47%) 100%)'
 			},
 			spacing: {
 				'safe-top': 'env(safe-area-inset-top)',

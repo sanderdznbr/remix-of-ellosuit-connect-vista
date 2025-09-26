@@ -98,10 +98,29 @@ const loadPDF = async () => {
         }
       }
 
-// 2) Fallback: fetch and render the PDF client-side
-      const response = await fetch(document.file_url, { mode: 'cors' });
-      if (!response.ok) throw new Error('Falha ao baixar PDF');
-      const arrayBuffer = await response.arrayBuffer();
+      // 2) Fallback: fetch and render the PDF client-side
+      let arrayBuffer: ArrayBuffer | null = null;
+      try {
+        const response = await fetch(document.file_url, { mode: 'cors' });
+        if (response.ok) {
+          arrayBuffer = await response.arrayBuffer();
+        }
+      } catch (e) {
+        // ignore, we'll try Supabase SDK fallback
+      }
+
+      if (!arrayBuffer) {
+        // Supabase SDK fallback (avoids CORS and redirects). We need the storage path.
+        const match = document.file_url.match(/\/storage\/v1\/object\/public\/trackable-documents\/(.+)$/);
+        const storagePath = match ? decodeURIComponent(match[1]) : null;
+        if (!storagePath) throw new Error('Caminho do arquivo inválido');
+        const { data: blob, error: dlError } = await supabase.storage
+          .from('trackable-documents')
+          .download(storagePath);
+        if (dlError || !blob) throw new Error('Falha ao baixar PDF (SDK)');
+        arrayBuffer = await blob.arrayBuffer();
+      }
+
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       pdfDoc.current = pdf;

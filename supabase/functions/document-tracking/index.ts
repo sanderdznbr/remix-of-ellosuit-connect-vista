@@ -97,10 +97,66 @@ serve(async (req) => {
         throw error;
       }
 
-      // Process stats
+      // Process detailed session data
       const sessionIds = [...new Set(stats?.map(s => s.session_id))];
       const uniqueVisitors = [...new Set(stats?.filter(s => s.visitor_id).map(s => s.visitor_id))];
       
+      // Process sessions with detailed page data
+      const sessionData: Record<string, any> = {};
+      
+      sessionIds.forEach(sessionId => {
+        const sessionEvents = stats?.filter(s => s.session_id === sessionId) || [];
+        const visitorId = sessionEvents.find(e => e.visitor_id)?.visitor_id;
+        
+        // Get document open event for session start time
+        const documentOpen = sessionEvents.find(e => e.event_type === 'document_open');
+        const sessionStart = documentOpen ? new Date(documentOpen.timestamp).getTime() : null;
+        
+        // Get session end event
+        const sessionEnd = sessionEvents.find(e => e.event_type === 'session_end');
+        const sessionEndTime = sessionEnd ? new Date(sessionEnd.timestamp).getTime() : null;
+        
+        // Calculate time spent per page in this session
+        const pageTimeData: Record<number, number> = {};
+        const pageSequence: Array<{page: number, timestamp: string, duration?: number}> = [];
+        
+        // Group time_spent events by page
+        const timeSpentEvents = sessionEvents.filter(e => e.event_type === 'time_spent');
+        timeSpentEvents.forEach(event => {
+          const page = event.page_number || 1;
+          const duration = event.data?.duration || 0;
+          pageTimeData[page] = Math.max(pageTimeData[page] || 0, duration);
+        });
+        
+        // Create page sequence from page_view and page_navigation events
+        const navigationEvents = sessionEvents.filter(e => 
+          ['page_view', 'page_navigation'].includes(e.event_type)
+        ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        
+        navigationEvents.forEach(event => {
+          const page = event.page_number || 1;
+          const duration = pageTimeData[page] ? Math.round(pageTimeData[page] / 1000) : 0;
+          pageSequence.push({
+            page,
+            timestamp: event.timestamp,
+            duration
+          });
+        });
+        
+        sessionData[sessionId] = {
+          sessionId,
+          visitorId,
+          startTime: sessionStart,
+          endTime: sessionEndTime,
+          duration: sessionEndTime && sessionStart ? sessionEndTime - sessionStart : null,
+          pageSequence,
+          totalPagesVisited: [...new Set(sessionEvents.map(e => e.page_number).filter(Boolean))].length,
+          totalEvents: sessionEvents.length,
+          events: sessionEvents.slice(0, 20) // Limit events per session
+        };
+      });
+
+      // Process overall page statistics
       const pageViews = stats?.filter(s => s.event_type === 'page_view') || [];
       const pageStats = pageViews.reduce((acc, view) => {
         const page = view.page_number || 1;
@@ -114,48 +170,59 @@ serve(async (req) => {
         return acc;
       }, {} as Record<number, { views: number, timeSpent: number, visitors: Set<string> }>);
 
-      // Process stats to calculate time spent per page
+      // Calculate time spent per page across all sessions
       const timeSpentEvents = stats?.filter(s => s.event_type === 'time_spent') || [];
       const timeByPage = timeSpentEvents.reduce((acc, event) => {
         const page = event.page_number || 1;
         const duration = event.data?.duration || 0;
+        const sessionId = event.session_id;
+        
         if (!acc[page]) {
-          acc[page] = { totalTime: 0, sessions: new Set() };
+          acc[page] = { totalTime: 0, sessions: new Map() };
         }
-        acc[page].totalTime = Math.max(acc[page].totalTime, duration); // Take the maximum time for each session
-        if (event.session_id) {
-          acc[page].sessions.add(event.session_id);
-        }
+        
+        // Store max time per session for this page
+        const currentSessionTime = acc[page].sessions.get(sessionId) || 0;
+        acc[page].sessions.set(sessionId, Math.max(currentSessionTime, duration));
+        
         return acc;
-      }, {} as Record<number, { totalTime: number, sessions: Set<string> }>);
+      }, {} as Record<number, { totalTime: number, sessions: Map<string, number> }>);
 
-      // Merge page stats with time data
-      Object.entries(timeByPage).forEach(([page, timeData]) => {
+      // Calculate average time per page
+      Object.entries(timeByPage).forEach(([page, data]) => {
         const pageNum = parseInt(page);
+        const sessionTimes = Array.from(data.sessions.values());
+        const avgTime = sessionTimes.length > 0 
+          ? sessionTimes.reduce((sum, time) => sum + time, 0) / sessionTimes.length 
+          : 0;
+        
         if (pageStats[pageNum]) {
-          pageStats[pageNum].timeSpent = Math.round(timeData.totalTime / 1000); // Convert to seconds
+          pageStats[pageNum].timeSpent = Math.round(avgTime / 1000); // Convert to seconds
         } else {
           pageStats[pageNum] = {
             views: 0,
-            timeSpent: Math.round(timeData.totalTime / 1000),
+            timeSpent: Math.round(avgTime / 1000),
             visitors: new Set()
           };
         }
       });
 
-      // Convert sets to arrays for JSON serialization
+      // Convert page stats for JSON serialization
       const processedPageStats = Object.entries(pageStats).map(([page, data]) => ({
         page: parseInt(page),
         views: data.views,
         uniqueVisitors: data.visitors.size,
         timeSpent: data.timeSpent
-      })).sort((a, b) => b.timeSpent - a.timeSpent); // Sort by time spent descending
+      })).sort((a, b) => b.timeSpent - a.timeSpent);
 
       const response = {
         totalSessions: sessionIds.length,
         uniqueVisitors: uniqueVisitors.length,
         totalEvents: stats?.length || 0,
         pageStats: processedPageStats,
+        sessions: Object.values(sessionData).sort((a, b) => 
+          new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime()
+        ).slice(0, 20), // Limit to last 20 sessions
         recentEvents: stats?.slice(0, 50) || []
       };
 

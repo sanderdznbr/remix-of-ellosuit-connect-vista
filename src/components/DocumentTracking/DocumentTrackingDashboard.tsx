@@ -33,6 +33,20 @@ interface DocumentStats {
     uniqueVisitors: number;
     timeSpent: number;
   }>;
+  sessions: Array<{
+    sessionId: string;
+    visitorId: string;
+    startTime: number;
+    endTime?: number;
+    duration?: number;
+    pageSequence: Array<{
+      page: number;
+      timestamp: string;
+      duration?: number;
+    }>;
+    totalPagesVisited: number;
+    totalEvents: number;
+  }>;
   recentEvents: Array<{
     event_type: string;
     page_number: number;
@@ -394,13 +408,76 @@ const DocumentTrackingDashboard = () => {
                                         </div>
                                       </div>
 
-                      {/* Page Stats */}
+                      {/* Sessions Details */}
+                      {documentStats.sessions && documentStats.sessions.length > 0 && (
+                        <div>
+                          <h4 className="font-medium mb-4">👥 Sessões Detalhadas ({documentStats.sessions.length})</h4>
+                          <div className="space-y-4 max-h-96 overflow-y-auto">
+                            {documentStats.sessions.map((session, index) => {
+                              const sessionDuration = session.duration ? Math.round(session.duration / 1000) : 0;
+                              const sessionStartDate = new Date(session.startTime);
+                              
+                              return (
+                                <Card key={session.sessionId} className="p-4 border border-gray-200">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                      <h5 className="font-medium text-sm">Sessão #{index + 1}</h5>
+                                      <p className="text-xs text-muted-foreground">
+                                        {sessionStartDate.toLocaleDateString()} às {sessionStartDate.toLocaleTimeString()}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Visitante: {session.visitorId?.substring(0, 8)}...
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm font-medium text-primary">
+                                        {Math.floor(sessionDuration / 60)}m {sessionDuration % 60}s
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {session.totalPagesVisited} páginas
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Page Timeline */}
+                                  <div className="space-y-2">
+                                    <h6 className="text-xs font-medium text-gray-600 mb-2">Timeline de Navegação:</h6>
+                                    <div className="space-y-1">
+                                      {session.pageSequence.map((pageInfo, pageIndex) => (
+                                        <div key={`${pageInfo.page}-${pageIndex}`} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                              <span className="text-xs text-blue-600">{pageInfo.page}</span>
+                                            </div>
+                                            <span>Página {pageInfo.page}</span>
+                                          </div>
+                                          <div className="text-right">
+                                            {pageInfo.duration ? (
+                                              <span className="text-green-600 font-medium">
+                                                {Math.floor(pageInfo.duration / 60)}m {pageInfo.duration % 60}s
+                                              </span>
+                                            ) : (
+                                              <span className="text-gray-400">--</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Page Stats Summary */}
                       {documentStats.pageStats.length > 0 && (
                         <div>
-                          <h4 className="font-medium mb-3">📊 Análise Detalhada por Página</h4>
-                          <div className="space-y-3">
+                          <h4 className="font-medium mb-3">📊 Resumo por Página</h4>
+                          <div className="space-y-2">
                             {documentStats.pageStats
-                              .slice(0, 10) // Show top 10 pages
+                              .slice(0, 10)
                               .map((page) => (
                                 <div key={page.page} className="flex justify-between items-center p-3 bg-muted rounded-lg">
                                   <div className="flex items-center gap-3">
@@ -413,7 +490,7 @@ const DocumentTrackingDashboard = () => {
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="font-medium">{Math.round(page.timeSpent / 60)}m {page.timeSpent % 60}s</div>
+                                    <div className="font-medium">{Math.floor(page.timeSpent / 60)}m {page.timeSpent % 60}s</div>
                                     <div className="text-sm text-muted-foreground">{page.views} visualizações</div>
                                   </div>
                                 </div>

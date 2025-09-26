@@ -53,9 +53,22 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
     }
   };
 
-  const handleScreenShare = () => {
-    // TODO: Implement screen sharing
-    setIsScreenSharing(!isScreenSharing);
+  const handleScreenShare = async () => {
+    if (localParticipant) {
+      try {
+        if (isScreenSharing) {
+          // Stop screen sharing
+          await localParticipant.setScreenShareEnabled(false);
+          setIsScreenSharing(false);
+        } else {
+          // Start screen sharing
+          await localParticipant.setScreenShareEnabled(true);
+          setIsScreenSharing(true);
+        }
+      } catch (error) {
+        console.error('Screen share error:', error);
+      }
+    }
   };
 
   return (

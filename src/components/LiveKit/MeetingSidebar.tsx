@@ -104,11 +104,11 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
       <div className="meeting-sidebar-header">
         <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'chat' | 'participants')}>
           <TabsList className="grid w-full grid-cols-2 bg-gray-100">
-            <TabsTrigger value="participants" className="gap-2 text-gray-700 data-[state=active]:bg-ellosuit-blue data-[state=active]:text-white">
+            <TabsTrigger value="participants" className="gap-2 text-gray-700 data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900">
               <Users className="h-4 w-4" />
               Participantes ({participants.length})
             </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2 text-gray-700 data-[state=active]:bg-ellosuit-blue data-[state=active]:text-white">
+            <TabsTrigger value="chat" className="gap-2 text-gray-700 data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900">
               <MessageSquare className="h-4 w-4" />
               Chat
             </TabsTrigger>
@@ -127,7 +127,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                     key={participant.identity}
                     className="participant-item"
                   >
-                    <div className="w-8 h-8 bg-ellosuit-blue rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
                       {(participant.name || 'P').charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
@@ -166,7 +166,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                 {messages.map((msg) => (
                   <div key={msg.id} className="chat-message">
                     <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 bg-ellosuit-blue rounded-full flex items-center justify-center text-white text-xs font-medium">
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium">
                         {msg.sender.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -211,7 +211,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                 <Button
                   onClick={handleSendMessage}
                   size="sm"
-                  className="bg-ellosuit-blue hover:bg-ellosuit-blue-hover text-white"
+                  className="bg-primary hover:bg-primary/90 text-white"
                   disabled={!inputMessage.trim()}
                 >
                   <Send className="h-4 w-4" />

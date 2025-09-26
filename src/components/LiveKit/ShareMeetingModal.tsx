@@ -95,13 +95,13 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
                 readOnly
                 className="flex-1 bg-gray-50 border-gray-300 text-gray-900"
               />
-              <Button
-                onClick={copyToClipboard}
-                size="sm"
-                className="bg-ellosuit-blue hover:bg-ellosuit-blue-hover text-white"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
+                <Button
+                  onClick={copyToClipboard}
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-white"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
             </div>
           </div>
 

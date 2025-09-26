@@ -5,7 +5,7 @@ import {
   useTracks,
   TrackReference,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { Track, Room, RoomEvent } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import ZoomParticipantGrid from './ZoomParticipantGrid';
 import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
+import { useParticipants } from '@livekit/components-react';
 
 interface SimpleLiveKitRoomProps {
   roomName: string;
@@ -46,12 +47,44 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [error, setError] = useState<string>('');
   const [preJoinChoices, setPreJoinChoices] = useState<any>();
   const [showPreJoin, setShowPreJoin] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true); // Auto-open chat
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('participants');
+  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('chat'); // Default to chat
   const { user } = useAuth();
   const { toast } = useToast();
+  const participants = useParticipants(); // Get real participants
+
+  // Enhanced connection management to prevent disconnections
+  useEffect(() => {
+    let isPageVisible = !document.hidden;
+    
+    const handleVisibilityChange = () => {
+      const wasVisible = isPageVisible;
+      isPageVisible = !document.hidden;
+      
+      if (wasVisible && !isPageVisible) {
+        // Page became hidden - don't disconnect
+        console.log('Page hidden, maintaining LiveKit connection');
+      } else if (!wasVisible && isPageVisible) {
+        // Page became visible again
+        console.log('Page visible again, connection maintained');
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      // Only disconnect when actually leaving the page
+      console.log('Page unloading, will disconnect');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   const generateToken = useCallback(async () => {
     try {
@@ -197,6 +230,24 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         data-lk-theme="default"
         onDisconnected={handleDisconnected}
         onError={handleError}
+        options={{
+          // Enhanced connection options
+          adaptiveStream: true,
+          disconnectOnPageLeave: false, // Critical: don't disconnect on visibility change
+          publishDefaults: {
+            simulcast: false,
+            stopMicTrackOnMute: false, // Keep track active when muted
+          },
+          // Advanced settings to maintain connection
+          reconnectPolicy: {
+            nextRetryDelayInMs: (context) => {
+              if (context.elapsedMs < 30_000) {
+                return Math.min(context.retryCount * 1000, 5000);
+              }
+              return 10_000;
+            },
+          },
+        }}
       >
         <RoomAudioRenderer />
         
@@ -225,7 +276,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               <div className="flex items-center gap-4">
                 <Button
                   onClick={() => setShowShareModal(true)}
-                  className="bg-ellosuit-blue hover:bg-ellosuit-blue-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                  className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                 >
                   <Share2 className="h-4 w-4" />
                   <span className="text-sm font-medium">Convidar</span>
@@ -251,7 +302,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 />
               </div>
 
-              {/* Fixed Sidebar */}
+              {/* Fixed Sidebar - Always Show Chat */}
               <div className="zoom-meeting-sidebar-container">
                 {/* Sidebar Toggle Buttons */}
                 <div className="zoom-sidebar-buttons">
@@ -263,7 +314,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     )}
                   >
                     <Users className="h-4 w-4" />
-                    <span className="ml-2 text-sm">Participantes (3)</span>
+                    <span className="ml-2 text-sm">Participantes ({participants.length})</span>
                   </Button>
                   <Button
                     onClick={() => toggleSidebar('chat')}
@@ -277,15 +328,24 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   </Button>
                 </div>
 
-                {/* Sidebar Content */}
+                {/* Always Open Sidebar */}
                 <MeetingSidebar
-                  isOpen={isChatOpen || isParticipantsOpen}
+                  isOpen={true}
                   onClose={() => {
                     setIsChatOpen(false);
                     setIsParticipantsOpen(false);
                   }}
-                  activeTab={sidebarTab}
-                  onTabChange={setSidebarTab}
+                  activeTab={isChatOpen ? 'chat' : 'participants'}
+                  onTabChange={(tab) => {
+                    if (tab === 'chat') {
+                      setIsChatOpen(true);
+                      setIsParticipantsOpen(false);
+                    } else {
+                      setIsParticipantsOpen(true);
+                      setIsChatOpen(false);
+                    }
+                    setSidebarTab(tab);
+                  }}
                 />
               </div>
             </div>

@@ -41,6 +41,7 @@ const Sidebar = () => {
     { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
     { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' },
     { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' },
+    { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de Documento' },
     { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
   ];
 

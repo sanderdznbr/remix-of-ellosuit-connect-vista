@@ -565,6 +565,53 @@ export type Database = {
           },
         ]
       }
+      document_tracking_events: {
+        Row: {
+          data: Json | null
+          document_id: string
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          page_number: number | null
+          session_id: string
+          timestamp: string
+          user_agent: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          data?: Json | null
+          document_id: string
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          page_number?: number | null
+          session_id: string
+          timestamp?: string
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          data?: Json | null
+          document_id?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          page_number?: number | null
+          session_id?: string
+          timestamp?: string
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_tracking_events_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "trackable_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           company_id: string
@@ -1395,6 +1442,51 @@ export type Database = {
           id?: number
           key?: string | null
           value?: string | null
+        }
+        Relationships: []
+      }
+      trackable_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          file_size: number | null
+          file_url: string
+          id: string
+          mime_type: string
+          original_filename: string
+          public_link_id: string
+          title: string
+          tracking_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          mime_type: string
+          original_filename: string
+          public_link_id?: string
+          title: string
+          tracking_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          public_link_id?: string
+          title?: string
+          tracking_enabled?: boolean
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

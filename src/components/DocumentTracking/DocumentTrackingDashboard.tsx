@@ -96,22 +96,38 @@ const DocumentTrackingDashboard = () => {
     try {
       setLoading(true);
 
-      // Upload file to storage
-      const fileUrl = await uploadFile(file, 'trackable-documents');
-      if (!fileUrl) {
-        throw new Error('Falha no upload do arquivo');
-      }
-
-      // Get company ID
-      const { data: companyUser } = await supabase
+      // Get company ID first
+      const { data: companyUser, error: companyError } = await supabase
         .from('company_users')
         .select('company_id')
         .eq('user_id', user?.id)
         .single();
 
-      if (!companyUser) {
+      if (companyError || !companyUser) {
         throw new Error('Usuário não associado a empresa');
       }
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${companyUser.company_id}/${fileName}`;
+
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('trackable-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('trackable-documents')
+        .getPublicUrl(uploadData.path);
 
       // Save document metadata
       const { data, error } = await supabase
@@ -121,7 +137,7 @@ const DocumentTrackingDashboard = () => {
           company_id: companyUser.company_id,
           title: file.name.replace('.pdf', ''),
           original_filename: file.name,
-          file_url: fileUrl,
+          file_url: publicUrl,
           file_size: file.size,
           mime_type: file.type,
           tracking_enabled: true
@@ -136,6 +152,16 @@ const DocumentTrackingDashboard = () => {
         description: 'Documento enviado e preparado para rastreamento',
       });
 
+      // Show the shareable link
+      const shareableUrl = `${window.location.origin}/document/${data.public_link_id}`;
+      toast({
+        title: 'Link Compartilhável Gerado',
+        description: `Link copiado: ${shareableUrl}`,
+      });
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(shareableUrl);
+
       fetchDocuments();
       
       // Clear input
@@ -145,7 +171,7 @@ const DocumentTrackingDashboard = () => {
       console.error('Error uploading document:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao enviar documento',
+        description: error.message || 'Erro ao enviar documento',
         variant: 'destructive',
       });
     } finally {

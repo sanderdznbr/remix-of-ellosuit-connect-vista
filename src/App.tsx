@@ -18,6 +18,7 @@ import ImprovedBookingPublic from '@/pages/ImprovedBookingPublic';
 import ImprovedBookingCalendar from '@/pages/ImprovedBookingCalendar';
 import MeetingRoom from "./components/Dashboard/MeetingRoom";
 import DocumentViewer from './pages/DocumentViewer';
+import SharedContent from './pages/SharedContent';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/agendamentos/:slug" element={<ImprovedBookingCalendar />} />
             <Route path="/:companyName/:slug" element={<ImprovedBookingCalendar />} />
             <Route path="/document/:linkId" element={<DocumentViewer />} />
+            <Route path="/shared/:shareId" element={<SharedContent />} />
             <Route path="/team" element={<Team />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

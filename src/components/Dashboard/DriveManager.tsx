@@ -25,7 +25,9 @@ import {
   Clock,
   Eye,
   ArrowLeft,
-  Home
+  Home,
+  Link,
+  Archive
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -237,6 +239,97 @@ const DriveManager = () => {
     });
 
     loadFiles();
+  };
+
+  // Share folder or file
+  const generateShareableLink = async (item: DriveFile | DriveFolder, type: 'file' | 'folder') => {
+    const baseUrl = window.location.origin;
+    const shareId = `${type}-${item.id}`;
+    const shareUrl = `${baseUrl}/shared/${shareId}`;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: 'Link copiado!',
+        description: `Link compartilhável copiado para a área de transferência`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível copiar o link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Download folder as ZIP
+  const downloadFolderAsZip = async (folder: DriveFolder) => {
+    try {
+      // Dynamic import JSZip
+      const JSZip = (await import('jszip')).default;
+      
+      // Get all files in the folder
+      const { data: folderFiles, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('folder_id', folder.id)
+        .eq('company_id', companyId);
+
+      if (error) throw error;
+
+      if (!folderFiles || folderFiles.length === 0) {
+        toast({
+          title: 'Pasta vazia',
+          description: 'Esta pasta não contém arquivos para download',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Preparando download...',
+        description: `Preparando ${folderFiles.length} arquivos para download`,
+      });
+
+      const zip = new JSZip();
+
+      // Add files to ZIP
+      for (const file of folderFiles) {
+        if (file.file_url) {
+          try {
+            const response = await fetch(file.file_url);
+            const blob = await response.blob();
+            zip.file(file.name, blob);
+          } catch (error) {
+            console.error(`Error adding file ${file.name} to ZIP:`, error);
+          }
+        }
+      }
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download ZIP file
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `${folder.name}.zip`;
+      link.click();
+
+      // Clean up
+      URL.revokeObjectURL(link.href);
+
+      toast({
+        title: 'Download concluído',
+        description: `Pasta "${folder.name}" baixada como ZIP`,
+      });
+    } catch (error) {
+      console.error('Error downloading folder as ZIP:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao baixar pasta como ZIP',
+        variant: 'destructive',
+      });
+    }
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -490,12 +583,23 @@ const DriveManager = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-4">📄 Arquivos</h3>
             <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4' : 'space-y-2'}>
               {filteredFiles.map((file) => (
-                <Card key={file.id} className="hover:shadow-lg transition-shadow rounded-2xl">
+                <Card key={file.id} className="hover:shadow-lg transition-shadow rounded-2xl group">
                   <CardContent className="p-4">
                     {viewMode === 'grid' ? (
                        <div className="text-center">
-                         <div className="w-16 h-16 bg-gray-100 rounded-xl mx-auto mb-2 flex items-center justify-center text-2xl">
+                         <div className="w-16 h-16 bg-gray-100 rounded-xl mx-auto mb-2 flex items-center justify-center text-2xl relative">
                            {getFileIcon(file.file_type)}
+                           
+                           {/* Share button overlay */}
+                           <Button
+                             size="icon"
+                             variant="secondary"
+                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                             onClick={() => generateShareableLink(file, 'file')}
+                             title="Compartilhar arquivo"
+                           >
+                             <Link className="h-3 w-3" />
+                           </Button>
                          </div>
                          <p className="font-medium text-sm truncate">{file.name}</p>
                          <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
@@ -553,6 +657,15 @@ const DriveManager = () => {
                           <p className="text-sm text-gray-500">{formatFileSize(file.file_size)}</p>
                         </div>
                        <div className="flex gap-1">
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                             onClick={() => generateShareableLink(file, 'file')}
+                             title="Compartilhar"
+                           >
+                             <Link className="h-4 w-4" />
+                           </Button>
                            {file.file_url && (
                              <>
                                <Button 
@@ -586,7 +699,6 @@ const DriveManager = () => {
                              className="h-8 w-8 text-red-600 hover:text-red-700"
                              onClick={() => {
                                if (confirm('Deseja excluir este arquivo?')) {
-                                 // Função de exclusão aqui
                                  console.log('Excluir arquivo:', file.id);
                                }
                              }}

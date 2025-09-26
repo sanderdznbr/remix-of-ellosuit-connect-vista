@@ -87,7 +87,7 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
       }
     };
 
-    if (user && roomName) {
+    if (roomName) {
       generateToken();
     }
   }, [roomName, participantName, user, toast]);
@@ -159,9 +159,79 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
           });
         }}
       >
-        <VideoConference />
-        <RoomControls onLeave={onLeave} />
+        <div className="h-[100dvh] w-full flex">
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-2 bg-background/80 backdrop-blur">
+              <div className="text-sm font-medium">Sala {roomName}</div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const url = window.location.href;
+                    navigator.clipboard.writeText(url);
+                    toast({ title: 'Link copiado', description: 'URL da chamada copiada.' });
+                  }}
+                >
+                  Copiar link
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    const url = window.location.href;
+                    if ((navigator as any).share) {
+                      try {
+                        await (navigator as any).share({ title: 'Chamada Ellosuit', url });
+                      } catch {}
+                    } else {
+                      navigator.clipboard.writeText(url);
+                      toast({ title: 'Link copiado', description: 'Compartilhe o link com seus convidados.' });
+                    }
+                  }}
+                >
+                  Convidar
+                </Button>
+                <Button variant="destructive" size="sm" onClick={onLeave}>Sair</Button>
+              </div>
+            </div>
+
+            <div className="relative flex-1 min-h-0">
+              <VideoGrid />
+              <div className="absolute bottom-4 right-4">
+                <ControlBar />
+              </div>
+            </div>
+          </div>
+
+          <aside className="w-[340px] max-w-[380px] min-w-[320px] border-l bg-background flex flex-col">
+            <div className="px-4 py-2 border-b text-sm font-medium">Chat</div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <Chat />
+            </div>
+          </aside>
+        </div>
       </LiveKitRoom>
+    </div>
+  );
+};
+
+const VideoGrid: React.FC = () => {
+  const tracks = useTracks([
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
+    { source: Track.Source.Camera, withPlaceholder: true },
+  ]);
+
+  return (
+    <div className="h-full w-full p-2">
+      <GridLayout tracks={tracks as any} className="h-full w-full">
+        {tracks.map((track) => (
+          <ParticipantTile
+            key={`${track.participant.identity}-${String(track.source)}`}
+            trackRef={track as any}
+          />
+        ))}
+      </GridLayout>
     </div>
   );
 };

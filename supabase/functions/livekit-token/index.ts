@@ -100,27 +100,39 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user from auth header
+    // Optional auth: if provided, we'll use the user id, otherwise join as guest
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header required');
-    }
+    let userId: string | null = null;
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      throw new Error('Invalid authentication');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const { data: { user } } = await supabaseClient.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+      userId = user?.id ?? null;
     }
 
     const { roomName, participantName } = await req.json();
     
-    if (!roomName || !participantName) {
-      throw new Error('roomName and participantName are required');
+    if (!roomName) {
+      throw new Error('roomName is required');
     }
 
-    console.log('Generating token for:', { roomName, participantName, userId: user.id });
+    // Validate room exists and is active
+    const { data: room, error: roomError } = await supabaseClient
+      .from('meeting_rooms')
+      .select('id, is_active, ended_at')
+      .eq('room_code', roomName)
+      .single();
+
+    if (roomError || !room) {
+      throw new Error('Sala não encontrada');
+    }
+
+    if (!room.is_active) {
+      throw new Error('Sala inativa');
+    }
+
+    console.log('Generating token for:', { roomName, participantName, userId: userId ?? 'guest' });
 
     const livekitUrl = Deno.env.get('LIVEKIT_URL');
     const apiKey = Deno.env.get('LIVEKIT_API_KEY');
@@ -131,9 +143,12 @@ serve(async (req) => {
     }
 
     // Create access token
+    const identity = userId ?? `guest-${crypto.randomUUID()}`;
+    const displayName = participantName || (userId ? 'Usuário' : 'Convidado');
+
     const at = new LiveKitAccessToken(apiKey, apiSecret, {
-      identity: user.id,
-      name: participantName,
+      identity,
+      name: displayName,
       ttl: '1h',
     });
 
@@ -153,8 +168,8 @@ serve(async (req) => {
       token,
       url: livekitUrl,
       roomName,
-      participantName,
-      userId: user.id
+      participantName: displayName,
+      userId: identity
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

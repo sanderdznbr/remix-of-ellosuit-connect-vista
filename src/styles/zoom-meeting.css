@@ -229,35 +229,39 @@
 
 /* Meeting Sidebar - Fixed Right Side */
 .zoom-meeting-sidebar-container {
-  @apply fixed top-20 right-0 bottom-0 w-80 bg-white border-l border-gray-200 shadow-xl z-30 flex flex-col;
+  @apply fixed top-20 right-0 bottom-0 w-80 bg-background border-l border-border shadow-xl z-30 flex flex-col;
+}
+
+.zoom-meeting-sidebar {
+  @apply w-full h-full bg-background flex flex-col overflow-hidden;
 }
 
 .zoom-sidebar-buttons {
-  @apply flex border-b border-gray-200 bg-gray-50;
+  @apply flex border-b border-border bg-muted/50;
 }
 
 .sidebar-toggle-button {
-  @apply flex-1 px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-none bg-transparent transition-colors flex items-center justify-center;
+  @apply flex-1 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-none bg-transparent transition-colors flex items-center justify-center;
 }
 
 .sidebar-toggle-button.active {
-  @apply text-gray-900 bg-gray-200 font-semibold;
+  @apply text-foreground bg-muted font-semibold;
 }
 
 .meeting-sidebar {
-  @apply flex-1 bg-white flex flex-col overflow-hidden;
+  @apply flex-1 bg-background flex flex-col overflow-hidden;
 }
 
 .meeting-sidebar-header {
-  @apply p-4 border-b border-gray-200 bg-gray-50/50;
+  @apply p-4 border-b border-border bg-muted/20;
 }
 
 .meeting-sidebar-content {
-  @apply flex-1 overflow-hidden bg-white;
+  @apply flex-1 overflow-hidden bg-background;
 }
 
 .participant-item {
-  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors;
+  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors;
 }
 
 .chat-message {
@@ -265,7 +269,7 @@
 }
 
 .chat-input {
-  @apply p-4 border-t border-gray-200 bg-gray-50/50;
+  @apply p-4 border-t border-border bg-muted/20;
 }
 
 /* Recording button styles */

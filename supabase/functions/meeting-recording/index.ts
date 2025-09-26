@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { AccessToken } from 'https://esm.sh/livekit-server-sdk@2.13.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,11 +26,18 @@ serve(async (req) => {
     console.log('Recording action:', { action, roomName, userId, companyId });
 
     if (action === 'start') {
+      // Create proper JWT token for LiveKit API
+      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+        identity: `recorder-${Date.now()}`,
+      });
+      at.addGrant({ roomRecord: true });
+      const token = at.toJwt();
+
       // Start recording via LiveKit Recording API
       const recordingResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StartRoomCompositeEgress`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LIVEKIT_API_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -81,11 +89,18 @@ serve(async (req) => {
       });
 
     } else if (action === 'stop') {
+      // Create proper JWT token for LiveKit API
+      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+        identity: `recorder-${Date.now()}`,
+      });
+      at.addGrant({ roomRecord: true });
+      const token = at.toJwt();
+
       // Stop recording via LiveKit API
       const stopResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LIVEKIT_API_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

@@ -149,7 +149,7 @@ serve(async (req) => {
     const at = new LiveKitAccessToken(apiKey, apiSecret, {
       identity,
       name: displayName,
-      ttl: '12h', // Increased TTL for better stability
+      ttl: '8760h', // ~1 ano para prática de "não expirar"
     });
 
     at.addGrant({

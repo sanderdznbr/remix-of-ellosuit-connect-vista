@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LiveKitRoom,
   GridLayout,
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy, Users, MessageCircle, Settings, PhoneOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import '@/styles/livekit.css';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -44,6 +45,7 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
   const [error, setError] = useState<string>('');
   const { user } = useAuth();
   const { toast } = useToast();
+  const retryRef = useRef(0);
 
   useEffect(() => {
     const generateToken = async () => {
@@ -93,6 +95,26 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
     }
   }, [roomName, participantName, user, toast]);
 
+  const regenerateToken = React.useCallback(async () => {
+    try {
+      setError('');
+      const { data, error } = await supabase.functions.invoke('livekit-token', {
+        body: {
+          roomName,
+          participantName: participantName || user?.user_metadata?.full_name || 'Participante'
+        }
+      });
+      if (error) throw error;
+      const tokenData = data as TokenResponse;
+      setToken(tokenData.token);
+      setServerUrl(tokenData.url);
+      toast({ title: 'Reconectando...', description: 'Atualizando credenciais da chamada' });
+    } catch (e) {
+      console.error('Erro ao renovar token:', e);
+      setError(e instanceof Error ? e.message : 'Erro ao renovar token');
+    }
+  }, [roomName, participantName, user, toast]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -131,6 +153,7 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
     <ErrorBoundary>
       <div className="h-screen w-full bg-background overflow-hidden">
         <LiveKitRoom
+          key={token}
           video={true}
           audio={true}
           token={token}
@@ -158,12 +181,18 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
             });
             onLeave();
           }}
-          onError={(error) => {
+          onError={async (error) => {
             console.error('LiveKit room error:', error);
-            setError(error.message);
+            const msg = (error as any)?.message ? String((error as any).message) : String(error);
+            if (/token|expire|disconnect|401|403/i.test(msg) && retryRef.current < 3) {
+              retryRef.current += 1;
+              await regenerateToken();
+              return;
+            }
+            setError(msg);
             toast({
               title: "Erro na chamada",
-              description: "Ocorreu um erro durante a chamada",
+              description: msg,
               variant: "destructive",
             });
           }}

@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
-// Robust auth for LiveKit Egress: try JWT first, then fall back to key:secret pair
+// Helper to call LiveKit Egress with robust auth (JWT first, then fallback)
 async function egressFetch(url: string, body: any, opts: { apiKey: string; apiSecret: string }) {
   const { apiKey, apiSecret } = opts;
 
-  // Build a minimal JWT compatible with LiveKit REST using HMAC-SHA256
+  // Build a minimal JWT compatible with LiveKit Egress
   const token = await buildJwt(apiKey, apiSecret, { video: { roomRecord: true } });
 
+  // Attempt 1: Bearer JWT
   let res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -16,10 +17,12 @@ async function egressFetch(url: string, body: any, opts: { apiKey: string; apiSe
     },
     body: JSON.stringify(body),
   });
-
   if (res.ok) return res;
 
-  // Fallback: Bearer apiKey:apiSecret (supported by Twirp endpoints)
+  const t1 = await res.text();
+  console.error('Egress JWT attempt failed:', t1);
+
+  // Attempt 2: Bearer apiKey:apiSecret (some deployments accept this)
   res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -28,13 +31,28 @@ async function egressFetch(url: string, body: any, opts: { apiKey: string; apiSe
     },
     body: JSON.stringify(body),
   });
+  if (res.ok) return res;
+
+  const t2 = await res.text();
+  console.error('Egress key:secret attempt failed:', t2);
+
+  // Attempt 3: explicit headers (defensive)
+  res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'LiveKit-Api-Key': apiKey,
+      'LiveKit-Api-Secret': apiSecret,
+    } as any,
+    body: JSON.stringify(body),
+  });
   return res;
 }
 
 // Small JWT builder (Deno compatible)
 async function buildJwt(apiKey: string, apiSecret: string, payloadExt: Record<string, unknown>) {
   const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'HS256', typ: 'JWT' };
+  const header = { alg: 'HS256', typ: 'JWT' } as const;
   const payload = { iss: apiKey, iat: now, exp: now + 60 * 10, ...payloadExt };
   const enc = (obj: any) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj))))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/g, '');
@@ -73,6 +91,20 @@ serve(async (req) => {
       throw new Error('LiveKit credentials are not configured');
     }
 
+    // Resolve room_id (uuid) from room_code (text)
+    const { data: room, error: roomErr } = await supabase
+      .from('meeting_rooms')
+      .select('id')
+      .eq('room_code', roomName)
+      .single();
+
+    if (roomErr || !room) {
+      console.error('Room lookup error:', roomErr);
+      throw new Error('Sala não encontrada para iniciar a gravação');
+    }
+
+    const roomId: string = room.id as string;
+
     if (action === 'start') {
       const egressBody = {
         room_name: roomName,
@@ -102,11 +134,11 @@ serve(async (req) => {
       const recordingData = await recordingResponse.json();
       console.log('LiveKit recording started:', recordingData);
 
-      // Create recording record in database
+      // Create recording record in database (store uuid room_id)
       const { data: recording, error } = await supabase
         .from('meeting_recordings')
         .insert({
-          room_id: roomName,
+          room_id: roomId,
           company_id: companyId,
           created_by: userId,
           title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,

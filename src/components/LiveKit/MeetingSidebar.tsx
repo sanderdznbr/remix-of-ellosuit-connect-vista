@@ -46,7 +46,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
         if (message.type === 'chat') {
           setMessages(prev => [...prev, {
             id: Date.now(),
-            participant: participant?.identity || 'Unknown',
+            participant: participant?.name || participant?.identity || 'Participante',
             message: message.text,
             timestamp: new Date()
           }]);

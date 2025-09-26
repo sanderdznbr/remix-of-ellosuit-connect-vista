@@ -184,11 +184,18 @@
 }
 
 .meeting-controls-center {
-  @apply flex items-center gap-3;
+  @apply flex items-center gap-4;
 }
 
 .control-button {
-  @apply w-12 h-12 rounded-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl;
+  @apply w-12 h-12 rounded-full text-white border-2 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl;
+  background-color: hsl(var(--ellosuit-blue));
+  border-color: hsl(var(--ellosuit-blue));
+}
+
+.control-button:hover {
+  background-color: hsl(var(--ellosuit-blue-hover));
+  border-color: hsl(var(--ellosuit-blue-hover));
 }
 
 .control-button-muted {
@@ -196,11 +203,8 @@
 }
 
 .control-button-active {
-  @apply bg-blue-500 hover:bg-blue-600 text-white border-blue-500;
-}
-
-.control-button-share {
-  @apply bg-white hover:bg-gray-50 px-4 w-auto h-12 rounded-full border-2 border-gray-200 hover:border-gray-300;
+  background-color: hsl(var(--ellosuit-blue-light));
+  border-color: hsl(var(--ellosuit-blue-light));
 }
 
 .control-button-leave {
@@ -211,9 +215,26 @@
   @apply w-3 h-3 bg-green-500 rounded-full animate-pulse;
 }
 
-/* Meeting Sidebar - Light Theme */
+/* Meeting Sidebar - Fixed Right Side */
+.zoom-meeting-sidebar-container {
+  @apply fixed top-20 right-0 bottom-0 w-80 bg-white border-l border-gray-200 shadow-xl z-30 flex flex-col;
+}
+
+.zoom-sidebar-buttons {
+  @apply flex border-b border-gray-200 bg-gray-50;
+}
+
+.sidebar-toggle-button {
+  @apply flex-1 px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-none bg-transparent transition-colors flex items-center justify-center;
+}
+
+.sidebar-toggle-button.active {
+  @apply text-white;
+  background-color: hsl(var(--ellosuit-blue));
+}
+
 .meeting-sidebar {
-  @apply w-80 bg-white border-l border-gray-200 flex flex-col h-full shadow-xl;
+  @apply flex-1 bg-white flex flex-col overflow-hidden;
 }
 
 .meeting-sidebar-header {
@@ -251,8 +272,8 @@
     @apply order-2 justify-center;
   }
   
-  .meeting-sidebar {
-    @apply w-full absolute top-0 right-0 bottom-0 z-30 bg-white;
+  .zoom-meeting-sidebar-container {
+    @apply w-full top-20 right-0 bottom-0;
   }
   
   .control-button {
@@ -268,7 +289,15 @@
   }
   
   .zoom-meeting-header {
-    @apply p-3;
+    @apply p-3 flex-col gap-2;
+  }
+  
+  .zoom-meeting-header > div:first-child {
+    @apply justify-center;
+  }
+  
+  .zoom-meeting-header > div:last-child {
+    @apply justify-center;
   }
 }
 

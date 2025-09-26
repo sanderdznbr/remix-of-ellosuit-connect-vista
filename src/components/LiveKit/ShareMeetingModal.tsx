@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Copy, Mail, MessageSquare, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Copy, 
-  Share2, 
-  QrCode,
-  Mail,
-  MessageCircle,
-  Check
-} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ShareMeetingModalProps {
   isOpen: boolean;
@@ -31,15 +27,15 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const meetingUrl = `${window.location.origin}/meeting/${roomName}`;
+  const meetingLink = `${window.location.origin}/livekit-meeting/${roomName}`;
 
-  const handleCopyLink = async () => {
+  const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(meetingUrl);
+      await navigator.clipboard.writeText(meetingLink);
       setCopied(true);
       toast({
         title: "Link copiado!",
-        description: "O link da reunião foi copiado para a área de transferência.",
+        description: "O link foi copiado para a área de transferência.",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -51,100 +47,116 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
     }
   };
 
-  const handleShareWhatsApp = () => {
-    const message = `Você foi convidado para uma reunião!\n\nSala: ${roomName}\nLink: ${meetingUrl}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+  const shareViaEmail = () => {
+    const subject = encodeURIComponent(`Convite para reunião - ${roomName}`);
+    const body = encodeURIComponent(`Você foi convidado para participar da reunião "${roomName}"\n\nClique no link para entrar: ${meetingLink}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
   };
 
-  const handleShareEmail = () => {
-    const subject = `Convite para reunião - Sala ${roomName}`;
-    const body = `Você foi convidado para participar de uma reunião.\n\nSala: ${roomName}\nLink: ${meetingUrl}\n\nClique no link para entrar na reunião.`;
-    const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = emailUrl;
+  const shareViaWhatsApp = () => {
+    const message = encodeURIComponent(`Você foi convidado para a reunião "${roomName}"\n\nLink: ${meetingLink}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
+  };
+
+  const shareGeneric = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Reunião ${roomName}`,
+        text: `Você foi convidado para participar da reunião "${roomName}"`,
+        url: meetingLink,
+      });
+    } else {
+      copyToClipboard();
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700">
+      <DialogContent className="sm:max-w-md bg-white border-gray-200 text-gray-900">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Convidar pessoas
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Compartilhar Reunião
           </DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Convide outras pessoas para participar da reunião
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Room Info */}
-          <div className="bg-gray-800 p-4 rounded-lg">
-            <div className="text-sm text-gray-300 mb-1">Sala de reunião</div>
-            <div className="text-lg font-semibold text-white">{roomName}</div>
-          </div>
-
-          {/* Copy Link */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-white">Link da reunião</label>
+        <div className="space-y-4">
+          {/* Meeting Link */}
+          <div className="space-y-2">
+            <Label htmlFor="meeting-link" className="text-sm font-medium text-gray-700">
+              Link da Reunião
+            </Label>
             <div className="flex gap-2">
-              <Input 
-                value={meetingUrl}
+              <Input
+                id="meeting-link"
+                value={meetingLink}
                 readOnly
-                className="bg-gray-800 border-gray-600 text-white text-sm"
+                className="flex-1 bg-gray-50 border-gray-300 text-gray-900"
               />
-              <Button 
-                onClick={handleCopyLink}
-                className="px-3 bg-primary hover:bg-primary/90"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Share Options */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-white">Compartilhar via</label>
-            <div className="grid grid-cols-2 gap-3">
               <Button
-                onClick={handleShareWhatsApp}
-                variant="outline"
-                className="bg-green-600 hover:bg-green-700 border-green-600 text-white"
+                onClick={copyToClipboard}
+                size="sm"
+                className="bg-ellosuit-blue hover:bg-ellosuit-blue-hover text-white"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                WhatsApp
+                <Copy className="h-4 w-4" />
               </Button>
-              
+            </div>
+          </div>
+
+          {/* Quick Share Options */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">
+              Compartilhar via
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
               <Button
-                onClick={handleShareEmail}
+                onClick={() => shareViaEmail()}
                 variant="outline"
-                className="bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
               >
-                <Mail className="h-4 w-4 mr-2" />
-                E-mail
+                <Mail className="h-5 w-5 mb-1" />
+                <span className="text-xs">Email</span>
+              </Button>
+              <Button
+                onClick={() => shareViaWhatsApp()}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                <MessageSquare className="h-5 w-5 mb-1" />
+                <span className="text-xs">WhatsApp</span>
+              </Button>
+              <Button
+                onClick={() => shareGeneric()}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                <Share2 className="h-5 w-5 mb-1" />
+                <span className="text-xs">Outros</span>
               </Button>
             </div>
           </div>
 
-          {/* Instructions */}
-          <div className="bg-blue-900/30 border border-blue-700/50 p-4 rounded-lg">
-            <div className="text-sm text-blue-200">
-              <strong>Como entrar:</strong>
-              <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>Clique no link compartilhado</li>
-                <li>Permita o acesso à câmera e microfone</li>
-                <li>Digite seu nome e entre na reunião</li>
-              </ul>
+          {/* Meeting Info */}
+          <div className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">
+              <strong className="text-gray-900">Sala:</strong> {roomName}
+            </div>
+            <div className="text-sm text-gray-600">
+              <strong className="text-gray-900">Início:</strong> Agora
             </div>
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Fechar
-            </Button>
-          </div>
+        <div className="flex justify-end mt-6">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Fechar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

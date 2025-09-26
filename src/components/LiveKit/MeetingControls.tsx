@@ -5,13 +5,7 @@ import {
   Video, 
   VideoOff, 
   Monitor, 
-  Users, 
-  MessageSquare, 
-  Settings, 
-  Phone,
-  Share2,
-  Shield,
-  Smile
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -101,35 +95,6 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
           </Button>
 
-          {/* Security */}
-          <Button className="control-button" size="lg">
-            <Shield className="h-5 w-5" />
-          </Button>
-
-          {/* Participants */}
-          <Button
-            onClick={onToggleParticipants}
-            className={cn(
-              "control-button",
-              isParticipantsOpen && "control-button-active"
-            )}
-            size="lg"
-          >
-            <Users className="h-5 w-5" />
-          </Button>
-
-          {/* Chat */}
-          <Button
-            onClick={onToggleChat}
-            className={cn(
-              "control-button",
-              isChatOpen && "control-button-active"
-            )}
-            size="lg"
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-
           {/* Screen Share */}
           <Button
             onClick={handleScreenShare}
@@ -142,28 +107,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             <Monitor className="h-5 w-5" />
           </Button>
 
-          {/* Reactions */}
-          <Button className="control-button" size="lg">
-            <Smile className="h-5 w-5" />
-          </Button>
-
-          {/* More options */}
-          <Button className="control-button" size="lg">
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* Right side - Actions */}
-        <div className="meeting-controls-right">
-          <Button
-            onClick={onShareMeeting}
-            className="control-button control-button-share"
-            size="lg"
-          >
-            <Share2 className="h-4 w-4" />
-            <span className="ml-2 text-sm font-medium">Convidar</span>
-          </Button>
-
+          {/* End Call */}
           <Button
             onClick={onLeave}
             className="control-button control-button-leave"
@@ -171,6 +115,10 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
           >
             <Phone className="h-5 w-5 rotate-[135deg]" />
           </Button>
+        </div>
+
+        {/* Right side - Empty for mobile responsiveness */}
+        <div className="meeting-controls-right">
         </div>
       </div>
     </div>

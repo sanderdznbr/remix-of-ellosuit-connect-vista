@@ -10,7 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import MeetingControls from './MeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
@@ -221,27 +222,62 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   <span className="text-sm text-gray-500">Sala: {roomName}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span>Conectado</span>
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={() => setShowShareModal(true)}
+                  className="bg-ellosuit-blue hover:bg-ellosuit-blue-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="text-sm font-medium">Convidar</span>
+                </Button>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span>Conectado</span>
+                </div>
               </div>
             </div>
 
             <div className="zoom-meeting-main">
               <div className="zoom-meeting-content">
                 <ZoomParticipantGrid />
+                
+                <MeetingControls
+                  onToggleChat={() => toggleSidebar('chat')}
+                  onToggleParticipants={() => toggleSidebar('participants')}
+                  onShareMeeting={() => setShowShareModal(true)}
+                  onLeave={onLeave}
+                  isChatOpen={isChatOpen}
+                  isParticipantsOpen={isParticipantsOpen}
+                />
               </div>
 
-              <MeetingControls
-                onToggleChat={() => toggleSidebar('chat')}
-                onToggleParticipants={() => toggleSidebar('participants')}
-                onShareMeeting={() => setShowShareModal(true)}
-                onLeave={onLeave}
-                isChatOpen={isChatOpen}
-                isParticipantsOpen={isParticipantsOpen}
-              />
+              {/* Fixed Sidebar */}
+              <div className="zoom-meeting-sidebar-container">
+                {/* Sidebar Toggle Buttons */}
+                <div className="zoom-sidebar-buttons">
+                  <Button
+                    onClick={() => toggleSidebar('participants')}
+                    className={cn(
+                      "sidebar-toggle-button",
+                      isParticipantsOpen && "active"
+                    )}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span className="ml-2 text-sm">Participantes (3)</span>
+                  </Button>
+                  <Button
+                    onClick={() => toggleSidebar('chat')}
+                    className={cn(
+                      "sidebar-toggle-button",
+                      isChatOpen && "active"
+                    )}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="ml-2 text-sm">Chat</span>
+                  </Button>
+                </div>
 
-              {(isChatOpen || isParticipantsOpen) && (
+                {/* Sidebar Content */}
                 <MeetingSidebar
                   isOpen={isChatOpen || isParticipantsOpen}
                   onClose={() => {
@@ -251,7 +287,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   activeTab={sidebarTab}
                   onTabChange={setSidebarTab}
                 />
-              )}
+              </div>
             </div>
           </>
         )}

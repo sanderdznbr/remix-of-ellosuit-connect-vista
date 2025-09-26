@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import * as pdfjsLib from 'pdfjs-dist';
+import PDFViewerFallback from './PDFViewerFallback';
 
-// Configure PDF.js worker using CDN with correct version
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js`;
+// No longer using PDF.js for client-side rendering - using fallback approach
 
 interface TrackableDocument {
   id: string;
@@ -25,9 +24,9 @@ const CustomPDFViewer: React.FC<CustomPDFViewerProps> = ({ document }) => {
   const [pageImages, setPageImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
   const [pageStartTime, setPageStartTime] = useState<Record<number, number>>({});
   const [sessionStartTime] = useState(Date.now());
-  const [timeOnCurrentPage, setTimeOnCurrentPage] = useState(0);
   
   const sessionId = useRef<string>(Math.random().toString(36).substring(7));
   const visitorId = useRef<string>(
@@ -38,9 +37,7 @@ const CustomPDFViewer: React.FC<CustomPDFViewerProps> = ({ document }) => {
       return id;
     })()
   );
-  const pdfDoc = useRef<any>(null);
   const timeInterval = useRef<NodeJS.Timeout | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Silent tracking function - no console logs or visible indicators
   const trackEvent = useCallback(async (eventType: string, pageNumber: number, data?: any) => {
@@ -88,79 +85,25 @@ const loadPDF = async () => {
             title: document.title,
             filename: document.original_filename,
             totalPages: urls.length,
-            sessionStartTime: sessionStartTime
+            sessionStartTime: sessionStartTime,
+            method: 'images'
           });
 
           setPageStartTime({ 1: Date.now() });
           await trackEvent('page_view', 1);
           setLoading(false);
-          return; // no need to render PDF client-side
+          return;
         }
       }
 
-      // 2) Fallback: fetch and render the PDF client-side
-      let arrayBuffer: ArrayBuffer | null = null;
-      try {
-        const response = await fetch(document.file_url, { mode: 'cors' });
-        if (response.ok) {
-          arrayBuffer = await response.arrayBuffer();
-        }
-      } catch (e) {
-        // ignore, we'll try Supabase SDK fallback
-      }
-
-      if (!arrayBuffer) {
-        // Supabase SDK fallback (avoids CORS and redirects). We need the storage path.
-        const match = document.file_url.match(/\/storage\/v1\/object\/public\/trackable-documents\/(.+)$/);
-        const storagePath = match ? decodeURIComponent(match[1]) : null;
-        if (!storagePath) throw new Error('Caminho do arquivo inválido');
-        const { data: blob, error: dlError } = await supabase.storage
-          .from('trackable-documents')
-          .download(storagePath);
-        if (dlError || !blob) throw new Error('Falha ao baixar PDF (SDK)');
-        arrayBuffer = await blob.arrayBuffer();
-      }
-
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      pdfDoc.current = pdf;
-      setTotalPages(pdf.numPages);
-
-      // Pre-render all pages as images
-      const images: string[] = [];
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
-        
-        const canvas = window.document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({
-          canvasContext: context,
-          viewport: viewport
-        }).promise;
-
-        images.push(canvas.toDataURL());
-      }
-
-      setPageImages(images);
-      
-      // Track document open silently
-      await trackEvent('document_open', 1, {
-        title: document.title,
-        filename: document.original_filename,
-        totalPages: pdf.numPages,
-        sessionStartTime: sessionStartTime
-      });
-
-      setPageStartTime({ 1: Date.now() });
-      await trackEvent('page_view', 1);
-      
+      // 2) If no extracted images found, use iframe fallback
+      console.log('No extracted images found, using iframe fallback');
+      setUseFallback(true);
       setLoading(false);
+      
     } catch (err) {
-      setError('Erro ao carregar o documento');
+      console.error('Error in loadPDF:', err);
+      setUseFallback(true);
       setLoading(false);
     }
   };
@@ -180,7 +123,6 @@ const loadPDF = async () => {
         const startTime = pageStartTime[currentPage];
         if (startTime) {
           const currentDuration = Date.now() - startTime;
-          setTimeOnCurrentPage(Math.floor(currentDuration / 1000));
           
           // Silent tracking every 30 seconds
           if (currentDuration % 30000 < 1000) {
@@ -272,14 +214,21 @@ const loadPDF = async () => {
     );
   }
 
-  if (error) {
+  if (useFallback) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={loadPDF}>Tentar novamente</Button>
-        </div>
-      </div>
+      <PDFViewerFallback 
+        document={document} 
+        onTrackEvent={trackEvent}
+      />
+    );
+  }
+
+  if (error || pageImages.length === 0) {
+    return (
+      <PDFViewerFallback 
+        document={document} 
+        onTrackEvent={trackEvent}
+      />
     );
   }
 

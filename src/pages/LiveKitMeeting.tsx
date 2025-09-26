@@ -19,6 +19,7 @@ const LiveKitMeeting = () => {
   );
   const [showNameInput, setShowNameInput] = useState(!participantName);
   const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string>('');
 
   useEffect(() => {
     if (!roomCode) {
@@ -28,6 +29,7 @@ const LiveKitMeeting = () => {
 
   const handleJoinRoom = () => {
     if (participantName.trim()) {
+      setJoinError('');
       setIsJoining(true);
       setShowNameInput(false);
     }
@@ -55,6 +57,11 @@ const LiveKitMeeting = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {joinError && (
+              <div className="text-sm text-destructive text-center p-2 bg-destructive/10 rounded">
+                {joinError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Como você quer aparecer?</Label>
               <Input
@@ -89,7 +96,7 @@ const LiveKitMeeting = () => {
     );
   }
 
-  if (isJoining) {
+  if (isJoining && participantName.trim()) {
     return (
       <LiveKitRoomComponent
         roomName={roomCode}
@@ -97,6 +104,13 @@ const LiveKitMeeting = () => {
         onLeave={handleLeaveRoom}
       />
     );
+  }
+
+  // If we reach here and were trying to join but had an error, go back to name input
+  if (isJoining && !participantName.trim()) {
+    setIsJoining(false);
+    setShowNameInput(true);
+    setJoinError('Nome é obrigatório para entrar na sala');
   }
 
   return null;

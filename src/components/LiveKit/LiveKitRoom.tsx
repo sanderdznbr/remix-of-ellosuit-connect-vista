@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   LiveKitRoom,
-  VideoConference,
   GridLayout,
   ParticipantTile,
   ControlBar,
@@ -9,14 +8,16 @@ import {
   useRoomContext,
   useTracks,
   useParticipants,
+  RoomAudioRenderer,
 } from '@livekit/components-react';
-import { Track, Room } from 'livekit-client';
+import { Track, ConnectionState } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Video, VideoOff, Mic, MicOff, Monitor, PhoneOff } from 'lucide-react';
-import '@/styles/livekit.css';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Copy, Users, MessageCircle, Settings, PhoneOff } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -127,42 +128,57 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <LiveKitRoom
-        video={true}
-        audio={true}
-        token={token}
-        serverUrl={serverUrl}
-        data-lk-theme="default"
-        style={{ height: '100vh' }}
-        onConnected={() => {
-          console.log('Connected to LiveKit room');
-          toast({
-            title: "Conectado",
-            description: "Você entrou na sala de reunião",
-          });
-        }}
-        onDisconnected={(reason) => {
-          console.log('Disconnected from LiveKit room:', reason);
-          toast({
-            title: "Desconectado",
-            description: "Você saiu da sala de reunião",
-          });
-          onLeave();
-        }}
-        onError={(error) => {
-          console.error('LiveKit room error:', error);
-          toast({
-            title: "Erro na chamada",
-            description: "Ocorreu um erro durante a chamada",
-            variant: "destructive",
-          });
-        }}
-      >
-        <div className="h-[100dvh] w-full flex">
-          <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex items-center justify-between border-b px-4 py-2 bg-background/80 backdrop-blur">
-              <div className="text-sm font-medium">Sala {roomName}</div>
+    <ErrorBoundary>
+      <div className="h-screen w-full bg-background overflow-hidden">
+        <LiveKitRoom
+          video={true}
+          audio={true}
+          token={token}
+          serverUrl={serverUrl}
+          data-lk-theme="default"
+          options={{
+            adaptiveStream: true,
+            dynacast: true,
+            videoCaptureDefaults: {
+              resolution: { width: 1280, height: 720, frameRate: 30 }
+            }
+          }}
+          onConnected={() => {
+            console.log('Connected to LiveKit room');
+            toast({
+              title: "Conectado",
+              description: "Você entrou na sala de reunião",
+            });
+          }}
+          onDisconnected={(reason) => {
+            console.log('Disconnected from LiveKit room:', reason);
+            toast({
+              title: "Desconectado",
+              description: "Você saiu da sala de reunião",
+            });
+            onLeave();
+          }}
+          onError={(error) => {
+            console.error('LiveKit room error:', error);
+            setError(error.message);
+            toast({
+              title: "Erro na chamada",
+              description: "Ocorreu um erro durante a chamada",
+              variant: "destructive",
+            });
+          }}
+        >
+          <RoomAudioRenderer />
+          
+          {/* Google Meet Style Layout */}
+          <div className="h-full w-full flex flex-col bg-background">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between px-6 py-3 border-b bg-background/95 backdrop-blur-sm z-10">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold text-foreground">Sala {roomName}</h2>
+                <ConnectionStatus />
+              </div>
+              
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -170,49 +186,64 @@ const LiveKitRoomComponent: React.FC<LiveKitRoomProps> = ({
                   onClick={() => {
                     const url = window.location.href;
                     navigator.clipboard.writeText(url);
-                    toast({ title: 'Link copiado', description: 'URL da chamada copiada.' });
+                    toast({ title: 'Link copiado!', description: 'Compartilhe com seus convidados' });
                   }}
+                  className="gap-2"
                 >
-                  Copiar link
+                  <Copy className="h-4 w-4" />
+                  Compartilhar
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={async () => {
-                    const url = window.location.href;
-                    if ((navigator as any).share) {
-                      try {
-                        await (navigator as any).share({ title: 'Chamada Ellosuit', url });
-                      } catch {}
-                    } else {
-                      navigator.clipboard.writeText(url);
-                      toast({ title: 'Link copiado', description: 'Compartilhe o link com seus convidados.' });
-                    }
-                  }}
-                >
-                  Convidar
+                
+                <Button variant="destructive" size="sm" onClick={onLeave} className="gap-2">
+                  <PhoneOff className="h-4 w-4" />
+                  Sair
                 </Button>
-                <Button variant="destructive" size="sm" onClick={onLeave}>Sair</Button>
               </div>
             </div>
 
-            <div className="relative flex-1 min-h-0">
-              <VideoGrid />
-              <div className="absolute bottom-4 right-4">
-                <ControlBar />
+            <div className="flex flex-1 min-h-0">
+              {/* Main Video Area */}
+              <div className="flex-1 relative min-w-0 flex flex-col">
+                <div className="flex-1 p-4">
+                  <VideoGrid />
+                </div>
+                
+                {/* Controls at bottom */}
+                <div className="flex justify-center pb-6">
+                  <ControlBar />
+                </div>
               </div>
+
+              {/* Right Sidebar */}
+              <aside className="w-80 border-l bg-card flex flex-col">
+                <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2 m-2">
+                    <TabsTrigger value="chat" className="gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      Chat
+                    </TabsTrigger>
+                    <TabsTrigger value="participants" className="gap-2">
+                      <Users className="h-4 w-4" />
+                      Pessoas
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="chat" className="flex-1 m-0 p-2">
+                    <div className="h-full">
+                      <Chat />
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="participants" className="flex-1 m-0 p-4">
+                    <ParticipantsList />
+                  </TabsContent>
+                </Tabs>
+              </aside>
             </div>
           </div>
-
-          <aside className="w-[340px] max-w-[380px] min-w-[320px] border-l bg-background flex flex-col">
-            <div className="px-4 py-2 border-b text-sm font-medium">Chat</div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <Chat />
-            </div>
-          </aside>
-        </div>
-      </LiveKitRoom>
-    </div>
+        </LiveKitRoom>
+      </div>
+    </ErrorBoundary>
   );
 };
 
@@ -223,17 +254,68 @@ const VideoGrid: React.FC = () => {
   ]);
 
   return (
-    <div className="h-full w-full p-2">
+    <div className="h-full w-full">
       <GridLayout tracks={tracks as any} className="h-full w-full">
         {tracks.map((track) => (
           <ParticipantTile
             key={`${track.participant.identity}-${String(track.source)}`}
             trackRef={track as any}
+            className="rounded-lg overflow-hidden"
           />
         ))}
       </GridLayout>
     </div>
   );
+};
+
+const ParticipantsList: React.FC = () => {
+  const participants = useParticipants();
+  
+  return (
+    <div className="space-y-2">
+      <h3 className="font-medium text-sm text-muted-foreground mb-3">
+        Participantes ({participants.length})
+      </h3>
+      {participants.map((participant) => (
+        <div key={participant.identity} className="flex items-center gap-3 p-2 rounded-lg bg-background">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-sm font-medium text-primary">
+              {participant.name?.charAt(0) || participant.identity.charAt(0)}
+            </span>
+          </div>
+          <span className="text-sm font-medium">{participant.name || participant.identity}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ConnectionStatus: React.FC = () => {
+  const room = useRoomContext();
+  
+  if (!room) return null;
+
+  const connectionState = room.state;
+  
+  if (connectionState === ConnectionState.Reconnecting) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Reconectando...
+      </div>
+    );
+  }
+  
+  if (connectionState === ConnectionState.Connecting) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Conectando...
+      </div>
+    );
+  }
+  
+  return null;
 };
 
 const RoomControls: React.FC<{ onLeave: () => void }> = ({ onLeave }) => {

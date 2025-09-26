@@ -6,8 +6,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 export async function extractAndUploadPdfPages(fileUrl: string, documentId: string, options?: { maxWidth?: number; format?: 'image/webp' | 'image/png'; quality?: number; }) {
   const maxWidth = options?.maxWidth ?? 1400;
-  const format = options?.format ?? 'image/webp';
-  const quality = options?.quality ?? 0.9;
+  const format = options?.format ?? 'image/png'; // Changed to PNG for better compatibility
+  const quality = options?.quality ?? 0.85;
 
   // Load PDF from URL
   const response = await fetch(fileUrl, { mode: 'cors' });

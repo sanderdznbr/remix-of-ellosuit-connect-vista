@@ -37,27 +37,28 @@ export const useAuth = () => {
       }
     };
 
-    // Set up auth state listener FIRST (synchronous callback)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔐 Auth event:', event, session?.user?.email || 'No user');
-
-      if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out - clearing state');
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-        return;
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 Auth event:', event, session?.user?.email || 'No user');
+        
+        if (event === 'SIGNED_OUT') {
+          console.log('👋 User signed out - clearing state');
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
+        // Notificar iOS especificamente no evento SIGNED_IN
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🔐 Login bem-sucedido, notificando iOS...');
+          notifyIOSLoginSuccess();
+        }
+        
+        updateAuthState(session);
       }
-
-      // Defer any side-effects to avoid deadlocks
-      if (event === 'SIGNED_IN' && session?.user) {
-        setTimeout(() => {
-          try { notifyIOSLoginSuccess(); } catch {}
-        }, 0);
-      }
-
-      updateAuthState(session);
-    });
+    );
 
     // Get initial session
     const getInitialSession = async () => {

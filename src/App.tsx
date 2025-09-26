@@ -5,9 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
@@ -34,12 +32,11 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthScreen />} />
-            <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
             <Route path="/livekit/:roomCode" element={<LiveKitMeeting />} />
-            <Route path="/tarefas" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
-            <Route path="/tasks" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
+            <Route path="/tarefas" element={<Tarefas />} />
+            <Route path="/tasks" element={<Tarefas />} />
             <Route path="/booking-public/:slug" element={<ImprovedBookingPublic />} />
             <Route path="/agendamentos/:slug" element={<ImprovedBookingCalendar />} />
             <Route path="/:companyName/:slug" element={<ImprovedBookingCalendar />} />

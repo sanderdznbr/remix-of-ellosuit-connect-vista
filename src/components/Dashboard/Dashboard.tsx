@@ -1,7 +1,6 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth } from '@/hooks/useAuth';
 import Sidebar from './Sidebar';
 import Home from './Home';
 import MyCalendar from './MyCalendar';
@@ -23,41 +22,23 @@ import MeetingRecordings from './MeetingRecordings';
 
 const Dashboard = () => {
   const { isMobile } = useIsMobile();
-  const { user, loading } = useAuth();
 
   const handleNavigate = (page: string) => {
     // Navigation logic can be implemented here if needed
     console.log('Navigate to:', page);
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Redirect to auth if not logged in
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
   // Usar layout mobile se estiver em dispositivo móvel
   if (isMobile) {
     return <MobileDashboard />;
   }
 
+  // Layout desktop padrão
   return (
-    <div className="min-h-screen bg-gray-50 mobile-container desktop-container">
-      <div className="responsive-flex">
-        <div className="hidden md:block md:w-64 lg:w-72 flex-shrink-0">
-          <Sidebar />
-        </div>
-        <div className="flex-1 min-w-0 w-full">
-          <div className="p-2 sm:p-4 md:p-6">
-            <Routes>
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 overflow-auto">
+        <Routes>
           <Route path="/" element={<Home onNavigate={handleNavigate} />} />
           <Route path="/agenda" element={<MyCalendar />} />
           <Route path="/reunioes" element={<MeetingRooms />} />
@@ -75,8 +56,6 @@ const Dashboard = () => {
           <Route path="/rastreamento-documento" element={<DocumentTrackingDashboard />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -3,12 +3,9 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
-// Vite: resolve worker file URL correctly
-// @ts-ignore - Vite will provide a URL string for the asset
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Configure PDF.js worker using local asset URL (avoids cross-origin issues)
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configure PDF.js worker using CDN with correct version
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js`;
 
 interface TrackableDocument {
   id: string;

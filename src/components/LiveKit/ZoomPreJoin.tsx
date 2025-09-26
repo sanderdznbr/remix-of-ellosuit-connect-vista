@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Video, VideoOff, Mic, MicOff, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logoEllosuit from '@/assets/logoellosuit.png';
+import DeviceSettingsModal from './DeviceSettingsModal';
 
 interface ZoomPreJoinProps {
   roomName: string;
@@ -22,6 +23,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -133,7 +135,10 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
               )}
             </button>
             
-            <button className="zoom-prejoin-button-light active-light">
+            <button 
+              onClick={() => setShowDeviceSettings(true)}
+              className="zoom-prejoin-button-light active-light"
+            >
               <Settings className="h-5 w-5" />
             </button>
           </div>
@@ -177,6 +182,12 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Device Settings Modal */}
+      <DeviceSettingsModal 
+        isOpen={showDeviceSettings}
+        onClose={() => setShowDeviceSettings(false)}
+      />
     </div>
   );
 };

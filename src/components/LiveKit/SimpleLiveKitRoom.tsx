@@ -186,7 +186,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }
 
   return (
-    <div className="zoom-meeting-layout">
+    <div className="zoom-meeting-layout-light">
       <LiveKitRoom
         video={preJoinChoices?.videoEnabled ?? true}
         audio={preJoinChoices?.audioEnabled ?? true}

@@ -1,8 +1,8 @@
 /* Zoom-Style Meeting Layout */
 
-/* Meeting Layout */
-.zoom-meeting-layout {
-  @apply h-screen w-full bg-gray-900 flex flex-col relative overflow-hidden;
+/* Meeting Layout - Light version for PreJoin */
+.zoom-meeting-layout-light {
+  @apply h-screen w-full bg-gray-50 flex flex-col relative overflow-hidden;
 }
 
 .zoom-meeting-header {
@@ -60,7 +60,7 @@
 
 /* Pre-Join Styles - Light Theme */
 .zoom-prejoin-container-light {
-  @apply h-full flex items-center justify-center bg-white p-8;
+  @apply h-full flex items-center justify-center bg-gray-50 p-8;
 }
 
 .zoom-prejoin-card-light {

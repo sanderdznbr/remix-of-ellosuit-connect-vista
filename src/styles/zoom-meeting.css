@@ -308,42 +308,42 @@
 
 /* Mobile Meeting Layout */
 .mobile-meeting-layout {
-  @apply h-screen w-full bg-background flex flex-col overflow-hidden;
+  @apply h-screen w-full bg-gray-50 flex flex-col overflow-hidden;
 }
 
 .mobile-meeting-header {
-  @apply flex items-center justify-between p-3 bg-background border-b border-border z-10 shadow-sm;
-  height: 60px;
+  @apply flex items-center justify-between p-3 bg-white border-b border-gray-200 z-10 shadow-sm;
+  height: 70px;
 }
 
 .mobile-video-area {
-  @apply flex-1 p-3 flex flex-col gap-3 overflow-hidden;
+  @apply flex-1 p-4 flex flex-col gap-4 overflow-hidden bg-gray-50;
 }
 
 .mobile-screenshare {
-  @apply flex justify-center items-center mb-3 bg-background rounded-xl p-3;
-  min-height: 250px;
+  @apply flex justify-center items-center mb-4 bg-white rounded-xl p-4 shadow-lg border border-gray-200;
+  min-height: 280px;
 }
 
 .mobile-participants-grid {
-  @apply grid gap-3 overflow-y-auto justify-items-center content-start;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  @apply grid gap-4 overflow-y-auto justify-items-center content-start p-2;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .mobile-participants-grid.with-screenshare {
-  @apply grid grid-cols-2 gap-2 overflow-y-auto justify-items-center;
+  @apply grid grid-cols-2 gap-3 overflow-y-auto justify-items-center;
   height: auto;
-  max-height: 200px;
+  max-height: 220px;
 }
 
 .mobile-participants-grid.full-screen {
-  @apply flex-1 grid grid-cols-2 gap-3 overflow-y-auto justify-items-center content-start;
+  @apply flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto justify-items-center content-start;
 }
 
-/* Mobile Controls */
+/* Mobile Controls - Updated for new design */
 .mobile-controls {
-  @apply flex items-center justify-center gap-4 p-4 bg-muted/20 border-t border-border;
-  height: 80px;
+  @apply flex items-center justify-center bg-white border-t border-gray-200 shadow-lg;
+  height: 90px;
 }
 
 .mobile-control-btn {

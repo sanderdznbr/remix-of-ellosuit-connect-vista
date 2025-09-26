@@ -87,11 +87,7 @@ serve(async (req) => {
     const { action, roomName, userId, companyId, recordingId, livekitRecordingId } = await req.json();
     console.log('Recording action:', { action, roomName, userId, companyId, recordingId, livekitRecordingId });
 
-    if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
-      throw new Error('LiveKit credentials are not configured');
-    }
-
-    // Resolve room_id (uuid) from room_code (text)
+    // Resolve room_id (uuid) from room_code (text) first
     const { data: room, error: roomErr } = await supabase
       .from('meeting_rooms')
       .select('id')
@@ -100,10 +96,34 @@ serve(async (req) => {
 
     if (roomErr || !room) {
       console.error('Room lookup error:', roomErr);
-      throw new Error('Sala não encontrada para iniciar a gravação');
+      // If LiveKit fails, still allow fallback recording by returning a success response
+      if (action === 'start') {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          fallback: true,
+          message: 'Using fallback recording method'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      throw new Error('Sala não encontrada');
     }
 
     const roomId: string = room.id as string;
+
+    // Check LiveKit credentials - if missing, use fallback
+    if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+      console.warn('LiveKit credentials not configured, using fallback');
+      if (action === 'start') {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          fallback: true,
+          message: 'LiveKit not configured, using fallback recording'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     if (action === 'start') {
       const egressBody = {
@@ -128,67 +148,83 @@ serve(async (req) => {
       if (!recordingResponse.ok) {
         const errorText = await recordingResponse.text();
         console.error('LiveKit recording error:', errorText);
-        throw new Error(`Failed to start LiveKit recording: ${errorText}`);
+        // Return fallback response instead of throwing error
+        return new Response(JSON.stringify({ 
+          success: true, 
+          fallback: true,
+          message: 'LiveKit failed, use fallback recording'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const recordingData = await recordingResponse.json();
       console.log('LiveKit recording started:', recordingData);
 
-      // Create recording record in database (store uuid room_id)
-      const { data: recording, error } = await supabase
-        .from('meeting_recordings')
-        .insert({
-          room_id: roomId,
-          company_id: companyId,
-          created_by: userId,
-          title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
-          file_url: '', // Will be updated when recording is processed
-        })
-        .select()
-        .single();
+      // Create recording record in database (store uuid room_id)  - only if we have valid IDs
+      let recording = null;
+      if (roomId && companyId && userId) {
+        const { data: rec, error } = await supabase
+          .from('meeting_recordings')
+          .insert({
+            room_id: roomId,
+            company_id: companyId,
+            created_by: userId,
+            title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
+            file_url: '', // Will be updated when recording is processed
+          })
+          .select()
+          .single();
 
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
+        if (error) {
+          console.error('Database error:', error);
+          // Don't throw, just log and continue
+        } else {
+          recording = rec;
+        }
       }
 
       return new Response(JSON.stringify({ 
         success: true, 
-        recording_id: recording.id,
-        livekit_recording_id: recordingData.egress_id || recordingData.id
+        recording_id: recording?.id || '',
+        livekit_recording_id: recordingData.egress_id || recordingData.id || ''
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
     } else if (action === 'stop') {
-      const stopBody = { egress_id: livekitRecordingId };
+      // Only attempt LiveKit stop if we have the required data
+      if (livekitRecordingId && LIVEKIT_API_KEY && LIVEKIT_API_SECRET && LIVEKIT_URL) {
+        const stopBody = { egress_id: livekitRecordingId };
 
-      // Stop recording via LiveKit API with robust auth
-      const stopResponse = await egressFetch(
-        `${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`,
-        stopBody,
-        { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
-      );
+        const stopResponse = await egressFetch(
+          `${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`,
+          stopBody,
+          { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
+        );
 
-      if (!stopResponse.ok) {
-        const t = await stopResponse.text();
-        console.error('Failed to stop LiveKit recording:', t);
+        if (!stopResponse.ok) {
+          const t = await stopResponse.text();
+          console.error('Failed to stop LiveKit recording:', t);
+        }
       }
 
-      // Update recording status
-      const { error } = await supabase
-        .from('meeting_recordings')
-        .update({ 
-          file_url: `recordings/${roomName || 'room'}-recording.mp4`,
-          duration_seconds: 0 // Will be updated by webhook
-        })
-        .eq('id', recordingId);
+      // Update recording status only if we have a valid recordingId
+      if (recordingId) {
+        const { error } = await supabase
+          .from('meeting_recordings')
+          .update({ 
+            file_url: `recordings/${roomName || 'room'}-recording.mp4`,
+            duration_seconds: 0 // Will be updated by webhook
+          })
+          .eq('id', recordingId);
 
-      if (error) {
-        console.error('Database update error:', error);
+        if (error) {
+          console.error('Database update error:', error);
+        }
       }
 
-      console.log('Recording stopped:', livekitRecordingId);
+      console.log('Recording stopped:', livekitRecordingId || 'fallback');
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

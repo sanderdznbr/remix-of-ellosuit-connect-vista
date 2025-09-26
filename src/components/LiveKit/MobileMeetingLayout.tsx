@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Users, X, Send, Mic, MicOff, Video, VideoOff, Monitor, Phone, Share2 } from 'lucide-react';
+import { MessageSquare, Users, X, Send, Mic, MicOff, Video, VideoOff, Monitor, Phone, Share2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import ResizableVideoTile from './ResizableVideoTile';
 import { useTracks, TrackReference } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import logoEllosuit from '@/assets/logoellosuit.png';
 
 interface MobileMeetingLayoutProps {
   roomName: string;
@@ -27,6 +28,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [videoScale, setVideoScale] = useState(1);
   const [messages, setMessages] = useState<Array<{
     id: string;
     sender: string;
@@ -144,17 +146,37 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   return (
     <div className="mobile-meeting-layout">
       {/* Mobile Header */}
-      <div className="mobile-meeting-header">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-bold">E</span>
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-white">Reunião ELLOSUIT</h2>
-            <p className="text-xs text-gray-300">{roomName}</p>
+      <div className="mobile-meeting-header bg-white border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <img 
+            src={logoEllosuit} 
+            alt="ELLOSUIT" 
+            className="h-8 w-auto object-contain"
+          />
+          <div className="flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-800">Reunião ELLOSUIT</h2>
+            <p className="text-xs text-gray-500">{roomName}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setVideoScale(Math.max(0.5, videoScale - 0.1))}
+              size="sm"
+              variant="outline"
+              className="h-8 w-8 p-0"
+            >
+              <ZoomOut className="h-3 w-3" />
+            </Button>
+            <Button
+              onClick={() => setVideoScale(Math.min(2, videoScale + 0.1))}
+              size="sm"
+              variant="outline"
+              className="h-8 w-8 p-0"
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+          </div>
           <Button
             onClick={onShareMeeting}
             size="sm"
@@ -165,7 +187,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           </Button>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-gray-300">Online</span>
+            <span className="text-xs text-gray-600">Online</span>
           </div>
         </div>
       </div>
@@ -187,19 +209,31 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           </div>
         )}
 
-        {/* Participants Grid */}
-        <div className={cn(
-          "mobile-participants-grid",
-          hasScreenShare ? "with-screenshare" : "full-screen"
-        )}>
+        {/* Participants Grid with Zoom */}
+        <div 
+          className={cn(
+            "mobile-participants-grid",
+            hasScreenShare ? "with-screenshare" : "full-screen"
+          )}
+          style={{ transform: `scale(${videoScale})`, transformOrigin: 'center' }}
+        >
           {cameraTracks.map((trackRef: TrackReference, index: number) => (
-            <ResizableVideoTile
+            <div
               key={`camera-mobile-${trackRef.participant.identity}-${index}`}
-              trackRef={trackRef}
-              isScreenShare={false}
-              defaultWidth={hasScreenShare ? 160 : 170}
-              defaultHeight={hasScreenShare ? 120 : 128}
-            />
+              className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-200"
+            >
+              <ResizableVideoTile
+                trackRef={trackRef}
+                isScreenShare={false}
+                defaultWidth={hasScreenShare ? 180 : 200}
+                defaultHeight={hasScreenShare ? 135 : 150}
+              />
+              <div className="p-2 bg-white">
+                <p className="text-xs font-medium text-gray-700 truncate">
+                  {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
+                </p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -230,44 +264,52 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         </Button>
       </div>
 
-      {/* Mobile Controls */}
-      <div className="mobile-controls">
-        <Button
-          onClick={toggleMic}
-          className={cn(
-            "mobile-control-btn",
-            !micEnabled && "muted"
-          )}
-        >
-          {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-        </Button>
+      {/* Mobile Controls - Simplified and Larger */}
+      <div className="mobile-controls bg-white border-t border-gray-200 shadow-lg">
+        <div className="flex items-center justify-center gap-6 p-4">
+          <Button
+            onClick={toggleMic}
+            className={cn(
+              "w-14 h-14 rounded-full shadow-lg border-2 transition-all duration-200",
+              micEnabled 
+                ? "bg-primary hover:bg-primary/90 text-white border-primary" 
+                : "bg-red-500 hover:bg-red-600 text-white border-red-500"
+            )}
+          >
+            {micEnabled ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
+          </Button>
 
-        <Button
-          onClick={toggleCamera}
-          className={cn(
-            "mobile-control-btn",
-            !cameraEnabled && "muted"
-          )}
-        >
-          {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-        </Button>
+          <Button
+            onClick={toggleCamera}
+            className={cn(
+              "w-14 h-14 rounded-full shadow-lg border-2 transition-all duration-200",
+              cameraEnabled 
+                ? "bg-primary hover:bg-primary/90 text-white border-primary" 
+                : "bg-red-500 hover:bg-red-600 text-white border-red-500"
+            )}
+          >
+            {cameraEnabled ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
+          </Button>
 
-        <Button
-          onClick={handleScreenShare}
-          className={cn(
-            "mobile-control-btn",
-            isScreenSharing && "active"
-          )}
-        >
-          <Monitor className="h-5 w-5" />
-        </Button>
+          <Button
+            onClick={handleScreenShare}
+            className={cn(
+              "w-14 h-14 rounded-full shadow-lg border-2 transition-all duration-200",
+              isScreenSharing 
+                ? "bg-green-500 hover:bg-green-600 text-white border-green-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-300"
+            )}
+          >
+            <Monitor className="h-6 w-6" />
+          </Button>
 
-        <Button
-          onClick={onLeave}
-          className="mobile-control-btn leave"
-        >
-          <Phone className="h-5 w-5 rotate-[135deg]" />
-        </Button>
+          <Button
+            onClick={onLeave}
+            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white border-2 border-red-500 shadow-lg transition-all duration-200"
+          >
+            <Phone className="h-6 w-6 rotate-[135deg]" />
+          </Button>
+        </div>
       </div>
 
       {/* Chat Modal */}

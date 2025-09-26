@@ -368,10 +368,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   />
                 </div>
 
-                {/* Fixed Sidebar - Always Show Chat */}
+                {/* Fixed Sidebar - Always Show */}
                 <div className="zoom-meeting-sidebar-container">
                   <MeetingSidebar
-                    isOpen={true}
+                    isOpen={isChatOpen || isParticipantsOpen}
                     onClose={() => {
                       setIsChatOpen(false);
                       setIsParticipantsOpen(false);
@@ -384,6 +384,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                       } else if (tab === 'participants') {
                         setIsParticipantsOpen(true);
                         setIsChatOpen(false);
+                      } else if (tab === 'transcription') {
+                        // Keep current state but set tab
                       }
                       setSidebarTab(tab);
                     }}

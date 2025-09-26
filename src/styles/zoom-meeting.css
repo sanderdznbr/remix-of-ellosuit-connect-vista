@@ -99,13 +99,13 @@
 
 /* Modern Participant Grid - Light Theme - Full Height */
 .zoom-participant-grid-container {
-  @apply flex-1 p-6 flex flex-col gap-6 overflow-hidden;
+  @apply flex-1 p-6 flex flex-col gap-6 overflow-hidden bg-background;
   min-height: calc(100vh - 240px);
   height: 100%;
 }
 
 .zoom-screenshare-area {
-  @apply flex-1 min-h-0 flex flex-col justify-center bg-gray-900 rounded-xl p-4 mb-4;
+  @apply flex-1 min-h-0 flex flex-col justify-center bg-background rounded-xl p-4 mb-4 border border-border;
 }
 
 .zoom-participant-grid {

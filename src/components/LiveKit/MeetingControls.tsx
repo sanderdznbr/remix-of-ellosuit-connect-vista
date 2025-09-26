@@ -122,31 +122,60 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         const fileName = `meeting-${roomCode}-${Date.now()}.webm`;
         
         try {
-          // Upload to Supabase Storage
-          const { data, error } = await supabase.storage
+          // Upload to Supabase Storage (private bucket)
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('meeting-recordings')
             .upload(fileName, blob);
 
-          if (error) throw error;
+          if (uploadError) throw uploadError;
 
-          // Save recording info to database
-          const { data: user } = await supabase.auth.getUser();
-          if (user.user) {
-            await supabase.from('meeting_recordings').insert({
-              room_id: recordingId,
-              company_id: companyId,
-              created_by: user.user.id,
-              title: `Gravação Local - ${new Date().toLocaleString('pt-BR')}`,
-              file_url: data.path,
+          // Resolve room_id from room_code
+          const { data: roomRow, error: roomErr } = await supabase
+            .from('meeting_rooms')
+            .select('id')
+            .eq('room_code', roomCode)
+            .single();
+
+          if (roomErr || !roomRow) {
+            console.error('Room lookup failed for fallback recording:', roomErr);
+            toast({
+              title: 'Erro ao salvar',
+              description: 'Não foi possível associar a gravação à sala.',
+              variant: 'destructive'
             });
+            return;
           }
 
+          // Current user
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) throw new Error('User not authenticated');
+
+          // Store storage path (bucket + path). UI will create signed URL when needed
+          const storagePath = uploadData.path.startsWith('meeting-recordings/')
+            ? uploadData.path
+            : `meeting-recordings/${uploadData.path}`;
+
+          const { error: insertErr } = await supabase.from('meeting_recordings').insert({
+            room_id: roomRow.id,
+            company_id: companyId,
+            created_by: userData.user.id,
+            title: `Gravação Local - ${new Date().toLocaleString('pt-BR')}`,
+            file_url: storagePath,
+          });
+
+          if (insertErr) throw insertErr;
+
           toast({
-            title: "Gravação salva",
-            description: "Sua gravação local foi salva com sucesso!",
+            title: 'Gravação salva',
+            description: 'Sua gravação local foi salva com sucesso!'
           });
         } catch (error) {
           console.error('Error saving fallback recording:', error);
+          toast({
+            title: 'Erro na gravação',
+            description: 'Não foi possível salvar a gravação local.',
+            variant: 'destructive'
+          });
         }
       };
 

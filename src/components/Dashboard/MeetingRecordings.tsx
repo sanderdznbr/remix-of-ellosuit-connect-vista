@@ -38,6 +38,7 @@ const MeetingRecordings: React.FC = () => {
   const [selectedRecording, setSelectedRecording] = useState<MeetingRecording | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [playbackUrl, setPlaybackUrl] = useState<string>('');
 
   // Get company ID
   useEffect(() => {
@@ -115,6 +116,19 @@ const MeetingRecordings: React.FC = () => {
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
+  // Resolve a playable URL for a recording (handles private bucket)
+  const resolveRecordingUrl = async (fileUrl: string): Promise<string> => {
+    if (!fileUrl) return '';
+    if (fileUrl.startsWith('http')) return fileUrl;
+    const pathOnly = fileUrl.startsWith('meeting-recordings/')
+      ? fileUrl.replace('meeting-recordings/', '')
+      : fileUrl;
+    const { data, error } = await supabase.storage
+      .from('meeting-recordings')
+      .createSignedUrl(pathOnly, 60 * 60);
+    if (error || !data?.signedUrl) return '';
+    return data.signedUrl;
+  };
 
   const filteredRecordings = recordings.filter(recording =>
     recording.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,29 +136,28 @@ const MeetingRecordings: React.FC = () => {
     recording.room?.room_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const playRecording = (recording: MeetingRecording) => {
+  const playRecording = async (recording: MeetingRecording) => {
     setSelectedRecording(recording);
+    const url = await resolveRecordingUrl(recording.file_url);
+    if (!url) {
+      toast({ title: 'Arquivo indisponível', description: 'Não foi possível abrir esta gravação.', variant: 'destructive' });
+      return;
+    }
+    setPlaybackUrl(url);
     setShowPlayer(true);
   };
 
   const downloadRecording = async (recording: MeetingRecording) => {
     try {
-      // Create download link
+      const url = await resolveRecordingUrl(recording.file_url);
+      if (!url) throw new Error('URL inválida');
       const link = document.createElement('a');
-      link.href = recording.file_url;
+      link.href = url;
       link.download = `${recording.title}.webm`;
       link.click();
-      
-      toast({
-        title: 'Download iniciado',
-        description: 'O download da gravação foi iniciado'
-      });
+      toast({ title: 'Download iniciado', description: 'O download da gravação foi iniciado' });
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao baixar gravação',
-        variant: 'destructive'
-      });
+      toast({ title: 'Erro', description: 'Erro ao baixar gravação', variant: 'destructive' });
     }
   };
 
@@ -280,7 +293,7 @@ const MeetingRecordings: React.FC = () => {
             <div className="space-y-4">
               <div className="aspect-video bg-black rounded-lg overflow-hidden">
                 <video
-                  src={selectedRecording.file_url}
+                  src={playbackUrl || selectedRecording.file_url}
                   controls
                   className="w-full h-full"
                   poster=""

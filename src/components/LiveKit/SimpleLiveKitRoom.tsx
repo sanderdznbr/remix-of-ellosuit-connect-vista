@@ -378,39 +378,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
                   {/* Fixed Sidebar - Always Show Chat */}
                   <div className="zoom-meeting-sidebar-container">
-                    {/* Sidebar Toggle Buttons */}
-                    <div className="zoom-sidebar-buttons">
-                      <Button
-                        onClick={() => toggleSidebar('participants')}
-                        className={cn(
-                          "sidebar-toggle-button",
-                          isParticipantsOpen && "active"
-                        )}
-                      >
-                        <Users className="h-4 w-4" />
-                        <span className="ml-2 text-sm">Participantes</span>
-                      </Button>
-                      <Button
-                        onClick={() => toggleSidebar('chat')}
-                        className={cn(
-                          "sidebar-toggle-button",
-                          isChatOpen && "active"
-                        )}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        <span className="ml-2 text-sm">Chat</span>
-                      </Button>
-                      <Button
-                        onClick={() => toggleSidebar('transcription')}
-                        className={cn(
-                          "sidebar-toggle-button",
-                          sidebarTab === 'transcription' && "active"
-                        )}
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span className="ml-2 text-sm">Transcrição</span>
-                      </Button>
-                    </div>
 
                     {/* Always Open Sidebar */}
                     <MeetingSidebar

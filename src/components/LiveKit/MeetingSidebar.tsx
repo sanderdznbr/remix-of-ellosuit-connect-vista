@@ -10,7 +10,6 @@ import {
   useRoomContext,
   useLocalParticipant
 } from '@livekit/components-react';
-import { supabase } from '@/integrations/supabase/client';
 import TranscriptionPanel from './TranscriptionPanel';
 
 interface MeetingSidebarProps {
@@ -84,10 +83,11 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
       
       await room.localParticipant.publishData(data, { reliable: true });
       
-      // Add to local messages
+      // Add to local messages - use name first, then identity as fallback
+      const senderName = localParticipant.name || localParticipant.identity || 'Você';
       setMessages(prev => [...prev, {
         id: Date.now(),
-        participant: localParticipant.identity,
+        participant: senderName,
         message: inputMessage,
         timestamp: new Date()
       }]);
@@ -108,70 +108,86 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="zoom-meeting-sidebar">
-      <div className="h-full flex flex-col">
-        <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className="h-full w-80 bg-background border-l border-border flex flex-col">
+      <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col h-full">
+        {/* Modern Clean Header with Tabs */}
+        <div className="flex-none border-b border-border bg-background">
+          <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/20 rounded-none">
             <TabsTrigger 
               value="participants" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Participantes</span>
+              <span>Participantes</span>
             </TabsTrigger>
             <TabsTrigger 
               value="chat" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Chat</span>
+              <span>Chat</span>
             </TabsTrigger>
             <TabsTrigger 
               value="transcription" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Transcrição</span>
+              <span>Transcrição</span>
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="participants" className="flex-1 flex flex-col mt-0">
-            <div className="p-3 border-b border-border">
-              <h3 className="font-medium text-sm">Participantes ({participants.length})</h3>
+        {/* Tab Contents */}
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="participants" className="h-full m-0 flex flex-col">
+            <div className="flex-none p-4 border-b border-border bg-background">
+              <h3 className="font-semibold text-foreground">Participantes na reunião</h3>
+              <p className="text-sm text-muted-foreground">{participants.length} pessoa{participants.length !== 1 ? 's' : ''} conectada{participants.length !== 1 ? 's' : ''}</p>
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-3 space-y-2">
+              <div className="p-4 space-y-3">
                 {participants.map((participant) => {
                   const isHost = participant.identity === localParticipant?.identity;
                   const audioEnabled = participant.isMicrophoneEnabled;
                   const videoEnabled = participant.isCameraEnabled;
+                  const displayName = participant.name || participant.identity || 'Participante';
                   
                   return (
                     <div 
                       key={participant.identity} 
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        {isHost && <Crown className="h-4 w-4 text-yellow-500" />}
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {(participant.name as string | undefined) || participant.identity || 'Participante'}
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isHost && <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {displayName}
                             {isHost && ' (Você)'}
-                          </span>
+                          </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1">
-                        {audioEnabled ? (
-                          <Mic className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <MicOff className="h-4 w-4 text-red-500" />
-                        )}
-                        {videoEnabled ? (
-                          <Video className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <VideoOff className="h-4 w-4 text-red-500" />
-                        )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className={cn(
+                          "p-1.5 rounded-full",
+                          audioEnabled ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                        )}>
+                          {audioEnabled ? (
+                            <Mic className="h-3 w-3" />
+                          ) : (
+                            <MicOff className="h-3 w-3" />
+                          )}
+                        </div>
+                        <div className={cn(
+                          "p-1.5 rounded-full",
+                          videoEnabled ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                        )}>
+                          {videoEnabled ? (
+                            <Video className="h-3 w-3" />
+                          ) : (
+                            <VideoOff className="h-3 w-3" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -180,31 +196,32 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-            <div className="p-3 border-b border-border">
-              <h3 className="font-medium text-sm">Chat da Reunião</h3>
+          <TabsContent value="chat" className="h-full m-0 flex flex-col">
+            <div className="flex-none p-4 border-b border-border bg-background">
+              <h3 className="font-semibold text-foreground">Chat da reunião</h3>
+              <p className="text-sm text-muted-foreground">Converse com os participantes</p>
             </div>
             
-            <ScrollArea className="flex-1" ref={chatScrollRef}>
-              <div className="p-3 space-y-3">
+            <ScrollArea className="flex-1 p-0" ref={chatScrollRef}>
+              <div className="p-4 space-y-4">
                 {messages.length === 0 ? (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>Nenhuma mensagem ainda</p>
-                    <p className="text-xs mt-1">Envie uma mensagem para começar a conversa</p>
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground font-medium">Nenhuma mensagem ainda</p>
+                    <p className="text-xs text-muted-foreground mt-1">Envie uma mensagem para começar a conversa</p>
                   </div>
                 ) : (
                   messages.map((msg) => (
-                    <div key={msg.id} className="text-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-xs">
+                    <div key={msg.id} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-primary">
                           {msg.participant}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {msg.timestamp.toLocaleTimeString()}
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <div className="text-foreground leading-relaxed">
+                      <div className="text-sm text-foreground leading-relaxed bg-muted/30 rounded-lg px-3 py-2">
                         {msg.message}
                       </div>
                     </div>
@@ -213,19 +230,20 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
               </div>
             </ScrollArea>
 
-            <div className="p-3 border-t border-border">
+            <div className="flex-none p-4 border-t border-border bg-background">
               <div className="flex gap-2">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1"
+                  className="flex-1 border-muted-foreground/20 focus:border-primary"
                 />
                 <Button 
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim()}
                   size="sm"
+                  className="px-3"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -233,14 +251,14 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="transcription" className="h-full mt-0 p-0">
+          <TabsContent value="transcription" className="h-full m-0 p-0">
             <TranscriptionPanel 
               roomId={roomId || ''} 
               isActive={activeTab === 'transcription'} 
             />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   );
 };

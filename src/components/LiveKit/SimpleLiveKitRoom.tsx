@@ -135,17 +135,17 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     }
   }, [showPreJoin, token, serverUrl]);
 
-  const generateToken = useCallback(async () => {
+  const generateToken = useCallback(async (username: string) => {
     try {
       setLoading(true);
       setError('');
 
-      console.log('Generating LiveKit token for room:', roomName);
+      console.log('Generating LiveKit token for room:', roomName, 'with name:', username);
 
       const { data, error } = await supabase.functions.invoke('livekit-token', {
         body: {
           roomName,
-          participantName: participantName || user?.user_metadata?.full_name || 'Participante'
+          participantName: username
         }
       });
 
@@ -158,7 +158,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       }
 
       const tokenData = data as TokenResponse;
-      console.log('Token generated successfully');
+      console.log('Token generated successfully for:', username);
 
       setToken(tokenData.token);
       setServerUrl(tokenData.url);
@@ -175,19 +175,25 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [roomName, participantName, user, toast]);
+  }, [roomName, toast]);
 
+  // Don't generate token initially - wait for pre-join
   useEffect(() => {
-    if (roomName) {
-      generateToken();
-    }
-  }, [generateToken]);
+    setLoading(false); // Just set loading to false, no token generation yet
+  }, []);
 
-  const handlePreJoinSubmit = useCallback((values: any) => {
+  const handlePreJoinSubmit = useCallback(async (values: any) => {
     console.log('PreJoin submitted with values:', values);
     setPreJoinChoices(values);
-    setShowPreJoin(false);
-  }, []);
+    
+    // Generate token with the actual username entered
+    await generateToken(values.username || participantName || 'Convidado');
+    
+    // Only hide pre-join after token is ready
+    setTimeout(() => {
+      setShowPreJoin(false);
+    }, 500);
+  }, [generateToken, participantName]);
 
   const toggleSidebar = (tab: 'chat' | 'participants' | 'transcription') => {
     if (tab === 'chat') {
@@ -255,7 +261,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             <p className="text-muted-foreground mb-4">{error}</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={generateToken} variant="default" className="gap-2">
+            <Button onClick={() => generateToken(participantName || 'Convidado')} variant="default" className="gap-2">
               <RefreshCw className="h-4 w-4" />
               Tentar Novamente
             </Button>
@@ -274,7 +280,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <p className="text-muted-foreground">Preparando sala...</p>
-          <Button onClick={generateToken} variant="outline" size="sm">
+          <Button onClick={() => generateToken(participantName || 'Convidado')} variant="outline" size="sm">
             Recarregar
           </Button>
         </div>
@@ -284,134 +290,137 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   return (
     <div className="zoom-meeting-layout-light">
-      <LiveKitRoom
-        video={preJoinChoices?.videoEnabled ?? true}
-        audio={preJoinChoices?.audioEnabled ?? true}
-        token={token}
-        serverUrl={serverUrl}
-        data-lk-theme="default"
-        onDisconnected={handleDisconnected}
-        onError={handleError}
-        options={{
-          // Enhanced connection options - Better handling of page visibility
-          adaptiveStream: true,
-          disconnectOnPageLeave: false,
-          publishDefaults: {
-            simulcast: false,
-            stopMicTrackOnMute: false,
-            videoCodec: 'vp8', // More stable codec
-          },
-          // Connection management
-          reconnectPolicy: {
-            nextRetryDelayInMs: (context) => {
-              // More aggressive reconnection for better stability
-              if (context.elapsedMs < 10_000) {
-                return 1000; // Quick reconnect for short disconnections
-              }
-              return Math.min(context.retryCount * 2000, 10000);
-            },
-          },
-        }}
-      >
-        <RoomAudioRenderer />
-        
-        {showPreJoin ? (
-          <ZoomPreJoin 
-            roomName={roomName}
-            participantName={participantName}
-            onSubmit={handlePreJoinSubmit}
-            onCancel={onLeave}
-          />
-        ) : (
-          <>
-            {isMobile ? (
-              <MobileMeetingLayout
-                roomName={roomName}
-                onLeave={onLeave}
-                onShareMeeting={() => setShowShareModal(true)}
-              />
-            ) : (
-              <>
-                {/* Meeting Header with Logo */}
-                <div className="zoom-meeting-header">
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={logoEllo} 
-                      alt="ELLOSUIT" 
-                      className="zoom-meeting-logo"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
-                      <span className="text-sm text-gray-500">Sala: {roomName}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Button
-                      onClick={() => setShowShareModal(true)}
-                      className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                    >
-                      <Share2 className="h-4 w-4" />
-                      <span className="text-sm font-medium">Convidar</span>
-                    </Button>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span>Conectado</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="zoom-meeting-main">
-                  <div className="zoom-meeting-content">
-                    <ZoomParticipantGrid />
-                    
-                    <MeetingControls
-                      onToggleChat={() => toggleSidebar('chat')}
-                      onToggleParticipants={() => toggleSidebar('participants')}
-                      onShareMeeting={() => setShowShareModal(true)}
-                      onLeave={onLeave}
-                      isChatOpen={isChatOpen}
-                      isParticipantsOpen={isParticipantsOpen}
-                      roomCode={roomName}
-                      companyId={companyId}
-                    />
-                  </div>
-
-                  {/* Fixed Sidebar - Always Show Chat */}
-                  <div className="zoom-meeting-sidebar-container">
-
-                    {/* Always Open Sidebar */}
-                    <MeetingSidebar
-                      isOpen={true}
-                      onClose={() => {
-                        setIsChatOpen(false);
-                        setIsParticipantsOpen(false);
-                      }}
-                      activeTab={sidebarTab}
-                      onTabChange={(tab) => {
-                        if (tab === 'chat') {
-                          setIsChatOpen(true);
-                          setIsParticipantsOpen(false);
-                        } else if (tab === 'participants') {
-                          setIsParticipantsOpen(true);
-                          setIsChatOpen(false);
-                        }
-                        setSidebarTab(tab);
-                      }}
-                      roomId={roomName}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        <ShareMeetingModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
+      {showPreJoin ? (
+        <ZoomPreJoin 
           roomName={roomName}
+          participantName={participantName}
+          onSubmit={handlePreJoinSubmit}
+          onCancel={onLeave}
         />
-      </LiveKitRoom>
+      ) : token && serverUrl ? (
+        <LiveKitRoom
+          video={preJoinChoices?.videoEnabled ?? true}
+          audio={preJoinChoices?.audioEnabled ?? true}
+          token={token}
+          serverUrl={serverUrl}
+          data-lk-theme="default"
+          onDisconnected={handleDisconnected}
+          onError={handleError}
+          options={{
+            // Enhanced connection options - Better handling of page visibility
+            adaptiveStream: true,
+            disconnectOnPageLeave: false,
+            publishDefaults: {
+              simulcast: false,
+              stopMicTrackOnMute: false,
+              videoCodec: 'vp8', // More stable codec
+            },
+            // Connection management
+            reconnectPolicy: {
+              nextRetryDelayInMs: (context) => {
+                // More aggressive reconnection for better stability
+                if (context.elapsedMs < 10_000) {
+                  return 1000; // Quick reconnect for short disconnections
+                }
+                return Math.min(context.retryCount * 2000, 10000);
+              },
+            },
+          }}
+        >
+          <RoomAudioRenderer />
+          
+          {isMobile ? (
+            <MobileMeetingLayout
+              roomName={roomName}
+              onLeave={onLeave}
+              onShareMeeting={() => setShowShareModal(true)}
+            />
+          ) : (
+            <>
+              {/* Meeting Header with Logo */}
+              <div className="zoom-meeting-header">
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={logoEllo} 
+                    alt="ELLOSUIT" 
+                    className="zoom-meeting-logo"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
+                    <span className="text-sm text-gray-500">Sala: {roomName}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    onClick={() => setShowShareModal(true)}
+                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Convidar</span>
+                  </Button>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span>Conectado</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="zoom-meeting-main">
+                <div className="zoom-meeting-content">
+                  <ZoomParticipantGrid />
+                  
+                  <MeetingControls
+                    onToggleChat={() => toggleSidebar('chat')}
+                    onToggleParticipants={() => toggleSidebar('participants')}
+                    onShareMeeting={() => setShowShareModal(true)}
+                    onLeave={onLeave}
+                    isChatOpen={isChatOpen}
+                    isParticipantsOpen={isParticipantsOpen}
+                    roomCode={roomName}
+                    companyId={companyId}
+                  />
+                </div>
+
+                {/* Fixed Sidebar - Always Show Chat */}
+                <div className="zoom-meeting-sidebar-container">
+                  <MeetingSidebar
+                    isOpen={true}
+                    onClose={() => {
+                      setIsChatOpen(false);
+                      setIsParticipantsOpen(false);
+                    }}
+                    activeTab={sidebarTab}
+                    onTabChange={(tab) => {
+                      if (tab === 'chat') {
+                        setIsChatOpen(true);
+                        setIsParticipantsOpen(false);
+                      } else if (tab === 'participants') {
+                        setIsParticipantsOpen(true);
+                        setIsChatOpen(false);
+                      }
+                      setSidebarTab(tab);
+                    }}
+                    roomId={roomName}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <ShareMeetingModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            roomName={roomName}
+          />
+        </LiveKitRoom>
+      ) : (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Entrando na reunião...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

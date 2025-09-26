@@ -41,6 +41,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   companyId
 }) => {
   const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
   const { toast } = useToast();
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -48,6 +49,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingId, setRecordingId] = useState<string>('');
   const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
+  const [fallbackRecorder, setFallbackRecorder] = useState<MediaRecorder | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionWs, setTranscriptionWs] = useState<WebSocket | null>(null);
 
@@ -81,7 +83,79 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         }
       } catch (error) {
         console.error('Screen share error:', error);
+        toast({
+          title: "Erro no compartilhamento",
+          description: "Não foi possível compartilhar a tela",
+          variant: "destructive"
+        });
       }
+    }
+  };
+
+  // Fallback recording using MediaRecorder
+  const startFallbackRecording = async () => {
+    try {
+      // Get audio from room tracks
+      const audioContext = new AudioContext();
+      const destination = audioContext.createMediaStreamDestination();
+      
+      // Mix local and remote audio
+      if (localParticipant?.audioTrackPublications.size > 0) {
+        for (const publication of localParticipant.audioTrackPublications.values()) {
+          if (publication.track) {
+            const source = audioContext.createMediaStreamSource(new MediaStream([publication.track.mediaStreamTrack!]));
+            source.connect(destination);
+          }
+        }
+      }
+
+      // Record the mixed audio
+      const mediaRecorder = new MediaRecorder(destination.stream);
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const fileName = `meeting-${roomCode}-${Date.now()}.webm`;
+        
+        try {
+          // Upload to Supabase Storage
+          const { data, error } = await supabase.storage
+            .from('meeting-recordings')
+            .upload(fileName, blob);
+
+          if (error) throw error;
+
+          // Save recording info to database
+          const { data: user } = await supabase.auth.getUser();
+          if (user.user) {
+            await supabase.from('meeting_recordings').insert({
+              room_id: recordingId,
+              company_id: companyId,
+              created_by: user.user.id,
+              title: `Gravação Local - ${new Date().toLocaleString('pt-BR')}`,
+              file_url: data.path,
+            });
+          }
+
+          toast({
+            title: "Gravação salva",
+            description: "Sua gravação local foi salva com sucesso!",
+          });
+        } catch (error) {
+          console.error('Error saving fallback recording:', error);
+        }
+      };
+
+      mediaRecorder.start();
+      setFallbackRecorder(mediaRecorder);
+      return true;
+    } catch (error) {
+      console.error('Fallback recording failed:', error);
+      return false;
     }
   };
 
@@ -98,7 +172,15 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.warn('LiveKit stop failed, but continuing...');
+        }
+
+        // Stop fallback recorder if active
+        if (fallbackRecorder) {
+          fallbackRecorder.stop();
+          setFallbackRecorder(null);
+        }
 
         setIsRecording(false);
         setRecordingId('');
@@ -114,7 +196,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         
         toast({
           title: "Gravação finalizada",
-          description: "Sua reunião foi gravada com sucesso! Confira 'Ver Gravações' para baixar sua reunião ou assisti-la.",
+          description: "Sua reunião foi gravada com sucesso! Confira 'Ver Gravações' para baixar ou assistir.",
           duration: 5000,
         });
       } else {
@@ -122,28 +204,52 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         const { data: user } = await supabase.auth.getUser();
         if (!user.user) throw new Error('User not authenticated');
 
-        const { data, error } = await supabase.functions.invoke('meeting-recording', {
-          body: {
-            action: 'start',
-            roomName: roomCode,
-            userId: user.user.id,
-            companyId
+        let recordingStarted = false;
+
+        try {
+          // Try LiveKit recording first
+          const { data, error } = await supabase.functions.invoke('meeting-recording', {
+            body: {
+              action: 'start',
+              roomName: roomCode,
+              userId: user.user.id,
+              companyId
+            }
+          });
+
+          if (!error && data) {
+            setRecordingId(data.recording_id);
+            setLivekitRecordingId(data.livekit_recording_id);
+            recordingStarted = true;
+            
+            toast({
+              title: "Gravação iniciada",
+              description: "A reunião está sendo gravada pelo LiveKit",
+            });
           }
-        });
+        } catch (livekitError) {
+          console.warn('LiveKit recording failed, trying fallback:', livekitError);
+        }
 
-        if (error) throw error;
+        // Fallback to local recording if LiveKit failed
+        if (!recordingStarted) {
+          const fallbackSuccess = await startFallbackRecording();
+          if (fallbackSuccess) {
+            recordingStarted = true;
+            toast({
+              title: "Gravação local iniciada",
+              description: "A reunião está sendo gravada localmente",
+            });
+          }
+        }
 
-        setIsRecording(true);
-        setRecordingId(data.recording_id);
-        setLivekitRecordingId(data.livekit_recording_id);
-        
-        // Auto-start transcription when recording starts
-        startTranscription();
-        
-        toast({
-          title: "Gravação iniciada",
-          description: "A reunião está sendo gravada e transcrita em tempo real",
-        });
+        if (recordingStarted) {
+          setIsRecording(true);
+          // Auto-start transcription when recording starts
+          startTranscription();
+        } else {
+          throw new Error('Nenhum método de gravação funcionou');
+        }
       }
     } catch (error) {
       console.error('Recording error:', error);
@@ -172,11 +278,6 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
       ws.onerror = (error) => {
         console.error('Transcription WebSocket error:', error);
-        toast({
-          title: "Erro na transcrição",
-          description: "Não foi possível conectar ao serviço de transcrição",
-          variant: "destructive"
-        });
       };
 
       ws.onclose = () => {
@@ -198,16 +299,20 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
           body: {
             action: 'stop',
             recordingId,
-            livekitRecordingId
+            livekitRecordingId,
+            roomName: roomCode
           }
         });
+      }
+      if (fallbackRecorder) {
+        fallbackRecorder.stop();
       }
       if (transcriptionWs) {
         transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
         transcriptionWs.close();
       }
     };
-  }, [isRecording, recordingId, livekitRecordingId, transcriptionWs]);
+  }, [isRecording, recordingId, livekitRecordingId, transcriptionWs, fallbackRecorder, roomCode]);
 
   return (
     <div className="meeting-controls">

@@ -45,49 +45,80 @@ const ZoomParticipantGrid: React.FC = () => {
 
   return (
     <div className="zoom-participant-grid-container">
-      {/* Screen Share Area */}
+      {/* Screen Share Area - Responsive Layout */}
       {hasScreenShare && (
         <div className="zoom-screenshare-area">
-          <div className="flex flex-wrap gap-4 justify-center items-center">
+          <div className="w-full max-w-full overflow-hidden">
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
-              <ResizableVideoTile
+              <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                trackRef={trackRef}
-                isScreenShare={true}
-                defaultWidth={800}
-                defaultHeight={450}
-              />
+                className="w-full aspect-video bg-black rounded-lg overflow-hidden"
+              >
+                <ResizableVideoTile
+                  trackRef={trackRef}
+                  isScreenShare={true}
+                  defaultWidth={800}
+                  defaultHeight={450}
+                />
+              </div>
             ))}
           </div>
+          
+          {/* Camera carousel when screen sharing */}
+          {cameraTracks.length > 0 && (
+            <div className="mt-4 w-full">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
+                {cameraTracks.map((trackRef: TrackReference, index: number) => (
+                  <div
+                    key={`camera-carousel-${trackRef.participant.identity}-${index}`}
+                    className="flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden bg-gray-900"
+                  >
+                    <ResizableVideoTile
+                      trackRef={trackRef}
+                      isScreenShare={false}
+                      defaultWidth={128}
+                      defaultHeight={80}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Camera Participants Grid */}
-      <div className={cn(
-        "zoom-participant-grid",
-        hasScreenShare ? "grid-with-screenshare" : getGridClass(cameraTracks.length)
-      )}>
-        {cameraTracks.map((trackRef: TrackReference, index: number) => (
-          <ResizableVideoTile
-            key={`camera-${trackRef.participant.identity}-${index}`}
-            trackRef={trackRef}
-            isScreenShare={false}
-            defaultWidth={hasScreenShare ? 240 : 320}
-            defaultHeight={hasScreenShare ? 180 : 240}
-          />
-        ))}
-
-        {/* Show message if no participants */}
-        {participants.length === 0 && (
-          <div className="col-span-full flex items-center justify-center h-full text-gray-500">
-            <div className="text-center">
-              <Wifi className="h-16 w-16 mx-auto mb-6 text-gray-400" />
-              <p className="text-xl font-medium">Aguardando participantes...</p>
-              <p className="text-gray-400 mt-2">Convide pessoas para se juntar à reunião</p>
+      {/* Camera Participants Grid - Only when no screen share */}
+      {!hasScreenShare && (
+        <div className={cn(
+          "zoom-participant-grid",
+          getGridClass(cameraTracks.length)
+        )}>
+          {cameraTracks.map((trackRef: TrackReference, index: number) => (
+            <div
+              key={`camera-${trackRef.participant.identity}-${index}`}
+              className="aspect-video bg-gray-900 rounded-lg overflow-hidden"
+            >
+              <ResizableVideoTile
+                trackRef={trackRef}
+                isScreenShare={false}
+                defaultWidth={320}
+                defaultHeight={240}
+              />
             </div>
-          </div>
-        )}
-      </div>
+          ))}
+
+          {/* Show message if no participants */}
+          {participants.length === 0 && (
+            <div className="col-span-full flex items-center justify-center h-full text-gray-500">
+              <div className="text-center">
+                <Wifi className="h-16 w-16 mx-auto mb-6 text-gray-400" />
+                <p className="text-xl font-medium">Aguardando participantes...</p>
+                <p className="text-gray-400 mt-2">Convide pessoas para se juntar à reunião</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

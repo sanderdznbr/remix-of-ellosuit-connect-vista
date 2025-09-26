@@ -117,6 +117,10 @@ serve(async (req) => {
       throw new Error('roomName is required');
     }
 
+    if (!participantName || participantName.trim() === '') {
+      throw new Error('participantName is required');
+    }
+
     // Validate room exists and is active
     const { data: room, error: roomError } = await supabaseClient
       .from('meeting_rooms')
@@ -142,14 +146,16 @@ serve(async (req) => {
       throw new Error('LiveKit credentials not configured');
     }
 
-    // Create access token
-    const identity = userId ?? `guest-${crypto.randomUUID()}`;
-    const displayName = participantName || (userId ? 'Usuário' : 'Convidado');
+    // Create unique identity to prevent conflicts
+    const identity = userId ? userId : `guest-${crypto.randomUUID()}`;
+    const displayName = participantName.trim();
+
+    console.log('Creating token with identity:', identity, 'name:', displayName);
 
     const at = new LiveKitAccessToken(apiKey, apiSecret, {
       identity,
-      name: displayName,
-      ttl: '8760h', // ~1 ano para prática de "não expirar"
+      name: displayName, // Use the actual name entered by the user
+      ttl: '8760h', // ~1 year for practical "no expiry"
     });
 
     at.addGrant({
@@ -162,7 +168,7 @@ serve(async (req) => {
 
     const token = await at.toJwt();
 
-    console.log('Token generated successfully for room:', roomName);
+    console.log('Token generated successfully for:', displayName, 'in room:', roomName);
 
     return new Response(JSON.stringify({ 
       token,

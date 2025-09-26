@@ -52,13 +52,22 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   }, []);
 
   useEffect(() => {
-    if (stream && videoRef.current) {
+    if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+      
       if (videoTrack) {
         videoTrack.enabled = videoEnabled;
       }
+      if (audioTrack) {
+        audioTrack.enabled = audioEnabled;
+      }
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
     }
-  }, [videoEnabled, stream]);
+  }, [videoEnabled, audioEnabled, stream]);
 
   const handleJoin = () => {
     onSubmit({

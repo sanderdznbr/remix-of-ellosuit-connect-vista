@@ -3,9 +3,12 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
+// Vite: resolve worker file URL correctly
+// @ts-ignore - Vite will provide a URL string for the asset
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`;
+// Configure PDF.js worker using local asset URL (avoids cross-origin issues)
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface TrackableDocument {
   id: string;
@@ -69,7 +72,11 @@ const CustomPDFViewer: React.FC<CustomPDFViewerProps> = ({ document }) => {
       setLoading(true);
       setError(null);
 
-      const loadingTask = pdfjsLib.getDocument(document.file_url);
+      // Fetch the PDF to avoid CORS/worker issues and parse on main thread
+      const response = await fetch(document.file_url, { mode: 'cors' });
+      if (!response.ok) throw new Error('Falha ao baixar PDF');
+      const arrayBuffer = await response.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       pdfDoc.current = pdf;
       setTotalPages(pdf.numPages);

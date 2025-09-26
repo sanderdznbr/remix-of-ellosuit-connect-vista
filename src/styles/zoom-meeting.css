@@ -308,7 +308,9 @@
 
 /* Mobile Meeting Layout */
 .mobile-meeting-layout {
-  @apply h-screen w-full bg-gray-50 flex flex-col overflow-hidden;
+  @apply w-full bg-gray-50 flex flex-col overflow-hidden;
+  height: 100dvh;
+  min-height: 100dvh;
 }
 
 .mobile-meeting-header {
@@ -470,7 +472,7 @@ html, body {
 }
 
 #root {
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 

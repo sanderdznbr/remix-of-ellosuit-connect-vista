@@ -146,8 +146,8 @@ serve(async (req) => {
       throw new Error('LiveKit credentials not configured');
     }
 
-    // Create unique identity to prevent conflicts
-    const identity = userId ? userId : `guest-${crypto.randomUUID()}`;
+    // Create unique identity to prevent conflicts (even for authenticated users)
+    const identity = userId ? `${userId}-${crypto.randomUUID()}` : `guest-${crypto.randomUUID()}`;
     const displayName = participantName.trim();
 
     console.log('Creating token with identity:', identity, 'name:', displayName);

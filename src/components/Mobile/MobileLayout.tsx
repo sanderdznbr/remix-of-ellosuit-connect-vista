@@ -39,7 +39,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         onAddClick={onAddClick}
       />
       
-      <main className="pb-20 mobile-safe-top">
+      <main className="pb-28 mobile-safe-bottom">
         {children}
       </main>
       

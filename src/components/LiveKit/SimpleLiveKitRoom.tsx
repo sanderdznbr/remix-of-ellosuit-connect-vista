@@ -12,11 +12,13 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import MeetingControls from './MeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
 import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
+import MobileMeetingLayout from './MobileMeetingLayout';
 import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
@@ -52,6 +54,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('chat'); // Default to chat
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
 
   // Enhanced connection management with better visibility handling
   useEffect(() => {
@@ -99,6 +102,18 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       }
     };
   }, []);
+
+  // Play connection sound on successful join
+  useEffect(() => {
+    if (!showPreJoin && token && serverUrl) {
+      // Play connection sound
+      const audio = new Audio();
+      audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1hdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+PSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
+      audio.play().catch(() => {
+        console.log('Could not play connection sound');
+      });
+    }
+  }, [showPreJoin, token, serverUrl]);
 
   const generateToken = useCallback(async () => {
     try {
@@ -167,11 +182,24 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   const handleDisconnected = useCallback(() => {
     console.log('Disconnected from room');
+    
+    // Play disconnection sound
+    const audio = new Audio();
+    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
+    audio.play().catch(() => {
+      // Fallback if audio doesn't play
+      console.log('Could not play disconnect sound');
+    });
+    
     toast({
       title: "Desconectado",
       description: "Você saiu da sala de reunião",
     });
-    onLeave();
+    
+    // Ensure complete disconnection and redirect
+    setTimeout(() => {
+      onLeave();
+    }, 500);
   }, [onLeave, toast]);
 
   const handleError = useCallback((error: Error) => {
@@ -276,95 +304,105 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           />
         ) : (
           <>
-            {/* Meeting Header with Logo */}
-            <div className="zoom-meeting-header">
-              <div className="flex items-center gap-4">
-                <img 
-                  src={logoEllo} 
-                  alt="ELLOSUIT" 
-                  className="zoom-meeting-logo"
-                />
-                <div className="flex flex-col">
-                  <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
-                  <span className="text-sm text-gray-500">Sala: {roomName}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <Button
-                  onClick={() => setShowShareModal(true)}
-                  className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span className="text-sm font-medium">Convidar</span>
-                </Button>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span>Conectado</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="zoom-meeting-main">
-              <div className="zoom-meeting-content">
-                <ZoomParticipantGrid />
-                
-                <MeetingControls
-                  onToggleChat={() => toggleSidebar('chat')}
-                  onToggleParticipants={() => toggleSidebar('participants')}
-                  onShareMeeting={() => setShowShareModal(true)}
-                  onLeave={onLeave}
-                  isChatOpen={isChatOpen}
-                  isParticipantsOpen={isParticipantsOpen}
-                />
-              </div>
-
-              {/* Fixed Sidebar - Always Show Chat */}
-              <div className="zoom-meeting-sidebar-container">
-                {/* Sidebar Toggle Buttons */}
-                <div className="zoom-sidebar-buttons">
-                  <Button
-                    onClick={() => toggleSidebar('participants')}
-                    className={cn(
-                      "sidebar-toggle-button",
-                      isParticipantsOpen && "active"
-                    )}
-                  >
-                    <Users className="h-4 w-4" />
-                    <span className="ml-2 text-sm">Participantes</span>
-                  </Button>
-                  <Button
-                    onClick={() => toggleSidebar('chat')}
-                    className={cn(
-                      "sidebar-toggle-button",
-                      isChatOpen && "active"
-                    )}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="ml-2 text-sm">Chat</span>
-                  </Button>
+            {isMobile ? (
+              <MobileMeetingLayout
+                roomName={roomName}
+                onLeave={onLeave}
+                onShareMeeting={() => setShowShareModal(true)}
+              />
+            ) : (
+              <>
+                {/* Meeting Header with Logo */}
+                <div className="zoom-meeting-header">
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={logoEllo} 
+                      alt="ELLOSUIT" 
+                      className="zoom-meeting-logo"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
+                      <span className="text-sm text-gray-500">Sala: {roomName}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      onClick={() => setShowShareModal(true)}
+                      className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span className="text-sm font-medium">Convidar</span>
+                    </Button>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span>Conectado</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Always Open Sidebar */}
-                <MeetingSidebar
-                  isOpen={true}
-                  onClose={() => {
-                    setIsChatOpen(false);
-                    setIsParticipantsOpen(false);
-                  }}
-                  activeTab={isChatOpen ? 'chat' : 'participants'}
-                  onTabChange={(tab) => {
-                    if (tab === 'chat') {
-                      setIsChatOpen(true);
-                      setIsParticipantsOpen(false);
-                    } else {
-                      setIsParticipantsOpen(true);
-                      setIsChatOpen(false);
-                    }
-                    setSidebarTab(tab);
-                  }}
-                />
-              </div>
-            </div>
+                <div className="zoom-meeting-main">
+                  <div className="zoom-meeting-content">
+                    <ZoomParticipantGrid />
+                    
+                    <MeetingControls
+                      onToggleChat={() => toggleSidebar('chat')}
+                      onToggleParticipants={() => toggleSidebar('participants')}
+                      onShareMeeting={() => setShowShareModal(true)}
+                      onLeave={onLeave}
+                      isChatOpen={isChatOpen}
+                      isParticipantsOpen={isParticipantsOpen}
+                    />
+                  </div>
+
+                  {/* Fixed Sidebar - Always Show Chat */}
+                  <div className="zoom-meeting-sidebar-container">
+                    {/* Sidebar Toggle Buttons */}
+                    <div className="zoom-sidebar-buttons">
+                      <Button
+                        onClick={() => toggleSidebar('participants')}
+                        className={cn(
+                          "sidebar-toggle-button",
+                          isParticipantsOpen && "active"
+                        )}
+                      >
+                        <Users className="h-4 w-4" />
+                        <span className="ml-2 text-sm">Participantes</span>
+                      </Button>
+                      <Button
+                        onClick={() => toggleSidebar('chat')}
+                        className={cn(
+                          "sidebar-toggle-button",
+                          isChatOpen && "active"
+                        )}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="ml-2 text-sm">Chat</span>
+                      </Button>
+                    </div>
+
+                    {/* Always Open Sidebar */}
+                    <MeetingSidebar
+                      isOpen={true}
+                      onClose={() => {
+                        setIsChatOpen(false);
+                        setIsParticipantsOpen(false);
+                      }}
+                      activeTab={isChatOpen ? 'chat' : 'participants'}
+                      onTabChange={(tab) => {
+                        if (tab === 'chat') {
+                          setIsChatOpen(true);
+                          setIsParticipantsOpen(false);
+                        } else {
+                          setIsParticipantsOpen(true);
+                          setIsChatOpen(false);
+                        }
+                        setSidebarTab(tab);
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 

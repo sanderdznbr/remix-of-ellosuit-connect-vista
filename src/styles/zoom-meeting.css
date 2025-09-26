@@ -268,48 +268,109 @@
   @apply p-4 border-t border-gray-200 bg-gray-50/50;
 }
 
-/* Responsive Design - Light Theme */
-@media (max-width: 768px) {
-  .meeting-controls-container {
-    @apply flex-col gap-4 px-4;
-  }
-  
-  .meeting-controls-center {
-    @apply order-1;
-  }
-  
-  .meeting-controls-left,
-  .meeting-controls-right {
-    @apply order-2 justify-center;
-  }
-  
-  .zoom-meeting-sidebar-container {
-    @apply w-full top-20 right-0 bottom-0;
-  }
-  
-  .control-button {
-    @apply w-11 h-11;
-  }
-  
-  .zoom-participant-grid {
-    @apply p-3 gap-2;
-  }
-  
-  .zoom-participant-grid.grid-many {
-    @apply grid-cols-2;
-  }
-  
-  .zoom-meeting-header {
-    @apply p-3 flex-col gap-2;
-  }
-  
-  .zoom-meeting-header > div:first-child {
-    @apply justify-center;
-  }
-  
-  .zoom-meeting-header > div:last-child {
-    @apply justify-center;
-  }
+/* Mobile Meeting Layout */
+.mobile-meeting-layout {
+  @apply h-screen w-full bg-gray-50 flex flex-col overflow-hidden;
+}
+
+.mobile-meeting-header {
+  @apply flex items-center justify-between p-3 bg-white border-b border-gray-200 z-10 shadow-sm;
+  height: 60px;
+}
+
+.mobile-video-area {
+  @apply flex-1 p-2 flex flex-col gap-2 overflow-hidden;
+}
+
+.mobile-screenshare {
+  @apply flex justify-center items-center mb-2;
+}
+
+.mobile-participants-grid {
+  @apply flex flex-wrap justify-center items-center gap-2 overflow-y-auto;
+}
+
+.mobile-participants-grid.with-screenshare {
+  @apply flex-row flex-nowrap overflow-x-auto justify-start;
+  height: 120px;
+}
+
+.mobile-participants-grid.full-screen {
+  @apply flex-1;
+}
+
+/* Mobile Controls */
+.mobile-controls {
+  @apply flex items-center justify-center gap-4 p-4 bg-white border-t border-gray-200;
+  height: 80px;
+}
+
+.mobile-control-btn {
+  @apply w-12 h-12 rounded-full bg-primary text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200;
+}
+
+.mobile-control-btn.muted {
+  @apply bg-red-500 hover:bg-red-600;
+}
+
+.mobile-control-btn.active {
+  @apply bg-green-500 hover:bg-green-600;
+}
+
+.mobile-control-btn.leave {
+  @apply bg-red-500 hover:bg-red-600;
+}
+
+/* Floating Action Buttons */
+.mobile-floating-buttons {
+  @apply fixed right-4 bottom-24 flex flex-col gap-3 z-30;
+}
+
+.mobile-fab {
+  @apply w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center relative;
+}
+
+.mobile-fab.with-badge {
+  @apply bg-blue-600;
+}
+
+.fab-badge {
+  @apply absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold;
+}
+
+/* Mobile Modals */
+.mobile-modal-overlay {
+  @apply fixed inset-0 bg-black/50 z-40 flex items-end;
+}
+
+.mobile-modal {
+  @apply w-full bg-white rounded-t-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300;
+  max-height: 80vh;
+}
+
+.mobile-modal.chat-modal,
+.mobile-modal.participants-modal {
+  @apply h-[80vh];
+}
+
+.modal-header {
+  @apply flex items-center justify-between p-4 border-b border-gray-200;
+}
+
+.modal-content {
+  @apply flex-1 overflow-y-auto;
+}
+
+.modal-footer {
+  @apply p-4 border-t border-gray-200;
+}
+
+.chat-message-mobile {
+  @apply py-2;
+}
+
+.participant-item-mobile {
+  @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors;
 }
 
 @media (max-width: 480px) {
@@ -317,16 +378,26 @@
     @apply p-6 mx-4;
   }
   
-  .meeting-controls {
+  .mobile-meeting-header {
     @apply p-2;
+    height: 50px;
   }
   
-  .control-button {
-    @apply w-8 h-8;
+  .mobile-controls {
+    @apply gap-3 p-3;
+    height: 70px;
   }
   
-  .control-button-share {
-    @apply px-3 h-8;
+  .mobile-control-btn {
+    @apply w-10 h-10;
+  }
+  
+  .mobile-fab {
+    @apply w-12 h-12;
+  }
+  
+  .fab-badge {
+    @apply w-4 h-4 text-xs;
   }
 }
 

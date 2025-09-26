@@ -235,8 +235,7 @@ const Sidebar = () => {
               {!isCollapsed && (
                 <div className="px-1 mb-1">
                   <h3 
-                    className="text-xs font-semibold uppercase tracking-wider opacity-75"
-                    style={{ color: group.color }}
+                    className="text-xs font-semibold uppercase tracking-wider opacity-75 text-white"
                   >
                     {group.label}
                   </h3>

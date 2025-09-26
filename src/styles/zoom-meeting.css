@@ -101,10 +101,22 @@
 }
 
 /* Modern Participant Grid - Light Theme - Full Height */
-.zoom-participant-grid {
-  @apply flex-1 p-6 flex flex-wrap justify-center items-center gap-6 overflow-hidden;
-  min-height: calc(100vh - 240px); /* Account for header and controls */
+.zoom-participant-grid-container {
+  @apply flex-1 p-6 flex flex-col gap-6 overflow-hidden;
+  min-height: calc(100vh - 240px);
   height: 100%;
+}
+
+.zoom-screenshare-area {
+  @apply flex-1 min-h-0 flex flex-col justify-center;
+}
+
+.zoom-participant-grid {
+  @apply flex flex-wrap justify-center items-center gap-4 overflow-hidden;
+}
+
+.zoom-participant-grid.grid-with-screenshare {
+  @apply h-32 overflow-x-auto flex-nowrap justify-start px-2;
 }
 
 .zoom-participant-grid.grid-1 {
@@ -229,7 +241,7 @@
 }
 
 .sidebar-toggle-button.active {
-  @apply text-gray-900 bg-gray-200;
+  @apply text-gray-900 bg-gray-200 font-semibold;
 }
 
 .meeting-sidebar {

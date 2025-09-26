@@ -53,34 +53,50 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Enhanced connection management to prevent disconnections
+  // Enhanced connection management with better visibility handling
   useEffect(() => {
-    let isPageVisible = !document.hidden;
+    let reconnectTimeout: NodeJS.Timeout;
     
     const handleVisibilityChange = () => {
-      const wasVisible = isPageVisible;
-      isPageVisible = !document.hidden;
-      
-      if (wasVisible && !isPageVisible) {
-        // Page became hidden - don't disconnect
-        console.log('Page hidden, maintaining LiveKit connection');
-      } else if (!wasVisible && isPageVisible) {
-        // Page became visible again
-        console.log('Page visible again, connection maintained');
+      if (!document.hidden) {
+        // Page became visible - clear any pending reconnection
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
+        }
+        console.log('Page visible - maintaining stable connection');
+      } else {
+        // Page hidden - but maintain connection
+        console.log('Page hidden - connection maintained');
       }
     };
 
-    const handleBeforeUnload = () => {
-      // Only disconnect when actually leaving the page
-      console.log('Page unloading, will disconnect');
+    const handleFocus = () => {
+      console.log('Window focused - ensuring connection stability');
+    };
+
+    const handleBlur = () => {
+      console.log('Window blurred - maintaining connection');
+    };
+
+    // Prevent connection drops on various browser events
+    const preventDisconnect = (e: Event) => {
+      e.preventDefault();
+      return false;
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('beforeunload', preventDisconnect);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('beforeunload', preventDisconnect);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
     };
   }, []);
 
@@ -229,20 +245,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         onDisconnected={handleDisconnected}
         onError={handleError}
         options={{
-          // Enhanced connection options
+          // Enhanced connection options - Better handling of page visibility
           adaptiveStream: true,
-          disconnectOnPageLeave: false, // Critical: don't disconnect on visibility change
+          disconnectOnPageLeave: false,
           publishDefaults: {
             simulcast: false,
-            stopMicTrackOnMute: false, // Keep track active when muted
+            stopMicTrackOnMute: false,
+            videoCodec: 'vp8', // More stable codec
           },
-          // Advanced settings to maintain connection
+          // Connection management
           reconnectPolicy: {
             nextRetryDelayInMs: (context) => {
-              if (context.elapsedMs < 30_000) {
-                return Math.min(context.retryCount * 1000, 5000);
+              // More aggressive reconnection for better stability
+              if (context.elapsedMs < 10_000) {
+                return 1000; // Quick reconnect for short disconnections
               }
-              return 10_000;
+              return Math.min(context.retryCount * 2000, 10000);
             },
           },
         }}

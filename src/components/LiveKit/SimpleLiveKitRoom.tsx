@@ -230,16 +230,16 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             <div className="zoom-meeting-main">
               <div className="zoom-meeting-content">
                 <ZoomParticipantGrid />
-                
-                <MeetingControls
-                  onToggleChat={() => toggleSidebar('chat')}
-                  onToggleParticipants={() => toggleSidebar('participants')}
-                  onShareMeeting={() => setShowShareModal(true)}
-                  onLeave={onLeave}
-                  isChatOpen={isChatOpen}
-                  isParticipantsOpen={isParticipantsOpen}
-                />
               </div>
+
+              <MeetingControls
+                onToggleChat={() => toggleSidebar('chat')}
+                onToggleParticipants={() => toggleSidebar('participants')}
+                onShareMeeting={() => setShowShareModal(true)}
+                onLeave={onLeave}
+                isChatOpen={isChatOpen}
+                isParticipantsOpen={isParticipantsOpen}
+              />
 
               {(isChatOpen || isParticipantsOpen) && (
                 <MeetingSidebar

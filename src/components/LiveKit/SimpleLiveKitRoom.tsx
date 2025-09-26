@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MeetingControls from './MeetingControls';
@@ -71,7 +71,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     getCompanyId();
   }, []);
-  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants'>('chat'); // Default to chat
+  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
   const { user } = useAuth();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
@@ -189,11 +189,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setShowPreJoin(false);
   }, []);
 
-  const toggleSidebar = (tab: 'chat' | 'participants') => {
+  const toggleSidebar = (tab: 'chat' | 'participants' | 'transcription') => {
     if (tab === 'chat') {
       setIsChatOpen(!isChatOpen);
       setIsParticipantsOpen(false);
-    } else {
+    } else if (tab === 'participants') {
       setIsParticipantsOpen(!isParticipantsOpen);
       setIsChatOpen(false);
     }
@@ -400,6 +400,16 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                         <MessageSquare className="h-4 w-4" />
                         <span className="ml-2 text-sm">Chat</span>
                       </Button>
+                      <Button
+                        onClick={() => toggleSidebar('transcription')}
+                        className={cn(
+                          "sidebar-toggle-button",
+                          sidebarTab === 'transcription' && "active"
+                        )}
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="ml-2 text-sm">Transcrição</span>
+                      </Button>
                     </div>
 
                     {/* Always Open Sidebar */}
@@ -409,17 +419,18 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                         setIsChatOpen(false);
                         setIsParticipantsOpen(false);
                       }}
-                      activeTab={isChatOpen ? 'chat' : 'participants'}
+                      activeTab={sidebarTab}
                       onTabChange={(tab) => {
                         if (tab === 'chat') {
                           setIsChatOpen(true);
                           setIsParticipantsOpen(false);
-                        } else {
+                        } else if (tab === 'participants') {
                           setIsParticipantsOpen(true);
                           setIsChatOpen(false);
                         }
                         setSidebarTab(tab);
                       }}
+                      roomId={roomName}
                     />
                   </div>
                 </div>

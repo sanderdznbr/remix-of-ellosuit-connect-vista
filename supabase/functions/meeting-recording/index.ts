@@ -13,7 +13,7 @@ const supabase = createClient(
 
 const LIVEKIT_API_KEY = Deno.env.get('LIVEKIT_API_KEY');
 const LIVEKIT_API_SECRET = Deno.env.get('LIVEKIT_API_SECRET');
-const LIVEKIT_URL = Deno.env.get('LIVEKIT_URL');
+const LIVEKIT_URL = Deno.env.get('LIVEKIT_URL')?.replace('wss://', 'https://');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -21,12 +21,12 @@ serve(async (req) => {
   }
 
   try {
-    const { action, roomName, userId, companyId } = await req.json();
+    const { action, roomName, userId, companyId, recordingId, livekitRecordingId } = await req.json();
     console.log('Recording action:', { action, roomName, userId, companyId });
 
     if (action === 'start') {
       // Start recording via LiveKit Recording API
-      const recordingResponse = await fetch(`${LIVEKIT_URL}/recording/start`, {
+      const recordingResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StartRoomCompositeEgress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LIVEKIT_API_KEY}`,
@@ -34,18 +34,21 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           room_name: roomName,
-          output: {
-            type: 'file',
-            file_outputs: [{
-              file_type: 'mp4',
-              filepath: `recordings/${roomName}-${Date.now()}.mp4`
-            }]
+          layout: "speaker-dark",
+          audio_only: false,
+          video_only: false,
+          custom_base_url: "",
+          file: {
+            filepath: `recordings/${roomName}-${Date.now()}.mp4`,
+            output: "MP4"
           }
         })
       });
 
       if (!recordingResponse.ok) {
-        throw new Error('Failed to start LiveKit recording');
+        const errorText = await recordingResponse.text();
+        console.error('LiveKit recording error:', errorText);
+        throw new Error(`Failed to start LiveKit recording: ${errorText}`);
       }
 
       const recordingData = await recordingResponse.json();
@@ -58,7 +61,7 @@ serve(async (req) => {
           room_id: roomName,
           company_id: companyId,
           created_by: userId,
-          title: `Recording - ${new Date().toLocaleString()}`,
+          title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
           file_url: '', // Will be updated when recording is processed
         })
         .select()
@@ -72,28 +75,39 @@ serve(async (req) => {
       return new Response(JSON.stringify({ 
         success: true, 
         recording_id: recording.id,
-        livekit_recording_id: recordingData.recording_id 
+        livekit_recording_id: recordingData.egress_id || recordingData.id
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
     } else if (action === 'stop') {
-      const { recordingId, livekitRecordingId } = await req.json();
-
       // Stop recording via LiveKit API
-      const stopResponse = await fetch(`${LIVEKIT_URL}/recording/stop`, {
+      const stopResponse = await fetch(`${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LIVEKIT_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          recording_id: livekitRecordingId
+          egress_id: livekitRecordingId
         })
       });
 
       if (!stopResponse.ok) {
         console.error('Failed to stop LiveKit recording');
+      }
+
+      // Update recording status
+      const { error } = await supabase
+        .from('meeting_recordings')
+        .update({ 
+          file_url: `recordings/${roomName}-recording.mp4`,
+          duration_seconds: 0 // Will be updated by webhook
+        })
+        .eq('id', recordingId);
+
+      if (error) {
+        console.error('Database update error:', error);
       }
 
       console.log('Recording stopped:', livekitRecordingId);

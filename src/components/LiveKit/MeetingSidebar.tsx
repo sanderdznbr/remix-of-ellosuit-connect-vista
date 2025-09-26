@@ -1,223 +1,243 @@
-import React, { useState, useEffect } from 'react';
-import { X, Users, MessageSquare, Send, Crown, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Send, Users, MessageSquare, Crown, Mic, MicOff, Video, VideoOff, FileText, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useParticipants, useLocalParticipant, useRoomContext } from '@livekit/components-react';
-import { useAuth } from '@/hooks/useAuth';
+import {
+  useParticipants, 
+  useRoomContext,
+  useLocalParticipant
+} from '@livekit/components-react';
+import { supabase } from '@/integrations/supabase/client';
+import TranscriptionPanel from './TranscriptionPanel';
 
 interface MeetingSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'chat' | 'participants';
-  onTabChange: (tab: 'chat' | 'participants') => void;
+  activeTab: 'participants' | 'chat' | 'transcription';
+  onTabChange: (tab: 'participants' | 'chat' | 'transcription') => void;
+  roomId?: string;
 }
 
-const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
-  isOpen,
-  onClose,
-  activeTab,
-  onTabChange
+const MeetingSidebar: React.FC<MeetingSidebarProps> = ({ 
+  isOpen, 
+  onClose, 
+  activeTab, 
+  onTabChange,
+  roomId 
 }) => {
   const [inputMessage, setInputMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{
-    id: string;
-    sender: string;
-    message: string;
-    time: string;
-    userId?: string;
-  }>>([]);
-  
+  const [messages, setMessages] = useState<any[]>([]);
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
-  const { user } = useAuth();
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Listen for chat messages
   useEffect(() => {
     if (!room) return;
 
     const handleDataReceived = (payload: Uint8Array, participant: any) => {
-      const decoder = new TextDecoder();
-      const data = JSON.parse(decoder.decode(payload));
-      
-      if (data.type === 'chat') {
-        const newMessage = {
-          id: Date.now().toString(),
-          sender: participant?.name || 'Participante',
-          message: data.message,
-          time: new Date().toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          userId: participant?.identity
-        };
-        
-        setMessages(prev => [...prev, newMessage]);
+      try {
+        const decoder = new TextDecoder();
+        const message = JSON.parse(decoder.decode(payload));
+        if (message.type === 'chat') {
+          setMessages(prev => [...prev, {
+            id: Date.now(),
+            participant: participant?.identity || 'Unknown',
+            message: message.text,
+            timestamp: new Date()
+          }]);
+        }
+      } catch (error) {
+        console.error('Error parsing chat message:', error);
       }
     };
 
     room.on('dataReceived', handleDataReceived);
-    
     return () => {
       room.off('dataReceived', handleDataReceived);
     };
   }, [room]);
 
+  // Auto scroll chat to bottom
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const handleSendMessage = async () => {
-    if (inputMessage.trim() && localParticipant) {
+    if (!inputMessage.trim() || !room || !localParticipant) return;
+
+    try {
       const messageData = {
         type: 'chat',
-        message: inputMessage.trim(),
-        sender: localParticipant.name || user?.user_metadata?.full_name || 'Você',
-        timestamp: Date.now()
+        text: inputMessage,
+        timestamp: new Date().toISOString()
       };
 
-      // Send to room
       const encoder = new TextEncoder();
       const data = encoder.encode(JSON.stringify(messageData));
-      await localParticipant.publishData(data, { reliable: true });
-
-      // Add to local messages
-      const newMessage = {
-        id: Date.now().toString(),
-        sender: 'Você',
-        message: inputMessage.trim(),
-        time: new Date().toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        userId: localParticipant.identity
-      };
       
-      setMessages(prev => [...prev, newMessage]);
+      await room.localParticipant.publishData(data, { reliable: true });
+      
+      // Add to local messages
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        participant: localParticipant.identity,
+        message: inputMessage,
+        timestamp: new Date()
+      }]);
+      
       setInputMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="meeting-sidebar">
-      <div className="meeting-sidebar-header">
-        <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'chat' | 'participants')}>
-          <TabsList className="grid w-full grid-cols-2 bg-gray-100">
-            <TabsTrigger value="participants" className="gap-2 text-gray-700 data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900">
+    <div className="zoom-meeting-sidebar">
+      <div className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger 
+              value="participants" 
+              className="flex items-center gap-2"
+            >
               <Users className="h-4 w-4" />
-              Participantes ({participants.length})
+              <span className="hidden sm:inline">Participantes</span>
             </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2 text-gray-700 data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900">
+            <TabsTrigger 
+              value="chat" 
+              className="flex items-center gap-2"
+            >
               <MessageSquare className="h-4 w-4" />
-              Chat
+              <span className="hidden sm:inline">Chat</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="transcription" 
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Transcrição</span>
             </TabsTrigger>
           </TabsList>
-        </Tabs>
-      </div>
 
-      <div className="meeting-sidebar-content">
-        <Tabs value={activeTab} className="h-full">
-          {/* Participants Tab */}
-          <TabsContent value="participants" className="mt-0">
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              <div className="p-4 space-y-2">
-                {participants.map((participant) => (
-                  <div
-                    key={participant.identity}
-                    className="participant-item"
-                  >
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      {(participant.name || 'P').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {participant.name || `Participante ${participant.identity.slice(-4)}`}
-                          {participant.identity === localParticipant?.identity && ' (Você)'}
-                        </span>
-                        {participant.permissions?.canPublish && (
-                          <Crown className="w-3 h-3 text-yellow-500" />
+          <TabsContent value="participants" className="flex-1 flex flex-col mt-0">
+            <div className="p-3 border-b border-border">
+              <h3 className="font-medium text-sm">Participantes ({participants.length})</h3>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-2">
+                {participants.map((participant) => {
+                  const isHost = participant.identity === localParticipant?.identity;
+                  const audioEnabled = participant.isMicrophoneEnabled;
+                  const videoEnabled = participant.isCameraEnabled;
+                  
+                  return (
+                    <div 
+                      key={participant.identity} 
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isHost && <Crown className="h-4 w-4 text-yellow-500" />}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {participant.identity || 'Participante'}
+                            {isHost && ' (Você)'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        {audioEnabled ? (
+                          <Mic className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <MicOff className="h-4 w-4 text-red-500" />
+                        )}
+                        {videoEnabled ? (
+                          <Video className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <VideoOff className="h-4 w-4 text-red-500" />
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {participant.isMicrophoneEnabled === false && (
-                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                          <MicOff className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                      {participant.isCameraEnabled === false && (
-                        <div className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center">
-                          <VideoOff className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </TabsContent>
 
-          {/* Chat Tab */}
-          <TabsContent value="chat" className="mt-0 h-full flex flex-col">
-            <ScrollArea className="flex-1 px-4">
-              <div className="space-y-3 py-4">
-                {messages.map((msg) => (
-                  <div key={msg.id} className="chat-message">
-                    <div className="flex items-start gap-2">
-                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium">
-                        {msg.sender.charAt(0).toUpperCase()}
+          <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
+            <div className="p-3 border-b border-border">
+              <h3 className="font-medium text-sm">Chat da Reunião</h3>
+            </div>
+            
+            <ScrollArea className="flex-1" ref={chatScrollRef}>
+              <div className="p-3 space-y-3">
+                {messages.length === 0 ? (
+                  <div className="text-center text-sm text-muted-foreground py-8">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma mensagem ainda</p>
+                    <p className="text-xs mt-1">Envie uma mensagem para começar a conversa</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className="text-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-xs">
+                          {msg.participant}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {msg.timestamp.toLocaleTimeString()}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-900">
-                            {msg.sender}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {msg.time}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded-lg">
-                          {msg.message}
-                        </p>
+                      <div className="text-foreground leading-relaxed">
+                        {msg.message}
                       </div>
                     </div>
-                  </div>
-                ))}
-                {messages.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma mensagem ainda.</p>
-                    <p className="text-xs">Envie a primeira mensagem!</p>
-                  </div>
+                  ))
                 )}
               </div>
             </ScrollArea>
 
-            <div className="chat-input">
+            <div className="p-3 border-t border-border">
               <div className="flex gap-2">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 bg-white border-gray-300 text-gray-900"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSendMessage();
-                    }
-                  }}
+                  className="flex-1"
                 />
-                <Button
+                <Button 
                   onClick={handleSendMessage}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-white"
                   disabled={!inputMessage.trim()}
+                  size="sm"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="transcription" className="h-full mt-0 p-0">
+            <TranscriptionPanel 
+              roomId={roomId || ''} 
+              isActive={activeTab === 'transcription'} 
+            />
           </TabsContent>
         </Tabs>
       </div>

@@ -47,7 +47,7 @@ serve(async (req) => {
 
         assemblySocket.onopen = () => {
           console.log('Connected to AssemblyAI');
-          // Send auth message
+          // Send auth message first
           assemblySocket?.send(JSON.stringify({
             audio_data: ASSEMBLYAI_API_KEY
           }));
@@ -58,8 +58,9 @@ serve(async (req) => {
           }));
         };
 
-        assemblySocket.onmessage = (assemblyEvent) => {
+        assemblySocket.onmessage = async (assemblyEvent) => {
           const transcriptionData = JSON.parse(assemblyEvent.data);
+          console.log('AssemblyAI message:', transcriptionData);
           
           if (transcriptionData.message_type === 'FinalTranscript') {
             const transcript = transcriptionData.text;
@@ -75,8 +76,8 @@ serve(async (req) => {
               timestamp: new Date().toISOString()
             }));
             
-            // Save to database
-            supabase.from('room_chat_messages').insert({
+            // Save to database as chat message
+            await supabase.from('room_chat_messages').insert({
               room_id: roomId,
               participant_id: null,
               message: transcript,
@@ -104,9 +105,11 @@ serve(async (req) => {
 
       } else if (data.type === 'audio_data' && assemblySocket && isTranscribing) {
         // Forward audio data to AssemblyAI
-        assemblySocket.send(JSON.stringify({
-          audio_data: data.audio
-        }));
+        if (assemblySocket.readyState === WebSocket.OPEN) {
+          assemblySocket.send(JSON.stringify({
+            audio_data: data.audio
+          }));
+        }
         
       } else if (data.type === 'stop_transcription') {
         isTranscribing = false;

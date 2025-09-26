@@ -51,7 +51,10 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
           // Auto-scroll to bottom
           setTimeout(() => {
             if (scrollAreaRef.current) {
-              scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+              const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+              if (scrollElement) {
+                scrollElement.scrollTop = scrollElement.scrollHeight;
+              }
             }
           }, 100);
         }
@@ -118,24 +121,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
       <div className="flex items-center justify-between p-3 border-b border-border">
         <h3 className="font-medium text-sm">Transcrição em Tempo Real</h3>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={isTranscribing ? stopTranscription : startTranscription}
-            size="sm"
-            variant={isTranscribing ? "destructive" : "default"}
-            className="h-8"
-          >
-            {isTranscribing ? (
-              <>
-                <MicOff className="h-3 w-3 mr-1" />
-                Parar
-              </>
-            ) : (
-              <>
-                <Mic className="h-3 w-3 mr-1" />
-                Iniciar
-              </>
-            )}
-          </Button>
           {messages.length > 0 && (
             <Button
               onClick={downloadTranscript}
@@ -185,7 +170,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
           
           {!isTranscribing && messages.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-8">
-              <p>Clique em "Iniciar" para começar a transcrição em tempo real</p>
+              <p>A transcrição será iniciada automaticamente quando a gravação começar</p>
             </div>
           )}
         </div>
@@ -196,7 +181,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
         <div className="p-2 border-t border-border bg-muted/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
-            Transcrevendo em tempo real
+            Transcrevendo automaticamente durante a gravação
           </div>
         </div>
       )}

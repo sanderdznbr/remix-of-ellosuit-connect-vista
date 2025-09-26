@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, 
   MicOff, 
@@ -48,6 +48,8 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingId, setRecordingId] = useState<string>('');
   const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionWs, setTranscriptionWs] = useState<WebSocket | null>(null);
 
   const toggleMic = async () => {
     if (localParticipant) {
@@ -101,9 +103,18 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         setRecordingId('');
         setLivekitRecordingId('');
         
+        // Stop transcription if active
+        if (isTranscribing && transcriptionWs) {
+          transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
+          transcriptionWs.close();
+          setTranscriptionWs(null);
+          setIsTranscribing(false);
+        }
+        
         toast({
           title: "Gravação finalizada",
-          description: "A gravação foi salva e estará disponível em breve",
+          description: "Sua reunião foi gravada com sucesso! Confira 'Ver Gravações' para baixar sua reunião ou assisti-la.",
+          duration: 5000,
         });
       } else {
         // Start recording
@@ -125,9 +136,12 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         setRecordingId(data.recording_id);
         setLivekitRecordingId(data.livekit_recording_id);
         
+        // Auto-start transcription when recording starts
+        startTranscription();
+        
         toast({
           title: "Gravação iniciada",
-          description: "A reunião está sendo gravada",
+          description: "A reunião está sendo gravada e transcrita em tempo real",
         });
       }
     } catch (error) {
@@ -139,6 +153,60 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
       });
     }
   };
+
+  const startTranscription = () => {
+    try {
+      const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('Connected to transcription service');
+        ws.send(JSON.stringify({
+          type: 'start_transcription',
+          roomId: roomCode
+        }));
+        setIsTranscribing(true);
+        setTranscriptionWs(ws);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Transcription WebSocket error:', error);
+        toast({
+          title: "Erro na transcrição",
+          description: "Não foi possível conectar ao serviço de transcrição",
+          variant: "destructive"
+        });
+      };
+
+      ws.onclose = () => {
+        setTranscriptionWs(null);
+        setIsTranscribing(false);
+      };
+      
+    } catch (error) {
+      console.error('Failed to start transcription:', error);
+    }
+  };
+
+  // Auto-stop recording when component unmounts (user leaves meeting)
+  React.useEffect(() => {
+    return () => {
+      if (isRecording) {
+        // Auto-stop recording when leaving
+        supabase.functions.invoke('meeting-recording', {
+          body: {
+            action: 'stop',
+            recordingId,
+            livekitRecordingId
+          }
+        });
+      }
+      if (transcriptionWs) {
+        transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
+        transcriptionWs.close();
+      }
+    };
+  }, [isRecording, recordingId, livekitRecordingId, transcriptionWs]);
 
   return (
     <div className="meeting-controls">

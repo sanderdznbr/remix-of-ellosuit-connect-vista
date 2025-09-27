@@ -237,7 +237,7 @@ const AuthScreen = () => {
                 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-black text-white hover:bg-gray-800" 
+                  className="w-full h-12 bg-primary text-primary-foreground hover:opacity-90" 
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -332,7 +332,7 @@ const AuthScreen = () => {
                 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-black text-white hover:bg-gray-800" 
+                  className="w-full h-12 bg-primary text-primary-foreground hover:opacity-90" 
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -351,7 +351,7 @@ const AuthScreen = () => {
       </div>
 
       {/* Right side - Brand */}
-      <div className="flex-1 flex items-center justify-center order-1 md:order-2 min-h-[200px] md:min-h-screen" style={{ backgroundColor: '#3600FF' }}>
+      <div className="flex-1 flex items-center justify-center order-1 md:order-2 min-h-[200px] md:min-h-screen" style={{ backgroundColor: 'hsl(var(--primary))' }}>
         <div className="text-center p-4">
           <img 
             src={ellosuitLogo} 

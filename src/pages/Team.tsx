@@ -410,11 +410,7 @@ const Team = () => {
 
   if (isMobile) {
     return (
-      <MobileLayout 
-        title="Equipe" 
-        activeItem="team" 
-        onItemClick={() => {}}
-      >
+      <MobileLayout>
         {content}
       </MobileLayout>
     );

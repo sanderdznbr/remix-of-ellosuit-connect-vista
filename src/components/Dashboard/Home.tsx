@@ -1,5 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileHomeScreen from '@/components/Mobile/MobileHomeScreen';
+
+// Import the original home content
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +80,14 @@ const inspirationalQuotes = [
 ];
 
 const Home = ({ onNavigate }: HomeProps) => {
+  const { isMobile } = useIsMobile();
+
+  // Se for mobile, usar a versão mobile-first
+  if (isMobile) {
+    return <MobileHomeScreen onNavigate={onNavigate} />;
+  }
+
+  // Continuar com a versão desktop original
   const { user } = useAuth();
   const [currentQuote, setCurrentQuote] = useState('');
   const [stats, setStats] = useState({

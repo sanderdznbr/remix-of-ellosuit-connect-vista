@@ -11,7 +11,7 @@ import Analytics from './Analytics';
 import Settings from './Settings';
 import GroupedSidebarEditor from './GroupedSidebarEditor';
 import MeetingRooms from './MeetingRooms';
-import MobileDashboard from '@/components/Mobile/MobileDashboard';
+import MobileResponsiveDashboard from '@/components/Mobile/MobileResponsiveDashboard';
 import FluxosBoard from '@/components/Fluxos/FluxosBoard';
 import TarefasWeb from '@/components/Tarefas/TarefasWeb';
 import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
@@ -28,37 +28,9 @@ const Dashboard = () => {
     console.log('Navigate to:', page);
   };
 
-  // Usar layout mobile se estiver em dispositivo móvel
-  if (isMobile) {
-    return <MobileDashboard />;
-  }
+  // Sempre usar o novo layout responsivo
+  return <MobileResponsiveDashboard />;
 
-  // Layout desktop padrão
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <Routes>
-          <Route path="/" element={<Home onNavigate={handleNavigate} />} />
-          <Route path="/agenda" element={<MyCalendar />} />
-          <Route path="/reunioes" element={<MeetingRooms />} />
-          <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />
-          <Route path="/email/*" element={<EmailDashboard />} />
-          <Route path="/clientes" element={<ClientsManager />} />
-          <Route path="/drive" element={<DriveManager />} />
-          <Route path="/agenda-aberta" element={<ImprovedAgendaAberta />} />
-          <Route path="/analises" element={<Navigate to="/dashboard/email" replace />} />
-          <Route path="/editar" element={<GroupedSidebarEditor />} />
-          <Route path="/configuracoes" element={<GroupedSidebarEditor />} />
-          <Route path="/fluxos" element={<FluxosBoard />} />
-          <Route path="/tasks" element={<TarefasWeb />} />
-          <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
-          <Route path="/rastreamento-documento" element={<DocumentTrackingDashboard />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </div>
-    </div>
-  );
 };
 
 export default Dashboard;

@@ -481,6 +481,5 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     </div>
   );
 };
-};
 
 export default MobileMeetingLayout;

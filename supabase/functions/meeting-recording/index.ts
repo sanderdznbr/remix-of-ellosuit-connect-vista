@@ -126,16 +126,49 @@ serve(async (req) => {
     }
 
     if (action === 'start') {
+      // Create the recording record FIRST to ensure we have a valid file path
+      let recording = null;
+      const timestamp = Date.now();
+      const fileName = `${roomName}-${timestamp}.mp4`;
+      const filePath = `recordings/${fileName}`;
+      
+      if (roomId && companyId && userId) {
+        const { data: rec, error } = await supabase
+          .from('meeting_recordings')
+          .insert({
+            room_id: roomId,
+            company_id: companyId,
+            created_by: userId,
+            title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
+            file_url: filePath, // Set file path immediately
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database error:', error);
+          throw new Error('Erro ao criar registro de gravação');
+        } else {
+          recording = rec;
+          console.log('Recording record created:', recording.id);
+        }
+      }
+
+      // Configure LiveKit egress with proper output specification
       const egressBody = {
         room_name: roomName,
         layout: 'speaker-dark',
         audio_only: false,
         video_only: false,
         custom_base_url: '',
-        file: {
-          filepath: `recordings/${roomName}-${Date.now()}.mp4`,
-          output: 'MP4',
-        },
+        // Fixed: Add proper output configuration
+        output: {
+          case: 'file',
+          file: {
+            filepath: filePath,
+            output: 'MP4',
+          }
+        }
       };
 
       // Start recording via LiveKit Recording API with robust auth
@@ -148,41 +181,25 @@ serve(async (req) => {
       if (!recordingResponse.ok) {
         const errorText = await recordingResponse.text();
         console.error('LiveKit recording error:', errorText);
-        // Return fallback response instead of throwing error
-        return new Response(JSON.stringify({ 
-          success: true, 
-          fallback: true,
-          message: 'LiveKit failed, use fallback recording'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        
+        // If LiveKit fails but we created a database record, keep it for manual recording
+        if (recording) {
+          console.log('Recording started: manual/fallback mode');
+          return new Response(JSON.stringify({ 
+            success: true, 
+            recording_id: recording.id,
+            fallback: true,
+            message: 'Gravação iniciada em modo manual - certifique-se de gravar localmente'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          throw new Error('Falha ao iniciar gravação');
+        }
       }
 
       const recordingData = await recordingResponse.json();
       console.log('LiveKit recording started:', recordingData);
-
-      // Create recording record in database (store uuid room_id)  - only if we have valid IDs
-      let recording = null;
-      if (roomId && companyId && userId) {
-        const { data: rec, error } = await supabase
-          .from('meeting_recordings')
-          .insert({
-            room_id: roomId,
-            company_id: companyId,
-            created_by: userId,
-            title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
-            file_url: '', // Will be updated when recording is processed
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Database error:', error);
-          // Don't throw, just log and continue
-        } else {
-          recording = rec;
-        }
-      }
 
       return new Response(JSON.stringify({ 
         success: true, 
@@ -206,6 +223,8 @@ serve(async (req) => {
         if (!stopResponse.ok) {
           const t = await stopResponse.text();
           console.error('Failed to stop LiveKit recording:', t);
+        } else {
+          console.log('LiveKit recording stopped successfully');
         }
       }
 
@@ -214,13 +233,15 @@ serve(async (req) => {
         const { error } = await supabase
           .from('meeting_recordings')
           .update({ 
-            file_url: `recordings/${roomName || 'room'}-recording.mp4`,
-            duration_seconds: 0 // Will be updated by webhook
+            file_url: `recordings/${roomName || 'room'}-${Date.now()}.mp4`,
+            duration_seconds: 0 // Will be updated by webhook when available
           })
           .eq('id', recordingId);
 
         if (error) {
           console.error('Database update error:', error);
+        } else {
+          console.log('Recording database record updated');
         }
       }
 

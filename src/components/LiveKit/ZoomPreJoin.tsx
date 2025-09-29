@@ -19,7 +19,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   onSubmit,
   onCancel
 }) => {
-  const [name, setName] = useState(participantName);
+  const [name, setName] = useState(participantName === 'Convidado' ? '' : participantName);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -70,8 +70,9 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   }, [videoEnabled, audioEnabled, stream]);
 
   const handleJoin = () => {
+    const finalName = name.trim() || participantName || 'Convidado';
     onSubmit({
-      username: name,
+      username: finalName,
       videoEnabled,
       audioEnabled
     });
@@ -177,7 +178,6 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </Button>
           <Button
             onClick={handleJoin}
-            disabled={!name.trim()}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
             Entrar na reunião

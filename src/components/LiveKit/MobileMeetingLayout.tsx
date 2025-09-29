@@ -196,10 +196,10 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           </div>
         )}
 
-        {/* Participants Grid with Zoom */}
+        {/* Participants Grid with Zoom - Fixed positioning */}
         <div 
           className={cn(
-            "mobile-participants-grid",
+            "mobile-participants-grid-fixed",
             hasScreenShare ? "with-screenshare" : "full-screen"
           )}
           style={{ transform: `scale(${videoScale})`, transformOrigin: 'center' }}
@@ -207,7 +207,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           {cameraTracks.map((trackRef: TrackReference, index: number) => (
             <div
               key={`camera-mobile-${trackRef.participant.identity}-${index}`}
-              className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-200"
+              className="mobile-participant-card"
             >
               <ResizableVideoTile
                 trackRef={trackRef}
@@ -215,8 +215,8 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                 defaultWidth={hasScreenShare ? 180 : 200}
                 defaultHeight={hasScreenShare ? 135 : 150}
               />
-              <div className="p-2 bg-white">
-                <p className="text-xs font-medium text-gray-700 truncate">
+              <div className="mobile-participant-name">
+                <p className="text-xs font-medium text-white truncate bg-black/50 px-2 py-1 rounded">
                   {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
                 </p>
               </div>
@@ -413,12 +413,15 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                       {participant.isMicrophoneEnabled === false && (
                         <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                           <MicOff className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                      {participant.isCameraEnabled === false && (
-                        <div className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center">
-                          <VideoOff className="w-3 h-3 text-white" />
-                        </div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
       )}
 
       {/* Invite Link Modal */}
@@ -476,15 +479,8 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         </div>
       )}
     </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-      )}
-    </div>
   );
+};
 };
 
 export default MobileMeetingLayout;

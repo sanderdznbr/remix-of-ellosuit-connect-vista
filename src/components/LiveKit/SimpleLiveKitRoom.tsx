@@ -187,12 +187,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setPreJoinChoices(values);
     
     // Generate token with the actual username entered
-    await generateToken(values.username || participantName || 'Convidado');
+    const finalUsername = values.username || participantName || 'Convidado';
+    console.log('Using final username:', finalUsername);
+    await generateToken(finalUsername);
     
-    // Only hide pre-join after token is ready
-    setTimeout(() => {
-      setShowPreJoin(false);
-    }, 500);
+    // Hide pre-join immediately after token generation starts
+    setShowPreJoin(false);
   }, [generateToken, participantName]);
 
   const toggleSidebar = (tab: 'chat' | 'participants' | 'transcription') => {

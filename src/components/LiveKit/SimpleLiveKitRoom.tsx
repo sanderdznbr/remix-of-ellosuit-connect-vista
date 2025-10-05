@@ -365,6 +365,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     isParticipantsOpen={isParticipantsOpen}
                     roomCode={roomName}
                     companyId={companyId}
+                    onToggleTranscription={() => toggleSidebar('transcription')}
                   />
                 </div>
 

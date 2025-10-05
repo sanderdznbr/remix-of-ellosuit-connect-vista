@@ -23,7 +23,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (isActive && !wsRef.current) {
+    if (isActive && !wsRef.current && roomId) {
       // Connect to transcription WebSocket
       const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
       const ws = new WebSocket(wsUrl);
@@ -31,6 +31,11 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
 
       ws.onopen = () => {
         console.log('Connected to transcription service');
+        // Auto-start transcription when panel opens
+        ws.send(JSON.stringify({
+          type: 'start_transcription',
+          roomId
+        }));
       };
 
       ws.onmessage = (event) => {
@@ -72,30 +77,18 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
 
     return () => {
       if (wsRef.current) {
+        // Send stop message before closing
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'stop_transcription'
+          }));
+        }
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [isActive]);
+  }, [isActive, roomId]);
 
-  const startTranscription = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'start_transcription',
-        roomId
-      }));
-      setIsTranscribing(true);
-    }
-  };
-
-  const stopTranscription = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'stop_transcription'
-      }));
-      setIsTranscribing(false);
-    }
-  };
 
   const downloadTranscript = () => {
     const fullText = messages.map(msg => 
@@ -119,16 +112,25 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
-        <h3 className="font-medium text-sm">Transcrição em Tempo Real</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium text-sm">Transcrição em Tempo Real</h3>
+          {isTranscribing && (
+            <div className="flex items-center gap-1 text-xs text-green-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              Ativa
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
             <Button
               onClick={downloadTranscript}
               size="sm"
               variant="outline"
-              className="h-8"
+              className="h-8 gap-2"
             >
               <Download className="h-3 w-3" />
+              <span className="text-xs">Baixar</span>
             </Button>
           )}
         </div>
@@ -161,30 +163,28 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
           )}
           
           {/* Status messages */}
-          {isTranscribing && messages.length === 0 && !currentTranscript && (
+          {messages.length === 0 && !currentTranscript && (
             <div className="text-center text-sm text-muted-foreground py-8">
-              <Mic className="h-8 w-8 mx-auto mb-2 animate-pulse" />
-              <p>Aguardando áudio para transcrever...</p>
-            </div>
-          )}
-          
-          {!isTranscribing && messages.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              <p>A transcrição será iniciada automaticamente quando a gravação começar</p>
+              <Mic className="h-8 w-8 mx-auto mb-2 text-primary animate-pulse" />
+              <p className="font-medium">Transcrição Automática Ativa</p>
+              <p className="text-xs mt-2">Capturando áudio de todos os participantes...</p>
             </div>
           )}
         </div>
       </ScrollArea>
       
-      {/* Recording indicator */}
-      {isTranscribing && (
-        <div className="p-2 border-t border-border bg-muted/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
-            Transcrevendo automaticamente durante a gravação
+      {/* Active indicator */}
+      <div className="p-2 border-t border-border bg-green-50 dark:bg-green-950/20">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="font-medium">Transcrição ativa durante toda a reunião</span>
           </div>
+          <span className="text-muted-foreground">
+            {messages.length} segmento{messages.length !== 1 ? 's' : ''}
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 };

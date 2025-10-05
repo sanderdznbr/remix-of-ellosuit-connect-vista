@@ -28,6 +28,7 @@ interface MeetingControlsProps {
   isParticipantsOpen: boolean;
   roomCode: string;
   companyId: string;
+  onToggleTranscription: () => void;
 }
 
 const MeetingControls: React.FC<MeetingControlsProps> = ({
@@ -38,7 +39,8 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   isChatOpen,
   isParticipantsOpen,
   roomCode,
-  companyId
+  companyId,
+  onToggleTranscription
 }) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -295,46 +297,58 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
   const startAudioCapture = async (ws: WebSocket) => {
     try {
-      console.log('Iniciando captura de áudio para transcrição...');
+      console.log('Iniciando captura de áudio de TODOS os participantes...');
       
+      if (!room) {
+        console.error('Room não disponível');
+        return;
+      }
+
       // Create audio context
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-      
-      // Get the local participant's audio track
-      if (!localParticipant) {
-        console.error('Local participant não encontrado');
-        return;
+      const audioContext = new AudioContext({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+
+      // Create destination to mix all audio
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Get all participants including local
+      const allParticipants = room.remoteParticipants.size > 0
+        ? [...room.remoteParticipants.values(), room.localParticipant]
+        : [room.localParticipant];
+
+      console.log(`Capturando áudio de ${allParticipants.length} participante(s)`);
+
+      // Connect each participant's audio
+      for (const participant of allParticipants) {
+        // Get first audio track publication
+        let audioTrack = null;
+        for (const publication of participant.audioTrackPublications.values()) {
+          audioTrack = publication.audioTrack;
+          break;
+        }
+        
+        if (audioTrack?.mediaStreamTrack) {
+          const stream = new MediaStream([audioTrack.mediaStreamTrack]);
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(destination);
+          console.log(`✓ Áudio conectado: ${participant.name || participant.identity}`);
+        }
       }
 
-      // Get the microphone track
-      const audioTrack = Array.from(localParticipant.audioTrackPublications.values())[0]?.audioTrack;
-      if (!audioTrack) {
-        console.error('Audio track não encontrado');
-        return;
-      }
+      // Store the mixed stream
+      audioStreamRef.current = destination.stream;
 
-      // Get the MediaStreamTrack
-      const mediaStreamTrack = audioTrack.mediaStreamTrack;
-      if (!mediaStreamTrack) {
-        console.error('MediaStreamTrack não encontrado');
-        return;
-      }
-
-      // Create a MediaStream with the audio track
-      const stream = new MediaStream([mediaStreamTrack]);
-      audioStreamRef.current = stream;
-
-      // Create MediaRecorder to capture audio in chunks
-      const recorder = new MediaRecorder(stream, {
+      // Create MediaRecorder from mixed audio
+      const recorder = new MediaRecorder(destination.stream, {
         mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 16000
       });
       audioRecorderRef.current = recorder;
 
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-          console.log('Enviando chunk de áudio, tamanho:', event.data.size);
+          console.log('Enviando áudio mixado, tamanho:', event.data.size);
           
-          // Convert blob to base64
           const reader = new FileReader();
           reader.onloadend = () => {
             const base64Audio = (reader.result as string).split(',')[1];
@@ -351,9 +365,14 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         console.error('Erro no MediaRecorder:', error);
       };
 
-      // Start recording with 1 second chunks
-      recorder.start(1000);
-      console.log('MediaRecorder iniciado');
+      // Start with 2 second chunks for better buffering
+      recorder.start(2000);
+      console.log('✓ Captura de áudio iniciada para todos os participantes');
+
+      toast({
+        title: "Transcrição Ativa",
+        description: `Capturando áudio de ${allParticipants.length} participante(s)`,
+      });
 
     } catch (error) {
       console.error('Erro ao capturar áudio:', error);
@@ -386,11 +405,12 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
   const startTranscription = () => {
     try {
-      const wsUrl = `wss://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/realtime-transcription`;
+      console.log('Iniciando transcrição automática...');
+      const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
-        console.log('Connected to transcription service');
+        console.log('✓ Conectado ao serviço de transcrição');
         ws.send(JSON.stringify({
           type: 'start_transcription',
           roomId: roomCode
@@ -398,24 +418,47 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         setIsTranscribing(true);
         setTranscriptionWs(ws);
         
-        // Start capturing audio
+        // Start capturing audio from all participants
         startAudioCapture(ws);
       };
 
       ws.onerror = (error) => {
-        console.error('Transcription WebSocket error:', error);
+        console.error('Erro no WebSocket de transcrição:', error);
         stopAudioCapture();
       };
 
       ws.onclose = () => {
+        console.log('WebSocket de transcrição fechado');
         setTranscriptionWs(null);
         setIsTranscribing(false);
         stopAudioCapture();
       };
       
     } catch (error) {
-      console.error('Failed to start transcription:', error);
+      console.error('Falha ao iniciar transcrição:', error);
     }
+  };
+
+  // Auto-start transcription when room is ready
+  useEffect(() => {
+    if (room && roomCode && !isTranscribing && !transcriptionWs) {
+      console.log('Auto-iniciando transcrição para sala:', roomCode);
+      
+      // Wait for room to be fully connected
+      setTimeout(() => {
+        startTranscription();
+      }, 2000);
+    }
+  }, [room, roomCode]);
+
+  const stopTranscription = () => {
+    if (transcriptionWs) {
+      transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
+      transcriptionWs.close();
+      setTranscriptionWs(null);
+    }
+    setIsTranscribing(false);
+    stopAudioCapture();
   };
 
   // Auto-stop recording when component unmounts (user leaves meeting)

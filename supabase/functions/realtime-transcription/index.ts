@@ -73,7 +73,7 @@ serve(async (req) => {
   socket.onmessage = async (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log('Received message:', data.type);
+      console.log('📥 Received message type:', data.type);
 
       if (data.type === 'start_transcription') {
         roomId = data.roomId;
@@ -82,7 +82,7 @@ serve(async (req) => {
         bufferStartTime = Date.now();
         fullTranscript = '';
         
-        console.log('Started transcription for room:', roomId);
+        console.log('✅ Started transcription for room:', roomId);
         
         socket.send(JSON.stringify({ 
           type: 'transcription_started',
@@ -90,6 +90,7 @@ serve(async (req) => {
         }));
 
       } else if (data.type === 'audio_data' && isTranscribing) {
+        console.log('🎤 Received audio_data, size:', data.audio?.length || 0);
         try {
           // Decode base64 audio data
           const binaryString = atob(data.audio);
@@ -98,14 +99,17 @@ serve(async (req) => {
             bytes[i] = binaryString.charCodeAt(i);
           }
           
+          console.log('✅ Decoded audio bytes:', bytes.length);
           audioBuffer.push(bytes);
           
           // Process buffer every 5 seconds or when it reaches a certain size (5MB)
           const bufferSize = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
           const timeSinceStart = Date.now() - bufferStartTime;
           
+          console.log(`📊 Buffer status: ${bufferSize} bytes, ${timeSinceStart}ms elapsed`);
+          
           if (timeSinceStart >= 5000 || bufferSize >= 5 * 1024 * 1024) {
-            console.log('Processing audio buffer, size:', bufferSize, 'time:', timeSinceStart);
+            console.log('🔄 Processing audio buffer NOW - size:', bufferSize, 'time:', timeSinceStart);
             
             // Combine all chunks
             const totalLength = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -118,10 +122,11 @@ serve(async (req) => {
             
             // Transcribe
             try {
+              console.log('🎯 Sending to Whisper API...');
               const transcript = await transcribeAudioChunk(combinedAudio);
               
               if (transcript && transcript.trim()) {
-                console.log('Transcription result:', transcript);
+                console.log('✅ Transcription successful:', transcript);
                 fullTranscript += transcript + ' ';
                 
                 // Send to client
@@ -131,9 +136,12 @@ serve(async (req) => {
                   is_final: true,
                   timestamp: new Date().toISOString()
                 }));
+                console.log('📤 Sent transcript to client');
+              } else {
+                console.log('⚠️ Empty transcript received from Whisper');
               }
             } catch (error) {
-              console.error('Transcription error:', error);
+              console.error('❌ Transcription error:', error);
               socket.send(JSON.stringify({
                 type: 'transcript_update',
                 text: '[Erro ao transcrever este segmento]',

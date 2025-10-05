@@ -297,14 +297,14 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
   const startAudioCapture = async (ws: WebSocket) => {
     try {
-      console.log('Iniciando captura de áudio de TODOS os participantes...');
+      console.log('🎤 Iniciando captura de áudio de TODOS os participantes...');
       
       if (!room) {
-        console.error('Room não disponível');
+        console.error('❌ Room não disponível');
         return;
       }
 
-      // Create audio context
+      // Create audio context at 24kHz (required by Whisper)
       const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
 
@@ -312,70 +312,114 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
       const destination = audioContext.createMediaStreamDestination();
 
       // Get all participants including local
-      const allParticipants = room.remoteParticipants.size > 0
-        ? [...room.remoteParticipants.values(), room.localParticipant]
-        : [room.localParticipant];
+      const allParticipants = [room.localParticipant, ...Array.from(room.remoteParticipants.values())];
+      
+      console.log(`📊 Total de participantes: ${allParticipants.length}`);
 
-      console.log(`Capturando áudio de ${allParticipants.length} participante(s)`);
-
+      let connectedCount = 0;
+      
       // Connect each participant's audio
       for (const participant of allParticipants) {
-        // Get first audio track publication
-        let audioTrack = null;
-        for (const publication of participant.audioTrackPublications.values()) {
-          audioTrack = publication.audioTrack;
-          break;
-        }
+        console.log(`🔍 Verificando participante: ${participant.name || participant.identity}`);
         
-        if (audioTrack?.mediaStreamTrack) {
-          const stream = new MediaStream([audioTrack.mediaStreamTrack]);
-          const source = audioContext.createMediaStreamSource(stream);
-          source.connect(destination);
-          console.log(`✓ Áudio conectado: ${participant.name || participant.identity}`);
+        // Get all audio track publications
+        const audioPublications = [...participant.audioTrackPublications.values()];
+        console.log(`  - ${audioPublications.length} publicações de áudio encontradas`);
+        
+        for (const publication of audioPublications) {
+          if (publication.audioTrack?.mediaStreamTrack) {
+            try {
+              const track = publication.audioTrack.mediaStreamTrack;
+              console.log(`  - Estado da track: ${track.readyState}, Enabled: ${track.enabled}`);
+              
+              const stream = new MediaStream([track]);
+              const source = audioContext.createMediaStreamSource(stream);
+              source.connect(destination);
+              connectedCount++;
+              
+              console.log(`✅ Áudio conectado com sucesso: ${participant.name || participant.identity}`);
+            } catch (err) {
+              console.error(`❌ Erro ao conectar áudio de ${participant.name}:`, err);
+            }
+          } else {
+            console.log(`  - Track de áudio não disponível`);
+          }
         }
+      }
+
+      console.log(`📈 Total de streams de áudio conectados: ${connectedCount}`);
+
+      if (connectedCount === 0) {
+        console.warn('⚠️ Nenhum stream de áudio foi conectado!');
+        toast({
+          title: "Aviso",
+          description: "Nenhum áudio detectado. Certifique-se de que os microfones estão habilitados.",
+          variant: "destructive"
+        });
+        return;
       }
 
       // Store the mixed stream
       audioStreamRef.current = destination.stream;
 
       // Create MediaRecorder from mixed audio
+      const mimeType = 'audio/webm;codecs=opus';
+      console.log(`🎙️ Criando MediaRecorder com mimeType: ${mimeType}`);
+      
       const recorder = new MediaRecorder(destination.stream, {
-        mimeType: 'audio/webm;codecs=opus',
+        mimeType,
         audioBitsPerSecond: 16000
       });
       audioRecorderRef.current = recorder;
 
       recorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-          console.log('Enviando áudio mixado, tamanho:', event.data.size);
+        if (event.data.size > 0) {
+          console.log(`📦 Áudio capturado: ${event.data.size} bytes, WebSocket estado: ${ws.readyState}`);
           
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Audio = (reader.result as string).split(',')[1];
-            ws.send(JSON.stringify({
-              type: 'audio_data',
-              audio: base64Audio
-            }));
-          };
-          reader.readAsDataURL(event.data);
+          if (ws.readyState === WebSocket.OPEN) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64Audio = (reader.result as string).split(',')[1];
+              console.log(`📤 Enviando ${base64Audio.length} caracteres base64 para transcrição`);
+              
+              ws.send(JSON.stringify({
+                type: 'audio_data',
+                audio: base64Audio
+              }));
+            };
+            reader.onerror = (error) => {
+              console.error('❌ Erro ao ler arquivo de áudio:', error);
+            };
+            reader.readAsDataURL(event.data);
+          } else {
+            console.warn('⚠️ WebSocket não está aberto, dados de áudio descartados');
+          }
         }
       };
 
       recorder.onerror = (error) => {
-        console.error('Erro no MediaRecorder:', error);
+        console.error('❌ Erro no MediaRecorder:', error);
       };
 
-      // Start with 2 second chunks for better buffering
-      recorder.start(2000);
-      console.log('✓ Captura de áudio iniciada para todos os participantes');
+      recorder.onstart = () => {
+        console.log('▶️ MediaRecorder iniciado');
+      };
+
+      recorder.onstop = () => {
+        console.log('⏹️ MediaRecorder parado');
+      };
+
+      // Start recording with 1 second chunks
+      recorder.start(1000);
+      console.log('✅ Captura de áudio iniciada com sucesso!');
 
       toast({
         title: "Transcrição Ativa",
-        description: `Capturando áudio de ${allParticipants.length} participante(s)`,
+        description: `Capturando áudio de ${connectedCount} fonte(s)`,
       });
 
     } catch (error) {
-      console.error('Erro ao capturar áudio:', error);
+      console.error('❌ Erro fatal ao capturar áudio:', error);
       toast({
         title: "Erro na Captura de Áudio",
         description: "Não foi possível capturar o áudio para transcrição",
@@ -405,51 +449,96 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
   const startTranscription = () => {
     try {
-      console.log('Iniciando transcrição automática...');
+      console.log('🚀 Iniciando transcrição automática...');
       const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
+      console.log(`📡 Conectando ao WebSocket: ${wsUrl}`);
+      
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
-        console.log('✓ Conectado ao serviço de transcrição');
-        ws.send(JSON.stringify({
+        console.log('✅ WebSocket conectado com sucesso!');
+        
+        const startMessage = {
           type: 'start_transcription',
           roomId: roomCode
-        }));
+        };
+        console.log('📤 Enviando mensagem de início:', startMessage);
+        
+        ws.send(JSON.stringify(startMessage));
         setIsTranscribing(true);
         setTranscriptionWs(ws);
         
-        // Start capturing audio from all participants
-        startAudioCapture(ws);
+        // Wait a bit for the session to be ready, then start audio capture
+        setTimeout(() => {
+          console.log('⏰ Iniciando captura de áudio após delay...');
+          startAudioCapture(ws);
+        }, 500);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📥 Mensagem recebida do servidor:', data.type);
+          
+          if (data.type === 'transcription_started') {
+            console.log('✅ Transcrição iniciada no servidor');
+          } else if (data.type === 'transcript_update') {
+            console.log('📝 Atualização de transcrição recebida:', data.text?.substring(0, 50) + '...');
+          } else if (data.type === 'error') {
+            console.error('❌ Erro do servidor:', data.error);
+          }
+        } catch (err) {
+          console.error('❌ Erro ao processar mensagem:', err);
+        }
       };
 
       ws.onerror = (error) => {
-        console.error('Erro no WebSocket de transcrição:', error);
+        console.error('❌ Erro no WebSocket de transcrição:', error);
         stopAudioCapture();
+        toast({
+          title: "Erro na Transcrição",
+          description: "Não foi possível conectar ao serviço de transcrição",
+          variant: "destructive"
+        });
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket de transcrição fechado');
+      ws.onclose = (event) => {
+        console.log(`🔌 WebSocket fechado. Código: ${event.code}, Razão: ${event.reason}`);
         setTranscriptionWs(null);
         setIsTranscribing(false);
         stopAudioCapture();
       };
       
     } catch (error) {
-      console.error('Falha ao iniciar transcrição:', error);
+      console.error('❌ Falha fatal ao iniciar transcrição:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao iniciar sistema de transcrição",
+        variant: "destructive"
+      });
     }
   };
 
-  // Auto-start transcription when room is ready
+  // Auto-start transcription when room is ready and has participants
   useEffect(() => {
-    if (room && roomCode && !isTranscribing && !transcriptionWs) {
-      console.log('Auto-iniciando transcrição para sala:', roomCode);
+    if (room && roomCode && !isTranscribing && !transcriptionWs && localParticipant) {
+      console.log('🎬 Preparando para auto-iniciar transcrição...');
+      console.log(`  - Room code: ${roomCode}`);
+      console.log(`  - Local participant: ${localParticipant.identity}`);
+      console.log(`  - Remote participants: ${room.remoteParticipants.size}`);
       
-      // Wait for room to be fully connected
-      setTimeout(() => {
+      // Wait for room to be fully connected and audio tracks to be ready
+      const timer = setTimeout(() => {
+        console.log('⏰ Timer expirou, iniciando transcrição agora...');
         startTranscription();
-      }, 2000);
+      }, 3000);
+
+      return () => {
+        console.log('🧹 Limpando timer de auto-início');
+        clearTimeout(timer);
+      };
     }
-  }, [room, roomCode]);
+  }, [room, roomCode, localParticipant]);
 
   const stopTranscription = () => {
     if (transcriptionWs) {

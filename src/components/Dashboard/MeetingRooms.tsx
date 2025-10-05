@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2, Play } from 'lucide-react';
+import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -14,11 +14,13 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import MeetingRecordings from './MeetingRecordings';
+import MeetingTranscriptions from './MeetingTranscriptions';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showRecordingsDialog, setShowRecordingsDialog] = useState(false);
+  const [showTranscriptionsDialog, setShowTranscriptionsDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
@@ -116,6 +118,21 @@ const MeetingRooms = () => {
             </DialogTrigger>
             <DialogContent className="max-w-6xl max-h-[90vh] p-0">
               <MeetingRecordings />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showTranscriptionsDialog} onOpenChange={setShowTranscriptionsDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                <FileText className="h-4 w-4" />
+                Ver Transcrições
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+              <MeetingTranscriptions />
             </DialogContent>
           </Dialog>
           

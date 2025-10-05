@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
@@ -11,7 +12,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-const ASSEMBLYAI_API_KEY = Deno.env.get('ASSEMBLYAI_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,13 +26,48 @@ serve(async (req) => {
 
   const { socket, response } = Deno.upgradeWebSocket(req);
   
-  let assemblySocket: WebSocket | null = null;
   let isTranscribing = false;
   let roomId = '';
   let fullTranscript = '';
+  let audioBuffer: Uint8Array[] = [];
+  let bufferStartTime = Date.now();
 
   socket.onopen = () => {
     console.log('WebSocket connection established with client');
+  };
+
+  // Helper function to transcribe audio with Whisper
+  const transcribeAudioChunk = async (audioData: Uint8Array) => {
+    try {
+      console.log('Transcribing audio chunk with Whisper, size:', audioData.length);
+      
+      const formData = new FormData();
+      const blob = new Blob([audioData], { type: 'audio/webm' });
+      formData.append('file', blob, 'audio.webm');
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'pt');
+      formData.append('response_format', 'json');
+
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Whisper API error:', response.status, errorText);
+        throw new Error(`Whisper API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.text;
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      throw error;
+    }
   };
 
   socket.onmessage = async (event) => {
@@ -41,86 +77,113 @@ serve(async (req) => {
 
       if (data.type === 'start_transcription') {
         roomId = data.roomId;
+        isTranscribing = true;
+        audioBuffer = [];
+        bufferStartTime = Date.now();
+        fullTranscript = '';
         
-        // Initialize AssemblyAI real-time transcription
-        assemblySocket = new WebSocket('wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000&word_boost=%5B%5D&spelling_correction=false');
+        console.log('Started transcription for room:', roomId);
+        
+        socket.send(JSON.stringify({ 
+          type: 'transcription_started',
+          message: 'Transcrição iniciada com sucesso'
+        }));
 
-        assemblySocket.onopen = () => {
-          console.log('Connected to AssemblyAI');
-          // Send auth message first
-          assemblySocket?.send(JSON.stringify({
-            audio_data: ASSEMBLYAI_API_KEY
-          }));
-          isTranscribing = true;
-          socket.send(JSON.stringify({ 
-            type: 'transcription_started',
-            message: 'Transcrição iniciada com sucesso'
-          }));
-        };
-
-        assemblySocket.onmessage = async (assemblyEvent) => {
-          const transcriptionData = JSON.parse(assemblyEvent.data);
-          console.log('AssemblyAI message:', transcriptionData);
-          
-          if (transcriptionData.message_type === 'FinalTranscript') {
-            const transcript = transcriptionData.text;
-            fullTranscript += transcript + ' ';
-            
-            console.log('Final transcript:', transcript);
-            
-            // Send transcript to client
-            socket.send(JSON.stringify({
-              type: 'transcript_update',
-              text: transcript,
-              is_final: true,
-              timestamp: new Date().toISOString()
-            }));
-            
-            // Save to database as chat message
-            await supabase.from('room_chat_messages').insert({
-              room_id: roomId,
-              participant_id: null,
-              message: transcript,
-              message_type: 'transcript'
-            });
+      } else if (data.type === 'audio_data' && isTranscribing) {
+        try {
+          // Decode base64 audio data
+          const binaryString = atob(data.audio);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
           
-          if (transcriptionData.message_type === 'PartialTranscript') {
-            socket.send(JSON.stringify({
-              type: 'transcript_update',
-              text: transcriptionData.text,
-              is_final: false,
-              timestamp: new Date().toISOString()
-            }));
+          audioBuffer.push(bytes);
+          
+          // Process buffer every 5 seconds or when it reaches a certain size (5MB)
+          const bufferSize = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
+          const timeSinceStart = Date.now() - bufferStartTime;
+          
+          if (timeSinceStart >= 5000 || bufferSize >= 5 * 1024 * 1024) {
+            console.log('Processing audio buffer, size:', bufferSize, 'time:', timeSinceStart);
+            
+            // Combine all chunks
+            const totalLength = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
+            const combinedAudio = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of audioBuffer) {
+              combinedAudio.set(chunk, offset);
+              offset += chunk.length;
+            }
+            
+            // Transcribe
+            try {
+              const transcript = await transcribeAudioChunk(combinedAudio);
+              
+              if (transcript && transcript.trim()) {
+                console.log('Transcription result:', transcript);
+                fullTranscript += transcript + ' ';
+                
+                // Send to client
+                socket.send(JSON.stringify({
+                  type: 'transcript_update',
+                  text: transcript,
+                  is_final: true,
+                  timestamp: new Date().toISOString()
+                }));
+              }
+            } catch (error) {
+              console.error('Transcription error:', error);
+              socket.send(JSON.stringify({
+                type: 'transcript_update',
+                text: '[Erro ao transcrever este segmento]',
+                is_final: false,
+                timestamp: new Date().toISOString()
+              }));
+            }
+            
+            // Reset buffer
+            audioBuffer = [];
+            bufferStartTime = Date.now();
           }
-        };
-
-        assemblySocket.onerror = (error) => {
-          console.error('AssemblyAI WebSocket error:', error);
-          socket.send(JSON.stringify({ 
-            type: 'transcription_error',
-            error: 'Erro na conexão com o serviço de transcrição'
-          }));
-        };
-
-      } else if (data.type === 'audio_data' && assemblySocket && isTranscribing) {
-        // Forward audio data to AssemblyAI
-        if (assemblySocket.readyState === WebSocket.OPEN) {
-          assemblySocket.send(JSON.stringify({
-            audio_data: data.audio
-          }));
+        } catch (error) {
+          console.error('Error processing audio data:', error);
         }
         
       } else if (data.type === 'stop_transcription') {
         isTranscribing = false;
         
-        if (assemblySocket) {
-          assemblySocket.send(JSON.stringify({ terminate_session: true }));
-          assemblySocket.close();
+        // Process any remaining audio in buffer
+        if (audioBuffer.length > 0) {
+          console.log('Processing final audio buffer');
+          const totalLength = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
+          const combinedAudio = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of audioBuffer) {
+            combinedAudio.set(chunk, offset);
+            offset += chunk.length;
+          }
+          
+          try {
+            const transcript = await transcribeAudioChunk(combinedAudio);
+            if (transcript && transcript.trim()) {
+              fullTranscript += transcript + ' ';
+              
+              socket.send(JSON.stringify({
+                type: 'transcript_update',
+                text: transcript,
+                is_final: true,
+                timestamp: new Date().toISOString()
+              }));
+            }
+          } catch (error) {
+            console.error('Error transcribing final buffer:', error);
+          }
         }
         
         // Save full transcript to meeting recording
         if (fullTranscript.trim()) {
+          console.log('Saving full transcript to database for room:', roomId);
           await supabase
             .from('meeting_recordings')
             .update({ transcript: fullTranscript.trim() })
@@ -131,6 +194,9 @@ serve(async (req) => {
           type: 'transcription_stopped',
           full_transcript: fullTranscript.trim()
         }));
+        
+        // Reset
+        audioBuffer = [];
       }
       
     } catch (error) {
@@ -144,9 +210,8 @@ serve(async (req) => {
 
   socket.onclose = () => {
     console.log('Client disconnected');
-    if (assemblySocket) {
-      assemblySocket.close();
-    }
+    isTranscribing = false;
+    audioBuffer = [];
   };
 
   return response;

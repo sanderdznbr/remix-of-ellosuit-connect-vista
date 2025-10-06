@@ -34,6 +34,9 @@ const InPersonMeeting = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [specificQuery, setSpecificQuery] = useState('');
   const [isProcessingSpeakers, setIsProcessingSpeakers] = useState(false);
+  const [showSpeakerMapping, setShowSpeakerMapping] = useState(false);
+  const [speakerMapping, setSpeakerMapping] = useState<Record<string, string>>({});
+  const [identifiedSpeakers, setIdentifiedSpeakers] = useState<string[]>([]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -434,7 +437,8 @@ const InPersonMeeting = () => {
       });
 
       setShowSummary(true);
-      setShowDownloadOptions(true);
+      // Não mostrar download options ainda - esperar mapeamento de speakers
+      // setShowDownloadOptions(true);
 
       // Process speaker diarization in background with file URL
       processSpeakerDiarization(fileUrl, meetingData.id);
@@ -496,11 +500,25 @@ const InPersonMeeting = () => {
         }));
         setTranscript(newTranscript);
 
+        // Identificar speakers únicos
+        const uniqueSpeakers = Array.from(new Set(data.segments.map((seg: any) => seg.speaker as string))) as string[];
+        setIdentifiedSpeakers(uniqueSpeakers);
+        
+        // Criar mapeamento inicial (vazio)
+        const initialMapping: Record<string, string> = {};
+        uniqueSpeakers.forEach((speaker: string) => {
+          initialMapping[speaker] = ''; // Usuário preencherá
+        });
+        setSpeakerMapping(initialMapping);
+
         toast({
           title: "✅ Vozes Identificadas!",
-          description: `${data.speakerCount} ${data.speakerCount === 1 ? 'pessoa identificada' : 'pessoas diferentes identificadas'} por tom de voz`,
+          description: `${data.speakerCount} ${data.speakerCount === 1 ? 'pessoa identificada' : 'pessoas diferentes identificadas'} por tom de voz. Agora adicione os nomes.`,
           duration: 5000,
         });
+
+        // Mostrar diálogo de mapeamento em vez de liberar os botões diretamente
+        setShowSpeakerMapping(true);
       } else {
         throw new Error('Nenhum segmento retornado pelo AssemblyAI');
       }
@@ -542,9 +560,12 @@ const InPersonMeeting = () => {
   };
 
   const downloadTranscriptTXT = () => {
-    const fullText = transcript.map(msg => 
-      `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker || 'Pessoa 1'}: ${msg.text}`
-    ).join('\n\n');
+    const fullText = transcript.map(msg => {
+      const speakerName = msg.speaker && speakerMapping[msg.speaker] 
+        ? speakerMapping[msg.speaker] 
+        : (msg.speaker || 'Pessoa 1');
+      return `[${new Date(msg.timestamp).toLocaleTimeString()}] ${speakerName}: ${msg.text}`;
+    }).join('\n\n');
     
     const blob = new Blob([fullText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -576,9 +597,12 @@ const InPersonMeeting = () => {
   const processTranscriptWithAI = async (type: 'summary' | 'keypoints', customQuery?: string) => {
     setIsProcessingAI(true);
     try {
-      const fullTranscript = transcript.map(msg => 
-        `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker}: ${msg.text}`
-      ).join('\n');
+      const fullTranscript = transcript.map(msg => {
+        const speakerName = msg.speaker && speakerMapping[msg.speaker] 
+          ? speakerMapping[msg.speaker] 
+          : (msg.speaker || 'Pessoa 1');
+        return `[${new Date(msg.timestamp).toLocaleTimeString()}] ${speakerName}: ${msg.text}`;
+      }).join('\n');
 
       let prompt = '';
       if (type === 'summary') {
@@ -678,8 +702,10 @@ const InPersonMeeting = () => {
             second: '2-digit'
           });
           
-          const speaker = msg.speaker || 'Pessoa 1';
-          const header = `[${time}] ${speaker}:`;
+          const speakerName = msg.speaker && speakerMapping[msg.speaker] 
+            ? speakerMapping[msg.speaker] 
+            : (msg.speaker || 'Pessoa 1');
+          const header = `[${time}] ${speakerName}:`;
           const text = msg.text;
           
           if (yPosition > pageHeight - 30) {
@@ -791,6 +817,98 @@ const InPersonMeeting = () => {
                 Iniciar Reunião
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Speaker Mapping Dialog */}
+      <Dialog open={showSpeakerMapping} onOpenChange={setShowSpeakerMapping}>
+        <DialogContent className="sm:max-w-[600px] rounded-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Identificar Participantes</DialogTitle>
+            <DialogDescription>
+              {identifiedSpeakers.length} {identifiedSpeakers.length === 1 ? 'voz foi identificada' : 'vozes foram identificadas'} na reunião. 
+              Adicione o nome de cada pessoa para gerar o PDF com identificação correta.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {identifiedSpeakers.map((speaker) => {
+              // Encontrar exemplo de fala deste speaker
+              const exampleText = transcript.find(t => t.speaker === speaker)?.text || '';
+              const truncatedExample = exampleText.length > 100 
+                ? exampleText.substring(0, 100) + '...' 
+                : exampleText;
+
+              return (
+                <div key={speaker} className="space-y-2 p-4 border rounded-xl bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold text-primary">{speaker}</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {transcript.filter(t => t.speaker === speaker).length} falas
+                    </span>
+                  </div>
+                  
+                  {truncatedExample && (
+                    <div className="text-xs text-muted-foreground italic bg-background/50 p-2 rounded border">
+                      "{truncatedExample}"
+                    </div>
+                  )}
+                  
+                  <Input
+                    placeholder="Digite o nome da pessoa"
+                    value={speakerMapping[speaker] || ''}
+                    onChange={(e) => setSpeakerMapping(prev => ({
+                      ...prev,
+                      [speaker]: e.target.value
+                    }))}
+                    className="rounded-xl"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                // Pular mapeamento - usar labels originais
+                setShowSpeakerMapping(false);
+                setShowDownloadOptions(true);
+              }}
+              className="rounded-xl flex-1"
+            >
+              Pular e Usar Labels Originais
+            </Button>
+            <Button 
+              onClick={() => {
+                // Verificar se todos os campos foram preenchidos
+                const allFilled = identifiedSpeakers.every(speaker => 
+                  speakerMapping[speaker] && speakerMapping[speaker].trim() !== ''
+                );
+                
+                if (!allFilled) {
+                  toast({
+                    title: "Campos Incompletos",
+                    description: "Por favor, preencha o nome de todos os participantes ou clique em 'Pular'.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                setShowSpeakerMapping(false);
+                setShowDownloadOptions(true);
+                
+                toast({
+                  title: "Nomes Adicionados!",
+                  description: "Os PDFs agora serão gerados com os nomes corretos dos participantes.",
+                });
+              }}
+              className="rounded-xl flex-1 hover:scale-105 transition-transform"
+            >
+              Confirmar Nomes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1043,7 +1161,7 @@ const InPersonMeeting = () => {
             </Card>
           )}
 
-          {!isProcessingSpeakers && (
+          {!isProcessingSpeakers && !showSpeakerMapping && showDownloadOptions && (
             <Card className="mt-6 border-2 border-green-500/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
@@ -1073,6 +1191,8 @@ const InPersonMeeting = () => {
                       lastTranscriptRef.current = '';
                       currentSpeakerRef.current = 1;
                       speakerCountRef.current = 1;
+                      setSpeakerMapping({});
+                      setIdentifiedSpeakers([]);
                     }}
                     className="gap-2 h-auto py-4 flex-col rounded-xl hover:scale-105 transition-transform"
                   >
@@ -1084,7 +1204,7 @@ const InPersonMeeting = () => {
                   <p className="font-semibold mb-2 text-green-800 dark:text-green-300">Resumo:</p>
                   <ul className="space-y-1 text-muted-foreground">
                     <li>• {transcript.length} segmentos transcritos</li>
-                    <li>• {transcript.filter(t => t.speaker).length > 0 ? `${new Set(transcript.map(t => t.speaker)).size} participante(s) identificado(s)` : 'Identificando participantes...'}</li>
+                    <li>• {identifiedSpeakers.length > 0 ? `${identifiedSpeakers.length} participante(s) identificado(s)` : 'Identificando participantes...'}</li>
                     <li>• Gravação salva e disponível para download</li>
                   </ul>
                 </div>

@@ -7,7 +7,10 @@ import {
   Monitor, 
   Phone,
   Circle,
-  Square
+  Square,
+  MessageSquare,
+  Users,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,7 @@ interface MeetingControlsProps {
   onToggleParticipants: () => void;
   onShareMeeting: () => void;
   onLeave: () => void;
+  onSettingsClick: () => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
   roomCode: string;
@@ -37,6 +41,7 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
   onToggleParticipants,
   onShareMeeting,
   onLeave,
+  onSettingsClick,
   isChatOpen,
   isParticipantsOpen,
   roomCode,
@@ -657,15 +662,14 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
         </div>
 
         {/* Center - Main controls */}
-        <div className="meeting-controls-center">
+        <div className="meeting-controls-center flex items-center justify-center gap-3">
           {/* Audio Control */}
           <Button
             onClick={toggleMic}
             className={cn(
-              "control-button",
-              !micEnabled && "control-button-muted"
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              !micEnabled ? "bg-red-600 hover:bg-red-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
             )}
-            size="lg"
           >
             {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
           </Button>
@@ -674,10 +678,9 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
           <Button
             onClick={toggleCamera}
             className={cn(
-              "control-button",
-              !cameraEnabled && "control-button-muted"
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              !cameraEnabled ? "bg-red-600 hover:bg-red-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
             )}
-            size="lg"
           >
             {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
           </Button>
@@ -686,10 +689,9 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
           <Button
             onClick={handleScreenShare}
             className={cn(
-              "control-button",
-              isScreenSharing && "control-button-active"
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              isScreenSharing ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
             )}
-            size="lg"
           >
             <Monitor className="h-5 w-5" />
           </Button>
@@ -698,22 +700,50 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
           <Button
             onClick={handleRecording}
             className={cn(
-              "control-button",
-              isRecording && "control-button-recording"
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              isRecording ? "bg-red-600 hover:bg-red-700 text-white animate-pulse" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
             )}
-            size="lg"
           >
             {isRecording ? (
-              <Square className="h-5 w-5 fill-current" />
+              <Square className="h-4 w-4 fill-current" />
             ) : (
               <Circle className="h-5 w-5" />
             )}
           </Button>
 
+          {/* Chat */}
+          <Button
+            onClick={onToggleChat}
+            className={cn(
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              isChatOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
+            )}
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Button>
+
+          {/* Participants */}
+          <Button
+            onClick={onToggleParticipants}
+            className={cn(
+              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
+              isParticipantsOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
+            )}
+          >
+            <Users className="h-5 w-5" />
+          </Button>
+
+          {/* Settings */}
+          <Button
+            onClick={onSettingsClick}
+            className="control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all bg-[#3c4043] hover:bg-[#5f6368] text-white"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+
           {/* End Call */}
           <Button
             onClick={async () => {
-              // Check if I'm the host and mark room as inactive
               try {
                 const { data: { user } } = await supabase.auth.getUser();
                 const { data: roomData } = await supabase
@@ -741,7 +771,6 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
                 console.error('Error ending room:', error);
               }
               
-              // Stop transcription and recording
               stopTranscription();
               if (isRecording) {
                 await handleRecording();
@@ -749,8 +778,7 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
               
               onLeave();
             }}
-            className="control-button control-button-leave"
-            size="lg"
+            className="control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all bg-red-600 hover:bg-red-700 text-white ml-2"
           >
             <Phone className="h-5 w-5 rotate-[135deg]" />
           </Button>

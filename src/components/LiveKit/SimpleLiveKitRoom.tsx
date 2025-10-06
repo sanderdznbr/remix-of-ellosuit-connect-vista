@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, RefreshCw, Share2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import MeetingControls from './MeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
@@ -67,7 +68,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const meetingControlsRef = useRef<any>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
@@ -91,66 +91,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     getCompanyId();
   }, []);
-
-  // Conexão WebSocket para transcrição em tempo real
-  useEffect(() => {
-    if (!token || activeTab !== 'transcription') return;
-
-    console.log('🎤 Conectando WebSocket para transcrição em tempo real...');
-    
-    // Get Supabase project URL from environment or use default
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-    const projectRef = SUPABASE_URL.split('//')[1]?.split('.')[0] || '';
-    const wsUrl = `wss://${projectRef}.supabase.co/functions/v1/realtime-transcription`;
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('✅ WebSocket conectado para transcrição');
-      setIsTranscribing(true);
-      ws.send(JSON.stringify({
-        type: 'start',
-        roomId: roomName,
-        userId: user?.id
-      }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📝 Transcrição recebida:', data);
-        
-        if (data.type === 'transcription') {
-          setTranscriptionMessages(prev => [...prev, {
-            text: data.text,
-            is_final: data.is_final || false,
-            timestamp: data.timestamp || new Date().toISOString(),
-            speaker: data.speaker || 'Participante'
-          }]);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao processar mensagem WebSocket:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('❌ Erro no WebSocket:', error);
-      setIsTranscribing(false);
-    };
-
-    ws.onclose = () => {
-      console.log('🔌 WebSocket desconectado');
-      setIsTranscribing(false);
-    };
-
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'stop' }));
-        ws.close();
-      }
-    };
-  }, [token, activeTab, roomName, user?.id]);
 
   // Enhanced connection management with better visibility handling
   useEffect(() => {
@@ -469,7 +409,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
               <div className="h-screen w-full flex flex-col bg-[#202124]">
                 {/* Header Minimalista - estilo Google Meet */}
-                <div className="bg-[#202124] px-4 py-2 flex items-center justify-between border-b border-gray-800">
+                <div className="bg-[#202124] px-6 py-3 flex items-center justify-between border-b border-gray-800/50">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -480,12 +420,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     <Button
                       onClick={() => setShowShareModal(true)}
                       size="sm"
-                      className="bg-[#3c4043] hover:bg-[#5f6368] text-white border-0"
+                      className="bg-[#3c4043] hover:bg-[#5f6368] text-white border-0 h-8"
                     >
-                      <Share2 className="h-4 w-4 mr-2" />
+                      <Share2 className="h-3.5 w-3.5 mr-2" />
                       Convidar
                     </Button>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 ml-2">
                       {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
@@ -493,44 +433,39 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
                 {/* Main content area */}
                 <div className="flex-1 flex overflow-hidden relative">
-                  {/* Video Grid Area - Full Width */}
-                  <div className="flex-1 flex flex-col">
+                  {/* Video Grid Area - Full Width quando sidebar fechada */}
+                  <div className={cn(
+                    "flex-1 flex flex-col transition-all duration-300",
+                    (activeTab === 'chat' || activeTab === 'participants') && "mr-80 md:mr-96"
+                  )}>
                     <ZoomParticipantGrid />
                   </div>
 
-                  {/* Sidebar overlay quando ativo - estilo Google Meet */}
-                  {(activeTab === 'chat' || activeTab === 'participants' || activeTab === 'transcription') && (
-                    <div className="absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#202124] border-l border-gray-800 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
-                      {activeTab === 'transcription' ? (
-                        <TranscriptionPanel
-                          roomId={roomName}
-                          isActive={isTranscribing}
-                          messages={transcriptionMessages}
-                          onMessagesUpdate={setTranscriptionMessages}
-                        />
-                      ) : (
-                        <MeetingSidebar 
-                          isOpen={true}
-                          onClose={() => setActiveTab(null)}
-                          activeTab={activeTab}
-                          onTabChange={setActiveTab}
-                          roomId={roomName}
-                          transcriptionMessages={transcriptionMessages}
-                          onTranscriptionMessagesUpdate={setTranscriptionMessages}
-                        />
-                      )}
+                  {/* Sidebar fixa (não overlay) - estilo Google Meet */}
+                  {(activeTab === 'chat' || activeTab === 'participants') && (
+                    <div className="w-80 md:w-96 bg-[#202124] border-l border-gray-800/50 flex flex-col animate-in slide-in-from-right duration-200">
+                      <MeetingSidebar 
+                        isOpen={true}
+                        onClose={() => setActiveTab(null)}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        roomId={roomName}
+                        transcriptionMessages={transcriptionMessages}
+                        onTranscriptionMessagesUpdate={setTranscriptionMessages}
+                      />
                     </div>
                   )}
                 </div>
 
-                {/* Bottom Controls Bar - estilo Google Meet */}
-                <div className="bg-[#202124] border-t border-gray-800 px-4 py-3">
+                {/* Bottom Controls Bar - estilo Google Meet, SEM SOMBRAS */}
+                <div className="bg-[#202124] border-t border-gray-800/50 px-6 py-4">
                   <MeetingControls
                     ref={meetingControlsRef}
                     onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
                     onToggleParticipants={() => setActiveTab(activeTab === 'participants' ? null : 'participants')}
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
+                    onSettingsClick={() => setShowDeviceSettings(true)}
                     isChatOpen={activeTab === 'chat'}
                     isParticipantsOpen={activeTab === 'participants'}
                     roomCode={roomName}

@@ -102,8 +102,7 @@ ${meetingsContext}`;
             { role: 'system', content: systemPrompt },
             ...messages,
             userMessage
-          ],
-          model: 'google/gemini-2.5-flash'
+          ]
         }
       });
 
@@ -176,8 +175,8 @@ ${meetingsContext}`;
                 <div
                   className={`max-w-[80%] rounded-lg p-3 ${
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>

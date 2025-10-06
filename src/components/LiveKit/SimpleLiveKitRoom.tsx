@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -19,6 +19,7 @@ import ShareMeetingModal from './ShareMeetingModal';
 import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
 import MobileMeetingLayout from './MobileMeetingLayout';
+import { RoomContextCapture } from './RoomContextCapture';
 import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
@@ -75,6 +76,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
+  const roomRef = useRef<Room | null>(null);
 
   // Enhanced connection management with better visibility handling
   useEffect(() => {
@@ -206,8 +208,34 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setSidebarTab(tab);
   };
 
-  const handleDisconnected = useCallback(() => {
+  const handleDisconnected = useCallback(async () => {
     console.log('Disconnected from room');
+    
+    // If I'm the host, mark room as inactive
+    if (roomRef.current?.localParticipant) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: roomData } = await supabase
+          .from('meeting_rooms')
+          .select('created_by, room_code')
+          .eq('room_code', roomName)
+          .single();
+        
+        if (roomData && user && roomData.created_by === user.id) {
+          await supabase
+            .from('meeting_rooms')
+            .update({ 
+              is_active: false,
+              ended_at: new Date().toISOString()
+            })
+            .eq('room_code', roomName);
+          
+          console.log('Room marked as inactive by host');
+        }
+      } catch (error) {
+        console.error('Error marking room as inactive:', error);
+      }
+    }
     
     // Play disconnection sound
     const audio = new Audio();
@@ -222,11 +250,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       description: "Você saiu da sala de reunião",
     });
     
-    // Ensure complete disconnection and redirect
     setTimeout(() => {
       onLeave();
     }, 500);
-  }, [onLeave, toast]);
+  }, [onLeave, toast, roomName]);
 
   const handleError = useCallback((error: Error) => {
     console.error('LiveKit error:', error);
@@ -314,6 +341,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             },
           }}
         >
+          <RoomContextCapture onRoomReady={(room) => {
+            console.log('Room ready:', room.name);
+            roomRef.current = room;
+          }} />
           <RoomAudioRenderer />
           
           {isMobile ? (

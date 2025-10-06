@@ -647,7 +647,43 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
           {/* End Call */}
           <Button
-            onClick={onLeave}
+            onClick={async () => {
+              // Check if I'm the host and mark room as inactive
+              try {
+                const { data: { user } } = await supabase.auth.getUser();
+                const { data: roomData } = await supabase
+                  .from('meeting_rooms')
+                  .select('created_by')
+                  .eq('room_code', roomCode)
+                  .single();
+                
+                if (roomData && user && roomData.created_by === user.id) {
+                  await supabase
+                    .from('meeting_rooms')
+                    .update({ 
+                      is_active: false,
+                      ended_at: new Date().toISOString()
+                    })
+                    .eq('room_code', roomCode);
+                  
+                  console.log('Room ended by host');
+                  toast({
+                    title: "Reunião encerrada",
+                    description: "A sala foi encerrada para todos",
+                  });
+                }
+              } catch (error) {
+                console.error('Error ending room:', error);
+              }
+              
+              // Stop transcription and recording
+              stopTranscription();
+              if (isRecording) {
+                await handleRecording();
+              }
+              
+              onLeave();
+            }}
             className="control-button control-button-leave"
             size="lg"
           >

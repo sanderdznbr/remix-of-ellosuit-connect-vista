@@ -24,44 +24,58 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
 
   useEffect(() => {
     if (isActive && !wsRef.current && roomId) {
+      console.log('🎙️ TranscriptionPanel: Connecting to WebSocket for room:', roomId);
       // Connect to transcription WebSocket
-      const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
+      const wsUrl = `wss://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/realtime-transcription`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('Connected to transcription service');
+        console.log('✅ TranscriptionPanel: Connected to transcription service');
+        setIsTranscribing(true);
         // Auto-start transcription when panel opens
-        ws.send(JSON.stringify({
+        const startMsg = {
           type: 'start_transcription',
           roomId
-        }));
+        };
+        console.log('📤 TranscriptionPanel: Sending start message:', startMsg);
+        ws.send(JSON.stringify(startMsg));
       };
 
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'transcript_update') {
-          if (data.is_final) {
-            setMessages(prev => [...prev, {
-              text: data.text,
-              is_final: true,
-              timestamp: data.timestamp
-            }]);
-            setCurrentTranscript('');
-          } else {
-            setCurrentTranscript(data.text);
-          }
+        console.log('📨 TranscriptionPanel: Received message:', event.data);
+        try {
+          const data = JSON.parse(event.data);
           
-          // Auto-scroll to bottom
-          setTimeout(() => {
-            if (scrollAreaRef.current) {
-              const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-              if (scrollElement) {
-                scrollElement.scrollTop = scrollElement.scrollHeight;
-              }
+          if (data.type === 'transcription_started') {
+            console.log('✅ TranscriptionPanel: Transcription started successfully');
+          } else if (data.type === 'transcript_update') {
+            console.log('📝 TranscriptionPanel: Transcript update:', data);
+            if (data.is_final) {
+              setMessages(prev => [...prev, {
+                text: data.text,
+                is_final: true,
+                timestamp: data.timestamp
+              }]);
+              setCurrentTranscript('');
+            } else {
+              setCurrentTranscript(data.text);
             }
-          }, 100);
+            
+            // Auto-scroll to bottom
+            setTimeout(() => {
+              if (scrollAreaRef.current) {
+                const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+                if (scrollElement) {
+                  scrollElement.scrollTop = scrollElement.scrollHeight;
+                }
+              }
+            }, 100);
+          } else if (data.type === 'error') {
+            console.error('❌ TranscriptionPanel: Error from server:', data.error);
+          }
+        } catch (error) {
+          console.error('❌ TranscriptionPanel: Error parsing message:', error);
         }
       };
 

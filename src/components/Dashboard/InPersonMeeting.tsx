@@ -34,6 +34,7 @@ const InPersonMeeting = () => {
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [specificQuery, setSpecificQuery] = useState('');
+  const [isProcessingSpeakers, setIsProcessingSpeakers] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -236,11 +237,11 @@ const InPersonMeeting = () => {
               if (!isDuplicate && data.text.trim().length > 0) {
                 lastTranscriptRef.current = data.text;
                 
-                // Durante gravação, não identificamos speakers (será feito pelo AssemblyAI depois)
+                // Durante gravação, NÃO mostramos speakers (será identificado depois)
                 setTranscript(prev => [...prev, {
                   text: data.text,
                   timestamp: new Date().toISOString(),
-                  speaker: '...' // Placeholder - será identificado após gravação
+                  speaker: undefined // Sem speaker durante gravação
                 }]);
                 setCurrentText('');
               } else {
@@ -444,10 +445,11 @@ const InPersonMeeting = () => {
 
   const processSpeakerDiarization = async (audioUrl: string, meetingId: string) => {
     try {
+      setIsProcessingSpeakers(true);
       console.log('🎤 Processando identificação de speakers com AssemblyAI...');
       
       toast({
-        title: "Identificando Vozes",
+        title: "🎙️ Identificando Vozes",
         description: "Analisando tom de voz para identificar cada pessoa... Isso pode levar alguns minutos.",
         duration: 10000,
       });
@@ -511,6 +513,8 @@ const InPersonMeeting = () => {
         description: "Não foi possível analisar os tons de voz. Aplicada numeração sequencial.",
         variant: "default",
       });
+    } finally {
+      setIsProcessingSpeakers(false);
     }
   };
 
@@ -972,13 +976,6 @@ const InPersonMeeting = () => {
                       {transcript.map((msg, index) => (
                         <div key={index} className="border-l-4 border-primary/40 pl-4 py-2 animate-fade-in">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                              msg.speaker === '...' 
-                                ? 'text-muted-foreground bg-muted italic animate-pulse' 
-                                : 'text-primary bg-primary/10'
-                            }`}>
-                              {msg.speaker === '...' ? 'Identificando...' : msg.speaker}
-                            </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(msg.timestamp).toLocaleTimeString()}
                             </span>
@@ -1012,52 +1009,75 @@ const InPersonMeeting = () => {
 
       {/* Success Summary */}
       {showSummary && transcript.length > 0 && (
-        <Card className="mt-6 border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
-          <CardHeader>
-            <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Reunião Encerrada com Sucesso
-            </CardTitle>
-            <CardDescription>
-              A gravação e transcrição foram salvas no sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                onClick={() => setShowDownloadOptions(true)}
-                className="gap-2 h-auto py-4 flex-col"
-              >
-                <Download className="h-6 w-6" />
-                <span className="text-sm font-semibold">Baixar Transcrição</span>
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  setShowSummary(false);
-                  setTranscript([]);
-                  setMeetingTitle('');
-                  audioChunksRef.current = [];
-                  lastTranscriptRef.current = '';
-                  currentSpeakerRef.current = 1;
-                  speakerCountRef.current = 1;
-                }}
-                className="gap-2 h-auto py-4 flex-col"
-              >
-                <FileText className="h-6 w-6" />
-                <span className="text-sm font-semibold">Nova Reunião</span>
-              </Button>
-            </div>
-            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4 text-sm">
-              <p className="font-semibold mb-2 text-green-800 dark:text-green-300">Resumo:</p>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• {transcript.length} segmentos transcritos</li>
-                <li>• {speakerCountRef.current} participante(s) identificado(s)</li>
-                <li>• Gravação salva e disponível para download</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {/* Loading state para processamento de speakers */}
+          {isProcessingSpeakers && (
+            <Card className="mt-6 border-2 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20 animate-pulse">
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-2">
+                      Identificando Vozes...
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Analisando o tom de voz de cada participante para identificar pessoas automaticamente
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isProcessingSpeakers && (
+            <Card className="mt-6 border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
+              <CardHeader>
+                <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  Reunião Encerrada com Sucesso
+                </CardTitle>
+                <CardDescription>
+                  A gravação e transcrição foram salvas no sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    onClick={() => setShowDownloadOptions(true)}
+                    className="gap-2 h-auto py-4 flex-col"
+                  >
+                    <Download className="h-6 w-6" />
+                    <span className="text-sm font-semibold">Baixar Transcrição</span>
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setShowSummary(false);
+                      setTranscript([]);
+                      setMeetingTitle('');
+                      audioChunksRef.current = [];
+                      lastTranscriptRef.current = '';
+                      currentSpeakerRef.current = 1;
+                      speakerCountRef.current = 1;
+                    }}
+                    className="gap-2 h-auto py-4 flex-col"
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span className="text-sm font-semibold">Nova Reunião</span>
+                  </Button>
+                </div>
+                <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4 text-sm">
+                  <p className="font-semibold mb-2 text-green-800 dark:text-green-300">Resumo:</p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• {transcript.length} segmentos transcritos</li>
+                    <li>• {transcript.filter(t => t.speaker).length > 0 ? `${new Set(transcript.map(t => t.speaker)).size} participante(s) identificado(s)` : 'Identificando participantes...'}</li>
+                    <li>• Gravação salva e disponível para download</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

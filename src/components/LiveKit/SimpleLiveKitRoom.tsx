@@ -2,8 +2,10 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useRoomContext,
+  useConnectionState,
 } from '@livekit/components-react';
-import { Room } from 'livekit-client';
+import { Room, Track, ConnectionState } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -11,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, RefreshCw, Share2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import MeetingControls from './MeetingControls';
+import SimpleMeetingControls from './SimpleMeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
 import { MeetingExitModal } from './MeetingExitModal';
@@ -23,6 +25,7 @@ import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
 import { MeetingAIChat } from './MeetingAIChat';
+import { LiveKitTranscriptionListener } from './LiveKitTranscriptionListener';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -207,83 +210,23 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setShowPreJoin(false);
   }, [generateToken, participantName]);
 
+  const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
+    console.log('📝 New transcription:', message);
+    
+    if (message.is_final) {
+      setTranscriptionMessages(prev => [...prev, message]);
+    }
+  }, []);
+
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
     
-    // Stop audio capture first
-    if (meetingControlsRef.current?.stopAudioCapture) {
-      console.log('⏸️ Parando captura de áudio...');
-      await meetingControlsRef.current.stopAudioCapture();
-    }
-    
-    // Get saved audio URL
-    let audioUrl = '';
-    if (meetingControlsRef.current?.getSavedAudioUrl) {
-      audioUrl = meetingControlsRef.current.getSavedAudioUrl();
-      console.log('🎙️ URL do áudio salvo:', audioUrl || 'Nenhum');
-      setSavedAudioUrl(audioUrl);
-    }
-    
-    // If we have audio, process speaker diarization
-    if (audioUrl) {
-      console.log('🎤 Processando identificação de speakers...');
-      setIsProcessingTranscript(true);
-      
-      try {
-        toast({
-          title: "🎙️ Identificando Vozes",
-          description: "Analisando tom de voz para identificar cada pessoa... Isso pode levar alguns minutos.",
-          duration: 10000,
-        });
-        
-        const { data, error } = await supabase.functions.invoke('speaker-diarization', {
-          body: { audioUrl }
-        });
-        
-        if (error) {
-          console.error('❌ Erro na diarização:', error);
-          throw error;
-        }
-        
-        if (data && data.success && data.segments && data.segments.length > 0) {
-          console.log(`✅ AssemblyAI retornou ${data.speakerCount} speakers`);
-          console.log('📊 Segments:', data.segments.length);
-          
-          // Convert segments to transcription messages format
-          const transcriptMsgs: TranscriptionMessage[] = data.segments.map((seg: any) => ({
-            text: seg.text,
-            is_final: true,
-            timestamp: new Date().toISOString(),
-            speaker: seg.speaker
-          }));
-          
-          setTranscriptionMessages(transcriptMsgs);
-          
-          toast({
-            title: "✅ Transcrição Completa",
-            description: `${data.speakerCount} voz${data.speakerCount > 1 ? 'es' : ''} identificada${data.speakerCount > 1 ? 's' : ''}!`,
-          });
-        } else {
-          console.warn('⚠️ Nenhum segmento retornado da diarização');
-        }
-      } catch (error) {
-        console.error('❌ Erro ao processar diarização:', error);
-        toast({
-          title: "Erro na Transcrição",
-          description: "Não foi possível processar a transcrição completa",
-          variant: "destructive"
-        });
-      } finally {
-        setIsProcessingTranscript(false);
-      }
-    }
-    
-    // Show exit modal if we have any data
-    if (transcriptionMessages.length > 0 || audioUrl) {
-      console.log('✅ Abrindo modal de saída com dados');
+    // Show exit modal if we have transcription data
+    if (transcriptionMessages.length > 0) {
+      console.log('✅ Abrindo modal de saída com', transcriptionMessages.length, 'mensagens');
       setShowExitModal(true);
     } else {
-      console.log('ℹ️ Nenhum dado de transcrição, saindo direto');
+      console.log('ℹ️ Nenhuma transcrição, saindo direto');
       handleDisconnected();
     }
   };
@@ -420,6 +363,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }} />
           <RoomAudioRenderer />
           
+          {/* LiveKit Native Transcription Listener */}
+          <LiveKitTranscriptionListener 
+            onTranscriptionUpdate={handleTranscriptionUpdate}
+            roomName={roomName}
+          />
+          
           {isMobile ? (
             <MobileMeetingLayout
               roomName={roomName}
@@ -498,24 +447,16 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
                 {/* Bottom Controls Bar - Clean, No Shadow, No Overlap */}
                 <div className="bg-background border-t border-border px-6 py-3">
-                  <MeetingControls
+                  <SimpleMeetingControls
                     ref={meetingControlsRef}
                     onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
                     onToggleParticipants={() => setActiveTab(activeTab === 'participants' ? null : 'participants')}
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
                     onSettingsClick={() => setShowDeviceSettings(true)}
+                    onToggleTranscription={() => setShowTranscriptionModal(!showTranscriptionModal)}
                     isChatOpen={activeTab === 'chat'}
                     isParticipantsOpen={activeTab === 'participants'}
-                    roomCode={roomName}
-                    companyId={companyId}
-                    onToggleTranscription={() => {
-                      setShowTranscriptionModal(true);
-                      if (!isTranscribing) {
-                        setIsTranscribing(true);
-                      }
-                    }}
-                    onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
                   />
                 </div>
               </div>

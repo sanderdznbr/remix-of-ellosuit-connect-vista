@@ -12,7 +12,8 @@ import {
   CheckSquare,
   MessageSquare,
   Bot,
-  Zap
+  Zap,
+  BarChart3
 } from "lucide-react";
 
 import {
@@ -36,6 +37,8 @@ const menuGroups = [
     label: 'Sistema',
     items: [
       { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+      { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Funcionários' },
+      { id: 'customize', path: '/dashboard/personalizar-dashboard', icon: Settings, label: 'Personalizar' },
       { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
     ]
   },

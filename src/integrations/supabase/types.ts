@@ -458,6 +458,53 @@ export type Database = {
           },
         ]
       }
+      dashboard_widgets: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          is_visible: boolean | null
+          position: number
+          settings: Json | null
+          size: string | null
+          updated_at: string | null
+          user_id: string
+          widget_type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          position?: number
+          settings?: Json | null
+          size?: string | null
+          updated_at?: string | null
+          user_id: string
+          widget_type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          position?: number
+          settings?: Json | null
+          size?: string | null
+          updated_at?: string | null
+          user_id?: string
+          widget_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widgets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_tokens: {
         Row: {
           created_at: string | null
@@ -567,36 +614,57 @@ export type Database = {
       }
       document_tracking_events: {
         Row: {
+          browser: string | null
           data: Json | null
+          device_type: string | null
           document_id: string
+          duration_seconds: number | null
           event_type: string
           id: string
           ip_address: unknown | null
+          os: string | null
           page_number: number | null
+          referrer: string | null
+          screen_resolution: string | null
+          scroll_depth: number | null
           session_id: string
           timestamp: string
           user_agent: string | null
           visitor_id: string | null
         }
         Insert: {
+          browser?: string | null
           data?: Json | null
+          device_type?: string | null
           document_id: string
+          duration_seconds?: number | null
           event_type: string
           id?: string
           ip_address?: unknown | null
+          os?: string | null
           page_number?: number | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          scroll_depth?: number | null
           session_id: string
           timestamp?: string
           user_agent?: string | null
           visitor_id?: string | null
         }
         Update: {
+          browser?: string | null
           data?: Json | null
+          device_type?: string | null
           document_id?: string
+          duration_seconds?: number | null
           event_type?: string
           id?: string
           ip_address?: unknown | null
+          os?: string | null
           page_number?: number | null
+          referrer?: string | null
+          screen_resolution?: string | null
+          scroll_depth?: number | null
           session_id?: string
           timestamp?: string
           user_agent?: string | null
@@ -1618,6 +1686,41 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          company_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_sidebar_settings: {
         Row: {
           company_id: string
@@ -2054,6 +2157,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      is_company_admin: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_company_admin_or_manager: {
         Args: { company_id: string; user_id: string }
         Returns: boolean
@@ -2062,12 +2169,41 @@ export type Database = {
         Args: { company_id: string; user_id: string }
         Returns: boolean
       }
+      user_has_permission: {
+        Args: {
+          _company_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       company_role: "admin" | "manager" | "employee"
       email_provider: "gmail" | "outlook" | "yahoo"
       event_type: "meeting" | "appointment" | "reminder"
       meeting_provider: "google_meet" | "zoom" | "teams"
+      permission_type:
+        | "view_calendar"
+        | "manage_calendar"
+        | "view_clients"
+        | "manage_clients"
+        | "view_emails"
+        | "send_emails"
+        | "manage_email_campaigns"
+        | "view_documents"
+        | "manage_documents"
+        | "view_meetings"
+        | "create_meetings"
+        | "view_tasks"
+        | "manage_tasks"
+        | "view_analytics"
+        | "manage_settings"
+        | "manage_users"
+        | "view_crm"
+        | "manage_crm"
+        | "view_tracking"
+        | "manage_tracking"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2199,6 +2335,28 @@ export const Constants = {
       email_provider: ["gmail", "outlook", "yahoo"],
       event_type: ["meeting", "appointment", "reminder"],
       meeting_provider: ["google_meet", "zoom", "teams"],
+      permission_type: [
+        "view_calendar",
+        "manage_calendar",
+        "view_clients",
+        "manage_clients",
+        "view_emails",
+        "send_emails",
+        "manage_email_campaigns",
+        "view_documents",
+        "manage_documents",
+        "view_meetings",
+        "create_meetings",
+        "view_tasks",
+        "manage_tasks",
+        "view_analytics",
+        "manage_settings",
+        "manage_users",
+        "view_crm",
+        "manage_crm",
+        "view_tracking",
+        "manage_tracking",
+      ],
     },
   },
 } as const

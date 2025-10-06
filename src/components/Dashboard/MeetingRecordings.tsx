@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +40,9 @@ const MeetingRecordings: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [playbackUrl, setPlaybackUrl] = useState<string>('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [recordingToDelete, setRecordingToDelete] = useState<MeetingRecording | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Get company ID
   useEffect(() => {
@@ -161,6 +165,56 @@ const MeetingRecordings: React.FC = () => {
     }
   };
 
+  const handleDeleteClick = (recording: MeetingRecording) => {
+    setRecordingToDelete(recording);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recordingToDelete) return;
+    
+    setDeletingId(recordingToDelete.id);
+    
+    try {
+      // Delete file from storage
+      if (recordingToDelete.file_url) {
+        const fileName = recordingToDelete.file_url.replace('meeting-recordings/', '').split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('meeting-recordings')
+            .remove([fileName]);
+        }
+      }
+
+      // Delete from database
+      const { error } = await supabase
+        .from('meeting_recordings')
+        .delete()
+        .eq('id', recordingToDelete.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setRecordings(prev => prev.filter(r => r.id !== recordingToDelete.id));
+
+      toast({
+        title: "Gravação Excluída",
+        description: "A gravação foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir gravação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a gravação",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+      setShowDeleteDialog(false);
+      setRecordingToDelete(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -274,6 +328,14 @@ const MeetingRecordings: React.FC = () => {
                     >
                       <Download className="h-4 w-4" />
                     </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleDeleteClick(recording)}
+                      disabled={deletingId === recording.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -350,6 +412,28 @@ const MeetingRecordings: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a gravação "{recordingToDelete?.title}"? 
+              Esta ação não pode ser desfeita e o arquivo será permanentemente removido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

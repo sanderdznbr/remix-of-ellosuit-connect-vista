@@ -36,8 +36,11 @@ serve(async (req) => {
       body: JSON.stringify({
         audio_url: audioUrl,
         speaker_labels: true,
-        speakers_expected: null, // Let AssemblyAI detect automatically
+        speakers_expected: 2, // Expect at least 2 speakers to be more sensitive
         language_code: 'pt', // Portuguese
+        speech_threshold: 0.3, // Lower threshold for better detection
+        punctuate: true,
+        format_text: true,
       }),
     });
 
@@ -49,6 +52,7 @@ serve(async (req) => {
 
     const { id: transcriptId } = await transcriptResponse.json();
     console.log('✅ Transcrição enviada. ID:', transcriptId);
+    console.log('⚙️ Configuração: speakers_expected=2, speech_threshold=0.3');
 
     // Step 2: Poll for completion
     let transcriptResult;
@@ -69,7 +73,7 @@ serve(async (req) => {
       }
 
       transcriptResult = await statusResponse.json();
-      console.log(`📊 Status: ${transcriptResult.status}`);
+      console.log(`📊 Status: ${transcriptResult.status} | Audio Duration: ${transcriptResult.audio_duration}s`);
 
       if (transcriptResult.status === 'completed') {
         console.log('✅ Transcrição completa!');
@@ -86,6 +90,17 @@ serve(async (req) => {
     }
 
     // Step 3: Process and return speaker-labeled transcript
+    console.log('🔍 Palavras retornadas:', transcriptResult.words?.length || 0);
+    console.log('🔍 Utterances retornadas:', transcriptResult.utterances?.length || 0);
+    
+    // Log unique speakers from words
+    const speakersInWords = new Set(
+      transcriptResult.words
+        ?.filter((w: any) => w.speaker)
+        .map((w: any) => w.speaker) || []
+    );
+    console.log('👥 Speakers únicos nas palavras:', Array.from(speakersInWords));
+    
     const speakerMap = new Map<string, number>();
     let speakerCounter = 1;
 

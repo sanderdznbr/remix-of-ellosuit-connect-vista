@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Calendar, Clock, FileText, Trash2 } from 'lucide-react';
+import { Download, Calendar, Clock, FileText, Trash2, Loader2, Sparkles, BookOpen, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { jsPDF } from 'jspdf';
+import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 interface InPersonMeeting {
   id: string;
@@ -25,6 +30,10 @@ const InPersonMeetingsView = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState<InPersonMeeting | null>(null);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState<InPersonMeeting | null>(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [specificQuery, setSpecificQuery] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,22 +75,149 @@ const InPersonMeetingsView = () => {
   };
 
   const downloadTranscript = (meeting: InPersonMeeting) => {
-    if (!meeting.transcript) return;
+    setSelectedMeeting(meeting);
+    setShowDownloadOptions(true);
+  };
 
-    const blob = new Blob([meeting.transcript], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${meeting.title}-${format(new Date(meeting.created_at), 'yyyy-MM-dd')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const cleanMarkdownForPDF = (text: string): string => {
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/#{1,6}\s+/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .trim();
+  };
 
-    toast({
-      title: "Download Iniciado",
-      description: "A transcrição está sendo baixada",
-    });
+  const processTranscriptWithAI = async (type: 'summary' | 'keypoints', customQuery?: string) => {
+    if (!selectedMeeting?.transcript) return null;
+    
+    setIsProcessingAI(true);
+    try {
+      const fullTranscript = selectedMeeting.transcript;
+
+      let prompt = '';
+      if (type === 'summary') {
+        prompt = `Você é um assistente que cria resumos executivos de reuniões. Analise esta transcrição e crie um resumo profissional e conciso em português, SEM usar formatação markdown (sem asteriscos, sem hashtags). Use texto simples e organize em parágrafos claros. Destaque os principais tópicos discutidos, decisões tomadas e próximos passos:\n\n${fullTranscript}`;
+      } else if (type === 'keypoints') {
+        prompt = `Você é um assistente que identifica pontos-chave em reuniões. Analise esta transcrição e liste os pontos mais importantes em português, SEM usar formatação markdown (sem asteriscos, sem hashtags). Use texto simples com hífens (-) para listas. Liste: decisões tomadas, ações necessárias e tópicos relevantes:\n\n${fullTranscript}`;
+      } else if (customQuery) {
+        prompt = `Você é um assistente que ajuda a extrair informações específicas de transcrições de reuniões. O usuário quer saber: "${customQuery}"\n\nAnalise esta transcrição e forneça uma resposta precisa e detalhada em português, SEM usar formatação markdown:\n\n${fullTranscript}`;
+      }
+
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { 
+          messages: [
+            { role: 'user', content: prompt }
+          ]
+        }
+      });
+
+      if (error) throw error;
+
+      const cleanedText = cleanMarkdownForPDF(data.message);
+      return cleanedText;
+    } catch (error) {
+      console.error('Erro ao processar com IA:', error);
+      toast({
+        title: "Erro ao Processar",
+        description: "Não foi possível processar a transcrição com IA",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  const downloadTranscriptPDF = async (content?: string, title?: string) => {
+    if (!selectedMeeting) return;
+    
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxLineWidth = pageWidth - 2 * margin;
+      
+      // Add logo
+      const img = new Image();
+      img.src = ellosuitLogo;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+      
+      doc.addImage(img, 'PNG', margin, 15, 50, 15);
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      const docTitle = title || 'Transcrição de Reunião';
+      doc.text(docTitle, pageWidth / 2, 45, { align: 'center' });
+      
+      // Meeting info
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      const meetingDate = new Date(selectedMeeting.created_at).toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      doc.text(`Reunião: ${selectedMeeting.title}`, margin, 60);
+      doc.text(`Data: ${meetingDate}`, margin, 68);
+      
+      // Line separator
+      doc.setLineWidth(0.5);
+      doc.line(margin, 75, pageWidth - margin, 75);
+      
+      // Content
+      doc.setFontSize(10);
+      let yPosition = 85;
+      
+      const textContent = content || selectedMeeting.transcript || '';
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(textContent, maxLineWidth);
+      lines.forEach((line: string) => {
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += 5;
+      });
+      
+      // Footer
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+          `Página ${i} de ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+      
+      const filename = title 
+        ? `${title.toLowerCase().replace(/\s+/g, '-')}-${selectedMeeting.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
+        : `transcricao-${selectedMeeting.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      doc.save(filename);
+      
+      toast({
+        title: "Download PDF Iniciado",
+        description: "A transcrição em PDF está sendo baixada",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro ao Gerar PDF",
+        description: "Não foi possível gerar o PDF",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteClick = (meeting: InPersonMeeting) => {
@@ -159,6 +295,119 @@ const InPersonMeetingsView = () => {
 
   return (
     <>
+      {/* Download Options Dialog */}
+      <Dialog open={showDownloadOptions} onOpenChange={setShowDownloadOptions}>
+        <DialogContent className="sm:max-w-[500px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Opções de Download</DialogTitle>
+            <DialogDescription>
+              Escolha como deseja baixar a transcrição da reunião
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4">
+            <Button 
+              onClick={() => {
+                downloadTranscriptPDF();
+                setShowDownloadOptions(false);
+              }}
+              className="w-full gap-2 h-auto py-4 justify-start rounded-xl hover:scale-105 transition-transform"
+              variant="outline"
+            >
+              <FileText className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-semibold">PDF Completo</div>
+                <div className="text-xs text-muted-foreground">Transcrição original sem alterações</div>
+              </div>
+            </Button>
+
+            <Button 
+              onClick={async () => {
+                const summary = await processTranscriptWithAI('summary');
+                if (summary) {
+                  await downloadTranscriptPDF(summary, 'Resumo Executivo');
+                  setShowDownloadOptions(false);
+                }
+              }}
+              className="w-full gap-2 h-auto py-4 justify-start rounded-xl hover:scale-105 transition-transform"
+              variant="outline"
+              disabled={isProcessingAI}
+            >
+              {isProcessingAI ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Sparkles className="h-5 w-5" />
+              )}
+              <div className="text-left">
+                <div className="font-semibold">PDF Resumido com IA</div>
+                <div className="text-xs text-muted-foreground">Resumo executivo gerado por IA</div>
+              </div>
+            </Button>
+
+            <Button 
+              onClick={async () => {
+                const keypoints = await processTranscriptWithAI('keypoints');
+                if (keypoints) {
+                  await downloadTranscriptPDF(keypoints, 'Pontos-Chave');
+                  setShowDownloadOptions(false);
+                }
+              }}
+              className="w-full gap-2 h-auto py-4 justify-start rounded-xl hover:scale-105 transition-transform"
+              variant="outline"
+              disabled={isProcessingAI}
+            >
+              {isProcessingAI ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <BookOpen className="h-5 w-5" />
+              )}
+              <div className="text-left">
+                <div className="font-semibold">Pontos Importantes</div>
+                <div className="text-xs text-muted-foreground">Decisões e ações extraídas por IA</div>
+              </div>
+            </Button>
+
+            <div className="border-t pt-3 mt-3">
+              <Label htmlFor="specific-query" className="text-sm font-medium mb-2 block">
+                Consulta Específica
+              </Label>
+              <Textarea
+                id="specific-query"
+                placeholder="Ex: Quais foram as decisões tomadas sobre o projeto X?"
+                value={specificQuery}
+                onChange={(e) => setSpecificQuery(e.target.value)}
+                className="min-h-[80px] rounded-xl"
+              />
+              <Button
+                onClick={async () => {
+                  if (!specificQuery.trim()) return;
+                  const result = await processTranscriptWithAI('keypoints', specificQuery);
+                  if (result) {
+                    await downloadTranscriptPDF(result, 'Consulta Específica');
+                    setShowDownloadOptions(false);
+                    setSpecificQuery('');
+                  }
+                }}
+                className="w-full mt-3 gap-2 rounded-xl hover:scale-105 transition-transform"
+                disabled={isProcessingAI || !specificQuery.trim()}
+              >
+                {isProcessingAI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar e Baixar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ScrollArea className="h-full">
         <div className="p-6 space-y-4">
           <div className="mb-6">

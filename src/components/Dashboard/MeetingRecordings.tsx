@@ -122,31 +122,54 @@ const MeetingRecordings: React.FC = () => {
   };
   // Resolve a playable URL for a recording (handles private bucket)
   const resolveRecordingUrl = async (fileUrl: string): Promise<string> => {
-    if (!fileUrl) return '';
+    if (!fileUrl) {
+      console.error('❌ No file URL provided');
+      return '';
+    }
+    
+    console.log('🔍 Original file URL:', fileUrl);
     
     // If it's already a full URL, return it
-    if (fileUrl.startsWith('http')) return fileUrl;
+    if (fileUrl.startsWith('http')) {
+      console.log('✅ Already a full URL, returning as-is');
+      return fileUrl;
+    }
     
-    // Remove bucket prefix if present
-    const pathOnly = fileUrl.startsWith('meeting-recordings/')
-      ? fileUrl.replace('meeting-recordings/', '')
-      : fileUrl;
+    // Extract the path after the bucket name
+    let pathOnly = fileUrl;
     
-    console.log('Resolving recording URL for path:', pathOnly);
+    // Handle various path formats
+    if (fileUrl.includes('/meeting-recordings/')) {
+      // Format: "https://...storage.../meeting-recordings/file.webm"
+      pathOnly = fileUrl.split('/meeting-recordings/')[1];
+    } else if (fileUrl.startsWith('meeting-recordings/')) {
+      // Format: "meeting-recordings/file.webm"
+      pathOnly = fileUrl.replace('meeting-recordings/', '');
+    }
+    // else: already just the file name/path
+    
+    console.log('🎯 Path to resolve:', pathOnly);
     
     const { data, error } = await supabase.storage
       .from('meeting-recordings')
-      .createSignedUrl(pathOnly, 60 * 60);
+      .createSignedUrl(pathOnly, 60 * 60); // 1 hour expiry
     
     if (error) {
-      console.error('Error creating signed URL:', error);
+      console.error('❌ Error creating signed URL:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível acessar a gravação',
+        variant: 'destructive'
+      });
       return '';
     }
     
     if (!data?.signedUrl) {
-      console.error('No signed URL returned');
+      console.error('❌ No signed URL returned');
       return '';
     }
+    
+    console.log('✅ Signed URL created successfully');
     
     return data.signedUrl;
   };

@@ -216,16 +216,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   };
 
   const handleLeaveClick = async () => {
-    // Get saved audio URL from MeetingControls if available
+    console.log('🚪 Sair - transcrições:', transcriptionMessages.length);
+    
+    // Get saved audio URL
+    let audioUrl = '';
     if (meetingControlsRef.current?.getSavedAudioUrl) {
-      const audioUrl = meetingControlsRef.current.getSavedAudioUrl();
+      audioUrl = meetingControlsRef.current.getSavedAudioUrl();
+      console.log('🎙️ Áudio:', audioUrl ? 'Sim' : 'Não');
       setSavedAudioUrl(audioUrl);
     }
     
-    // If there are transcriptions, show exit modal
-    if (transcriptionMessages.length > 0) {
+    // Show modal if we have transcriptions or audio
+    if (transcriptionMessages.length > 0 || audioUrl) {
+      console.log('✅ Abrindo modal de saída');
       setShowExitModal(true);
     } else {
+      console.log('❌ Saindo direto');
       handleDisconnected();
     }
   };

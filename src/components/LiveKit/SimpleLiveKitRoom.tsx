@@ -211,24 +211,28 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [generateToken, participantName]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
-    console.log('📝 Atualização de transcrição recebida:', {
+    console.log('📝 [SimpleLiveKitRoom] Atualização de transcrição recebida:', {
       is_final: message.is_final,
       text: message.text,
       speaker: message.speaker,
       timestamp: message.timestamp
     });
     
-    if (message.is_final) {
-      console.log('✅ Adicionando transcrição final à lista');
-      setTranscriptionMessages(prev => {
-        const updated = [...prev, message];
-        console.log(`📊 Total de transcrições: ${updated.length}`);
-        return updated;
+    setTranscriptionMessages(prev => {
+      const updated = [...prev, message];
+      console.log(`📊 [SimpleLiveKitRoom] Total de transcrições: ${updated.length}`);
+      console.log('📋 [SimpleLiveKitRoom] Última mensagem:', message);
+      return updated;
+    });
+    
+    // Show toast for first transcription
+    if (transcriptionMessages.length === 0) {
+      toast({
+        title: "✅ Transcrição iniciada",
+        description: "A transcrição em tempo real está funcionando!",
       });
-    } else {
-      console.log('⏳ Transcrição parcial (aguardando finalização)');
     }
-  }, []);
+  }, [transcriptionMessages.length, toast]);
 
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
@@ -405,13 +409,20 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
               )}
 
-              {/* Transcription Active Indicator */}
+              {/* Transcription Active Indicator com botão para abrir modal */}
               {isTranscribing && (
-                <div className="fixed bottom-20 right-6 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom">
+                <button
+                  onClick={() => setShowTranscriptionModal(true)}
+                  className="fixed bottom-20 right-6 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom z-40 hover:bg-primary/90 transition-colors cursor-pointer"
+                >
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <span className="text-sm font-medium">Transcrição Ativa</span>
-                  <span className="text-xs opacity-80">Canal independente do LiveKit</span>
-                </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium">Transcrição Ativa</span>
+                    <span className="text-xs opacity-80">
+                      {transcriptionMessages.length} mensagens • Clique para ver
+                    </span>
+                  </div>
+                </button>
               )}
 
               <div className="h-screen w-full flex flex-col bg-background">

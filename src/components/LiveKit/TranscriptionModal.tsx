@@ -26,6 +26,16 @@ const TranscriptionModal: React.FC<TranscriptionModalProps> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Log when modal opens and messages change
+  useEffect(() => {
+    console.log('🪟 [TranscriptionModal] Estado:', {
+      isOpen,
+      isActive,
+      messagesCount: messages.length,
+      messages: messages.slice(-3) // últimas 3 mensagens
+    });
+  }, [isOpen, isActive, messages]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current && isOpen) {

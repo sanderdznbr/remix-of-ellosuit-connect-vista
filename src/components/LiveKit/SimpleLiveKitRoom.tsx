@@ -19,10 +19,10 @@ import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
 import MobileMeetingLayout from './MobileMeetingLayout';
 import { RoomContextCapture } from './RoomContextCapture';
-import { LiveKitTranscription } from './LiveKitTranscription';
 import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
+import { MeetingAIChat } from './MeetingAIChat';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -68,11 +68,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [savedAudioUrl, setSavedAudioUrl] = useState<string>('');
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   const meetingControlsRef = useRef<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
   const roomRef = useRef<Room | null>(null);
+  const audioRecordersRef = useRef<Map<string, { recorder: MediaRecorder; chunks: Blob[] }>>(new Map());
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -378,13 +380,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }} />
           <RoomAudioRenderer />
           
-          <LiveKitTranscription
-            isActive={isTranscribing}
-            onTranscript={(data) => {
-              setTranscriptionMessages(prev => [...prev, data]);
-            }}
-          />
-          
           {isMobile ? (
             <MobileMeetingLayout
               roomName={roomName}
@@ -497,6 +492,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 onClose={() => setShowTranscriptionModal(false)}
                 messages={transcriptionMessages}
                 isActive={isTranscribing}
+              />
+
+              {/* AI Chat Assistant */}
+              <MeetingAIChat
+                transcriptionMessages={transcriptionMessages}
+                roomName={roomName}
               />
             </>
           )}

@@ -11,6 +11,7 @@ import ResizableVideoTile from './ResizableVideoTile';
 import { useTracks, TrackReference } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import logoEllosuit from '@/assets/logoellosuit.png';
+import '@/styles/mobile-meeting.css';
 
 interface MobileMeetingLayoutProps {
   roomName: string;
@@ -147,81 +148,112 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   };
 
   return (
-    <div className="mobile-meeting-layout">
-      {/* Mobile Header - Simplified with centered logo */}
-      <div className="mobile-meeting-header bg-white border-b border-gray-200">
-        <div className="flex items-center justify-center w-full">
+    <div className="fixed inset-0 bg-gray-900 flex flex-col">
+      {/* Mobile Header - Simplified */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 safe-area-inset-top">
+        <div className="flex items-center gap-2">
           <img 
             src={logoEllosuit} 
             alt="ELLOSUIT" 
-            className="h-10 w-auto object-contain"
+            className="h-8 w-auto object-contain"
           />
         </div>
         
-        {/* Zoom Controls - Discrete corner position */}
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Button
-            onClick={() => setVideoScale(Math.max(0.5, videoScale - 0.1))}
+            onClick={() => setVideoScale(Math.max(0.5, videoScale - 0.25))}
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+            className="h-8 w-8 p-0 text-gray-600"
           >
-            <ZoomOut className="h-3 w-3" />
+            <ZoomOut className="h-4 w-4" />
           </Button>
+          <span className="text-xs text-gray-500 w-12 text-center">
+            {Math.round(videoScale * 100)}%
+          </span>
           <Button
-            onClick={() => setVideoScale(Math.min(2, videoScale + 0.1))}
+            onClick={() => setVideoScale(Math.min(2, videoScale + 0.25))}
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+            className="h-8 w-8 p-0 text-gray-600"
           >
-            <ZoomIn className="h-3 w-3" />
+            <ZoomIn className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Video Area */}
-      <div className="mobile-video-area">
-        {/* Screen Share */}
+      {/* Video Area - SEMPRE responsivo e visível */}
+      <div className="flex-1 relative overflow-hidden bg-gray-900">
+        {/* Screen Share - Tela cheia no mobile */}
         {hasScreenShare && (
-          <div className="mobile-screenshare">
+          <div className="absolute inset-0 flex items-center justify-center bg-black p-2">
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <ResizableVideoTile
                 key={`screenshare-mobile-${trackRef.participant.identity}-${index}`}
                 trackRef={trackRef}
                 isScreenShare={true}
-                defaultWidth={350}
-                defaultHeight={200}
+                defaultWidth={window.innerWidth - 16}
+                defaultHeight={window.innerHeight * 0.6}
               />
             ))}
           </div>
         )}
 
-        {/* Participants Grid with Zoom - Fixed positioning */}
+        {/* Participants Grid - SEMPRE responsivo */}
         <div 
           className={cn(
-            "mobile-participants-grid-fixed",
-            hasScreenShare ? "with-screenshare" : "full-screen"
+            "absolute p-2",
+            hasScreenShare 
+              ? "bottom-20 left-0 right-0 h-32" 
+              : "inset-0"
           )}
-          style={{ transform: `scale(${videoScale})`, transformOrigin: 'center' }}
         >
-          {cameraTracks.map((trackRef: TrackReference, index: number) => (
-            <div
-              key={`camera-mobile-${trackRef.participant.identity}-${index}`}
-              className="mobile-participant-card"
-            >
-              <ResizableVideoTile
-                trackRef={trackRef}
-                isScreenShare={false}
-                defaultWidth={hasScreenShare ? 180 : 200}
-                defaultHeight={hasScreenShare ? 135 : 150}
-              />
-              <div className="mobile-participant-name">
-                <p className="text-xs font-medium text-white truncate bg-black/50 px-2 py-1 rounded">
-                  {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
-                </p>
+          <div 
+            className={cn(
+              "h-full w-full overflow-auto",
+              hasScreenShare ? "flex gap-2 overflow-x-auto" : "grid gap-2"
+            )}
+            style={{
+              transform: hasScreenShare ? 'none' : `scale(${videoScale})`,
+              transformOrigin: 'center',
+              gridTemplateColumns: hasScreenShare 
+                ? 'none'
+                : cameraTracks.length === 1 
+                  ? '1fr'
+                  : cameraTracks.length === 2
+                    ? 'repeat(1, 1fr)'
+                    : 'repeat(2, 1fr)',
+              gridTemplateRows: hasScreenShare 
+                ? 'none'
+                : cameraTracks.length === 1 
+                  ? '1fr'
+                  : cameraTracks.length === 2
+                    ? 'repeat(2, 1fr)'
+                    : 'auto'
+            }}
+          >
+            {cameraTracks.map((trackRef: TrackReference, index: number) => (
+              <div
+                key={`camera-mobile-${trackRef.participant.identity}-${index}`}
+                className={cn(
+                  "relative rounded-lg overflow-hidden bg-gray-800 border-2 border-gray-700",
+                  hasScreenShare ? "flex-shrink-0 w-32 h-24" : "w-full h-full"
+                )}
+              >
+                <ResizableVideoTile
+                  trackRef={trackRef}
+                  isScreenShare={false}
+                  defaultWidth={hasScreenShare ? 128 : window.innerWidth - 16}
+                  defaultHeight={hasScreenShare ? 96 : (window.innerHeight - 200) / Math.ceil(cameraTracks.length / 2)}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1">
+                  <p className="text-white text-xs font-medium truncate">
+                    {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

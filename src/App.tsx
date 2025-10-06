@@ -20,6 +20,7 @@ import MeetingRoom from "./components/Dashboard/MeetingRoom";
 import LiveKitMeeting from "./pages/LiveKitMeeting";
 import DocumentViewer from './pages/DocumentViewer';
 import SharedContent from './pages/SharedContent';
+import RecoverMeeting from './pages/RecoverMeeting';
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
             <Route path="/livekit/:roomCode" element={<LiveKitMeeting />} />
+            <Route path="/recover-meeting/:roomCode" element={<RecoverMeeting />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/tasks" element={<Tarefas />} />
             <Route path="/booking-public/:slug" element={<ImprovedBookingPublic />} />

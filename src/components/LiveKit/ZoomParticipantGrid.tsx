@@ -20,15 +20,15 @@ const ZoomParticipantGrid: React.FC = () => {
   const cameraTracks = tracks.filter(t => t.source === Track.Source.Camera);
   const hasScreenShare = screenShareTracks.length > 0;
 
-  // Grid dinâmico responsivo com auto-fit
+  // Grid dinâmico responsivo - NUNCA corta participantes
   const getGridClass = (count: number) => {
     if (count === 1) return 'grid-cols-1';
-    if (count === 2) return 'grid-cols-1 md:grid-cols-2';
-    if (count <= 4) return 'grid-cols-2';
-    if (count <= 6) return 'grid-cols-2 md:grid-cols-3';
-    if (count <= 9) return 'grid-cols-2 md:grid-cols-3';
-    if (count <= 12) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-    return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    if (count === 2) return 'grid-cols-1 sm:grid-cols-2';
+    if (count <= 4) return 'grid-cols-2 sm:grid-cols-2';
+    if (count <= 6) return 'grid-cols-2 sm:grid-cols-3';
+    if (count <= 9) return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3';
+    if (count <= 12) return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4';
+    return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
   };
 
   const getParticipantName = (participant: Participant) => {
@@ -112,18 +112,21 @@ const ZoomParticipantGrid: React.FC = () => {
             </div>
           ) : (
             <div className={cn(
-              "grid gap-3 w-full auto-rows-fr",
-              cameraTracks.length === 1 && "max-w-3xl max-h-[500px]",
+              "grid gap-4 w-full h-full",
+              cameraTracks.length === 1 && "max-w-4xl max-h-[600px] mx-auto",
               getGridClass(cameraTracks.length)
             )}
             style={{
-              maxHeight: '100%',
-              gridAutoRows: cameraTracks.length === 1 ? 'auto' : 'minmax(200px, 1fr)'
+              gridAutoRows: cameraTracks.length === 1 ? 'auto' : 'minmax(180px, 1fr)'
             }}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-${trackRef.participant.identity}-${index}`}
-                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group min-h-[200px] aspect-video"
+                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group w-full h-full flex items-center justify-center"
+                  style={{
+                    minHeight: cameraTracks.length === 1 ? '400px' : '180px',
+                    aspectRatio: cameraTracks.length === 1 ? '16/9' : 'auto'
+                  }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <VideoTrack

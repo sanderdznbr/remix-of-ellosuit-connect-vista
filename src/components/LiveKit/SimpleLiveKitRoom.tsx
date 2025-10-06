@@ -22,7 +22,7 @@ import { RoomContextCapture } from './RoomContextCapture';
 import { LiveKitTranscription } from './LiveKitTranscription';
 import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
-import TranscriptionPanel from './TranscriptionPanel';
+import TranscriptionModal from './TranscriptionModal';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -58,8 +58,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [error, setError] = useState<string>('');
   const [preJoinChoices, setPreJoinChoices] = useState<any>();
   const [showPreJoin, setShowPreJoin] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'transcription' | null>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showTranscriptionModal, setShowTranscriptionModal] = useState(false);
   const [companyId, setCompanyId] = useState<string>('');
   const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -302,10 +303,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#202124] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <p className="text-gray-300">Conectando à sala...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-foreground">Conectando à sala...</p>
         </div>
       </div>
     );
@@ -314,12 +315,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-[#202124] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500" />
+          <AlertCircle className="h-12 w-12 text-destructive" />
           <div>
-            <h3 className="text-lg font-semibold mb-2 text-white">Erro na Conexão</h3>
-            <p className="text-gray-400 mb-4">{error}</p>
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Erro na Conexão</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => generateToken(participantName || 'Convidado')} variant="default" className="gap-2">
@@ -395,55 +396,58 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               {/* Processing Transcript Loading */}
               {isProcessingTranscript && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                  <div className="bg-[#2d2e30] p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
+                  <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
                     <div className="mb-4">
-                      <Loader2 className="mx-auto w-16 h-16 text-blue-500 animate-spin" />
+                      <Loader2 className="mx-auto w-16 h-16 text-primary animate-spin" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-white">Processando transcrição...</h3>
-                    <p className="text-gray-400">
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Processando transcrição...</h3>
+                    <p className="text-muted-foreground">
                       Estamos identificando os participantes e gerando a transcrição completa da reunião.
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="h-screen w-full flex flex-col bg-[#202124]">
-                {/* Header Minimalista - estilo Google Meet */}
-                <div className="bg-[#202124] px-6 py-3 flex items-center justify-between border-b border-gray-800/50">
+              <div className="h-screen w-full flex flex-col bg-background">
+                {/* Header Clean - Light Theme */}
+                <div className="bg-background px-6 py-3 flex items-center justify-between border-b border-border">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-sm text-gray-300 font-medium">{roomName}</span>
+                      <span className="text-sm text-foreground font-medium">{roomName}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
                       onClick={() => setShowShareModal(true)}
                       size="sm"
-                      className="bg-[#3c4043] hover:bg-[#5f6368] text-white border-0 h-8"
+                      variant="outline"
+                      className="h-8"
                     >
                       <Share2 className="h-3.5 w-3.5 mr-2" />
                       Convidar
                     </Button>
-                    <div className="text-xs text-gray-500 ml-2">
+                    <div className="text-xs text-muted-foreground ml-2">
                       {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
 
-                {/* Main content area */}
-                <div className="flex-1 flex overflow-hidden relative">
-                  {/* Video Grid Area - Full Width quando sidebar fechada */}
+                {/* Main content area - no overlap */}
+                <div className="flex-1 flex overflow-hidden bg-background">
+                  {/* Video Grid Area */}
                   <div className={cn(
-                    "flex-1 flex flex-col transition-all duration-300",
-                    (activeTab === 'chat' || activeTab === 'participants') && "mr-80 md:mr-96"
+                    "flex-1 flex items-center justify-center p-4 transition-all duration-300",
+                    (activeTab === 'chat' || activeTab === 'participants') && "mr-80"
                   )}>
-                    <ZoomParticipantGrid />
+                    <div className="w-full h-full max-w-5xl max-h-[calc(100vh-180px)]">
+                      <ZoomParticipantGrid />
+                    </div>
                   </div>
 
-                  {/* Sidebar fixa (não overlay) - estilo Google Meet */}
+                  {/* Sidebar - Light Theme */}
                   {(activeTab === 'chat' || activeTab === 'participants') && (
-                    <div className="w-80 md:w-96 bg-[#202124] border-l border-gray-800/50 flex flex-col animate-in slide-in-from-right duration-200">
+                    <div className="w-80 bg-background border-l border-border flex flex-col animate-in slide-in-from-right duration-200">
                       <MeetingSidebar 
                         isOpen={true}
                         onClose={() => setActiveTab(null)}
@@ -457,8 +461,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   )}
                 </div>
 
-                {/* Bottom Controls Bar - estilo Google Meet, SEM SOMBRAS */}
-                <div className="bg-[#202124] border-t border-gray-800/50 px-6 py-4">
+                {/* Bottom Controls Bar - Clean, No Shadow, No Overlap */}
+                <div className="bg-background border-t border-border px-6 py-3">
                   <MeetingControls
                     ref={meetingControlsRef}
                     onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
@@ -471,8 +475,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     roomCode={roomName}
                     companyId={companyId}
                     onToggleTranscription={() => {
-                      setActiveTab(activeTab === 'transcription' ? null : 'transcription');
-                      setIsTranscribing(true);
+                      setShowTranscriptionModal(true);
+                      if (!isTranscribing) {
+                        setIsTranscribing(true);
+                      }
                     }}
                     onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
                   />
@@ -483,6 +489,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               <DeviceSettingsModal
                 isOpen={showDeviceSettings}
                 onClose={() => setShowDeviceSettings(false)}
+              />
+
+              {/* Transcription Modal */}
+              <TranscriptionModal
+                isOpen={showTranscriptionModal}
+                onClose={() => setShowTranscriptionModal(false)}
+                messages={transcriptionMessages}
+                isActive={isTranscribing}
               />
             </>
           )}
@@ -503,10 +517,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           />
         </LiveKitRoom>
       ) : (
-        <div className="min-h-screen bg-[#202124] flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-gray-300">Entrando na reunião...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-foreground">Entrando na reunião...</p>
           </div>
         </div>
       )}

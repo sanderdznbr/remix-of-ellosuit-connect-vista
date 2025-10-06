@@ -46,7 +46,7 @@ const ZoomParticipantGrid: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#202124]">
+    <div className="w-full h-full flex flex-col bg-background">
       {/* Screen Share Area */}
       {hasScreenShare && (
         <div className="flex-1 flex flex-col gap-3 p-3">
@@ -70,7 +70,7 @@ const ZoomParticipantGrid: React.FC = () => {
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                  className="relative flex-shrink-0 w-32 h-24 bg-[#3c4043] rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all"
+                  className="relative flex-shrink-0 w-32 h-24 bg-muted rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <VideoTrack
@@ -78,8 +78,8 @@ const ZoomParticipantGrid: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#3c4043]">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
                     </div>
@@ -89,8 +89,8 @@ const ZoomParticipantGrid: React.FC = () => {
                       {getParticipantName(trackRef.participant)}
                     </span>
                     {isParticipantMuted(trackRef.participant) && (
-                      <div className="bg-red-600 rounded-full p-1">
-                        <MicOff className="h-2.5 w-2.5 text-white" />
+                      <div className="bg-destructive rounded-full p-1">
+                        <MicOff className="h-2.5 w-2.5 text-destructive-foreground" />
                       </div>
                     )}
                   </div>
@@ -106,19 +106,20 @@ const ZoomParticipantGrid: React.FC = () => {
         <div className="flex-1 flex items-center justify-center p-4">
           {cameraTracks.length === 0 ? (
             <div className="text-center">
-              <Wifi className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-              <p className="text-xl font-medium text-gray-300">Aguardando participantes...</p>
-              <p className="text-sm text-gray-500 mt-2">Convide pessoas para se juntar à reunião</p>
+              <Wifi className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-xl font-medium text-foreground">Aguardando participantes...</p>
+              <p className="text-sm text-muted-foreground mt-2">Convide pessoas para se juntar à reunião</p>
             </div>
           ) : (
             <div className={cn(
               "grid gap-3 w-full h-full",
+              cameraTracks.length === 1 && "max-w-3xl max-h-[500px]",
               getGridClass(cameraTracks.length)
             )}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-${trackRef.participant.identity}-${index}`}
-                  className="relative bg-[#3c4043] rounded-lg overflow-hidden border-2 border-[#3c4043] hover:border-blue-500 transition-all group"
+                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group"
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <VideoTrack
@@ -126,8 +127,8 @@ const ZoomParticipantGrid: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#3c4043]">
-                      <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-3xl">
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-3xl">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
                     </div>
@@ -140,8 +141,8 @@ const ZoomParticipantGrid: React.FC = () => {
                         {getParticipantName(trackRef.participant)}
                       </span>
                       {isParticipantMuted(trackRef.participant) && (
-                        <div className="bg-red-600 rounded-full p-1.5">
-                          <MicOff className="h-3.5 w-3.5 text-white" />
+                        <div className="bg-destructive rounded-full p-1.5">
+                          <MicOff className="h-3.5 w-3.5 text-destructive-foreground" />
                         </div>
                       )}
                     </div>

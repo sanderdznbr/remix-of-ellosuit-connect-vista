@@ -10,7 +10,8 @@ import {
   Square,
   MessageSquare,
   Users,
-  Settings
+  Settings,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -646,148 +647,100 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
   }, [isRecording, recordingId, livekitRecordingId, transcriptionWs, fallbackRecorder, roomCode]);
 
   return (
-    <div className="meeting-controls">
-      <div className="meeting-controls-container">
-        {/* Left side - Meeting info */}
-        <div className="meeting-controls-left">
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "recording-indicator",
-              isRecording && "recording-active"
-            )} />
-            <span className="text-sm text-gray-700 font-medium">
-              {isRecording ? "Gravando" : "Conectado"}
-            </span>
-          </div>
-        </div>
+    <div className="flex items-center justify-center gap-2">
+      {/* Audio Control */}
+      <Button
+        onClick={toggleMic}
+        size="icon"
+        variant={!micEnabled ? "destructive" : "secondary"}
+        className="rounded-full w-12 h-12"
+      >
+        {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+      </Button>
 
-        {/* Center - Main controls */}
-        <div className="meeting-controls-center flex items-center justify-center gap-3">
-          {/* Audio Control */}
-          <Button
-            onClick={toggleMic}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              !micEnabled ? "bg-red-600 hover:bg-red-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </Button>
+      {/* Video Control */}
+      <Button
+        onClick={toggleCamera}
+        size="icon"
+        variant={!cameraEnabled ? "destructive" : "secondary"}
+        className="rounded-full w-12 h-12"
+      >
+        {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+      </Button>
 
-          {/* Video Control */}
-          <Button
-            onClick={toggleCamera}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              !cameraEnabled ? "bg-red-600 hover:bg-red-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-          </Button>
+      {/* Screen Share */}
+      <Button
+        onClick={handleScreenShare}
+        size="icon"
+        variant={isScreenSharing ? "default" : "secondary"}
+        className="rounded-full w-12 h-12"
+      >
+        <Monitor className="h-5 w-5" />
+      </Button>
 
-          {/* Screen Share */}
-          <Button
-            onClick={handleScreenShare}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              isScreenSharing ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            <Monitor className="h-5 w-5" />
-          </Button>
+      {/* Recording Control */}
+      <Button
+        onClick={handleRecording}
+        size="icon"
+        variant={isRecording ? "destructive" : "secondary"}
+        className={cn("rounded-full w-12 h-12", isRecording && "animate-pulse")}
+      >
+        {isRecording ? (
+          <Square className="h-4 w-4 fill-current" />
+        ) : (
+          <Circle className="h-5 w-5" />
+        )}
+      </Button>
 
-          {/* Recording Control */}
-          <Button
-            onClick={handleRecording}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              isRecording ? "bg-red-600 hover:bg-red-700 text-white animate-pulse" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            {isRecording ? (
-              <Square className="h-4 w-4 fill-current" />
-            ) : (
-              <Circle className="h-5 w-5" />
-            )}
-          </Button>
+      {/* Transcription */}
+      <Button
+        onClick={onToggleTranscription}
+        size="icon"
+        variant="secondary"
+        className="rounded-full w-12 h-12"
+      >
+        <FileText className="h-5 w-5" />
+      </Button>
 
-          {/* Chat */}
-          <Button
-            onClick={onToggleChat}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              isChatOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
+      {/* Chat */}
+      <Button
+        onClick={onToggleChat}
+        size="icon"
+        variant={isChatOpen ? "default" : "secondary"}
+        className="rounded-full w-12 h-12"
+      >
+        <MessageSquare className="h-5 w-5" />
+      </Button>
 
-          {/* Participants */}
-          <Button
-            onClick={onToggleParticipants}
-            className={cn(
-              "control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all",
-              isParticipantsOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-[#3c4043] hover:bg-[#5f6368] text-white"
-            )}
-          >
-            <Users className="h-5 w-5" />
-          </Button>
+      {/* Participants */}
+      <Button
+        onClick={onToggleParticipants}
+        size="icon"
+        variant={isParticipantsOpen ? "default" : "secondary"}
+        className="rounded-full w-12 h-12"
+      >
+        <Users className="h-5 w-5" />
+      </Button>
 
-          {/* Settings */}
-          <Button
-            onClick={onSettingsClick}
-            className="control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all bg-[#3c4043] hover:bg-[#5f6368] text-white"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
+      {/* Settings */}
+      <Button
+        onClick={onSettingsClick}
+        size="icon"
+        variant="secondary"
+        className="rounded-full w-12 h-12"
+      >
+        <Settings className="h-5 w-5" />
+      </Button>
 
-          {/* End Call */}
-          <Button
-            onClick={async () => {
-              try {
-                const { data: { user } } = await supabase.auth.getUser();
-                const { data: roomData } = await supabase
-                  .from('meeting_rooms')
-                  .select('created_by')
-                  .eq('room_code', roomCode)
-                  .single();
-                
-                if (roomData && user && roomData.created_by === user.id) {
-                  await supabase
-                    .from('meeting_rooms')
-                    .update({ 
-                      is_active: false,
-                      ended_at: new Date().toISOString()
-                    })
-                    .eq('room_code', roomCode);
-                  
-                  console.log('Room ended by host');
-                  toast({
-                    title: "Reunião encerrada",
-                    description: "A sala foi encerrada para todos",
-                  });
-                }
-              } catch (error) {
-                console.error('Error ending room:', error);
-              }
-              
-              stopTranscription();
-              if (isRecording) {
-                await handleRecording();
-              }
-              
-              onLeave();
-            }}
-            className="control-button rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all bg-red-600 hover:bg-red-700 text-white ml-2"
-          >
-            <Phone className="h-5 w-5 rotate-[135deg]" />
-          </Button>
-        </div>
-
-        {/* Right side - Empty for mobile responsiveness */}
-        <div className="meeting-controls-right">
-        </div>
-      </div>
+      {/* End Call */}
+      <Button
+        onClick={onLeave}
+        size="icon"
+        variant="destructive"
+        className="rounded-full w-12 h-12 ml-2"
+      >
+        <Phone className="h-5 w-5 rotate-[135deg]" />
+      </Button>
     </div>
   );
 });

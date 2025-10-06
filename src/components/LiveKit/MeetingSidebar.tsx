@@ -16,8 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 interface MeetingSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'participants' | 'chat' | 'transcription';
-  onTabChange: (tab: 'participants' | 'chat' | 'transcription') => void;
+  activeTab: 'participants' | 'chat';
+  onTabChange: (tab: 'participants' | 'chat') => void;
   roomId?: string;
   transcriptionMessages: Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>;
   onTranscriptionMessagesUpdate: (messages: Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>) => void;
@@ -220,21 +220,21 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="h-full w-full bg-[#202124] flex flex-col">
+    <div className="h-full w-full bg-background flex flex-col">
       <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col h-full">
-        {/* Modern Clean Header with Tabs */}
-        <div className="flex-none border-b border-gray-800/50 bg-[#202124]">
-          <TabsList className="grid w-full grid-cols-2 h-12 bg-[#2d2e30] rounded-none">
+        {/* Modern Clean Header with Tabs - Light Theme */}
+        <div className="flex-none border-b border-border bg-background">
+          <TabsList className="grid w-full grid-cols-2 h-12 bg-muted rounded-none">
             <TabsTrigger 
               value="participants" 
-              className="flex items-center gap-2 text-sm data-[state=active]:bg-[#202124] data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-gray-300"
+              className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <Users className="h-4 w-4" />
               <span>Participantes</span>
             </TabsTrigger>
             <TabsTrigger 
               value="chat" 
-              className="flex items-center gap-2 text-sm data-[state=active]:bg-[#202124] data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-gray-300"
+              className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <MessageSquare className="h-4 w-4" />
               <span>Chat</span>
@@ -245,9 +245,9 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
         {/* Tab Contents */}
         <div className="flex-1 overflow-hidden">
           <TabsContent value="participants" className="h-full m-0 flex flex-col">
-            <div className="flex-none p-4 border-b border-gray-800/50 bg-[#202124]">
-              <h3 className="font-semibold text-white">Participantes na reunião</h3>
-              <p className="text-sm text-gray-400">{participants.length} pessoa{participants.length !== 1 ? 's' : ''} conectada{participants.length !== 1 ? 's' : ''}</p>
+            <div className="flex-none p-4 border-b border-border bg-background">
+              <h3 className="font-semibold text-foreground">Participantes na reunião</h3>
+              <p className="text-sm text-muted-foreground">{participants.length} pessoa{participants.length !== 1 ? 's' : ''} conectada{participants.length !== 1 ? 's' : ''}</p>
             </div>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-3">
@@ -260,12 +260,12 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                   return (
                     <div 
                       key={participant.identity} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-[#2d2e30] hover:bg-[#3c4043] transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {isHost && <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-white truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {displayName}
                             {isHost && ' (Você)'}
                           </p>
@@ -275,7 +275,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <div className={cn(
                           "p-1.5 rounded-full",
-                          audioEnabled ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                          audioEnabled ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
                         )}>
                           {audioEnabled ? (
                             <Mic className="h-3 w-3" />
@@ -285,7 +285,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                         </div>
                         <div className={cn(
                           "p-1.5 rounded-full",
-                          videoEnabled ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                          videoEnabled ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
                         )}>
                           {videoEnabled ? (
                             <Video className="h-3 w-3" />
@@ -302,47 +302,47 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
           </TabsContent>
 
           <TabsContent value="chat" className="h-full m-0 flex flex-col">
-            <div className="flex-none p-4 border-b border-gray-800/50 bg-[#202124]">
-              <h3 className="font-semibold text-white">Chat da reunião</h3>
-              <p className="text-sm text-gray-400">Converse e compartilhe arquivos</p>
+            <div className="flex-none p-4 border-b border-border bg-background">
+              <h3 className="font-semibold text-foreground">Chat da reunião</h3>
+              <p className="text-sm text-muted-foreground">Converse e compartilhe arquivos</p>
             </div>
             
-            <ScrollArea className="flex-1 p-0" ref={chatScrollRef}>
+            <ScrollArea className="flex-1" ref={chatScrollRef}>
               <div className="p-4 space-y-4">
                 {messages.length === 0 ? (
                   <div className="text-center py-8">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-                    <p className="text-sm text-gray-400 font-medium">Nenhuma mensagem ainda</p>
-                    <p className="text-xs text-gray-500 mt-1">Envie uma mensagem para começar a conversa</p>
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground font-medium">Nenhuma mensagem ainda</p>
+                    <p className="text-xs text-muted-foreground mt-1">Envie uma mensagem para começar a conversa</p>
                   </div>
                 ) : (
                   messages.map((msg) => (
                     <div key={msg.id} className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-blue-400">
+                        <span className="text-xs font-semibold text-primary">
                           {msg.participant}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       {msg.message ? (
-                        <div className="text-sm text-gray-200 leading-relaxed bg-[#2d2e30] rounded-lg px-3 py-2">
+                        <div className="text-sm text-foreground leading-relaxed bg-muted rounded-lg px-3 py-2">
                           {msg.message}
                         </div>
                       ) : msg.file ? (
-                        <div className="flex items-center gap-3 bg-[#2d2e30] rounded-lg px-3 py-2">
-                          <File className="h-8 w-8 text-blue-400 flex-shrink-0" />
+                        <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2">
+                          <File className="h-8 w-8 text-primary flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-200 truncate">{msg.file.name}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(msg.file.size)}</p>
+                            <p className="text-sm font-medium text-foreground truncate">{msg.file.name}</p>
+                            <p className="text-xs text-muted-foreground">{formatFileSize(msg.file.size)}</p>
                           </div>
                           <a
                             href={msg.file.url}
                             download={msg.file.name}
                             className="flex-shrink-0"
                           >
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                               <Download className="h-4 w-4" />
                             </Button>
                           </a>
@@ -354,7 +354,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
               </div>
             </ScrollArea>
 
-            <div className="flex-none p-4 border-t border-gray-800/50 bg-[#202124]">
+            <div className="flex-none p-4 border-t border-border bg-background">
               <div className="flex gap-2">
                 <input
                   ref={fileInputRef}
@@ -366,7 +366,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                   onClick={() => fileInputRef.current?.click()}
                   size="sm"
                   variant="ghost"
-                  className="px-3 text-gray-400 hover:text-gray-200"
+                  className="px-3"
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
@@ -375,13 +375,12 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 bg-[#2d2e30] border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500"
+                  className="flex-1"
                 />
                 <Button 
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim()}
                   size="sm"
-                  className="px-3 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Send className="h-4 w-4" />
                 </Button>

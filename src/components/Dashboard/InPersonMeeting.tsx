@@ -400,16 +400,25 @@ const InPersonMeeting = () => {
 
       if (uploadError) throw uploadError;
 
-      // Generate a signed URL (temporary public access) for AssemblyAI
-      const { data: urlData, error: signedUrlError } = await supabase.storage
+      // Try to get URL for AssemblyAI - first try signed URL, fallback to public URL
+      let fileUrl: string;
+      
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('meeting-recordings')
-        .createSignedUrl(fileName, 3600); // 1 hour expiration
+        .createSignedUrl(fileName, 3600);
 
-      if (signedUrlError || !urlData?.signedUrl) {
-        throw new Error('Erro ao gerar URL assinada do arquivo');
+      if (signedUrlData?.signedUrl) {
+        fileUrl = signedUrlData.signedUrl;
+        console.log('✅ URL assinada gerada para AssemblyAI:', fileUrl);
+      } else {
+        // Fallback to public URL if bucket is public
+        const { data: publicUrlData } = supabase.storage
+          .from('meeting-recordings')
+          .getPublicUrl(fileName);
+        
+        fileUrl = publicUrlData.publicUrl;
+        console.log('✅ URL pública gerada para AssemblyAI:', fileUrl);
       }
-
-      console.log('✅ URL assinada gerada para AssemblyAI:', urlData.signedUrl);
 
       // Initial save with Whisper transcript
       const whisperTranscript = transcript.map(t => `${t.speaker}: ${t.text}`).join('\n');
@@ -437,8 +446,8 @@ const InPersonMeeting = () => {
       setShowSummary(true);
       setShowDownloadOptions(true);
 
-      // Process speaker diarization in background with signed URL
-      processSpeakerDiarization(urlData.signedUrl, meetingData.id);
+      // Process speaker diarization in background with file URL
+      processSpeakerDiarization(fileUrl, meetingData.id);
 
     } catch (error) {
       console.error('Erro ao salvar reunião:', error);
@@ -758,26 +767,37 @@ const InPersonMeeting = () => {
     <div className="w-full max-w-4xl mx-auto">
       {/* Title Dialog */}
       <Dialog open={showTitleDialog} onOpenChange={setShowTitleDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Título da Reunião</DialogTitle>
+            <DialogTitle className="text-xl">Título da Reunião</DialogTitle>
+            <DialogDescription>
+              Insira um título para identificar esta reunião
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Título *</Label>
+              <Label htmlFor="title" className="text-sm font-medium">Título *</Label>
               <Input
                 id="title"
                 placeholder="Ex: Reunião com Cliente X"
                 value={meetingTitle}
                 onChange={(e) => setMeetingTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleStartWithTitle()}
+                className="mt-2 rounded-xl"
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowTitleDialog(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowTitleDialog(false)}
+                className="rounded-xl"
+              >
                 Cancelar
               </Button>
-              <Button onClick={handleStartWithTitle}>
+              <Button 
+                onClick={handleStartWithTitle}
+                className="rounded-xl hover:scale-105 transition-transform"
+              >
                 Iniciar Reunião
               </Button>
             </div>
@@ -787,9 +807,9 @@ const InPersonMeeting = () => {
 
       {/* Download Options Dialog */}
       <Dialog open={showDownloadOptions} onOpenChange={setShowDownloadOptions}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Opções de Download</DialogTitle>
+            <DialogTitle className="text-xl">Opções de Download</DialogTitle>
             <DialogDescription>
               Escolha como deseja baixar a transcrição da reunião
             </DialogDescription>
@@ -797,7 +817,7 @@ const InPersonMeeting = () => {
           <div className="space-y-3 py-4">
             <Button
               variant="outline"
-              className="w-full justify-start gap-3 h-auto py-4"
+              className="w-full justify-start gap-3 h-auto py-4 rounded-xl hover:scale-105 transition-transform"
               onClick={async () => {
                 await downloadTranscriptPDF();
                 setShowDownloadOptions(false);
@@ -812,7 +832,7 @@ const InPersonMeeting = () => {
 
             <Button
               variant="outline"
-              className="w-full justify-start gap-3 h-auto py-4"
+              className="w-full justify-start gap-3 h-auto py-4 rounded-xl hover:scale-105 transition-transform"
               onClick={async () => {
                 const summary = await processTranscriptWithAI('summary');
                 if (summary) {
@@ -835,7 +855,7 @@ const InPersonMeeting = () => {
 
             <Button
               variant="outline"
-              className="w-full justify-start gap-3 h-auto py-4"
+              className="w-full justify-start gap-3 h-auto py-4 rounded-xl hover:scale-105 transition-transform"
               onClick={async () => {
                 const keypoints = await processTranscriptWithAI('keypoints');
                 if (keypoints) {
@@ -856,19 +876,21 @@ const InPersonMeeting = () => {
               </div>
             </Button>
 
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Search className="h-4 w-4 text-primary" />
+            <div className="pt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Search className="h-3.5 w-3.5 text-primary" />
+                </div>
                 <span className="text-sm font-semibold">Busca Específica</span>
               </div>
               <Textarea
                 placeholder="Ex: O que foi decidido sobre o orçamento?"
                 value={specificQuery}
                 onChange={(e) => setSpecificQuery(e.target.value)}
-                className="min-h-[80px] mb-2"
+                className="min-h-[80px] rounded-xl"
               />
               <Button
-                className="w-full"
+                className="w-full rounded-xl hover:scale-105 transition-transform"
                 onClick={async () => {
                   if (!specificQuery.trim()) {
                     toast({
@@ -906,7 +928,7 @@ const InPersonMeeting = () => {
 
 
       {/* Main Recording Interface */}
-      <Card className="border-2">
+      <Card className="border-none shadow-lg rounded-2xl">
         <CardContent className="pt-8 pb-8">
           {!isRecording ? (
             <div className="space-y-8">
@@ -926,7 +948,7 @@ const InPersonMeeting = () => {
                     onClick={() => setShowTitleDialog(true)} 
                     size="lg"
                     disabled={!selectedDeviceId}
-                    className="relative h-32 w-32 rounded-full text-lg font-semibold shadow-2xl hover:scale-105 transition-transform"
+                    className="relative h-32 w-32 rounded-full text-lg font-semibold shadow-2xl hover:scale-105 transition-transform bg-gradient-to-br from-primary to-primary/80"
                   >
                     <Mic className="h-12 w-12" />
                   </Button>
@@ -941,49 +963,56 @@ const InPersonMeeting = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Recording Header */}
-              <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-950/20 rounded-xl border-2 border-red-200">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse" />
+              {/* Recording Header - Redesigned */}
+              <div className="flex items-center justify-between p-5 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 rounded-2xl border border-red-200/50">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                     <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-red-700 dark:text-red-400">Gravando</p>
-                    <p className="text-sm text-red-600 dark:text-red-300">{meetingTitle}</p>
+                    <p className="text-base font-bold text-red-700 dark:text-red-400">Gravando</p>
+                    <p className="text-xs text-red-600/80 dark:text-red-300/80">{meetingTitle}</p>
                   </div>
                 </div>
                 <Button 
                   onClick={stopRecording} 
                   size="lg"
                   variant="destructive"
-                  className="gap-2 font-semibold"
+                  className="gap-2 font-semibold rounded-xl hover:scale-105 transition-transform"
                 >
-                  <Square className="h-5 w-5 fill-current" />
+                  <Square className="h-4 w-4 fill-current" />
                   Encerrar
                 </Button>
               </div>
 
-              {/* Audio Visualizer */}
-              <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8">
+              {/* Compact Audio Monitor */}
+              <div className="bg-gradient-to-br from-primary/5 via-purple-50/50 to-primary/10 dark:from-primary/10 dark:via-purple-900/20 dark:to-primary/5 rounded-2xl p-6 border border-primary/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-semibold text-foreground/80">Monitor de Áudio</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Ativo</span>
+                </div>
                 <AudioVisualizer stream={currentStream} />
               </div>
 
               {/* Live Transcript */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <Card className="rounded-2xl border-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     Transcrição em Tempo Real
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[300px] w-full rounded-lg border-2 p-4" ref={scrollRef}>
-                    <div className="space-y-4">
+                  <ScrollArea className="h-[300px] w-full rounded-xl border p-4 bg-muted/30" ref={scrollRef}>
+                    <div className="space-y-3">
                       {transcript.map((msg, index) => (
-                        <div key={index} className="border-l-4 border-primary/40 pl-4 py-2 animate-fade-in">
+                        <div key={index} className="border-l-2 border-primary/40 pl-3 py-2 animate-fade-in rounded-r-lg bg-background/50">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-medium">
                               {new Date(msg.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
@@ -992,7 +1021,7 @@ const InPersonMeeting = () => {
                       ))}
                       
                       {currentText && (
-                        <div className="border-l-4 border-primary/20 pl-4 py-2 animate-pulse">
+                        <div className="border-l-2 border-primary/20 pl-3 py-2 animate-pulse rounded-r-lg bg-primary/5">
                           <p className="text-xs text-muted-foreground mb-1">Transcrevendo...</p>
                           <p className="text-sm text-muted-foreground italic">{currentText}</p>
                         </div>
@@ -1019,7 +1048,7 @@ const InPersonMeeting = () => {
         <>
           {/* Loading state para processamento de speakers */}
           {isProcessingSpeakers && (
-            <Card className="mt-6 border-2 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20 animate-pulse">
+            <Card className="mt-6 border-2 border-blue-500/50 bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/20 dark:to-sky-950/20 animate-pulse rounded-2xl">
               <CardContent className="py-12">
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
@@ -1037,7 +1066,7 @@ const InPersonMeeting = () => {
           )}
 
           {!isProcessingSpeakers && (
-            <Card className="mt-6 border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
+            <Card className="mt-6 border-2 border-green-500/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -1051,7 +1080,7 @@ const InPersonMeeting = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <Button 
                     onClick={() => setShowDownloadOptions(true)}
-                    className="gap-2 h-auto py-4 flex-col"
+                    className="gap-2 h-auto py-4 flex-col rounded-xl hover:scale-105 transition-transform"
                   >
                     <Download className="h-6 w-6" />
                     <span className="text-sm font-semibold">Baixar Transcrição</span>
@@ -1067,13 +1096,13 @@ const InPersonMeeting = () => {
                       currentSpeakerRef.current = 1;
                       speakerCountRef.current = 1;
                     }}
-                    className="gap-2 h-auto py-4 flex-col"
+                    className="gap-2 h-auto py-4 flex-col rounded-xl hover:scale-105 transition-transform"
                   >
                     <FileText className="h-6 w-6" />
                     <span className="text-sm font-semibold">Nova Reunião</span>
                   </Button>
                 </div>
-                <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4 text-sm">
+                <div className="bg-white/60 dark:bg-black/20 rounded-xl p-4 text-sm border border-green-200/50">
                   <p className="font-semibold mb-2 text-green-800 dark:text-green-300">Resumo:</p>
                   <ul className="space-y-1 text-muted-foreground">
                     <li>• {transcript.length} segmentos transcritos</li>

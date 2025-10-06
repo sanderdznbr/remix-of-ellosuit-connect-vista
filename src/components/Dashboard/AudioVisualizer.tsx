@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Volume2, AlertCircle } from 'lucide-react';
 
 interface AudioVisualizerProps {
   stream: MediaStream | null;
@@ -11,23 +9,20 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
   const animationRef = useRef<number>();
   const analyserRef = useRef<AnalyserNode>();
   const [volume, setVolume] = useState(0);
-  const [hasAudio, setHasAudio] = useState(false);
 
   useEffect(() => {
     if (!stream) {
-      setHasAudio(false);
       return;
     }
 
     const audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 256; // Smaller for cleaner bars
     
     source.connect(analyser);
     analyserRef.current = analyser;
     
-    setHasAudio(true);
     visualize();
 
     return () => {
@@ -52,84 +47,66 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
       if (!analyserRef.current) return;
       
       animationRef.current = requestAnimationFrame(draw);
-      analyserRef.current.getByteTimeDomainData(dataArray);
+      analyserRef.current.getByteFrequencyData(dataArray);
 
       // Calculate volume
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
-        sum += Math.abs(dataArray[i] - 128);
+        sum += dataArray[i];
       }
-      const avgVolume = (sum / bufferLength) / 128 * 100;
+      const avgVolume = (sum / bufferLength) / 255 * 100;
       setVolume(Math.round(avgVolume));
 
-      // Draw waveform
-      ctx.fillStyle = 'hsl(var(--background))';
+      // Clear canvas
+      ctx.fillStyle = 'transparent';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'hsl(var(--primary))';
-      ctx.beginPath();
+      // Draw bars
+      const barCount = 32;
+      const barWidth = canvas.width / barCount;
+      const gap = 2;
 
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * bufferLength);
+        const barHeight = (dataArray[dataIndex] / 255) * canvas.height;
+        
+        // Create gradient for bars
+        const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
+        gradient.addColorStop(0, 'hsl(var(--primary))');
+        gradient.addColorStop(1, 'hsl(var(--primary) / 0.5)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(
+          i * barWidth + gap / 2,
+          canvas.height - barHeight,
+          barWidth - gap,
+          barHeight
+        );
       }
-
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
     };
 
     draw();
   };
 
   return (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Volume2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Monitor de Áudio</span>
-        </div>
-        {hasAudio ? (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-muted-foreground">Ativo</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-            <span className="text-xs text-muted-foreground">Aguardando</span>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-3">
       <canvas
         ref={canvasRef}
-        width={400}
-        height={80}
-        className="w-full h-20 rounded-md bg-muted/30"
+        width={600}
+        height={60}
+        className="w-full h-16 rounded-lg"
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 justify-center">
         <span className="text-xs text-muted-foreground">Volume:</span>
-        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div className="w-32 h-1.5 bg-background/50 rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary transition-all duration-100"
+            className="h-full bg-primary/60 transition-all duration-100 rounded-full"
             style={{ width: `${volume}%` }}
           />
         </div>
-        <span className="text-xs font-mono w-12 text-right">{volume}%</span>
+        <span className="text-xs font-mono text-muted-foreground">{volume}%</span>
       </div>
-    </Card>
+    </div>
   );
 };

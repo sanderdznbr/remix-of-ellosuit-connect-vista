@@ -117,15 +117,17 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
   };
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-card">
+    <div className="space-y-4 p-5 border border-primary/10 rounded-2xl bg-gradient-to-br from-card to-card/50 shadow-sm">
       <div className="flex items-center gap-2 mb-2">
-        <Mic className="h-5 w-5 text-primary" />
+        <div className="p-2 rounded-xl bg-primary/10">
+          <Mic className="h-4 w-4 text-primary" />
+        </div>
         <Label className="text-base font-semibold">Dispositivo de Áudio</Label>
       </div>
       
       <div className="space-y-2">
         <Select value={selectedDeviceId} onValueChange={onDeviceSelect}>
-          <SelectTrigger>
+          <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Selecione um microfone" />
           </SelectTrigger>
           <SelectContent>
@@ -143,7 +145,7 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
             variant="outline"
             size="sm"
             disabled={testing}
-            className="w-full"
+            className="w-full rounded-xl hover:scale-105 transition-transform"
           >
             {testing ? 'Testando...' : 'Testar Microfone'}
           </Button>

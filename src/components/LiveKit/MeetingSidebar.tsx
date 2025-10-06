@@ -302,7 +302,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                   return (
                     <div 
                       key={participant.identity} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-muted hover:bg-muted/80 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {isHost && <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />}
@@ -359,9 +359,9 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                   </div>
                 ) : (
                   messages.map((msg) => (
-                    <div key={msg.id} className="space-y-1">
+                    <div key={msg.id} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-primary">
+                        <span className="text-xs font-semibold text-foreground">
                           {msg.participant}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -369,11 +369,11 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                         </span>
                       </div>
                       {msg.message ? (
-                        <div className="text-sm text-foreground leading-relaxed bg-muted rounded-lg px-3 py-2">
+                        <div className="text-sm text-foreground leading-relaxed bg-primary/10 rounded-2xl px-4 py-3 border border-primary/20">
                           {msg.message}
                         </div>
                       ) : msg.file ? (
-                        <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-3 bg-accent rounded-2xl px-4 py-3 border border-border">
                           <File className="h-8 w-8 text-primary flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">{msg.file.name}</p>
@@ -384,7 +384,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                             download={msg.file.name}
                             className="flex-shrink-0"
                           >
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10">
                               <Download className="h-4 w-4" />
                             </Button>
                           </a>
@@ -415,7 +415,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                     onClick={() => fileInputRef.current?.click()}
                     size="sm"
                     variant="ghost"
-                    className="px-3"
+                    className="px-3 rounded-full"
                     disabled={!room || !localParticipant}
                   >
                     <Paperclip className="h-4 w-4" />
@@ -425,13 +425,14 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 bg-background"
+                    className="flex-1 bg-background rounded-full border-border"
                     disabled={!room || !localParticipant}
                   />
                   <Button 
                     onClick={handleSendMessage}
                     disabled={!inputMessage.trim() || !room || !localParticipant}
                     size="sm"
+                    className="rounded-full"
                   >
                     <Send className="h-4 w-4" />
                   </Button>

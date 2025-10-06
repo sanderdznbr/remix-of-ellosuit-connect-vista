@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw, Share2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Share2, FileText } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import SimpleMeetingControls from './SimpleMeetingControls';
@@ -221,18 +221,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTranscriptionMessages(prev => {
       const updated = [...prev, message];
       console.log(`📊 [SimpleLiveKitRoom] Total de transcrições: ${updated.length}`);
-      console.log('📋 [SimpleLiveKitRoom] Última mensagem:', message);
       return updated;
     });
-    
-    // Show toast for first transcription
-    if (transcriptionMessages.length === 0) {
-      toast({
-        title: "✅ Transcrição iniciada",
-        description: "A transcrição em tempo real está funcionando!",
-      });
-    }
-  }, [transcriptionMessages.length, toast]);
+  }, []);
 
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
@@ -409,19 +400,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
               )}
 
-              {/* Transcription Active Indicator com botão para abrir modal */}
-              {isTranscribing && (
+              {/* Transcription indicator - subtle */}
+              {isTranscribing && transcriptionMessages.length > 0 && (
                 <button
                   onClick={() => setShowTranscriptionModal(true)}
-                  className="fixed bottom-20 right-6 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom z-40 hover:bg-primary/90 transition-colors cursor-pointer"
+                  className="fixed bottom-20 right-6 bg-card hover:bg-accent text-card-foreground p-3 rounded-full shadow-lg transition-all z-40 border border-border"
+                  title={`${transcriptionMessages.length} mensagens transcritas`}
                 >
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">Transcrição Ativa</span>
-                    <span className="text-xs opacity-80">
-                      {transcriptionMessages.length} mensagens • Clique para ver
-                    </span>
-                  </div>
+                  <FileText className="h-5 w-5" />
                 </button>
               )}
 

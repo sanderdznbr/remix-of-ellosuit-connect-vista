@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, Bot, User, Loader2, FileDown, Eye } from 'lucide-react';
+import { Send, Bot, User, Loader2, FileDown } from 'lucide-react';
 import SavedMeetingDownloadModal from './SavedMeetingDownloadModal';
 
 interface MeetingReference {
@@ -97,39 +97,59 @@ Transcrição: ${meeting.transcript.substring(0, 800)}...
 
   const extractMeetingReferences = (text: string): MeetingReference[] => {
     const references: MeetingReference[] = [];
+    const addedIds = new Set<string>(); // Evitar duplicatas
     
-    // Procura por menções de reuniões no texto
-    meetings.forEach(meeting => {
-      const titleLower = meeting.title.toLowerCase();
-      const textLower = text.toLowerCase();
-      const date = new Date(meeting.created_at).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit', 
-        year: 'numeric'
-      });
-      
-      // Se a IA mencionar o título ou a data da reunião
-      if (textLower.includes(titleLower) || text.includes(date)) {
-        references.push({
-          id: meeting.id,
-          title: meeting.title,
-          date: date
-        });
-      }
-    });
-    
-    return references;
-  };
-
-  const handleViewMeeting = (meetingId: string) => {
-    const meeting = meetings.find(m => m.id === meetingId);
-    if (meeting) {
-      // Aqui você pode abrir um modal para visualizar a reunião
-      toast({
-        title: 'Visualizar Reunião',
-        description: `Abrindo: ${meeting.title}`
+    // Procura por menções diretas de ID no texto
+    const idMatches = text.match(/ID:\s*([a-f0-9-]+)/gi);
+    if (idMatches) {
+      idMatches.forEach(match => {
+        const id = match.split(':')[1].trim();
+        const meeting = meetings.find(m => m.id === id);
+        if (meeting && !addedIds.has(meeting.id)) {
+          addedIds.add(meeting.id);
+          references.push({
+            id: meeting.id,
+            title: meeting.title,
+            date: new Date(meeting.created_at).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric'
+            })
+          });
+        }
       });
     }
+    
+    // Se não encontrou IDs, procura por títulos exatos (mínimo 4 caracteres)
+    if (references.length === 0) {
+      meetings.forEach(meeting => {
+        if (meeting.title.length < 4) return; // Ignora títulos muito curtos
+        
+        const titleLower = meeting.title.toLowerCase();
+        const textLower = text.toLowerCase();
+        
+        // Procura por correspondência exata do título entre aspas ou isolado
+        const exactMatch = textLower.includes(`"${titleLower}"`) || 
+                          textLower.includes(`'${titleLower}'`) ||
+                          new RegExp(`\\b${titleLower}\\b`, 'i').test(textLower);
+        
+        if (exactMatch && !addedIds.has(meeting.id)) {
+          addedIds.add(meeting.id);
+          references.push({
+            id: meeting.id,
+            title: meeting.title,
+            date: new Date(meeting.created_at).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric'
+            })
+          });
+        }
+      });
+    }
+    
+    // Limitar a 3 reuniões por resposta para evitar poluição visual
+    return references.slice(0, 3);
   };
 
   const handleDownloadMeeting = (meetingId: string) => {
@@ -155,10 +175,11 @@ Transcrição: ${meeting.transcript.substring(0, 800)}...
 Você tem acesso ao histórico completo de reuniões do usuário.
 Responda de forma clara, concisa e em português.
 
-IMPORTANTE: Quando mencionar reuniões específicas, sempre inclua:
-- O título EXATO da reunião
-- A data no formato DD/MM/YYYY
-- Use o ID da reunião quando disponível no contexto
+IMPORTANTE: Ao mencionar reuniões específicas:
+1. SEMPRE inclua o ID da reunião no formato "ID: [id-completo]" 
+2. Cite o título exato entre aspas: "nome da reunião"
+3. Mencione a data no formato DD/MM/YYYY
+4. Seja específico - cite apenas reuniões que realmente respondem à pergunta
 
 Use as informações das reuniões para responder perguntas sobre:
 - Quem participou de reuniões específicas
@@ -285,45 +306,35 @@ ${meetingsContext}`;
                     
                     {/* Botões de Ação para Reuniões Mencionadas */}
                     {message.role === 'assistant' && message.meetings && message.meetings.length > 0 && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <p className="text-xs text-muted-foreground font-medium">
-                          Reuniões mencionadas:
+                      <div className="space-y-2 mt-3">
+                        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                          📎 Reuniões Mencionadas
                         </p>
-                        {message.meetings.map((meeting) => (
-                          <div
-                            key={meeting.id}
-                            className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {meeting.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {meeting.date}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
+                        <div className="space-y-2">
+                          {message.meetings.map((meeting) => (
+                            <div
+                              key={meeting.id}
+                              className="flex items-center justify-between gap-3 p-3 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border border-border hover:border-primary/30 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate">
+                                  {meeting.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {meeting.date}
+                                </p>
+                              </div>
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                onClick={() => handleViewMeeting(meeting.id)}
-                                className="h-8 px-2"
-                              >
-                                <Eye className="h-3 w-3 mr-1" />
-                                Ver
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
                                 onClick={() => handleDownloadMeeting(meeting.id)}
-                                className="h-8 px-2"
+                                className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 shadow-sm"
                               >
-                                <FileDown className="h-3 w-3 mr-1" />
+                                <FileDown className="h-4 w-4 mr-2" />
                                 Baixar
                               </Button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

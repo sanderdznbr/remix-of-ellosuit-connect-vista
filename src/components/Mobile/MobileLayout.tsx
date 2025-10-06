@@ -15,16 +15,16 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header with trigger */}
-          <header className="h-14 bg-card border-b flex items-center px-4 shadow-sm sticky top-0 z-10">
+          <header className="h-14 bg-card border-b flex items-center px-4 shadow-sm sticky top-0 z-10 flex-shrink-0">
             <SidebarTrigger className="mr-3 text-foreground" />
             <h1 className="text-lg font-semibold text-foreground">ELLOsuit</h1>
           </header>
           
-          {/* Main content */}
-          <main className="flex-1 overflow-auto bg-background">
-            <div className="container mx-auto p-4 max-w-7xl">
+          {/* Main content - scrollable */}
+          <main className="flex-1 overflow-y-auto bg-background">
+            <div className="container mx-auto p-4 max-w-7xl min-h-full">
               {children}
             </div>
           </main>

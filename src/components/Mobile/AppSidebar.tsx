@@ -91,8 +91,8 @@ export function AppSidebar() {
 
   const getNavClassName = (active: boolean) => {
     return active 
-      ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90" 
-      : "hover:bg-gray-100 text-gray-700";
+      ? "bg-white/20 text-white font-medium hover:bg-white/30" 
+      : "text-white/80 hover:bg-white/10 hover:text-white";
   };
 
   return (
@@ -150,11 +150,10 @@ export function AppSidebar() {
                         <SidebarMenuButton 
                           asChild 
                           className={`${getNavClassName(active)} transition-colors rounded-lg mx-1`}
-                          style={active ? { backgroundColor: 'rgba(255,255,255,0.2)' } : {}}
                         >
                           <Link to={item.path} className="flex items-center">
-                            <IconComponent className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0`} />
-                            {!isCollapsed && <span className="truncate text-white">{item.label}</span>}
+                            <IconComponent className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0 text-white`} />
+                            {!isCollapsed && <span className="truncate">{item.label}</span>}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

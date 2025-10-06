@@ -16,7 +16,10 @@ import {
   FileText,
   Video,
   BarChart3,
-  Quote
+  Quote,
+  CheckSquare,
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -140,10 +143,18 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
   };
 
   const quickActions = [
-    { icon: Calendar, label: 'Agendar', path: '/dashboard/agenda', color: 'bg-blue-500' },
+    { icon: Calendar, label: 'Agenda', path: '/dashboard/agenda', color: 'bg-blue-500' },
+    { icon: Calendar, label: 'Ag. Online', path: '/dashboard/agenda-aberta', color: 'bg-cyan-500' },
+    { icon: Video, label: 'Reuniões', path: '/dashboard/reunioes', color: 'bg-indigo-500' },
     { icon: Mail, label: 'Email', path: '/dashboard/email', color: 'bg-green-500' },
     { icon: Users, label: 'Contatos', path: '/dashboard/clientes', color: 'bg-purple-500' },
-    { icon: FileText, label: 'Arquivos', path: '/dashboard/drive', color: 'bg-orange-500' }
+    { icon: FileText, label: 'Arquivos', path: '/dashboard/drive', color: 'bg-orange-500' },
+    { icon: CheckSquare, label: 'Tarefas', path: '/dashboard/tasks', color: 'bg-pink-500' },
+    { icon: TrendingUp, label: 'Fluxos', path: '/dashboard/fluxos', color: 'bg-red-500' },
+    { icon: MessageSquare, label: 'WhatsApp', path: '/dashboard/crm-whatsapp', color: 'bg-emerald-500' },
+    { icon: Activity, label: 'Bot IA', path: '/dashboard/bot-ia', color: 'bg-violet-500' },
+    { icon: BarChart3, label: 'Rastreio', path: '/dashboard/rastreamento-documento', color: 'bg-amber-500' },
+    { icon: Settings, label: 'Config', path: '/dashboard/configuracoes', color: 'bg-slate-500' }
   ];
 
   if (loading) {
@@ -157,7 +168,7 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-6">
       {/* Welcome Section */}
       <MobileCard>
         <div className="text-center py-4">
@@ -175,14 +186,14 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
 
       {/* Quick Actions */}
       <MobileCard title="Ações Rápidas" icon={<Target className="h-5 w-5 text-primary" />}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {quickActions.map((action, index) => (
             <Link key={index} to={action.path} className="group">
-              <div className="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-primary/30 transition-all duration-200 group-active:scale-95">
-                <div className={`${action.color} p-3 rounded-full mb-2`}>
-                  <action.icon className="h-5 w-5 text-white" />
+              <div className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:border-primary/30 transition-all duration-200 group-active:scale-95">
+                <div className={`${action.color} p-2.5 rounded-full mb-1.5`}>
+                  <action.icon className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                <span className="text-xs font-medium text-gray-700 text-center leading-tight">{action.label}</span>
               </div>
             </Link>
           ))}

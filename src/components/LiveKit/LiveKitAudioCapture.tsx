@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
 
 interface TranscriptionMessage {
   text: string;
@@ -20,10 +21,14 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   onTranscriptionUpdate
 }) => {
   const { toast } = useToast();
+  const room = useRoomContext();
+  const remoteParticipants = useRemoteParticipants();
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const mixerNodeRef = useRef<GainNode | null>(null);
+  const localSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const remoteSourcesRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
   const streamRef = useRef<MediaStream | null>(null);
   const audioBufferRef = useRef<Int16Array>(new Int16Array(0));
   const lastSendTimeRef = useRef<number>(0);
@@ -56,41 +61,38 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
   const startCapture = async () => {
     try {
-      console.log('🎤 Iniciando captura SEPARADA de áudio para transcrição...');
-      console.log('📍 Este canal é INDEPENDENTE do LiveKit');
+      console.log('🎤 Iniciando captura de TODOS os participantes para transcrição...');
+      console.log('📍 Capturando áudio local + remoto via LiveKit');
 
-      // IMPORTANTE: Criar stream INDEPENDENTE apenas para transcrição
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 24000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
+      if (!room) {
+        throw new Error('Room não disponível');
+      }
 
-      streamRef.current = stream;
-      const audioTrack = stream.getAudioTracks()[0];
-      const settings = audioTrack.getSettings();
-      
-      console.log('✅ Canal de transcrição criado:', {
-        deviceId: settings.deviceId,
-        sampleRate: settings.sampleRate,
-        channelCount: settings.channelCount
-      });
-
-      // Create AudioContext with exact configuration from InPersonMeeting
+      // Create AudioContext para mixar todos os áudios
       audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
+      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
+
+      // Criar um mixer node para combinar todos os áudios
+      mixerNodeRef.current = audioContextRef.current.createGain();
+      mixerNodeRef.current.gain.value = 1.0;
+
+      // Criar o processor para capturar o áudio mixado
       processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
-      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
+      // Conectar mixer ao processor
+      mixerNodeRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioContextRef.current.destination);
+
+      // Capturar áudio LOCAL (do participante atual)
+      await setupLocalAudio();
+
+      // Capturar áudio REMOTO (de todos os outros participantes)
+      await setupRemoteAudio();
 
       // Connect to WebSocket BEFORE processing audio
       await connectWebSocket();
 
-      // Process audio in real-time (exactly like InPersonMeeting)
+      // Process mixed audio in real-time
       processorRef.current.onaudioprocess = (e) => {
         if (!isActive || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
           return;
@@ -109,18 +111,73 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         accumulateAndSendAudio(int16Data);
       };
 
-      sourceRef.current.connect(processorRef.current);
-      processorRef.current.connect(audioContextRef.current.destination);
-
-      console.log('✅ Pipeline de áudio PCM16 conectado');
+      console.log('✅ Pipeline de áudio mixado conectado - Capturando TODOS participantes');
 
     } catch (error) {
       console.error('❌ Erro ao iniciar captura:', error);
       toast({
         title: "Erro na Transcrição",
-        description: "Não foi possível acessar o microfone para transcrição",
+        description: "Não foi possível iniciar transcrição de todos os participantes",
         variant: "destructive"
       });
+    }
+  };
+
+  const setupLocalAudio = async () => {
+    if (!audioContextRef.current || !mixerNodeRef.current) return;
+
+    try {
+      // Obter o microfone local
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 24000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      streamRef.current = stream;
+      
+      // Criar source do áudio local
+      localSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
+      
+      // Conectar ao mixer
+      localSourceRef.current.connect(mixerNodeRef.current);
+      
+      console.log('✅ Áudio LOCAL conectado ao mixer');
+    } catch (error) {
+      console.error('❌ Erro ao capturar áudio local:', error);
+    }
+  };
+
+  const setupRemoteAudio = async () => {
+    if (!audioContextRef.current || !mixerNodeRef.current || !room) return;
+
+    try {
+      // Obter todos os tracks de áudio remotos
+      const audioTracks = Array.from(room.remoteParticipants.values())
+        .flatMap(participant => Array.from(participant.audioTrackPublications.values()))
+        .filter(pub => pub.track)
+        .map(pub => pub.track!.mediaStreamTrack);
+
+      console.log(`🎧 Encontrados ${audioTracks.length} tracks de áudio remotos`);
+
+      // Criar um MediaStream com todos os tracks remotos
+      if (audioTracks.length > 0) {
+        const remoteStream = new MediaStream(audioTracks);
+        
+        // Criar source do áudio remoto
+        const remoteSource = audioContextRef.current.createMediaStreamSource(remoteStream);
+        
+        // Conectar ao mixer
+        remoteSource.connect(mixerNodeRef.current);
+        
+        console.log('✅ Áudio REMOTO conectado ao mixer');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao capturar áudio remoto:', error);
     }
   };
 
@@ -272,6 +329,17 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     });
   };
 
+  // Watch for new participants joining and add their audio
+  useEffect(() => {
+    if (!isActive || !audioContextRef.current || !mixerNodeRef.current) return;
+
+    const updateRemoteAudio = async () => {
+      await setupRemoteAudio();
+    };
+
+    updateRemoteAudio();
+  }, [remoteParticipants, isActive]);
+
   const cleanup = () => {
     console.log('🧹 Limpando captura de áudio...');
 
@@ -306,10 +374,18 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       processorRef.current.disconnect();
       processorRef.current = null;
     }
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
+    if (localSourceRef.current) {
+      localSourceRef.current.disconnect();
+      localSourceRef.current = null;
     }
+    if (mixerNodeRef.current) {
+      mixerNodeRef.current.disconnect();
+      mixerNodeRef.current = null;
+    }
+    // Disconnect all remote sources
+    remoteSourcesRef.current.forEach(source => source.disconnect());
+    remoteSourcesRef.current.clear();
+    
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;

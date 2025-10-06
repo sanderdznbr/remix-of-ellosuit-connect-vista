@@ -39,8 +39,24 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
       const allDevices = await navigator.mediaDevices.enumerateDevices();
+      
+      // Filter audio input devices and exclude loopback/virtual devices
+      const suspiciousNames = [
+        'stereo mix', 'loopback', 'monitor', 'what u hear', 
+        'blackhole', 'soundflower', 'virtual audio', 'voicemeeter',
+        'wave out mix', 'mixage stéréo', 'estéreo mix'
+      ];
+      
       const audioInputs = allDevices
         .filter(device => device.kind === 'audioinput')
+        .filter(device => {
+          const labelLower = device.label.toLowerCase();
+          const isSuspicious = suspiciousNames.some(name => labelLower.includes(name));
+          if (isSuspicious) {
+            console.warn('⚠️ Dispositivo suspeito filtrado:', device.label);
+          }
+          return !isSuspicious;
+        })
         .map(device => ({
           deviceId: device.deviceId,
           label: device.label || `Microfone ${device.deviceId.slice(0, 5)}`

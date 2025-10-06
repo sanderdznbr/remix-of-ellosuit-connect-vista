@@ -37,6 +37,8 @@ const InPersonMeeting = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const audioBufferRef = useRef<Int16Array>(new Int16Array(0));
+  const lastSendTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -86,6 +88,49 @@ const InPersonMeeting = () => {
     return btoa(binary);
   };
 
+  // Accumulate audio buffer and send when threshold is met
+  const accumulateAndSendAudio = (pcm16Data: Int16Array) => {
+    // Accumulate audio in buffer
+    const combined = new Int16Array(audioBufferRef.current.length + pcm16Data.length);
+    combined.set(audioBufferRef.current);
+    combined.set(pcm16Data, audioBufferRef.current.length);
+    audioBufferRef.current = combined;
+
+    const now = Date.now();
+    const timeSinceLastSend = now - lastSendTimeRef.current;
+    const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
+
+    // Send only if:
+    // 1. Buffer has at least 3 seconds of audio
+    // 2. At least 2 seconds passed since last send
+    if (bufferDurationMs >= 3000 && timeSinceLastSend >= 2000) {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms)`);
+        
+        // Convert to Uint8Array for base64 encoding
+        const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
+        let binary = '';
+        const chunkSize = 0x8000;
+        
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        
+        const base64Audio = btoa(binary);
+        
+        wsRef.current.send(JSON.stringify({
+          type: 'audio_data',
+          audio: base64Audio
+        }));
+
+        // Clear buffer and update timestamp
+        audioBufferRef.current = new Int16Array(0);
+        lastSendTimeRef.current = now;
+      }
+    }
+  };
+
   const startRecording = async () => {
     if (!meetingTitle.trim()) {
       setShowTitleDialog(true);
@@ -121,8 +166,38 @@ const InPersonMeeting = () => {
 
       // Verify the audio track
       const audioTrack = stream.getAudioTracks()[0];
+      const settings = audioTrack.getSettings();
+      
       console.log('✅ Usando dispositivo:', audioTrack.label);
-      console.log('🎤 Configurações do track:', audioTrack.getSettings());
+      console.log('🎤 Configurações completas:', {
+        deviceId: settings.deviceId,
+        groupId: settings.groupId,
+        label: audioTrack.label,
+        sampleRate: settings.sampleRate,
+        channelCount: settings.channelCount,
+        echoCancellation: settings.echoCancellation,
+        noiseSuppression: settings.noiseSuppression,
+        autoGainControl: settings.autoGainControl
+      });
+
+      // Validate it's a real microphone, not a loopback/virtual device
+      const suspiciousDevices = [
+        'stereo mix', 'loopback', 'monitor', 'what u hear', 
+        'blackhole', 'soundflower', 'virtual audio', 'voicemeeter'
+      ];
+      
+      const deviceNameLower = audioTrack.label.toLowerCase();
+      const isSuspicious = suspiciousDevices.some(name => deviceNameLower.includes(name));
+      
+      if (isSuspicious) {
+        stream.getTracks().forEach(track => track.stop());
+        toast({
+          title: "Dispositivo Inválido",
+          description: "Por favor, selecione um microfone físico, não um dispositivo de loopback ou virtual",
+          variant: "destructive"
+        });
+        return;
+      }
 
       // ====== 1. Setup AudioContext for PCM16 transcription ======
       audioContextRef.current = new AudioContext({ sampleRate: 24000 });
@@ -142,6 +217,10 @@ const InPersonMeeting = () => {
         
         // Generate meeting ID
         meetingIdRef.current = `in-person-${Date.now()}`;
+        
+        // Reset audio buffer and timestamp
+        audioBufferRef.current = new Int16Array(0);
+        lastSendTimeRef.current = Date.now();
         
         ws.send(JSON.stringify({
           type: 'start_transcription',
@@ -187,15 +266,17 @@ const InPersonMeeting = () => {
 
       // ====== 3. Process audio in real-time for transcription ======
       processorRef.current.onaudioprocess = (e) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          const inputData = e.inputBuffer.getChannelData(0);
-          const pcm16Base64 = convertToPCM16Base64(inputData);
-          
-          ws.send(JSON.stringify({
-            type: 'audio_data',
-            audio: pcm16Base64
-          }));
+        const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Convert Float32 to Int16 (PCM16)
+        const int16Data = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
+        
+        // Accumulate audio and send when buffer is large enough
+        accumulateAndSendAudio(int16Data);
       };
 
       sourceRef.current.connect(processorRef.current);
@@ -231,6 +312,27 @@ const InPersonMeeting = () => {
   };
 
   const stopRecording = async () => {
+    // Send any remaining audio in buffer before stopping
+    if (audioBufferRef.current.length > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log(`🎵 Enviando áudio final: ${audioBufferRef.current.length} samples`);
+      
+      const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      
+      const base64Audio = btoa(binary);
+      
+      wsRef.current.send(JSON.stringify({
+        type: 'audio_data',
+        audio: base64Audio
+      }));
+    }
+
     // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -257,11 +359,16 @@ const InPersonMeeting = () => {
       setCurrentStream(null);
     }
 
-    // Close WebSocket
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
-      wsRef.current.close();
-    }
+    // Close WebSocket with a small delay to allow final audio to be processed
+    setTimeout(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
+        wsRef.current.close();
+      }
+    }, 500);
+
+    // Clear audio buffer
+    audioBufferRef.current = new Int16Array(0);
 
     setIsRecording(false);
     await saveRecording();
@@ -389,11 +496,17 @@ const InPersonMeeting = () => {
         </DialogContent>
       </Dialog>
 
-      {otherAudioSources.length > 0 && !isRecording && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Atenção:</strong> Feche outras abas que estejam reproduzindo áudio antes de iniciar a gravação para garantir que apenas o microfone seja capturado.
+      {!isRecording && (
+        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+          <AlertTriangle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800 dark:text-blue-300">
+            <strong>Importante antes de gravar:</strong>
+            <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
+              <li>Feche TODAS as abas com vídeos, músicas ou qualquer áudio (YouTube, Spotify, etc.)</li>
+              <li>Selecione um microfone físico real, não um dispositivo virtual ou de loopback</li>
+              <li>Use fones de ouvido para evitar feedback e eco</li>
+              <li>Teste o microfone antes de iniciar a gravação</li>
+            </ul>
           </AlertDescription>
         </Alert>
       )}

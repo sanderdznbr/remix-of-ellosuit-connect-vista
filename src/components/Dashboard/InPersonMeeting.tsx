@@ -34,6 +34,9 @@ const InPersonMeeting = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const meetingIdRef = useRef<string>('');
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -61,6 +64,26 @@ const InPersonMeeting = () => {
     } catch (error) {
       console.error('Erro ao verificar fontes de áudio:', error);
     }
+  };
+
+  // Convert Float32Array to PCM16 base64
+  const convertToPCM16Base64 = (float32Array: Float32Array): string => {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32Array[i]));
+      int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    
+    const uint8Array = new Uint8Array(int16Array.buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    return btoa(binary);
   };
 
   const startRecording = async () => {
@@ -99,9 +122,16 @@ const InPersonMeeting = () => {
       // Verify the audio track
       const audioTrack = stream.getAudioTracks()[0];
       console.log('✅ Usando dispositivo:', audioTrack.label);
-      console.log('🎤 Configurações:', audioTrack.getSettings());
+      console.log('🎤 Configurações do track:', audioTrack.getSettings());
 
-      // Connect to transcription WebSocket
+      // ====== 1. Setup AudioContext for PCM16 transcription ======
+      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
+      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+
+      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
+
+      // ====== 2. Connect to transcription WebSocket ======
       const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -155,7 +185,25 @@ const InPersonMeeting = () => {
         });
       };
 
-      // Setup MediaRecorder
+      // ====== 3. Process audio in real-time for transcription ======
+      processorRef.current.onaudioprocess = (e) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const pcm16Base64 = convertToPCM16Base64(inputData);
+          
+          ws.send(JSON.stringify({
+            type: 'audio_data',
+            audio: pcm16Base64
+          }));
+        }
+      };
+
+      sourceRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioContextRef.current.destination);
+
+      console.log('✅ Pipeline de áudio PCM16 conectado');
+
+      // ====== 4. Setup MediaRecorder for saving file ======
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       });
@@ -164,26 +212,13 @@ const InPersonMeeting = () => {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('🎵 Chunk:', event.data.size, 'bytes');
+          console.log('💾 Salvando chunk para arquivo:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
-          
-          // Send audio to transcription service
-          if (ws.readyState === WebSocket.OPEN) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const base64Audio = (reader.result as string).split(',')[1];
-              ws.send(JSON.stringify({
-                type: 'audio_data',
-                audio: base64Audio
-              }));
-            };
-            reader.readAsDataURL(event.data);
-          }
         }
       };
 
       mediaRecorder.start(1000); // 1 second chunks
-      console.log('✅ Gravação iniciada');
+      console.log('✅ MediaRecorder iniciado para salvar arquivo');
 
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
@@ -196,16 +231,33 @@ const InPersonMeeting = () => {
   };
 
   const stopRecording = async () => {
+    // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
+    // Clean up AudioContext pipeline
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    // Stop stream
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
       setCurrentStream(null);
     }
 
+    // Close WebSocket
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
       wsRef.current.close();

@@ -98,9 +98,34 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !room || !localParticipant) return;
+    if (!inputMessage.trim()) {
+      console.warn('⚠️ Mensagem vazia');
+      return;
+    }
+    
+    if (!room) {
+      console.error('❌ Room não disponível');
+      toast({
+        title: "Erro",
+        description: "Sala não conectada",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!localParticipant) {
+      console.error('❌ LocalParticipant não disponível');
+      toast({
+        title: "Erro",
+        description: "Você não está conectado à sala",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
+      console.log('📤 Enviando mensagem:', inputMessage);
+      
       const messageData = {
         type: 'chat',
         text: inputMessage,
@@ -110,7 +135,13 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
       const encoder = new TextEncoder();
       const data = encoder.encode(JSON.stringify(messageData));
       
+      if (!room.localParticipant) {
+        throw new Error('LocalParticipant não disponível no room');
+      }
+      
       await room.localParticipant.publishData(data, { reliable: true });
+      
+      console.log('✅ Mensagem enviada com sucesso');
       
       const senderName = localParticipant.name || localParticipant.identity || 'Você';
       setMessages(prev => [...prev, {
@@ -122,10 +153,10 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
       
       setInputMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Erro ao enviar mensagem:', error);
       toast({
         title: "Erro ao enviar mensagem",
-        description: "Não foi possível enviar a mensagem",
+        description: error instanceof Error ? error.message : "Não foi possível enviar a mensagem",
         variant: "destructive"
       });
     }
@@ -355,36 +386,44 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             </ScrollArea>
 
             <div className="flex-none p-4 border-t border-border bg-background">
-              <div className="flex gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  size="sm"
-                  variant="ghost"
-                  className="px-3"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-                <Input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleSendMessage}
-                  disabled={!inputMessage.trim()}
-                  size="sm"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              {!room || !localParticipant ? (
+                <div className="text-center py-2">
+                  <p className="text-xs text-muted-foreground">Conectando ao chat...</p>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    size="sm"
+                    variant="ghost"
+                    className="px-3"
+                    disabled={!room || !localParticipant}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Digite sua mensagem..."
+                    className="flex-1 bg-background"
+                    disabled={!room || !localParticipant}
+                  />
+                  <Button 
+                    onClick={handleSendMessage}
+                    disabled={!inputMessage.trim() || !room || !localParticipant}
+                    size="sm"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </TabsContent>
         </div>

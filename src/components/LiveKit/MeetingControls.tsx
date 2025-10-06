@@ -420,20 +420,28 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
       };
 
       recorder.onstop = async () => {
-        console.log('⏹️ MediaRecorder parado, salvando áudio completo...');
+        console.log('⏹️ MediaRecorder parado, total de chunks:', audioChunksRef.current.length);
         
         // Save complete audio file for speaker diarization
         if (audioChunksRef.current.length > 0) {
           try {
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            console.log('📦 Tamanho total do blob:', audioBlob.size, 'bytes');
+            
             const fileName = `online-meeting-${roomCode}-${Date.now()}.webm`;
+            console.log('💾 Fazendo upload:', fileName);
             
             const { error: uploadError, data: uploadData } = await supabase.storage
               .from('meeting-recordings')
               .upload(fileName, audioBlob);
             
             if (uploadError) {
-              console.error('Erro ao salvar áudio:', uploadError);
+              console.error('❌ Erro ao salvar áudio:', uploadError);
+              toast({
+                title: "Erro ao salvar áudio",
+                description: "Não foi possível salvar a gravação",
+                variant: "destructive"
+              });
             } else {
               // Get public URL for AssemblyAI
               const { data: publicUrlData } = supabase.storage
@@ -442,10 +450,19 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
               
               savedAudioUrlRef.current = publicUrlData.publicUrl;
               console.log('✅ Áudio completo salvo:', savedAudioUrlRef.current);
+              console.log('📍 Nome do arquivo:', fileName);
+              console.log('🌐 URL pública:', savedAudioUrlRef.current);
             }
           } catch (error) {
-            console.error('Erro ao processar áudio completo:', error);
+            console.error('❌ Erro ao processar áudio completo:', error);
+            toast({
+              title: "Erro",
+              description: "Não foi possível processar o áudio",
+              variant: "destructive"
+            });
           }
+        } else {
+          console.warn('⚠️ Nenhum chunk de áudio para salvar');
         }
       };
 
@@ -495,8 +512,13 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
     });
   };
 
-  const getSavedAudioUrl = () => savedAudioUrlRef.current;
+  const getSavedAudioUrl = () => {
+    console.log('🔍 getSavedAudioUrl chamado:', savedAudioUrlRef.current);
+    return savedAudioUrlRef.current;
+  };
+  
   const clearAudioData = () => {
+    console.log('🗑️ Limpando dados de áudio');
     audioChunksRef.current = [];
     savedAudioUrlRef.current = '';
   };
@@ -504,10 +526,16 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     getSavedAudioUrl,
-    clearAudioData
+    clearAudioData,
+    stopAudioCapture
   }));
 
   const startTranscription = () => {
+    if (isTranscribing) {
+      console.log('⚠️ Transcrição já está ativa');
+      return;
+    }
+    
     try {
       console.log('🚀 Iniciando transcrição automática...');
       const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
@@ -612,6 +640,7 @@ const MeetingControls = forwardRef<any, MeetingControlsProps>(({
   }, [room, roomCode, localParticipant]);
 
   const stopTranscription = async () => {
+    console.log('🛑 stopTranscription chamado');
     if (transcriptionWs) {
       transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
       transcriptionWs.close();

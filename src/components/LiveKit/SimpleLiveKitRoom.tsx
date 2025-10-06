@@ -208,42 +208,82 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [generateToken, participantName]);
 
   const handleLeaveClick = async () => {
-    console.log('🚪 Sair - transcrições:', transcriptionMessages.length);
+    console.log('🚪 Iniciando processo de saída...');
     
+    // Stop audio capture first
+    if (meetingControlsRef.current?.stopAudioCapture) {
+      console.log('⏸️ Parando captura de áudio...');
+      await meetingControlsRef.current.stopAudioCapture();
+    }
+    
+    // Get saved audio URL
     let audioUrl = '';
     if (meetingControlsRef.current?.getSavedAudioUrl) {
       audioUrl = meetingControlsRef.current.getSavedAudioUrl();
-      console.log('🎙️ Áudio:', audioUrl ? 'Sim' : 'Não');
+      console.log('🎙️ URL do áudio salvo:', audioUrl || 'Nenhum');
       setSavedAudioUrl(audioUrl);
     }
     
-    if (transcriptionMessages.length > 0 || audioUrl) {
-      console.log('✅ Abrindo modal de saída');
+    // If we have audio, process speaker diarization
+    if (audioUrl) {
+      console.log('🎤 Processando identificação de speakers...');
+      setIsProcessingTranscript(true);
       
-      if (audioUrl) {
-        setIsProcessingTranscript(true);
+      try {
+        toast({
+          title: "🎙️ Identificando Vozes",
+          description: "Analisando tom de voz para identificar cada pessoa... Isso pode levar alguns minutos.",
+          duration: 10000,
+        });
         
-        try {
-          const { data, error } = await supabase.functions.invoke('speaker-diarization', {
-            body: { audioUrl }
-          });
-          
-          if (!error && data) {
-            console.log('✅ Diarização completa:', data);
-            if (data.segments) {
-              // Process segments...
-            }
-          }
-        } catch (error) {
-          console.error('Erro na diarização:', error);
-        } finally {
-          setIsProcessingTranscript(false);
+        const { data, error } = await supabase.functions.invoke('speaker-diarization', {
+          body: { audioUrl }
+        });
+        
+        if (error) {
+          console.error('❌ Erro na diarização:', error);
+          throw error;
         }
+        
+        if (data && data.success && data.segments && data.segments.length > 0) {
+          console.log(`✅ AssemblyAI retornou ${data.speakerCount} speakers`);
+          console.log('📊 Segments:', data.segments.length);
+          
+          // Convert segments to transcription messages format
+          const transcriptMsgs: TranscriptionMessage[] = data.segments.map((seg: any) => ({
+            text: seg.text,
+            is_final: true,
+            timestamp: new Date().toISOString(),
+            speaker: seg.speaker
+          }));
+          
+          setTranscriptionMessages(transcriptMsgs);
+          
+          toast({
+            title: "✅ Transcrição Completa",
+            description: `${data.speakerCount} voz${data.speakerCount > 1 ? 'es' : ''} identificada${data.speakerCount > 1 ? 's' : ''}!`,
+          });
+        } else {
+          console.warn('⚠️ Nenhum segmento retornado da diarização');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao processar diarização:', error);
+        toast({
+          title: "Erro na Transcrição",
+          description: "Não foi possível processar a transcrição completa",
+          variant: "destructive"
+        });
+      } finally {
+        setIsProcessingTranscript(false);
       }
-      
+    }
+    
+    // Show exit modal if we have any data
+    if (transcriptionMessages.length > 0 || audioUrl) {
+      console.log('✅ Abrindo modal de saída com dados');
       setShowExitModal(true);
     } else {
-      console.log('❌ Saindo direto');
+      console.log('ℹ️ Nenhum dado de transcrição, saindo direto');
       handleDisconnected();
     }
   };

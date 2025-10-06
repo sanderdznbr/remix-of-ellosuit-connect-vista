@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { 
   Mic, 
   MicOff, 
@@ -32,7 +32,7 @@ interface MeetingControlsProps {
   onTranscriptionMessage: (msg: {text: string, is_final: boolean, timestamp: string}) => void;
 }
 
-const MeetingControls: React.FC<MeetingControlsProps> = ({
+const MeetingControls = forwardRef<any, MeetingControlsProps>(({
   onToggleChat,
   onToggleParticipants,
   onShareMeeting,
@@ -43,7 +43,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   companyId,
   onToggleTranscription,
   onTranscriptionMessage
-}) => {
+}, ref) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
   const { toast } = useToast();
@@ -59,6 +59,8 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const savedAudioUrlRef = useRef<string>('');
 
   const toggleMic = async () => {
     if (localParticipant) {
@@ -376,8 +378,12 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
 
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          console.log(`📦 Áudio capturado: ${event.data.size} bytes, WebSocket estado: ${ws.readyState}`);
+          console.log(`📦 Áudio capturado: ${event.data.size} bytes`);
           
+          // Save for speaker diarization later
+          audioChunksRef.current.push(event.data);
+          
+          // Send to real-time transcription
           if (ws.readyState === WebSocket.OPEN) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -394,7 +400,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             };
             reader.readAsDataURL(event.data);
           } else {
-            console.warn('⚠️ WebSocket não está aberto, dados de áudio descartados');
+            console.warn('⚠️ WebSocket não está aberto, mas áudio foi salvo para diarização');
           }
         }
       };
@@ -407,12 +413,38 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
         console.log('▶️ MediaRecorder iniciado');
       };
 
-      recorder.onstop = () => {
-        console.log('⏹️ MediaRecorder parado');
+      recorder.onstop = async () => {
+        console.log('⏹️ MediaRecorder parado, salvando áudio completo...');
+        
+        // Save complete audio file for speaker diarization
+        if (audioChunksRef.current.length > 0) {
+          try {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const fileName = `online-meeting-${roomCode}-${Date.now()}.webm`;
+            
+            const { error: uploadError, data: uploadData } = await supabase.storage
+              .from('meeting-recordings')
+              .upload(fileName, audioBlob);
+            
+            if (uploadError) {
+              console.error('Erro ao salvar áudio:', uploadError);
+            } else {
+              // Get public URL for AssemblyAI
+              const { data: publicUrlData } = supabase.storage
+                .from('meeting-recordings')
+                .getPublicUrl(fileName);
+              
+              savedAudioUrlRef.current = publicUrlData.publicUrl;
+              console.log('✅ Áudio completo salvo:', savedAudioUrlRef.current);
+            }
+          } catch (error) {
+            console.error('Erro ao processar áudio completo:', error);
+          }
+        }
       };
 
-      // Start recording with 1 second chunks
-      recorder.start(1000);
+      // Start recording with 3 second chunks (better for transcription quality)
+      recorder.start(3000);
       console.log('✅ Captura de áudio iniciada com sucesso!');
 
       toast({
@@ -430,24 +462,44 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
     }
   };
 
-  const stopAudioCapture = () => {
+  const stopAudioCapture = async () => {
     console.log('Parando captura de áudio...');
     
-    if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
-    }
-    
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => track.stop());
-      audioStreamRef.current = null;
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
+    return new Promise<void>((resolve) => {
+      if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+        audioRecorderRef.current.onstop = async () => {
+          console.log('MediaRecorder stopped');
+          resolve();
+        };
+        audioRecorderRef.current.stop();
+        audioRecorderRef.current = null;
+      } else {
+        resolve();
+      }
+      
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
+      
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    });
   };
+
+  const getSavedAudioUrl = () => savedAudioUrlRef.current;
+  const clearAudioData = () => {
+    audioChunksRef.current = [];
+    savedAudioUrlRef.current = '';
+  };
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    getSavedAudioUrl,
+    clearAudioData
+  }));
 
   const startTranscription = () => {
     try {
@@ -535,10 +587,15 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
       console.log(`  - Local participant: ${localParticipant.identity}`);
       console.log(`  - Remote participants: ${room.remoteParticipants.size}`);
       
+      // Clear any previous audio data
+      audioChunksRef.current = [];
+      savedAudioUrlRef.current = '';
+      
       // Wait for room to be fully connected and audio tracks to be ready
       const timer = setTimeout(() => {
         console.log('⏰ Timer expirou, iniciando transcrição agora...');
         startTranscription();
+        onToggleTranscription(); // Open transcription panel
       }, 3000);
 
       return () => {
@@ -548,14 +605,14 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
     }
   }, [room, roomCode, localParticipant]);
 
-  const stopTranscription = () => {
+  const stopTranscription = async () => {
     if (transcriptionWs) {
       transcriptionWs.send(JSON.stringify({ type: 'stop_transcription' }));
       transcriptionWs.close();
       setTranscriptionWs(null);
     }
     setIsTranscribing(false);
-    stopAudioCapture();
+    await stopAudioCapture();
   };
 
   // Auto-stop recording when component unmounts (user leaves meeting)
@@ -705,6 +762,9 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
       </div>
     </div>
   );
-};
+});
+
+MeetingControls.displayName = 'MeetingControls';
 
 export default MeetingControls;
+export { MeetingControls };

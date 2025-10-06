@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,19 +15,126 @@ interface MeetingExitModalProps {
   onConfirmExit: () => void;
   transcriptionMessages: Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>;
   roomName: string;
+  savedAudioUrl?: string;
 }
 
-export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcriptionMessages, roomName }: MeetingExitModalProps) => {
+export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcriptionMessages, roomName, savedAudioUrl }: MeetingExitModalProps) => {
   const [downloadType, setDownloadType] = useState<'complete' | 'summary' | 'highlights' | 'specific' | null>(null);
   const [specificQuery, setSpecificQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingSpeakers, setIsProcessingSpeakers] = useState(false);
+  const [showSpeakerMapping, setShowSpeakerMapping] = useState(false);
+  const [speakerMapping, setSpeakerMapping] = useState<Record<string, string>>({});
+  const [identifiedSpeakers, setIdentifiedSpeakers] = useState<string[]>([]);
+  const [processedTranscript, setProcessedTranscript] = useState<Array<{text: string, timestamp: string, speaker: string}>>([]);
   const { toast } = useToast();
 
+  // Process speaker diarization when modal opens
+  useEffect(() => {
+    if (isOpen && savedAudioUrl && transcriptionMessages.length > 0 && !isProcessingSpeakers && identifiedSpeakers.length === 0) {
+      processSpeakerDiarization();
+    }
+  }, [isOpen, savedAudioUrl]);
+
+  const processSpeakerDiarization = async () => {
+    if (!savedAudioUrl) {
+      // No audio URL - use transcription as-is
+      setProcessedTranscript(transcriptionMessages.filter(m => m.is_final).map(m => ({
+        text: m.text,
+        timestamp: m.timestamp,
+        speaker: 'Participante'
+      })));
+      return;
+    }
+
+    setIsProcessingSpeakers(true);
+    toast({
+      title: "🎙️ Identificando Vozes",
+      description: "Analisando tom de voz para identificar cada pessoa...",
+      duration: 10000,
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('speaker-diarization', {
+        body: { audioUrl: savedAudioUrl }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.segments && data.segments.length > 0) {
+        console.log(`✅ Identificados ${data.speakerCount} speakers`);
+        
+        // Get unique speakers
+        const speakers = Array.from(new Set(data.segments.map((s: any) => s.speaker))) as string[];
+        setIdentifiedSpeakers(speakers);
+        
+        // Initialize speaker mapping
+        const initialMapping: Record<string, string> = {};
+        speakers.forEach((speaker: string) => {
+          initialMapping[speaker] = '';
+        });
+        setSpeakerMapping(initialMapping);
+        
+        // Store processed transcript with speaker labels
+        const transcript = data.segments.map((seg: any) => ({
+          text: seg.text,
+          timestamp: new Date().toISOString(),
+          speaker: seg.speaker
+        }));
+        setProcessedTranscript(transcript);
+        
+        // Show speaker mapping dialog
+        setShowSpeakerMapping(true);
+        toast({
+          title: "Vozes Identificadas",
+          description: `${speakers.length} pessoa(s) detectada(s). Por favor, identifique cada uma.`,
+        });
+      } else {
+        // No speakers detected, use generic labels
+        setProcessedTranscript(transcriptionMessages.filter(m => m.is_final).map(m => ({
+          text: m.text,
+          timestamp: m.timestamp,
+          speaker: 'Participante'
+        })));
+      }
+    } catch (error) {
+      console.error('Erro na diarização:', error);
+      toast({
+        title: "Não foi possível identificar vozes",
+        description: "Usando transcrição sem identificação de speakers",
+        variant: "destructive"
+      });
+      // Fallback to generic labels
+      setProcessedTranscript(transcriptionMessages.filter(m => m.is_final).map(m => ({
+        text: m.text,
+        timestamp: m.timestamp,
+        speaker: 'Participante'
+      })));
+    } finally {
+      setIsProcessingSpeakers(false);
+    }
+  };
+
+  const handleSpeakerMappingComplete = () => {
+    // Apply speaker mapping to transcript
+    const mappedTranscript = processedTranscript.map(item => ({
+      ...item,
+      speaker: speakerMapping[item.speaker] || item.speaker
+    }));
+    setProcessedTranscript(mappedTranscript);
+    setShowSpeakerMapping(false);
+    
+    toast({
+      title: "Mapeamento Concluído",
+      description: "Agora você pode baixar a transcrição com os nomes corretos",
+    });
+  };
+
   const handleDownload = async (type: 'complete' | 'summary' | 'highlights' | 'specific') => {
-    if (transcriptionMessages.length === 0) {
+    if (processedTranscript.length === 0) {
       toast({
         title: "Sem transcrição",
-        description: "Não há transcrição disponível para download",
+        description: "Aguarde o processamento da transcrição",
         variant: "destructive"
       });
       return;
@@ -35,9 +142,8 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
 
     setIsProcessing(true);
     try {
-      const fullTranscript = transcriptionMessages
-        .filter(msg => msg.is_final)
-        .map(msg => `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker || 'Participante'}: ${msg.text}`)
+      const fullTranscript = processedTranscript
+        .map(msg => `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker}: ${msg.text}`)
         .join('\n\n');
 
       if (type === 'complete') {
@@ -145,6 +251,82 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
     onClose();
   };
 
+  // Show loading while processing speakers
+  if (isProcessingSpeakers) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Processando Transcrição</DialogTitle>
+            <DialogDescription>
+              Identificando vozes e preparando a transcrição...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">
+              Analisando tom de voz de cada participante
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show speaker mapping dialog
+  if (showSpeakerMapping) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Identificar Participantes</DialogTitle>
+            <DialogDescription>
+              {identifiedSpeakers.length} voz(es) detectada(s). Por favor, identifique cada pessoa:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {identifiedSpeakers.map((speaker) => (
+              <div key={speaker} className="space-y-2">
+                <Label htmlFor={speaker}>{speaker}</Label>
+                <Input
+                  id={speaker}
+                  value={speakerMapping[speaker] || ''}
+                  onChange={(e) => setSpeakerMapping({
+                    ...speakerMapping,
+                    [speaker]: e.target.value
+                  })}
+                  placeholder="Digite o nome da pessoa"
+                />
+              </div>
+            ))}
+
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Skip mapping
+                  setShowSpeakerMapping(false);
+                }} 
+                className="flex-1"
+              >
+                Pular Mapeamento
+              </Button>
+              <Button 
+                onClick={handleSpeakerMappingComplete}
+                className="flex-1"
+                disabled={Object.values(speakerMapping).every(v => !v.trim())}
+              >
+                Confirmar Identificação
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show download options
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">

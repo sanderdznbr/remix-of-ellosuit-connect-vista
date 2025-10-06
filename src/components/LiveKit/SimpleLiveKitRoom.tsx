@@ -58,6 +58,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [transcriptionMessages, setTranscriptionMessages] = useState<Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>>([]);
   const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [savedAudioUrl, setSavedAudioUrl] = useState<string>('');
+  const meetingControlsRef = useRef<any>(null);
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -213,7 +215,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setSidebarTab(tab);
   };
 
-  const handleLeaveClick = () => {
+  const handleLeaveClick = async () => {
+    // Get saved audio URL from MeetingControls if available
+    if (meetingControlsRef.current?.getSavedAudioUrl) {
+      const audioUrl = meetingControlsRef.current.getSavedAudioUrl();
+      setSavedAudioUrl(audioUrl);
+    }
+    
     // If there are transcriptions, show exit modal
     if (transcriptionMessages.length > 0) {
       setShowExitModal(true);
@@ -410,6 +418,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   <ZoomParticipantGrid />
                   
                   <MeetingControls
+                    ref={meetingControlsRef}
                     onToggleChat={() => toggleSidebar('chat')}
                     onToggleParticipants={() => toggleSidebar('participants')}
                     onShareMeeting={() => setShowShareModal(true)}
@@ -468,6 +477,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onConfirmExit={handleDisconnected}
             transcriptionMessages={transcriptionMessages}
             roomName={roomName}
+            savedAudioUrl={savedAudioUrl}
           />
         </LiveKitRoom>
       ) : (

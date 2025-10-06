@@ -155,13 +155,13 @@ serve(async (req) => {
           
           audioBuffer.push(bytes);
           
-          // Process buffer every 5 seconds or when it reaches a certain size (5MB)
+          // Process buffer every 3-4 seconds (better for real-time quality)
           const bufferSize = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
           const timeSinceStart = Date.now() - bufferStartTime;
           
           console.log(`📊 Buffer status: ${bufferSize} bytes, ${timeSinceStart}ms elapsed`);
           
-          if (timeSinceStart >= 5000 || bufferSize >= 5 * 1024 * 1024) {
+          if (timeSinceStart >= 3000 || bufferSize >= 3 * 1024 * 1024) {
             console.log('🔄 Processing audio buffer NOW - size:', bufferSize, 'time:', timeSinceStart);
             
             // Combine all chunks

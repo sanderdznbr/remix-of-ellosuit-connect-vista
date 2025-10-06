@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2, Play, FileText } from 'lucide-react';
+import { Plus, Video, Users, Settings, ExternalLink, Copy, Trash2, Play, FileText, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,12 +15,14 @@ import { ptBR } from 'date-fns/locale';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import MeetingRecordings from './MeetingRecordings';
 import MeetingTranscriptions from './MeetingTranscriptions';
+import InPersonMeeting from './InPersonMeeting';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showRecordingsDialog, setShowRecordingsDialog] = useState(false);
   const [showTranscriptionsDialog, setShowTranscriptionsDialog] = useState(false);
+  const [showInPersonDialog, setShowInPersonDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
@@ -133,6 +135,21 @@ const MeetingRooms = () => {
             </DialogTrigger>
             <DialogContent className="max-w-6xl max-h-[90vh] p-0">
               <MeetingTranscriptions />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showInPersonDialog} onOpenChange={setShowInPersonDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                <Mic className="h-4 w-4" />
+                Reunião Presencial
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh]">
+              <InPersonMeeting />
             </DialogContent>
           </Dialog>
           

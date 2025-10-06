@@ -29,6 +29,7 @@ interface MeetingControlsProps {
   roomCode: string;
   companyId: string;
   onToggleTranscription: () => void;
+  onTranscriptionMessage: (msg: {text: string, is_final: boolean, timestamp: string}) => void;
 }
 
 const MeetingControls: React.FC<MeetingControlsProps> = ({
@@ -40,7 +41,8 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   isParticipantsOpen,
   roomCode,
   companyId,
-  onToggleTranscription
+  onToggleTranscription,
+  onTranscriptionMessage
 }) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -484,6 +486,12 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
             console.log('✅ Transcrição iniciada no servidor');
           } else if (data.type === 'transcript_update') {
             console.log('📝 Atualização de transcrição recebida:', data.text?.substring(0, 50) + '...');
+            // Enviar mensagem para o TranscriptionPanel
+            onTranscriptionMessage({
+              text: data.text,
+              is_final: data.is_final,
+              timestamp: data.timestamp
+            });
           } else if (data.type === 'error') {
             console.error('❌ Erro do servidor:', data.error);
           }

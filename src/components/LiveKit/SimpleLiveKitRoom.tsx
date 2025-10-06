@@ -53,6 +53,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [companyId, setCompanyId] = useState<string>('');
+  const [transcriptionMessages, setTranscriptionMessages] = useState<Array<{text: string, is_final: boolean, timestamp: string}>>([]);
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -397,6 +398,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     roomCode={roomName}
                     companyId={companyId}
                     onToggleTranscription={() => toggleSidebar('transcription')}
+                    onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
                   />
                 </div>
 
@@ -422,6 +424,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                       setSidebarTab(tab);
                     }}
                     roomId={roomName}
+                    transcriptionMessages={transcriptionMessages}
+                    onTranscriptionMessagesUpdate={setTranscriptionMessages}
                   />
                 </div>
               </div>

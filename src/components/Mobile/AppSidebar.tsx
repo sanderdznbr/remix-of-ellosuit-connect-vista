@@ -97,8 +97,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={`${isCollapsed ? "w-14" : "w-64"} border-r border-gray-200 bg-white`}
+      className={`${isCollapsed ? "w-14" : "w-64"} border-r`}
       style={{ backgroundColor: 'hsl(var(--primary))' }}
+      collapsible="icon"
     >
       <SidebarContent className="bg-primary text-white">
         {/* Logo */}

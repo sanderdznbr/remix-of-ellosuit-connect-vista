@@ -9,6 +9,24 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
   const animationRef = useRef<number>();
   const analyserRef = useRef<AnalyserNode>();
   const [volume, setVolume] = useState(0);
+  const [primaryColor, setPrimaryColor] = useState('rgb(99, 102, 241)'); // Fallback color
+
+  useEffect(() => {
+    // Get computed primary color from CSS variable
+    if (canvasRef.current) {
+      const computedStyle = getComputedStyle(canvasRef.current);
+      const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
+      
+      if (primaryHsl) {
+        // Convert HSL to RGB for canvas
+        const hslValues = primaryHsl.split(' ').map(v => parseFloat(v));
+        if (hslValues.length >= 3) {
+          const [h, s, l] = hslValues;
+          setPrimaryColor(`hsl(${h}, ${s}%, ${l}%)`);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!stream) {
@@ -31,7 +49,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
       }
       audioContext.close();
     };
-  }, [stream]);
+  }, [stream, primaryColor]);
 
   const visualize = () => {
     if (!analyserRef.current || !canvasRef.current) return;
@@ -70,12 +88,10 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
         const dataIndex = Math.floor((i / barCount) * bufferLength);
         const barHeight = (dataArray[dataIndex] / 255) * canvas.height;
         
-        // Create gradient for bars
-        const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
-        gradient.addColorStop(0, 'hsl(var(--primary))');
-        gradient.addColorStop(1, 'hsl(var(--primary) / 0.5)');
+        // Use direct color values that canvas can understand
+        ctx.fillStyle = primaryColor;
+        ctx.globalAlpha = 0.6 + (barHeight / canvas.height) * 0.4; // Vary opacity
         
-        ctx.fillStyle = gradient;
         ctx.fillRect(
           i * barWidth + gap / 2,
           canvas.height - barHeight,
@@ -83,6 +99,8 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
           barHeight
         );
       }
+      
+      ctx.globalAlpha = 1.0; // Reset alpha
     };
 
     draw();

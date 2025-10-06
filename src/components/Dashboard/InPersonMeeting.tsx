@@ -400,25 +400,13 @@ const InPersonMeeting = () => {
 
       if (uploadError) throw uploadError;
 
-      // Try to get URL for AssemblyAI - first try signed URL, fallback to public URL
-      let fileUrl: string;
-      
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      // Get public URL for AssemblyAI access
+      const { data: publicUrlData } = supabase.storage
         .from('meeting-recordings')
-        .createSignedUrl(fileName, 3600);
+        .getPublicUrl(fileName);
 
-      if (signedUrlData?.signedUrl) {
-        fileUrl = signedUrlData.signedUrl;
-        console.log('✅ URL assinada gerada para AssemblyAI:', fileUrl);
-      } else {
-        // Fallback to public URL if bucket is public
-        const { data: publicUrlData } = supabase.storage
-          .from('meeting-recordings')
-          .getPublicUrl(fileName);
-        
-        fileUrl = publicUrlData.publicUrl;
-        console.log('✅ URL pública gerada para AssemblyAI:', fileUrl);
-      }
+      const fileUrl = publicUrlData.publicUrl;
+      console.log('✅ URL pública gerada para AssemblyAI:', fileUrl);
 
       // Initial save with Whisper transcript
       const whisperTranscript = transcript.map(t => `${t.speaker}: ${t.text}`).join('\n');

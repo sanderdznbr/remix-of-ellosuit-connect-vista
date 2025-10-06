@@ -190,9 +190,14 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     }
     const rms = Math.sqrt(sum / pcm16Data.length);
     
-    // Threshold para detectar silêncio (ajuste conforme necessário)
-    // Valores típicos: 100-500 para 16-bit PCM
-    const SILENCE_THRESHOLD = 300;
+    // Threshold mais rigoroso para detectar silêncio
+    // Aumentado significativamente para evitar capturar ruídos
+    const SILENCE_THRESHOLD = 800;
+    
+    // Log do nível de áudio para debug
+    if (rms > SILENCE_THRESHOLD / 2) {
+      console.log('🔊 Nível RMS:', rms.toFixed(2));
+    }
     
     // Se o RMS está abaixo do threshold, é silêncio - não acumula
     if (rms < SILENCE_THRESHOLD) {
@@ -210,9 +215,9 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
 
     // Send only if:
-    // 1. Buffer has at least 4 seconds of audio (aumentado de 3 para 4)
-    // 2. At least 3 seconds passed since last send (aumentado de 2 para 3)
-    if (bufferDurationMs >= 4000 && timeSinceLastSend >= 3000) {
+    // 1. Buffer has at least 5 seconds of audio (aumentado para 5)
+    // 2. At least 4 seconds passed since last send (aumentado para 4)
+    if (bufferDurationMs >= 5000 && timeSinceLastSend >= 4000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms, RMS: ${rms.toFixed(2)})`);
         

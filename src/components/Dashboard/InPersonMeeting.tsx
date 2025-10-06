@@ -379,8 +379,11 @@ const InPersonMeeting = () => {
       }
     }, 500);
 
-    // Clear audio buffer
+    // Clear audio buffer and reset speaker tracking
     audioBufferRef.current = new Int16Array(0);
+    lastSpeakerTimeRef.current = Date.now();
+    currentSpeakerRef.current = 1;
+    speakerCountRef.current = 1;
 
     setIsRecording(false);
     await saveRecording();
@@ -412,18 +415,21 @@ const InPersonMeeting = () => {
         .from('meeting-recordings')
         .getPublicUrl(fileName);
 
-      const fullTranscript = transcript.map(t => t.text).join(' ');
+      // Initial save with Whisper transcript
+      const whisperTranscript = transcript.map(t => `${t.speaker}: ${t.text}`).join('\n');
       
-      const { error: dbError } = await supabase
+      const { data: meetingData, error: dbError } = await supabase
         .from('in_person_meetings')
         .insert({
           title: meetingTitle,
           file_url: urlData.publicUrl,
-          transcript: fullTranscript,
+          transcript: whisperTranscript,
           created_by: user.id,
           company_id: companyData.company_id,
           duration_seconds: Math.floor(audioChunksRef.current.length),
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
 
@@ -435,12 +441,69 @@ const InPersonMeeting = () => {
       setShowSummary(true);
       setShowDownloadOptions(true);
 
+      // Process speaker diarization in background
+      processSpeakerDiarization(urlData.publicUrl, meetingData.id);
+
     } catch (error) {
       console.error('Erro ao salvar reunião:', error);
       toast({
         title: "Erro ao Salvar",
         description: "Não foi possível salvar a reunião",
         variant: "destructive"
+      });
+    }
+  };
+
+  const processSpeakerDiarization = async (audioUrl: string, meetingId: string) => {
+    try {
+      console.log('🎤 Processando identificação de speakers com AssemblyAI...');
+      
+      toast({
+        title: "Processando Áudio",
+        description: "Identificando speakers automaticamente...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('speaker-diarization', {
+        body: { audioUrl }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.segments) {
+        console.log(`✅ Identificados ${data.speakerCount} speakers`);
+
+        // Update transcript with speaker labels from AssemblyAI
+        const updatedTranscript = data.segments.map((seg: any) => 
+          `${seg.speaker}: ${seg.text}`
+        ).join('\n');
+
+        // Update the meeting record
+        const { error: updateError } = await supabase
+          .from('in_person_meetings')
+          .update({ transcript: updatedTranscript })
+          .eq('id', meetingId);
+
+        if (updateError) throw updateError;
+
+        // Update local transcript state
+        const newTranscript = data.segments.map((seg: any) => ({
+          text: seg.text,
+          timestamp: new Date().toISOString(),
+          speaker: seg.speaker
+        }));
+        setTranscript(newTranscript);
+
+        toast({
+          title: "Speakers Identificados",
+          description: `${data.speakerCount} pessoas diferentes foram detectadas`,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao processar speaker diarization:', error);
+      toast({
+        title: "Aviso",
+        description: "Não foi possível identificar speakers automaticamente. Usando detecção por tempo.",
+        variant: "default"
       });
     }
   };

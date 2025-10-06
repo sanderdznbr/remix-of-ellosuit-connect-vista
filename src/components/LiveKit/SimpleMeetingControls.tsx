@@ -24,7 +24,7 @@ interface SimpleMeetingControlsProps {
   onShareMeeting: () => void;
   onLeave: () => void;
   onSettingsClick: () => void;
-  onToggleTranscription: () => void;
+  onToggleTranscription: (newState: boolean) => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
 }
@@ -86,13 +86,19 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   };
 
   const handleTranscriptionToggle = () => {
-    setShowTranscription(!showTranscription);
-    onToggleTranscription();
+    const newState = !showTranscription;
+    setShowTranscription(newState);
+    onToggleTranscription(newState);
     
-    if (!showTranscription) {
+    if (newState) {
       toast({
         title: "Transcrição Ativa",
-        description: "O LiveKit está capturando e transcrevendo o áudio em tempo real",
+        description: "Capturando áudio em canal separado para transcrição",
+      });
+    } else {
+      toast({
+        title: "Transcrição Pausada",
+        description: "Captura pausada",
       });
     }
   };

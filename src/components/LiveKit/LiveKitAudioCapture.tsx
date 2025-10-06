@@ -41,9 +41,10 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
   const startCapture = async () => {
     try {
-      console.log('🎤 Iniciando captura de áudio para transcrição...');
+      console.log('🎤 Iniciando captura SEPARADA de áudio para transcrição (não interfere no LiveKit)...');
 
-      // Get microphone access
+      // IMPORTANTE: Criar um stream INDEPENDENTE do LiveKit
+      // Este é um segundo canal de áudio apenas para transcrição
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 24000,
@@ -55,7 +56,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       });
 
       streamRef.current = stream;
-      console.log('✅ Microfone acessado');
+      console.log('✅ Canal SEPARADO de áudio criado para transcrição (LiveKit não afetado)');
 
       // Create AudioContext
       audioContextRef.current = new AudioContext({ sampleRate: 24000 });
@@ -115,7 +116,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('✅ WebSocket conectado');
+        console.log('✅ WebSocket conectado para transcrição');
         setIsConnected(true);
 
         // Start transcription
@@ -124,10 +125,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
           roomId: roomName
         }));
 
-        toast({
-          title: "Transcrição Ativa",
-          description: "O LiveKit está capturando e transcrevendo o áudio em tempo real",
-        });
+        console.log('📡 Transcrição iniciada - Canal independente do LiveKit');
       };
 
       wsRef.current.onmessage = (event) => {

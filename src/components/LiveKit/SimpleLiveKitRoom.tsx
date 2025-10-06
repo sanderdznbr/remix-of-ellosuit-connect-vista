@@ -63,10 +63,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [showPreJoin, setShowPreJoin] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'participants' | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showTranscriptionModal, setShowTranscriptionModal] = useState(false);
+  const [showTranscriptionModal, setShowTranscriptionModal] = useState(true);
   const [companyId, setCompanyId] = useState<string>('');
   const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
-  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(true); // Auto-start transcription
   const [showExitModal, setShowExitModal] = useState(false);
   const [savedAudioUrl, setSavedAudioUrl] = useState<string>('');
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
@@ -393,6 +393,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
               )}
 
+              {/* Transcription Active Indicator */}
+              {isTranscribing && (
+                <div className="fixed bottom-20 right-6 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  <span className="text-sm font-medium">Transcrição Ativa</span>
+                  <span className="text-xs opacity-80">Canal independente do LiveKit</span>
+                </div>
+              )}
+
               <div className="h-screen w-full flex flex-col bg-background">
                 {/* Header Clean - Light Theme */}
                 <div className="bg-background px-6 py-3 flex items-center justify-between border-b border-border">
@@ -455,7 +464,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
                     onSettingsClick={() => setShowDeviceSettings(true)}
-                    onToggleTranscription={() => setShowTranscriptionModal(!showTranscriptionModal)}
+                    onToggleTranscription={(newState: boolean) => {
+                      setIsTranscribing(newState);
+                      setShowTranscriptionModal(newState);
+                    }}
                     isChatOpen={activeTab === 'chat'}
                     isParticipantsOpen={activeTab === 'participants'}
                   />

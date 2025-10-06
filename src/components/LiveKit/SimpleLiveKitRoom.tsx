@@ -238,20 +238,30 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Auto-save meeting function
   const autoSaveMeeting = async () => {
     try {
-      if (!companyId || !user?.id || transcriptionMessages.length === 0) return;
+      if (!companyId || !user?.id) {
+        console.log('⚠️ Sem companyId ou user.id, não é possível salvar');
+        return;
+      }
 
-      console.log('💾 Salvando reunião automaticamente...');
+      if (transcriptionMessages.length === 0) {
+        console.log('⚠️ Nenhuma transcrição para salvar');
+        return;
+      }
+
+      console.log('💾 Salvando reunião automaticamente com', transcriptionMessages.length, 'mensagens...');
 
       // Concatenate all transcription messages
       const fullTranscript = transcriptionMessages
         .map(msg => `[${msg.timestamp}] ${msg.speaker}: ${msg.text}`)
         .join('\n\n');
 
+      console.log('📝 Transcrição completa:', fullTranscript.substring(0, 200) + '...');
+
       // Save to in_person_meetings table
       const { data, error } = await supabase
         .from('in_person_meetings')
         .insert({
-          title: `Reunião ${roomName} - ${new Date().toLocaleDateString('pt-BR')}`,
+          title: `Reunião ${roomName} - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`,
           transcript: fullTranscript,
           company_id: companyId,
           created_by: user.id,
@@ -266,18 +276,26 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro do Supabase ao salvar:', error);
+        throw error;
+      }
 
       console.log('✅ Reunião salva automaticamente:', data.id);
       
       toast({
         title: "Reunião salva!",
-        description: "A reunião foi salva automaticamente no histórico.",
+        description: `A reunião foi salva com ${transcriptionMessages.length} transcrições.`,
       });
 
       return data.id;
     } catch (error) {
       console.error('❌ Erro ao salvar reunião:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar a reunião automaticamente. Use 'Recuperar Reunião'.",
+        variant: "destructive"
+      });
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar a reunião automaticamente.",

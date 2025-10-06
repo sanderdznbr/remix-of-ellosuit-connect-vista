@@ -44,7 +44,27 @@ const RecoverMeeting = () => {
       try {
         setLoading(true);
 
-        // Try to fetch from calendar_events first
+        // Try to fetch from in_person_meetings first (most common)
+        const { data: inPersonMeeting, error: inPersonError } = await supabase
+          .from('in_person_meetings')
+          .select('*')
+          .ilike('title', `%${roomCode}%`)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (inPersonMeeting && inPersonMeeting.transcript) {
+          setTranscriptionData({
+            transcript: inPersonMeeting.transcript,
+            title: inPersonMeeting.title,
+            date: inPersonMeeting.created_at,
+            source: 'in_person_meeting'
+          });
+          setTitle(inPersonMeeting.title);
+          return;
+        }
+
+        // Try to fetch from calendar_events
         const { data: event, error: eventError } = await supabase
           .from('calendar_events')
           .select('*')
@@ -52,7 +72,7 @@ const RecoverMeeting = () => {
           .or(`meeting_data->roomCode.eq.${roomCode}`)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (event && event.transcript) {
           setTranscriptionData({
@@ -62,15 +82,37 @@ const RecoverMeeting = () => {
             source: 'calendar_event'
           });
           setTitle(event.title);
-        } else {
-          // If not found, show message to use realtime transcription logs
-          setTranscriptionData({
-            message: 'Reunião não encontrada no banco de dados',
-            suggestion: 'As transcrições dessa reunião podem estar nos logs do edge function realtime-transcription',
-            roomCode: roomCode
-          });
-          setTitle(`Reunião ${roomCode} - ${new Date().toLocaleDateString('pt-BR')}`);
+          return;
         }
+
+        // Try to fetch from meeting_recordings
+        const { data: recording, error: recordingError } = await supabase
+          .from('meeting_recordings')
+          .select('*')
+          .ilike('title', `%${roomCode}%`)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (recording && recording.transcript) {
+          setTranscriptionData({
+            transcript: recording.transcript,
+            title: recording.title,
+            date: recording.created_at,
+            source: 'meeting_recording'
+          });
+          setTitle(recording.title);
+          return;
+        }
+
+        // If not found anywhere, show message
+        setTranscriptionData({
+          message: 'Reunião não encontrada no banco de dados',
+          suggestion: 'As transcrições dessa reunião podem ter se perdido. Certifique-se de que a reunião foi salva antes de sair.',
+          roomCode: roomCode
+        });
+        setTitle(`Reunião ${roomCode} - ${new Date().toLocaleDateString('pt-BR')}`);
+        
       } catch (error) {
         console.error('Error fetching transcription:', error);
         toast({

@@ -245,16 +245,38 @@ serve(async (req) => {
                   timestamp: new Date().toISOString()
                 }));
                 console.log('📤 Sent transcript to client');
+                
+                // Save backup incrementally to database
+                try {
+                  if (roomId && fullTranscript.trim().length > 20) {
+                    const { error: upsertError } = await supabase
+                      .from('meeting_recordings')
+                      .upsert({
+                        room_id: roomId,
+                        title: `Reunião ${roomId} - ${new Date().toLocaleDateString('pt-BR')}`,
+                        transcript: fullTranscript.trim(),
+                        file_url: '',
+                        company_id: roomId, 
+                        created_by: roomId,
+                        duration_seconds: Math.floor((Date.now() - bufferStartTime) / 1000)
+                      }, {
+                        onConflict: 'room_id'
+                      });
+                    if (upsertError) {
+                      console.error('⚠️ Erro ao salvar backup:', upsertError);
+                    } else {
+                      console.log('💾 Backup salvo no banco');
+                    }
+                  }
+                } catch (dbError) {
+                  console.error('⚠️ Erro ao salvar backup:', dbError);
+                }
               } else {
                 console.log('⚠️ Transcrição vazia ou filtrada, não enviando ao cliente');
               }
             } catch (error) {
               console.error('❌ Transcription error:', error);
               // Não enviar mensagem de erro ao cliente para evitar poluir a UI
-            }
-                is_final: false,
-                timestamp: new Date().toISOString()
-              }));
             }
             
             // Reset buffer
@@ -296,13 +318,28 @@ serve(async (req) => {
           }
         }
         
-        // Save full transcript to meeting recording
+        // Save full transcript to meeting recording with UPSERT
         if (fullTranscript.trim()) {
           console.log('Saving full transcript to database for room:', roomId);
-          await supabase
+          const { error: upsertError } = await supabase
             .from('meeting_recordings')
-            .update({ transcript: fullTranscript.trim() })
-            .eq('room_id', roomId);
+            .upsert({
+              room_id: roomId,
+              title: `Reunião ${roomId} - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`,
+              transcript: fullTranscript.trim(),
+              file_url: '',
+              company_id: roomId,
+              created_by: roomId,
+              duration_seconds: Math.floor((Date.now() - bufferStartTime) / 1000)
+            }, {
+              onConflict: 'room_id'
+            });
+          
+          if (upsertError) {
+            console.error('Error saving transcript:', upsertError);
+          } else {
+            console.log('✅ Full transcript saved successfully');
+          }
         }
         
         socket.send(JSON.stringify({ 

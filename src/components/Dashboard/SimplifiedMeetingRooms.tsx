@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Video, Plus, Play, Mic, FileText, Users, Clock } from 'lucide-react';
+import { Video, Plus, Play, Mic, FileText, Users, Clock, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -10,6 +10,7 @@ import { useMeetingRooms } from '@/hooks/useMeetingRooms';
 import MeetingRecordings from './MeetingRecordings';
 import InPersonMeeting from './InPersonMeeting';
 import SavedMeetings from './SavedMeetings';
+import MeetingsChatAI from './MeetingsChatAI';
 
 const SimplifiedMeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -17,6 +18,7 @@ const SimplifiedMeetingRooms = () => {
   const [showRecordingsDialog, setShowRecordingsDialog] = useState(false);
   const [showInPersonDialog, setShowInPersonDialog] = useState(false);
   const [showSavedMeetingsDialog, setShowSavedMeetingsDialog] = useState(false);
+  const [showAIChatDialog, setShowAIChatDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoomTitle, setNewRoomTitle] = useState('');
@@ -103,6 +105,13 @@ const SimplifiedMeetingRooms = () => {
       color: 'text-purple-600 bg-purple-50',
       action: () => setShowSavedMeetingsDialog(true)
     },
+    {
+      icon: Bot,
+      title: 'IA - Assistente',
+      count: null,
+      color: 'text-emerald-600 bg-emerald-50',
+      action: () => setShowAIChatDialog(true)
+    },
   ];
 
   return (
@@ -139,7 +148,7 @@ const SimplifiedMeetingRooms = () => {
             <Clock className="h-6 w-6" />
             Gerenciar
           </h2>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             {manageActions.map((action, index) => (
               <Card 
                 key={index}
@@ -250,6 +259,12 @@ const SimplifiedMeetingRooms = () => {
         <Dialog open={showSavedMeetingsDialog} onOpenChange={setShowSavedMeetingsDialog}>
           <DialogContent className="max-w-4xl max-h-[90vh]">
             <SavedMeetings />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showAIChatDialog} onOpenChange={setShowAIChatDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <MeetingsChatAI />
           </DialogContent>
         </Dialog>
       </div>

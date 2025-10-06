@@ -1010,8 +1010,10 @@ export type Database = {
           duration_seconds: number | null
           file_url: string | null
           id: string
+          speaker_mapping: Json | null
           title: string
           transcript: string | null
+          transcript_with_timestamps: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -1021,8 +1023,10 @@ export type Database = {
           duration_seconds?: number | null
           file_url?: string | null
           id?: string
+          speaker_mapping?: Json | null
           title: string
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -1032,8 +1036,10 @@ export type Database = {
           duration_seconds?: number | null
           file_url?: string | null
           id?: string
+          speaker_mapping?: Json | null
           title?: string
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1101,8 +1107,10 @@ export type Database = {
           file_url: string
           id: string
           room_id: string
+          speaker_mapping: Json | null
           title: string
           transcript: string | null
+          transcript_with_timestamps: Json | null
           updated_at: string
         }
         Insert: {
@@ -1114,8 +1122,10 @@ export type Database = {
           file_url: string
           id?: string
           room_id: string
+          speaker_mapping?: Json | null
           title: string
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1127,8 +1137,10 @@ export type Database = {
           file_url?: string
           id?: string
           room_id?: string
+          speaker_mapping?: Json | null
           title?: string
           transcript?: string | null
+          transcript_with_timestamps?: Json | null
           updated_at?: string
         }
         Relationships: [

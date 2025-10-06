@@ -61,6 +61,7 @@ const ImprovedUserManagement = () => {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'employee' | 'manager'>('employee');
   const [inviteLink, setInviteLink] = useState('');
+  const [newUserPermissions, setNewUserPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     loadCompanyUsers();
@@ -123,9 +124,19 @@ const ImprovedUserManagement = () => {
   };
 
   const generateInviteLink = () => {
+    if (!newUserEmail.trim()) {
+      toast({
+        title: 'E-mail Obrigatório',
+        description: 'Por favor, insira o e-mail do funcionário',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     // Generate a unique invite link
     const inviteCode = Math.random().toString(36).substring(2, 15);
-    const link = `${window.location.origin}/convite/${inviteCode}?role=${newUserRole}`;
+    const permissionsParam = newUserPermissions.join(',');
+    const link = `${window.location.origin}/convite/${inviteCode}?email=${encodeURIComponent(newUserEmail)}&role=${newUserRole}&permissions=${permissionsParam}`;
     setInviteLink(link);
     setShowInviteDialog(true);
   };
@@ -340,59 +351,175 @@ const ImprovedUserManagement = () => {
       </div>
 
       {/* Invite Dialog */}
-      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showInviteDialog} onOpenChange={(open) => {
+        setShowInviteDialog(open);
+        if (!open) {
+          setNewUserEmail('');
+          setNewUserRole('employee');
+          setNewUserPermissions([]);
+          setInviteLink('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Link de Convite Gerado</DialogTitle>
+            <DialogTitle>Convidar Funcionário</DialogTitle>
             <DialogDescription>
-              Compartilhe este link com o funcionário que deseja convidar
+              Configure as permissões e gere o link de convite
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Função</Label>
-              <Select value={newUserRole} onValueChange={(v: any) => {
-                setNewUserRole(v);
-                generateInviteLink();
-              }}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employee">Funcionário</SelectItem>
-                  <SelectItem value="manager">Gerente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <ScrollArea className="max-h-[calc(85vh-200px)] pr-4">
+            <div className="space-y-6">
+              {/* Email e Função */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="invite-email">E-mail do Funcionário *</Label>
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    placeholder="funcionario@exemplo.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                  />
+                </div>
 
-            <div className="flex items-center gap-2">
-              <Input value={inviteLink} readOnly className="font-mono text-sm" />
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={copyInviteLink}
-              >
-                {copiedInvite ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
+                <div className="space-y-2">
+                  <Label>Função</Label>
+                  <Select value={newUserRole} onValueChange={(v: any) => setNewUserRole(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="employee">Funcionário</SelectItem>
+                      <SelectItem value="manager">Gerente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-            <div className="bg-muted p-3 rounded-lg text-sm">
-              <p className="font-medium mb-1">⚠️ Importante:</p>
-              <p className="text-muted-foreground">
-                Este link permite que qualquer pessoa com acesso a ele se junte à sua empresa. 
-                Compartilhe apenas com pessoas confiáveis.
-              </p>
-            </div>
-          </div>
+              <Separator />
 
-          <div className="flex justify-end gap-2">
+              {/* Permissões */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Permissões de Acesso</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (newUserPermissions.length === PERMISSIONS.length) {
+                        setNewUserPermissions([]);
+                      } else {
+                        setNewUserPermissions(PERMISSIONS.map(p => p.value));
+                      }
+                    }}
+                  >
+                    {newUserPermissions.length === PERMISSIONS.length ? 'Desmarcar Todas' : 'Marcar Todas'}
+                  </Button>
+                </div>
+
+                {PERMISSION_CATEGORIES.map((category) => {
+                  const categoryPerms = PERMISSIONS.filter(p => p.category === category);
+                  const selectedCount = newUserPermissions.filter(p => 
+                    categoryPerms.some(cp => cp.value === p)
+                  ).length;
+                  
+                  return (
+                    <div key={category} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-sm">{category}</h4>
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedCount}/{categoryPerms.length}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const allSelected = selectedCount === categoryPerms.length;
+                            if (allSelected) {
+                              setNewUserPermissions(newUserPermissions.filter(p => 
+                                !categoryPerms.some(cp => cp.value === p)
+                              ));
+                            } else {
+                              setNewUserPermissions([
+                                ...newUserPermissions,
+                                ...categoryPerms.map(p => p.value).filter(v => !newUserPermissions.includes(v))
+                              ]);
+                            }
+                          }}
+                        >
+                          {selectedCount === categoryPerms.length ? 'Desmarcar' : 'Marcar'}
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 pl-2">
+                        {categoryPerms.map((perm) => (
+                          <div key={perm.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`invite-${perm.value}`}
+                              checked={newUserPermissions.includes(perm.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setNewUserPermissions([...newUserPermissions, perm.value]);
+                                } else {
+                                  setNewUserPermissions(newUserPermissions.filter(p => p !== perm.value));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`invite-${perm.value}`} className="cursor-pointer text-sm">
+                              {perm.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {inviteLink && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>Link de Convite Gerado</Label>
+                    <div className="flex items-center gap-2">
+                      <Input value={inviteLink} readOnly className="font-mono text-sm" />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={copyInviteLink}
+                      >
+                        {copiedInvite ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg text-sm">
+                      <p className="font-medium mb-1">⚠️ Importante:</p>
+                      <p className="text-muted-foreground">
+                        Este link permite que a pessoa com acesso a ele se junte à sua empresa. 
+                        Compartilhe apenas com o funcionário correto.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-              Fechar
+              Cancelar
             </Button>
-            <Button onClick={copyInviteLink}>
-              <Mail className="mr-2 h-4 w-4" />
-              Copiar e Enviar por E-mail
+            <Button onClick={generateInviteLink} disabled={!newUserEmail.trim()}>
+              {inviteLink ? (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Copiar Link
+                </>
+              ) : (
+                'Gerar Link de Convite'
+              )}
             </Button>
           </div>
         </DialogContent>

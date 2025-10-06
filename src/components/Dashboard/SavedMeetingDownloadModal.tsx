@@ -25,6 +25,12 @@ interface SavedMeetingDownloadModalProps {
     transcript: string;
     created_at: string;
     duration_seconds: number;
+    speaker_mapping?: Record<string, string>;
+    transcript_with_timestamps?: Array<{
+      timestamp_seconds: number;
+      speaker: string;
+      text: string;
+    }>;
   };
 }
 
@@ -39,6 +45,24 @@ const SavedMeetingDownloadModal: React.FC<SavedMeetingDownloadModalProps> = ({
   const [downloadType, setDownloadType] = useState<DownloadType>('complete');
   const [specificQuery, setSpecificQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const formatTranscriptWithSpeakers = () => {
+    if (!meeting.transcript_with_timestamps || meeting.transcript_with_timestamps.length === 0) {
+      return meeting.transcript;
+    }
+
+    const speakerMapping = meeting.speaker_mapping || {};
+    
+    return meeting.transcript_with_timestamps.map(segment => {
+      const minutes = Math.floor(segment.timestamp_seconds / 60);
+      const seconds = segment.timestamp_seconds % 60;
+      const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      const speakerName = speakerMapping[segment.speaker] || segment.speaker;
+      
+      return `[${timeStr}] ${speakerName}: ${segment.text}`;
+    }).join('\n\n');
+  };
 
   const generatePDF = async (title: string, content: string) => {
     const doc = new jsPDF();
@@ -142,7 +166,7 @@ const SavedMeetingDownloadModal: React.FC<SavedMeetingDownloadModalProps> = ({
   const handleDownload = async () => {
     setIsProcessing(true);
     try {
-      let pdfContent = meeting.transcript;
+      let pdfContent = downloadType === 'complete' ? formatTranscriptWithSpeakers() : meeting.transcript;
       let pdfTitle = 'Transcrição Completa';
       let filename = `${meeting.title.replace(/\s+/g, '-')}-completa`;
 

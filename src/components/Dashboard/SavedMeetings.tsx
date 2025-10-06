@@ -14,6 +14,12 @@ interface Meeting {
   created_at: string;
   duration_seconds: number;
   file_url: string;
+  speaker_mapping?: Record<string, string>;
+  transcript_with_timestamps?: Array<{
+    timestamp_seconds: number;
+    speaker: string;
+    text: string;
+  }>;
 }
 
 const SavedMeetings = () => {
@@ -34,12 +40,12 @@ const SavedMeetings = () => {
 
       const { data, error } = await supabase
         .from('in_person_meetings')
-        .select('*')
+        .select('id, title, transcript, created_at, duration_seconds, file_url, speaker_mapping, transcript_with_timestamps')
         .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMeetings(data || []);
+      setMeetings((data || []) as Meeting[]);
     } catch (error) {
       console.error('Erro ao carregar reuniões:', error);
       toast({

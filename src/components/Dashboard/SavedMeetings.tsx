@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { jsPDF } from 'jspdf';
-import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import SavedMeetingDownloadModal from './SavedMeetingDownloadModal';
 
 interface Meeting {
   id: string;
@@ -21,6 +20,8 @@ const SavedMeetings = () => {
   const { toast } = useToast();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   useEffect(() => {
     loadMeetings();
@@ -51,92 +52,9 @@ const SavedMeetings = () => {
     }
   };
 
-  const downloadTranscriptPDF = async (meeting: Meeting) => {
-    try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxLineWidth = pageWidth - 2 * margin;
-
-      // Add logo
-      const img = new Image();
-      img.src = ellosuitLogo;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-      });
-      
-      doc.addImage(img, 'PNG', margin, 15, 50, 15);
-      
-      // Title
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Transcrição de Reunião', pageWidth / 2, 45, { align: 'center' });
-      
-      // Meeting info
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      const meetingDate = new Date(meeting.created_at).toLocaleDateString('pt-BR', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      doc.text(`Reunião: ${meeting.title}`, margin, 60);
-      doc.text(`Data: ${meetingDate}`, margin, 68);
-      
-      if (meeting.duration_seconds) {
-        const minutes = Math.floor(meeting.duration_seconds / 60);
-        doc.text(`Duração: ${minutes} minutos`, margin, 76);
-      }
-      
-      // Line separator
-      doc.setLineWidth(0.5);
-      doc.line(margin, 83, pageWidth - margin, 83);
-      
-      // Transcript content
-      doc.setFontSize(10);
-      let yPosition = 91;
-      
-      const lines = doc.splitTextToSize(meeting.transcript, maxLineWidth);
-      lines.forEach((line: string) => {
-        if (yPosition > pageHeight - 30) {
-          doc.addPage();
-          yPosition = margin;
-        }
-        doc.text(line, margin, yPosition);
-        yPosition += 5;
-      });
-      
-      // Footer
-      const totalPages = doc.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(
-          `Página ${i} de ${totalPages}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
-      }
-      
-      doc.save(`${meeting.title.replace(/\s+/g, '-')}-${new Date(meeting.created_at).toISOString().split('T')[0]}.pdf`);
-      
-      toast({
-        title: "Download Iniciado",
-        description: "A transcrição está sendo baixada",
-      });
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      toast({
-        title: "Erro ao Gerar PDF",
-        description: "Não foi possível gerar o PDF",
-        variant: "destructive"
-      });
-    }
+  const openDownloadModal = (meeting: Meeting) => {
+    setSelectedMeeting(meeting);
+    setShowDownloadModal(true);
   };
 
   const deleteMeeting = async (id: string) => {
@@ -198,17 +116,18 @@ const SavedMeetings = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Reuniões Salvas</CardTitle>
-        <CardDescription>
-          {meetings.length} reuniõe(s) gravada(s)
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
-          <div className="space-y-3">
-            {meetings.map((meeting) => (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Reuniões Salvas</CardTitle>
+          <CardDescription>
+            {meetings.length} reuniõe(s) gravada(s)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-3">
+              {meetings.map((meeting) => (
               <Card key={meeting.id} className="border-2">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between gap-4">
@@ -243,11 +162,11 @@ const SavedMeetings = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => downloadTranscriptPDF(meeting)}
+                        onClick={() => openDownloadModal(meeting)}
                         className="gap-2"
                       >
                         <Download className="h-4 w-4" />
-                        PDF
+                        Baixar
                       </Button>
                       <Button
                         variant="outline"
@@ -262,10 +181,22 @@ const SavedMeetings = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {selectedMeeting && (
+        <SavedMeetingDownloadModal
+          isOpen={showDownloadModal}
+          onClose={() => {
+            setShowDownloadModal(false);
+            setSelectedMeeting(null);
+          }}
+          meeting={selectedMeeting}
+        />
+      )}
+    </>
   );
 };
 

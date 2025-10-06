@@ -606,7 +606,7 @@ const InPersonMeeting = () => {
           ? speakerMapping[msg.speaker] 
           : (msg.speaker || 'Pessoa 1');
         return `[${new Date(msg.timestamp).toLocaleTimeString()}] ${speakerName}: ${msg.text}`;
-      }).join('\n');
+      }).join('\n\n');
 
       let prompt = '';
       if (type === 'summary') {
@@ -732,7 +732,7 @@ const InPersonMeeting = () => {
             yPosition += 5;
           });
           
-          yPosition += 3;
+          yPosition += 8; // More space between different speakers
         });
       }
       

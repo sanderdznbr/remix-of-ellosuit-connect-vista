@@ -121,14 +121,14 @@ serve(async (req) => {
       };
     }).filter(Boolean) || [];
 
-    // Group words by speaker and time windows (10 second windows for better grouping)
+    // Group words by speaker and time windows (2 second windows for better phrase separation)
     const segments: any[] = [];
     let currentSegment: any = null;
 
     labeledTranscript.forEach((word: any) => {
       if (!currentSegment || 
           currentSegment.speaker !== word.speaker || 
-          word.start - currentSegment.end > 10000) { // Increased to 10 seconds
+          word.start - currentSegment.end > 2000) { // 2 seconds for better phrase detection
         // New segment
         if (currentSegment) {
           segments.push(currentSegment);

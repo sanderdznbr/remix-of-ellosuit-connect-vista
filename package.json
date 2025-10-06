@@ -62,6 +62,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.3.0",
     "input-otp": "^1.2.4",
+    "jspdf": "^3.0.3",
     "jszip": "^3.10.1",
     "livekit-client": "^2.15.7",
     "livekit-server-sdk": "^2.13.3",

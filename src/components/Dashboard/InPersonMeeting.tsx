@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Download, FileText, AlertTriangle } from 'lucide-react';
+import { Mic, Square, Download, FileText, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,10 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AudioDeviceSelector } from './AudioDeviceSelector';
 import { AudioVisualizer } from './AudioVisualizer';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { jsPDF } from 'jspdf';
+import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 interface TranscriptMessage {
   text: string;
   timestamp: string;
+  speaker?: string;
 }
 
 const InPersonMeeting = () => {
@@ -39,6 +43,10 @@ const InPersonMeeting = () => {
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const audioBufferRef = useRef<Int16Array>(new Int16Array(0));
   const lastSendTimeRef = useRef<number>(0);
+  const lastTranscriptRef = useRef<string>('');
+  const lastSpeakerTimeRef = useRef<number>(Date.now());
+  const currentSpeakerRef = useRef<number>(1);
+  const speakerCountRef = useRef<number>(1);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -241,11 +249,34 @@ const InPersonMeeting = () => {
           if (data.type === 'transcript_update') {
             console.log('📝 Transcrição:', data.text);
             if (data.is_final) {
-              setTranscript(prev => [...prev, {
-                text: data.text,
-                timestamp: new Date().toISOString()
-              }]);
-              setCurrentText('');
+              // Check for duplicate text
+              const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);
+              
+              if (!isDuplicate && data.text.trim().length > 0) {
+                // Detect speaker change based on time gap
+                const now = Date.now();
+                const timeSinceLastSpeaker = now - lastSpeakerTimeRef.current;
+                
+                // If more than 3 seconds passed, consider it a new speaker
+                if (timeSinceLastSpeaker > 3000 && transcript.length > 0) {
+                  currentSpeakerRef.current++;
+                  if (currentSpeakerRef.current > speakerCountRef.current) {
+                    speakerCountRef.current = currentSpeakerRef.current;
+                  }
+                }
+                
+                lastSpeakerTimeRef.current = now;
+                lastTranscriptRef.current = data.text;
+                
+                setTranscript(prev => [...prev, {
+                  text: data.text,
+                  timestamp: new Date().toISOString(),
+                  speaker: `Pessoa ${currentSpeakerRef.current}`
+                }]);
+                setCurrentText('');
+              } else {
+                console.log('⏭️ Texto duplicado ignorado:', data.text);
+              }
             } else {
               setCurrentText(data.text);
             }
@@ -432,25 +463,150 @@ const InPersonMeeting = () => {
     }
   };
 
-  const downloadTranscript = () => {
+  // Check if two texts are similar (for deduplication)
+  const isSimilarText = (text1: string, text2: string): boolean => {
+    if (!text1 || !text2) return false;
+    
+    const clean1 = text1.toLowerCase().trim().replace(/[.,!?]/g, '');
+    const clean2 = text2.toLowerCase().trim().replace(/[.,!?]/g, '');
+    
+    // Exact match
+    if (clean1 === clean2) return true;
+    
+    // Check if one contains the other (90% threshold)
+    const shorter = clean1.length < clean2.length ? clean1 : clean2;
+    const longer = clean1.length < clean2.length ? clean2 : clean1;
+    
+    return longer.includes(shorter) && shorter.length / longer.length > 0.9;
+  };
+
+  const downloadTranscriptTXT = () => {
     const fullText = transcript.map(msg => 
-      `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.text}`
+      `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker || 'Pessoa 1'}: ${msg.text}`
     ).join('\n\n');
     
     const blob = new Blob([fullText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transcript-${meetingTitle}-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `transcricao-${meetingTitle.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Download Iniciado",
-      description: "A transcrição está sendo baixada",
+      title: "Download TXT Iniciado",
+      description: "A transcrição em texto está sendo baixada",
     });
+  };
+
+  const downloadTranscriptPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxLineWidth = pageWidth - 2 * margin;
+      
+      // Add logo
+      const img = new Image();
+      img.src = ellosuitLogo;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+      
+      doc.addImage(img, 'PNG', margin, 15, 50, 15);
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Transcrição de Reunião', pageWidth / 2, 45, { align: 'center' });
+      
+      // Meeting info
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      const meetingDate = new Date().toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      doc.text(`Reunião: ${meetingTitle}`, margin, 60);
+      doc.text(`Data: ${meetingDate}`, margin, 68);
+      
+      // Line separator
+      doc.setLineWidth(0.5);
+      doc.line(margin, 75, pageWidth - margin, 75);
+      
+      // Transcript content
+      doc.setFontSize(10);
+      let yPosition = 85;
+      
+      transcript.forEach((msg, index) => {
+        const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        
+        const speaker = msg.speaker || 'Pessoa 1';
+        const header = `[${time}] ${speaker}:`;
+        const text = msg.text;
+        
+        // Check if we need a new page
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        
+        // Add timestamp and speaker
+        doc.setFont('helvetica', 'bold');
+        doc.text(header, margin, yPosition);
+        yPosition += 6;
+        
+        // Add transcript text (wrap long lines)
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(text, maxLineWidth);
+        lines.forEach((line: string) => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = margin;
+          }
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        });
+        
+        yPosition += 3; // Space between messages
+      });
+      
+      // Footer
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+          `Página ${i} de ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+      
+      doc.save(`transcricao-${meetingTitle.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "Download PDF Iniciado",
+        description: "A transcrição em PDF está sendo baixada",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro ao Gerar PDF",
+        description: "Não foi possível gerar o PDF. Tente baixar em TXT.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleStartWithTitle = () => {
@@ -570,15 +726,25 @@ const InPersonMeeting = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Transcrição em Tempo Real</CardTitle>
                     {transcript.length > 0 && (
-                      <Button
-                        onClick={downloadTranscript}
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Baixar
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline" className="gap-2">
+                            <Download className="h-4 w-4" />
+                            Baixar
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={downloadTranscriptPDF}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Baixar PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={downloadTranscriptTXT}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar TXT
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </CardHeader>
@@ -586,9 +752,11 @@ const InPersonMeeting = () => {
                   <ScrollArea className="h-[400px] w-full rounded-md border p-4" ref={scrollRef}>
                     <div className="space-y-3">
                       {transcript.map((msg, index) => (
-                        <div key={index} className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-1">
-                            {new Date(msg.timestamp).toLocaleTimeString()}
+                        <div key={index} className="text-sm border-l-2 border-primary/30 pl-3 py-2">
+                          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                            <span className="font-semibold text-primary">{msg.speaker || 'Pessoa 1'}</span>
+                            <span>•</span>
+                            <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
                           </div>
                           <div className="text-foreground leading-relaxed">
                             {msg.text}
@@ -633,16 +801,34 @@ const InPersonMeeting = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2">
-              <Button onClick={downloadTranscript} variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Baixar Transcrição
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Baixar Transcrição
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={downloadTranscriptPDF}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Baixar PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={downloadTranscriptTXT}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar TXT
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button 
                 onClick={() => {
                   setShowSummary(false);
                   setTranscript([]);
                   setMeetingTitle('');
                   audioChunksRef.current = [];
+                  lastTranscriptRef.current = '';
+                  currentSpeakerRef.current = 1;
+                  speakerCountRef.current = 1;
                 }}
                 className="gap-2"
               >

@@ -8,6 +8,7 @@ interface TranscriptionMessage {
   text: string;
   is_final: boolean;
   timestamp: string;
+  speaker?: string;
 }
 
 interface TranscriptionPanelProps {
@@ -24,14 +25,17 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
   // Auto-scroll quando novas mensagens chegam
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (scrollAreaRef.current) {
           const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
           if (scrollElement) {
-            scrollElement.scrollTop = scrollElement.scrollHeight;
+            scrollElement.scrollTo({
+              top: scrollElement.scrollHeight,
+              behavior: 'smooth'
+            });
           }
         }
-      }, 100);
+      });
     }
   }, [messages]);
 
@@ -83,38 +87,69 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
       </div>
 
       {/* Transcription Area */}
-      <ScrollArea className="flex-1 p-3" ref={scrollAreaRef}>
-        <div className="space-y-3">
-          {messages.map((message, index) => (
-            <div key={index} className="text-sm">
-              <div className="text-xs text-muted-foreground mb-1">
-                {new Date(message.timestamp).toLocaleTimeString()}
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-12">
+              <div className="relative inline-block mb-4">
+                <Mic className="h-12 w-12 text-primary animate-pulse" />
+                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
               </div>
-              <div className="text-foreground leading-relaxed">
-                {message.text}
-              </div>
+              <p className="font-semibold text-base mb-2">Transcrição em Tempo Real</p>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                Os áudios dos participantes serão transcritos automaticamente e aparecerão aqui instantaneamente
+              </p>
             </div>
-          ))}
-          
-          {/* Current transcript being typed */}
-          {currentTranscript && (
-            <div className="text-sm">
-              <div className="text-xs text-muted-foreground mb-1">
-                Transcrevendo...
-              </div>
-              <div className="text-muted-foreground leading-relaxed italic">
-                {currentTranscript}
-              </div>
-            </div>
-          )}
-          
-          {/* Status messages */}
-          {messages.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              <Mic className="h-8 w-8 mx-auto mb-2 text-primary animate-pulse" />
-              <p className="font-medium">Aguardando Transcrição</p>
-              <p className="text-xs mt-2">Certifique-se de que os microfones estão habilitados...</p>
-            </div>
+          ) : (
+            <>
+              {messages.map((message, index) => (
+                <div 
+                  key={index} 
+                  className="bg-muted/50 rounded-lg p-3 border border-border hover:bg-muted/70 transition-colors animate-in fade-in slide-in-from-bottom-2 duration-300"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {message.speaker && (
+                        <span className="text-xs font-semibold text-primary">
+                          {message.speaker}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(message.timestamp).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    {message.is_final && (
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    )}
+                  </div>
+                  <div className={cn(
+                    "text-sm leading-relaxed",
+                    message.is_final ? "text-foreground" : "text-muted-foreground italic"
+                  )}>
+                    {message.text}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Current transcript being typed */}
+              {currentTranscript && (
+                <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 animate-pulse">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    <span className="text-xs text-primary font-medium">
+                      Transcrevendo...
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted-foreground leading-relaxed italic">
+                    {currentTranscript}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>

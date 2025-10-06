@@ -23,10 +23,12 @@ const ZoomParticipantGrid: React.FC = () => {
   const hasScreenShare = screenShareTracks.length > 0;
 
   const getGridClass = (count: number) => {
-    if (count === 1) return 'grid-1';
-    if (count === 2) return 'grid-2';
-    if (count <= 4) return 'grid-4';
-    return 'grid-many';
+    if (count === 1) return 'grid-cols-1';
+    if (count === 2) return 'grid-cols-2';
+    if (count <= 4) return 'grid-cols-2 grid-rows-2';
+    if (count <= 6) return 'grid-cols-3 grid-rows-2';
+    if (count <= 9) return 'grid-cols-3 grid-rows-3';
+    return 'grid-cols-4 auto-rows-fr';
   };
 
   const getParticipantName = (participant: Participant) => {
@@ -89,32 +91,51 @@ const ZoomParticipantGrid: React.FC = () => {
 
       {/* Camera Participants Grid - Only when no screen share */}
       {!hasScreenShare && (
-        <div className={cn(
-          "zoom-participant-grid",
-          getGridClass(cameraTracks.length)
-        )}>
-          {cameraTracks.map((trackRef: TrackReference, index: number) => (
-            <div
-              key={`camera-${trackRef.participant.identity}-${index}`}
-              className="aspect-video bg-background rounded-lg overflow-hidden"
-            >
-              <ResizableVideoTile
-                trackRef={trackRef}
-                isScreenShare={false}
-                defaultWidth={320}
-                defaultHeight={240}
-              />
-            </div>
-          ))}
-
-          {/* Show message if no participants */}
-          {participants.length === 0 && (
-            <div className="col-span-full flex items-center justify-center h-full text-gray-500">
+        <div className="w-full h-full p-4">
+          {cameraTracks.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
                 <Wifi className="h-16 w-16 mx-auto mb-6 text-gray-400" />
                 <p className="text-xl font-medium">Aguardando participantes...</p>
                 <p className="text-gray-400 mt-2">Convide pessoas para se juntar à reunião</p>
               </div>
+            </div>
+          ) : (
+            <div className={cn(
+              "grid gap-4 h-full w-full",
+              getGridClass(cameraTracks.length)
+            )}>
+              {cameraTracks.map((trackRef: TrackReference, index: number) => (
+                <div
+                  key={`camera-${trackRef.participant.identity}-${index}`}
+                  className="relative bg-gray-900 rounded-xl overflow-hidden shadow-lg border-2 border-gray-800 hover:border-primary/50 transition-all"
+                >
+                  <ResizableVideoTile
+                    trackRef={trackRef}
+                    isScreenShare={false}
+                    defaultWidth={320}
+                    defaultHeight={240}
+                  />
+                  
+                  {/* Participant Info Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white text-sm font-medium flex items-center gap-2">
+                        {getParticipantName(trackRef.participant)}
+                        {isParticipantMuted(trackRef.participant) && (
+                          <MicOff className="h-3 w-3 text-red-400" />
+                        )}
+                      </span>
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        getConnectionQuality(trackRef.participant) === 'excellent' ? 'bg-green-400' :
+                        getConnectionQuality(trackRef.participant) === 'good' ? 'bg-yellow-400' :
+                        'bg-red-400'
+                      )} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

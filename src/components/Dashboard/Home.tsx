@@ -81,13 +81,6 @@ const inspirationalQuotes = [
 
 const Home = ({ onNavigate }: HomeProps) => {
   const { isMobile } = useIsMobile();
-
-  // Se for mobile, usar a versão mobile-first
-  if (isMobile) {
-    return <MobileHomeScreen onNavigate={onNavigate} />;
-  }
-
-  // Continuar com a versão desktop original
   const { user } = useAuth();
   const [currentQuote, setCurrentQuote] = useState('');
   const [stats, setStats] = useState({
@@ -220,6 +213,11 @@ const Home = ({ onNavigate }: HomeProps) => {
       default: return status;
     }
   };
+
+  // Se for mobile, usar a versão mobile-first (após todos os hooks)
+  if (isMobile) {
+    return <MobileHomeScreen onNavigate={onNavigate} />;
+  }
 
   return (
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen page-content">{/* ... keep existing code (all content) */}

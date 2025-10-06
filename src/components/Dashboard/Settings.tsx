@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SidebarEditor from './SidebarEditor';
 import IntegrationsSettings from './IntegrationsSettings';
 import NotificationSettings from './NotificationSettings';
-import { Settings as SettingsIcon, Palette, Link, Bell } from 'lucide-react';
+import ImprovedDashboardCustomizer from './ImprovedDashboardCustomizer';
+import EmployeeManagement from './EmployeeManagement';
+import { Settings as SettingsIcon, Palette, Link, Bell, Users, LayoutDashboard } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const [activeTab, setActiveTab] = useState('employees');
 
   return (
     <div className="p-6 page-content">
@@ -21,7 +23,15 @@ const Settings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="employees" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Funcionários</span>
+          </TabsTrigger>
+          <TabsTrigger value="customize" className="flex items-center space-x-2">
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="hidden sm:inline">Personalizar</span>
+          </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center space-x-2">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Aparência</span>
@@ -39,6 +49,14 @@ const Settings = () => {
             <span className="hidden sm:inline">Geral</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="employees">
+          <EmployeeManagement />
+        </TabsContent>
+
+        <TabsContent value="customize">
+          <ImprovedDashboardCustomizer />
+        </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6">
           <Card>

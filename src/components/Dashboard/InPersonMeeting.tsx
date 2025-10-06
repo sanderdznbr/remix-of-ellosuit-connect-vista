@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AudioDeviceSelector } from './AudioDeviceSelector';
-import { AudioVisualizer } from './AudioVisualizer';
 import { Textarea } from '@/components/ui/textarea';
 import { jsPDF } from 'jspdf';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
@@ -208,7 +207,10 @@ const InPersonMeeting = () => {
         // Generate meeting ID
         meetingIdRef.current = `in-person-${Date.now()}`;
         
-        // Reset audio buffer and timestamp
+        // Reset transcript and audio buffer for new meeting
+        setTranscript([]);
+        setCurrentText('');
+        lastTranscriptRef.current = '';
         audioBufferRef.current = new Int16Array(0);
         lastSendTimeRef.current = Date.now();
         
@@ -972,18 +974,6 @@ const InPersonMeeting = () => {
                   <Square className="h-4 w-4 fill-current" />
                   Encerrar
                 </Button>
-              </div>
-
-              {/* Compact Audio Monitor */}
-              <div className="bg-gradient-to-br from-primary/5 via-purple-50/50 to-primary/10 dark:from-primary/10 dark:via-purple-900/20 dark:to-primary/5 rounded-2xl p-6 border border-primary/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-semibold text-foreground/80">Monitor de Áudio</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">Ativo</span>
-                </div>
-                <AudioVisualizer stream={currentStream} />
               </div>
 
               {/* Live Transcript */}

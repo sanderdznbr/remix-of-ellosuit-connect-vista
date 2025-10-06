@@ -130,7 +130,7 @@ serve(async (req) => {
       let recording = null;
       const timestamp = Date.now();
       const fileName = `${roomName}-${timestamp}.mp4`;
-      const filePath = `recordings/${fileName}`;
+      const filePath = `meeting-recordings/${fileName}`; // Use full path with bucket name
       
       if (roomId && companyId && userId) {
         const { data: rec, error } = await supabase
@@ -233,7 +233,7 @@ serve(async (req) => {
         const { error } = await supabase
           .from('meeting_recordings')
           .update({ 
-            file_url: `recordings/${roomName || 'room'}-${Date.now()}.mp4`,
+            file_url: `meeting-recordings/${roomName || 'room'}-${Date.now()}.mp4`,
             duration_seconds: 0 // Will be updated by webhook when available
           })
           .eq('id', recordingId);

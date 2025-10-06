@@ -18,8 +18,8 @@ interface MeetingSidebarProps {
   activeTab: 'participants' | 'chat' | 'transcription';
   onTabChange: (tab: 'participants' | 'chat' | 'transcription') => void;
   roomId?: string;
-  transcriptionMessages: Array<{text: string, is_final: boolean, timestamp: string}>;
-  onTranscriptionMessagesUpdate: (messages: Array<{text: string, is_final: boolean, timestamp: string}>) => void;
+  transcriptionMessages: Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>;
+  onTranscriptionMessagesUpdate: (messages: Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>) => void;
 }
 
 const MeetingSidebar: React.FC<MeetingSidebarProps> = ({ 

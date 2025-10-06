@@ -16,10 +16,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MeetingControls from './MeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
+import { MeetingExitModal } from './MeetingExitModal';
 import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
 import MobileMeetingLayout from './MobileMeetingLayout';
 import { RoomContextCapture } from './RoomContextCapture';
+import { LiveKitTranscription } from './LiveKitTranscription';
 import logoEllo from '@/assets/logoellosuit.png';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
@@ -53,7 +55,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [companyId, setCompanyId] = useState<string>('');
-  const [transcriptionMessages, setTranscriptionMessages] = useState<Array<{text: string, is_final: boolean, timestamp: string}>>([]);
+  const [transcriptionMessages, setTranscriptionMessages] = useState<Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>>([]);
+  const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -209,6 +213,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setSidebarTab(tab);
   };
 
+  const handleLeaveClick = () => {
+    // If there are transcriptions, show exit modal
+    if (transcriptionMessages.length > 0) {
+      setShowExitModal(true);
+    } else {
+      handleDisconnected();
+    }
+  };
+  
   const handleDisconnected = useCallback(async () => {
     console.log('Disconnected from room');
     
@@ -348,6 +361,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }} />
           <RoomAudioRenderer />
           
+          {/* Real-time Transcription */}
+          <LiveKitTranscription
+            isActive={isTranscriptionActive}
+            onTranscript={(data) => {
+              setTranscriptionMessages(prev => [...prev, data]);
+            }}
+          />
+          
           {isMobile ? (
             <MobileMeetingLayout
               roomName={roomName}
@@ -392,12 +413,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     onToggleChat={() => toggleSidebar('chat')}
                     onToggleParticipants={() => toggleSidebar('participants')}
                     onShareMeeting={() => setShowShareModal(true)}
-                    onLeave={onLeave}
+                    onLeave={handleLeaveClick}
                     isChatOpen={isChatOpen}
                     isParticipantsOpen={isParticipantsOpen}
                     roomCode={roomName}
                     companyId={companyId}
-                    onToggleTranscription={() => toggleSidebar('transcription')}
+                    onToggleTranscription={() => {
+                      toggleSidebar('transcription');
+                      setIsTranscriptionActive(true);
+                    }}
                     onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
                   />
                 </div>
@@ -435,6 +459,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <ShareMeetingModal
             isOpen={showShareModal}
             onClose={() => setShowShareModal(false)}
+            roomName={roomName}
+          />
+
+          <MeetingExitModal
+            isOpen={showExitModal}
+            onClose={() => setShowExitModal(false)}
+            onConfirmExit={handleDisconnected}
+            transcriptionMessages={transcriptionMessages}
             roomName={roomName}
           />
         </LiveKitRoom>

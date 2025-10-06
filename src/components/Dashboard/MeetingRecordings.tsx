@@ -123,14 +123,31 @@ const MeetingRecordings: React.FC = () => {
   // Resolve a playable URL for a recording (handles private bucket)
   const resolveRecordingUrl = async (fileUrl: string): Promise<string> => {
     if (!fileUrl) return '';
+    
+    // If it's already a full URL, return it
     if (fileUrl.startsWith('http')) return fileUrl;
+    
+    // Remove bucket prefix if present
     const pathOnly = fileUrl.startsWith('meeting-recordings/')
       ? fileUrl.replace('meeting-recordings/', '')
       : fileUrl;
+    
+    console.log('Resolving recording URL for path:', pathOnly);
+    
     const { data, error } = await supabase.storage
       .from('meeting-recordings')
       .createSignedUrl(pathOnly, 60 * 60);
-    if (error || !data?.signedUrl) return '';
+    
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return '';
+    }
+    
+    if (!data?.signedUrl) {
+      console.error('No signed URL returned');
+      return '';
+    }
+    
     return data.signedUrl;
   };
 

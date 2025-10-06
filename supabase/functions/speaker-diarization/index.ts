@@ -36,11 +36,10 @@ serve(async (req) => {
       body: JSON.stringify({
         audio_url: audioUrl,
         speaker_labels: true,
-        speakers_expected: 2, // Expect at least 2 speakers to be more sensitive
         language_code: 'pt', // Portuguese
-        speech_threshold: 0.3, // Lower threshold for better detection
         punctuate: true,
         format_text: true,
+        utterances: true, // Use utterances for better phrase separation
       }),
     });
 
@@ -89,66 +88,29 @@ serve(async (req) => {
       throw new Error('Timeout: transcrição demorou muito tempo');
     }
 
-    // Step 3: Process and return speaker-labeled transcript
-    console.log('🔍 Palavras retornadas:', transcriptResult.words?.length || 0);
+    // Step 3: Process utterances for natural phrase separation
     console.log('🔍 Utterances retornadas:', transcriptResult.utterances?.length || 0);
-    
-    // Log unique speakers from words
-    const speakersInWords = new Set(
-      transcriptResult.words
-        ?.filter((w: any) => w.speaker)
-        .map((w: any) => w.speaker) || []
-    );
-    console.log('👥 Speakers únicos nas palavras:', Array.from(speakersInWords));
     
     const speakerMap = new Map<string, number>();
     let speakerCounter = 1;
 
-    const labeledTranscript = transcriptResult.words?.map((word: any) => {
-      if (!word.speaker) return null;
+    // Use utterances directly - they already have perfect speaker and phrase separation
+    const segments = transcriptResult.utterances?.map((utterance: any) => {
+      if (!utterance.speaker) return null;
 
       // Map AssemblyAI speaker IDs to sequential numbers
-      if (!speakerMap.has(word.speaker)) {
-        speakerMap.set(word.speaker, speakerCounter++);
+      if (!speakerMap.has(utterance.speaker)) {
+        speakerMap.set(utterance.speaker, speakerCounter++);
       }
 
       return {
-        text: word.text,
-        speaker: `Pessoa ${speakerMap.get(word.speaker)}`,
-        start: word.start,
-        end: word.end,
-        confidence: word.confidence,
+        speaker: `Pessoa ${speakerMap.get(utterance.speaker)}`,
+        text: utterance.text,
+        start: utterance.start,
+        end: utterance.end,
+        confidence: utterance.confidence,
       };
     }).filter(Boolean) || [];
-
-    // Group words by speaker and time windows (2 second windows for better phrase separation)
-    const segments: any[] = [];
-    let currentSegment: any = null;
-
-    labeledTranscript.forEach((word: any) => {
-      if (!currentSegment || 
-          currentSegment.speaker !== word.speaker || 
-          word.start - currentSegment.end > 2000) { // 2 seconds for better phrase detection
-        // New segment
-        if (currentSegment) {
-          segments.push(currentSegment);
-        }
-        currentSegment = {
-          speaker: word.speaker,
-          text: word.text,
-          start: word.start,
-          end: word.end,
-        };
-      } else {
-        // Continue current segment
-        currentSegment.text += ' ' + word.text;
-        currentSegment.end = word.end;
-      }
-    });
-
-    if (currentSegment) {
-      segments.push(currentSegment);
-    }
 
     // Verify actual unique speakers in final segments
     const actualUniqueSpeakers = new Set(segments.map(seg => seg.speaker));

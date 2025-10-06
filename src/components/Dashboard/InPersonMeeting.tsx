@@ -1,17 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Download, FileText, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Mic, Square, Download, FileText, AlertTriangle, Sparkles, BookOpen, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AudioDeviceSelector } from './AudioDeviceSelector';
 import { AudioVisualizer } from './AudioVisualizer';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Textarea } from '@/components/ui/textarea';
 import { jsPDF } from 'jspdf';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
@@ -31,7 +31,9 @@ const InPersonMeeting = () => {
   const [showTitleDialog, setShowTitleDialog] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
-  const [otherAudioSources, setOtherAudioSources] = useState<string[]>([]);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [specificQuery, setSpecificQuery] = useState('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -54,27 +56,6 @@ const InPersonMeeting = () => {
     }
   }, [transcript, currentText]);
 
-  useEffect(() => {
-    // Check for other audio sources
-    checkOtherAudioSources();
-  }, []);
-
-  const checkOtherAudioSources = async () => {
-    try {
-      // This is a simple check - in reality, we can't reliably detect all audio sources
-      // but we can warn users
-      const sources: string[]= [];
-      
-      // Check if there are multiple tabs (approximate)
-      if (performance.navigation.type === 0) {
-        sources.push('Outras abas do navegador podem estar reproduzindo áudio');
-      }
-      
-      setOtherAudioSources(sources);
-    } catch (error) {
-      console.error('Erro ao verificar fontes de áudio:', error);
-    }
-  };
 
   // Convert Float32Array to PCM16 base64
   const convertToPCM16Base64 = (float32Array: Float32Array): string => {
@@ -452,6 +433,7 @@ const InPersonMeeting = () => {
       });
 
       setShowSummary(true);
+      setShowDownloadOptions(true);
 
     } catch (error) {
       console.error('Erro ao salvar reunião:', error);
@@ -501,7 +483,47 @@ const InPersonMeeting = () => {
     });
   };
 
-  const downloadTranscriptPDF = async () => {
+  const processTranscriptWithAI = async (type: 'summary' | 'keypoints', customQuery?: string) => {
+    setIsProcessingAI(true);
+    try {
+      const fullTranscript = transcript.map(msg => 
+        `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.speaker}: ${msg.text}`
+      ).join('\n');
+
+      let prompt = '';
+      if (type === 'summary') {
+        prompt = `Você é um assistente que cria resumos executivos de reuniões. Analise esta transcrição e crie um resumo profissional e conciso em português, destacando os principais tópicos discutidos, decisões tomadas e próximos passos:\n\n${fullTranscript}`;
+      } else if (type === 'keypoints') {
+        prompt = `Você é um assistente que identifica pontos-chave em reuniões. Analise esta transcrição e liste os pontos mais importantes, decisões tomadas, ações necessárias e tópicos relevantes em português. Organize em formato de lista:\n\n${fullTranscript}`;
+      } else if (customQuery) {
+        prompt = `Você é um assistente que ajuda a extrair informações específicas de transcrições de reuniões. O usuário quer saber: "${customQuery}"\n\nAnalise esta transcrição e forneça uma resposta precisa e detalhada em português:\n\n${fullTranscript}`;
+      }
+
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { 
+          messages: [
+            { role: 'user', content: prompt }
+          ]
+        }
+      });
+
+      if (error) throw error;
+
+      return data.message;
+    } catch (error) {
+      console.error('Erro ao processar com IA:', error);
+      toast({
+        title: "Erro ao Processar",
+        description: "Não foi possível processar a transcrição com IA",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  const downloadTranscriptPDF = async (content?: string, title?: string) => {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -521,7 +543,8 @@ const InPersonMeeting = () => {
       // Title
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text('Transcrição de Reunião', pageWidth / 2, 45, { align: 'center' });
+      const docTitle = title || 'Transcrição de Reunião';
+      doc.text(docTitle, pageWidth / 2, 45, { align: 'center' });
       
       // Meeting info
       doc.setFontSize(12);
@@ -538,35 +561,14 @@ const InPersonMeeting = () => {
       doc.setLineWidth(0.5);
       doc.line(margin, 75, pageWidth - margin, 75);
       
-      // Transcript content
+      // Content
       doc.setFontSize(10);
       let yPosition = 85;
       
-      transcript.forEach((msg, index) => {
-        const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
-        
-        const speaker = msg.speaker || 'Pessoa 1';
-        const header = `[${time}] ${speaker}:`;
-        const text = msg.text;
-        
-        // Check if we need a new page
-        if (yPosition > pageHeight - 30) {
-          doc.addPage();
-          yPosition = margin;
-        }
-        
-        // Add timestamp and speaker
-        doc.setFont('helvetica', 'bold');
-        doc.text(header, margin, yPosition);
-        yPosition += 6;
-        
-        // Add transcript text (wrap long lines)
+      if (content) {
+        // AI-processed content
         doc.setFont('helvetica', 'normal');
-        const lines = doc.splitTextToSize(text, maxLineWidth);
+        const lines = doc.splitTextToSize(content, maxLineWidth);
         lines.forEach((line: string) => {
           if (yPosition > pageHeight - 30) {
             doc.addPage();
@@ -575,9 +577,42 @@ const InPersonMeeting = () => {
           doc.text(line, margin, yPosition);
           yPosition += 5;
         });
-        
-        yPosition += 3; // Space between messages
-      });
+      } else {
+        // Original transcript
+        transcript.forEach((msg) => {
+          const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+          
+          const speaker = msg.speaker || 'Pessoa 1';
+          const header = `[${time}] ${speaker}:`;
+          const text = msg.text;
+          
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = margin;
+          }
+          
+          doc.setFont('helvetica', 'bold');
+          doc.text(header, margin, yPosition);
+          yPosition += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          lines.forEach((line: string) => {
+            if (yPosition > pageHeight - 30) {
+              doc.addPage();
+              yPosition = margin;
+            }
+            doc.text(line, margin, yPosition);
+            yPosition += 5;
+          });
+          
+          yPosition += 3;
+        });
+      }
       
       // Footer
       const totalPages = doc.getNumberOfPages();
@@ -593,7 +628,11 @@ const InPersonMeeting = () => {
         );
       }
       
-      doc.save(`transcricao-${meetingTitle.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+      const filename = title 
+        ? `${title.toLowerCase().replace(/\s+/g, '-')}-${meetingTitle.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
+        : `transcricao-${meetingTitle.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      doc.save(filename);
       
       toast({
         title: "Download PDF Iniciado",
@@ -623,7 +662,8 @@ const InPersonMeeting = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Title Dialog */}
       <Dialog open={showTitleDialog} onOpenChange={setShowTitleDialog}>
         <DialogContent>
           <DialogHeader>
@@ -652,134 +692,241 @@ const InPersonMeeting = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Download Options Dialog */}
+      <Dialog open={showDownloadOptions} onOpenChange={setShowDownloadOptions}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Opções de Download</DialogTitle>
+            <DialogDescription>
+              Escolha como deseja baixar a transcrição da reunião
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-auto py-4"
+              onClick={async () => {
+                await downloadTranscriptPDF();
+                setShowDownloadOptions(false);
+              }}
+            >
+              <FileText className="h-5 w-5 text-primary" />
+              <div className="text-left">
+                <div className="font-semibold">Transcrição Completa</div>
+                <div className="text-xs text-muted-foreground">Download da transcrição original em PDF</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-auto py-4"
+              onClick={async () => {
+                const summary = await processTranscriptWithAI('summary');
+                if (summary) {
+                  await downloadTranscriptPDF(summary, 'Resumo Executivo');
+                }
+                setShowDownloadOptions(false);
+              }}
+              disabled={isProcessingAI}
+            >
+              {isProcessingAI ? (
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              ) : (
+                <Sparkles className="h-5 w-5 text-primary" />
+              )}
+              <div className="text-left">
+                <div className="font-semibold">Resumo da Reunião</div>
+                <div className="text-xs text-muted-foreground">IA cria um resumo executivo da reunião</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-auto py-4"
+              onClick={async () => {
+                const keypoints = await processTranscriptWithAI('keypoints');
+                if (keypoints) {
+                  await downloadTranscriptPDF(keypoints, 'Pontos Importantes');
+                }
+                setShowDownloadOptions(false);
+              }}
+              disabled={isProcessingAI}
+            >
+              {isProcessingAI ? (
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              ) : (
+                <BookOpen className="h-5 w-5 text-primary" />
+              )}
+              <div className="text-left">
+                <div className="font-semibold">Pontos Importantes</div>
+                <div className="text-xs text-muted-foreground">IA extrai os pontos-chave e decisões</div>
+              </div>
+            </Button>
+
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Search className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold">Busca Específica</span>
+              </div>
+              <Textarea
+                placeholder="Ex: O que foi decidido sobre o orçamento?"
+                value={specificQuery}
+                onChange={(e) => setSpecificQuery(e.target.value)}
+                className="min-h-[80px] mb-2"
+              />
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  if (!specificQuery.trim()) {
+                    toast({
+                      title: "Digite sua pergunta",
+                      description: "Por favor, descreva o que você procura na transcrição",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  const result = await processTranscriptWithAI('keypoints', specificQuery);
+                  if (result) {
+                    await downloadTranscriptPDF(result, 'Busca Específica');
+                  }
+                  setSpecificQuery('');
+                  setShowDownloadOptions(false);
+                }}
+                disabled={isProcessingAI || !specificQuery.trim()}
+              >
+                {isProcessingAI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar e Baixar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Important Alert */}
       {!isRecording && (
-        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+        <Alert className="mb-6 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20">
           <AlertTriangle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800 dark:text-blue-300">
-            <strong>Importante antes de gravar:</strong>
-            <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
-              <li>Feche TODAS as abas com vídeos, músicas ou qualquer áudio (YouTube, Spotify, etc.)</li>
-              <li>Selecione um microfone físico real, não um dispositivo virtual ou de loopback</li>
-              <li>Use fones de ouvido para evitar feedback e eco</li>
-              <li>Teste o microfone antes de iniciar a gravação</li>
+            <strong className="block mb-2">Importante antes de gravar:</strong>
+            <ul className="space-y-1 text-sm list-disc list-inside">
+              <li>Feche abas com vídeos, músicas ou qualquer áudio</li>
+              <li>Selecione um microfone físico real</li>
+              <li>Use fones de ouvido para evitar eco</li>
             </ul>
           </AlertDescription>
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reunião Presencial</CardTitle>
-          <CardDescription>
-            Grave áudio e transcreva reuniões presenciais em tempo real
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Main Recording Interface */}
+      <Card className="border-2">
+        <CardContent className="pt-8 pb-8">
           {!isRecording ? (
-            <div className="space-y-4">
-              <AudioDeviceSelector
-                selectedDeviceId={selectedDeviceId}
-                onDeviceSelect={setSelectedDeviceId}
-              />
+            <div className="space-y-8">
+              {/* Device Selector */}
+              <div className="max-w-md mx-auto">
+                <AudioDeviceSelector
+                  selectedDeviceId={selectedDeviceId}
+                  onDeviceSelect={setSelectedDeviceId}
+                />
+              </div>
               
-              <div className="text-center py-8">
-                <Mic className="h-16 w-16 mx-auto mb-4 text-primary" />
-                <h3 className="text-lg font-semibold mb-2">Pronto para Gravar</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Selecione um microfone e clique para iniciar
+              {/* Central Record Button */}
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="mb-8 relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                  <Button 
+                    onClick={() => setShowTitleDialog(true)} 
+                    size="lg"
+                    disabled={!selectedDeviceId}
+                    className="relative h-32 w-32 rounded-full text-lg font-semibold shadow-2xl hover:scale-105 transition-transform"
+                  >
+                    <Mic className="h-12 w-12" />
+                  </Button>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Pronto para Gravar</h3>
+                <p className="text-muted-foreground text-center max-w-sm">
+                  {selectedDeviceId 
+                    ? 'Clique no botão acima para iniciar a gravação'
+                    : 'Selecione um microfone para começar'}
                 </p>
-                <Button 
-                  onClick={() => setShowTitleDialog(true)} 
-                  size="lg" 
-                  className="gap-2"
-                  disabled={!selectedDeviceId}
-                >
-                  <Mic className="h-5 w-5" />
-                  Iniciar Reunião Presencial
-                </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <div className="space-y-6">
+              {/* Recording Header */}
+              <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-950/20 rounded-xl border-2 border-red-200">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse" />
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75" />
+                  </div>
                   <div>
-                    <p className="font-semibold text-red-700 dark:text-red-400">Gravando</p>
-                    <p className="text-xs text-red-600 dark:text-red-300">{meetingTitle}</p>
+                    <p className="text-lg font-bold text-red-700 dark:text-red-400">Gravando</p>
+                    <p className="text-sm text-red-600 dark:text-red-300">{meetingTitle}</p>
                   </div>
                 </div>
                 <Button 
                   onClick={stopRecording} 
+                  size="lg"
                   variant="destructive"
-                  className="gap-2"
+                  className="gap-2 font-semibold"
                 >
-                  <Square className="h-4 w-4" />
-                  Encerrar Reunião
+                  <Square className="h-5 w-5 fill-current" />
+                  Encerrar
                 </Button>
               </div>
 
-              <AudioVisualizer stream={currentStream} />
+              {/* Audio Visualizer */}
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-8">
+                <AudioVisualizer stream={currentStream} />
+              </div>
 
+              {/* Live Transcript */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Transcrição em Tempo Real</CardTitle>
-                    {transcript.length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline" className="gap-2">
-                            <Download className="h-4 w-4" />
-                            Baixar
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={downloadTranscriptPDF}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Baixar PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={downloadTranscriptTXT}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Baixar TXT
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Transcrição em Tempo Real
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px] w-full rounded-md border p-4" ref={scrollRef}>
-                    <div className="space-y-3">
+                  <ScrollArea className="h-[300px] w-full rounded-lg border-2 p-4" ref={scrollRef}>
+                    <div className="space-y-4">
                       {transcript.map((msg, index) => (
-                        <div key={index} className="text-sm border-l-2 border-primary/30 pl-3 py-2">
-                          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-                            <span className="font-semibold text-primary">{msg.speaker || 'Pessoa 1'}</span>
-                            <span>•</span>
-                            <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                        <div key={index} className="border-l-4 border-primary/40 pl-4 py-2 animate-fade-in">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-primary px-2 py-1 bg-primary/10 rounded-full">
+                              {msg.speaker || 'Pessoa 1'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(msg.timestamp).toLocaleTimeString()}
+                            </span>
                           </div>
-                          <div className="text-foreground leading-relaxed">
-                            {msg.text}
-                          </div>
+                          <p className="text-sm leading-relaxed">{msg.text}</p>
                         </div>
                       ))}
                       
                       {currentText && (
-                        <div className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-1">
-                            Transcrevendo...
-                          </div>
-                          <div className="text-muted-foreground leading-relaxed italic">
-                            {currentText}
-                          </div>
+                        <div className="border-l-4 border-primary/20 pl-4 py-2 animate-pulse">
+                          <p className="text-xs text-muted-foreground mb-1">Transcrevendo...</p>
+                          <p className="text-sm text-muted-foreground italic">{currentText}</p>
                         </div>
                       )}
 
                       {transcript.length === 0 && !currentText && (
-                        <div className="text-center text-sm text-muted-foreground py-8">
-                          <Mic className="h-8 w-8 mx-auto mb-2 text-primary animate-pulse" />
-                          <p className="font-medium">Aguardando fala...</p>
-                          <p className="text-xs mt-2">Comece a falar para ver a transcrição</p>
+                        <div className="text-center py-12">
+                          <Mic className="h-12 w-12 mx-auto mb-3 text-primary/40 animate-pulse" />
+                          <p className="font-medium text-muted-foreground">Aguardando fala...</p>
+                          <p className="text-xs text-muted-foreground mt-1">Comece a falar para ver a transcrição</p>
                         </div>
                       )}
                     </div>
@@ -791,36 +938,29 @@ const InPersonMeeting = () => {
         </CardContent>
       </Card>
 
+      {/* Success Summary */}
       {showSummary && transcript.length > 0 && (
-        <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
+        <Card className="mt-6 border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
           <CardHeader>
-            <CardTitle className="text-green-700 dark:text-green-400">Reunião Encerrada</CardTitle>
+            <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              Reunião Encerrada com Sucesso
+            </CardTitle>
             <CardDescription>
-              A gravação e transcrição foram salvas com sucesso
+              A gravação e transcrição foram salvas no sistema
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Baixar Transcrição
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={downloadTranscriptPDF}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Baixar PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={downloadTranscriptTXT}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar TXT
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
               <Button 
+                onClick={() => setShowDownloadOptions(true)}
+                className="gap-2 h-auto py-4 flex-col"
+              >
+                <Download className="h-6 w-6" />
+                <span className="text-sm font-semibold">Baixar Transcrição</span>
+              </Button>
+              <Button 
+                variant="outline"
                 onClick={() => {
                   setShowSummary(false);
                   setTranscript([]);
@@ -830,16 +970,19 @@ const InPersonMeeting = () => {
                   currentSpeakerRef.current = 1;
                   speakerCountRef.current = 1;
                 }}
-                className="gap-2"
+                className="gap-2 h-auto py-4 flex-col"
               >
-                <FileText className="h-4 w-4" />
-                Nova Reunião
+                <FileText className="h-6 w-6" />
+                <span className="text-sm font-semibold">Nova Reunião</span>
               </Button>
             </div>
-            <div className="text-sm text-muted-foreground">
-              <p className="font-semibold mb-1">Resumo:</p>
-              <p>• {transcript.length} segmentos transcritos</p>
-              <p>• Gravação salva no sistema</p>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4 text-sm">
+              <p className="font-semibold mb-2 text-green-800 dark:text-green-300">Resumo:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• {transcript.length} segmentos transcritos</li>
+                <li>• {speakerCountRef.current} participante(s) identificado(s)</li>
+                <li>• Gravação salva e disponível para download</li>
+              </ul>
             </div>
           </CardContent>
         </Card>

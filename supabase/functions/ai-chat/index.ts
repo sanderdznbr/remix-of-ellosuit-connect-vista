@@ -14,17 +14,31 @@ serve(async (req) => {
   }
 
   try {
-    const { message, personality, instructions, model = 'gpt-4o-mini' } = await req.json();
+    const { messages, message, personality, instructions, model = 'gpt-4o-mini' } = await req.json();
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    // Build system prompt from personality and instructions
-    const systemPrompt = `${personality ? `Personalidade: ${personality}\n\n` : ''}${instructions || 'Você é um assistente IA útil e amigável.'}`;
+    // Support both old (message) and new (messages) format
+    let apiMessages = [];
+    
+    if (messages && Array.isArray(messages)) {
+      // New format with messages array
+      apiMessages = messages;
+    } else if (message) {
+      // Old format with single message
+      const systemPrompt = `${personality ? `Personalidade: ${personality}\n\n` : ''}${instructions || 'Você é um assistente IA útil e amigável.'}`;
+      apiMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ];
+    } else {
+      throw new Error('Either "messages" array or "message" string is required');
+    }
 
-    console.log('🤖 Processing chat request:', { model, systemPrompt: systemPrompt.substring(0, 100) + '...' });
+    console.log('🤖 Processing chat request:', { model, messageCount: apiMessages.length });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -34,11 +48,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
-        max_tokens: 1500,
+        messages: apiMessages,
+        max_tokens: 2000,
         temperature: 0.7,
         stream: false
       }),
@@ -57,6 +68,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       response: assistantMessage,
+      message: assistantMessage, // For backward compatibility
       model: model,
       usage: data.usage 
     }), {

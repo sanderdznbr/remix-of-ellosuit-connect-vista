@@ -25,7 +25,7 @@ import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
 import { MeetingAIChat } from './MeetingAIChat';
-import { LiveKitTranscriptionListener } from './LiveKitTranscriptionListener';
+import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -363,10 +363,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }} />
           <RoomAudioRenderer />
           
-          {/* LiveKit Native Transcription Listener */}
-          <LiveKitTranscriptionListener 
-            onTranscriptionUpdate={handleTranscriptionUpdate}
+          {/* Local Audio Capture for Real-time Transcription */}
+          <LiveKitAudioCapture 
+            isActive={isTranscribing}
             roomName={roomName}
+            onTranscriptionUpdate={handleTranscriptionUpdate}
           />
           
           {isMobile ? (

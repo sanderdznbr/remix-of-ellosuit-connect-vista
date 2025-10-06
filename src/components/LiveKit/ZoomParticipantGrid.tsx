@@ -7,8 +7,7 @@ import {
 } from '@livekit/components-react';
 import { Track, Participant } from 'livekit-client';
 import { cn } from '@/lib/utils';
-import { MicOff, Wifi } from 'lucide-react';
-import ResizableVideoTile from './ResizableVideoTile';
+import { MicOff, Wifi, Video } from 'lucide-react';
 
 const ZoomParticipantGrid: React.FC = () => {
   const participants = useParticipants();
@@ -17,18 +16,19 @@ const ZoomParticipantGrid: React.FC = () => {
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
 
-  // Separate screen share tracks from camera tracks
   const screenShareTracks = tracks.filter(t => t.source === Track.Source.ScreenShare);
   const cameraTracks = tracks.filter(t => t.source === Track.Source.Camera);
   const hasScreenShare = screenShareTracks.length > 0;
 
+  // Grid dinâmico inspirado no Google Meet: 1, 2, 4, 6, 9, etc.
   const getGridClass = (count: number) => {
-    if (count === 1) return 'grid-cols-1';
-    if (count === 2) return 'grid-cols-2';
+    if (count === 1) return 'grid-cols-1 grid-rows-1';
+    if (count === 2) return 'grid-cols-2 grid-rows-1';
     if (count <= 4) return 'grid-cols-2 grid-rows-2';
     if (count <= 6) return 'grid-cols-3 grid-rows-2';
     if (count <= 9) return 'grid-cols-3 grid-rows-3';
-    return 'grid-cols-4 auto-rows-fr';
+    if (count <= 12) return 'grid-cols-4 grid-rows-3';
+    return 'grid-cols-4 grid-rows-4';
   };
 
   const getParticipantName = (participant: Participant) => {
@@ -40,100 +40,119 @@ const ZoomParticipantGrid: React.FC = () => {
     return !audioTrack || audioTrack.isMuted;
   };
 
-  const getConnectionQuality = (participant: Participant) => {
-    // This would typically come from LiveKit's connection quality API
-    return 'excellent'; // 'excellent', 'good', 'poor'
+  const isVideoEnabled = (participant: Participant) => {
+    const videoTrack = participant.videoTrackPublications.values().next().value;
+    return videoTrack && !videoTrack.isMuted;
   };
 
   return (
-    <div className="zoom-participant-grid-container">
-      {/* Screen Share Area - Responsive Layout */}
+    <div className="w-full h-full flex flex-col bg-[#202124]">
+      {/* Screen Share Area */}
       {hasScreenShare && (
-        <div className="zoom-screenshare-area">
-          <div className="w-full max-w-full overflow-hidden">
+        <div className="flex-1 flex flex-col gap-3 p-3">
+          <div className="flex-1 flex items-center justify-center">
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                className="w-full aspect-video bg-background rounded-lg overflow-hidden"
+                className="w-full h-full max-h-full flex items-center justify-center bg-black rounded-lg overflow-hidden"
               >
-                <ResizableVideoTile
+                <VideoTrack
                   trackRef={trackRef}
-                  isScreenShare={true}
-                  defaultWidth={800}
-                  defaultHeight={450}
+                  className="w-full h-full object-contain"
                 />
               </div>
             ))}
           </div>
           
-          {/* Camera carousel when screen sharing */}
+          {/* Camera carousel quando há compartilhamento de tela */}
           {cameraTracks.length > 0 && (
-            <div className="mt-4 w-full">
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
-                {cameraTracks.map((trackRef: TrackReference, index: number) => (
-                  <div
-                    key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                    className="flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden bg-background"
-                  >
-                    <ResizableVideoTile
+            <div className="flex gap-2 overflow-x-auto pb-2 px-2">
+              {cameraTracks.map((trackRef: TrackReference, index: number) => (
+                <div
+                  key={`camera-carousel-${trackRef.participant.identity}-${index}`}
+                  className="relative flex-shrink-0 w-32 h-24 bg-[#3c4043] rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all"
+                >
+                  {isVideoEnabled(trackRef.participant) ? (
+                    <VideoTrack
                       trackRef={trackRef}
-                      isScreenShare={false}
-                      defaultWidth={128}
-                      defaultHeight={80}
+                      className="w-full h-full object-cover"
                     />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#3c4043]">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                        {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between">
+                    <span className="text-white text-xs font-medium bg-black/70 px-2 py-0.5 rounded truncate max-w-[80px]">
+                      {getParticipantName(trackRef.participant)}
+                    </span>
+                    {isParticipantMuted(trackRef.participant) && (
+                      <div className="bg-red-600 rounded-full p-1">
+                        <MicOff className="h-2.5 w-2.5 text-white" />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Camera Participants Grid - Only when no screen share */}
+      {/* Camera Grid - sem compartilhamento de tela */}
       {!hasScreenShare && (
-        <div className="w-full h-full p-4">
+        <div className="flex-1 flex items-center justify-center p-4">
           {cameraTracks.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center">
-                <Wifi className="h-16 w-16 mx-auto mb-6 text-gray-400" />
-                <p className="text-xl font-medium">Aguardando participantes...</p>
-                <p className="text-gray-400 mt-2">Convide pessoas para se juntar à reunião</p>
-              </div>
+            <div className="text-center">
+              <Wifi className="h-16 w-16 mx-auto mb-4 text-gray-500" />
+              <p className="text-xl font-medium text-gray-300">Aguardando participantes...</p>
+              <p className="text-sm text-gray-500 mt-2">Convide pessoas para se juntar à reunião</p>
             </div>
           ) : (
             <div className={cn(
-              "grid gap-4 h-full w-full",
+              "grid gap-3 w-full h-full",
               getGridClass(cameraTracks.length)
             )}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-${trackRef.participant.identity}-${index}`}
-                  className="relative bg-gray-900 rounded-xl overflow-hidden shadow-lg border-2 border-gray-800 hover:border-primary/50 transition-all"
+                  className="relative bg-[#3c4043] rounded-lg overflow-hidden border-2 border-[#3c4043] hover:border-blue-500 transition-all group"
                 >
-                  <ResizableVideoTile
-                    trackRef={trackRef}
-                    isScreenShare={false}
-                    defaultWidth={320}
-                    defaultHeight={240}
-                  />
+                  {isVideoEnabled(trackRef.participant) ? (
+                    <VideoTrack
+                      trackRef={trackRef}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#3c4043]">
+                      <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-3xl">
+                        {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
                   
-                  {/* Participant Info Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+                  {/* Participant info overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                     <div className="flex items-center justify-between">
-                      <span className="text-white text-sm font-medium flex items-center gap-2">
+                      <span className="text-white text-sm font-medium truncate max-w-[80%] drop-shadow-lg">
                         {getParticipantName(trackRef.participant)}
-                        {isParticipantMuted(trackRef.participant) && (
-                          <MicOff className="h-3 w-3 text-red-400" />
-                        )}
                       </span>
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        getConnectionQuality(trackRef.participant) === 'excellent' ? 'bg-green-400' :
-                        getConnectionQuality(trackRef.participant) === 'good' ? 'bg-yellow-400' :
-                        'bg-red-400'
-                      )} />
+                      {isParticipantMuted(trackRef.participant) && (
+                        <div className="bg-red-600 rounded-full p-1.5">
+                          <MicOff className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Speaking indicator */}
+                  {!isParticipantMuted(trackRef.participant) && (
+                    <div className="absolute top-3 left-3 bg-green-500 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

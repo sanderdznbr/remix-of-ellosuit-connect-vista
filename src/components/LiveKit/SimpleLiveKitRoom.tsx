@@ -2,16 +2,13 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  useTracks,
-  TrackReference,
 } from '@livekit/components-react';
-import { Track, Room, RoomEvent } from 'livekit-client';
+import { Room } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2, FileText, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2, AlertCircle, RefreshCw, Share2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MeetingControls from './MeetingControls';
 import MeetingSidebar from './MeetingSidebar';
@@ -24,6 +21,7 @@ import { RoomContextCapture } from './RoomContextCapture';
 import { LiveKitTranscription } from './LiveKitTranscription';
 import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
+import TranscriptionPanel from './TranscriptionPanel';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -41,6 +39,13 @@ interface TokenResponse {
   userId: string;
 }
 
+interface TranscriptionMessage {
+  text: string;
+  is_final: boolean;
+  timestamp: string;
+  speaker?: string;
+}
+
 const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({ 
   roomName, 
   participantName, 
@@ -52,17 +57,21 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [error, setError] = useState<string>('');
   const [preJoinChoices, setPreJoinChoices] = useState<any>();
   const [showPreJoin, setShowPreJoin] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(true); // Auto-open chat
-  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'transcription' | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [companyId, setCompanyId] = useState<string>('');
-  const [transcriptionMessages, setTranscriptionMessages] = useState<Array<{text: string, is_final: boolean, timestamp: string, speaker?: string}>>([]);
-  const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
+  const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [savedAudioUrl, setSavedAudioUrl] = useState<string>('');
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const meetingControlsRef = useRef<any>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { isMobile } = useIsMobile();
+  const roomRef = useRef<Room | null>(null);
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -82,11 +91,66 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     getCompanyId();
   }, []);
-  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { isMobile } = useIsMobile();
-  const roomRef = useRef<Room | null>(null);
+
+  // Conexão WebSocket para transcrição em tempo real
+  useEffect(() => {
+    if (!token || activeTab !== 'transcription') return;
+
+    console.log('🎤 Conectando WebSocket para transcrição em tempo real...');
+    
+    // Get Supabase project URL from environment or use default
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+    const projectRef = SUPABASE_URL.split('//')[1]?.split('.')[0] || '';
+    const wsUrl = `wss://${projectRef}.supabase.co/functions/v1/realtime-transcription`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket conectado para transcrição');
+      setIsTranscribing(true);
+      ws.send(JSON.stringify({
+        type: 'start',
+        roomId: roomName,
+        userId: user?.id
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📝 Transcrição recebida:', data);
+        
+        if (data.type === 'transcription') {
+          setTranscriptionMessages(prev => [...prev, {
+            text: data.text,
+            is_final: data.is_final || false,
+            timestamp: data.timestamp || new Date().toISOString(),
+            speaker: data.speaker || 'Participante'
+          }]);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao processar mensagem WebSocket:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ Erro no WebSocket:', error);
+      setIsTranscribing(false);
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket desconectado');
+      setIsTranscribing(false);
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'stop' }));
+        ws.close();
+      }
+    };
+  }, [token, activeTab, roomName, user?.id]);
 
   // Enhanced connection management with better visibility handling
   useEffect(() => {
@@ -94,13 +158,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Page became visible - clear any pending reconnection
         if (reconnectTimeout) {
           clearTimeout(reconnectTimeout);
         }
         console.log('Page visible - maintaining stable connection');
       } else {
-        // Page hidden - but maintain connection
         console.log('Page hidden - connection maintained');
       }
     };
@@ -113,7 +175,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       console.log('Window blurred - maintaining connection');
     };
 
-    // Prevent connection drops on various browser events
     const preventDisconnect = (e: Event) => {
       e.preventDefault();
       return false;
@@ -138,7 +199,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Play connection sound on successful join
   useEffect(() => {
     if (!showPreJoin && token && serverUrl) {
-      // Play connection sound
       const audio = new Audio();
       audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1hdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+PSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
       audio.play().catch(() => {
@@ -189,39 +249,24 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     }
   }, [roomName, toast]);
 
-  // Don't generate token initially - wait for pre-join
   useEffect(() => {
-    setLoading(false); // Just set loading to false, no token generation yet
+    setLoading(false);
   }, []);
 
   const handlePreJoinSubmit = useCallback(async (values: any) => {
     console.log('PreJoin submitted with values:', values);
     setPreJoinChoices(values);
     
-    // Generate token with the actual username entered
     const finalUsername = values.username || participantName || 'Convidado';
     console.log('Using final username:', finalUsername);
     await generateToken(finalUsername);
     
-    // Hide pre-join immediately after token generation starts
     setShowPreJoin(false);
   }, [generateToken, participantName]);
-
-  const toggleSidebar = (tab: 'chat' | 'participants' | 'transcription') => {
-    if (tab === 'chat') {
-      setIsChatOpen(!isChatOpen);
-      setIsParticipantsOpen(false);
-    } else if (tab === 'participants') {
-      setIsParticipantsOpen(!isParticipantsOpen);
-      setIsChatOpen(false);
-    }
-    setSidebarTab(tab);
-  };
 
   const handleLeaveClick = async () => {
     console.log('🚪 Sair - transcrições:', transcriptionMessages.length);
     
-    // Get saved audio URL
     let audioUrl = '';
     if (meetingControlsRef.current?.getSavedAudioUrl) {
       audioUrl = meetingControlsRef.current.getSavedAudioUrl();
@@ -229,15 +274,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       setSavedAudioUrl(audioUrl);
     }
     
-    // Show modal if we have transcriptions or audio
     if (transcriptionMessages.length > 0 || audioUrl) {
       console.log('✅ Abrindo modal de saída');
       
-      // If we have audio, show processing state
       if (audioUrl) {
         setIsProcessingTranscript(true);
         
-        // Start speaker diarization
         try {
           const { data, error } = await supabase.functions.invoke('speaker-diarization', {
             body: { audioUrl }
@@ -245,7 +287,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           
           if (!error && data) {
             console.log('✅ Diarização completa:', data);
-            // Update transcription messages with speaker info if available
             if (data.segments) {
               // Process segments...
             }
@@ -267,7 +308,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const handleDisconnected = useCallback(async () => {
     console.log('Disconnected from room');
     
-    // If I'm the host, mark room as inactive
     if (roomRef.current?.localParticipant) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -293,11 +333,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       }
     }
     
-    // Play disconnection sound
     const audio = new Audio();
-    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
+    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
     audio.play().catch(() => {
-      // Fallback if audio doesn't play
       console.log('Could not play disconnect sound');
     });
     
@@ -324,10 +362,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#202124] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Conectando à sala...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <p className="text-gray-300">Conectando à sala...</p>
         </div>
       </div>
     );
@@ -336,12 +374,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#202124] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-destructive" />
+          <AlertCircle className="h-12 w-12 text-red-500" />
           <div>
-            <h3 className="text-lg font-semibold mb-2">Erro na Conexão</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <h3 className="text-lg font-semibold mb-2 text-white">Erro na Conexão</h3>
+            <p className="text-gray-400 mb-4">{error}</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => generateToken(participantName || 'Convidado')} variant="default" className="gap-2">
@@ -357,9 +395,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     );
   }
 
-
   return (
-    <div className="zoom-meeting-layout-light">
+    <>
       {showPreJoin ? (
         <ZoomPreJoin 
           roomName={roomName}
@@ -377,20 +414,17 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           onDisconnected={handleDisconnected}
           onError={handleError}
           options={{
-            // Enhanced connection options - Better handling of page visibility
             adaptiveStream: true,
             disconnectOnPageLeave: false,
             publishDefaults: {
               simulcast: false,
               stopMicTrackOnMute: false,
-              videoCodec: 'vp8', // More stable codec
+              videoCodec: 'vp8',
             },
-            // Connection management
             reconnectPolicy: {
               nextRetryDelayInMs: (context) => {
-                // More aggressive reconnection for better stability
                 if (context.elapsedMs < 10_000) {
-                  return 1000; // Quick reconnect for short disconnections
+                  return 1000;
                 }
                 return Math.min(context.retryCount * 2000, 10000);
               },
@@ -403,9 +437,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }} />
           <RoomAudioRenderer />
           
-          {/* Real-time Transcription */}
           <LiveKitTranscription
-            isActive={isTranscriptionActive}
+            isActive={isTranscribing}
             onTranscript={(data) => {
               setTranscriptionMessages(prev => [...prev, data]);
             }}
@@ -419,112 +452,96 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             />
           ) : (
             <>
-              {/* Modern Meeting Header */}
-              <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-4">
-                <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
+              {/* Processing Transcript Loading */}
+              {isProcessingTranscript && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                  <div className="bg-[#2d2e30] p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
+                    <div className="mb-4">
+                      <Loader2 className="mx-auto w-16 h-16 text-blue-500 animate-spin" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-white">Processando transcrição...</h3>
+                    <p className="text-gray-400">
+                      Estamos identificando os participantes e gerando a transcrição completa da reunião.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="h-screen w-full flex flex-col bg-[#202124]">
+                {/* Header Minimalista - estilo Google Meet */}
+                <div className="bg-[#202124] px-4 py-2 flex items-center justify-between border-b border-gray-800">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={logoEllo} 
-                      alt="ELLOSUIT" 
-                      className="h-8 w-8 object-contain"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-base font-semibold text-white">Reunião ELLOSUIT</span>
-                      <span className="text-xs text-white/70">Sala: {roomName}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-sm text-gray-300 font-medium">{roomName}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Button
                       onClick={() => setShowShareModal(true)}
-                      variant="secondary"
                       size="sm"
-                      className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                      className="bg-[#3c4043] hover:bg-[#5f6368] text-white border-0"
                     >
                       <Share2 className="h-4 w-4 mr-2" />
                       Convidar
                     </Button>
-                    <div className="flex items-center gap-2 text-xs text-white/90 bg-green-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span>Conectado</span>
+                    <div className="text-xs text-gray-500">
+                      {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="relative flex h-screen bg-gray-900">
-                {/* Main Video Area */}
-                <div className="flex-1 flex flex-col">
-                  {/* Video Grid */}
-                  <div className="flex-1 relative">
+                {/* Main content area */}
+                <div className="flex-1 flex overflow-hidden relative">
+                  {/* Video Grid Area - Full Width */}
+                  <div className="flex-1 flex flex-col">
                     <ZoomParticipantGrid />
                   </div>
-                  
-                  {/* Bottom Controls Bar */}
-                  <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
-                    <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowDeviceSettings(true)}
-                          className="text-white hover:bg-white/20 backdrop-blur-sm"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Configurações
-                        </Button>
-                      </div>
-                      
-                      <MeetingControls
-                        ref={meetingControlsRef}
-                        onToggleChat={() => toggleSidebar('chat')}
-                        onToggleParticipants={() => toggleSidebar('participants')}
-                        onShareMeeting={() => setShowShareModal(true)}
-                        onLeave={handleLeaveClick}
-                        isChatOpen={isChatOpen}
-                        isParticipantsOpen={isParticipantsOpen}
-                        roomCode={roomName}
-                        companyId={companyId}
-                        onToggleTranscription={() => {
-                          toggleSidebar('transcription');
-                          setIsTranscriptionActive(true);
-                        }}
-                        onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
-                      />
-                      
-                      <div className="w-32" />
+
+                  {/* Sidebar overlay quando ativo - estilo Google Meet */}
+                  {(activeTab === 'chat' || activeTab === 'participants' || activeTab === 'transcription') && (
+                    <div className="absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#202124] border-l border-gray-800 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+                      {activeTab === 'transcription' ? (
+                        <TranscriptionPanel
+                          roomId={roomName}
+                          isActive={isTranscribing}
+                          messages={transcriptionMessages}
+                          onMessagesUpdate={setTranscriptionMessages}
+                        />
+                      ) : (
+                        <MeetingSidebar 
+                          isOpen={true}
+                          onClose={() => setActiveTab(null)}
+                          activeTab={activeTab}
+                          onTabChange={setActiveTab}
+                          roomId={roomName}
+                          transcriptionMessages={transcriptionMessages}
+                          onTranscriptionMessagesUpdate={setTranscriptionMessages}
+                        />
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Sidebar Overlay */}
-                {(isChatOpen || isParticipantsOpen) && (
-                  <div className="absolute right-0 top-0 bottom-0 z-30 w-96 bg-background shadow-2xl">
-                    <MeetingSidebar
-                      isOpen={isChatOpen || isParticipantsOpen}
-                      onClose={() => {
-                        setIsChatOpen(false);
-                        setIsParticipantsOpen(false);
-                      }}
-                      activeTab={sidebarTab}
-                      onTabChange={(tab) => {
-                        if (tab === 'chat') {
-                          setIsChatOpen(true);
-                          setIsParticipantsOpen(false);
-                        } else if (tab === 'participants') {
-                          setIsParticipantsOpen(true);
-                          setIsChatOpen(false);
-                        } else if (tab === 'transcription') {
-                          setIsChatOpen(false);
-                          setIsParticipantsOpen(false);
-                        }
-                        setSidebarTab(tab);
-                      }}
-                      roomId={roomName}
-                      transcriptionMessages={transcriptionMessages}
-                      onTranscriptionMessagesUpdate={setTranscriptionMessages}
-                    />
-                  </div>
-                )}
+                {/* Bottom Controls Bar - estilo Google Meet */}
+                <div className="bg-[#202124] border-t border-gray-800 px-4 py-3">
+                  <MeetingControls
+                    ref={meetingControlsRef}
+                    onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
+                    onToggleParticipants={() => setActiveTab(activeTab === 'participants' ? null : 'participants')}
+                    onShareMeeting={() => setShowShareModal(true)}
+                    onLeave={handleLeaveClick}
+                    isChatOpen={activeTab === 'chat'}
+                    isParticipantsOpen={activeTab === 'participants'}
+                    roomCode={roomName}
+                    companyId={companyId}
+                    onToggleTranscription={() => {
+                      setActiveTab(activeTab === 'transcription' ? null : 'transcription');
+                      setIsTranscribing(true);
+                    }}
+                    onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
+                  />
+                </div>
               </div>
               
               {/* Device Settings Modal */}
@@ -532,26 +549,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 isOpen={showDeviceSettings}
                 onClose={() => setShowDeviceSettings(false)}
               />
-              
-              {/* Processing Transcript Loading */}
-              {isProcessingTranscript && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
-                  <div className="bg-background rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-                    <div className="relative inline-block mb-6">
-                      <Loader2 className="h-16 w-16 text-primary animate-spin" />
-                      <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Processando Transcrição</h3>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      Estamos identificando as vozes e gerando a transcrição completa com identificação de participantes...
-                    </p>
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                      <span>Isso pode levar alguns segundos</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
 
@@ -571,14 +568,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           />
         </LiveKitRoom>
       ) : (
-        <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="min-h-screen bg-[#202124] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Entrando na reunião...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <p className="text-gray-300">Entrando na reunião...</p>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

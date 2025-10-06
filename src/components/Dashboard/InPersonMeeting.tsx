@@ -42,16 +42,29 @@ const InPersonMeeting = () => {
     }
 
     try {
-      // Request microphone access
+      // List all audio devices to help debug
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      console.log('📱 Dispositivos de áudio disponíveis:', audioInputs);
+
+      // Request ONLY microphone access with strict constraints
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          sampleRate: 24000,
-          channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
-        } 
+          autoGainControl: true,
+          sampleRate: 24000,
+          channelCount: 1,
+          // Prefer default microphone
+          deviceId: audioInputs.length > 0 ? { ideal: audioInputs[0].deviceId } : undefined
+        },
+        video: false
       });
+
+      // Verify the audio track
+      const audioTrack = stream.getAudioTracks()[0];
+      console.log('🎤 Usando dispositivo:', audioTrack.label);
+      console.log('🎤 Configurações:', audioTrack.getSettings());
 
       // Connect to transcription WebSocket
       const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
@@ -79,8 +92,10 @@ const InPersonMeeting = () => {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📥 Mensagem WebSocket recebida:', data.type, data);
           
           if (data.type === 'transcript_update') {
+            console.log('📝 Transcrição:', data.text, 'Final:', data.is_final);
             if (data.is_final) {
               setTranscript(prev => [...prev, {
                 text: data.text,
@@ -92,7 +107,7 @@ const InPersonMeeting = () => {
             }
           }
         } catch (err) {
-          console.error('Erro ao processar transcrição:', err);
+          console.error('❌ Erro ao processar transcrição:', err);
         }
       };
 
@@ -114,6 +129,7 @@ const InPersonMeeting = () => {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
+          console.log('🎵 Capturado chunk de áudio:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
           
           // Send audio to transcription service
@@ -121,6 +137,7 @@ const InPersonMeeting = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64Audio = (reader.result as string).split(',')[1];
+              console.log('📤 Enviando áudio para transcrição:', base64Audio.length, 'caracteres base64');
               ws.send(JSON.stringify({
                 type: 'audio_data',
                 audio: base64Audio

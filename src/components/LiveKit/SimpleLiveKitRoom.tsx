@@ -211,10 +211,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [generateToken, participantName]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
-    console.log('📝 New transcription:', message);
+    console.log('📝 Atualização de transcrição recebida:', {
+      is_final: message.is_final,
+      text: message.text,
+      speaker: message.speaker,
+      timestamp: message.timestamp
+    });
     
     if (message.is_final) {
-      setTranscriptionMessages(prev => [...prev, message]);
+      console.log('✅ Adicionando transcrição final à lista');
+      setTranscriptionMessages(prev => {
+        const updated = [...prev, message];
+        console.log(`📊 Total de transcrições: ${updated.length}`);
+        return updated;
+      });
+    } else {
+      console.log('⏳ Transcrição parcial (aguardando finalização)');
     }
   }, []);
 

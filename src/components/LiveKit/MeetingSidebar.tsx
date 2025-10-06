@@ -51,14 +51,22 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
 
   // Listen for chat messages and files
   useEffect(() => {
-    if (!room) return;
+    if (!room) {
+      console.log('⚠️ Room não disponível para chat');
+      return;
+    }
+
+    console.log('✅ Room disponível, configurando listener de chat');
 
     const handleDataReceived = (payload: Uint8Array, participant: any) => {
       try {
         const decoder = new TextDecoder();
         const data = JSON.parse(decoder.decode(payload));
         
+        console.log('📩 Dados recebidos:', data.type, 'de', participant?.name);
+        
         if (data.type === 'chat') {
+          console.log('💬 Mensagem de chat recebida:', data.text);
           setMessages(prev => [...prev, {
             id: Date.now(),
             participant: participant?.name || participant?.identity || 'Participante',
@@ -66,7 +74,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             timestamp: new Date()
           }]);
         } else if (data.type === 'file') {
-          // Receive file metadata (files are temporary, not saved to Supabase)
+          console.log('📎 Arquivo recebido:', data.fileName);
           setMessages(prev => [...prev, {
             id: Date.now(),
             participant: participant?.name || participant?.identity || 'Participante',
@@ -80,12 +88,15 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
           }]);
         }
       } catch (error) {
-        console.error('Error parsing data:', error);
+        console.error('❌ Erro ao processar dados recebidos:', error);
       }
     };
 
     room.on('dataReceived', handleDataReceived);
+    console.log('✅ Listener de chat configurado');
+    
     return () => {
+      console.log('🧹 Removendo listener de chat');
       room.off('dataReceived', handleDataReceived);
     };
   }, [room]);
@@ -388,7 +399,9 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             <div className="flex-none p-4 border-t border-border bg-background">
               {!room || !localParticipant ? (
                 <div className="text-center py-2">
-                  <p className="text-xs text-muted-foreground">Conectando ao chat...</p>
+                  <p className="text-xs text-muted-foreground">
+                    {!room ? '🔌 Aguardando conexão com a sala...' : '👤 Conectando participante...'}
+                  </p>
                 </div>
               ) : (
                 <div className="flex gap-2">

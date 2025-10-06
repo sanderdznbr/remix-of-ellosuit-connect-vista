@@ -82,7 +82,9 @@ serve(async (req) => {
       formData.append('file', blob, 'audio.wav');
       formData.append('model', 'whisper-1');
       formData.append('language', 'pt');
-      formData.append('response_format', 'json');
+      formData.append('response_format', 'verbose_json');
+      // Adicionar prompt para melhorar detecção e evitar ruído
+      formData.append('prompt', 'Esta é uma reunião profissional em português. Transcreva apenas fala clara e audível, ignorando ruídos de fundo.');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -99,7 +101,41 @@ serve(async (req) => {
       }
 
       const result = await response.json();
-      return result.text;
+      
+      // Validar qualidade da transcrição
+      const text = result.text?.trim() || '';
+      const noSpeechProb = result.segments?.[0]?.no_speech_prob || 0;
+      
+      // Se a probabilidade de "não fala" é alta, ignorar
+      if (noSpeechProb > 0.6) {
+        console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
+        return '';
+      }
+      
+      // Filtrar transcrições muito curtas (menos de 10 caracteres)
+      if (text.length < 10) {
+        console.log('⚠️ Transcrição muito curta, ignorando:', text);
+        return '';
+      }
+      
+      // Filtrar padrões de ruído comuns
+      const noisePatterns = [
+        /^[eéaáií\s]+$/i,  // "E aí", "é é é"
+        /^(da)+$/i,         // "DADADADA"
+        /^(pa|ra|rá)+$/i,   // "Parará, parará"
+        /amara\.org/i,      // "Legendas pela comunidade do Amara.org"
+        /legendas? pela comunidade/i,
+        /^[a-záéíóú]{1,2}(\s[a-záéíóú]{1,2})+$/i // Repetições de letras curtas
+      ];
+      
+      for (const pattern of noisePatterns) {
+        if (pattern.test(text)) {
+          console.log('⚠️ Padrão de ruído detectado, ignorando:', text);
+          return '';
+        }
+      }
+      
+      return text;
     } catch (error) {
       console.error('Error transcribing audio:', error);
       throw error;
@@ -178,7 +214,8 @@ serve(async (req) => {
               console.log('🎯 Sending to Whisper API...');
               const transcript = await transcribeAudioChunk(combinedAudio);
               
-              if (transcript && transcript.trim()) {
+              // Apenas envia se houver transcrição válida (não vazia após filtragem)
+              if (transcript && transcript.trim().length >= 10) {
                 console.log('✅ Transcription successful:', transcript);
                 fullTranscript += transcript + ' ';
                 
@@ -191,13 +228,12 @@ serve(async (req) => {
                 }));
                 console.log('📤 Sent transcript to client');
               } else {
-                console.log('⚠️ Empty transcript received from Whisper');
+                console.log('⚠️ Transcrição vazia ou filtrada, não enviando ao cliente');
               }
             } catch (error) {
               console.error('❌ Transcription error:', error);
-              socket.send(JSON.stringify({
-                type: 'transcript_update',
-                text: '[Erro ao transcrever este segmento]',
+              // Não enviar mensagem de erro ao cliente para evitar poluir a UI
+            }
                 is_final: false,
                 timestamp: new Date().toISOString()
               }));

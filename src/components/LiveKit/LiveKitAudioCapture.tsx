@@ -183,6 +183,22 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
   // Exactly like InPersonMeeting - accumulate and send intelligently
   const accumulateAndSendAudio = (pcm16Data: Int16Array) => {
+    // Calculate RMS (Root Mean Square) to detect if there's actual audio content
+    let sum = 0;
+    for (let i = 0; i < pcm16Data.length; i++) {
+      sum += pcm16Data[i] * pcm16Data[i];
+    }
+    const rms = Math.sqrt(sum / pcm16Data.length);
+    
+    // Threshold para detectar silêncio (ajuste conforme necessário)
+    // Valores típicos: 100-500 para 16-bit PCM
+    const SILENCE_THRESHOLD = 300;
+    
+    // Se o RMS está abaixo do threshold, é silêncio - não acumula
+    if (rms < SILENCE_THRESHOLD) {
+      return;
+    }
+
     // Accumulate audio in buffer
     const combined = new Int16Array(audioBufferRef.current.length + pcm16Data.length);
     combined.set(audioBufferRef.current);
@@ -194,11 +210,11 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
 
     // Send only if:
-    // 1. Buffer has at least 3 seconds of audio
-    // 2. At least 2 seconds passed since last send
-    if (bufferDurationMs >= 3000 && timeSinceLastSend >= 2000) {
+    // 1. Buffer has at least 4 seconds of audio (aumentado de 3 para 4)
+    // 2. At least 3 seconds passed since last send (aumentado de 2 para 3)
+    if (bufferDurationMs >= 4000 && timeSinceLastSend >= 3000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms)`);
+        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms, RMS: ${rms.toFixed(2)})`);
         
         // Convert to Uint8Array for base64 encoding
         const uint8Array = new Uint8Array(audioBufferRef.current.buffer);

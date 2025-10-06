@@ -60,6 +60,7 @@ const InPersonMeeting = () => {
 
       ws.onopen = () => {
         console.log('✅ Conectado ao serviço de transcrição');
+        setIsRecording(true); // Mover para cá para garantir que está conectado
         
         // Generate meeting ID
         meetingIdRef.current = `in-person-${Date.now()}`;
@@ -131,7 +132,7 @@ const InPersonMeeting = () => {
       };
 
       mediaRecorder.start(1000); // 1 second chunks
-      setIsRecording(true);
+      console.log('✅ Gravação iniciada');
 
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
@@ -186,18 +187,19 @@ const InPersonMeeting = () => {
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('meeting-recordings')
         .getPublicUrl(fileName);
 
-      // Save transcript to database
+      const publicUrl = urlData.publicUrl;
+
+      // Save transcript to database na tabela correta
       const fullTranscript = transcript.map(t => t.text).join(' ');
       
       const { error: dbError } = await supabase
-        .from('meeting_recordings')
+        .from('in_person_meetings')
         .insert({
           title: meetingTitle,
-          room_id: null, // In-person meeting
           file_url: publicUrl,
           transcript: fullTranscript,
           created_by: user.id,

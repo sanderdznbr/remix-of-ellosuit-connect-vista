@@ -16,6 +16,7 @@ import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import MeetingRecordings from './MeetingRecordings';
 import MeetingTranscriptions from './MeetingTranscriptions';
 import InPersonMeeting from './InPersonMeeting';
+import InPersonMeetingsView from './InPersonMeetingsView';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -23,6 +24,7 @@ const MeetingRooms = () => {
   const [showRecordingsDialog, setShowRecordingsDialog] = useState(false);
   const [showTranscriptionsDialog, setShowTranscriptionsDialog] = useState(false);
   const [showInPersonDialog, setShowInPersonDialog] = useState(false);
+  const [showInPersonMeetingsDialog, setShowInPersonMeetingsDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
@@ -150,6 +152,21 @@ const MeetingRooms = () => {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh]">
               <InPersonMeeting />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showInPersonMeetingsDialog} onOpenChange={setShowInPersonMeetingsDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-teal-300 text-teal-700 hover:bg-teal-50"
+              >
+                <FileText className="h-4 w-4" />
+                Ver Reuniões Presenciais
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+              <InPersonMeetingsView />
             </DialogContent>
           </Dialog>
           

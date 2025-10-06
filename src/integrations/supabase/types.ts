@@ -934,6 +934,42 @@ export type Database = {
         }
         Relationships: []
       }
+      in_person_meetings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          duration_seconds: number | null
+          file_url: string | null
+          id: string
+          title: string
+          transcript: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          duration_seconds?: number | null
+          file_url?: string | null
+          id?: string
+          title: string
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          duration_seconds?: number | null
+          file_url?: string | null
+          id?: string
+          title?: string
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       meeting_integrations: {
         Row: {
           access_token: string | null

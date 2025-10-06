@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2, FileText } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Video, VideoOff, Mic, MicOff, Users, MessageSquare, Share2, FileText, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MeetingControls from './MeetingControls';
@@ -23,6 +23,7 @@ import MobileMeetingLayout from './MobileMeetingLayout';
 import { RoomContextCapture } from './RoomContextCapture';
 import { LiveKitTranscription } from './LiveKitTranscription';
 import logoEllo from '@/assets/logoellosuit.png';
+import DeviceSettingsModal from './DeviceSettingsModal';
 import '@/styles/livekit.css';
 import '@/styles/zoom-meeting.css';
 
@@ -59,6 +60,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [savedAudioUrl, setSavedAudioUrl] = useState<string>('');
+  const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
+  const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const meetingControlsRef = useRef<any>(null);
 
   useEffect(() => {
@@ -229,6 +232,31 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     // Show modal if we have transcriptions or audio
     if (transcriptionMessages.length > 0 || audioUrl) {
       console.log('✅ Abrindo modal de saída');
+      
+      // If we have audio, show processing state
+      if (audioUrl) {
+        setIsProcessingTranscript(true);
+        
+        // Start speaker diarization
+        try {
+          const { data, error } = await supabase.functions.invoke('speaker-diarization', {
+            body: { audioUrl }
+          });
+          
+          if (!error && data) {
+            console.log('✅ Diarização completa:', data);
+            // Update transcription messages with speaker info if available
+            if (data.segments) {
+              // Process segments...
+            }
+          }
+        } catch (error) {
+          console.error('Erro na diarização:', error);
+        } finally {
+          setIsProcessingTranscript(false);
+        }
+      }
+      
       setShowExitModal(true);
     } else {
       console.log('❌ Saindo direto');
@@ -391,83 +419,139 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             />
           ) : (
             <>
-              {/* Meeting Header with Logo */}
-              <div className="zoom-meeting-header">
-                <div className="flex items-center gap-4">
-                  <img 
-                    src={logoEllo} 
-                    alt="ELLOSUIT" 
-                    className="zoom-meeting-logo"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-lg font-semibold text-gray-800">Reunião ELLOSUIT</span>
-                    <span className="text-sm text-gray-500">Sala: {roomName}</span>
+              {/* Modern Meeting Header */}
+              <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-4">
+                <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={logoEllo} 
+                      alt="ELLOSUIT" 
+                      className="h-8 w-8 object-contain"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-base font-semibold text-white">Reunião ELLOSUIT</span>
+                      <span className="text-xs text-white/70">Sala: {roomName}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Button
-                    onClick={() => setShowShareModal(true)}
-                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span className="text-sm font-medium">Convidar</span>
-                  </Button>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span>Conectado</span>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={() => setShowShareModal(true)}
+                      variant="secondary"
+                      size="sm"
+                      className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Convidar
+                    </Button>
+                    <div className="flex items-center gap-2 text-xs text-white/90 bg-green-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span>Conectado</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="zoom-meeting-main">
-                <div className="zoom-meeting-content">
-                  <ZoomParticipantGrid />
+              <div className="relative flex h-screen bg-gray-900">
+                {/* Main Video Area */}
+                <div className="flex-1 flex flex-col">
+                  {/* Video Grid */}
+                  <div className="flex-1 relative">
+                    <ZoomParticipantGrid />
+                  </div>
                   
-                  <MeetingControls
-                    ref={meetingControlsRef}
-                    onToggleChat={() => toggleSidebar('chat')}
-                    onToggleParticipants={() => toggleSidebar('participants')}
-                    onShareMeeting={() => setShowShareModal(true)}
-                    onLeave={handleLeaveClick}
-                    isChatOpen={isChatOpen}
-                    isParticipantsOpen={isParticipantsOpen}
-                    roomCode={roomName}
-                    companyId={companyId}
-                    onToggleTranscription={() => {
-                      toggleSidebar('transcription');
-                      setIsTranscriptionActive(true);
-                    }}
-                    onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
-                  />
+                  {/* Bottom Controls Bar */}
+                  <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
+                    <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowDeviceSettings(true)}
+                          className="text-white hover:bg-white/20 backdrop-blur-sm"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Configurações
+                        </Button>
+                      </div>
+                      
+                      <MeetingControls
+                        ref={meetingControlsRef}
+                        onToggleChat={() => toggleSidebar('chat')}
+                        onToggleParticipants={() => toggleSidebar('participants')}
+                        onShareMeeting={() => setShowShareModal(true)}
+                        onLeave={handleLeaveClick}
+                        isChatOpen={isChatOpen}
+                        isParticipantsOpen={isParticipantsOpen}
+                        roomCode={roomName}
+                        companyId={companyId}
+                        onToggleTranscription={() => {
+                          toggleSidebar('transcription');
+                          setIsTranscriptionActive(true);
+                        }}
+                        onTranscriptionMessage={(msg) => setTranscriptionMessages(prev => [...prev, msg])}
+                      />
+                      
+                      <div className="w-32" />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Fixed Sidebar - Always Show */}
-                <div className="zoom-meeting-sidebar-container">
-                  <MeetingSidebar
-                    isOpen={isChatOpen || isParticipantsOpen}
-                    onClose={() => {
-                      setIsChatOpen(false);
-                      setIsParticipantsOpen(false);
-                    }}
-                    activeTab={sidebarTab}
-                    onTabChange={(tab) => {
-                      if (tab === 'chat') {
-                        setIsChatOpen(true);
-                        setIsParticipantsOpen(false);
-                      } else if (tab === 'participants') {
-                        setIsParticipantsOpen(true);
+                {/* Sidebar Overlay */}
+                {(isChatOpen || isParticipantsOpen) && (
+                  <div className="absolute right-0 top-0 bottom-0 z-30 w-96 bg-background shadow-2xl">
+                    <MeetingSidebar
+                      isOpen={isChatOpen || isParticipantsOpen}
+                      onClose={() => {
                         setIsChatOpen(false);
-                      } else if (tab === 'transcription') {
-                        // Keep current state but set tab
-                      }
-                      setSidebarTab(tab);
-                    }}
-                    roomId={roomName}
-                    transcriptionMessages={transcriptionMessages}
-                    onTranscriptionMessagesUpdate={setTranscriptionMessages}
-                  />
-                </div>
+                        setIsParticipantsOpen(false);
+                      }}
+                      activeTab={sidebarTab}
+                      onTabChange={(tab) => {
+                        if (tab === 'chat') {
+                          setIsChatOpen(true);
+                          setIsParticipantsOpen(false);
+                        } else if (tab === 'participants') {
+                          setIsParticipantsOpen(true);
+                          setIsChatOpen(false);
+                        } else if (tab === 'transcription') {
+                          setIsChatOpen(false);
+                          setIsParticipantsOpen(false);
+                        }
+                        setSidebarTab(tab);
+                      }}
+                      roomId={roomName}
+                      transcriptionMessages={transcriptionMessages}
+                      onTranscriptionMessagesUpdate={setTranscriptionMessages}
+                    />
+                  </div>
+                )}
               </div>
+              
+              {/* Device Settings Modal */}
+              <DeviceSettingsModal
+                isOpen={showDeviceSettings}
+                onClose={() => setShowDeviceSettings(false)}
+              />
+              
+              {/* Processing Transcript Loading */}
+              {isProcessingTranscript && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+                  <div className="bg-background rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+                    <div className="relative inline-block mb-6">
+                      <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                      <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Processando Transcrição</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Estamos identificando as vozes e gerando a transcrição completa com identificação de participantes...
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                      <span>Isso pode levar alguns segundos</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

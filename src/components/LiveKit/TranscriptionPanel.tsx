@@ -22,22 +22,31 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ roomId, isActiv
   const [currentTranscript, setCurrentTranscript] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll quando novas mensagens chegam
+  // Auto-scroll quando novas mensagens chegam - melhorado
   useEffect(() => {
-    if (messages.length > 0) {
-      requestAnimationFrame(() => {
+    if (messages.length > 0 && isActive) {
+      // Múltiplas tentativas para garantir o scroll
+      const scrollToBottom = () => {
         if (scrollAreaRef.current) {
           const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
           if (scrollElement) {
-            scrollElement.scrollTo({
-              top: scrollElement.scrollHeight,
-              behavior: 'smooth'
-            });
+            scrollElement.scrollTop = scrollElement.scrollHeight;
           }
         }
+      };
+      
+      // Scroll imediato
+      scrollToBottom();
+      
+      // Scroll após renderização
+      requestAnimationFrame(() => {
+        scrollToBottom();
       });
+      
+      // Scroll com delay para garantir
+      setTimeout(scrollToBottom, 100);
     }
-  }, [messages]);
+  }, [messages, isActive]);
 
 
   const downloadTranscript = () => {

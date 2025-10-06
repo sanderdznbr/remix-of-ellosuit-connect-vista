@@ -234,25 +234,13 @@ const InPersonMeeting = () => {
               const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);
               
               if (!isDuplicate && data.text.trim().length > 0) {
-                // Detect speaker change based on time gap
-                const now = Date.now();
-                const timeSinceLastSpeaker = now - lastSpeakerTimeRef.current;
-                
-                // If more than 3 seconds passed, consider it a new speaker
-                if (timeSinceLastSpeaker > 3000 && transcript.length > 0) {
-                  currentSpeakerRef.current++;
-                  if (currentSpeakerRef.current > speakerCountRef.current) {
-                    speakerCountRef.current = currentSpeakerRef.current;
-                  }
-                }
-                
-                lastSpeakerTimeRef.current = now;
                 lastTranscriptRef.current = data.text;
                 
+                // Durante gravação, não identificamos speakers (será feito pelo AssemblyAI depois)
                 setTranscript(prev => [...prev, {
                   text: data.text,
                   timestamp: new Date().toISOString(),
-                  speaker: `Pessoa ${currentSpeakerRef.current}`
+                  speaker: '...' // Placeholder - será identificado após gravação
                 }]);
                 setCurrentText('');
               } else {
@@ -459,18 +447,22 @@ const InPersonMeeting = () => {
       console.log('🎤 Processando identificação de speakers com AssemblyAI...');
       
       toast({
-        title: "Processando Áudio",
-        description: "Identificando speakers automaticamente...",
+        title: "Identificando Vozes",
+        description: "Analisando tom de voz para identificar cada pessoa... Isso pode levar alguns minutos.",
+        duration: 10000,
       });
 
       const { data, error } = await supabase.functions.invoke('speaker-diarization', {
         body: { audioUrl }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na função:', error);
+        throw error;
+      }
 
-      if (data.success && data.segments) {
-        console.log(`✅ Identificados ${data.speakerCount} speakers`);
+      if (data.success && data.segments && data.segments.length > 0) {
+        console.log(`✅ Identificados ${data.speakerCount} speakers diferentes por tom de voz`);
 
         // Update transcript with speaker labels from AssemblyAI
         const updatedTranscript = data.segments.map((seg: any) => 
@@ -483,9 +475,12 @@ const InPersonMeeting = () => {
           .update({ transcript: updatedTranscript })
           .eq('id', meetingId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Erro ao atualizar reunião:', updateError);
+          throw updateError;
+        }
 
-        // Update local transcript state
+        // Update local transcript state with proper speaker labels
         const newTranscript = data.segments.map((seg: any) => ({
           text: seg.text,
           timestamp: new Date().toISOString(),
@@ -494,16 +489,27 @@ const InPersonMeeting = () => {
         setTranscript(newTranscript);
 
         toast({
-          title: "Speakers Identificados",
-          description: `${data.speakerCount} pessoas diferentes foram detectadas`,
+          title: "✅ Vozes Identificadas!",
+          description: `${data.speakerCount} ${data.speakerCount === 1 ? 'pessoa identificada' : 'pessoas diferentes identificadas'} por tom de voz`,
+          duration: 5000,
         });
+      } else {
+        throw new Error('Nenhum segmento retornado pelo AssemblyAI');
       }
     } catch (error) {
-      console.error('Erro ao processar speaker diarization:', error);
+      console.error('❌ Erro ao processar speaker diarization:', error);
+      
+      // Fallback: usar numeração simples se AssemblyAI falhar
+      const fallbackTranscript = transcript.map((msg, index) => ({
+        ...msg,
+        speaker: `Pessoa ${Math.floor(index / 3) + 1}` // Agrupa a cada 3 mensagens
+      }));
+      setTranscript(fallbackTranscript);
+      
       toast({
-        title: "Aviso",
-        description: "Não foi possível identificar speakers automaticamente. Usando detecção por tempo.",
-        variant: "default"
+        title: "Identificação Manual Aplicada",
+        description: "Não foi possível analisar os tons de voz. Aplicada numeração sequencial.",
+        variant: "default",
       });
     }
   };
@@ -966,8 +972,12 @@ const InPersonMeeting = () => {
                       {transcript.map((msg, index) => (
                         <div key={index} className="border-l-4 border-primary/40 pl-4 py-2 animate-fade-in">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-primary px-2 py-1 bg-primary/10 rounded-full">
-                              {msg.speaker || 'Pessoa 1'}
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                              msg.speaker === '...' 
+                                ? 'text-muted-foreground bg-muted italic animate-pulse' 
+                                : 'text-primary bg-primary/10'
+                            }`}>
+                              {msg.speaker === '...' ? 'Identificando...' : msg.speaker}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(msg.timestamp).toLocaleTimeString()}

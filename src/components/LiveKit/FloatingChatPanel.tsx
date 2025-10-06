@@ -115,20 +115,25 @@ const FloatingChatPanel: React.FC<FloatingChatPanelProps> = ({ isOpen, onClose }
     const file = e.target.files?.[0];
     if (!file || !room || !localParticipant) return;
 
-    if (file.size > 10 * 1024 * 1024) {
+    // Limit to 5MB for better DataChannel reliability
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 10MB",
+        description: "O arquivo deve ter no máximo 5MB",
         variant: "destructive"
       });
       return;
     }
 
     try {
+      console.log('📎 Iniciando compartilhamento de arquivo:', file.name);
+      
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
           const base64Data = reader.result as string;
+          
+          console.log('📦 Arquivo convertido para base64, tamanho:', base64Data.length);
           
           const fileData = {
             type: 'file',
@@ -142,7 +147,15 @@ const FloatingChatPanel: React.FC<FloatingChatPanelProps> = ({ isOpen, onClose }
           const encoder = new TextEncoder();
           const data = encoder.encode(JSON.stringify(fileData));
           
+          console.log('📤 Enviando arquivo via DataChannel, bytes:', data.length);
+          
+          if (!room.localParticipant) {
+            throw new Error('LocalParticipant não disponível');
+          }
+          
           await room.localParticipant.publishData(data, { reliable: true });
+          
+          console.log('✅ Arquivo enviado com sucesso');
           
           const senderName = localParticipant.name || localParticipant.identity || 'Você';
           setMessages(prev => [...prev, {
@@ -162,21 +175,37 @@ const FloatingChatPanel: React.FC<FloatingChatPanelProps> = ({ isOpen, onClose }
             description: `${file.name} foi compartilhado com sucesso`,
           });
         } catch (error) {
+          console.error('❌ Erro ao publicar arquivo:', error);
           toast({
             title: "Erro ao compartilhar",
-            description: "Não foi possível compartilhar o arquivo",
+            description: error instanceof Error ? error.message : "Não foi possível compartilhar o arquivo",
             variant: "destructive"
           });
         }
       };
       
+      reader.onerror = (error) => {
+        console.error('❌ Erro ao ler arquivo:', error);
+        toast({
+          title: "Erro ao ler arquivo",
+          description: "Não foi possível ler o arquivo",
+          variant: "destructive"
+        });
+      };
+      
       reader.readAsDataURL(file);
     } catch (error) {
+      console.error('❌ Erro geral no compartilhamento:', error);
       toast({
-        title: "Erro ao ler arquivo",
-        description: "Não foi possível ler o arquivo",
+        title: "Erro ao processar arquivo",
+        description: "Não foi possível processar o arquivo",
         variant: "destructive"
       });
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 

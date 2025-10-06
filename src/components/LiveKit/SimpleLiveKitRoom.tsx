@@ -391,17 +391,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
               )}
 
-              {/* Transcription indicator - subtle */}
-              {isTranscribing && transcriptionMessages.length > 0 && (
-                <button
-                  onClick={() => setShowTranscriptionModal(true)}
-                  className="fixed bottom-20 right-6 bg-background hover:bg-muted text-foreground p-3 rounded-full shadow-lg transition-all z-40 border border-border"
-                  title={`${transcriptionMessages.length} mensagens transcritas`}
-                >
-                  <FileText className="h-5 w-5" />
-                </button>
-              )}
-
               {/* Floating Chat Panel */}
               <FloatingChatPanel
                 isOpen={showFloatingChat}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Download, FileText, Loader2 } from 'lucide-react';
+import { Mic, Square, Download, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AudioDeviceSelector } from './AudioDeviceSelector';
+import { AudioVisualizer } from './AudioVisualizer';
 
 interface TranscriptMessage {
   text: string;
@@ -22,6 +25,9 @@ const InPersonMeeting = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState('');
   const [showTitleDialog, setShowTitleDialog] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const [otherAudioSources, setOtherAudioSources] = useState<string[]>([]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -35,35 +41,64 @@ const InPersonMeeting = () => {
     }
   }, [transcript, currentText]);
 
+  useEffect(() => {
+    // Check for other audio sources
+    checkOtherAudioSources();
+  }, []);
+
+  const checkOtherAudioSources = async () => {
+    try {
+      // This is a simple check - in reality, we can't reliably detect all audio sources
+      // but we can warn users
+      const sources: string[]= [];
+      
+      // Check if there are multiple tabs (approximate)
+      if (performance.navigation.type === 0) {
+        sources.push('Outras abas do navegador podem estar reproduzindo áudio');
+      }
+      
+      setOtherAudioSources(sources);
+    } catch (error) {
+      console.error('Erro ao verificar fontes de áudio:', error);
+    }
+  };
+
   const startRecording = async () => {
     if (!meetingTitle.trim()) {
       setShowTitleDialog(true);
       return;
     }
 
-    try {
-      // List all audio devices to help debug
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioInputs = devices.filter(device => device.kind === 'audioinput');
-      console.log('📱 Dispositivos de áudio disponíveis:', audioInputs);
+    if (!selectedDeviceId) {
+      toast({
+        title: "Selecione um Microfone",
+        description: "Por favor, selecione um dispositivo de áudio antes de iniciar",
+        variant: "destructive"
+      });
+      return;
+    }
 
-      // Request ONLY microphone access with strict constraints
+    try {
+      console.log('🎤 Iniciando gravação com dispositivo:', selectedDeviceId);
+
+      // Request ONLY the selected microphone with strict constraints
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
+          deviceId: { exact: selectedDeviceId },
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 24000,
           channelCount: 1,
-          // Prefer default microphone
-          deviceId: audioInputs.length > 0 ? { ideal: audioInputs[0].deviceId } : undefined
         },
         video: false
       });
 
+      setCurrentStream(stream);
+
       // Verify the audio track
       const audioTrack = stream.getAudioTracks()[0];
-      console.log('🎤 Usando dispositivo:', audioTrack.label);
+      console.log('✅ Usando dispositivo:', audioTrack.label);
       console.log('🎤 Configurações:', audioTrack.getSettings());
 
       // Connect to transcription WebSocket
@@ -73,7 +108,7 @@ const InPersonMeeting = () => {
 
       ws.onopen = () => {
         console.log('✅ Conectado ao serviço de transcrição');
-        setIsRecording(true); // Mover para cá para garantir que está conectado
+        setIsRecording(true);
         
         // Generate meeting ID
         meetingIdRef.current = `in-person-${Date.now()}`;
@@ -92,10 +127,10 @@ const InPersonMeeting = () => {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📥 Mensagem WebSocket recebida:', data.type, data);
+          console.log('📥 WebSocket:', data.type);
           
           if (data.type === 'transcript_update') {
-            console.log('📝 Transcrição:', data.text, 'Final:', data.is_final);
+            console.log('📝 Transcrição:', data.text);
             if (data.is_final) {
               setTranscript(prev => [...prev, {
                 text: data.text,
@@ -129,7 +164,7 @@ const InPersonMeeting = () => {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('🎵 Capturado chunk de áudio:', event.data.size, 'bytes');
+          console.log('🎵 Chunk:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
           
           // Send audio to transcription service
@@ -137,7 +172,6 @@ const InPersonMeeting = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64Audio = (reader.result as string).split(',')[1];
-              console.log('📤 Enviando áudio para transcrição:', base64Audio.length, 'caracteres base64');
               ws.send(JSON.stringify({
                 type: 'audio_data',
                 audio: base64Audio
@@ -167,14 +201,17 @@ const InPersonMeeting = () => {
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+      setCurrentStream(null);
+    }
+
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
       wsRef.current.close();
     }
 
     setIsRecording(false);
-
-    // Save recording and transcript
     await saveRecording();
   };
 
@@ -183,7 +220,6 @@ const InPersonMeeting = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Get company_id
       const { data: companyData } = await supabase
         .from('company_users')
         .select('company_id')
@@ -192,32 +228,26 @@ const InPersonMeeting = () => {
 
       if (!companyData) throw new Error('Empresa não encontrada');
 
-      // Create audio blob
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
       const fileName = `in-person-meeting-${Date.now()}.webm`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('meeting-recordings')
         .upload(fileName, audioBlob);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('meeting-recordings')
         .getPublicUrl(fileName);
 
-      const publicUrl = urlData.publicUrl;
-
-      // Save transcript to database na tabela correta
       const fullTranscript = transcript.map(t => t.text).join(' ');
       
       const { error: dbError } = await supabase
         .from('in_person_meetings')
         .insert({
           title: meetingTitle,
-          file_url: publicUrl,
+          file_url: urlData.publicUrl,
           transcript: fullTranscript,
           created_by: user.id,
           company_id: companyData.company_id,
@@ -307,6 +337,15 @@ const InPersonMeeting = () => {
         </DialogContent>
       </Dialog>
 
+      {otherAudioSources.length > 0 && !isRecording && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Atenção:</strong> Feche outras abas que estejam reproduzindo áudio antes de iniciar a gravação para garantir que apenas o microfone seja capturado.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Reunião Presencial</CardTitle>
@@ -316,16 +355,28 @@ const InPersonMeeting = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {!isRecording ? (
-            <div className="text-center py-8">
-              <Mic className="h-16 w-16 mx-auto mb-4 text-primary" />
-              <h3 className="text-lg font-semibold mb-2">Pronto para Gravar</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Clique no botão abaixo para iniciar a gravação e transcrição
-              </p>
-              <Button onClick={() => setShowTitleDialog(true)} size="lg" className="gap-2">
-                <Mic className="h-5 w-5" />
-                Iniciar Reunião Presencial
-              </Button>
+            <div className="space-y-4">
+              <AudioDeviceSelector
+                selectedDeviceId={selectedDeviceId}
+                onDeviceSelect={setSelectedDeviceId}
+              />
+              
+              <div className="text-center py-8">
+                <Mic className="h-16 w-16 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Pronto para Gravar</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Selecione um microfone e clique para iniciar
+                </p>
+                <Button 
+                  onClick={() => setShowTitleDialog(true)} 
+                  size="lg" 
+                  className="gap-2"
+                  disabled={!selectedDeviceId}
+                >
+                  <Mic className="h-5 w-5" />
+                  Iniciar Reunião Presencial
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -346,6 +397,8 @@ const InPersonMeeting = () => {
                   Encerrar Reunião
                 </Button>
               </div>
+
+              <AudioVisualizer stream={currentStream} />
 
               <Card>
                 <CardHeader>

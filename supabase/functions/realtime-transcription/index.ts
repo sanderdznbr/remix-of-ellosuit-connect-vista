@@ -109,7 +109,7 @@ serve(async (req) => {
   socket.onmessage = async (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log('📥 Received message type:', data.type);
+      console.log('📥 Mensagem recebida do cliente - Tipo:', data.type);
 
       if (data.type === 'start_transcription') {
         roomId = data.roomId;
@@ -126,8 +126,18 @@ serve(async (req) => {
         }));
 
       } else if (data.type === 'audio_data' && isTranscribing) {
-        console.log('🎤 Received audio_data, size:', data.audio?.length || 0);
+        console.log('🎤 Áudio recebido, tamanho base64:', data.audio?.length || 0);
         try {
+          // Validar formato de áudio
+          if (!data.audio || typeof data.audio !== 'string') {
+            console.error('❌ Formato de áudio inválido');
+            socket.send(JSON.stringify({
+              type: 'error',
+              error: 'Formato de áudio inválido'
+            }));
+            return;
+          }
+
           // Decode base64 audio data
           const binaryString = atob(data.audio);
           const bytes = new Uint8Array(binaryString.length);
@@ -135,7 +145,14 @@ serve(async (req) => {
             bytes[i] = binaryString.charCodeAt(i);
           }
           
-          console.log('✅ Decoded audio bytes:', bytes.length);
+          console.log('✅ Áudio decodificado:', bytes.length, 'bytes');
+          
+          // Validar tamanho mínimo
+          if (bytes.length < 100) {
+            console.warn('⚠️ Chunk de áudio muito pequeno, ignorando');
+            return;
+          }
+          
           audioBuffer.push(bytes);
           
           // Process buffer every 5 seconds or when it reaches a certain size (5MB)

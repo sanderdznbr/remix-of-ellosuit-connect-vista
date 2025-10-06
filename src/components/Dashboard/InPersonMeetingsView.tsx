@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Calendar, Clock, FileText } from 'lucide-react';
+import { Download, Calendar, Clock, FileText, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface InPersonMeeting {
   id: string;
@@ -21,6 +22,9 @@ interface InPersonMeeting {
 const InPersonMeetingsView = () => {
   const [meetings, setMeetings] = useState<InPersonMeeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState<InPersonMeeting | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,6 +84,56 @@ const InPersonMeetingsView = () => {
     });
   };
 
+  const handleDeleteClick = (meeting: InPersonMeeting) => {
+    setMeetingToDelete(meeting);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!meetingToDelete) return;
+    
+    setDeletingId(meetingToDelete.id);
+    
+    try {
+      // Delete from storage if exists
+      if (meetingToDelete.file_url) {
+        const fileName = meetingToDelete.file_url.split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('meeting-recordings')
+            .remove([fileName]);
+        }
+      }
+
+      // Delete from database
+      const { error } = await supabase
+        .from('in_person_meetings')
+        .delete()
+        .eq('id', meetingToDelete.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setMeetings(prev => prev.filter(m => m.id !== meetingToDelete.id));
+
+      toast({
+        title: "Reunião Excluída",
+        description: "A reunião foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir reunião:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a reunião",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+      setShowDeleteDialog(false);
+      setMeetingToDelete(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -104,69 +158,101 @@ const InPersonMeetingsView = () => {
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="p-6 space-y-4">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2">Reuniões Presenciais</h2>
-          <p className="text-sm text-muted-foreground">
-            Histórico de reuniões presenciais gravadas e transcritas
-          </p>
-        </div>
+    <>
+      <ScrollArea className="h-full">
+        <div className="p-6 space-y-4">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-2">Reuniões Presenciais</h2>
+            <p className="text-sm text-muted-foreground">
+              Histórico de reuniões presenciais gravadas e transcritas
+            </p>
+          </div>
 
-        <div className="grid gap-4">
-          {meetings.map((meeting) => (
-            <Card key={meeting.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 flex-1">
-                    <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(meeting.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(meeting.created_at), 'HH:mm', { locale: ptBR })}
-                      </div>
-                      {meeting.duration_seconds && (
+          <div className="grid gap-4">
+            {meetings.map((meeting) => (
+              <Card key={meeting.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 flex-1">
+                      <CardTitle className="text-lg">{meeting.title}</CardTitle>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(meeting.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {Math.floor(meeting.duration_seconds / 60)}min
+                          {format(new Date(meeting.created_at), 'HH:mm', { locale: ptBR })}
                         </div>
+                        {meeting.duration_seconds && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {Math.floor(meeting.duration_seconds / 60)}min
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {meeting.transcript && (
+                        <Button
+                          onClick={() => downloadTranscript(meeting)}
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Download className="h-3 w-3" />
+                          Baixar
+                        </Button>
                       )}
+                      <Button
+                        onClick={() => handleDeleteClick(meeting)}
+                        size="sm"
+                        variant="destructive"
+                        disabled={deletingId === meeting.id}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Excluir
+                      </Button>
                     </div>
                   </div>
-                  {meeting.transcript && (
-                    <Button
-                      onClick={() => downloadTranscript(meeting)}
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                    >
-                      <Download className="h-3 w-3" />
-                      Baixar
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              {meeting.transcript && (
-                <CardContent>
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground font-semibold mb-2">
-                      Prévia da Transcrição:
-                    </p>
-                    <p className="text-sm line-clamp-3">
-                      {meeting.transcript}
-                    </p>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          ))}
+                </CardHeader>
+                {meeting.transcript && (
+                  <CardContent>
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground font-semibold mb-2">
+                        Prévia da Transcrição:
+                      </p>
+                      <p className="text-sm line-clamp-3">
+                        {meeting.transcript}
+                      </p>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a reunião "{meetingToDelete?.title}"? 
+              Esta ação não pode ser desfeita e a gravação será permanentemente removida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

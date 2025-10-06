@@ -8,7 +8,8 @@ import {
   Phone,
   MessageSquare,
   Users,
-  Settings
+  Settings,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ interface SimpleMeetingControlsProps {
   onShareMeeting: () => void;
   onLeave: () => void;
   onSettingsClick: () => void;
+  onShowTranscription: () => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
 }
@@ -33,6 +35,7 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   onShareMeeting,
   onLeave,
   onSettingsClick,
+  onShowTranscription,
   isChatOpen,
   isParticipantsOpen
 }, ref) => {
@@ -123,6 +126,17 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         title={isScreenSharing ? "Parar Compartilhamento" : "Compartilhar Tela"}
       >
         <Monitor className="h-5 w-5" />
+      </Button>
+
+      {/* Transcription - Always Active, Just Opens Modal */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onShowTranscription}
+        className="h-12 w-12 rounded-full"
+        title="Ver Transcrição em Tempo Real"
+      >
+        <FileText className="h-5 w-5 text-primary" />
       </Button>
 
       {/* Chat */}

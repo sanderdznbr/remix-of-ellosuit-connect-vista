@@ -114,11 +114,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
       console.log('✅ Pipeline de áudio PCM16 conectado');
 
-      toast({
-        title: "Transcrição Iniciada",
-        description: "Capturando áudio para transcrição em tempo real",
-      });
-
     } catch (error) {
       console.error('❌ Erro ao iniciar captura:', error);
       toast({
@@ -206,8 +201,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
             console.log('📥 WebSocket:', data.type);
 
             if (data.type === 'transcript_update') {
-              console.log('📝 Transcrição:', data.text, '| Final:', data.is_final);
-              
               if (data.is_final) {
                 // Check for duplicate text
                 const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import SimpleMeetingControls from './SimpleMeetingControls';
 import MeetingSidebar from './MeetingSidebar';
 import ShareMeetingModal from './ShareMeetingModal';
+import FloatingChatPanel from './FloatingChatPanel';
 import { MeetingExitModal } from './MeetingExitModal';
 import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
@@ -63,6 +64,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [showPreJoin, setShowPreJoin] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'participants' | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showFloatingChat, setShowFloatingChat] = useState(false);
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(true);
   const [companyId, setCompanyId] = useState<string>('');
   const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
@@ -211,18 +213,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [generateToken, participantName]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
-    console.log('📝 [SimpleLiveKitRoom] Atualização de transcrição recebida:', {
-      is_final: message.is_final,
-      text: message.text,
-      speaker: message.speaker,
-      timestamp: message.timestamp
-    });
-    
-    setTranscriptionMessages(prev => {
-      const updated = [...prev, message];
-      console.log(`📊 [SimpleLiveKitRoom] Total de transcrições: ${updated.length}`);
-      return updated;
-    });
+    setTranscriptionMessages(prev => [...prev, message]);
   }, []);
 
   const handleLeaveClick = async () => {
@@ -404,12 +395,18 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               {isTranscribing && transcriptionMessages.length > 0 && (
                 <button
                   onClick={() => setShowTranscriptionModal(true)}
-                  className="fixed bottom-20 right-6 bg-card hover:bg-accent text-card-foreground p-3 rounded-full shadow-lg transition-all z-40 border border-border"
+                  className="fixed bottom-20 right-6 bg-background hover:bg-muted text-foreground p-3 rounded-full shadow-lg transition-all z-40 border border-border"
                   title={`${transcriptionMessages.length} mensagens transcritas`}
                 >
                   <FileText className="h-5 w-5" />
                 </button>
               )}
+
+              {/* Floating Chat Panel */}
+              <FloatingChatPanel
+                isOpen={showFloatingChat}
+                onClose={() => setShowFloatingChat(false)}
+              />
 
               <div className="h-screen w-full flex flex-col bg-background">
                 {/* Header Clean - Light Theme */}
@@ -468,7 +465,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 <div className="bg-background border-t border-border px-6 py-3">
                   <SimpleMeetingControls
                     ref={meetingControlsRef}
-                    onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
+                    onToggleChat={() => setShowFloatingChat(!showFloatingChat)}
                     onToggleParticipants={() => setActiveTab(activeTab === 'participants' ? null : 'participants')}
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
@@ -477,7 +474,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                       setIsTranscribing(newState);
                       setShowTranscriptionModal(newState);
                     }}
-                    isChatOpen={activeTab === 'chat'}
+                    isChatOpen={showFloatingChat}
                     isParticipantsOpen={activeTab === 'participants'}
                   />
                 </div>

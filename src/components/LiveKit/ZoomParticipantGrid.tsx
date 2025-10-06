@@ -20,15 +20,15 @@ const ZoomParticipantGrid: React.FC = () => {
   const cameraTracks = tracks.filter(t => t.source === Track.Source.Camera);
   const hasScreenShare = screenShareTracks.length > 0;
 
-  // Grid dinâmico inspirado no Google Meet: 1, 2, 4, 6, 9, etc.
+  // Grid dinâmico responsivo com auto-fit
   const getGridClass = (count: number) => {
-    if (count === 1) return 'grid-cols-1 grid-rows-1';
-    if (count === 2) return 'grid-cols-2 grid-rows-1';
-    if (count <= 4) return 'grid-cols-2 grid-rows-2';
-    if (count <= 6) return 'grid-cols-3 grid-rows-2';
-    if (count <= 9) return 'grid-cols-3 grid-rows-3';
-    if (count <= 12) return 'grid-cols-4 grid-rows-3';
-    return 'grid-cols-4 grid-rows-4';
+    if (count === 1) return 'grid-cols-1';
+    if (count === 2) return 'grid-cols-1 md:grid-cols-2';
+    if (count <= 4) return 'grid-cols-2';
+    if (count <= 6) return 'grid-cols-2 md:grid-cols-3';
+    if (count <= 9) return 'grid-cols-2 md:grid-cols-3';
+    if (count <= 12) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
   };
 
   const getParticipantName = (participant: Participant) => {
@@ -103,7 +103,7 @@ const ZoomParticipantGrid: React.FC = () => {
 
       {/* Camera Grid - sem compartilhamento de tela */}
       {!hasScreenShare && (
-        <div className="flex-1 flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
           {cameraTracks.length === 0 ? (
             <div className="text-center">
               <Wifi className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -112,14 +112,18 @@ const ZoomParticipantGrid: React.FC = () => {
             </div>
           ) : (
             <div className={cn(
-              "grid gap-3 w-full h-full",
+              "grid gap-3 w-full auto-rows-fr",
               cameraTracks.length === 1 && "max-w-3xl max-h-[500px]",
               getGridClass(cameraTracks.length)
-            )}>
+            )}
+            style={{
+              maxHeight: '100%',
+              gridAutoRows: cameraTracks.length === 1 ? 'auto' : 'minmax(200px, 1fr)'
+            }}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-${trackRef.participant.identity}-${index}`}
-                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group"
+                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group min-h-[200px] aspect-video"
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <VideoTrack

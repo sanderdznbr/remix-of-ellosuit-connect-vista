@@ -400,9 +400,16 @@ const InPersonMeeting = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Generate a signed URL (temporary public access) for AssemblyAI
+      const { data: urlData, error: signedUrlError } = await supabase.storage
         .from('meeting-recordings')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600); // 1 hour expiration
+
+      if (signedUrlError || !urlData?.signedUrl) {
+        throw new Error('Erro ao gerar URL assinada do arquivo');
+      }
+
+      console.log('✅ URL assinada gerada para AssemblyAI:', urlData.signedUrl);
 
       // Initial save with Whisper transcript
       const whisperTranscript = transcript.map(t => `${t.speaker}: ${t.text}`).join('\n');
@@ -411,7 +418,7 @@ const InPersonMeeting = () => {
         .from('in_person_meetings')
         .insert({
           title: meetingTitle,
-          file_url: urlData.publicUrl,
+          file_url: fileName, // Store just the filename, not the full URL
           transcript: whisperTranscript,
           created_by: user.id,
           company_id: companyData.company_id,
@@ -430,8 +437,8 @@ const InPersonMeeting = () => {
       setShowSummary(true);
       setShowDownloadOptions(true);
 
-      // Process speaker diarization in background
-      processSpeakerDiarization(urlData.publicUrl, meetingData.id);
+      // Process speaker diarization in background with signed URL
+      processSpeakerDiarization(urlData.signedUrl, meetingData.id);
 
     } catch (error) {
       console.error('Erro ao salvar reunião:', error);

@@ -18,67 +18,123 @@ serve(async (req) => {
       throw new Error('URL do áudio não fornecida');
     }
 
-    const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
-    if (!deepgramKey) {
-      throw new Error('DEEPGRAM_API_KEY não configurada');
+    const assemblyAIKey = Deno.env.get('ASSEMBLYAI_API_KEY');
+    if (!assemblyAIKey) {
+      throw new Error('ASSEMBLYAI_API_KEY não configurada');
     }
 
-    console.log('🎤 Iniciando speaker diarization com Deepgram...');
+    console.log('🎤 Iniciando speaker diarization com AssemblyAI...');
     console.log('📍 Audio URL:', audioUrl);
 
-    // Use Deepgram's diarization feature
-    const deepgramUrl = new URL('https://api.deepgram.com/v1/listen');
-    deepgramUrl.searchParams.append('model', 'nova-2');
-    deepgramUrl.searchParams.append('language', 'pt-BR');
-    deepgramUrl.searchParams.append('diarize', 'true');
-    deepgramUrl.searchParams.append('punctuate', 'true');
-    deepgramUrl.searchParams.append('utterances', 'true');
-
-    const response = await fetch(deepgramUrl.toString(), {
+    // Step 1: Submit audio for transcription with speaker diarization
+    const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${deepgramKey}`,
+        'Authorization': assemblyAIKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: audioUrl,
+        audio_url: audioUrl,
+        speaker_labels: true,
+        speakers_expected: null, // Let AssemblyAI detect automatically
+        language_code: 'pt', // Portuguese
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Erro Deepgram:', errorText);
-      throw new Error(`Deepgram API error: ${errorText}`);
+    if (!transcriptResponse.ok) {
+      const errorText = await transcriptResponse.text();
+      console.error('❌ Erro AssemblyAI:', errorText);
+      throw new Error(`AssemblyAI API error: ${errorText}`);
     }
 
-    const result = await response.json();
-    console.log('✅ Transcrição Deepgram completa!');
+    const { id: transcriptId } = await transcriptResponse.json();
+    console.log('✅ Transcrição enviada. ID:', transcriptId);
 
-    // Process Deepgram utterances (already grouped by speaker)
-    const utterances = result.results?.utterances || [];
-    const segments: any[] = [];
-    const speakerMap = new Map<number, number>();
-    let speakerCounter = 1;
+    // Step 2: Poll for completion
+    let transcriptResult;
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (5s intervals)
 
-    utterances.forEach((utterance: any) => {
-      const speakerId = utterance.speaker;
-      
-      // Map Deepgram speaker IDs to sequential numbers
-      if (!speakerMap.has(speakerId)) {
-        speakerMap.set(speakerId, speakerCounter++);
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+      const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+        headers: {
+          'Authorization': assemblyAIKey,
+        },
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error('Erro ao verificar status da transcrição');
       }
 
-      segments.push({
-        speaker: `Pessoa ${speakerMap.get(speakerId)}`,
-        text: utterance.transcript,
-        start: utterance.start * 1000, // Convert to milliseconds
-        end: utterance.end * 1000,
-        confidence: utterance.confidence,
-      });
+      transcriptResult = await statusResponse.json();
+      console.log(`📊 Status: ${transcriptResult.status}`);
+
+      if (transcriptResult.status === 'completed') {
+        console.log('✅ Transcrição completa!');
+        break;
+      } else if (transcriptResult.status === 'error') {
+        throw new Error(`Erro na transcrição: ${transcriptResult.error}`);
+      }
+
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error('Timeout: transcrição demorou muito tempo');
+    }
+
+    // Step 3: Process and return speaker-labeled transcript
+    const speakerMap = new Map<string, number>();
+    let speakerCounter = 1;
+
+    const labeledTranscript = transcriptResult.words?.map((word: any) => {
+      if (!word.speaker) return null;
+
+      // Map AssemblyAI speaker IDs to sequential numbers
+      if (!speakerMap.has(word.speaker)) {
+        speakerMap.set(word.speaker, speakerCounter++);
+      }
+
+      return {
+        text: word.text,
+        speaker: `Pessoa ${speakerMap.get(word.speaker)}`,
+        start: word.start,
+        end: word.end,
+        confidence: word.confidence,
+      };
+    }).filter(Boolean) || [];
+
+    // Group words by speaker and time windows (5 second windows)
+    const segments: any[] = [];
+    let currentSegment: any = null;
+
+    labeledTranscript.forEach((word: any) => {
+      if (!currentSegment || 
+          currentSegment.speaker !== word.speaker || 
+          word.start - currentSegment.end > 5000) {
+        // New segment
+        if (currentSegment) {
+          segments.push(currentSegment);
+        }
+        currentSegment = {
+          speaker: word.speaker,
+          text: word.text,
+          start: word.start,
+          end: word.end,
+        };
+      } else {
+        // Continue current segment
+        currentSegment.text += ' ' + word.text;
+        currentSegment.end = word.end;
+      }
     });
 
-    const fullText = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-    
+    if (currentSegment) {
+      segments.push(currentSegment);
+    }
+
     console.log(`✅ Processado ${segments.length} segmentos com ${speakerMap.size} speakers detectados`);
     
     // Log speaker distribution for debugging
@@ -93,7 +149,7 @@ serve(async (req) => {
         success: true,
         speakerCount: speakerMap.size,
         segments,
-        fullText,
+        fullText: transcriptResult.text,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -27,6 +27,7 @@ serve(async (req) => {
     console.log('📍 Audio URL:', audioUrl);
 
     // Step 1: Submit audio for transcription with speaker diarization
+    console.log('📤 Submitting to AssemblyAI API...');
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
@@ -36,12 +37,11 @@ serve(async (req) => {
       body: JSON.stringify({
         audio_url: audioUrl,
         speaker_labels: true,
-        language_code: 'pt', // Portuguese
-        punctuate: true,
-        format_text: true,
-        utterances: true, // Use utterances for better phrase separation
+        language_code: 'pt',
       }),
     });
+    
+    console.log('📊 AssemblyAI Response Status:', transcriptResponse.status);
 
     if (!transcriptResponse.ok) {
       const errorText = await transcriptResponse.text();
@@ -51,7 +51,7 @@ serve(async (req) => {
 
     const { id: transcriptId } = await transcriptResponse.json();
     console.log('✅ Transcrição enviada. ID:', transcriptId);
-    console.log('⚙️ Configuração: speakers_expected=2, speech_threshold=0.3');
+    console.log('⚙️ Configuração: speaker_labels=true, language=pt');
 
     // Step 2: Poll for completion
     let transcriptResult;

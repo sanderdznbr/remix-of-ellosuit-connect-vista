@@ -17,6 +17,7 @@ import MeetingRecordings from './MeetingRecordings';
 import MeetingTranscriptions from './MeetingTranscriptions';
 import InPersonMeeting from './InPersonMeeting';
 import InPersonMeetingsView from './InPersonMeetingsView';
+import SavedMeetings from './SavedMeetings';
 
 const MeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -25,6 +26,7 @@ const MeetingRooms = () => {
   const [showTranscriptionsDialog, setShowTranscriptionsDialog] = useState(false);
   const [showInPersonDialog, setShowInPersonDialog] = useState(false);
   const [showInPersonMeetingsDialog, setShowInPersonMeetingsDialog] = useState(false);
+  const [showSavedMeetingsDialog, setShowSavedMeetingsDialog] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [newRoom, setNewRoom] = useState({
@@ -167,6 +169,21 @@ const MeetingRooms = () => {
             </DialogTrigger>
             <DialogContent className="max-w-6xl max-h-[90vh] p-0">
               <InPersonMeetingsView />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showSavedMeetingsDialog} onOpenChange={setShowSavedMeetingsDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              >
+                <FileText className="h-4 w-4" />
+                Reuniões Salvas
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh]">
+              <SavedMeetings />
             </DialogContent>
           </Dialog>
           

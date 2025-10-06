@@ -483,6 +483,17 @@ const InPersonMeeting = () => {
     });
   };
 
+  // Clean markdown formatting from AI-generated text
+  const cleanMarkdownForPDF = (text: string): string => {
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold **text**
+      .replace(/\*([^*]+)\*/g, '$1') // Remove italic *text*
+      .replace(/#{1,6}\s+/g, '') // Remove headers #
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links [text](url)
+      .replace(/`([^`]+)`/g, '$1') // Remove code `text`
+      .trim();
+  };
+
   const processTranscriptWithAI = async (type: 'summary' | 'keypoints', customQuery?: string) => {
     setIsProcessingAI(true);
     try {
@@ -492,11 +503,11 @@ const InPersonMeeting = () => {
 
       let prompt = '';
       if (type === 'summary') {
-        prompt = `Você é um assistente que cria resumos executivos de reuniões. Analise esta transcrição e crie um resumo profissional e conciso em português, destacando os principais tópicos discutidos, decisões tomadas e próximos passos:\n\n${fullTranscript}`;
+        prompt = `Você é um assistente que cria resumos executivos de reuniões. Analise esta transcrição e crie um resumo profissional e conciso em português, SEM usar formatação markdown (sem asteriscos, sem hashtags). Use texto simples e organize em parágrafos claros. Destaque os principais tópicos discutidos, decisões tomadas e próximos passos:\n\n${fullTranscript}`;
       } else if (type === 'keypoints') {
-        prompt = `Você é um assistente que identifica pontos-chave em reuniões. Analise esta transcrição e liste os pontos mais importantes, decisões tomadas, ações necessárias e tópicos relevantes em português. Organize em formato de lista:\n\n${fullTranscript}`;
+        prompt = `Você é um assistente que identifica pontos-chave em reuniões. Analise esta transcrição e liste os pontos mais importantes em português, SEM usar formatação markdown (sem asteriscos, sem hashtags). Use texto simples com hífens (-) para listas. Liste: decisões tomadas, ações necessárias e tópicos relevantes:\n\n${fullTranscript}`;
       } else if (customQuery) {
-        prompt = `Você é um assistente que ajuda a extrair informações específicas de transcrições de reuniões. O usuário quer saber: "${customQuery}"\n\nAnalise esta transcrição e forneça uma resposta precisa e detalhada em português:\n\n${fullTranscript}`;
+        prompt = `Você é um assistente que ajuda a extrair informações específicas de transcrições de reuniões. O usuário quer saber: "${customQuery}"\n\nAnalise esta transcrição e forneça uma resposta precisa e detalhada em português, SEM usar formatação markdown:\n\n${fullTranscript}`;
       }
 
       const { data, error } = await supabase.functions.invoke('ai-chat', {
@@ -509,7 +520,9 @@ const InPersonMeeting = () => {
 
       if (error) throw error;
 
-      return data.message;
+      // Clean any remaining markdown that might have slipped through
+      const cleanedText = cleanMarkdownForPDF(data.message);
+      return cleanedText;
     } catch (error) {
       console.error('Erro ao processar com IA:', error);
       toast({
@@ -811,20 +824,6 @@ const InPersonMeeting = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Important Alert */}
-      {!isRecording && (
-        <Alert className="mb-6 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20">
-          <AlertTriangle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800 dark:text-blue-300">
-            <strong className="block mb-2">Importante antes de gravar:</strong>
-            <ul className="space-y-1 text-sm list-disc list-inside">
-              <li>Feche abas com vídeos, músicas ou qualquer áudio</li>
-              <li>Selecione um microfone físico real</li>
-              <li>Use fones de ouvido para evitar eco</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Main Recording Interface */}
       <Card className="border-2">

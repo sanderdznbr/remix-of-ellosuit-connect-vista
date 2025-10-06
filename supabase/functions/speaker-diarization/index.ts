@@ -106,14 +106,14 @@ serve(async (req) => {
       };
     }).filter(Boolean) || [];
 
-    // Group words by speaker and time windows (5 second windows)
+    // Group words by speaker and time windows (10 second windows for better grouping)
     const segments: any[] = [];
     let currentSegment: any = null;
 
     labeledTranscript.forEach((word: any) => {
       if (!currentSegment || 
           currentSegment.speaker !== word.speaker || 
-          word.start - currentSegment.end > 5000) {
+          word.start - currentSegment.end > 10000) { // Increased to 10 seconds
         // New segment
         if (currentSegment) {
           segments.push(currentSegment);
@@ -135,7 +135,11 @@ serve(async (req) => {
       segments.push(currentSegment);
     }
 
-    console.log(`✅ Processado ${segments.length} segmentos com ${speakerMap.size} speakers detectados`);
+    // Verify actual unique speakers in final segments
+    const actualUniqueSpeakers = new Set(segments.map(seg => seg.speaker));
+    
+    console.log(`✅ Processado ${segments.length} segmentos com ${actualUniqueSpeakers.size} speakers únicos detectados`);
+    console.log('👥 Speakers únicos nos segmentos finais:', Array.from(actualUniqueSpeakers));
     
     // Log speaker distribution for debugging
     const speakerCounts = new Map<string, number>();
@@ -147,7 +151,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        speakerCount: speakerMap.size,
+        speakerCount: actualUniqueSpeakers.size, // Use the actual count from segments
         segments,
         fullText: transcriptResult.text,
       }),

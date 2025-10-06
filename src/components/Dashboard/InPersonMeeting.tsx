@@ -474,7 +474,8 @@ const InPersonMeeting = () => {
       }
 
       if (data.success && data.segments && data.segments.length > 0) {
-        console.log(`✅ Identificados ${data.speakerCount} speakers diferentes por tom de voz`);
+        console.log(`✅ AssemblyAI retornou ${data.speakerCount} speakers`);
+        console.log('📊 Primeiros 5 segmentos:', data.segments.slice(0, 5).map((s: any) => ({ speaker: s.speaker, text: s.text.substring(0, 50) })));
 
         // Update transcript with speaker labels from AssemblyAI
         const updatedTranscript = data.segments.map((seg: any) => 
@@ -500,8 +501,11 @@ const InPersonMeeting = () => {
         }));
         setTranscript(newTranscript);
 
-        // Identificar speakers únicos
+        // Identificar speakers únicos exatamente como retornado pelo AssemblyAI
         const uniqueSpeakers = Array.from(new Set(data.segments.map((seg: any) => seg.speaker as string))) as string[];
+        console.log('👥 Speakers únicos encontrados:', uniqueSpeakers);
+        console.log('📊 Total de speakers únicos:', uniqueSpeakers.length);
+        
         setIdentifiedSpeakers(uniqueSpeakers);
         
         // Criar mapeamento inicial (vazio)
@@ -513,7 +517,7 @@ const InPersonMeeting = () => {
 
         toast({
           title: "✅ Vozes Identificadas!",
-          description: `${data.speakerCount} ${data.speakerCount === 1 ? 'pessoa identificada' : 'pessoas diferentes identificadas'} por tom de voz. Agora adicione os nomes.`,
+          description: `${uniqueSpeakers.length} ${uniqueSpeakers.length === 1 ? 'pessoa identificada' : 'pessoas diferentes identificadas'} por tom de voz. Agora adicione os nomes.`,
           duration: 5000,
         });
 

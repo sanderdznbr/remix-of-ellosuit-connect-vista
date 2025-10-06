@@ -459,10 +459,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
                     onSettingsClick={() => setShowDeviceSettings(true)}
-                    onToggleTranscription={(newState: boolean) => {
-                      setIsTranscribing(newState);
-                      setShowTranscriptionModal(newState);
-                    }}
                     isChatOpen={showFloatingChat}
                     isParticipantsOpen={activeTab === 'participants'}
                   />

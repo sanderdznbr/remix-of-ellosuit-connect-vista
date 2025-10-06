@@ -8,8 +8,7 @@ import {
   Phone,
   MessageSquare,
   Users,
-  Settings,
-  FileText
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,7 +23,6 @@ interface SimpleMeetingControlsProps {
   onShareMeeting: () => void;
   onLeave: () => void;
   onSettingsClick: () => void;
-  onToggleTranscription: (newState: boolean) => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
 }
@@ -35,7 +33,6 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   onShareMeeting,
   onLeave,
   onSettingsClick,
-  onToggleTranscription,
   isChatOpen,
   isParticipantsOpen
 }, ref) => {
@@ -44,7 +41,6 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [showTranscription, setShowTranscription] = useState(false);
 
   useImperativeHandle(ref, () => ({}));
 
@@ -82,24 +78,6 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
           variant: "destructive"
         });
       }
-    }
-  };
-
-  const handleTranscriptionToggle = () => {
-    const newState = !showTranscription;
-    setShowTranscription(newState);
-    onToggleTranscription(newState);
-    
-    if (newState) {
-      toast({
-        title: "Transcrição Ativa",
-        description: "Capturando áudio em canal separado para transcrição",
-      });
-    } else {
-      toast({
-        title: "Transcrição Pausada",
-        description: "Captura pausada",
-      });
     }
   };
 
@@ -145,20 +123,6 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         title={isScreenSharing ? "Parar Compartilhamento" : "Compartilhar Tela"}
       >
         <Monitor className="h-5 w-5" />
-      </Button>
-
-      {/* Transcription */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleTranscriptionToggle}
-        className={cn(
-          "h-12 w-12 rounded-full",
-          showTranscription && "bg-primary/20"
-        )}
-        title="Transcrição"
-      >
-        <FileText className={cn("h-5 w-5", showTranscription && "text-primary")} />
       </Button>
 
       {/* Chat */}

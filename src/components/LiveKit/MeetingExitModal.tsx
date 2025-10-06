@@ -31,30 +31,74 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
 
   // Process speaker diarization when modal opens
   useEffect(() => {
-    if (isOpen && savedAudioUrl && transcriptionMessages.length > 0 && !isProcessingSpeakers && identifiedSpeakers.length === 0) {
-      processSpeakerDiarization();
+    if (isOpen && transcriptionMessages.length > 0 && !isProcessingSpeakers && processedTranscript.length === 0) {
+      processTranscription();
     }
-  }, [isOpen, savedAudioUrl]);
+  }, [isOpen]);
+
+  const processTranscription = async () => {
+    setIsProcessingSpeakers(true);
+    
+    // Show loading for at least 2 seconds for UX
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    if (savedAudioUrl) {
+      // If we have audio, process with speaker diarization
+      await processSpeakerDiarization();
+    } else {
+      // If no audio, just process the transcription messages
+      toast({
+        title: "Processando Transcrição",
+        description: "Preparando transcrição da reunião...",
+      });
+      
+      const finalMessages = transcriptionMessages.filter(m => m.is_final);
+      
+      // Try to identify speakers from the transcription
+      const uniqueSpeakers = Array.from(new Set(finalMessages.map(m => m.speaker || 'Participante')));
+      
+      if (uniqueSpeakers.length > 1) {
+        setIdentifiedSpeakers(uniqueSpeakers);
+        const initialMapping: Record<string, string> = {};
+        uniqueSpeakers.forEach((speaker: string) => {
+          initialMapping[speaker] = '';
+        });
+        setSpeakerMapping(initialMapping);
+        
+        const transcript = finalMessages.map(m => ({
+          text: m.text,
+          timestamp: m.timestamp,
+          speaker: m.speaker || 'Participante'
+        }));
+        setProcessedTranscript(transcript);
+        
+        setShowSpeakerMapping(true);
+      } else {
+        // Single speaker or all generic
+        const transcript = finalMessages.map(m => ({
+          text: m.text,
+          timestamp: m.timestamp,
+          speaker: 'Participante'
+        }));
+        setProcessedTranscript(transcript);
+      }
+    }
+    
+    setIsProcessingSpeakers(false);
+  };
 
   const processSpeakerDiarization = async () => {
-    if (!savedAudioUrl) {
-      // No audio URL - use transcription as-is
-      setProcessedTranscript(transcriptionMessages.filter(m => m.is_final).map(m => ({
-        text: m.text,
-        timestamp: m.timestamp,
-        speaker: 'Participante'
-      })));
-      return;
-    }
-
-    setIsProcessingSpeakers(true);
     toast({
       title: "🎙️ Identificando Vozes",
-      description: "Analisando tom de voz para identificar cada pessoa...",
+      description: "Analisando áudio para identificar cada pessoa...",
       duration: 10000,
     });
 
     try {
+      if (!savedAudioUrl) {
+        throw new Error('No audio URL available');
+      }
+      
       // Ensure audio URL is publicly accessible
       let publicAudioUrl = savedAudioUrl;
       
@@ -118,19 +162,13 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
       }
     } catch (error) {
       console.error('Erro na diarização:', error);
-      toast({
-        title: "Não foi possível identificar vozes",
-        description: "Usando transcrição sem identificação de speakers",
-        variant: "destructive"
-      });
       // Fallback to generic labels
-      setProcessedTranscript(transcriptionMessages.filter(m => m.is_final).map(m => ({
+      const finalMessages = transcriptionMessages.filter(m => m.is_final);
+      setProcessedTranscript(finalMessages.map(m => ({
         text: m.text,
         timestamp: m.timestamp,
         speaker: 'Participante'
       })));
-    } finally {
-      setIsProcessingSpeakers(false);
     }
   };
 

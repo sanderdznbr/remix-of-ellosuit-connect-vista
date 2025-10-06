@@ -20,8 +20,8 @@ import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
 import DocumentTrackingDashboard from '@/components/DocumentTracking/DocumentTrackingDashboard';
 import DriveManager from '@/components/Dashboard/DriveManager';
 import ImprovedAgendaAberta from '@/components/Dashboard/ImprovedAgendaAberta';
-import UserManagement from '@/components/Dashboard/UserManagement';
-import DashboardCustomizer from '@/components/Dashboard/DashboardCustomizer';
+import ImprovedUserManagement from '@/components/Dashboard/ImprovedUserManagement';
+import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboardCustomizer';
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 
 const MobileResponsiveDashboard = () => {
@@ -64,8 +64,9 @@ const MobileResponsiveDashboard = () => {
           <Route path="/tasks" element={<TarefasWeb />} />
           <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
           <Route path="/rastreamento-documento" element={<DocumentTrackingDashboard />} />
-          <Route path="/funcionarios" element={<UserManagement />} />
-          <Route path="/personalizar-dashboard" element={<DashboardCustomizer />} />
+          <Route path="/funcionarios" element={<ImprovedUserManagement />} />
+          <Route path="/personalizar-dashboard" element={<ImprovedDashboardCustomizer />} />
+          <Route path="/personalizar" element={<ImprovedDashboardCustomizer />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

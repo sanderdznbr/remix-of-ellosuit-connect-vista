@@ -55,11 +55,30 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
     });
 
     try {
+      // Ensure audio URL is publicly accessible
+      let publicAudioUrl = savedAudioUrl;
+      
+      // If it's a relative path or storage path, convert to public URL
+      if (!savedAudioUrl.startsWith('http')) {
+        const fileName = savedAudioUrl.split('/').pop();
+        const { data: urlData } = await supabase.storage
+          .from('meeting-recordings')
+          .getPublicUrl(fileName || savedAudioUrl);
+        publicAudioUrl = urlData.publicUrl;
+      }
+
+      console.log('🎤 Enviando para AssemblyAI:', publicAudioUrl);
+
       const { data, error } = await supabase.functions.invoke('speaker-diarization', {
-        body: { audioUrl: savedAudioUrl }
+        body: { audioUrl: publicAudioUrl }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro da edge function:', error);
+        throw error;
+      }
+
+      console.log('📥 Resposta recebida:', data);
 
       if (data.success && data.segments && data.segments.length > 0) {
         console.log(`✅ Identificados ${data.speakerCount} speakers`);

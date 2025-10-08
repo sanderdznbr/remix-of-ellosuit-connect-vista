@@ -702,13 +702,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 <div className="px-6 py-4 border-t border-white/10" style={{ backgroundColor: '#101010' }}>
                   <SimpleMeetingControls
                     ref={meetingControlsRef}
-                    onToggleChat={() => setShowFloatingChat(!showFloatingChat)}
+                    onToggleChat={() => setActiveTab(activeTab === 'chat' ? null : 'chat')}
                     onToggleParticipants={() => setActiveTab(activeTab === 'participants' ? null : 'participants')}
                     onShareMeeting={() => setShowShareModal(true)}
                     onLeave={handleLeaveClick}
                     onSettingsClick={() => setShowDeviceSettings(true)}
                     onShowTranscription={() => setShowTranscriptionModal(true)}
-                    isChatOpen={showFloatingChat}
+                    isChatOpen={activeTab === 'chat'}
                     isParticipantsOpen={activeTab === 'participants'}
                   />
                 </div>

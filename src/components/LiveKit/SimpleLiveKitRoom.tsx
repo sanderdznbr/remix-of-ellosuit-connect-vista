@@ -699,7 +699,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
 
                 {/* Bottom Controls Bar - Dark Theme */}
-                <div className="px-6 py-4 border-t border-white/10">
+                <div className="px-6 py-4 border-t border-white/10" style={{ backgroundColor: '#101010' }}>
                   <SimpleMeetingControls
                     ref={meetingControlsRef}
                     onToggleChat={() => setShowFloatingChat(!showFloatingChat)}

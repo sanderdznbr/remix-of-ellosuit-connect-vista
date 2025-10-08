@@ -62,7 +62,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 }) => {
   const [token, setToken] = useState<string>('');
   const [serverUrl, setServerUrl] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [connectingToRoom, setConnectingToRoom] = useState(false);
   const [error, setError] = useState<string>('');
   const [preJoinChoices, setPreJoinChoices] = useState<any>();
   const [showPreJoin, setShowPreJoin] = useState(true);
@@ -211,7 +212,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   const generateToken = useCallback(async (username: string) => {
     try {
-      setLoading(true);
+      setConnectingToRoom(true);
       setError('');
 
       console.log('Generating LiveKit token for room:', roomName, 'with name:', username);
@@ -236,24 +237,21 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
       setToken(tokenData.token);
       setServerUrl(tokenData.url);
+      setConnectingToRoom(false);
       
     } catch (err) {
       console.error('Error generating token:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erro ao conectar na sala';
       setError(errorMessage);
+      setConnectingToRoom(false);
       toast({
         title: "Erro",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   }, [roomName, toast]);
 
-  useEffect(() => {
-    setLoading(false);
-  }, []);
 
   const handlePreJoinSubmit = useCallback(async (values: any) => {
     console.log('PreJoin submitted with values:', values);
@@ -453,17 +451,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     });
   }, [toast]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-foreground">Conectando à sala...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Error state
   if (error) {
@@ -520,6 +507,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           onApproved={handleApprovalGranted}
           onRejected={handleApprovalRejected}
         />
+      ) : connectingToRoom ? (
+        <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-white text-lg font-medium">Entrando na reunião...</p>
+            <p className="text-zinc-400 text-sm">Aguarde um momento</p>
+          </div>
+        </div>
       ) : token && serverUrl ? (
         <LiveKitRoom
           video={preJoinChoices?.videoEnabled ?? true}
@@ -737,14 +732,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             savedAudioUrl={savedAudioUrl}
           />
         </LiveKitRoom>
-      ) : (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-foreground">Entrando na reunião...</p>
-          </div>
-        </div>
-      )}
+      ) : null}
     </>
   );
 };

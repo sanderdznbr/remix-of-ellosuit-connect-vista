@@ -171,7 +171,10 @@ export const useMeetingRooms = () => {
       // Gerar peer ID único
       const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-      // Adicionar participante (permite convidados)
+      // Check if user is host
+      const isHost = user ? room.created_by === user.id : false;
+      
+      // Adicionar participante (convidados ficam em espera, anfitrião entra direto)
       const { data: participant, error: participantError } = await supabase
         .from('room_participants')
         .insert({
@@ -179,8 +182,9 @@ export const useMeetingRooms = () => {
           user_id: user?.id || null,
           display_name: displayName,
           peer_id: peerId,
-          is_host: user ? room.created_by === user.id : false,
-          connection_status: 'connected',
+          is_host: isHost,
+          connection_status: isHost ? 'connected' : 'waiting',
+          waiting_approval: !isHost, // Apenas não-anfitriões aguardam aprovação
         })
         .select()
         .single();

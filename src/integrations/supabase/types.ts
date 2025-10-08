@@ -1407,6 +1407,7 @@ export type Database = {
           screen_sharing: boolean | null
           user_id: string | null
           video_enabled: boolean | null
+          waiting_approval: boolean | null
         }
         Insert: {
           audio_enabled?: boolean | null
@@ -1422,6 +1423,7 @@ export type Database = {
           screen_sharing?: boolean | null
           user_id?: string | null
           video_enabled?: boolean | null
+          waiting_approval?: boolean | null
         }
         Update: {
           audio_enabled?: boolean | null
@@ -1437,6 +1439,7 @@ export type Database = {
           screen_sharing?: boolean | null
           user_id?: string | null
           video_enabled?: boolean | null
+          waiting_approval?: boolean | null
         }
         Relationships: [
           {

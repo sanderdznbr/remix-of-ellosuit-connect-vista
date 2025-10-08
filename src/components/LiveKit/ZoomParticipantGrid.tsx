@@ -73,10 +73,13 @@ const ZoomParticipantGrid: React.FC = () => {
                   className="relative flex-shrink-0 w-32 h-24 bg-muted rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                 >
                   {isVideoEnabled(trackRef.participant) ? (
-                    <VideoTrack
-                      trackRef={trackRef}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="w-full h-full bg-black flex items-center justify-center">
+                      <VideoTrack
+                        trackRef={trackRef}
+                        className="max-w-full max-h-full object-contain"
+                        style={{ aspectRatio: '16/9' }}
+                      />
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted">
                       <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
@@ -129,10 +132,13 @@ const ZoomParticipantGrid: React.FC = () => {
                   }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
-                    <VideoTrack
-                      trackRef={trackRef}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="w-full h-full bg-black flex items-center justify-center">
+                      <VideoTrack
+                        trackRef={trackRef}
+                        className="max-w-full max-h-full object-contain"
+                        style={{ aspectRatio: '16/9' }}
+                      />
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted">
                       <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-3xl">

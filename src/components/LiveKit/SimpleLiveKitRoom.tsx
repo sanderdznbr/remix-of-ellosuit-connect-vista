@@ -22,6 +22,8 @@ import ZoomPreJoin from './ZoomPreJoin';
 import ZoomParticipantGrid from './ZoomParticipantGrid';
 import MobileMeetingLayout from './MobileMeetingLayout';
 import { RoomContextCapture } from './RoomContextCapture';
+import WaitingRoomApproval from './WaitingRoomApproval';
+import WaitingRoomScreen from './WaitingRoomScreen';
 import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
@@ -74,6 +76,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
+  const [participantId, setParticipantId] = useState<string>('');
+  const [isHost, setIsHost] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState<string>('');
   const meetingControlsRef = useRef<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -207,10 +213,50 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     const finalUsername = values.username || participantName || 'Convidado';
     console.log('Using final username:', finalUsername);
-    await generateToken(finalUsername);
     
-    setShowPreJoin(false);
-  }, [generateToken, participantName]);
+    // Check if user needs to wait for approval
+    const { data: roomData } = await supabase
+      .from('meeting_rooms')
+      .select('id, created_by')
+      .eq('room_code', roomName)
+      .single();
+
+    if (roomData) {
+      setCurrentRoomId(roomData.id);
+      const userIsHost = user && roomData.created_by === user.id;
+      setIsHost(userIsHost);
+
+      // Create participant record to get ID
+      const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const { data: participantData } = await supabase
+        .from('room_participants')
+        .insert({
+          room_id: roomData.id,
+          user_id: user?.id || null,
+          display_name: finalUsername,
+          peer_id: peerId,
+          is_host: userIsHost,
+          connection_status: userIsHost ? 'connected' : 'waiting',
+          waiting_approval: !userIsHost,
+        })
+        .select('id, waiting_approval')
+        .single();
+
+      if (participantData) {
+        setParticipantId(participantData.id);
+        setIsWaitingApproval(participantData.waiting_approval);
+
+        // Only generate token if approved or is host
+        if (!participantData.waiting_approval) {
+          await generateToken(finalUsername);
+          setShowPreJoin(false);
+        }
+      }
+    } else {
+      await generateToken(finalUsername);
+      setShowPreJoin(false);
+    }
+  }, [generateToken, participantName, roomName, user]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
     setTranscriptionMessages(prev => [...prev, message]);
@@ -394,6 +440,21 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     );
   }
 
+  const handleApprovalGranted = useCallback(async () => {
+    setIsWaitingApproval(false);
+    const finalUsername = preJoinChoices?.username || participantName || 'Convidado';
+    await generateToken(finalUsername);
+  }, [preJoinChoices, participantName, generateToken]);
+
+  const handleApprovalRejected = useCallback(() => {
+    toast({
+      title: "Acesso negado",
+      description: "O anfitrião rejeitou sua entrada na reunião",
+      variant: "destructive",
+    });
+    setTimeout(() => onLeave(), 2000);
+  }, [toast, onLeave]);
+
   return (
     <>
       {showPreJoin ? (
@@ -402,6 +463,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           participantName={participantName}
           onSubmit={handlePreJoinSubmit}
           onCancel={onLeave}
+        />
+      ) : isWaitingApproval ? (
+        <WaitingRoomScreen
+          roomName={roomName}
+          participantId={participantId}
+          onApproved={handleApprovalGranted}
+          onRejected={handleApprovalRejected}
         />
       ) : token && serverUrl ? (
         <LiveKitRoom
@@ -443,6 +511,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onTranscriptionUpdate={handleTranscriptionUpdate}
           />
           
+          {/* Waiting Room Approval Panel (for hosts) */}
+          {!isMobile && isHost && (
+            <WaitingRoomApproval
+              roomId={currentRoomId}
+              isHost={isHost}
+            />
+          )}
+
           {isMobile ? (
             <MobileMeetingLayout
               roomName={roomName}

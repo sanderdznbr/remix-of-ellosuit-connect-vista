@@ -46,7 +46,7 @@ const ZoomParticipantGrid: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-background">
+    <div className="w-full h-full flex flex-col" style={{ backgroundColor: '#101010' }}>
       {/* Screen Share Area */}
       {hasScreenShare && (
         <div className="flex-1 flex flex-col gap-3 p-3">
@@ -70,7 +70,8 @@ const ZoomParticipantGrid: React.FC = () => {
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                  className="relative flex-shrink-0 w-32 h-24 bg-muted rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                  className="relative flex-shrink-0 w-32 h-24 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                  style={{ backgroundColor: '#1a1a1a' }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <div className="w-full h-full bg-black flex items-center justify-center">
@@ -125,8 +126,10 @@ const ZoomParticipantGrid: React.FC = () => {
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-${trackRef.participant.identity}-${index}`}
-                  className="relative bg-muted rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all group w-full h-full flex items-center justify-center"
-                  style={{
+                  className="relative rounded-3xl overflow-hidden border-2 hover:border-primary transition-all group w-full h-full flex items-center justify-center"
+                  style={{ 
+                    backgroundColor: '#1a1a1a',
+                    borderColor: '#2a2a2a',
                     minHeight: cameraTracks.length === 1 ? '400px' : '180px',
                     aspectRatio: cameraTracks.length === 1 ? '16/9' : 'auto'
                   }}

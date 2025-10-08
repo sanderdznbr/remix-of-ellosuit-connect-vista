@@ -115,11 +115,11 @@ const FloatingChatPanel: React.FC<FloatingChatPanelProps> = ({ isOpen, onClose }
     const file = e.target.files?.[0];
     if (!file || !room || !localParticipant) return;
 
-    // Limit to 5MB for better DataChannel reliability
-    if (file.size > 5 * 1024 * 1024) {
+    // Limit to 50KB to avoid DataChannel 65535 bytes limit (base64 increases size ~33%)
+    if (file.size > 50 * 1024) {
       toast({
         title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 5MB",
+        description: "O arquivo deve ter no máximo 50KB para compartilhamento via chat",
         variant: "destructive"
       });
       return;

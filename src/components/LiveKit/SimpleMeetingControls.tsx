@@ -70,7 +70,10 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
           await localParticipant.setScreenShareEnabled(false);
           setIsScreenSharing(false);
         } else {
-          await localParticipant.setScreenShareEnabled(true);
+          // Prevent auto-focus on shared window
+          await localParticipant.setScreenShareEnabled(true, {
+            suppressLocalAudioPlayback: true
+          });
           setIsScreenSharing(true);
         }
       } catch (error) {

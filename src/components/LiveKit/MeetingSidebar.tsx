@@ -279,7 +279,7 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
               className="flex items-center gap-2 text-sm data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
             >
               <MessageSquare className="h-4 w-4" />
-              <span>Chat</span>
+              <span>Bate-papo</span>
             </TabsTrigger>
           </TabsList>
         </div>

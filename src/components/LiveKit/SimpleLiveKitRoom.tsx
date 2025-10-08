@@ -100,61 +100,101 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Check if user is host on mount
   useEffect(() => {
     const checkHostAndSetup = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        setIsCheckingHost(false);
-        return;
-      }
-
-      // Get company ID
-      const { data: companyUsers } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userData.user.id)
-        .limit(1);
-      
-      if (companyUsers && companyUsers.length > 0) {
-        setCompanyId(companyUsers[0].company_id);
-      }
-
-      // Check if user is host
-      const { data: roomData } = await supabase
-        .from('meeting_rooms')
-        .select('id, created_by')
-        .eq('room_code', roomName)
-        .single();
-
-      if (roomData) {
-        setCurrentRoomId(roomData.id);
-        const userIsHost = userData.user && roomData.created_by === userData.user.id;
-        setIsHost(userIsHost);
-
-        // If host, skip PreJoin and enter directly
-        if (userIsHost) {
-          console.log('User is host, entering directly');
-          const finalUsername = userData.user.user_metadata?.full_name || participantName || 'Anfitrião';
-          
-          // Create participant record as host
-          const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-          await supabase
-            .from('room_participants')
-            .insert({
-              room_id: roomData.id,
-              user_id: userData.user.id,
-              display_name: finalUsername,
-              peer_id: peerId,
-              is_host: true,
-              connection_status: 'connected',
-              waiting_approval: false,
-            });
-
-          // Generate token and enter
-          await generateToken(finalUsername);
-          setShowPreJoin(false);
+      try {
+        console.log('🔍 [SimpleLiveKitRoom] Iniciando verificação de host para sala:', roomName);
+        
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar usuário:', userError);
+          setIsCheckingHost(false);
+          return;
         }
+        
+        if (!userData.user) {
+          console.log('👤 [SimpleLiveKitRoom] Nenhum usuário autenticado - modo convidado');
+          setIsCheckingHost(false);
+          return;
+        }
+
+        console.log('✅ [SimpleLiveKitRoom] Usuário encontrado:', userData.user.id);
+
+        // Get company ID
+        const { data: companyUsers, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userData.user.id)
+          .limit(1);
+        
+        if (companyError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar company:', companyError);
+        } else if (companyUsers && companyUsers.length > 0) {
+          console.log('🏢 [SimpleLiveKitRoom] Company ID:', companyUsers[0].company_id);
+          setCompanyId(companyUsers[0].company_id);
+        }
+
+        // Check if user is host
+        const { data: roomData, error: roomError } = await supabase
+          .from('meeting_rooms')
+          .select('id, created_by')
+          .eq('room_code', roomName)
+          .single();
+
+        if (roomError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', roomError);
+          setIsCheckingHost(false);
+          return;
+        }
+
+        if (roomData) {
+          console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id, 'Criado por:', roomData.created_by);
+          setCurrentRoomId(roomData.id);
+          const userIsHost = userData.user && roomData.created_by === userData.user.id;
+          setIsHost(userIsHost);
+
+          console.log(userIsHost ? '👑 [SimpleLiveKitRoom] Usuário é HOST' : '👥 [SimpleLiveKitRoom] Usuário é CONVIDADO');
+
+          // If host, skip PreJoin and enter directly
+          if (userIsHost) {
+            console.log('🎯 [SimpleLiveKitRoom] Host entrando diretamente na sala');
+            const finalUsername = userData.user.user_metadata?.full_name || participantName || 'Anfitrião';
+            
+            // Create participant record as host
+            const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            const { error: insertError } = await supabase
+              .from('room_participants')
+              .insert({
+                room_id: roomData.id,
+                user_id: userData.user.id,
+                display_name: finalUsername,
+                peer_id: peerId,
+                is_host: true,
+                connection_status: 'connected',
+                waiting_approval: false,
+              });
+
+            if (insertError) {
+              console.error('❌ [SimpleLiveKitRoom] Erro ao criar participante:', insertError);
+            } else {
+              console.log('✅ [SimpleLiveKitRoom] Participante criado como host');
+            }
+
+            // Generate token and enter
+            console.log('🎫 [SimpleLiveKitRoom] Gerando token...');
+            await generateToken(finalUsername);
+            setShowPreJoin(false);
+            console.log('✅ [SimpleLiveKitRoom] Host pronto para entrar');
+          }
+        } else {
+          console.warn('⚠️ [SimpleLiveKitRoom] Sala não encontrada');
+        }
+        
+        console.log('✅ [SimpleLiveKitRoom] Verificação concluída');
+        setIsCheckingHost(false);
+      } catch (err) {
+        console.error('❌ [SimpleLiveKitRoom] Erro fatal na verificação:', err);
+        setIsCheckingHost(false);
       }
-      
-      setIsCheckingHost(false);
     };
     
     checkHostAndSetup();
@@ -258,10 +298,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   const generateToken = useCallback(async (username: string) => {
     try {
+      console.log('🎫 [generateToken] Iniciando geração de token');
+      console.log('📝 [generateToken] Sala:', roomName, 'Usuário:', username);
+      
       setConnectingToRoom(true);
       setError('');
-
-      console.log('Generating LiveKit token for room:', roomName, 'with name:', username);
 
       const { data, error } = await supabase.functions.invoke('livekit-token', {
         body: {
@@ -271,22 +312,26 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       });
 
       if (error) {
+        console.error('❌ [generateToken] Erro do Supabase:', error);
         throw new Error(error.message || 'Erro ao gerar token');
       }
 
       if (!data || !data.token || !data.url) {
+        console.error('❌ [generateToken] Resposta inválida:', data);
         throw new Error('Resposta inválida do servidor');
       }
 
       const tokenData = data as TokenResponse;
-      console.log('Token generated successfully for:', username);
+      console.log('✅ [generateToken] Token gerado com sucesso');
+      console.log('🌐 [generateToken] Server URL:', tokenData.url);
 
       setToken(tokenData.token);
       setServerUrl(tokenData.url);
       setConnectingToRoom(false);
       
+      console.log('✅ [generateToken] Estados atualizados - pronto para conectar');
     } catch (err) {
-      console.error('Error generating token:', err);
+      console.error('❌ [generateToken] Erro fatal:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erro ao conectar na sala';
       setError(errorMessage);
       setConnectingToRoom(false);
@@ -518,6 +563,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   // Show loading while checking host status
   if (isCheckingHost) {
+    console.log('🔄 [Render] Mostrando tela de verificação de acesso');
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -527,6 +573,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       </div>
     );
   }
+
+  console.log('🎬 [Render] Estados atuais:', {
+    showPreJoin,
+    isHost,
+    isWaitingApproval,
+    connectingToRoom,
+    hasToken: !!token,
+    hasServerUrl: !!serverUrl
+  });
 
   return (
     <div style={{ backgroundColor: '#101010', minHeight: '100vh', width: '100%' }}>

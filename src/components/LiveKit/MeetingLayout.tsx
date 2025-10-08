@@ -102,7 +102,6 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         {/* Sidebar Chat à Direita */}
         <MeetingChatSidebar
           roomCode={roomName}
-          onShowAIChat={() => setShowAIChat(true)}
         />
       </div>
 
@@ -127,12 +126,10 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         onClose={() => setShowSettingsModal(false)}
       />
 
-      {showAIChat && (
-        <MeetingAIChat
-          isOpen={showAIChat}
-          onClose={() => setShowAIChat(false)}
-        />
-      )}
+      <MeetingAIChat
+        transcriptionMessages={transcriptionMessages}
+        roomName={roomName}
+      />
     </div>
   );
 };

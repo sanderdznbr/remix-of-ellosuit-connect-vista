@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 
 interface MeetingChatSidebarProps {
   roomCode: string;
-  onShowAIChat: () => void;
 }
 
 interface ChatMessage {
@@ -20,7 +19,7 @@ interface ChatMessage {
   file_url?: string;
 }
 
-const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, onShowAIChat }) => {
+const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat');
@@ -71,41 +70,31 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, onSho
   };
 
   return (
-    <div className="w-[340px] bg-white flex flex-col rounded-tl-[37px] shadow-2xl relative">
-      {/* AI Chat Button - Floating */}
-      <button
-        onClick={onShowAIChat}
-        className="absolute -left-16 bottom-8 flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-105"
-        style={{ width: '60px', height: '60px', backgroundColor: '#3600FF' }}
-        title="Falar com EllolA"
-      >
-        <Bot className="w-7 h-7 text-white" />
-      </button>
-
+    <div className="w-[360px] bg-white flex flex-col rounded-3xl shadow-2xl mr-4">
       {/* Tabs Header */}
-      <div className="flex items-center border-b px-4 pt-6">
-        <div className="flex gap-1 flex-1">
+      <div className="flex items-center border-b px-2 pt-4">
+        <div className="flex gap-2 flex-1">
           <button
             onClick={() => setActiveTab('participants')}
-            className={`flex items-center gap-2 px-4 py-3 rounded-t-lg transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
               activeTab === 'participants'
-                ? 'bg-gray-100 text-gray-900 font-medium'
+                ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Participantes</span>
+            <span className="text-sm">Participantes</span>
           </button>
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-4 py-3 rounded-t-lg transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
               activeTab === 'chat'
-                ? 'bg-gray-100 text-gray-900 font-medium'
+                ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            <span>Bate-papo</span>
+            <span className="text-sm">Bate-papo</span>
           </button>
         </div>
       </div>
@@ -115,14 +104,19 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, onSho
         {activeTab === 'chat' ? (
           <div className="h-full flex flex-col">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {messages.length === 0 && (
+                <div className="text-center text-gray-400 text-sm py-8">
+                  Nenhuma mensagem ainda
+                </div>
+              )}
               {messages.map((msg) => (
-                <div key={msg.id} className="bg-gray-50 rounded-2xl p-3 mr-2">
+                <div key={msg.id} className="bg-gray-50 rounded-2xl p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm text-gray-900">
+                    <span className="font-medium text-xs text-gray-900">
                       {msg.sender_name}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -137,7 +131,7 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, onSho
 
             {/* Input */}
             <div className="p-4 border-t">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -148,22 +142,25 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, onSho
                   size="icon"
                   variant="ghost"
                   onClick={() => fileInputRef.current?.click()}
+                  className="h-8 w-8 p-0 hover:bg-transparent"
                 >
-                  <Paperclip className="w-4 h-4" />
+                  <Paperclip className="w-4 h-4 text-gray-600" />
                 </Button>
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Escrever mensagem..."
-                  className="flex-1"
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 <Button
                   onClick={sendMessage}
                   size="icon"
                   disabled={!inputMessage.trim()}
+                  className="h-8 w-8 p-0 rounded-full"
+                  style={{ backgroundColor: '#3600FF' }}
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 text-white" />
                 </Button>
               </div>
             </div>

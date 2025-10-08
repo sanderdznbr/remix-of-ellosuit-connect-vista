@@ -479,7 +479,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#101010] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-destructive" />
           <div>
@@ -552,14 +552,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           </div>
         </div>
       ) : token && serverUrl ? (
-        <LiveKitRoom
-          video={preJoinChoices?.videoEnabled ?? true}
-          audio={preJoinChoices?.audioEnabled ?? true}
-          token={token}
-          serverUrl={serverUrl}
-          data-lk-theme="default"
-          onDisconnected={handleDisconnected}
-          onError={handleError}
+        <div style={{ backgroundColor: '#101010', minHeight: '100vh', width: '100%' }}>
+          <LiveKitRoom
+            video={preJoinChoices?.videoEnabled ?? true}
+            audio={preJoinChoices?.audioEnabled ?? true}
+            token={token}
+            serverUrl={serverUrl}
+            onDisconnected={handleDisconnected}
+            onError={handleError}
           options={{
             adaptiveStream: true,
             disconnectOnPageLeave: false,
@@ -691,6 +691,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             savedAudioUrl={savedAudioUrl}
           />
         </LiveKitRoom>
+        </div>
       ) : null}
     </>
   );

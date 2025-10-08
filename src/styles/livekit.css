@@ -2,10 +2,11 @@
 
 .lk-video-conference {
   height: 100dvh !important;
-  background: hsl(var(--background));
+  background: #101010 !important;
   font-family: inherit;
   display: flex;
   flex-direction: column;
+  transition: background-color 0s !important;
 }
 
 .lk-grid-layout {
@@ -29,7 +30,7 @@
 }
 
 .lk-control-bar {
-  background: hsl(var(--background) / 0.95) !important;
+  background: rgba(16, 16, 16, 0.95) !important;
   backdrop-filter: blur(12px);
   border: 1px solid hsl(var(--border));
   border-radius: 2rem;
@@ -161,7 +162,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: hsl(var(--background));
+  background: #101010 !important;
   flex-direction: column;
   gap: 1rem;
 }

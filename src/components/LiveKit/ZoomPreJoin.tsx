@@ -19,6 +19,8 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   onSubmit,
   onCancel
 }) => {
+  console.log('🎭 [ZoomPreJoin] Componente montado:', { roomName, participantName });
+  
   const [name, setName] = useState(participantName === 'Convidado' ? '' : participantName);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -71,6 +73,12 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
 
   const handleJoin = () => {
     const finalName = name.trim() || participantName || 'Convidado';
+    console.log('✅ [ZoomPreJoin] Entrando na sala:', {
+      finalName,
+      videoEnabled,
+      audioEnabled
+    });
+    
     onSubmit({
       username: finalName,
       videoEnabled,
@@ -78,8 +86,10 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
     });
   };
 
+  console.log('🎭 [ZoomPreJoin] Renderizando PreJoin');
+
   return (
-    <div className="zoom-prejoin-container-light">
+    <div className="zoom-prejoin-container-light" style={{ backgroundColor: '#101010', minHeight: '100vh' }}>
       <div className="zoom-prejoin-card-light">
         {/* Logo ELLOSUIT */}
         <div className="text-center mb-8">

@@ -85,7 +85,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isHost, setIsHost] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState<string>('');
   const [showWhiteboard, setShowWhiteboard] = useState(false);
-  const [isCheckingHost, setIsCheckingHost] = useState(true);
+  const [isCheckingHost, setIsCheckingHost] = useState(false); // Começar false para convidados
   const [whiteboardBgColor, setWhiteboardBgColor] = useState<'white' | 'black'>('white');
   const [meetingStartTime] = useState<number>(Date.now());
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -97,30 +97,44 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const roomRef = useRef<Room | null>(null);
   const audioRecordersRef = useRef<Map<string, { recorder: MediaRecorder; chunks: Blob[] }>>(new Map());
 
-  // Check if user is host on mount
+  console.log('🎬 [SimpleLiveKitRoom] Componente montado:', {
+    roomName,
+    participantName,
+    hasUser: !!user,
+    userId: user?.id
+  });
+
+  // Check if user is host on mount (ONLY if authenticated)
   useEffect(() => {
     const checkHostAndSetup = async () => {
+      console.log('🔍 [SimpleLiveKitRoom] Iniciando verificação...');
+      
+      // Se não tem usuário, é convidado - não precisa verificar host
+      if (!user) {
+        console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado direto');
+        setIsCheckingHost(false);
+        setIsHost(false);
+        setShowPreJoin(true);
+        return;
+      }
+
+      // Tem usuário - verificar se é host
+      setIsCheckingHost(true);
+      
       try {
-        console.log('🔍 [SimpleLiveKitRoom] Iniciando verificação de host para sala:', roomName);
+        console.log('🔍 [SimpleLiveKitRoom] Usuário autenticado, verificando host...');
         
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
-        if (userError) {
-          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar usuário:', userError);
-          console.log('👤 [SimpleLiveKitRoom] Continuando como convidado (não autenticado)');
+        if (userError || !userData.user) {
+          console.log('❌ [SimpleLiveKitRoom] Erro ao buscar usuário, continuando como convidado');
           setIsCheckingHost(false);
           setIsHost(false);
-          return;
-        }
-        
-        if (!userData.user) {
-          console.log('👤 [SimpleLiveKitRoom] Nenhum usuário autenticado - modo convidado');
-          setIsCheckingHost(false);
-          setIsHost(false);
+          setShowPreJoin(true);
           return;
         }
 
-        console.log('✅ [SimpleLiveKitRoom] Usuário encontrado:', userData.user.id);
+        console.log('✅ [SimpleLiveKitRoom] Usuário confirmado:', userData.user.id);
 
         // Get company ID
         const { data: companyUsers, error: companyError } = await supabase
@@ -201,11 +215,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         console.error('❌ [SimpleLiveKitRoom] Erro fatal na verificação:', err);
         setIsCheckingHost(false);
         setIsHost(false);
+        setShowPreJoin(true);
       }
     };
     
     checkHostAndSetup();
-  }, [roomName, participantName]);
+  }, [roomName, participantName, user]);
 
   // Clock update (Brasília time)
   useEffect(() => {

@@ -84,6 +84,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isHost, setIsHost] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState<string>('');
   const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [isCheckingHost, setIsCheckingHost] = useState(true);
   const [whiteboardBgColor, setWhiteboardBgColor] = useState<'white' | 'black'>('white');
   const [meetingStartTime] = useState<number>(Date.now());
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -95,24 +96,68 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const roomRef = useRef<Room | null>(null);
   const audioRecordersRef = useRef<Map<string, { recorder: MediaRecorder; chunks: Blob[] }>>(new Map());
 
+  // Check if user is host on mount
   useEffect(() => {
-    const getCompanyId = async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (user.user) {
-        const { data: companyUsers } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.user.id)
-          .limit(1);
-        
-        if (companyUsers && companyUsers.length > 0) {
-          setCompanyId(companyUsers[0].company_id);
+    const checkHostAndSetup = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setIsCheckingHost(false);
+        return;
+      }
+
+      // Get company ID
+      const { data: companyUsers } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .limit(1);
+      
+      if (companyUsers && companyUsers.length > 0) {
+        setCompanyId(companyUsers[0].company_id);
+      }
+
+      // Check if user is host
+      const { data: roomData } = await supabase
+        .from('meeting_rooms')
+        .select('id, created_by')
+        .eq('room_code', roomName)
+        .single();
+
+      if (roomData) {
+        setCurrentRoomId(roomData.id);
+        const userIsHost = userData.user && roomData.created_by === userData.user.id;
+        setIsHost(userIsHost);
+
+        // If host, skip PreJoin and enter directly
+        if (userIsHost) {
+          console.log('User is host, entering directly');
+          const finalUsername = userData.user.user_metadata?.full_name || participantName || 'Anfitrião';
+          
+          // Create participant record as host
+          const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+          await supabase
+            .from('room_participants')
+            .insert({
+              room_id: roomData.id,
+              user_id: userData.user.id,
+              display_name: finalUsername,
+              peer_id: peerId,
+              is_host: true,
+              connection_status: 'connected',
+              waiting_approval: false,
+            });
+
+          // Generate token and enter
+          await generateToken(finalUsername);
+          setShowPreJoin(false);
         }
       }
+      
+      setIsCheckingHost(false);
     };
     
-    getCompanyId();
-  }, []);
+    checkHostAndSetup();
+  }, [roomName, participantName]);
 
   // Clock update (Brasília time)
   useEffect(() => {
@@ -254,55 +299,34 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
 
   const handlePreJoinSubmit = useCallback(async (values: any) => {
-    console.log('PreJoin submitted with values:', values);
+    console.log('PreJoin submitted with values (guest):', values);
     setPreJoinChoices(values);
     
     const finalUsername = values.username || participantName || 'Convidado';
-    console.log('Using final username:', finalUsername);
-    
-    // Check if user needs to wait for approval
-    const { data: roomData } = await supabase
-      .from('meeting_rooms')
-      .select('id, created_by')
-      .eq('room_code', roomName)
+    console.log('Guest username:', finalUsername);
+
+    // Guest joining - create participant record and wait for approval
+    const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const { data: participantData } = await supabase
+      .from('room_participants')
+      .insert({
+        room_id: currentRoomId,
+        user_id: user?.id || null,
+        display_name: finalUsername,
+        peer_id: peerId,
+        is_host: false,
+        connection_status: 'waiting',
+        waiting_approval: true,
+      })
+      .select('id')
       .single();
 
-    if (roomData) {
-      setCurrentRoomId(roomData.id);
-      const userIsHost = user && roomData.created_by === user.id;
-      setIsHost(userIsHost);
-
-      // Create participant record to get ID
-      const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      const { data: participantData } = await supabase
-        .from('room_participants')
-        .insert({
-          room_id: roomData.id,
-          user_id: user?.id || null,
-          display_name: finalUsername,
-          peer_id: peerId,
-          is_host: userIsHost,
-          connection_status: userIsHost ? 'connected' : 'waiting',
-          waiting_approval: !userIsHost,
-        })
-        .select('id, waiting_approval')
-        .single();
-
-      if (participantData) {
-        setParticipantId(participantData.id);
-        setIsWaitingApproval(participantData.waiting_approval);
-
-        // Only generate token if approved or is host
-        if (!participantData.waiting_approval) {
-          await generateToken(finalUsername);
-          setShowPreJoin(false);
-        }
-      }
-    } else {
-      await generateToken(finalUsername);
+    if (participantData) {
+      setParticipantId(participantData.id);
+      setIsWaitingApproval(true);
       setShowPreJoin(false);
     }
-  }, [generateToken, participantName, roomName, user]);
+  }, [currentRoomId, participantName, user]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
     setTranscriptionMessages(prev => [...prev, message]);
@@ -491,9 +515,21 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTimeout(() => onLeave(), 2000);
   }, [toast, onLeave]);
 
+  // Show loading while checking host status
+  if (isCheckingHost) {
+    return (
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-white text-lg font-medium">Verificando acesso...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {showPreJoin ? (
+      {showPreJoin && !isHost ? (
         <ZoomPreJoin 
           roomName={roomName}
           participantName={participantName}

@@ -70,7 +70,6 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
           await localParticipant.setScreenShareEnabled(false);
           setIsScreenSharing(false);
         } else {
-          // Prevent auto-focus on shared window
           await localParticipant.setScreenShareEnabled(true, {
             suppressLocalAudioPlayback: true
           });
@@ -88,15 +87,15 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   };
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-3">
       {/* Microphone */}
       <Button
         variant="ghost"
         size="icon"
         onClick={toggleMic}
         className={cn(
-          "h-12 w-12 rounded-full",
-          !micEnabled && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          "h-14 w-14 rounded-2xl transition-all",
+          micEnabled ? "bg-white/10 hover:bg-white/20 text-white" : "bg-red-500 text-white hover:bg-red-600"
         )}
         title={micEnabled ? "Desativar Microfone" : "Ativar Microfone"}
       >
@@ -109,8 +108,8 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         size="icon"
         onClick={toggleCamera}
         className={cn(
-          "h-12 w-12 rounded-full",
-          !cameraEnabled && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          "h-14 w-14 rounded-2xl transition-all",
+          cameraEnabled ? "bg-white/10 hover:bg-white/20 text-white" : "bg-red-500 text-white hover:bg-red-600"
         )}
         title={cameraEnabled ? "Desativar Câmera" : "Ativar Câmera"}
       >
@@ -123,23 +122,23 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         size="icon"
         onClick={handleScreenShare}
         className={cn(
-          "h-12 w-12 rounded-full",
-          isScreenSharing && "bg-primary text-primary-foreground"
+          "h-14 w-14 rounded-2xl transition-all",
+          isScreenSharing ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white/10 hover:bg-white/20 text-white"
         )}
         title={isScreenSharing ? "Parar Compartilhamento" : "Compartilhar Tela"}
       >
         <Monitor className="h-5 w-5" />
       </Button>
 
-      {/* Transcription - Always Active, Just Opens Modal */}
+      {/* Transcription */}
       <Button
         variant="ghost"
         size="icon"
         onClick={onShowTranscription}
-        className="h-12 w-12 rounded-full"
-        title="Ver Transcrição em Tempo Real"
+        className="h-14 w-14 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all"
+        title="Ver Transcrição"
       >
-        <FileText className="h-5 w-5 text-primary" />
+        <FileText className="h-5 w-5" />
       </Button>
 
       {/* Chat */}
@@ -148,12 +147,12 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         size="icon"
         onClick={onToggleChat}
         className={cn(
-          "h-12 w-12 rounded-full",
-          isChatOpen && "bg-primary/20"
+          "h-14 w-14 rounded-2xl transition-all",
+          isChatOpen ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white/10 hover:bg-white/20 text-white"
         )}
         title="Chat"
       >
-        <MessageSquare className={cn("h-5 w-5", isChatOpen && "text-primary")} />
+        <MessageSquare className="h-5 w-5" />
       </Button>
 
       {/* Participants */}
@@ -162,12 +161,12 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         size="icon"
         onClick={onToggleParticipants}
         className={cn(
-          "h-12 w-12 rounded-full",
-          isParticipantsOpen && "bg-primary/20"
+          "h-14 w-14 rounded-2xl transition-all",
+          isParticipantsOpen ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white/10 hover:bg-white/20 text-white"
         )}
         title="Participantes"
       >
-        <Users className={cn("h-5 w-5", isParticipantsOpen && "text-primary")} />
+        <Users className="h-5 w-5" />
       </Button>
 
       {/* Settings */}
@@ -175,7 +174,7 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         variant="ghost"
         size="icon"
         onClick={onSettingsClick}
-        className="h-12 w-12 rounded-full"
+        className="h-14 w-14 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all"
         title="Configurações"
       >
         <Settings className="h-5 w-5" />
@@ -184,9 +183,8 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
       {/* Leave */}
       <Button
         onClick={onLeave}
-        variant="destructive"
         size="icon"
-        className="h-12 w-12 rounded-full"
+        className="h-14 w-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white transition-all"
         title="Sair da Reunião"
       >
         <Phone className="h-5 w-5 rotate-[135deg]" />

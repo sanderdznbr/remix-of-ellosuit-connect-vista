@@ -1044,6 +1044,41 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_audio_settings: {
+        Row: {
+          audio_type: string
+          audio_url: string
+          company_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          audio_type: string
+          audio_url: string
+          company_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          audio_type?: string
+          audio_url?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_audio_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_integrations: {
         Row: {
           access_token: string | null

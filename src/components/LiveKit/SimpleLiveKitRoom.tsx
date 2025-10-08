@@ -107,13 +107,16 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         
         if (userError) {
           console.error('❌ [SimpleLiveKitRoom] Erro ao buscar usuário:', userError);
+          console.log('👤 [SimpleLiveKitRoom] Continuando como convidado (não autenticado)');
           setIsCheckingHost(false);
+          setIsHost(false);
           return;
         }
         
         if (!userData.user) {
           console.log('👤 [SimpleLiveKitRoom] Nenhum usuário autenticado - modo convidado');
           setIsCheckingHost(false);
+          setIsHost(false);
           return;
         }
 
@@ -142,7 +145,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
         if (roomError) {
           console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', roomError);
+          console.log('⚠️ [SimpleLiveKitRoom] Sala não encontrada, mas continuando como convidado');
           setIsCheckingHost(false);
+          setIsHost(false);
           return;
         }
 
@@ -187,6 +192,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           }
         } else {
           console.warn('⚠️ [SimpleLiveKitRoom] Sala não encontrada');
+          setIsHost(false);
         }
         
         console.log('✅ [SimpleLiveKitRoom] Verificação concluída');
@@ -194,6 +200,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       } catch (err) {
         console.error('❌ [SimpleLiveKitRoom] Erro fatal na verificação:', err);
         setIsCheckingHost(false);
+        setIsHost(false);
       }
     };
     

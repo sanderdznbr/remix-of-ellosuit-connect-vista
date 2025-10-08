@@ -70,19 +70,19 @@ const ZoomParticipantGrid: React.FC = () => {
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
                   key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                  className="relative flex-shrink-0 w-32 h-24 rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                  className="relative flex-shrink-0 w-32 h-24 rounded-3xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                   style={{ backgroundColor: '#1a1a1a' }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
-                    <div className="w-full h-full bg-black flex items-center justify-center">
+                    <div className="w-full h-full bg-black rounded-3xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="max-w-full max-h-full object-contain"
+                        className="max-w-full max-h-full object-cover rounded-3xl"
                         style={{ aspectRatio: '16/9' }}
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-3xl">
                       <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
@@ -135,15 +135,15 @@ const ZoomParticipantGrid: React.FC = () => {
                   }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
-                    <div className="w-full h-full bg-black flex items-center justify-center">
+                    <div className="w-full h-full bg-black rounded-3xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="max-w-full max-h-full object-contain"
+                        className="max-w-full max-h-full object-cover rounded-3xl"
                         style={{ aspectRatio: '16/9' }}
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-3xl">
                       <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-3xl">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
@@ -151,7 +151,7 @@ const ZoomParticipantGrid: React.FC = () => {
                   )}
                   
                   {/* Participant info overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent rounded-b-3xl">
                     <div className="flex items-center justify-between">
                       <span className="text-white text-sm font-medium truncate max-w-[80%] drop-shadow-lg">
                         {getParticipantName(trackRef.participant)}

@@ -7,7 +7,8 @@ import IntegrationsSettings from './IntegrationsSettings';
 import NotificationSettings from './NotificationSettings';
 import ImprovedDashboardCustomizer from './ImprovedDashboardCustomizer';
 import EmployeeManagement from './EmployeeManagement';
-import { Settings as SettingsIcon, Palette, Link, Bell, Users, LayoutDashboard } from 'lucide-react';
+import MeetingAudioSettings from './MeetingAudioSettings';
+import { Settings as SettingsIcon, Palette, Link, Bell, Users, LayoutDashboard, Music } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,10 +24,14 @@ const Settings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="employees" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Funcionários</span>
+          </TabsTrigger>
+          <TabsTrigger value="audio" className="flex items-center space-x-2">
+            <Music className="h-4 w-4" />
+            <span className="hidden sm:inline">Áudios</span>
           </TabsTrigger>
           <TabsTrigger value="customize" className="flex items-center space-x-2">
             <LayoutDashboard className="h-4 w-4" />
@@ -52,6 +57,10 @@ const Settings = () => {
 
         <TabsContent value="employees">
           <EmployeeManagement />
+        </TabsContent>
+
+        <TabsContent value="audio">
+          <MeetingAudioSettings />
         </TabsContent>
 
         <TabsContent value="customize">

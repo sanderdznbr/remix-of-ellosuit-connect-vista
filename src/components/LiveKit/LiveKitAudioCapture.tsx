@@ -34,6 +34,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   const lastSendTimeRef = useRef<number>(0);
   const lastTranscriptRef = useRef<string>('');
   const [isConnected, setIsConnected] = useState(false);
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     if (!isActive) {
@@ -41,10 +42,21 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       return;
     }
 
+    // Disable transcription on mobile to prevent errors
+    if (isMobile) {
+      console.warn('⚠️ Transcrição desativada no mobile para evitar erros de memória');
+      toast({
+        title: "Transcrição desativada",
+        description: "A transcrição automática não está disponível em dispositivos móveis",
+        variant: "destructive",
+      });
+      return;
+    }
+
     startCapture();
 
     return () => cleanup();
-  }, [isActive, roomName]);
+  }, [isActive, roomName, isMobile]);
 
   // Check for similar text (duplicate detection)
   const isSimilarText = (text1: string, text2: string): boolean => {

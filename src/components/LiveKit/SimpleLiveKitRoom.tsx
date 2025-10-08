@@ -24,6 +24,8 @@ import MobileMeetingLayout from './MobileMeetingLayout';
 import { RoomContextCapture } from './RoomContextCapture';
 import WaitingRoomApproval from './WaitingRoomApproval';
 import WaitingRoomScreen from './WaitingRoomScreen';
+import WhiteboardCanvas from './WhiteboardCanvas';
+import AudioDevicePersistence from './AudioDevicePersistence';
 import logoEllo from '@/assets/logoellosuit.png';
 import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
@@ -80,7 +82,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [participantId, setParticipantId] = useState<string>('');
   const [isHost, setIsHost] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState<string>('');
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [whiteboardBgColor, setWhiteboardBgColor] = useState<'white' | 'black'>('white');
+  const [meetingStartTime] = useState<number>(Date.now());
+  const [currentTime, setCurrentTime] = useState<string>('');
   const meetingControlsRef = useRef<any>(null);
+  const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
@@ -105,6 +112,47 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     
     getCompanyId();
   }, []);
+
+  // Clock update (Brasília time)
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const brasiliaTime = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(now);
+      setCurrentTime(brasiliaTime);
+    };
+
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Meeting duration timer (1 hour limit)
+  useEffect(() => {
+    if (!showPreJoin && token && serverUrl) {
+      const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
+      
+      meetingDurationTimerRef.current = setTimeout(() => {
+        toast({
+          title: "Reunião encerrada",
+          description: "A reunião atingiu o limite de 1 hora e foi encerrada automaticamente",
+          variant: "destructive",
+        });
+        handleLeaveClick();
+      }, ONE_HOUR);
+
+      return () => {
+        if (meetingDurationTimerRef.current) {
+          clearTimeout(meetingDurationTimerRef.current);
+        }
+      };
+    }
+  }, [showPreJoin, token, serverUrl]);
 
   // Enhanced connection management with better visibility handling
   useEffect(() => {
@@ -265,20 +313,21 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
     
-    // Auto-save meeting before leaving
-    if (transcriptionMessages.length > 0) {
-      console.log('💾 Auto-salvando reunião...');
-      await autoSaveMeeting();
+    // Clear meeting duration timer
+    if (meetingDurationTimerRef.current) {
+      clearTimeout(meetingDurationTimerRef.current);
     }
     
-    // Show exit modal if we have transcription data
-    if (transcriptionMessages.length > 0) {
-      console.log('✅ Abrindo modal de saída com', transcriptionMessages.length, 'mensagens');
-      setShowExitModal(true);
-    } else {
-      console.log('ℹ️ Nenhuma transcrição, saindo direto');
-      handleDisconnected();
+    // Auto-save meeting before leaving (only for host)
+    if (isHost && transcriptionMessages.length > 0) {
+      console.log('💾 Auto-salvando reunião...');
+      setIsProcessingTranscript(true);
+      await autoSaveMeeting();
+      setIsProcessingTranscript(false);
     }
+    
+    // Immediate disconnect
+    handleDisconnected();
   };
 
   // Auto-save meeting function
@@ -503,6 +552,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             roomRef.current = room;
           }} />
           <RoomAudioRenderer />
+          <AudioDevicePersistence />
           
           {/* Local Audio Capture for Real-time Transcription */}
           <LiveKitAudioCapture 
@@ -552,12 +602,38 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 {/* Header Clean - Light Theme */}
                 <div className="bg-background px-6 py-3 flex items-center justify-between border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                       <span className="text-sm text-foreground font-medium">{roomName}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => {
+                          setWhiteboardBgColor('white');
+                          setShowWhiteboard(true);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        title="Lousa branca"
+                      >
+                        📝 Lousa
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setWhiteboardBgColor('black');
+                          setShowWhiteboard(true);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 bg-black text-white hover:bg-black/80"
+                        title="Lousa preta"
+                      >
+                        🖤 Lousa
+                      </Button>
+                    </div>
                     <Button
                       onClick={() => setShowShareModal(true)}
                       size="sm"
@@ -567,8 +643,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                       <Share2 className="h-3.5 w-3.5 mr-2" />
                       Convidar
                     </Button>
-                    <div className="text-xs text-muted-foreground ml-2">
-                      {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    <div className="text-sm text-muted-foreground font-medium px-3 py-1 bg-muted/50 rounded-md border border-border">
+                      🕐 {currentTime}
                     </div>
                   </div>
                 </div>
@@ -635,6 +711,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               <MeetingAIChat
                 transcriptionMessages={transcriptionMessages}
                 roomName={roomName}
+              />
+
+              {/* Whiteboard Canvas */}
+              <WhiteboardCanvas
+                isOpen={showWhiteboard}
+                onClose={() => setShowWhiteboard(false)}
+                backgroundColor={whiteboardBgColor}
               />
             </>
           )}

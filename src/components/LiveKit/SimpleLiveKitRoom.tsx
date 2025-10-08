@@ -33,6 +33,7 @@ import { MeetingAIChat } from './MeetingAIChat';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import '@/styles/livekit.css';
 import MeetingLayout from './MeetingLayout';
+import '@/styles/meeting-dark-theme.css';
 
 interface SimpleLiveKitRoomProps {
   roomName: string;
@@ -528,7 +529,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }
 
   return (
-    <>
+    <div style={{ backgroundColor: '#101010', minHeight: '100vh', width: '100%' }}>
       {showPreJoin && !isHost ? (
         <ZoomPreJoin 
           roomName={roomName}
@@ -693,7 +694,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         </LiveKitRoom>
         </div>
       ) : null}
-    </>
+    </div>
   );
 };
 

@@ -16,11 +16,23 @@ const LiveKitMeeting = () => {
   const handleLeaveRoom = () => navigate('/dashboard/reunioes');
 
   return (
-    <SimpleLiveKitRoom
-      roomName={roomCode}
-      participantName={user?.user_metadata?.full_name || 'Convidado'}
-      onLeave={handleLeaveRoom}
-    />
+    <div data-meeting-page style={{
+      backgroundColor: '#101010', 
+      minHeight: '100vh', 
+      width: '100%',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      overflow: 'hidden'
+    }}>
+      <SimpleLiveKitRoom
+        roomName={roomCode}
+        participantName={user?.user_metadata?.full_name || 'Convidado'}
+        onLeave={handleLeaveRoom}
+      />
+    </div>
   );
 };
 

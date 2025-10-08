@@ -64,17 +64,20 @@
   @apply flex gap-3;
 }
 
-/* Pre-Join Styles - Light Theme */
+/* Pre-Join Styles - Light Theme (Modified to Dark) */
 .zoom-prejoin-container-light {
-  @apply h-full flex items-center justify-center bg-gray-50 p-8;
+  @apply h-full flex items-center justify-center p-8;
+  background-color: #101010 !important;
 }
 
 .zoom-prejoin-card-light {
-  @apply bg-white border border-gray-200 rounded-2xl p-8 max-w-lg w-full shadow-xl;
+  @apply border border-gray-700 rounded-2xl p-8 max-w-lg w-full shadow-xl;
+  background-color: #1a1a1a !important;
 }
 
 .zoom-prejoin-preview-light {
-  @apply relative bg-gray-100 rounded-xl overflow-hidden mb-6 aspect-video border border-gray-200;
+  @apply relative rounded-xl overflow-hidden mb-6 aspect-video border border-gray-700;
+  background-color: #2a2a2a !important;
 }
 
 .zoom-prejoin-preview-light video {
@@ -82,19 +85,38 @@
 }
 
 .zoom-prejoin-button-light {
-  @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border border-gray-300;
+  @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border;
+  background-color: #2a2a2a !important;
+  color: white !important;
+  border-color: #444 !important;
 }
 
 .zoom-prejoin-button-light.active-light {
-  @apply bg-blue-600 text-white border-blue-600;
+  @apply text-white;
+  background-color: #3600FF !important;
+  border-color: #3600FF !important;
 }
 
 .zoom-prejoin-button-light.inactive-light {
-  @apply bg-red-500 text-white border-red-500;
+  @apply text-white;
+  background-color: #EF4444 !important;
+  border-color: #EF4444 !important;
 }
 
 .zoom-prejoin-name-light {
-  @apply bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500;
+  @apply rounded-lg px-4 py-3 focus:ring-1;
+  background-color: #2a2a2a !important;
+  color: white !important;
+  border: 1px solid #444 !important;
+}
+
+.zoom-prejoin-name-light::placeholder {
+  color: #888 !important;
+}
+
+.zoom-prejoin-name-light:focus {
+  border-color: #3600FF !important;
+  ring-color: #3600FF !important;
 }
 
 /* Modern Participant Grid - Light Theme - Full Height */

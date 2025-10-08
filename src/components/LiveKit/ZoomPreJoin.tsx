@@ -88,11 +88,11 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
             alt="ELLOSUIT" 
             className="h-12 mx-auto mb-6"
           />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-white mb-2">
             Preparar para entrar
           </h1>
-          <p className="text-gray-600">
-            Sala: <span className="font-semibold text-gray-900">{roomName}</span>
+          <p className="text-gray-300">
+            Sala: <span className="font-semibold text-white">{roomName}</span>
           </p>
         </div>
 
@@ -107,10 +107,10 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2a2a2a' }}>
               <div className="text-center">
-                <VideoOff className="h-12 w-12 text-gray-500 mx-auto mb-2" />
-                <p className="text-gray-500">Câmera desligada</p>
+                <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-400">Câmera desligada</p>
               </div>
             </div>
           )}
@@ -156,7 +156,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
 
         {/* Name Input */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Seu nome
           </label>
           <Input
@@ -172,13 +172,14 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           <Button
             onClick={onCancel}
             variant="outline"
-            className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleJoin}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            className="flex-1 text-white"
+            style={{ backgroundColor: '#3600FF' }}
           >
             Entrar na reunião
           </Button>
@@ -186,7 +187,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
 
         {/* Device Info */}
         <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             Ao entrar, você concorda em permitir acesso à câmera e microfone
           </p>
         </div>

@@ -78,14 +78,22 @@
   }
 }
 
-@layer base {
+  @layer base {
   * {
     @apply border-border;
   }
+  
   html, body, #root {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
+  }
+  
+  /* Fundo padrão para páginas normais - sobrescrito por meeting-dark-theme.css em reuniões */
+  html:not(:has([data-meeting-page])), 
+  body:not(:has([data-meeting-page])), 
+  #root:not(:has([data-meeting-page])) {
+    @apply bg-background;
   }
   
   /* Padronização global de fontes e estilos */

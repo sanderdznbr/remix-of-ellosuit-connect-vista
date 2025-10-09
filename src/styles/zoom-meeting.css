@@ -66,24 +66,34 @@
 
 /* Pre-Join Styles - Light Theme (Modified to Dark) */
 .zoom-prejoin-container-light {
-  @apply h-full flex items-center justify-center p-8;
+  @apply min-h-screen flex items-center justify-center p-4;
   background-color: #101010 !important;
+  overflow-y: auto;
 }
 
 .zoom-prejoin-card-light {
   @apply border border-gray-700 rounded-2xl p-8 w-full shadow-xl;
   background-color: #1a1a1a !important;
   max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .zoom-prejoin-preview-light {
   @apply relative rounded-xl overflow-hidden mb-6 border border-gray-700;
   background-color: #2a2a2a !important;
   width: 100%;
-  max-width: 100%;
-  height: auto;
+  height: 280px;
   max-height: 320px;
-  aspect-ratio: 16/9;
+  flex-shrink: 0;
+}
+
+.zoom-prejoin-preview-light video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .zoom-prejoin-preview-light video {
@@ -123,6 +133,27 @@
 .zoom-prejoin-name-light:focus {
   border-color: #3600FF !important;
   ring-color: #3600FF !important;
+}
+
+.zoom-prejoin-actions {
+  @apply flex gap-3 mt-6;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 640px) {
+  .zoom-prejoin-card-light {
+    @apply p-4;
+    max-height: 90vh;
+  }
+  
+  .zoom-prejoin-preview-light {
+    height: 200px;
+    max-height: 240px;
+  }
+  
+  .zoom-prejoin-button-light {
+    @apply h-10 w-10;
+  }
 }
 
 /* Modern Participant Grid - Light Theme - Full Height */

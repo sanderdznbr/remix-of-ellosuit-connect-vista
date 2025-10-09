@@ -31,16 +31,20 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   useEffect(() => {
     const getMedia = async () => {
       try {
+        console.log('🎥 [ZoomPreJoin] Solicitando acesso à câmera e microfone...');
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
+        console.log('✅ [ZoomPreJoin] Acesso concedido');
         setStream(mediaStream);
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
       } catch (error) {
-        console.error('Error accessing media devices:', error);
+        console.error('❌ [ZoomPreJoin] Erro ao acessar dispositivos:', error);
+        // Mesmo sem câmera, permitir entrar (só áudio ou sem nada)
+        setVideoEnabled(false);
       }
     };
 
@@ -108,19 +112,20 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
 
         {/* Video Preview */}
         <div className="zoom-prejoin-preview-light">
-          {videoEnabled ? (
+          {videoEnabled && stream ? (
             <video
               ref={videoRef}
               autoPlay
               muted
               playsInline
-              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2a2a2a' }}>
               <div className="text-center">
                 <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-400">Câmera desligada</p>
+                <p className="text-gray-400">
+                  {!stream ? 'Câmera não disponível' : 'Câmera desligada'}
+                </p>
               </div>
             </div>
           )}

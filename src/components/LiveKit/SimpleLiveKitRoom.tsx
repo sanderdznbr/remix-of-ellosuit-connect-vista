@@ -104,131 +104,125 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     userId: user?.id
   });
 
-  // Check if user is host on mount
+  // Check if user is the first to enter (becomes host automatically)
   useEffect(() => {
-    const checkHostAndSetup = async () => {
-      console.log('🔍 [SimpleLiveKitRoom] === INICIANDO VERIFICAÇÃO ===');
-      console.log('📊 [SimpleLiveKitRoom] Estado inicial:', { 
-        showPreJoin, 
-        isCheckingHost,
-        hasUser: !!user 
-      });
+    const checkFirstParticipant = async () => {
+      console.log('🔍 [SimpleLiveKitRoom] === VERIFICANDO PRIMEIRO PARTICIPANTE ===');
       
-      // SEMPRE buscar a sala primeiro para obter o room_id
       try {
+        // First, get the room data
+        console.log('📡 [SimpleLiveKitRoom] Buscando dados da sala...');
         const { data: roomData, error: roomError } = await supabase
           .from('meeting_rooms')
-          .select('id, created_by')
+          .select('id, created_by, title')
           .eq('room_code', roomName)
+          .eq('is_active', true)
           .single();
 
-        if (roomError || !roomData) {
-          console.error('❌ [SimpleLiveKitRoom] Sala não encontrada:', roomError);
+        if (roomError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', roomError);
+          setError('Sala não encontrada');
           setIsCheckingHost(false);
-          setIsHost(false);
-          setShowPreJoin(true);
           return;
         }
 
-        console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id);
+        console.log('✅ [SimpleLiveKitRoom] Sala encontrada:', roomData);
         setCurrentRoomId(roomData.id);
-        
-        // Se não tem usuário, é convidado
-        if (!user) {
-          console.log('👤 [SimpleLiveKitRoom] CONVIDADO - Mostrando PreJoin');
-          setIsCheckingHost(false);
-          setIsHost(false);
-          setShowPreJoin(true);
-          return;
+
+        // Check if there are any participants already in the room
+        console.log('👥 [SimpleLiveKitRoom] Verificando participantes existentes...');
+        const { data: existingParticipants, error: participantsError } = await supabase
+          .from('room_participants')
+          .select('id, is_host, display_name')
+          .eq('room_id', roomData.id);
+
+        if (participantsError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar participantes:', participantsError);
         }
 
-        // Tem usuário - verificar se é host
-        console.log('🔍 [SimpleLiveKitRoom] Verificando se é HOST...');
+        const participantCount = existingParticipants?.length || 0;
+        const isFirstParticipant = participantCount === 0;
         
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !userData.user) {
-          console.log('❌ [SimpleLiveKitRoom] Erro ao buscar usuário');
-          setIsCheckingHost(false);
-          setIsHost(false);
-          setShowPreJoin(true);
-          return;
-        }
+        console.log('📊 [SimpleLiveKitRoom] Participantes existentes:', participantCount);
+        console.log('🎯 [SimpleLiveKitRoom] É o primeiro participante?', isFirstParticipant);
+
+        // Get user data
+        const { data: userData } = await supabase.auth.getUser();
+        const userName = userData?.user?.user_metadata?.full_name || 
+                        userData?.user?.email?.split('@')[0] || 
+                        participantName ||
+                        'Participante';
 
         // Get company ID
-        const { data: companyUsers } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', userData.user.id)
-          .limit(1);
-        
-        if (companyUsers && companyUsers.length > 0) {
-          setCompanyId(companyUsers[0].company_id);
+        if (userData?.user) {
+          const { data: companyUsers } = await supabase
+            .from('company_users')
+            .select('company_id')
+            .eq('user_id', userData.user.id)
+            .limit(1);
+          
+          if (companyUsers && companyUsers.length > 0) {
+            setCompanyId(companyUsers[0].company_id);
+          }
         }
 
-        // Check if user is host
-        const userIsHost = roomData.created_by === userData.user.id;
-        setIsHost(userIsHost);
-
-        console.log(userIsHost ? '👑 [SimpleLiveKitRoom] É HOST!' : '👥 [SimpleLiveKitRoom] É CONVIDADO');
-
-        if (userIsHost) {
-          // HOST - Entra direto SEM PreJoin
-          console.log('👑 [SimpleLiveKitRoom] HOST DETECTADO - Entrando diretamente');
-          const finalUsername = userData.user.user_metadata?.full_name || participantName || 'Anfitrião';
+        if (isFirstParticipant) {
+          console.log('👑 [SimpleLiveKitRoom] ✨ PRIMEIRO A ENTRAR - VIRANDO HOST AUTOMATICAMENTE!');
+          setIsHost(true);
           
+          // Create participant record as host
+          console.log('💾 [SimpleLiveKitRoom] Criando registro como host...');
           const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
           
-          console.log('📝 [SimpleLiveKitRoom] Criando participante HOST');
-          
-          const { error: insertError } = await supabase
+          const { data: participantData, error: participantError } = await supabase
             .from('room_participants')
             .insert({
               room_id: roomData.id,
-              user_id: userData.user.id,
-              display_name: finalUsername,
+              user_id: userData?.user?.id || null,
+              display_name: userName,
               peer_id: peerId,
               is_host: true,
-              connection_status: 'connected',
               waiting_approval: false,
-            });
+              connection_status: 'connected'
+            })
+            .select()
+            .single();
 
-          if (insertError) {
-            console.error('❌ [SimpleLiveKitRoom] Erro ao criar participante:', insertError);
+          if (participantError) {
+            console.error('❌ [SimpleLiveKitRoom] Erro ao criar participante host:', participantError);
             toast({
-              title: "Erro ao entrar",
-              description: "Não foi possível criar registro de participante",
-              variant: "destructive",
+              title: "Erro ao entrar na sala",
+              description: participantError.message,
+              variant: "destructive"
             });
             setIsCheckingHost(false);
-            setShowPreJoin(true);
             return;
           }
-          
-          console.log('✅ [SimpleLiveKitRoom] Participante criado - Gerando token');
 
-          // Gerar token e entrar DIRETO
-          setIsCheckingHost(false);
+          console.log('✅ [SimpleLiveKitRoom] Participante host criado:', participantData);
+
+          // Generate token and enter room directly (NO PRE-JOIN)
+          console.log('🎫 [SimpleLiveKitRoom] Gerando token para host...');
           setShowPreJoin(false);
-          await generateToken(finalUsername);
-          console.log('✅ [SimpleLiveKitRoom] HOST entrando na sala');
-          return;
+          setIsCheckingHost(false);
+          await generateToken(userName);
+          
+          console.log('✅ [SimpleLiveKitRoom] ✨ HOST (primeiro a entrar) na sala com sucesso!');
         } else {
-          // CONVIDADO - Mostrar PreJoin
-          console.log('👥 [SimpleLiveKitRoom] CONVIDADO - Mostrando PreJoin');
+          console.log('👥 [SimpleLiveKitRoom] NÃO é o primeiro - mostrando pre-join para guest');
+          setIsHost(false);
           setIsCheckingHost(false);
           setShowPreJoin(true);
         }
-      } catch (err) {
-        console.error('❌ [SimpleLiveKitRoom] Erro fatal:', err);
+      } catch (error) {
+        console.error('❌ [SimpleLiveKitRoom] Erro ao verificar primeiro participante:', error);
+        setError('Erro ao conectar com a sala');
         setIsCheckingHost(false);
-        setIsHost(false);
-        setShowPreJoin(true);
       }
     };
-    
-    checkHostAndSetup();
-  }, [roomName]);
+
+    checkFirstParticipant();
+  }, [roomName, participantName, toast]);
 
   // Clock update (Brasília time)
   useEffect(() => {

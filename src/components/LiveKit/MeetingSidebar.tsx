@@ -294,45 +294,76 @@ const MeetingSidebar: React.FC<MeetingSidebarProps> = ({
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-3">
                 {participants.map((participant) => {
-                  const isHost = participant.identity === localParticipant?.identity;
+                  const isLocalUser = participant.identity === localParticipant?.identity;
                   const audioEnabled = participant.isMicrophoneEnabled;
                   const videoEnabled = participant.isCameraEnabled;
-                  const displayName = participant.name || participant.identity || 'Participante';
+                  
+                  // Display name with better fallback
+                  const displayName = participant.name || 
+                                    participant.metadata || 
+                                    participant.identity || 
+                                    'Participante';
+                  
+                  console.log('👤 [Participant]', {
+                    identity: participant.identity,
+                    name: participant.name,
+                    metadata: participant.metadata,
+                    displayName
+                  });
                   
                   return (
                     <div 
                       key={participant.identity} 
-                      className="flex items-center justify-between p-3 rounded-2xl bg-muted hover:bg-muted/80 transition-colors"
+                      className="flex items-center justify-between p-4 rounded-xl transition-all duration-200"
+                      style={{
+                        background: isLocalUser 
+                          ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))'
+                          : 'hsl(var(--muted))',
+                        border: isLocalUser 
+                          ? '1px solid hsl(var(--primary) / 0.3)' 
+                          : '1px solid transparent'
+                      }}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {isHost && <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />}
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {isLocalUser && (
+                          <div className="flex-shrink-0 p-1.5 rounded-full" style={{ background: 'hsl(var(--primary) / 0.2)' }}>
+                            <Crown className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold truncate" style={{ color: 'hsl(var(--foreground))' }}>
                             {displayName}
-                            {isHost && ' (Você)'}
+                            {isLocalUser && <span className="ml-2 text-xs font-normal" style={{ color: 'hsl(var(--muted-foreground))' }}>(Você)</span>}
+                          </p>
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                            {isLocalUser ? 'Anfitrião' : 'Participante'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <div className={cn(
-                          "p-1.5 rounded-full",
-                          audioEnabled ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
+                          "p-2 rounded-full transition-colors",
+                          audioEnabled 
+                            ? "bg-green-500/20 text-green-600 dark:bg-green-500/30 dark:text-green-400" 
+                            : "bg-red-500/20 text-red-600 dark:bg-red-500/30 dark:text-red-400"
                         )}>
                           {audioEnabled ? (
-                            <Mic className="h-3 w-3" />
+                            <Mic className="h-3.5 w-3.5" />
                           ) : (
-                            <MicOff className="h-3 w-3" />
+                            <MicOff className="h-3.5 w-3.5" />
                           )}
                         </div>
                         <div className={cn(
-                          "p-1.5 rounded-full",
-                          videoEnabled ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
+                          "p-2 rounded-full transition-colors",
+                          videoEnabled 
+                            ? "bg-green-500/20 text-green-600 dark:bg-green-500/30 dark:text-green-400" 
+                            : "bg-red-500/20 text-red-600 dark:bg-red-500/30 dark:text-red-400"
                         )}>
                           {videoEnabled ? (
-                            <Video className="h-3 w-3" />
+                            <Video className="h-3.5 w-3.5" />
                           ) : (
-                            <VideoOff className="h-3 w-3" />
+                            <VideoOff className="h-3.5 w-3.5" />
                           )}
                         </div>
                       </div>

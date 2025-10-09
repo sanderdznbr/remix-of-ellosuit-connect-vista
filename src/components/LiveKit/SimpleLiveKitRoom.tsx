@@ -208,11 +208,20 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
           // If host, skip PreJoin and enter directly
           if (userIsHost) {
-            console.log('🎯 [SimpleLiveKitRoom] Host entrando diretamente na sala');
+            console.log('👑 [SimpleLiveKitRoom] HOST DETECTADO - Entrando diretamente');
             const finalUsername = userData.user.user_metadata?.full_name || participantName || 'Anfitrião';
             
             // Create participant record as host
             const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            
+            console.log('📝 [SimpleLiveKitRoom] Criando registro de participante HOST:', {
+              room_id: roomData.id,
+              user_id: userData.user.id,
+              display_name: finalUsername,
+              is_host: true,
+              waiting_approval: false
+            });
+            
             const { error: insertError } = await supabase
               .from('room_participants')
               .insert({
@@ -226,16 +235,25 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               });
 
             if (insertError) {
-              console.error('❌ [SimpleLiveKitRoom] Erro ao criar participante:', insertError);
-            } else {
-              console.log('✅ [SimpleLiveKitRoom] Participante criado como host');
+              console.error('❌ [SimpleLiveKitRoom] Erro ao criar participante host:', insertError);
+              toast({
+                title: "Erro ao entrar",
+                description: "Não foi possível criar registro de participante",
+                variant: "destructive",
+              });
+              setIsCheckingHost(false);
+              return;
             }
+            
+            console.log('✅ [SimpleLiveKitRoom] Participante HOST criado com sucesso');
 
-            // Generate token and enter
-            console.log('🎫 [SimpleLiveKitRoom] Gerando token...');
-            await generateToken(finalUsername);
+            // Generate token and enter IMMEDIATELY
+            console.log('🎫 [SimpleLiveKitRoom] Gerando token para HOST...');
             setShowPreJoin(false);
-            console.log('✅ [SimpleLiveKitRoom] Host pronto para entrar');
+            setIsCheckingHost(false);
+            await generateToken(finalUsername);
+            console.log('✅ [SimpleLiveKitRoom] HOST entrando na sala agora');
+            return; // Exit early to prevent any other logic
           }
         } else {
           console.warn('⚠️ [SimpleLiveKitRoom] Sala não encontrada');

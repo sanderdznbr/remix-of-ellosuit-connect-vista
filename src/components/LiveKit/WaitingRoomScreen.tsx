@@ -83,35 +83,61 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-8 text-center space-y-6 shadow-2xl">
-        <div className="flex justify-center mb-4">
-          <img src={logoEllo} alt="ElloSuit" className="h-12 w-auto" />
-        </div>
-        
-        <div className="space-y-4">
-          <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-            <Clock className="h-10 w-10 text-primary animate-pulse" />
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--background)) 50%, hsl(var(--accent) / 0.05) 100%)' }}>
+      <Card className="max-w-lg w-full shadow-2xl border-0" style={{ background: 'hsl(var(--card))' }}>
+        {/* Header */}
+        <div className="p-6 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+          <div className="flex justify-center mb-6">
+            <img src={logoEllo} alt="ElloSuit" className="h-14 w-auto" />
           </div>
           
-          <h2 className="text-2xl font-bold text-foreground">
-            Aguardando Aprovação
-          </h2>
-          
-          <p className="text-muted-foreground">
-            O anfitrião da reunião <span className="font-semibold text-foreground">{roomName}</span> foi notificado da sua presença e em breve aprovará sua entrada.
-          </p>
-          
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Tempo de espera: {formatTime(waitTime)}</span>
+          {/* Animated Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full animate-ping" style={{ background: 'hsl(var(--primary) / 0.2)' }} />
+              <div className="relative w-24 h-24 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05))' }}>
+                <Clock className="h-12 w-12 animate-pulse" style={{ color: 'hsl(var(--primary))' }} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-border">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
-            <UserCheck className="h-4 w-4" />
-            <span>Apenas participantes aprovados podem entrar</span>
+        {/* Content */}
+        <div className="p-8 space-y-6">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>
+              Aguardando Aprovação
+            </h2>
+            
+            <p className="text-base leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              O anfitrião da reunião{' '}
+              <span className="font-bold px-2 py-1 rounded-md" style={{ 
+                background: 'hsl(var(--primary) / 0.1)', 
+                color: 'hsl(var(--primary))' 
+              }}>
+                {roomName}
+              </span>
+              {' '}foi notificado da sua presença e aprovará sua entrada em breve.
+            </p>
+          </div>
+          
+          {/* Timer */}
+          <div className="flex items-center justify-center gap-3 p-4 rounded-xl" style={{ 
+            background: 'hsl(var(--muted) / 0.5)',
+            border: '1px solid hsl(var(--border))'
+          }}>
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'hsl(var(--primary))' }} />
+            <span className="text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+              {formatTime(waitTime)}
+            </span>
+          </div>
+
+          {/* Info Footer */}
+          <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'hsl(var(--accent) / 0.3)' }}>
+            <UserCheck className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'hsl(var(--primary))' }} />
+            <div className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              Por segurança, apenas participantes aprovados pelo anfitrião podem entrar nesta reunião.
+            </div>
           </div>
         </div>
       </Card>

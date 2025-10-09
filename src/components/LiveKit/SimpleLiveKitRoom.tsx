@@ -400,11 +400,20 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
 
   const handlePreJoinSubmit = useCallback(async (values: any) => {
-    console.log('✅ [PreJoin] Submetido com valores:', values);
+    console.log('✅ [PreJoin] === INÍCIO DO SUBMIT ===');
+    console.log('✅ [PreJoin] Valores recebidos:', values);
     console.log('🆔 [PreJoin] Room ID atual:', currentRoomId);
+    console.log('👤 [PreJoin] User ID:', user?.id || 'sem user');
+    console.log('📝 [PreJoin] Participant name:', participantName);
     
     if (!currentRoomId) {
-      console.error('❌ [PreJoin] Erro: currentRoomId está vazio!');
+      console.error('❌ [PreJoin] ERRO CRÍTICO: currentRoomId está vazio!');
+      console.error('❌ [PreJoin] Estado completo:', {
+        currentRoomId,
+        hasUser: !!user,
+        roomName,
+        showPreJoin
+      });
       toast({
         title: "Erro",
         description: "Sala não encontrada. Tente recarregar a página.",
@@ -422,6 +431,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       // Guest joining - create participant record and wait for approval
       const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       console.log('🔑 [PreJoin] Criando participante com peer_id:', peerId);
+      console.log('📋 [PreJoin] Dados do insert:', {
+        room_id: currentRoomId,
+        user_id: user?.id || null,
+        display_name: finalUsername,
+        peer_id: peerId,
+        is_host: false,
+        connection_status: 'waiting',
+        waiting_approval: true,
+      });
       
       const { data: participantData, error: insertError } = await supabase
         .from('room_participants')
@@ -438,27 +456,36 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         .single();
 
       if (insertError) {
-        console.error('❌ [PreJoin] Erro ao criar participante:', insertError);
+        console.error('❌ [PreJoin] Erro ao criar participante - DETALHES:', {
+          error: insertError,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code
+        });
         toast({
-          title: "Erro",
-          description: "Não foi possível entrar na sala. Tente novamente.",
+          title: "Erro ao entrar",
+          description: insertError.message || "Não foi possível entrar na sala. Tente novamente.",
           variant: "destructive",
         });
         return;
       }
 
       if (participantData) {
-        console.log('✅ [PreJoin] Participante criado:', participantData.id);
+        console.log('✅ [PreJoin] Participante criado com sucesso:', participantData.id);
         setParticipantId(participantData.id);
         setIsWaitingApproval(true);
         setShowPreJoin(false);
         console.log('⏳ [PreJoin] Aguardando aprovação do anfitrião...');
+        console.log('✅ [PreJoin] === FIM DO SUBMIT COM SUCESSO ===');
       }
     } catch (err) {
-      console.error('❌ [PreJoin] Erro fatal:', err);
+      console.error('❌ [PreJoin] Erro fatal capturado:', err);
+      console.error('❌ [PreJoin] Tipo do erro:', typeof err);
+      console.error('❌ [PreJoin] Stack:', (err as Error).stack);
       toast({
-        title: "Erro",
-        description: "Erro inesperado. Tente novamente.",
+        title: "Erro inesperado",
+        description: `Erro: ${(err as Error).message}`,
         variant: "destructive",
       });
     }

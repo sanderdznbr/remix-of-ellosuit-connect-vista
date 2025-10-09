@@ -77,6 +77,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
 
   const handleJoin = () => {
     const finalName = name.trim() || participantName || 'Convidado';
+    console.log('✅ [ZoomPreJoin] === BOTÃO ENTRAR CLICADO ===');
     console.log('✅ [ZoomPreJoin] Entrando na sala:', {
       finalName,
       videoEnabled,
@@ -88,13 +89,15 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
       videoEnabled,
       audioEnabled
     });
+    
+    console.log('✅ [ZoomPreJoin] onSubmit chamado');
   };
 
   console.log('🎭 [ZoomPreJoin] Renderizando PreJoin');
 
   return (
-    <div className="zoom-prejoin-container-light" style={{ backgroundColor: '#101010', minHeight: '100vh' }}>
-      <div className="zoom-prejoin-card-light">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: '#101010', zIndex: 9999 }}>
+      <div className="w-full max-w-[600px] bg-[#1a1a1a] border border-gray-700 rounded-2xl p-6 sm:p-8 flex flex-col" style={{ maxHeight: '90vh' }}>
         {/* Logo ELLOSUIT */}
         <div className="text-center mb-8">
           <img 
@@ -111,13 +114,14 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
         </div>
 
         {/* Video Preview */}
-        <div className="zoom-prejoin-preview-light">
+        <div className="relative w-full rounded-xl overflow-hidden mb-6 border border-gray-700 bg-[#2a2a2a]" style={{ height: '280px' }}>
           {videoEnabled && stream ? (
             <video
               ref={videoRef}
               autoPlay
               muted
               playsInline
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2a2a2a' }}>
@@ -134,10 +138,12 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
             <button
               onClick={() => setVideoEnabled(!videoEnabled)}
-              className={cn(
-                "zoom-prejoin-button-light",
-                videoEnabled ? "active-light" : "inactive-light"
-              )}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border"
+              style={{
+                backgroundColor: videoEnabled ? '#3600FF' : '#EF4444',
+                borderColor: videoEnabled ? '#3600FF' : '#EF4444',
+                color: 'white'
+              }}
             >
               {videoEnabled ? (
                 <Video className="h-5 w-5" />
@@ -148,10 +154,12 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
             
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className={cn(
-                "zoom-prejoin-button-light",
-                audioEnabled ? "active-light" : "inactive-light"
-              )}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border"
+              style={{
+                backgroundColor: audioEnabled ? '#3600FF' : '#EF4444',
+                borderColor: audioEnabled ? '#3600FF' : '#EF4444',
+                color: 'white'
+              }}
             >
               {audioEnabled ? (
                 <Mic className="h-5 w-5" />
@@ -162,7 +170,12 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
             
             <button 
               onClick={() => setShowDeviceSettings(true)}
-              className="zoom-prejoin-button-light active-light"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border"
+              style={{
+                backgroundColor: '#3600FF',
+                borderColor: '#3600FF',
+                color: 'white'
+              }}
             >
               <Settings className="h-5 w-5" />
             </button>
@@ -178,12 +191,16 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Digite seu nome"
-            className="zoom-prejoin-name-light"
+            className="rounded-lg px-4 py-3 focus:ring-1 text-white"
+            style={{
+              backgroundColor: '#2a2a2a',
+              border: '1px solid #444'
+            }}
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="zoom-prejoin-actions">
+        <div className="flex gap-3 mt-6">
           <Button
             onClick={onCancel}
             variant="outline"

@@ -71,14 +71,18 @@
 }
 
 .zoom-prejoin-card-light {
-  @apply border border-gray-700 rounded-2xl p-8 max-w-lg w-full shadow-xl;
+  @apply border border-gray-700 rounded-2xl p-8 w-full shadow-xl;
   background-color: #1a1a1a !important;
+  max-width: 600px;
 }
 
 .zoom-prejoin-preview-light {
   @apply relative rounded-xl overflow-hidden mb-6 border border-gray-700;
   background-color: #2a2a2a !important;
-  max-height: 360px;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 320px;
   aspect-ratio: 16/9;
 }
 

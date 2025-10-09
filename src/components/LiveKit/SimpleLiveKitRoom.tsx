@@ -119,26 +119,33 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
         if (roomError) {
           console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', roomError);
-        } else if (roomData) {
-          console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id);
-          setCurrentRoomId(roomData.id);
-          
-          // Se não tem usuário, é convidado - não precisa verificar host
-          if (!user) {
-            console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado direto');
-            setIsCheckingHost(false);
-            setIsHost(false);
-            setShowPreJoin(true);
-            return;
-          }
+          setIsCheckingHost(false);
+          setIsHost(false);
+          setShowPreJoin(true);
+          return;
+        }
+        
+        if (!roomData) {
+          console.error('❌ [SimpleLiveKitRoom] Sala não encontrada');
+          setIsCheckingHost(false);
+          setIsHost(false);
+          setShowPreJoin(true);
+          return;
+        }
+
+        console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id);
+        setCurrentRoomId(roomData.id);
+        
+        // Se não tem usuário, é convidado - mostrar prejoin após ter o room_id
+        if (!user) {
+          console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado com room_id:', roomData.id);
+          setIsCheckingHost(false);
+          setIsHost(false);
+          setShowPreJoin(true);
+          return;
         }
       } catch (err) {
         console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', err);
-      }
-      
-      // Se chegou aqui sem room_id e sem user, mostrar erro
-      if (!user) {
-        console.log('👤 [SimpleLiveKitRoom] Sem user, mostrando prejoin');
         setIsCheckingHost(false);
         setIsHost(false);
         setShowPreJoin(true);

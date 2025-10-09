@@ -109,7 +109,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     const checkHostAndSetup = async () => {
       console.log('🔍 [SimpleLiveKitRoom] Iniciando verificação...');
       
-      // Primeiro, buscar a sala para obter o room_id
+      // SEMPRE buscar a sala primeiro para obter o room_id (preciso para guests também)
       try {
         const { data: roomData, error: roomError } = await supabase
           .from('meeting_rooms')
@@ -122,14 +122,23 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         } else if (roomData) {
           console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id);
           setCurrentRoomId(roomData.id);
+          
+          // Se não tem usuário, é convidado - não precisa verificar host
+          if (!user) {
+            console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado direto');
+            setIsCheckingHost(false);
+            setIsHost(false);
+            setShowPreJoin(true);
+            return;
+          }
         }
       } catch (err) {
         console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', err);
       }
       
-      // Se não tem usuário, é convidado - não precisa verificar host
+      // Se chegou aqui sem room_id e sem user, mostrar erro
       if (!user) {
-        console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado direto');
+        console.log('👤 [SimpleLiveKitRoom] Sem user, mostrando prejoin');
         setIsCheckingHost(false);
         setIsHost(false);
         setShowPreJoin(true);
@@ -384,34 +393,69 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
 
   const handlePreJoinSubmit = useCallback(async (values: any) => {
-    console.log('PreJoin submitted with values (guest):', values);
+    console.log('✅ [PreJoin] Submetido com valores:', values);
+    console.log('🆔 [PreJoin] Room ID atual:', currentRoomId);
+    
+    if (!currentRoomId) {
+      console.error('❌ [PreJoin] Erro: currentRoomId está vazio!');
+      toast({
+        title: "Erro",
+        description: "Sala não encontrada. Tente recarregar a página.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setPreJoinChoices(values);
     
     const finalUsername = values.username || participantName || 'Convidado';
-    console.log('Guest username:', finalUsername);
+    console.log('👤 [PreJoin] Nome final do convidado:', finalUsername);
 
-    // Guest joining - create participant record and wait for approval
-    const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const { data: participantData } = await supabase
-      .from('room_participants')
-      .insert({
-        room_id: currentRoomId,
-        user_id: user?.id || null,
-        display_name: finalUsername,
-        peer_id: peerId,
-        is_host: false,
-        connection_status: 'waiting',
-        waiting_approval: true,
-      })
-      .select('id')
-      .single();
+    try {
+      // Guest joining - create participant record and wait for approval
+      const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      console.log('🔑 [PreJoin] Criando participante com peer_id:', peerId);
+      
+      const { data: participantData, error: insertError } = await supabase
+        .from('room_participants')
+        .insert({
+          room_id: currentRoomId,
+          user_id: user?.id || null,
+          display_name: finalUsername,
+          peer_id: peerId,
+          is_host: false,
+          connection_status: 'waiting',
+          waiting_approval: true,
+        })
+        .select('id')
+        .single();
 
-    if (participantData) {
-      setParticipantId(participantData.id);
-      setIsWaitingApproval(true);
-      setShowPreJoin(false);
+      if (insertError) {
+        console.error('❌ [PreJoin] Erro ao criar participante:', insertError);
+        toast({
+          title: "Erro",
+          description: "Não foi possível entrar na sala. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (participantData) {
+        console.log('✅ [PreJoin] Participante criado:', participantData.id);
+        setParticipantId(participantData.id);
+        setIsWaitingApproval(true);
+        setShowPreJoin(false);
+        console.log('⏳ [PreJoin] Aguardando aprovação do anfitrião...');
+      }
+    } catch (err) {
+      console.error('❌ [PreJoin] Erro fatal:', err);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
     }
-  }, [currentRoomId, participantName, user]);
+  }, [currentRoomId, participantName, user, toast]);
 
   const handleTranscriptionUpdate = useCallback((message: TranscriptionMessage) => {
     setTranscriptionMessages(prev => [...prev, message]);

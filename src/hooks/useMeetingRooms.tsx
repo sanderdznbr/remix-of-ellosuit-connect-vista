@@ -79,10 +79,13 @@ export const useMeetingRooms = () => {
     chat_enabled?: boolean;
     screen_sharing_enabled?: boolean;
   }) => {
+    console.log('🔐 Verificando autenticação:', { hasUser: !!user, userId: user?.id });
+    
     if (!user) {
+      console.error('❌ Usuário não autenticado!');
       toast({
         title: "Erro de autenticação",
-        description: "Você precisa estar logado para criar uma sala",
+        description: "Você precisa estar logado para criar uma sala. Faça login e tente novamente.",
         variant: "destructive",
       });
       return null;

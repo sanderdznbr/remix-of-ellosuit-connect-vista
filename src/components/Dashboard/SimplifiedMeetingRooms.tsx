@@ -36,6 +36,8 @@ const SimplifiedMeetingRooms = () => {
       return;
     }
 
+    console.log('🚀 Tentando criar sala:', newRoomTitle);
+    
     const room = await createRoom({
       title: newRoomTitle,
       recording_enabled: false,
@@ -43,10 +45,15 @@ const SimplifiedMeetingRooms = () => {
       screen_sharing_enabled: true,
     });
     
+    console.log('📦 Resultado da criação:', room);
+    
     if (room) {
       setShowCreateDialog(false);
       setNewRoomTitle('');
       window.open(`/livekit/${room.room_code}`, '_blank');
+    } else {
+      // Se createRoom retornou null, o erro já foi exibido pelo hook
+      console.error('❌ Falha ao criar sala - verifique autenticação');
     }
   };
 

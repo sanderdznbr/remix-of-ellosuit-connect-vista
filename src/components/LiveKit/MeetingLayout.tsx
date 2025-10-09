@@ -5,7 +5,6 @@ import NewMeetingControls from './NewMeetingControls';
 import MeetingChatSidebar from './MeetingChatSidebar';
 import InviteUsersModal from './InviteUsersModal';
 import MeetingSettingsModal from './MeetingSettingsModal';
-import { MeetingAIChat } from './MeetingAIChat';
 
 interface MeetingLayoutProps {
   roomName: string;
@@ -51,7 +50,8 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         {/* Botão Convidar Usuários - Lado Esquerdo */}
         <button
           onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-100 transition-all"
+          className="flex items-center gap-2 transition-all hover:opacity-80"
+          style={{ backgroundColor: 'transparent' }}
           title="Convidar usuários"
         >
           <svg width="158" height="36" viewBox="0 0 158 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -102,6 +102,7 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         {/* Sidebar Chat à Direita */}
         <MeetingChatSidebar
           roomCode={roomName}
+          transcriptionMessages={transcriptionMessages}
         />
       </div>
 
@@ -126,10 +127,6 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         onClose={() => setShowSettingsModal(false)}
       />
 
-      <MeetingAIChat
-        transcriptionMessages={transcriptionMessages}
-        roomName={roomName}
-      />
     </div>
   );
 };

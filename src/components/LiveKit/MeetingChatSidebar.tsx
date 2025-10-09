@@ -138,42 +138,42 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
   };
 
   return (
-    <div className="w-[360px] bg-white flex flex-col rounded-3xl shadow-2xl mr-4">
+    <div className="w-[360px] bg-white flex flex-col rounded-3xl shadow-2xl mr-4 mb-4">
       {/* Tabs Header */}
       <div className="flex items-center border-b px-2 pt-4">
-        <div className="flex gap-2 flex-1">
+        <div className="flex gap-1 flex-1">
           <button
             onClick={() => setActiveTab('participants')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
               activeTab === 'participants'
                 ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span className="text-sm">Participantes</span>
+            <Users className="w-3.5 h-3.5" />
+            <span className="text-xs">Participantes</span>
           </button>
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
               activeTab === 'chat'
                 ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
-            <span className="text-sm">Bate-papo</span>
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="text-xs">Chat</span>
           </button>
           <button
             onClick={() => setActiveTab('ia')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
               activeTab === 'ia'
                 ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <Bot className="w-4 h-4" />
-            <span className="text-sm">IA</span>
+            <Bot className="w-3.5 h-3.5" />
+            <span className="text-xs">IA</span>
           </button>
         </div>
       </div>
@@ -209,7 +209,7 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t">
+            <div className="p-4 border-t rounded-b-3xl">
               <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2">
                 <input
                   type="file"
@@ -311,7 +311,7 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
             </ScrollArea>
 
             {/* AI Input */}
-            <div className="p-4 border-t">
+            <div className="p-4 border-t rounded-b-3xl">
               <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2">
                 <Input
                   value={aiInput}
@@ -335,9 +335,6 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                Aguardando transcrições...
-              </p>
             </div>
           </div>
         )}

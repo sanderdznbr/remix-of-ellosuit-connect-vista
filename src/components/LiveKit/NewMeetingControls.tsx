@@ -1,18 +1,22 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { useLocalParticipant } from '@livekit/components-react';
 import { useToast } from '@/hooks/use-toast';
+import { FileText } from 'lucide-react';
 
 interface NewMeetingControlsProps {
   onLeave: () => void;
   onSettingsClick: () => void;
+  onTranscriptionClick: () => void;
 }
 
 const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
   onLeave,
   onSettingsClick,
+  onTranscriptionClick,
 }, ref) => {
   const { localParticipant } = useLocalParticipant();
   const { toast } = useToast();
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   useImperativeHandle(ref, () => ({}));
 
@@ -31,14 +35,41 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
   };
 
   const handleScreenShare = async () => {
-    if (localParticipant) {
-      try {
-        const isSharing = localParticipant.isScreenShareEnabled;
-        await localParticipant.setScreenShareEnabled(!isSharing, {
-          suppressLocalAudioPlayback: true
+    if (!localParticipant) return;
+    
+    try {
+      const isCurrentlySharing = localParticipant.isScreenShareEnabled;
+      
+      if (isCurrentlySharing) {
+        // Stop screen sharing
+        await localParticipant.setScreenShareEnabled(false);
+        setIsScreenSharing(false);
+        toast({
+          title: "Compartilhamento encerrado",
+          description: "Você parou de compartilhar sua tela",
         });
-      } catch (error) {
-        console.error('Screen share error:', error);
+      } else {
+        // Start screen sharing
+        await localParticipant.setScreenShareEnabled(true, {
+          suppressLocalAudioPlayback: true,
+        });
+        setIsScreenSharing(true);
+        toast({
+          title: "Compartilhamento iniciado",
+          description: "Você está compartilhando sua tela",
+        });
+      }
+    } catch (error: any) {
+      console.error('Screen share error:', error);
+      setIsScreenSharing(false);
+      
+      if (error.name === 'NotAllowedError') {
+        toast({
+          title: "Permissão negada",
+          description: "Você precisa permitir o compartilhamento de tela",
+          variant: "destructive"
+        });
+      } else {
         toast({
           title: "Erro no compartilhamento",
           description: "Não foi possível compartilhar a tela",
@@ -52,12 +83,12 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
   const isCameraEnabled = localParticipant?.isCameraEnabled ?? true;
 
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center gap-4 px-8 py-4 rounded-full" style={{ backgroundColor: 'rgba(22, 22, 22, 0.95)', backdropFilter: 'blur(12px)' }}>
       {/* Camera/Webcam Button */}
       <button
         onClick={toggleCamera}
-        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
-        style={{ width: '57px', height: '57px', backgroundColor: '#161616' }}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ width: '52px', height: '52px', backgroundColor: isCameraEnabled ? '#2D2D2D' : '#1A1A1A' }}
         title={isCameraEnabled ? "Desligar câmera" : "Ligar câmera"}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -68,8 +99,13 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
       {/* Microphone Button - Blue when enabled */}
       <button
         onClick={toggleMic}
-        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
-        style={{ width: '57px', height: '57px', backgroundColor: isMicEnabled ? '#3600FF' : '#161616' }}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ 
+          width: '52px', 
+          height: '52px', 
+          backgroundColor: isMicEnabled ? '#3600FF' : '#1A1A1A',
+          boxShadow: isMicEnabled ? '0 0 20px rgba(54, 0, 255, 0.4)' : 'none'
+        }}
         title={isMicEnabled ? "Mutar microfone" : "Desmutar microfone"}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -80,9 +116,14 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
       {/* Screen Share Button */}
       <button
         onClick={handleScreenShare}
-        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
-        style={{ width: '57px', height: '57px', backgroundColor: '#161616' }}
-        title="Transmitir tela"
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ 
+          width: '52px', 
+          height: '52px', 
+          backgroundColor: isScreenSharing ? '#3600FF' : '#2D2D2D',
+          boxShadow: isScreenSharing ? '0 0 20px rgba(54, 0, 255, 0.4)' : 'none'
+        }}
+        title={isScreenSharing ? "Parar compartilhamento" : "Transmitir tela"}
       >
         <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g clipPath="url(#clip0_175_13)">
@@ -96,11 +137,21 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
         </svg>
       </button>
 
+      {/* Transcription Button */}
+      <button
+        onClick={onTranscriptionClick}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ width: '52px', height: '52px', backgroundColor: '#2D2D2D' }}
+        title="Ver transcrição"
+      >
+        <FileText className="w-5 h-5 text-white" />
+      </button>
+
       {/* Settings Button */}
       <button
         onClick={onSettingsClick}
-        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
-        style={{ width: '57px', height: '57px', backgroundColor: '#161616' }}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ width: '52px', height: '52px', backgroundColor: '#2D2D2D' }}
         title="Configurações"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -118,8 +169,8 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
       {/* Leave/Hang Up Button - Red */}
       <button
         onClick={onLeave}
-        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
-        style={{ width: '57px', height: '57px', backgroundColor: '#EF4444' }}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ width: '52px', height: '52px', backgroundColor: '#DC2626', boxShadow: '0 0 20px rgba(220, 38, 38, 0.3)' }}
         title="Desligar chamada"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

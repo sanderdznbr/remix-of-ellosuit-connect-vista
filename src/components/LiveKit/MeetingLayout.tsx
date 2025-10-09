@@ -20,6 +20,7 @@ interface MeetingLayoutProps {
   onDeviceSettings: () => void;
   onTranscriptionToggle: () => void;
   onShareMeeting: () => void;
+  onTranscriptionClick: () => void;
   meetingControlsRef: React.RefObject<any>;
 }
 
@@ -37,6 +38,7 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
   onDeviceSettings,
   onTranscriptionToggle,
   onShareMeeting,
+  onTranscriptionClick,
   meetingControlsRef,
 }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -112,6 +114,7 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
           ref={meetingControlsRef}
           onLeave={onLeave}
           onSettingsClick={() => setShowSettingsModal(true)}
+          onTranscriptionClick={onTranscriptionClick}
         />
       </div>
 

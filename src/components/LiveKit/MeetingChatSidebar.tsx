@@ -79,10 +79,55 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
     const file = e.target.files?.[0];
     if (!file) return;
 
-    toast({
-      title: "Upload em desenvolvimento",
-      description: "A funcionalidade de envio de arquivos será implementada em breve.",
-    });
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `chat-files/${roomCode}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('meeting-audios')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('meeting-audios')
+        .getPublicUrl(filePath);
+
+      // Send message with file
+      const newMessage: ChatMessage = {
+        id: Math.random().toString(),
+        sender_name: user?.user_metadata?.full_name || 'Convidado',
+        message: `Enviou um arquivo: ${file.name}`,
+        timestamp: new Date().toISOString(),
+        file_url: data.publicUrl,
+      };
+      
+      setMessages((prev) => [...prev, newMessage]);
+      
+      toast({
+        title: "Arquivo enviado!",
+        description: "O arquivo foi compartilhado no chat.",
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Erro ao enviar arquivo",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAiSend = async () => {
@@ -203,6 +248,16 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
                     </span>
                   </div>
                   <p className="text-sm text-gray-700">{msg.message}</p>
+                  {msg.file_url && (
+                    <a
+                      href={msg.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                    >
+                      📎 Abrir arquivo
+                    </a>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />

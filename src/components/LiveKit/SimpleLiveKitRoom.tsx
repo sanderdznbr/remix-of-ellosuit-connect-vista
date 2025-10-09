@@ -109,6 +109,24 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     const checkHostAndSetup = async () => {
       console.log('🔍 [SimpleLiveKitRoom] Iniciando verificação...');
       
+      // Primeiro, buscar a sala para obter o room_id
+      try {
+        const { data: roomData, error: roomError } = await supabase
+          .from('meeting_rooms')
+          .select('id, created_by')
+          .eq('room_code', roomName)
+          .single();
+
+        if (roomError) {
+          console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', roomError);
+        } else if (roomData) {
+          console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id);
+          setCurrentRoomId(roomData.id);
+        }
+      } catch (err) {
+        console.error('❌ [SimpleLiveKitRoom] Erro ao buscar sala:', err);
+      }
+      
       // Se não tem usuário, é convidado - não precisa verificar host
       if (!user) {
         console.log('👤 [SimpleLiveKitRoom] SEM USUÁRIO - Modo convidado direto');
@@ -167,7 +185,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
         if (roomData) {
           console.log('🚪 [SimpleLiveKitRoom] Sala encontrada:', roomData.id, 'Criado por:', roomData.created_by);
-          setCurrentRoomId(roomData.id);
           const userIsHost = userData.user && roomData.created_by === userData.user.id;
           setIsHost(userIsHost);
 
@@ -220,7 +237,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     };
     
     checkHostAndSetup();
-  }, [roomName, participantName, user]);
+  }, [roomName]); // Only depend on roomName, not user or participantName
 
   // Clock update (Brasília time)
   useEffect(() => {
@@ -724,6 +741,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   });
                 }}
                 onShareMeeting={() => setShowShareModal(true)}
+                onTranscriptionClick={() => setShowTranscriptionModal(true)}
                 meetingControlsRef={meetingControlsRef}
               />
               
@@ -739,11 +757,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 onClose={() => setShowTranscriptionModal(false)}
                 messages={transcriptionMessages}
                 isActive={isTranscribing}
-              />
-
-              <MeetingAIChat
-                transcriptionMessages={transcriptionMessages}
-                roomName={roomName}
               />
 
               <WhiteboardCanvas

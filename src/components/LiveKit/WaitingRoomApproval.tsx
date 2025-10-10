@@ -68,19 +68,30 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
 
   const approveParticipant = async (participantId: string, participantName: string) => {
     try {
-      const { error } = await supabase
+      console.log('🟢 Tentando aprovar participante:', { participantId, participantName, roomId });
+      
+      const { data, error } = await supabase
         .from('room_participants')
         .update({ waiting_approval: false })
-        .eq('id', participantId);
+        .eq('id', participantId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao aprovar:', error);
+        throw error;
+      }
+
+      console.log('✅ Participante aprovado com sucesso:', data);
 
       toast({
         title: "Participante aprovado",
         description: `${participantName} entrou na reunião`,
       });
+      
+      // Recarregar lista
+      fetchWaitingParticipants();
     } catch (error) {
-      console.error('Erro ao aprovar participante:', error);
+      console.error('❌ Erro ao aprovar participante:', error);
       toast({
         title: "Erro",
         description: "Não foi possível aprovar o participante",
@@ -91,23 +102,34 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
 
   const rejectParticipant = async (participantId: string, participantName: string) => {
     try {
-      const { error } = await supabase
+      console.log('🔴 Tentando rejeitar participante:', { participantId, participantName, roomId });
+      
+      const { data, error } = await supabase
         .from('room_participants')
         .update({ 
           left_at: new Date().toISOString(),
           connection_status: 'rejected'
         })
-        .eq('id', participantId);
+        .eq('id', participantId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao rejeitar:', error);
+        throw error;
+      }
+
+      console.log('✅ Participante rejeitado com sucesso:', data);
 
       toast({
         title: "Participante rejeitado",
         description: `${participantName} não foi admitido na reunião`,
         variant: "destructive",
       });
+      
+      // Recarregar lista
+      fetchWaitingParticipants();
     } catch (error) {
-      console.error('Erro ao rejeitar participante:', error);
+      console.error('❌ Erro ao rejeitar participante:', error);
       toast({
         title: "Erro",
         description: "Não foi possível rejeitar o participante",

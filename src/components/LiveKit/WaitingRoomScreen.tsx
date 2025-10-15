@@ -34,13 +34,17 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         .single();
 
       if (error) {
-        console.error('Erro ao verificar status de aprovação:', error);
+        console.error('❌ [WaitingRoomScreen] Erro ao verificar status de aprovação:', error);
         return;
       }
 
-      if (!data.waiting_approval && data.connection_status === 'connected') {
+      console.log('📊 [WaitingRoomScreen] Status atual do participante:', data);
+
+      if (!data.waiting_approval) {
+        console.log('✅ [WaitingRoomScreen] Participante aprovado! Chamando onApproved()');
         onApproved();
       } else if (data.left_at || data.connection_status === 'rejected') {
+        console.log('❌ [WaitingRoomScreen] Participante rejeitado! Chamando onRejected()');
         onRejected();
       }
     };
@@ -61,9 +65,13 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         },
         (payload) => {
           const newData = payload.new as any;
-          if (!newData.waiting_approval && newData.connection_status === 'connected') {
+          console.log('🔔 [WaitingRoomScreen] Atualização em tempo real recebida:', newData);
+          
+          if (!newData.waiting_approval) {
+            console.log('✅ [WaitingRoomScreen] Realtime: Participante aprovado!');
             onApproved();
           } else if (newData.left_at || newData.connection_status === 'rejected') {
+            console.log('❌ [WaitingRoomScreen] Realtime: Participante rejeitado!');
             onRejected();
           }
         }

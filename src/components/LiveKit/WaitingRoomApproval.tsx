@@ -72,7 +72,10 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
       
       const { data, error } = await supabase
         .from('room_participants')
-        .update({ waiting_approval: false })
+        .update({ 
+          waiting_approval: false,
+          connection_status: 'connected'
+        })
         .eq('id', participantId)
         .select();
 

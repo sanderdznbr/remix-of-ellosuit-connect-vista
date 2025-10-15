@@ -50,7 +50,9 @@ const SimplifiedMeetingRooms = () => {
     if (room) {
       setShowCreateDialog(false);
       setNewRoomTitle('');
-      window.open(`/livekit/${room.room_code}`, '_blank');
+      
+      // Redirecionar para a página da reunião (mesma janela)
+      window.location.href = `/livekit/${room.room_code}`;
     } else {
       // Se createRoom retornou null, o erro já foi exibido pelo hook
       console.error('❌ Falha ao criar sala - verifique autenticação');

@@ -192,9 +192,15 @@ const InPersonMeeting = () => {
       }
 
       // ====== 1. Setup AudioContext for PCM16 transcription ======
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ 
+        sampleRate: 24000,
+        latencyHint: 'interactive'
+      });
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+      
+      // Use createScriptProcessor com fallback para compatibilidade
+      const bufferSize = 4096;
+      processorRef.current = audioContextRef.current.createScriptProcessor(bufferSize, 1, 1);
 
       console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
 

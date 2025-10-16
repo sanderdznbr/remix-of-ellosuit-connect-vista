@@ -273,9 +273,6 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                     defaultWidth={120}
                     defaultHeight={90}
                   />
-                  <div className="mobile-participant-name">
-                    {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
-                  </div>
                 </div>
               ))}
             </div>
@@ -292,9 +289,6 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                 defaultWidth={window.innerWidth - 32}
                 defaultHeight={window.innerHeight * 0.65}
               />
-              <div className="mobile-participant-name">
-                {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
-              </div>
             </div>
           ))
         )}

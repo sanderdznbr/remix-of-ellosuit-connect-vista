@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Users, X, Send, Mic, MicOff, Video, VideoOff, Monitor, Phone, Share2, FileText, MoreVertical, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Users, X, Send, Mic, MicOff, Video, VideoOff, Monitor, Phone, Share2, FileText, Clock, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useParticipants, useLocalParticipant, useRoomContext } from '@livekit/components-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +11,15 @@ import ResizableVideoTile from './ResizableVideoTile';
 import { useTracks, TrackReference } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import logoEllosuit from '@/assets/logoellosuit.png';
+import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import '@/styles/mobile-meeting-improved.css';
+
+interface TranscriptionMessage {
+  text: string;
+  is_final: boolean;
+  timestamp: string;
+  speaker?: string;
+}
 
 interface MobileMeetingLayoutProps {
   roomName: string;
@@ -40,6 +47,10 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     userId?: string;
   }>>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
+  const [isTranscribing, setIsTranscribing] = useState(true);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
 
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -171,57 +182,253 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     }
   };
 
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
+  const handleTranscriptionUpdate = (message: TranscriptionMessage) => {
+    setTranscriptionMessages(prev => {
+      if (message.is_final) {
+        return [...prev, message];
+      }
+      const lastMessage = prev[prev.length - 1];
+      if (lastMessage && !lastMessage.is_final) {
+        return [...prev.slice(0, -1), message];
+      }
+      return [...prev, message];
+    });
+  };
+
+  // Swipe gesture handlers
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (sidebarOpen) {
+        touchStartX.current = e.touches[0].clientX;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!sidebarOpen) return;
+      
+      const touchX = e.touches[0].clientX;
+      const diff = touchX - touchStartX.current;
+      
+      if (diff > 100) {
+        closeSidebar();
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [sidebarOpen]);
+
   return (
     <div className="mobile-meeting-container">
+      {/* Transcription Capture */}
+      <LiveKitAudioCapture 
+        isActive={isTranscribing}
+        roomName={roomName}
+        onTranscriptionUpdate={handleTranscriptionUpdate}
+      />
+
+      {/* Sidebar Overlay */}
+      <div 
+        className={cn("mobile-sidebar-overlay", sidebarOpen && "visible")}
+        onClick={closeSidebar}
+      />
+
+      {/* Sidebar Sheet */}
+      <div 
+        ref={sidebarRef}
+        className={cn("mobile-sidebar-sheet", sidebarOpen && "open")}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h3 className="text-lg font-semibold text-white">
+            {sidebarTab === 'chat' && 'Chat'}
+            {sidebarTab === 'participants' && 'Participantes'}
+            {sidebarTab === 'transcription' && 'Transcrição'}
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={closeSidebar}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          {sidebarTab === 'chat' && (
+            <div className="flex flex-col h-full">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {messages.map((msg) => (
+                    <div key={msg.id} className="flex items-start gap-2">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                        {msg.sender.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-white">
+                            {msg.sender}
+                          </span>
+                          <span className="text-xs text-white/50">
+                            {msg.time}
+                          </span>
+                        </div>
+                        <p className="text-sm text-white/90 bg-white/5 px-3 py-2 rounded-lg break-words">
+                          {msg.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {messages.length === 0 && (
+                    <div className="text-center py-12 text-white/50">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">Nenhuma mensagem ainda</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              <div className="p-4 border-t border-white/10">
+                <div className="flex gap-2">
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="Digite sua mensagem..."
+                    className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!inputMessage.trim()}
+                    size="icon"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sidebarTab === 'participants' && (
+            <ScrollArea className="h-full p-4">
+              <div className="space-y-2">
+                {participants.map((participant) => (
+                  <div
+                    key={participant.identity}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
+                      {(participant.name || 'P').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {participant.name || `Participante ${participant.identity.slice(-4)}`}
+                        {participant.identity === localParticipant?.identity && ' (Você)'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {participant.isMicrophoneEnabled === false && (
+                        <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center">
+                          <MicOff className="w-3 h-3 text-red-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+
+          {sidebarTab === 'transcription' && (
+            <ScrollArea className="h-full p-4">
+              <div className="space-y-3">
+                {transcriptionMessages.filter(m => m.is_final).map((msg, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-white/5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-primary">
+                        {msg.speaker || 'Participante'}
+                      </span>
+                      <span className="text-xs text-white/40">
+                        {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/90">{msg.text}</p>
+                  </div>
+                ))}
+                {transcriptionMessages.filter(m => m.is_final).length === 0 && (
+                  <div className="text-center py-12 text-white/50">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Aguardando transcrição...</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      </div>
+
       {/* Clean Header - Dark Theme */}
       <div className="mobile-meeting-header">
         <div className="flex items-center gap-3">
           <img 
             src={logoEllosuit} 
             alt="Ellosuit Meeting" 
-            className="mobile-meeting-header-logo"
+            className="h-5 w-auto"
           />
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-white/70" />
-            <span className="mobile-meeting-time">{meetingDuration}</span>
+            <Clock className="h-3.5 w-3.5 text-white/60" />
+            <span className="text-sm text-white/90 font-medium">{meetingDuration}</span>
           </div>
         </div>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white/90 hover:text-white hover:bg-white/10"
-        >
-          <MoreVertical className="h-5 w-5" />
-        </Button>
+        <div className="text-xs text-white/50">
+          {participants.length} {participants.length === 1 ? 'pessoa' : 'pessoas'}
+        </div>
       </div>
 
-      {/* Video Grid - Adaptive Layout */}
+      {/* Video Grid - Optimized Layout */}
       <div className="mobile-video-grid">
         {hasScreenShare ? (
-          <div className="mobile-screenshare-layout">
-            <div className="mobile-screenshare-main">
+          <div className="flex flex-col gap-2 h-full w-full">
+            <div className="flex-1 relative">
               {screenShareTracks.map((trackRef: TrackReference, index: number) => (
-                <ResizableVideoTile
-                  key={`screenshare-${trackRef.participant.identity}-${index}`}
-                  trackRef={trackRef}
-                  isScreenShare={true}
-                  defaultWidth={window.innerWidth - 32}
-                  defaultHeight={window.innerHeight * 0.5}
-                />
+                <div key={`screenshare-${trackRef.participant.identity}-${index}`} className="absolute inset-0">
+                  <ResizableVideoTile
+                    trackRef={trackRef}
+                    isScreenShare={true}
+                    defaultWidth={window.innerWidth - 16}
+                    defaultHeight={window.innerHeight * 0.6}
+                  />
+                </div>
               ))}
             </div>
-            <div className="mobile-participants-strip">
+            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory' }}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
-                <div key={`camera-strip-${trackRef.participant.identity}-${index}`} className="mobile-video-tile">
+                <div 
+                  key={`camera-strip-${trackRef.participant.identity}-${index}`} 
+                  className="mobile-video-tile flex-shrink-0"
+                  style={{ width: '120px', height: '90px', scrollSnapAlign: 'start' }}
+                >
                   <ResizableVideoTile
                     trackRef={trackRef}
                     isScreenShare={false}
                     defaultWidth={120}
                     defaultHeight={90}
                   />
-                  <div className="mobile-participant-name">
-                    {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
+                  <div className="absolute bottom-2 left-2 text-xs bg-black/70 text-white px-2 py-1 rounded">
+                    {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
                   </div>
                 </div>
               ))}
@@ -229,27 +436,40 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
           </div>
         ) : (
           <div 
-            className="grid gap-2 p-2 h-full"
+            className="w-full h-full grid gap-2"
             style={{
               gridTemplateColumns: cameraTracks.length === 1 
                 ? '1fr'
                 : cameraTracks.length === 2
                   ? '1fr'
                   : 'repeat(2, 1fr)',
-              gridTemplateRows: cameraTracks.length <= 2 
-                ? 'repeat(auto-fit, minmax(0, 1fr))'
-                : 'auto'
+              gridTemplateRows: cameraTracks.length === 1
+                ? '1fr'
+                : cameraTracks.length === 2
+                  ? 'repeat(2, 1fr)'
+                  : `repeat(${Math.ceil(cameraTracks.length / 2)}, 1fr)`,
+              maxHeight: '100%'
             }}
           >
             {cameraTracks.map((trackRef: TrackReference, index: number) => (
-              <div key={`camera-${trackRef.participant.identity}-${index}`} className="mobile-video-tile">
+              <div 
+                key={`camera-${trackRef.participant.identity}-${index}`} 
+                className="mobile-video-tile relative"
+                style={{ 
+                  minHeight: cameraTracks.length === 1 ? '100%' : '200px',
+                  maxHeight: '100%'
+                }}
+              >
                 <ResizableVideoTile
                   trackRef={trackRef}
                   isScreenShare={false}
-                  defaultWidth={window.innerWidth / (cameraTracks.length > 2 ? 2 : 1) - 24}
-                  defaultHeight={(window.innerHeight - 200) / Math.ceil(cameraTracks.length / 2)}
+                  defaultWidth={window.innerWidth / (cameraTracks.length > 2 ? 2 : 1) - 16}
+                  defaultHeight={cameraTracks.length === 1 
+                    ? window.innerHeight * 0.7 
+                    : (window.innerHeight * 0.7) / Math.ceil(cameraTracks.length / 2)
+                  }
                 />
-                <div className="mobile-participant-name">
+                <div className="absolute bottom-3 left-3 text-sm bg-black/80 text-white px-3 py-1.5 rounded-full font-medium">
                   {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
                 </div>
               </div>
@@ -335,146 +555,6 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         </div>
       </div>
 
-      {/* Sidebar Modal - Sheet Component */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <div className="flex flex-col h-full">
-            {/* Tabs */}
-            <div className="flex border-b">
-              <button
-                onClick={() => setSidebarTab('chat')}
-                className={cn(
-                  "flex-1 py-3 text-sm font-medium transition-colors",
-                  sidebarTab === 'chat'
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-gray-600 hover:text-gray-900"
-                )}
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => setSidebarTab('participants')}
-                className={cn(
-                  "flex-1 py-3 text-sm font-medium transition-colors",
-                  sidebarTab === 'participants'
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-gray-600 hover:text-gray-900"
-                )}
-              >
-                Participantes ({participants.length})
-              </button>
-              <button
-                onClick={() => setSidebarTab('transcription')}
-                className={cn(
-                  "flex-1 py-3 text-sm font-medium transition-colors",
-                  sidebarTab === 'transcription'
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-gray-600 hover:text-gray-900"
-                )}
-              >
-                Transcrição
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-hidden">
-              {sidebarTab === 'chat' && (
-                <div className="flex flex-col h-full">
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-3">
-                      {messages.map((msg) => (
-                        <div key={msg.id} className="flex items-start gap-2">
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                            {msg.sender.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium text-gray-900">
-                                {msg.sender}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {msg.time}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded-lg break-words">
-                              {msg.message}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {messages.length === 0 && (
-                        <div className="text-center py-12 text-gray-500">
-                          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                          <p className="text-sm">Nenhuma mensagem ainda</p>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2">
-                      <Input
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        placeholder="Digite sua mensagem..."
-                        className="flex-1"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!inputMessage.trim()}
-                        size="icon"
-                        className="bg-primary hover:bg-primary/90"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {sidebarTab === 'participants' && (
-                <ScrollArea className="h-full p-4">
-                  <div className="space-y-2">
-                    {participants.map((participant) => (
-                      <div
-                        key={participant.identity}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
-                          {(participant.name || 'P').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {participant.name || `Participante ${participant.identity.slice(-4)}`}
-                            {participant.identity === localParticipant?.identity && ' (Você)'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {participant.isMicrophoneEnabled === false && (
-                            <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
-                              <MicOff className="w-3 h-3 text-red-600" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-
-              {sidebarTab === 'transcription' && (
-                <div className="h-full flex items-center justify-center p-8 text-center">
-                  <div className="text-gray-500">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">Transcrição em tempo real</p>
-                    <p className="text-xs mt-1">Em breve disponível</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };

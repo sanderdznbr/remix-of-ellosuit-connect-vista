@@ -36,7 +36,7 @@ const App = () => (
             <Route path="/auth" element={<Index />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
-            <Route path="/livekit/:roomCode" element={<LiveKitMeeting />} />
+            <Route path="/meet/:roomCode" element={<LiveKitMeeting />} />
             <Route path="/recover-meeting/:roomCode" element={<RecoverMeeting />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/tasks" element={<Tarefas />} />

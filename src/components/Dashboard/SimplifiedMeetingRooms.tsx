@@ -52,7 +52,7 @@ const SimplifiedMeetingRooms = () => {
       setNewRoomTitle('');
       
       // Redirecionar para a página da reunião (mesma janela)
-      window.location.href = `/livekit/${room.room_code}`;
+      window.location.href = `/meet/${room.room_code}`;
     } else {
       // Se createRoom retornou null, o erro já foi exibido pelo hook
       console.error('❌ Falha ao criar sala - verifique autenticação');
@@ -70,7 +70,7 @@ const SimplifiedMeetingRooms = () => {
     }
 
     setShowJoinDialog(false);
-    window.open(`/livekit/${roomCode.toUpperCase()}?name=${encodeURIComponent(displayName)}`, '_blank');
+    window.open(`/meet/${roomCode.toUpperCase()}?name=${encodeURIComponent(displayName)}`, '_blank');
     setRoomCode('');
     setDisplayName('');
   };

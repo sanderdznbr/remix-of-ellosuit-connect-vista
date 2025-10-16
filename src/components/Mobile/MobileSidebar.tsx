@@ -236,7 +236,6 @@ export function MobileSidebar() {
         className="w-[280px] p-0 bg-primary overflow-y-auto"
         style={{ zIndex: 100 }}
       >
-        {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <Link to="/dashboard" onClick={handleLinkClick}>
             <img 

@@ -27,7 +27,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const meetingLink = `https://www.ellosuit.online/livekit/${roomName}`;
+  const meetingLink = `https://www.ellosuit.online/meet/${roomName}`;
 
   const copyToClipboard = async () => {
     try {
@@ -72,12 +72,12 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-white border-gray-200 text-gray-900">
+      <DialogContent className="sm:max-w-md bg-[#1a1a1a] border-gray-700 text-white rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-xl font-semibold text-white">
             Compartilhar Reunião
           </DialogTitle>
-          <DialogDescription className="text-gray-600">
+          <DialogDescription className="text-gray-400">
             Convide outras pessoas para participar da reunião
           </DialogDescription>
         </DialogHeader>
@@ -85,7 +85,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
         <div className="space-y-4">
           {/* Meeting Link */}
           <div className="space-y-2">
-            <Label htmlFor="meeting-link" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="meeting-link" className="text-sm font-medium text-gray-300">
               Link da Reunião
             </Label>
             <div className="flex gap-2">
@@ -93,7 +93,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
                 id="meeting-link"
                 value={meetingLink}
                 readOnly
-                className="flex-1 bg-gray-50 border-gray-300 text-gray-900"
+                className="flex-1 bg-[#2a2a2a] border-gray-600 text-white"
               />
                 <Button
                   onClick={copyToClipboard}
@@ -107,14 +107,14 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
 
           {/* Quick Share Options */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
+            <Label className="text-sm font-medium text-gray-300">
               Compartilhar via
             </Label>
             <div className="grid grid-cols-3 gap-2">
               <Button
                 onClick={() => shareViaEmail()}
                 variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="flex flex-col items-center p-4 h-auto bg-[#2a2a2a] border-gray-600 hover:bg-[#333333] text-white"
               >
                 <Mail className="h-5 w-5 mb-1" />
                 <span className="text-xs">Email</span>
@@ -122,7 +122,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
               <Button
                 onClick={() => shareViaWhatsApp()}
                 variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="flex flex-col items-center p-4 h-auto bg-[#2a2a2a] border-gray-600 hover:bg-[#333333] text-white"
               >
                 <MessageSquare className="h-5 w-5 mb-1" />
                 <span className="text-xs">WhatsApp</span>
@@ -130,7 +130,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
               <Button
                 onClick={() => shareGeneric()}
                 variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+                className="flex flex-col items-center p-4 h-auto bg-[#2a2a2a] border-gray-600 hover:bg-[#333333] text-white"
               >
                 <Share2 className="h-5 w-5 mb-1" />
                 <span className="text-xs">Outros</span>
@@ -139,12 +139,12 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
           </div>
 
           {/* Meeting Info */}
-          <div className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">
-              <strong className="text-gray-900">Sala:</strong> {roomName}
+          <div className="space-y-2 p-3 bg-[#2a2a2a] rounded-lg border border-gray-700">
+            <div className="text-sm text-gray-400">
+              <strong className="text-white">Sala:</strong> {roomName}
             </div>
-            <div className="text-sm text-gray-600">
-              <strong className="text-gray-900">Início:</strong> Agora
+            <div className="text-sm text-gray-400">
+              <strong className="text-white">Início:</strong> Agora
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ const ShareMeetingModal: React.FC<ShareMeetingModalProps> = ({
           <Button
             onClick={onClose}
             variant="outline"
-            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="bg-[#2a2a2a] border-gray-600 text-white hover:bg-[#333333]"
           >
             Fechar
           </Button>

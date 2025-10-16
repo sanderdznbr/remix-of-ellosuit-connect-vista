@@ -17,7 +17,8 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
-  Shield
+  Shield,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -288,15 +289,24 @@ export function MobileSidebar() {
               </Avatar>
               
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-sm font-medium text-white truncate text-left">
                   {user.user_metadata?.full_name || 'Usuário'}
                 </p>
-                <p className="text-xs text-white/70 truncate">
+                <p className="text-xs text-white/70 truncate text-left">
                   {user.email}
                 </p>
               </div>
             </div>
           )}
+          
+          <Link
+            to="/dashboard/account"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg hover:bg-white/10 transition-colors text-white justify-start mb-2"
+            onClick={handleLinkClick}
+          >
+            <User className="h-4 w-4" />
+            <span className="text-left">Minha Conta</span>
+          </Link>
           
           <Button
             variant="ghost"
@@ -304,10 +314,10 @@ export function MobileSidebar() {
               signOut();
               handleLinkClick();
             }}
-            className="w-full justify-start text-white hover:bg-white/10"
+            className="w-full justify-start text-white hover:bg-white/10 text-left"
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Sair
+            <span className="text-left">Sair</span>
           </Button>
         </div>
       </SheetContent>

@@ -13,23 +13,14 @@ import {
   MessageSquare,
   Bot,
   Zap,
-  BarChart3
+  BarChart3,
+  Menu,
+  X
 } from "lucide-react";
-
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const menuGroups = [
   {
@@ -102,11 +93,10 @@ const menuGroups = [
   }
 ];
 
-export function AppSidebar() {
-  const { state } = useSidebar();
+export function MobileSidebar() {
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const isCollapsed = state === "collapsed";
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -115,117 +105,111 @@ export function AppSidebar() {
     return location.pathname.startsWith(path);
   };
 
-  const getNavClassName = (active: boolean) => {
-    return active 
-      ? "bg-white/20 text-white font-medium hover:bg-white/30" 
-      : "text-white/80 hover:bg-white/10 hover:text-white";
+  const handleLinkClick = () => {
+    setIsOpen(false);
   };
 
   return (
-    <Sidebar
-      className={`${isCollapsed ? "w-14" : "w-64"} border-r`}
-      style={{ backgroundColor: 'hsl(var(--primary))' }}
-      collapsible="icon"
-    >
-      <SidebarContent className="bg-primary text-white">
-        {/* Logo */}
-        <div className="p-4 border-b border-white/10">
-          {isCollapsed ? (
-            <Link to="/dashboard" className="flex items-center justify-center">
-              <img 
-                src="/lovable-uploads/331ff3c7-4d10-4f90-bfdf-ec5b94766b0d.png" 
-                alt="ElloSuit" 
-                className="h-8 w-8 object-contain filter brightness-0 invert"
-                onError={(e) => {
-                  console.error('Erro ao carregar favicon padrão:', e);
-                }}
-              />
-            </Link>
-          ) : (
-            <Link to="/dashboard" className="flex items-center">
-              <img 
-                src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-                alt="ElloSuit Logo" 
-                className="h-8 w-auto filter brightness-0 invert"
-                onError={(e) => {
-                  console.error('Erro ao carregar logo padrão:', e);
-                }}
-              />
-            </Link>
-          )}
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50 bg-primary/10 hover:bg-primary/20 text-primary"
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+      
+      <SheetContent 
+        side="left" 
+        className="w-[280px] p-0 bg-primary overflow-y-auto"
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <Link to="/dashboard" onClick={handleLinkClick}>
+            <img 
+              src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
+              alt="ElloSuit Logo" 
+              className="h-8 w-auto filter brightness-0 invert"
+              onError={(e) => {
+                console.error('Erro ao carregar logo padrão:', e);
+              }}
+            />
+          </Link>
         </div>
 
         {/* Menu Groups */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 py-4">
           {menuGroups.map((group) => (
-            <SidebarGroup key={group.id} className="px-2 py-2">
-              {!isCollapsed && (
-                <SidebarGroupLabel className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-2">
-                  {group.label}
-                </SidebarGroupLabel>
-              )}
+            <div key={group.id} className="mb-6 px-3">
+              <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3 px-3">
+                {group.label}
+              </h3>
               
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const IconComponent = item.icon;
-                    const active = isActive(item.path);
-                    
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton 
-                          asChild 
-                          className={`${getNavClassName(active)} transition-colors rounded-lg mx-1`}
-                        >
-                          <Link to={item.path} className="flex items-center">
-                            <IconComponent className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'} flex-shrink-0 text-white`} />
-                            {!isCollapsed && <span className="truncate">{item.label}</span>}
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+              <nav className="space-y-1">
+                {group.items.map((item) => {
+                  const IconComponent = item.icon;
+                  const active = isActive(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      onClick={handleLinkClick}
+                      className={`
+                        flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
+                        ${active 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        }
+                      `}
+                    >
+                      <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
           ))}
         </div>
 
         {/* User Profile */}
-        <div className="border-t border-white/10 p-3">
+        <div className="border-t border-white/10 p-4">
           {user && (
-            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} p-2`}>
-              <Avatar className="h-8 w-8">
+            <div className="flex items-center space-x-3 mb-3">
+              <Avatar className="h-10 w-10">
                 <AvatarImage src={user.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-white/20 text-white text-xs">
+                <AvatarFallback className="bg-white/20 text-white text-sm">
                   {user.email?.substring(0, 2).toUpperCase() || 'US'}
                 </AvatarFallback>
               </Avatar>
               
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {user.user_metadata?.full_name || 'Usuário'}
-                  </p>
-                  <p className="text-xs text-white/70 truncate">
-                    {user.email}
-                  </p>
-                </div>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className={`text-white hover:bg-white/10 ${isCollapsed ? 'p-1' : 'p-2'}`}
-                title="Sair"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {user.user_metadata?.full_name || 'Usuário'}
+                </p>
+                <p className="text-xs text-white/70 truncate">
+                  {user.email}
+                </p>
+              </div>
             </div>
           )}
+          
+          <Button
+            variant="ghost"
+            onClick={() => {
+              signOut();
+              handleLinkClick();
+            }}
+            className="w-full justify-start text-white hover:bg-white/10"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
         </div>
-      </SidebarContent>
-    </Sidebar>
+      </SheetContent>
+    </Sheet>
   );
 }

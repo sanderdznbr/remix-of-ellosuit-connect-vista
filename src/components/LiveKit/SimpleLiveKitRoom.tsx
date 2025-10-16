@@ -556,8 +556,31 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const handleDisconnected = useCallback(async () => {
     console.log('Disconnected from room');
     
+    // Stop all local media tracks before leaving
     if (roomRef.current?.localParticipant) {
       try {
+        console.log('Stopping all local media tracks...');
+        
+        // Stop all audio tracks
+        roomRef.current.localParticipant.audioTrackPublications.forEach((publication) => {
+          const track = publication.track;
+          if (track) {
+            track.stop();
+            console.log('Stopped audio track:', track.sid);
+          }
+        });
+        
+        // Stop all video tracks
+        roomRef.current.localParticipant.videoTrackPublications.forEach((publication) => {
+          const track = publication.track;
+          if (track) {
+            track.stop();
+            console.log('Stopped video track:', track.sid);
+          }
+        });
+        
+        console.log('All media tracks stopped successfully');
+
         const { data: { user } } = await supabase.auth.getUser();
         const { data: roomData } = await supabase
           .from('meeting_rooms')
@@ -577,7 +600,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           console.log('Room marked as inactive by host');
         }
       } catch (error) {
-        console.error('Error marking room as inactive:', error);
+        console.error('Error during disconnection:', error);
       }
     }
     

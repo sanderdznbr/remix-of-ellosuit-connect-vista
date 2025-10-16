@@ -16,7 +16,9 @@ import {
   CheckSquare,
   MessageSquare,
   Bot,
-  Zap
+  Zap,
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,67 +33,107 @@ const Sidebar = () => {
   
   const defaultMenuItems = [
     { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
-    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
+    { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
+    { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+    { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
+    { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
+    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
     { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
     { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
-    { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
-    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' },
+    { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de Produção' },
+    { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
+    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Online' },
+    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Ello Meetings' },
+    { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
     { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
-    { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
-    { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' },
-    { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' },
-    { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de Documento' },
-    { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+    { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de PDF' },
+    { id: 'link-tracking', path: '/dashboard/rastreamento-link', icon: FileText, label: 'Rastreamento de Link' },
+    { id: 'video-tracking', path: '/dashboard/rastreamento-video', icon: Video, label: 'Rastreamento de Vídeo' },
+    { id: 'vision', path: '/dashboard/ello-vision', icon: LayoutDashboard, label: 'Ello Vision' },
+    { id: 'analytics', path: '/dashboard/analytics', icon: LayoutDashboard, label: 'Análises' },
+    { id: 'reports', path: '/dashboard/relatorios', icon: FileText, label: 'Relatórios' },
+    { id: 'support', path: '/dashboard/suporte', icon: MessageSquare, label: 'Suporte' },
+    { id: 'report-problem', path: '/dashboard/reportar-problema', icon: AlertCircle, label: 'Reporte um problema' },
+    { id: 'terms', path: '/termos', icon: FileText, label: 'Termos & Políticas' },
+    { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
+    { id: 'customize', path: '/dashboard/personalizar', icon: Edit3, label: 'Personalização' },
+    { id: 'security', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança & Privacidade' }
   ];
 
   const defaultGroups: MenuGroup[] = [
     {
       id: 'sistema',
       label: 'Sistema',
-      color: '#64748B',
+      color: '#6366F1',
       items: [
         { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-        { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' }
+        { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
+        { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+        { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
+        { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
+        { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
+        { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
       ]
     },
     {
-      id: 'agendamentos',
-      label: 'Agendamentos',
-      color: '#3B82F6',
+      id: 'ello-flows',
+      label: 'Ello Flows',
+      color: '#06B6D4',
       items: [
-        { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agendamentos' },
-        { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agendamento Online' },
-        { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões Ello' }
+        { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
+        { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de Produção' },
+        { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
+        { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Online' },
+        { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Ello Meetings' }
       ]
     },
     {
-      id: 'marketing',
-      label: 'Marketing',
+      id: 'ello-omni',
+      label: 'Ello Omni',
       color: '#10B981',
       items: [
-        { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' },
-        { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' }
+        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
+        { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' }
       ]
     },
     {
-      id: 'producao',
-      label: 'Produção',
-      color: '#F59E0B',
+      id: 'ello-track',
+      label: 'Ello Track',
+      color: '#14B8A6',
       items: [
-        { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Contatos' },
-        { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' },
-        { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
-        { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de produção' },
-        { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'Whatsapp CRM' }
+        { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de PDF' },
+        { id: 'link-tracking', path: '/dashboard/rastreamento-link', icon: FileText, label: 'Rastreamento de Link' },
+        { id: 'video-tracking', path: '/dashboard/rastreamento-video', icon: Video, label: 'Rastreamento de Vídeo' }
       ]
     },
     {
-      id: 'rastreamento',
-      label: 'Rastreamento',
+      id: 'analise-relatorio',
+      label: 'Análise & Relatório',
       color: '#8B5CF6',
       items: [
-        { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de Documento' }
+        { id: 'vision', path: '/dashboard/ello-vision', icon: LayoutDashboard, label: 'Ello Vision' },
+        { id: 'analytics', path: '/dashboard/analytics', icon: LayoutDashboard, label: 'Análises' },
+        { id: 'reports', path: '/dashboard/relatorios', icon: FileText, label: 'Relatórios' }
+      ]
+    },
+    {
+      id: 'ajuda-suporte',
+      label: 'Ajuda & Suporte',
+      color: '#F59E0B',
+      items: [
+        { id: 'support', path: '/dashboard/suporte', icon: MessageSquare, label: 'Suporte' },
+        { id: 'report-problem', path: '/dashboard/reportar-problema', icon: AlertCircle, label: 'Reporte um problema' },
+        { id: 'terms', path: '/termos', icon: FileText, label: 'Termos & Políticas' }
+      ]
+    },
+    {
+      id: 'config-privacidade',
+      label: 'Configurações & Privacidade',
+      color: '#64748B',
+      items: [
+        { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
+        { id: 'customize', path: '/dashboard/personalizar', icon: Edit3, label: 'Personalização' },
+        { id: 'security', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança & Privacidade' }
       ]
     }
   ];

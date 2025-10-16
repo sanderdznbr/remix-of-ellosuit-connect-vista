@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import DeviceSettingsModal from './DeviceSettingsModal';
-import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import logoEllo from '@/assets/logoellosuit.png';
 import ResizableVideoTile from './ResizableVideoTile';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -239,7 +239,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       {/* Header */}
       <div className="mobile-meeting-header">
         <img 
-          src={ellosuitLogo}
+          src={logoEllo}
           alt="ElloSuit Meeting" 
           className="mobile-meeting-header-logo"
         />

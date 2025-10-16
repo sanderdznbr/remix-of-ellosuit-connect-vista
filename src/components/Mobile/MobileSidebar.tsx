@@ -121,7 +121,15 @@ interface MenuItem {
 
 export function MobileSidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    sistema: false,
+    'ello-flows': false,
+    'ello-omni': false,
+    'ello-track': false,
+    'analise-relatorio': false,
+    'ajuda-suporte': false,
+    'config-privacidade': false
+  });
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -226,6 +234,7 @@ export function MobileSidebar() {
       <SheetContent 
         side="left" 
         className="w-[280px] p-0 bg-primary overflow-y-auto"
+        style={{ zIndex: 100 }}
       >
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -241,17 +250,29 @@ export function MobileSidebar() {
           </Link>
         </div>
 
-        {/* Menu Groups */}
+        {/* Menu Groups - Collapsible */}
         <div className="flex-1 py-4">
           {menuGroups.map((group) => (
-            <div key={group.id} className="mb-6 px-3">
-              <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3 px-3">
-                {group.label}
-              </h3>
-              
-              <nav className="space-y-1">
-                {group.items.map(renderMenuItem)}
-              </nav>
+            <div key={group.id} className="mb-2 px-3">
+              <Collapsible 
+                open={openGroups[group.id]} 
+                onOpenChange={() => toggleGroup(group.id)}
+              >
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white hover:bg-white/10 rounded-lg transition-colors">
+                  <span>{group.label}</span>
+                  {openGroups[group.id] ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="mt-1">
+                  <nav className="space-y-1">
+                    {group.items.map(renderMenuItem)}
+                  </nav>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           ))}
         </div>

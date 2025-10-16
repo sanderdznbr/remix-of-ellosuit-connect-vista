@@ -22,13 +22,13 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen w-full bg-background relative">
       {/* Mobile Top Navbar - Fixed */}
-      <div className="mobile-top-navbar">
+      <div className="mobile-top-navbar bg-primary" style={{ zIndex: 50 }}>
         <MobileSidebar />
         <Link to="/dashboard">
           <img 
             src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
             alt="ElloSuit Logo" 
-            className="h-6 w-auto"
+            className="h-6 w-auto filter brightness-0 invert"
           />
         </Link>
         <div className="w-10" /> {/* Spacer for center alignment */}

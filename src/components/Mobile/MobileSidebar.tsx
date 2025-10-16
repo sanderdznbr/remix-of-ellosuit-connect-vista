@@ -258,12 +258,12 @@ export function MobileSidebar() {
                 open={openGroups[group.id]} 
                 onOpenChange={() => toggleGroup(group.id)}
               >
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white hover:bg-white/10 rounded-lg transition-colors">
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white text-left hover:bg-white/10 rounded-lg transition-colors">
                   <span>{group.label}</span>
                   {openGroups[group.id] ? (
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
                   )}
                 </CollapsibleTrigger>
                 

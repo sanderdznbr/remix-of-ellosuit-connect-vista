@@ -281,38 +281,22 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             </div>
           </div>
         ) : (
-          <div 
-            className="w-full h-full grid gap-2 p-2"
-            style={{
-              gridTemplateColumns: cameraTracks.length === 1 
-                ? '1fr'
-                : cameraTracks.length === 2
-                  ? '1fr'
-                  : 'repeat(2, 1fr)',
-              gridTemplateRows: cameraTracks.length === 1
-                ? '1fr'
-                : cameraTracks.length === 2
-                  ? 'repeat(2, 1fr)'
-                  : `repeat(${Math.ceil(cameraTracks.length / 2)}, 1fr)`,
-            }}
-          >
-            {cameraTracks.map((trackRef: TrackReference, index: number) => (
-              <div 
-                key={`camera-${trackRef.participant.identity}-${index}`} 
-                className="mobile-video-tile"
-              >
-                <ResizableVideoTile
-                  trackRef={trackRef}
-                  isScreenShare={false}
-                  defaultWidth={window.innerWidth / (cameraTracks.length > 2 ? 2 : 1) - 16}
-                  defaultHeight={200}
-                />
-                <div className="mobile-participant-name">
-                  {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
-                </div>
+          cameraTracks.map((trackRef: TrackReference, index: number) => (
+            <div 
+              key={`camera-${trackRef.participant.identity}-${index}`} 
+              className="mobile-video-tile"
+            >
+              <ResizableVideoTile
+                trackRef={trackRef}
+                isScreenShare={false}
+                defaultWidth={window.innerWidth - 32}
+                defaultHeight={window.innerHeight * 0.65}
+              />
+              <div className="mobile-participant-name">
+                {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
 
@@ -388,12 +372,14 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       <div 
         className={cn("mobile-sidebar-overlay", isSidebarOpen && "visible")}
         onClick={closeSidebar}
+        style={{ zIndex: 199 }}
       />
 
       {/* Sidebar Sheet */}
       <div 
         ref={sidebarRef}
         className={cn("mobile-sidebar-sheet", isSidebarOpen && "open")}
+        style={{ zIndex: 200 }}
       >
         <div className="mobile-modal-header">
           <h3 className="text-lg font-semibold text-white">

@@ -733,12 +733,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <RoomAudioRenderer />
           <AudioDevicePersistence />
           
-          {/* Local Audio Capture for Real-time Transcription */}
-          <LiveKitAudioCapture 
-            isActive={isTranscribing}
-            roomName={roomName}
-            onTranscriptionUpdate={handleTranscriptionUpdate}
-          />
+          {/* Local Audio Capture for Real-time Transcription - Desktop only */}
+          {!isMobile && (
+            <LiveKitAudioCapture 
+              isActive={isTranscribing}
+              roomName={roomName}
+              onTranscriptionUpdate={handleTranscriptionUpdate}
+            />
+          )}
           
           {/* Waiting Room Approval Panel (for hosts) */}
           {!isMobile && isHost && (

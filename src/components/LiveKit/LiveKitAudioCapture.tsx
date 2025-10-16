@@ -42,14 +42,9 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       return;
     }
 
-    // Disable transcription on mobile to prevent errors
+    // Silently skip transcription on mobile (component won't render on mobile anyway)
     if (isMobile) {
-      console.warn('⚠️ Transcrição desativada no mobile para evitar erros de memória');
-      toast({
-        title: "Transcrição desativada",
-        description: "A transcrição automática não está disponível em dispositivos móveis",
-        variant: "destructive",
-      });
+      console.log('📱 Transcrição desabilitada em dispositivo móvel');
       return;
     }
 

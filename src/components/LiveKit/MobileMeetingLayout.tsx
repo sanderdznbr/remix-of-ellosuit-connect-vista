@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Users, X, Send, Mic, MicOff, Video, VideoOff, Monitor, Phone, Share2, FileText, Clock, ChevronLeft } from 'lucide-react';
+import { useParticipants, useLocalParticipant, useRoomContext, useTracks } from '@livekit/components-react';
+import { Track } from 'livekit-client';
+import { 
+  Mic, MicOff, Video as VideoIcon, VideoOff, 
+  PhoneOff, MessageSquare, Users, 
+  FileText, Share2, Monitor, MonitorOff, X, ChevronLeft, Settings
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { useParticipants, useLocalParticipant, useRoomContext } from '@livekit/components-react';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import ResizableVideoTile from './ResizableVideoTile';
-import { useTracks, TrackReference } from '@livekit/components-react';
-import { Track } from 'livekit-client';
-import logoEllosuit from '@/assets/logoellosuit.png';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
+import DeviceSettingsModal from './DeviceSettingsModal';
+import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import ResizableVideoTile from './ResizableVideoTile';
+import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+import { TrackReference } from '@livekit/components-react';
 import '@/styles/mobile-meeting-improved.css';
 
 interface TranscriptionMessage {
@@ -24,7 +29,7 @@ interface TranscriptionMessage {
 interface MobileMeetingLayoutProps {
   roomName: string;
   onLeave: () => void;
-  onShareMeeting: () => void;
+  onShareMeeting?: () => void;
 }
 
 const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
@@ -32,13 +37,14 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   onLeave,
   onShareMeeting
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
   const [inputMessage, setInputMessage] = useState('');
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [meetingDuration, setMeetingDuration] = useState('00:00');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [meetingDuration, setMeetingDuration] = useState(0);
   const [messages, setMessages] = useState<Array<{
     id: string;
     sender: string;
@@ -46,9 +52,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     time: string;
     userId?: string;
   }>>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
-  const [isTranscribing, setIsTranscribing] = useState(true);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number>(0);
 
@@ -69,15 +73,17 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
 
   // Meeting duration timer
   useEffect(() => {
-    const startTime = Date.now();
     const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const minutes = Math.floor(elapsed / 60);
-      const seconds = elapsed % 60;
-      setMeetingDuration(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      setMeetingDuration(prev => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Listen for chat messages
   useEffect(() => {
@@ -100,9 +106,6 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         };
         
         setMessages(prev => [...prev, newMessage]);
-        if (!sidebarOpen || sidebarTab !== 'chat') {
-          setUnreadCount(prev => prev + 1);
-        }
       }
     };
 
@@ -111,37 +114,44 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     return () => {
       room.off('dataReceived', handleDataReceived);
     };
-  }, [room, sidebarOpen, sidebarTab]);
+  }, [room]);
 
   const toggleMic = async () => {
-    if (localParticipant) {
-      const enabled = !micEnabled;
-      await localParticipant.setMicrophoneEnabled(enabled);
-      setMicEnabled(enabled);
-    }
+    if (!localParticipant) return;
+    const enabled = !isMicOn;
+    await localParticipant.setMicrophoneEnabled(enabled);
+    setIsMicOn(enabled);
   };
 
   const toggleCamera = async () => {
-    if (localParticipant) {
-      const enabled = !cameraEnabled;
-      await localParticipant.setCameraEnabled(enabled);
-      setCameraEnabled(enabled);
-    }
+    if (!localParticipant) return;
+    const enabled = !isCameraOn;
+    await localParticipant.setCameraEnabled(enabled);
+    setIsCameraOn(enabled);
   };
 
   const handleScreenShare = async () => {
-    if (localParticipant) {
-      try {
-        if (isScreenSharing) {
-          await localParticipant.setScreenShareEnabled(false);
-          setIsScreenSharing(false);
-        } else {
-          await localParticipant.setScreenShareEnabled(true);
-          setIsScreenSharing(true);
-        }
-      } catch (error) {
-        console.error('Screen share error:', error);
+    if (!localParticipant) return;
+
+    try {
+      const isSharing = localParticipant.isScreenShareEnabled;
+      
+      if (isSharing) {
+        await localParticipant.setScreenShareEnabled(false);
+        setIsScreenSharing(false);
+        toast({ title: 'Compartilhamento encerrado' });
+      } else {
+        await localParticipant.setScreenShareEnabled(true);
+        setIsScreenSharing(true);
+        toast({ title: 'Compartilhando tela' });
       }
+    } catch (error) {
+      console.error('Erro ao compartilhar tela:', error);
+      toast({
+        title: 'Erro ao compartilhar tela',
+        description: 'Verifique as permissões do navegador',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -175,15 +185,12 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   };
 
   const openSidebar = (tab: 'chat' | 'participants' | 'transcription') => {
-    setSidebarTab(tab);
-    setSidebarOpen(true);
-    if (tab === 'chat') {
-      setUnreadCount(0);
-    }
+    setActiveTab(tab);
+    setIsSidebarOpen(true);
   };
 
   const closeSidebar = () => {
-    setSidebarOpen(false);
+    setIsSidebarOpen(false);
   };
 
   const handleTranscriptionUpdate = (message: TranscriptionMessage) => {
@@ -202,13 +209,13 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   // Swipe gesture handlers
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      if (sidebarOpen) {
+      if (isSidebarOpen) {
         touchStartX.current = e.touches[0].clientX;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!sidebarOpen) return;
+      if (!isSidebarOpen) return;
       
       const touchX = e.touches[0].clientX;
       const diff = touchX - touchStartX.current;
@@ -225,33 +232,174 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [sidebarOpen]);
+  }, [isSidebarOpen]);
 
   return (
     <div className="mobile-meeting-container">
-      {/* Transcription Capture */}
-      <LiveKitAudioCapture 
-        isActive={isTranscribing}
-        roomName={roomName}
-        onTranscriptionUpdate={handleTranscriptionUpdate}
-      />
+      {/* Header */}
+      <div className="mobile-meeting-header">
+        <img 
+          src={ellosuitLogo}
+          alt="ElloSuit Meeting" 
+          className="mobile-meeting-header-logo"
+        />
+      </div>
+
+      {/* Video Grid */}
+      <div className="mobile-video-grid">
+        {hasScreenShare ? (
+          <div className="mobile-screenshare-layout">
+            <div className="mobile-screenshare-main">
+              {screenShareTracks.map((trackRef: TrackReference, index: number) => (
+                <div key={`screenshare-${trackRef.participant.identity}-${index}`} className="w-full h-full">
+                  <ResizableVideoTile
+                    trackRef={trackRef}
+                    isScreenShare={true}
+                    defaultWidth={window.innerWidth - 16}
+                    defaultHeight={window.innerHeight * 0.6}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mobile-participants-strip">
+              {cameraTracks.map((trackRef: TrackReference, index: number) => (
+                <div 
+                  key={`camera-strip-${trackRef.participant.identity}-${index}`} 
+                  className="mobile-video-tile"
+                >
+                  <ResizableVideoTile
+                    trackRef={trackRef}
+                    isScreenShare={false}
+                    defaultWidth={120}
+                    defaultHeight={90}
+                  />
+                  <div className="mobile-participant-name">
+                    {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="w-full h-full grid gap-2 p-2"
+            style={{
+              gridTemplateColumns: cameraTracks.length === 1 
+                ? '1fr'
+                : cameraTracks.length === 2
+                  ? '1fr'
+                  : 'repeat(2, 1fr)',
+              gridTemplateRows: cameraTracks.length === 1
+                ? '1fr'
+                : cameraTracks.length === 2
+                  ? 'repeat(2, 1fr)'
+                  : `repeat(${Math.ceil(cameraTracks.length / 2)}, 1fr)`,
+            }}
+          >
+            {cameraTracks.map((trackRef: TrackReference, index: number) => (
+              <div 
+                key={`camera-${trackRef.participant.identity}-${index}`} 
+                className="mobile-video-tile"
+              >
+                <ResizableVideoTile
+                  trackRef={trackRef}
+                  isScreenShare={false}
+                  defaultWidth={window.innerWidth / (cameraTracks.length > 2 ? 2 : 1) - 16}
+                  defaultHeight={200}
+                />
+                <div className="mobile-participant-name">
+                  {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Controls Bar with Horizontal Scroll */}
+      <div className="mobile-controls-bar">
+        <div className="mobile-controls-scroll">
+          <button
+            onClick={toggleMic}
+            className={`mobile-control-btn ${isMicOn ? 'active' : ''}`}
+          >
+            {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            className={`mobile-control-btn ${isCameraOn ? 'active' : ''}`}
+          >
+            {isCameraOn ? <VideoIcon size={20} /> : <VideoOff size={20} />}
+          </button>
+
+          <button
+            onClick={handleScreenShare}
+            className={`mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
+          >
+            {isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />}
+          </button>
+
+          <button
+            onClick={() => openSidebar('chat')}
+            className="mobile-control-btn"
+          >
+            <MessageSquare size={20} />
+          </button>
+
+          <button
+            onClick={() => openSidebar('participants')}
+            className="mobile-control-btn"
+          >
+            <Users size={20} />
+          </button>
+
+          <button
+            onClick={() => openSidebar('transcription')}
+            className="mobile-control-btn"
+          >
+            <FileText size={20} />
+          </button>
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="mobile-control-btn"
+          >
+            <Settings size={20} />
+          </button>
+
+          <button
+            onClick={() => onShareMeeting?.()}
+            className="mobile-control-btn"
+          >
+            <Share2 size={20} />
+          </button>
+
+          <button
+            onClick={onLeave}
+            className="mobile-control-btn danger"
+          >
+            <PhoneOff size={20} />
+          </button>
+        </div>
+      </div>
 
       {/* Sidebar Overlay */}
       <div 
-        className={cn("mobile-sidebar-overlay", sidebarOpen && "visible")}
+        className={cn("mobile-sidebar-overlay", isSidebarOpen && "visible")}
         onClick={closeSidebar}
       />
 
       {/* Sidebar Sheet */}
       <div 
         ref={sidebarRef}
-        className={cn("mobile-sidebar-sheet", sidebarOpen && "open")}
+        className={cn("mobile-sidebar-sheet", isSidebarOpen && "open")}
       >
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="mobile-modal-header">
           <h3 className="text-lg font-semibold text-white">
-            {sidebarTab === 'chat' && 'Chat'}
-            {sidebarTab === 'participants' && 'Participantes'}
-            {sidebarTab === 'transcription' && 'Transcrição'}
+            {activeTab === 'chat' && 'Chat'}
+            {activeTab === 'participants' && 'Participantes'}
+            {activeTab === 'transcription' && 'Transcrição'}
           </h3>
           <Button
             variant="ghost"
@@ -259,12 +407,12 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             onClick={closeSidebar}
             className="text-white/70 hover:text-white hover:bg-white/10"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <X className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          {sidebarTab === 'chat' && (
+        <div className="mobile-modal-content">
+          {activeTab === 'chat' && (
             <div className="flex flex-col h-full">
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
@@ -296,7 +444,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                   )}
                 </div>
               </ScrollArea>
-              <div className="p-4 border-t border-white/10">
+              <div className="mobile-modal-footer">
                 <div className="flex gap-2">
                   <Input
                     value={inputMessage}
@@ -311,14 +459,14 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                     size="icon"
                     className="bg-primary hover:bg-primary/90"
                   >
-                    <Send className="h-4 w-4" />
+                    <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
           )}
 
-          {sidebarTab === 'participants' && (
+          {activeTab === 'participants' && (
             <ScrollArea className="h-full p-4">
               <div className="space-y-2">
                 {participants.map((participant) => (
@@ -348,7 +496,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             </ScrollArea>
           )}
 
-          {sidebarTab === 'transcription' && (
+          {activeTab === 'transcription' && (
             <ScrollArea className="h-full p-4">
               <div className="space-y-3">
                 {transcriptionMessages.filter(m => m.is_final).map((msg, idx) => (
@@ -379,182 +527,18 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         </div>
       </div>
 
-      {/* Clean Header - Dark Theme */}
-      <div className="mobile-meeting-header">
-        <div className="flex items-center gap-3">
-          <img 
-            src={logoEllosuit} 
-            alt="Ellosuit Meeting" 
-            className="h-5 w-auto"
-          />
-          <div className="flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-white/60" />
-            <span className="text-sm text-white/90 font-medium">{meetingDuration}</span>
-          </div>
-        </div>
-        
-        <div className="text-xs text-white/50">
-          {participants.length} {participants.length === 1 ? 'pessoa' : 'pessoas'}
-        </div>
-      </div>
+      {/* LiveKit Audio Capture for Transcription */}
+      <LiveKitAudioCapture 
+        isActive={true}
+        roomName={roomName}
+        onTranscriptionUpdate={handleTranscriptionUpdate} 
+      />
 
-      {/* Video Grid - Optimized Layout */}
-      <div className="mobile-video-grid">
-        {hasScreenShare ? (
-          <div className="flex flex-col gap-2 h-full w-full">
-            <div className="flex-1 relative">
-              {screenShareTracks.map((trackRef: TrackReference, index: number) => (
-                <div key={`screenshare-${trackRef.participant.identity}-${index}`} className="absolute inset-0">
-                  <ResizableVideoTile
-                    trackRef={trackRef}
-                    isScreenShare={true}
-                    defaultWidth={window.innerWidth - 16}
-                    defaultHeight={window.innerHeight * 0.6}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory' }}>
-              {cameraTracks.map((trackRef: TrackReference, index: number) => (
-                <div 
-                  key={`camera-strip-${trackRef.participant.identity}-${index}`} 
-                  className="mobile-video-tile flex-shrink-0"
-                  style={{ width: '120px', height: '90px', scrollSnapAlign: 'start' }}
-                >
-                  <ResizableVideoTile
-                    trackRef={trackRef}
-                    isScreenShare={false}
-                    defaultWidth={120}
-                    defaultHeight={90}
-                  />
-                  <div className="absolute bottom-2 left-2 text-xs bg-black/70 text-white px-2 py-1 rounded">
-                    {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div 
-            className="w-full h-full grid gap-2"
-            style={{
-              gridTemplateColumns: cameraTracks.length === 1 
-                ? '1fr'
-                : cameraTracks.length === 2
-                  ? '1fr'
-                  : 'repeat(2, 1fr)',
-              gridTemplateRows: cameraTracks.length === 1
-                ? '1fr'
-                : cameraTracks.length === 2
-                  ? 'repeat(2, 1fr)'
-                  : `repeat(${Math.ceil(cameraTracks.length / 2)}, 1fr)`,
-              maxHeight: '100%'
-            }}
-          >
-            {cameraTracks.map((trackRef: TrackReference, index: number) => (
-              <div 
-                key={`camera-${trackRef.participant.identity}-${index}`} 
-                className="mobile-video-tile relative"
-                style={{ 
-                  minHeight: cameraTracks.length === 1 ? '100%' : '200px',
-                  maxHeight: '100%'
-                }}
-              >
-                <ResizableVideoTile
-                  trackRef={trackRef}
-                  isScreenShare={false}
-                  defaultWidth={window.innerWidth / (cameraTracks.length > 2 ? 2 : 1) - 16}
-                  defaultHeight={cameraTracks.length === 1 
-                    ? window.innerHeight * 0.7 
-                    : (window.innerHeight * 0.7) / Math.ceil(cameraTracks.length / 2)
-                  }
-                />
-                <div className="absolute bottom-3 left-3 text-sm bg-black/80 text-white px-3 py-1.5 rounded-full font-medium">
-                  {trackRef.participant.name || `Participante ${trackRef.participant.identity.slice(-4)}`}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Action Buttons - Clean Design */}
-      <div className="mobile-fab-container">
-        <button 
-          onClick={() => openSidebar('chat')}
-          className="mobile-fab"
-        >
-          <MessageSquare className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <div className="mobile-fab-badge">{unreadCount}</div>
-          )}
-        </button>
-
-        <button 
-          onClick={() => openSidebar('participants')}
-          className="mobile-fab"
-        >
-          <Users className="h-5 w-5" />
-          <div className="mobile-fab-badge">{participants.length}</div>
-        </button>
-
-        <button 
-          onClick={() => openSidebar('transcription')}
-          className="mobile-fab"
-        >
-          <FileText className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Clean Control Bar - Bottom */}
-      <div className="mobile-controls-bar">
-        <div className="mobile-controls-grid">
-          <button
-            onClick={toggleMic}
-            className={cn(
-              "mobile-control-btn",
-              micEnabled ? "active" : "danger"
-            )}
-          >
-            {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </button>
-
-          <button
-            onClick={toggleCamera}
-            className={cn(
-              "mobile-control-btn",
-              cameraEnabled ? "active" : "danger"
-            )}
-          >
-            {cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-          </button>
-
-          <button
-            onClick={handleScreenShare}
-            className={cn(
-              "mobile-control-btn",
-              isScreenSharing && "active"
-            )}
-          >
-            <Monitor className="h-5 w-5" />
-          </button>
-
-          <button
-            onClick={onShareMeeting}
-            className="mobile-control-btn active"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
-
-          <button
-            onClick={onLeave}
-            className="mobile-control-btn danger"
-          >
-            <Phone className="h-5 w-5 rotate-[135deg]" />
-          </button>
-        </div>
-      </div>
-
+      {/* Device Settings Modal */}
+      <DeviceSettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 };

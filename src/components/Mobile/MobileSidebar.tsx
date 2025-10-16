@@ -15,12 +15,15 @@ import {
   Zap,
   BarChart3,
   Menu,
-  X
+  ChevronDown,
+  ChevronRight,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const menuGroups = [
   {
@@ -28,10 +31,17 @@ const menuGroups = [
     label: 'Sistema',
     items: [
       { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-      { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
-      { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-      { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
-      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
+      { 
+        id: 'contatos', 
+        label: 'Contatos',
+        icon: Users,
+        subItems: [
+          { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
+          { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+          { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
+          { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
+        ]
+      },
       { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
       { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
     ]
@@ -52,7 +62,15 @@ const menuGroups = [
     label: 'Ello Omni',
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
-      { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email Marketing' }
+      { 
+        id: 'email-group',
+        label: 'Email',
+        icon: Mail,
+        subItems: [
+          { id: 'email-default', path: '/dashboard/email', icon: Mail, label: 'Email padrão' },
+          { id: 'email-marketing', path: '/dashboard/email-marketing', icon: Mail, label: 'Email marketing' }
+        ]
+      }
     ]
   },
   {
@@ -88,13 +106,22 @@ const menuGroups = [
     items: [
       { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
       { id: 'customize', path: '/dashboard/personalizar', icon: Settings, label: 'Personalização' },
-      { id: 'security', path: '/dashboard/seguranca', icon: Settings, label: 'Segurança & Privacidade' }
+      { id: 'security', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança & Privacidade' }
     ]
   }
 ];
 
+interface MenuItem {
+  id: string;
+  path?: string;
+  icon: any;
+  label: string;
+  subItems?: MenuItem[];
+}
+
 export function MobileSidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -109,13 +136,88 @@ export function MobileSidebar() {
     setIsOpen(false);
   };
 
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const IconComponent = item.icon;
+    
+    if (item.subItems && item.subItems.length > 0) {
+      const isOpen = openGroups[item.id];
+      const hasActiveChild = item.subItems.some(subItem => subItem.path && isActive(subItem.path));
+      
+      return (
+        <Collapsible key={item.id} open={isOpen} onOpenChange={() => toggleGroup(item.id)}>
+          <CollapsibleTrigger className={`
+            w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
+            ${hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}
+          `}>
+            <div className="flex items-center">
+              <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </div>
+            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="ml-8 mt-1 space-y-1">
+            {item.subItems.map(subItem => {
+              const SubIconComponent = subItem.icon;
+              const active = subItem.path ? isActive(subItem.path) : false;
+              
+              return (
+                <Link
+                  key={subItem.id}
+                  to={subItem.path || '#'}
+                  onClick={handleLinkClick}
+                  className={`
+                    flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                    ${active 
+                      ? 'bg-white/20 text-white' 
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    }
+                  `}
+                >
+                  <SubIconComponent className="h-4 w-4 mr-3 flex-shrink-0" />
+                  <span className="truncate">{subItem.label}</span>
+                </Link>
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
+      );
+    }
+    
+    const active = item.path ? isActive(item.path) : false;
+    
+    return (
+      <Link
+        key={item.id}
+        to={item.path || '#'}
+        onClick={handleLinkClick}
+        className={`
+          flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
+          ${active 
+            ? 'bg-white/20 text-white' 
+            : 'text-white/80 hover:bg-white/10 hover:text-white'
+          }
+        `}
+      >
+        <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-50 bg-primary/10 hover:bg-primary/20 text-primary"
+          className="text-white hover:bg-white/10"
         >
           <Menu className="h-6 w-6" />
         </Button>
@@ -148,28 +250,7 @@ export function MobileSidebar() {
               </h3>
               
               <nav className="space-y-1">
-                {group.items.map((item) => {
-                  const IconComponent = item.icon;
-                  const active = isActive(item.path);
-                  
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.path}
-                      onClick={handleLinkClick}
-                      className={`
-                        flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
-                        ${active 
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/80 hover:bg-white/10 hover:text-white'
-                        }
-                      `}
-                    >
-                      <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                {group.items.map(renderMenuItem)}
               </nav>
             </div>
           ))}

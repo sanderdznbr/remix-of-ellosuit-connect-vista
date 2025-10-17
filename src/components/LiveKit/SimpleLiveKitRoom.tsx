@@ -872,7 +872,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <RoomContextCapture onRoomReady={(room) => {
             console.log('Room ready:', room.name);
             roomRef.current = room;
-            setShowInviteModal(true);
           }} />
           <RoomAudioRenderer />
           <AudioDevicePersistence />

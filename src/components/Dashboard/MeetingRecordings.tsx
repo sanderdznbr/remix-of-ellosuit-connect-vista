@@ -257,17 +257,17 @@ const MeetingRecordings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-[400px] flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando gravações...</p>
+          <p className="text-foreground">Carregando gravações...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-background">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

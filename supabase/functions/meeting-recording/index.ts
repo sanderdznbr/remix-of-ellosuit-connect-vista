@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
-import { RoomCompositeEgressRequest, EgressClient } from 'npm:livekit-server-sdk@2.6.1';
+import { EgressClient, EncodedFileOutput, EncodedFileType } from 'npm:livekit-server-sdk@2.13.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,27 +100,23 @@ serve(async (req) => {
       }
 
       try {
-        // Configure RoomComposite Egress request with proper output specification
+        // Configure RoomComposite Egress request using v2 API format
         // LiveKit salvará no próprio storage temporário
         // O webhook irá fazer download e upload para Supabase
-        const egressRequest: RoomCompositeEgressRequest = {
-          roomName: roomName,
-          layout: 'speaker-dark', // Valid layouts: grid, speaker, single-speaker (+ -light/-dark suffix)
+        const fileOutput = new EncodedFileOutput({
+          fileType: EncodedFileType.MP4,
+          filepath: filePath,
+        });
+
+        console.log('Starting LiveKit Egress with file output:', filePath);
+
+        // Start recording via LiveKit SDK using v2 format
+        const egressInfo = await egressClient.startRoomCompositeEgress(roomName, {
+          file: fileOutput,
+          layout: 'speaker-dark',
           audioOnly: false,
           videoOnly: false,
-          // Correct output configuration using file_outputs
-          fileOutputs: [
-            {
-              fileType: 'MP4', // MP4, OGG, or WEBM
-              filepath: filePath,
-            },
-          ],
-        };
-
-        console.log('Starting LiveKit Egress with config:', JSON.stringify(egressRequest, null, 2));
-
-        // Start recording via LiveKit SDK
-        const egressInfo = await egressClient.startRoomCompositeEgress(roomName, egressRequest);
+        });
         
         console.log('LiveKit recording started:', egressInfo);
 

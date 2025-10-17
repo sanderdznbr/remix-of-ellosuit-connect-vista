@@ -32,6 +32,7 @@ import TranscriptionModal from './TranscriptionModal';
 import { MeetingAIChat } from './MeetingAIChat';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import InviteModal from './InviteModal';
+import RecordingConsentDialog from './RecordingConsentDialog';
 import '@/styles/livekit.css';
 import MeetingLayout from './MeetingLayout';
 import '@/styles/meeting-dark-theme.css';
@@ -95,6 +96,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingId, setRecordingId] = useState<string>('');
   const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
+  const [showRecordingConsent, setShowRecordingConsent] = useState(false);
+  const [pendingRecordingRequest, setPendingRecordingRequest] = useState(false);
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const { user } = useAuth();
@@ -470,35 +473,200 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTranscriptionMessages(prev => [...prev, message]);
   }, []);
 
-  const startRecording = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('meeting-recording', {
-        body: {
-          action: 'start',
-          roomName: roomName,
-          userId: user?.id,
-          companyId: companyId
+  // Listen for recording consent requests via Realtime
+  useEffect(() => {
+    if (!currentRoomId || isHost) return; // Host doesn't need to see their own request
+
+    const channel = supabase
+      .channel(`recording-consent:${currentRoomId}`)
+      .on(
+        'broadcast',
+        { event: 'recording-request' },
+        () => {
+          console.log('📢 Received recording consent request');
+          setShowRecordingConsent(true);
         }
-      });
+      )
+      .subscribe();
 
-      if (error) throw error;
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentRoomId, isHost]);
 
-      setIsRecording(true);
-      setRecordingId(data.recording_id);
-      setLivekitRecordingId(data.livekit_recording_id || '');
+  const checkAllConsents = async (): Promise<boolean> => {
+    if (!currentRoomId) return false;
 
+    // Get all participants in the room
+    const { data: participants } = await supabase
+      .from('room_participants')
+      .select('id, display_name')
+      .eq('room_id', currentRoomId)
+      .is('left_at', null);
+
+    if (!participants || participants.length === 0) return false;
+
+    // Get all consents
+    const { data: consents } = await supabase
+      .from('recording_consents')
+      .select('*')
+      .eq('room_id', currentRoomId);
+
+    // Check if all participants have consented
+    const allConsented = participants.every(p => 
+      consents?.some(c => c.participant_name === p.display_name && c.consented === true)
+    );
+
+    return allConsented;
+  };
+
+  const startRecording = async () => {
+    if (!isHost) {
       toast({
-        title: "Gravação iniciada",
-        description: "A reunião está sendo gravada",
-      });
-    } catch (error) {
-      console.error('Erro ao iniciar gravação:', error);
-      toast({
-        title: "Erro ao gravar",
-        description: "Não foi possível iniciar a gravação",
+        title: "Permissão negada",
+        description: "Apenas o anfitrião pode iniciar gravação",
         variant: "destructive",
       });
+      return;
     }
+
+    // Clear previous consents
+    await supabase
+      .from('recording_consents')
+      .delete()
+      .eq('room_id', currentRoomId);
+
+    // Broadcast recording request to all participants
+    const channel = supabase.channel(`recording-consent:${currentRoomId}`);
+    await channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.send({
+          type: 'broadcast',
+          event: 'recording-request',
+          payload: {},
+        });
+      }
+    });
+
+    // Host automatically consents
+    await supabase
+      .from('recording_consents')
+      .insert({
+        room_id: currentRoomId,
+        participant_name: participantName,
+        consented: true,
+      });
+
+    setPendingRecordingRequest(true);
+
+    // Wait for all participants to respond (max 30 seconds)
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds
+
+    const checkInterval = setInterval(async () => {
+      attempts++;
+
+      const allConsented = await checkAllConsents();
+
+      if (allConsented) {
+        clearInterval(checkInterval);
+        setPendingRecordingRequest(false);
+
+        // Start actual recording
+        try {
+          const { data, error } = await supabase.functions.invoke('meeting-recording', {
+            body: {
+              action: 'start',
+              roomName: roomName,
+              userId: user?.id,
+              companyId: companyId
+            }
+          });
+
+          if (error) throw error;
+
+          setIsRecording(true);
+          setRecordingId(data.recording_id);
+          setLivekitRecordingId(data.livekit_recording_id || '');
+
+          toast({
+            title: "Gravação iniciada",
+            description: "Todos os participantes consentiram. A reunião está sendo gravada.",
+          });
+        } catch (error) {
+          console.error('Erro ao iniciar gravação:', error);
+          toast({
+            title: "Erro ao gravar",
+            description: "Não foi possível iniciar a gravação",
+            variant: "destructive",
+          });
+        }
+
+        return;
+      }
+
+      // Check if anyone rejected
+      const { data: consents } = await supabase
+        .from('recording_consents')
+        .select('*')
+        .eq('room_id', currentRoomId)
+        .eq('consented', false);
+
+      if (consents && consents.length > 0) {
+        clearInterval(checkInterval);
+        setPendingRecordingRequest(false);
+
+        toast({
+          title: "Gravação cancelada",
+          description: "Um participante não consentiu com a gravação",
+          variant: "destructive",
+        });
+
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        setPendingRecordingRequest(false);
+
+        toast({
+          title: "Tempo esgotado",
+          description: "Nem todos os participantes responderam a tempo",
+          variant: "destructive",
+        });
+      }
+    }, 1000);
+  };
+
+  const handleRecordingConsent = async () => {
+    await supabase
+      .from('recording_consents')
+      .insert({
+        room_id: currentRoomId,
+        participant_name: participantName,
+        consented: true,
+      });
+
+    setShowRecordingConsent(false);
+  };
+
+  const handleRecordingReject = async () => {
+    await supabase
+      .from('recording_consents')
+      .insert({
+        room_id: currentRoomId,
+        participant_name: participantName,
+        consented: false,
+      });
+
+    setShowRecordingConsent(false);
+
+    // Notify host
+    toast({
+      title: "Gravação negada",
+      description: "Você não autorizou a gravação desta reunião",
+      variant: "destructive",
+    });
   };
 
   const stopRecording = async () => {
@@ -918,6 +1086,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 </div>
               )}
 
+              {pendingRecordingRequest && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                  <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
+                    <div className="mb-4">
+                      <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                        <div className="w-8 h-8 bg-red-600 rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Aguardando consentimento...</h3>
+                    <p className="text-muted-foreground">
+                      Aguardando todos os participantes concordarem com a gravação da reunião.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Meeting Layout - Clean and Simple */}
               <MeetingLayout
                 roomName={roomName}
@@ -988,6 +1172,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             isOpen={showInviteModal}
             onClose={() => setShowInviteModal(false)}
             meetingLink={`${window.location.origin}/meeting/${roomName}`}
+          />
+
+          <RecordingConsentDialog
+            isOpen={showRecordingConsent}
+            onConsent={handleRecordingConsent}
+            onReject={handleRecordingReject}
+            roomId={currentRoomId}
+            participantName={participantName}
           />
         </LiveKitRoom>
         </div>

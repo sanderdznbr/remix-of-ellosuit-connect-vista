@@ -1388,6 +1388,38 @@ export type Database = {
           },
         ]
       }
+      recording_consents: {
+        Row: {
+          consented: boolean
+          created_at: string
+          id: string
+          participant_name: string
+          room_id: string
+        }
+        Insert: {
+          consented: boolean
+          created_at?: string
+          id?: string
+          participant_name: string
+          room_id: string
+        }
+        Update: {
+          consented?: boolean
+          created_at?: string
+          id?: string
+          participant_name?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_consents_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_chat_messages: {
         Row: {
           created_at: string

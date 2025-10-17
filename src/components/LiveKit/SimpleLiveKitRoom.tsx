@@ -101,6 +101,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [isInitialConnection, setIsInitialConnection] = useState(true);
   const [connectionStable, setConnectionStable] = useState(false);
+  const hasCheckedHostRef = useRef(false); // Prevenir múltiplas execuções
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const connectionTimeoutRef = useRef<NodeJS.Timeout>();
@@ -119,6 +120,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
   // Check if user is the first to enter (becomes host automatically)
   useEffect(() => {
+    // Prevenir múltiplas execuções
+    if (hasCheckedHostRef.current) {
+      console.log('⚠️ [SimpleLiveKitRoom] Checagem já executada, ignorando...');
+      return;
+    }
+    
+    hasCheckedHostRef.current = true;
+    
     const checkFirstParticipant = async () => {
       console.log('🔍 [SimpleLiveKitRoom] === VERIFICANDO PRIMEIRO PARTICIPANTE ===');
       
@@ -882,17 +891,32 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       timeSinceConnect: livekitConnectedAt > 0 ? Date.now() - livekitConnectedAt : 0
     });
     
-    // PROTEÇÃO CRÍTICA: Ignorar TODAS as desconexões nos primeiros 20 segundos
+    // PROTEÇÃO CRÍTICA: Ignorar TODAS as desconexões nos primeiros 30 segundos
     if (livekitConnectedAt > 0) {
       const connectionTime = Date.now() - livekitConnectedAt;
       console.log('⏱️ [handleDisconnected] Tempo desde conexão:', connectionTime, 'ms');
       
-      if (connectionTime < 20000) {
-        console.warn('🛡️ [handleDisconnected] BLOQUEADO - Desconexão nos primeiros 20 segundos!');
+      if (connectionTime < 30000) {
+        console.warn('🛡️ [handleDisconnected] BLOQUEADO - Desconexão nos primeiros 30 segundos!');
         console.log('🛡️ [handleDisconnected] Ignorando para prevenir desconexão prematura');
+        console.log('🔄 [handleDisconnected] Conexão será mantida para estabilização');
         toast({
           title: "Estabilizando conexão...",
           description: "Aguarde enquanto estabelecemos a conexão com a sala",
+        });
+        return;
+      }
+    }
+    
+    // Proteção extra: se for o host, adicionar mais validação
+    if (isHost && livekitConnectedAt > 0) {
+      const connectionTime = Date.now() - livekitConnectedAt;
+      if (connectionTime < 45000) {
+        console.warn('👑 [handleDisconnected] HOST BLOQUEADO - Desconexão nos primeiros 45 segundos!');
+        console.log('🛡️ [handleDisconnected] Hosts precisam de mais tempo para estabilizar');
+        toast({
+          title: "Estabilizando como anfitrião...",
+          description: "Configurando a sala para você",
         });
         return;
       }
@@ -1151,11 +1175,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 connectionTimeoutRef.current = undefined;
               }
               
-              // Aguardar 5 segundos para marcar a conexão como estável
+              // Aguardar 10 segundos para marcar a conexão como estável (mais tempo para hosts)
+              const stabilizationTime = isHost ? 10000 : 7000;
+              console.log(`⏱️ [LiveKitRoom] Aguardando ${stabilizationTime/1000}s para estabilizar (${isHost ? 'HOST' : 'GUEST'})`);
+              
               setTimeout(() => {
                 console.log('✅ [LiveKitRoom] ⭐ CONEXÃO ESTABILIZADA - proteção ativa');
                 setConnectionStable(true);
-              }, 5000);
+              }, stabilizationTime);
               
               // Mostrar aviso se entrou sem mídia
               console.log('🎬 [LiveKitRoom] Verificando status da mídia:', {
@@ -1204,12 +1231,19 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                   tentativa: context.retryCount,
                   tempoDecorrido: context.elapsedMs,
                   isInitialConnection,
-                  connectionStable
+                  connectionStable,
+                  isHost
                 });
                 
                 // Durante a conexão inicial, tentar mais agressivamente
                 if (isInitialConnection || !connectionStable) {
-                  console.log('🔄 [LiveKitRoom] Conexão inicial - retry rápido');
+                  console.log('🔄 [LiveKitRoom] Conexão inicial - retry rápido (300ms)');
+                  return 300;
+                }
+                
+                // Se for o host, ser mais persistente
+                if (isHost) {
+                  console.log('👑 [LiveKitRoom] Host - retry persistente');
                   return 500;
                 }
                 

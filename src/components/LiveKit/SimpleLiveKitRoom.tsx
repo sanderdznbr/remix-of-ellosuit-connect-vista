@@ -1018,6 +1018,16 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTimeout(() => onLeave(), 2000);
   }, [toast, onLeave]);
 
+  console.log('🎬 [Render] Estados atuais:', {
+    showPreJoin,
+    isHost,
+    isWaitingApproval,
+    connectingToRoom,
+    hasToken: !!token,
+    hasServerUrl: !!serverUrl,
+    isCheckingHost
+  });
+
   // Show loading while checking host status
   if (isCheckingHost) {
     console.log('🔄 [Render] Mostrando tela de verificação de acesso');
@@ -1032,15 +1042,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       </div>
     );
   }
-
-  console.log('🎬 [Render] Estados atuais:', {
-    showPreJoin,
-    isHost,
-    isWaitingApproval,
-    connectingToRoom,
-    hasToken: !!token,
-    hasServerUrl: !!serverUrl
-  });
 
   return (
     <div style={{ backgroundColor: '#101010', minHeight: '100vh', width: '100%' }}>

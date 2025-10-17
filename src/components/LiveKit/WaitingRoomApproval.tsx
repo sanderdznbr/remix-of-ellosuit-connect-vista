@@ -24,6 +24,30 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const fetchWaitingParticipants = React.useCallback(async () => {
+    try {
+      console.log('🔍 [WaitingRoomApproval] Buscando participantes aguardando para room:', roomId);
+      
+      const { data, error } = await supabase
+        .from('room_participants')
+        .select('id, display_name, joined_at')
+        .eq('room_id', roomId)
+        .eq('waiting_approval', true)
+        .is('left_at', null)
+        .order('joined_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ [WaitingRoomApproval] Erro ao buscar:', error);
+        throw error;
+      }
+      
+      console.log('✅ [WaitingRoomApproval] Participantes encontrados:', data?.length || 0, data);
+      setWaitingParticipants(data || []);
+    } catch (error) {
+      console.error('❌ [WaitingRoomApproval] Erro fatal ao buscar participantes aguardando:', error);
+    }
+  }, [roomId]);
+
   useEffect(() => {
     if (!isHost) return;
 
@@ -118,33 +142,9 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
       }
       supabase.removeChannel(channel);
     };
-  }, [roomId, isHost, toast]);
+  }, [roomId, isHost, toast, fetchWaitingParticipants]);
 
-  const fetchWaitingParticipants = async () => {
-    try {
-      console.log('🔍 [WaitingRoomApproval] Buscando participantes aguardando para room:', roomId);
-      
-      const { data, error } = await supabase
-        .from('room_participants')
-        .select('id, display_name, joined_at')
-        .eq('room_id', roomId)
-        .eq('waiting_approval', true)
-        .is('left_at', null)
-        .order('joined_at', { ascending: true });
-
-      if (error) {
-        console.error('❌ [WaitingRoomApproval] Erro ao buscar:', error);
-        throw error;
-      }
-      
-      console.log('✅ [WaitingRoomApproval] Participantes encontrados:', data?.length || 0, data);
-      setWaitingParticipants(data || []);
-    } catch (error) {
-      console.error('❌ [WaitingRoomApproval] Erro fatal ao buscar participantes aguardando:', error);
-    }
-  };
-
-  const approveParticipant = async (participantId: string, participantName: string) => {
+  const approveParticipant = React.useCallback(async (participantId: string, participantName: string) => {
     try {
       console.log('🟢 Tentando aprovar participante:', { participantId, participantName, roomId });
       
@@ -179,9 +179,9 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
         variant: "destructive",
       });
     }
-  };
+  }, [roomId, toast, fetchWaitingParticipants]);
 
-  const rejectParticipant = async (participantId: string, participantName: string) => {
+  const rejectParticipant = React.useCallback(async (participantId: string, participantName: string) => {
     try {
       console.log('🔴 Tentando rejeitar participante:', { participantId, participantName, roomId });
       
@@ -217,9 +217,12 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
         variant: "destructive",
       });
     }
-  };
+  }, [roomId, toast, fetchWaitingParticipants]);
 
-  if (!isHost || waitingParticipants.length === 0) return null;
+  // Não renderizar nada se não for host ou não houver participantes
+  if (!isHost || waitingParticipants.length === 0) {
+    return null;
+  }
 
   return (
     <div className="fixed top-20 right-6 w-80 z-50 animate-in slide-in-from-right duration-300">

@@ -84,7 +84,8 @@ serve(async (req) => {
             company_id: companyId,
             created_by: userId,
             title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
-            file_url: `${bucketName}/${filePath}`,
+            file_url: '', // Será preenchido pelo webhook do LiveKit
+            livekit_recording_id: '', // Será atualizado após iniciar egress
           })
           .select()
           .single();
@@ -100,6 +101,8 @@ serve(async (req) => {
 
       try {
         // Configure RoomComposite Egress request with proper output specification
+        // LiveKit salvará no próprio storage temporário
+        // O webhook irá fazer download e upload para Supabase
         const egressRequest: RoomCompositeEgressRequest = {
           roomName: roomName,
           layout: 'speaker-dark', // Valid layouts: grid, speaker, single-speaker (+ -light/-dark suffix)
@@ -110,15 +113,6 @@ serve(async (req) => {
             {
               fileType: 'MP4', // MP4, OGG, or WEBM
               filepath: filePath,
-              // Upload directly to Supabase Storage
-              s3: {
-                accessKey: '', // Will use presigned URL instead
-                secret: '',
-                region: '',
-                endpoint: `${SUPABASE_URL}/storage/v1/s3/${bucketName}`,
-                bucket: bucketName,
-                forcePathStyle: true,
-              },
             },
           ],
         };
@@ -129,6 +123,14 @@ serve(async (req) => {
         const egressInfo = await egressClient.startRoomCompositeEgress(roomName, egressRequest);
         
         console.log('LiveKit recording started:', egressInfo);
+
+        // Atualizar registro com LiveKit Recording ID
+        if (recording) {
+          await supabase
+            .from('meeting_recordings')
+            .update({ livekit_recording_id: egressInfo.egressId })
+            .eq('id', recording.id);
+        }
 
         return new Response(JSON.stringify({ 
           success: true, 

@@ -42,6 +42,9 @@ verify_jwt = false
 [functions.meeting-recording]
 verify_jwt = false
 
+[functions.livekit-webhook]
+verify_jwt = false
+
 [functions.realtime-transcription]
 verify_jwt = false
 

@@ -143,7 +143,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       // Parar as tracks imediatamente (só precisávamos da permissão)
       stream.getTracks().forEach(track => track.stop());
       
-      setRequestingPermissions(false);
+      // NÃO desativar requestingPermissions aqui - manter loading ativo
+      // será desativado junto com isCheckingHost após generateToken
       return true;
     } catch (error: any) {
       console.error('❌ [SimpleLiveKitRoom] Erro ao solicitar permissões:', error);
@@ -244,9 +245,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           
           if (!permissionsGranted) {
             console.error('❌ [SimpleLiveKitRoom] Permissões negadas - abortando entrada');
+            setRequestingPermissions(false);
             setIsCheckingHost(false);
             return; // Não entra na sala sem permissões
           }
+          // requestingPermissions ainda está true aqui - vai desativar depois
           // ================================================
           
           // Create participant record as host
@@ -298,12 +301,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           
           setShowPreJoin(false);
           
-          // IMPORTANTE: Manter isCheckingHost=true até generateToken ser chamado
-          // para evitar tela preta durante a geração do token
+          // IMPORTANTE: Manter requestingPermissions=true e isCheckingHost=true
+          // até generateToken ser chamado para evitar tela preta
           console.log('🎫 [SimpleLiveKitRoom] Gerando token para host (mantendo loading ativo)...');
           await generateToken(userName);
           
-          // Só desativar loading DEPOIS que o token foi gerado
+          // Agora sim, desativar TODOS os loadings após token gerado
+          setRequestingPermissions(false);
           setIsCheckingHost(false);
           
           console.log('✅ [SimpleLiveKitRoom] ✨ HOST (primeiro a entrar) na sala com sucesso!');

@@ -31,6 +31,7 @@ import DeviceSettingsModal from './DeviceSettingsModal';
 import TranscriptionModal from './TranscriptionModal';
 import { MeetingAIChat } from './MeetingAIChat';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
+import InviteModal from './InviteModal';
 import '@/styles/livekit.css';
 import MeetingLayout from './MeetingLayout';
 import '@/styles/meeting-dark-theme.css';
@@ -90,6 +91,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [meetingStartTime] = useState<number>(Date.now());
   const [livekitConnectedAt, setLivekitConnectedAt] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const { user } = useAuth();
@@ -789,6 +791,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <RoomContextCapture onRoomReady={(room) => {
             console.log('Room ready:', room.name);
             roomRef.current = room;
+            setShowInviteModal(true);
           }} />
           <RoomAudioRenderer />
           <AudioDevicePersistence />
@@ -895,6 +898,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             transcriptionMessages={transcriptionMessages}
             roomName={roomName}
             savedAudioUrl={savedAudioUrl}
+          />
+
+          <InviteModal
+            isOpen={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            meetingLink={`${window.location.origin}/meeting/${roomName}`}
           />
         </LiveKitRoom>
         </div>

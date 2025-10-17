@@ -195,7 +195,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
         {screenShareTrack ? (
           <div className="h-full flex flex-col lg:flex-row gap-2 p-2">
             {/* Screen share - área principal responsiva */}
-            {screenShareTrack.publication && (
+            {screenShareTrack && screenShareTrack.publication && (
               <div 
                 className="flex-1 bg-black rounded-lg overflow-hidden relative"
                 style={{ 
@@ -205,28 +205,30 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                 }}
               >
                 <VideoTrack
-                  trackRef={screenShareTrack}
+                  trackRef={{
+                    participant: screenShareTrack.participant,
+                    source: Track.Source.ScreenShare,
+                    publication: screenShareTrack.publication
+                  }}
                   className="w-full h-full object-contain"
                 />
               </div>
             )}
-            </div>
 
             {/* Participants - lado direito no desktop, embaixo no mobile */}
             <div className="flex-shrink-0 lg:w-64 overflow-y-auto lg:overflow-x-hidden overflow-x-auto pb-2 lg:pb-0">
               <div className="flex lg:flex-col gap-2 min-w-min lg:min-w-0 px-2 lg:px-0">
                 {cameraParticipants.map((participant) => {
                   const cameraTrack = participant.getTrackPublication(Track.Source.Camera);
-                  const track = cameraTrack || participant.getTrackPublication(Track.Source.Camera)?.track;
                   
                   return (
                     <div
                       key={participant.identity}
                       className="relative flex-shrink-0 w-32 h-24 lg:w-full lg:h-auto lg:aspect-video bg-[#1f1f1f] rounded-lg overflow-hidden"
                     >
-                      {cameraTrack && cameraTrack.publication ? (
+                      {cameraTrack ? (
                         <VideoTrack
-                          trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack.publication }}
+                          trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -259,16 +261,15 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             ) : (
               cameraParticipants.map((participant) => {
                 const cameraTrack = participant.getTrackPublication(Track.Source.Camera);
-                const track = cameraTrack || participant.getTrackPublication(Track.Source.Camera)?.track;
                 
                 return (
                   <div
                     key={participant.identity}
                     className="relative bg-[#1f1f1f] rounded-lg overflow-hidden flex items-center justify-center"
                   >
-                    {cameraTrack && cameraTrack.publication ? (
+                    {cameraTrack ? (
                       <VideoTrack
-                        trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack.publication }}
+                        trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
                         className="w-full h-full object-cover"
                       />
                     ) : (

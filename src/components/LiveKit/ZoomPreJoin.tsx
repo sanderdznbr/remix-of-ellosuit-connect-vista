@@ -26,6 +26,8 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [permissionError, setPermissionError] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -38,13 +40,33 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
         });
         console.log('✅ [ZoomPreJoin] Acesso concedido');
         setStream(mediaStream);
+        setPermissionDenied(false);
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ [ZoomPreJoin] Erro ao acessar dispositivos:', error);
-        // Mesmo sem câmera, permitir entrar (só áudio ou sem nada)
-        setVideoEnabled(false);
+        
+        // Tratar diferentes tipos de erro de permissão
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          console.warn('⚠️ [ZoomPreJoin] Permissões negadas pelo usuário');
+          setPermissionDenied(true);
+          setPermissionError('Você negou o acesso à câmera e microfone. Você pode entrar sem mídia.');
+          setVideoEnabled(false);
+          setAudioEnabled(false);
+        } else if (error.name === 'NotFoundError') {
+          console.warn('⚠️ [ZoomPreJoin] Dispositivos não encontrados');
+          setPermissionDenied(true);
+          setPermissionError('Nenhuma câmera ou microfone foi encontrado no seu dispositivo.');
+          setVideoEnabled(false);
+          setAudioEnabled(false);
+        } else {
+          console.error('❌ [ZoomPreJoin] Erro desconhecido:', error.name);
+          setPermissionDenied(true);
+          setPermissionError('Erro ao acessar dispositivos. Você pode entrar sem mídia.');
+          setVideoEnabled(false);
+          setAudioEnabled(false);
+        }
       }
     };
 
@@ -113,6 +135,18 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </p>
         </div>
 
+        {/* Permission Denied Warning */}
+        {permissionDenied && (
+          <div className="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+            <p className="text-sm text-yellow-200 text-center">
+              ⚠️ {permissionError}
+            </p>
+            <p className="text-xs text-yellow-300/70 text-center mt-2">
+              Você pode entrar na reunião sem áudio/vídeo.
+            </p>
+          </div>
+        )}
+
         {/* Video Preview */}
         <div className="relative w-full rounded-xl overflow-hidden mb-6 border border-gray-700 bg-[#2a2a2a]" style={{ height: '280px' }}>
           {videoEnabled && stream ? (
@@ -128,7 +162,7 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
               <div className="text-center">
                 <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-400">
-                  {!stream ? 'Câmera não disponível' : 'Câmera desligada'}
+                  {permissionDenied ? 'Permissão negada' : (!stream ? 'Câmera não disponível' : 'Câmera desligada')}
                 </p>
               </div>
             </div>

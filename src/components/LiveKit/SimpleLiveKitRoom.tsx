@@ -216,6 +216,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
           // Generate token and enter room directly (NO PRE-JOIN)
           console.log('🎫 [SimpleLiveKitRoom] Gerando token para host...');
+          
+          // Definir configurações padrão para o host (já que não há pre-join)
+          setPreJoinChoices({
+            username: userName,
+            videoEnabled: true,
+            audioEnabled: true
+          });
+          
           setShowPreJoin(false);
           setIsCheckingHost(false);
           await generateToken(userName);
@@ -1079,6 +1087,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onConnected={() => {
               console.log('🟢 [LiveKitRoom] === CONECTADO COM SUCESSO ===');
               console.log('🎉 [LiveKitRoom] Token válido, sessão iniciada');
+              console.log('🎬 [LiveKitRoom] Preferências de mídia:', {
+                video: preJoinChoices?.videoEnabled ?? true,
+                audio: preJoinChoices?.audioEnabled ?? true
+              });
               const now = Date.now();
               setLivekitConnectedAt(now);
               
@@ -1099,10 +1111,19 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 setConnectionStable(true);
               }, 5000);
               
-              toast({
-                title: "Conectado!",
-                description: "Você está na reunião",
-              });
+              // Mostrar aviso se entrou sem mídia
+              if (!preJoinChoices?.videoEnabled && !preJoinChoices?.audioEnabled) {
+                toast({
+                  title: "Conectado sem mídia",
+                  description: "Você entrou na reunião sem câmera e microfone",
+                  variant: "default",
+                });
+              } else {
+                toast({
+                  title: "Conectado!",
+                  description: "Você está na reunião",
+                });
+              }
             }}
           options={{
             adaptiveStream: true,

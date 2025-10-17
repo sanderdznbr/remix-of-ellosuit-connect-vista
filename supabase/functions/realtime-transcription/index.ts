@@ -15,15 +15,24 @@ const supabase = createClient(
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('📥 Nova requisição WebSocket recebida');
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+
   const upgradeHeader = req.headers.get("upgrade") || "";
   if (upgradeHeader.toLowerCase() !== "websocket") {
-    return new Response("Expected WebSocket connection", { status: 400 });
+    console.error('❌ Requisição não é WebSocket. Upgrade header:', upgradeHeader);
+    return new Response("Expected WebSocket connection", { 
+      status: 400,
+      headers: corsHeaders 
+    });
   }
 
+  console.log('✅ Upgrade para WebSocket aceito');
   const { socket, response } = Deno.upgradeWebSocket(req);
   
   let isTranscribing = false;

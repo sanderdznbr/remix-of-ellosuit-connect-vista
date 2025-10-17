@@ -255,13 +255,23 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   const connectWebSocket = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
-        const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
+        const wsUrl = `wss://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/realtime-transcription`;
         console.log('🔌 Conectando WebSocket:', wsUrl);
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
+        // Timeout se não conectar em 10 segundos
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) {
+            console.error('⏱️ Timeout ao conectar WebSocket');
+            ws.close();
+            reject(new Error('Timeout de conexão'));
+          }
+        }, 10000);
+
         ws.onopen = () => {
+          clearTimeout(connectionTimeout);
           console.log('✅ WebSocket conectado para transcrição');
           setIsConnected(true);
           
@@ -318,6 +328,8 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
                 description: data.error,
                 variant: "destructive"
               });
+            } else if (data.type === 'transcription_started') {
+              console.log('✅ Servidor confirmou início da transcrição');
             }
           } catch (error) {
             console.error('❌ Erro ao processar mensagem:', error);
@@ -325,26 +337,25 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         };
 
         ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           console.error('❌ WebSocket error:', error);
           setIsConnected(false);
-          toast({
-            title: "Erro de Conexão",
-            description: "Falha na conexão com serviço de transcrição",
-            variant: "destructive"
-          });
           reject(error);
         };
 
         ws.onclose = (event) => {
+          clearTimeout(connectionTimeout);
           console.log('🔌 WebSocket desconectado:', event.code, event.reason);
           setIsConnected(false);
           
-          // Try to reconnect if not a normal closure
-          if (isActive && event.code !== 1000) {
+          // Try to reconnect if not a normal closure and still active
+          if (isActive && event.code !== 1000 && event.code !== 1001) {
             console.log('🔄 Tentando reconectar em 3 segundos...');
             setTimeout(() => {
-              if (isActive) {
-                connectWebSocket();
+              if (isActive && wsRef.current?.readyState !== WebSocket.OPEN) {
+                connectWebSocket().catch(err => {
+                  console.error('❌ Falha na reconexão:', err);
+                });
               }
             }, 3000);
           }
@@ -352,6 +363,11 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
       } catch (error) {
         console.error('❌ Erro ao conectar WebSocket:', error);
+        toast({
+          title: "Erro de Conexão",
+          description: "Não foi possível conectar ao serviço de transcrição",
+          variant: "destructive"
+        });
         reject(error);
       }
     });

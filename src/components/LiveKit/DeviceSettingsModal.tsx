@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Volume2, Mic, Camera, Monitor, Upload, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, Mic, Camera, Monitor } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DeviceSettingsModalProps {
@@ -26,15 +26,8 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [selectedMicrophone, setSelectedMicrophone] = useState<string>('');
-  const [audioFiles, setAudioFiles] = useState<{
-    joined: File | null;
-    waiting: File | null;
-    left: File | null;
-  }>({
-    joined: null,
-    waiting: null,
-    left: null,
-  });
+  const [permissionError, setPermissionError] = useState<string>('');
+  const [requestingPermissions, setRequestingPermissions] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -142,51 +135,64 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
     onClose();
   };
 
-  const handleFileUpload = (type: 'joined' | 'waiting' | 'left', file: File | null) => {
-    if (file && file.size > 1024 * 1024) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "O áudio deve ter no máximo 1MB",
-        variant: "destructive"
-      });
-      return;
-    }
+  const requestPermissionsAgain = async () => {
+    setRequestingPermissions(true);
+    setPermissionError('');
     
-    setAudioFiles(prev => ({ ...prev, [type]: file }));
-    
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        localStorage.setItem(`meeting_audio_${type}_${companyId}`, reader.result as string);
-        toast({
-          title: "Áudio salvo",
-          description: `Áudio de ${type === 'joined' ? 'entrada' : type === 'waiting' ? 'solicitação' : 'saída'} atualizado`,
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveAudio = (type: 'joined' | 'waiting' | 'left') => {
-    setAudioFiles(prev => ({ ...prev, [type]: null }));
-    localStorage.removeItem(`meeting_audio_${type}_${companyId}`);
-    toast({
-      title: "Áudio removido",
-      description: "O áudio personalizado foi removido",
-    });
-  };
-
-  const handleTestAudio = (type: 'joined' | 'waiting' | 'left') => {
-    const savedAudio = localStorage.getItem(`meeting_audio_${type}_${companyId}`);
-    if (savedAudio) {
-      const audio = new Audio(savedAudio);
-      audio.play().catch(console.error);
-    } else {
-      toast({
-        title: "Nenhum áudio",
-        description: "Carregue um áudio primeiro",
-        variant: "destructive"
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
+
+      // Enumerar dispositivos agora que temos permissão
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      const audioDevices = devices.filter(d => d.kind === 'audioinput');
+
+      setCameras(videoDevices);
+      setMicrophones(audioDevices);
+
+      // Definir dispositivos padrão
+      if (videoDevices.length > 0) {
+        setSelectedCamera(videoDevices[0].deviceId);
+      }
+      if (audioDevices.length > 0) {
+        setSelectedMicrophone(audioDevices[0].deviceId);
+      }
+
+      // Parar tracks
+      stream.getTracks().forEach(track => track.stop());
+
+      toast({
+        title: "Permissões concedidas!",
+        description: "Dispositivos carregados com sucesso",
+      });
+    } catch (error: any) {
+      let errorMsg = 'Erro ao acessar dispositivos';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMsg = 'Você precisa permitir acesso aos dispositivos';
+      } else if (error.name === 'NotFoundError') {
+        errorMsg = 'Nenhum dispositivo encontrado';
+      }
+      
+      setPermissionError(errorMsg);
+      
+      toast({
+        title: "Erro ao acessar dispositivos",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setRequestingPermissions(false);
     }
   };
 
@@ -201,6 +207,38 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-6 mt-6">
+          {/* Permission Error */}
+          {permissionError && cameras.length === 0 && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-400 mb-2">
+                    {permissionError}
+                  </p>
+                  <Button
+                    onClick={requestPermissionsAgain}
+                    disabled={requestingPermissions}
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {requestingPermissions ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                        Solicitando...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3 h-3 mr-2" />
+                        Tentar novamente
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
             {/* Camera Settings */}
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">

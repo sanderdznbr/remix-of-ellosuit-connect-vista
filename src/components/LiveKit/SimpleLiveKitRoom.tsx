@@ -101,6 +101,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [isInitialConnection, setIsInitialConnection] = useState(true);
   const [connectionStable, setConnectionStable] = useState(false);
+  const [requestingPermissions, setRequestingPermissions] = useState(false);
   const hasCheckedHostRef = useRef(false); // Prevenir múltiplas execuções
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
@@ -117,6 +118,51 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     hasUser: !!user,
     userId: user?.id
   });
+
+  // Function to request host permissions
+  const requestHostPermissions = async (): Promise<boolean> => {
+    try {
+      console.log('🎤 [SimpleLiveKitRoom] Solicitando permissões para host...');
+      setRequestingPermissions(true);
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      
+      console.log('✅ [SimpleLiveKitRoom] Permissões concedidas para host!');
+      
+      // Parar as tracks imediatamente (só precisávamos da permissão)
+      stream.getTracks().forEach(track => track.stop());
+      
+      setRequestingPermissions(false);
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SimpleLiveKitRoom] Erro ao solicitar permissões:', error);
+      
+      let errorMessage = 'Erro ao acessar câmera e microfone';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Você precisa permitir acesso à câmera e microfone para entrar na reunião';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'Nenhuma câmera ou microfone foi encontrado';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Câmera ou microfone já está em uso por outro aplicativo';
+      }
+      
+      setError(errorMessage);
+      setRequestingPermissions(false);
+      return false;
+    }
+  };
 
   // Check if user is the first to enter (becomes host automatically)
   useEffect(() => {
@@ -191,6 +237,17 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         if (isFirstParticipant) {
           console.log('👑 [SimpleLiveKitRoom] ✨ PRIMEIRO A ENTRAR - VIRANDO HOST AUTOMATICAMENTE!');
           setIsHost(true);
+          
+          // ===== SOLICITAR PERMISSÕES ANTES DE ENTRAR =====
+          console.log('🎤 [SimpleLiveKitRoom] Solicitando permissões para host...');
+          const permissionsGranted = await requestHostPermissions();
+          
+          if (!permissionsGranted) {
+            console.error('❌ [SimpleLiveKitRoom] Permissões negadas - abortando entrada');
+            setIsCheckingHost(false);
+            return; // Não entra na sala sem permissões
+          }
+          // ================================================
           
           // Create participant record as host
           console.log('💾 [SimpleLiveKitRoom] Criando registro como host...');
@@ -1064,27 +1121,75 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [toast]);
 
 
+  // Loading state for permissions
+  if (requestingPermissions) {
+    return (
+      <div className="h-screen w-full bg-[#101010] flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src={logoEllo} alt="ELLOSUIT" className="h-12" />
+          </div>
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+          <p className="text-white text-lg mb-2">Solicitando permissões...</p>
+          <p className="text-gray-400 text-sm">
+            Por favor, permita o acesso à câmera e microfone
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{ background: '#0f172a' }}>
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2 text-white">Erro ao conectar</h2>
-          <p className="text-slate-300 mb-6">{error}</p>
-          <div className="flex gap-3 justify-center">
+      <div className="h-screen w-full bg-[#101010] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#1C1C1E] rounded-2xl p-8 border border-red-500/20">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img src={logoEllo} alt="ELLOSUIT" className="h-12" />
+          </div>
+
+          {/* Ícone de erro */}
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+          </div>
+
+          {/* Mensagem de erro */}
+          <h2 className="text-xl font-semibold text-white text-center mb-2">
+            Não foi possível acessar seus dispositivos
+          </h2>
+          <p className="text-gray-400 text-center mb-6">
+            {error}
+          </p>
+
+          {/* Instruções */}
+          <div className="bg-[#2C2C2E] rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-300 mb-2 font-medium">Como resolver:</p>
+            <ol className="text-sm text-gray-400 space-y-2 list-decimal list-inside">
+              <li>Clique no ícone de cadeado 🔒 na barra de endereço</li>
+              <li>Permita o acesso à câmera e microfone</li>
+              <li>Recarregue a página</li>
+            </ol>
+          </div>
+
+          {/* Botões */}
+          <div className="space-y-3">
             <Button
-              onClick={() => {
-                setError('');
-                generateToken(participantName || 'Convidado');
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="w-4 h-4 mr-2" />
               Tentar novamente
             </Button>
-            <Button onClick={onLeave} variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
-              Sair
+            
+            <Button
+              onClick={onLeave}
+              variant="outline"
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Voltar para o dashboard
             </Button>
           </div>
         </div>

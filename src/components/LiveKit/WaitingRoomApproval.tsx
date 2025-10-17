@@ -21,11 +21,26 @@ interface WaitingRoomApprovalProps {
 const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHost }) => {
   const [waitingParticipants, setWaitingParticipants] = useState<WaitingParticipant[]>([]);
   const { toast } = useToast();
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isHost) return;
 
+    console.log('🔔 [WaitingRoomApproval] Iniciando monitoramento para room:', roomId);
+
+    // Carregar áudio de notificação
+    audioRef.current = new Audio('/audio/user-waiting.mp3');
+    audioRef.current.volume = 0.7;
+
+    // Fetch inicial IMEDIATO
     fetchWaitingParticipants();
+
+    // Polling a cada 3 segundos como fallback
+    pollingIntervalRef.current = setInterval(() => {
+      console.log('🔄 [WaitingRoomApproval] Polling periódico...');
+      fetchWaitingParticipants();
+    }, 3000);
 
     // Realtime subscription for waiting participants
     const channel = supabase
@@ -33,24 +48,82 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'room_participants',
           filter: `room_id=eq.${roomId}`,
         },
-        () => {
+        (payload) => {
+          console.log('🔔 [WaitingRoomApproval] Nova inserção detectada:', payload);
+          const newParticipant = payload.new as any;
+          
+          if (newParticipant.waiting_approval) {
+            console.log('⏳ [WaitingRoomApproval] Novo participante aguardando aprovação:', newParticipant.display_name);
+            
+            // Tocar som de notificação
+            if (audioRef.current) {
+              audioRef.current.play().catch(e => console.error('Erro ao tocar áudio:', e));
+            }
+            
+            // Mostrar toast
+            toast({
+              title: "🔔 Novo participante aguardando",
+              description: `${newParticipant.display_name} está na sala de espera`,
+              duration: 5000,
+            });
+            
+            fetchWaitingParticipants();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'room_participants',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          console.log('🔄 [WaitingRoomApproval] Update detectado:', payload);
           fetchWaitingParticipants();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'room_participants',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          console.log('❌ [WaitingRoomApproval] Delete detectado:', payload);
+          fetchWaitingParticipants();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 [WaitingRoomApproval] Status do canal realtime:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [WaitingRoomApproval] Canal realtime conectado com sucesso!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [WaitingRoomApproval] Erro no canal realtime!');
+        }
+      });
 
     return () => {
+      console.log('🔌 [WaitingRoomApproval] Desconectando canal realtime e parando polling');
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  }, [roomId, isHost]);
+  }, [roomId, isHost, toast]);
 
   const fetchWaitingParticipants = async () => {
     try {
+      console.log('🔍 [WaitingRoomApproval] Buscando participantes aguardando para room:', roomId);
+      
       const { data, error } = await supabase
         .from('room_participants')
         .select('id, display_name, joined_at')
@@ -59,10 +132,15 @@ const WaitingRoomApproval: React.FC<WaitingRoomApprovalProps> = ({ roomId, isHos
         .is('left_at', null)
         .order('joined_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [WaitingRoomApproval] Erro ao buscar:', error);
+        throw error;
+      }
+      
+      console.log('✅ [WaitingRoomApproval] Participantes encontrados:', data?.length || 0, data);
       setWaitingParticipants(data || []);
     } catch (error) {
-      console.error('Erro ao buscar participantes aguardando:', error);
+      console.error('❌ [WaitingRoomApproval] Erro fatal ao buscar participantes aguardando:', error);
     }
   };
 

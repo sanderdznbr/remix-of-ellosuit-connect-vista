@@ -14,40 +14,16 @@ const supabase = createClient(
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
-if (!OPENAI_API_KEY) {
-  console.error('❌ OPENAI_API_KEY não está configurado!');
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('📥 Nova requisição WebSocket recebida');
-  console.log('Headers:', Object.fromEntries(req.headers.entries()));
-
   const upgradeHeader = req.headers.get("upgrade") || "";
   if (upgradeHeader.toLowerCase() !== "websocket") {
-    console.error('❌ Requisição não é WebSocket. Upgrade header:', upgradeHeader);
-    return new Response("Expected WebSocket connection", { 
-      status: 400,
-      headers: corsHeaders 
-    });
+    return new Response("Expected WebSocket connection", { status: 400 });
   }
 
-  // Verificar se OPENAI_API_KEY está configurado ANTES de fazer upgrade
-  if (!OPENAI_API_KEY) {
-    console.error('❌ OPENAI_API_KEY não configurado, recusando conexão');
-    return new Response(JSON.stringify({ 
-      error: 'OPENAI_API_KEY não está configurado. Configure a chave antes de usar transcrição.' 
-    }), { 
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  console.log('✅ Upgrade para WebSocket aceito');
   const { socket, response } = Deno.upgradeWebSocket(req);
   
   let isTranscribing = false;
@@ -108,8 +84,8 @@ serve(async (req) => {
       formData.append('language', 'pt');
       formData.append('response_format', 'verbose_json');
       formData.append('temperature', '0.0'); // Usar temperatura 0 para transcrições mais precisas
-      // Prompt MUITO mais específico e rigoroso
-      formData.append('prompt', 'Transcrição profissional de reunião corporativa. IMPORTANTE: Transcreva SOMENTE fala humana nítida e clara de participantes da reunião. IGNORE COMPLETAMENTE e NÃO transcreva: música de fundo, sons de vídeos do YouTube, legendas automáticas, notificações, ruídos ambientes, tosse, respiração, sons de digitação, cliques, repetições sem sentido, sons de aplicativos.');
+      // Prompt mais específico para evitar legendas falsas e ruídos
+      formData.append('prompt', 'Reunião profissional. Transcreva apenas fala humana clara. Ignore completamente: ruídos, sons ambiente, legendas automáticas, repetições sem sentido.');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -131,19 +107,19 @@ serve(async (req) => {
       const text = result.text?.trim() || '';
       const noSpeechProb = result.segments?.[0]?.no_speech_prob || 0;
       
-      // Se a probabilidade de "não fala" é alta, ignorar (mais rigoroso)
-      if (noSpeechProb > 0.4) {
+      // Se a probabilidade de "não fala" é muito alta, ignorar
+      if (noSpeechProb > 0.5) {
         console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
         return '';
       }
       
-      // Filtrar transcrições muito curtas (menos de 20 caracteres - mais rigoroso)
-      if (text.length < 20) {
+      // Filtrar transcrições muito curtas (menos de 15 caracteres)
+      if (text.length < 15) {
         console.log('⚠️ Transcrição muito curta, ignorando:', text);
         return '';
       }
       
-      // Filtrar padrões de ruído comuns - versão EXTREMAMENTE rigorosa
+      // Filtrar padrões de ruído comuns - versão mais rigorosa
       const noisePatterns = [
         /^[eéaáií\s]+$/i,              // "E aí", "é é é"
         /^(e\s*aí\s*){2,}/i,           // "E aí E aí E aí"
@@ -158,15 +134,6 @@ serve(async (req) => {
         /^(\w{1,3}\s*){5,}$/i,         // Palavras muito curtas repetidas
         /subtitles?\s+by/i,            // "Subtitles by"
         /^[^\w]*$/,                    // Apenas caracteres não-palavra
-        /inscre[vw]/i,                 // "Inscreva-se", "inscreve"
-        /canal/i,                      // "canal"
-        /v[ií]deo/i,                   // "vídeo"
-        /ative?.*(sino|notifica)/i,    // "ative o sino", "ative notificações"
-        /compartilh/i,                 // "compartilhe"
-        /like/i,                       // "like"
-        /^(na|da|de|em|para|pro|pra)\s+$/i, // Preposições isoladas
-        /youtube/i,                    // "YouTube"
-        /^(um|uma|dois|duas|três)\s+$/i, // Números isolados
       ];
       
       for (const pattern of noisePatterns) {
@@ -180,19 +147,9 @@ serve(async (req) => {
       const words = text.toLowerCase().split(/\s+/);
       const uniqueWords = new Set(words);
       
-      // Se mais de 60% das palavras são repetições, provavelmente é ruído (mais rigoroso)
-      if (words.length > 3 && uniqueWords.size / words.length < 0.4) {
+      // Se mais de 70% das palavras são repetições, provavelmente é ruído
+      if (words.length > 3 && uniqueWords.size / words.length < 0.3) {
         console.log('⚠️ Muitas repetições detectadas, ignorando:', text);
-        return '';
-      }
-      
-      // Filtrar frases comuns de YouTube/vídeos
-      const youtubeKeywords = ['inscreva', 'se inscreva', 'ative o sino', 'deixe seu like', 'compartilhe', 'canal'];
-      const lowerText = text.toLowerCase();
-      const hasYouTubeContent = youtubeKeywords.some(keyword => lowerText.includes(keyword));
-      
-      if (hasYouTubeContent) {
-        console.log('⚠️ Conteúdo de vídeo do YouTube detectado, ignorando:', text);
         return '';
       }
       

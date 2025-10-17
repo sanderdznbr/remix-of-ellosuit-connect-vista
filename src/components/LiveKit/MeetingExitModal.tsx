@@ -204,11 +204,8 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         .join('\n\n');
 
       if (type === 'complete') {
-        // Download complete PDF with pagination
+        // Download complete PDF
         const doc = new jsPDF();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        
         doc.setFontSize(18);
         doc.text('Transcrição da Reunião', 20, 20);
         doc.setFontSize(10);
@@ -217,16 +214,7 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         
         doc.setFontSize(11);
         const lines = doc.splitTextToSize(fullTranscript, 170);
-        
-        let yPosition = 50;
-        lines.forEach((line: string) => {
-          if (yPosition > pageHeight - 30) {
-            doc.addPage();
-            yPosition = margin;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += 5;
-        });
+        doc.text(lines, 20, 50);
         
         doc.save(`transcricao-reuniao-${roomName}-${Date.now()}.pdf`);
       } else if (type === 'summary' || type === 'highlights') {
@@ -247,9 +235,6 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         if (error) throw error;
 
         const doc = new jsPDF();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        
         doc.setFontSize(18);
         doc.text(type === 'summary' ? 'Resumo da Reunião' : 'Pontos Importantes', 20, 20);
         doc.setFontSize(10);
@@ -258,16 +243,7 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         
         doc.setFontSize(11);
         const lines = doc.splitTextToSize(data.response || '', 170);
-        
-        let yPosition = 50;
-        lines.forEach((line: string) => {
-          if (yPosition > pageHeight - 30) {
-            doc.addPage();
-            yPosition = margin;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += 5;
-        });
+        doc.text(lines, 20, 50);
         
         doc.save(`${type}-reuniao-${roomName}-${Date.now()}.pdf`);
       } else if (type === 'specific') {
@@ -295,9 +271,6 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         if (error) throw error;
 
         const doc = new jsPDF();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        
         doc.setFontSize(18);
         doc.text('Consulta Específica', 20, 20);
         doc.setFontSize(10);
@@ -306,16 +279,7 @@ export const MeetingExitModal = ({ isOpen, onClose, onConfirmExit, transcription
         
         doc.setFontSize(11);
         const lines = doc.splitTextToSize(data.response || '', 170);
-        
-        let yPosition = 50;
-        lines.forEach((line: string) => {
-          if (yPosition > pageHeight - 30) {
-            doc.addPage();
-            yPosition = margin;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += 5;
-        });
+        doc.text(lines, 20, 50);
         
         doc.save(`consulta-reuniao-${roomName}-${Date.now()}.pdf`);
       }

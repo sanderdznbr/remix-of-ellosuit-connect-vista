@@ -1,6 +1,5 @@
-import React from 'react';
-import { MobileSidebar } from './MobileSidebar';
-import Sidebar from '@/components/Dashboard/Sidebar';
+import React, { useState } from 'react';
+import { UnifiedSidebar } from '@/components/Dashboard/UnifiedSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 
@@ -10,12 +9,13 @@ interface MobileLayoutProps {
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const { isMobile } = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Desktop view - mostrar a sidebar azul completa
+  // Desktop view - mostrar a sidebar azul completa fixa
   if (!isMobile) {
     return (
       <div className="flex min-h-screen w-full">
-        <Sidebar />
+        <UnifiedSidebar isMobile={false} />
         <main className="flex-1 w-full bg-background">
           {children}
         </main>
@@ -23,11 +23,16 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     );
   }
 
+  // Mobile view - sidebar como Sheet
   return (
     <div className="min-h-screen w-full bg-background relative">
       {/* Mobile Top Navbar - Fixed */}
       <div className="mobile-top-navbar bg-primary" style={{ zIndex: 50 }}>
-        <MobileSidebar />
+        <UnifiedSidebar 
+          isMobile={true} 
+          isOpen={sidebarOpen} 
+          onOpenChange={setSidebarOpen} 
+        />
         <Link to="/dashboard">
           <img 
             src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 

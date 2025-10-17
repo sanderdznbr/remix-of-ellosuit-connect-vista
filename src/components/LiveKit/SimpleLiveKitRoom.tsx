@@ -297,8 +297,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           });
           
           setShowPreJoin(false);
-          setIsCheckingHost(false);
+          
+          // IMPORTANTE: Manter isCheckingHost=true até generateToken ser chamado
+          // para evitar tela preta durante a geração do token
+          console.log('🎫 [SimpleLiveKitRoom] Gerando token para host (mantendo loading ativo)...');
           await generateToken(userName);
+          
+          // Só desativar loading DEPOIS que o token foi gerado
+          setIsCheckingHost(false);
           
           console.log('✅ [SimpleLiveKitRoom] ✨ HOST (primeiro a entrar) na sala com sucesso!');
         } else {

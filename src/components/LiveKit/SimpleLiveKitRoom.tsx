@@ -218,7 +218,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           console.log('🎫 [SimpleLiveKitRoom] Gerando token para host...');
           
           // Definir configurações padrão para o host (já que não há pre-join)
+          console.log('⚙️ [SimpleLiveKitRoom] Definindo preJoinChoices padrão para host');
           setPreJoinChoices({
+            username: userName,
+            videoEnabled: true,
+            audioEnabled: true
+          });
+          console.log('✅ [SimpleLiveKitRoom] PreJoinChoices definido:', {
             username: userName,
             videoEnabled: true,
             audioEnabled: true
@@ -876,13 +882,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       timeSinceConnect: livekitConnectedAt > 0 ? Date.now() - livekitConnectedAt : 0
     });
     
-    // PROTEÇÃO CRÍTICA: Ignorar TODAS as desconexões nos primeiros 15 segundos
+    // PROTEÇÃO CRÍTICA: Ignorar TODAS as desconexões nos primeiros 20 segundos
     if (livekitConnectedAt > 0) {
       const connectionTime = Date.now() - livekitConnectedAt;
       console.log('⏱️ [handleDisconnected] Tempo desde conexão:', connectionTime, 'ms');
       
-      if (connectionTime < 15000) {
-        console.warn('🛡️ [handleDisconnected] BLOQUEADO - Desconexão nos primeiros 15 segundos!');
+      if (connectionTime < 20000) {
+        console.warn('🛡️ [handleDisconnected] BLOQUEADO - Desconexão nos primeiros 20 segundos!');
         console.log('🛡️ [handleDisconnected] Ignorando para prevenir desconexão prematura');
         toast({
           title: "Estabilizando conexão...",
@@ -970,7 +976,38 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }, [onLeave, toast, roomName, livekitConnectedAt]);
 
   const handleError = useCallback((error: Error) => {
-    console.error('LiveKit error:', error);
+    console.error('🚨 [handleError] LiveKit error:', error);
+    console.log('🔍 [handleError] Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Detectar erros de permissão - ESTES NÃO SÃO FATAIS!
+    const isPermissionError = 
+      error.name === 'NotAllowedError' ||
+      error.name === 'PermissionDeniedError' ||
+      error.message.toLowerCase().includes('permission') ||
+      error.message.toLowerCase().includes('denied') ||
+      error.message.toLowerCase().includes('camera') ||
+      error.message.toLowerCase().includes('microphone') ||
+      error.message.toLowerCase().includes('mic') ||
+      error.message.toLowerCase().includes('video');
+    
+    if (isPermissionError) {
+      console.warn('⚠️ [handleError] Erro de permissão detectado - tratando como não-fatal');
+      console.log('✅ [handleError] Permitindo reunião continuar sem mídia');
+      toast({
+        title: "Sem acesso a câmera/microfone",
+        description: "Você está na reunião mas sem áudio/vídeo. Pode ajustar nas configurações.",
+        variant: "default",
+      });
+      // NÃO chamar setError() - deixar a reunião continuar
+      return;
+    }
+    
+    // Para outros erros, manter comportamento original (erro fatal)
+    console.error('❌ [handleError] Erro fatal detectado - mostrando tela de erro');
     setError(error.message);
     toast({
       title: "Erro na chamada",
@@ -1084,6 +1121,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             serverUrl={serverUrl}
             onDisconnected={handleDisconnected}
             onError={handleError}
+            onMediaDeviceFailure={(error) => {
+              console.warn('⚠️ [LiveKitRoom] Falha no dispositivo de mídia:', error);
+              console.log('📱 [LiveKitRoom] Continuando reunião sem o dispositivo');
+              toast({
+                title: "Dispositivo não disponível",
+                description: "Câmera ou microfone não puderam ser acessados, mas você ainda pode participar da reunião",
+                variant: "default",
+              });
+            }}
             onConnected={() => {
               console.log('🟢 [LiveKitRoom] === CONECTADO COM SUCESSO ===');
               console.log('🎉 [LiveKitRoom] Token válido, sessão iniciada');
@@ -1112,13 +1158,32 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               }, 5000);
               
               // Mostrar aviso se entrou sem mídia
+              console.log('🎬 [LiveKitRoom] Verificando status da mídia:', {
+                videoEnabled: preJoinChoices?.videoEnabled,
+                audioEnabled: preJoinChoices?.audioEnabled
+              });
+              
               if (!preJoinChoices?.videoEnabled && !preJoinChoices?.audioEnabled) {
+                console.warn('⚠️ [LiveKitRoom] Usuário entrou sem vídeo e sem áudio');
                 toast({
                   title: "Conectado sem mídia",
                   description: "Você entrou na reunião sem câmera e microfone",
                   variant: "default",
                 });
+              } else if (!preJoinChoices?.videoEnabled) {
+                console.log('📹 [LiveKitRoom] Usuário entrou apenas com áudio');
+                toast({
+                  title: "Conectado!",
+                  description: "Você está na reunião apenas com áudio",
+                });
+              } else if (!preJoinChoices?.audioEnabled) {
+                console.log('🎤 [LiveKitRoom] Usuário entrou apenas com vídeo');
+                toast({
+                  title: "Conectado!",
+                  description: "Você está na reunião apenas com vídeo",
+                });
               } else {
+                console.log('✅ [LiveKitRoom] Usuário entrou com vídeo e áudio');
                 toast({
                   title: "Conectado!",
                   description: "Você está na reunião",

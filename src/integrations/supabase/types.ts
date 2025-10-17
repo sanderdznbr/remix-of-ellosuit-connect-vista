@@ -1440,6 +1440,7 @@ export type Database = {
           peer_id: string
           room_id: string
           screen_sharing: boolean | null
+          updated_at: string | null
           user_id: string | null
           video_enabled: boolean | null
           waiting_approval: boolean | null
@@ -1456,6 +1457,7 @@ export type Database = {
           peer_id: string
           room_id: string
           screen_sharing?: boolean | null
+          updated_at?: string | null
           user_id?: string | null
           video_enabled?: boolean | null
           waiting_approval?: boolean | null
@@ -1472,6 +1474,7 @@ export type Database = {
           peer_id?: string
           room_id?: string
           screen_sharing?: boolean | null
+          updated_at?: string | null
           user_id?: string | null
           video_enabled?: boolean | null
           waiting_approval?: boolean | null

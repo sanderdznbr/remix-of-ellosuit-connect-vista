@@ -1007,6 +1007,27 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       stack: error.stack
     });
     
+    // Detectar erros de dispositivo não disponível
+    const isDeviceError = 
+      error.message.toLowerCase().includes('device') ||
+      error.message.toLowerCase().includes('dispositivo') ||
+      error.message.toLowerCase().includes('not found') ||
+      error.message.toLowerCase().includes('não encontrado') ||
+      error.name === 'NotFoundError' ||
+      error.name === 'DevicesNotFoundError';
+    
+    if (isDeviceError) {
+      console.warn('⚠️ [handleError] Erro de dispositivo detectado - abrindo configurações');
+      setShowDeviceSettings(true);
+      toast({
+        title: "Dispositivo não encontrado",
+        description: "Configure seus dispositivos de áudio e vídeo para continuar",
+        variant: "default",
+        duration: 6000,
+      });
+      return;
+    }
+    
     // Detectar erros de permissão - ESTES NÃO SÃO FATAIS!
     const isPermissionError = 
       error.name === 'NotAllowedError' ||
@@ -1021,10 +1042,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     if (isPermissionError) {
       console.warn('⚠️ [handleError] Erro de permissão detectado - tratando como não-fatal');
       console.log('✅ [handleError] Permitindo reunião continuar sem mídia');
+      setShowDeviceSettings(true);
       toast({
         title: "Sem acesso a câmera/microfone",
-        description: "Você está na reunião mas sem áudio/vídeo. Pode ajustar nas configurações.",
+        description: "Configure as permissões de mídia para usar câmera e microfone",
         variant: "default",
+        duration: 6000,
       });
       // NÃO chamar setError() - deixar a reunião continuar
       return;
@@ -1147,11 +1170,17 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onError={handleError}
             onMediaDeviceFailure={(error) => {
               console.warn('⚠️ [LiveKitRoom] Falha no dispositivo de mídia:', error);
-              console.log('📱 [LiveKitRoom] Continuando reunião sem o dispositivo');
+              console.log('🔧 [LiveKitRoom] Detalhes do erro:', error);
+              console.log('📱 [LiveKitRoom] Abrindo modal de configurações para o usuário');
+              
+              // Abrir modal de configurações automaticamente
+              setShowDeviceSettings(true);
+              
               toast({
                 title: "Dispositivo não disponível",
-                description: "Câmera ou microfone não puderam ser acessados, mas você ainda pode participar da reunião",
+                description: "Câmera ou microfone não puderam ser acessados. Configure seus dispositivos.",
                 variant: "default",
+                duration: 5000,
               });
             }}
             onConnected={() => {

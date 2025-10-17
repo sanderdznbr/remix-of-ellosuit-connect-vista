@@ -51,19 +51,25 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           console.warn('⚠️ [ZoomPreJoin] Permissões negadas pelo usuário');
           setPermissionDenied(true);
-          setPermissionError('Você negou o acesso à câmera e microfone. Você pode entrar sem mídia.');
+          setPermissionError('Você negou o acesso à câmera e microfone.');
           setVideoEnabled(false);
           setAudioEnabled(false);
-        } else if (error.name === 'NotFoundError') {
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
           console.warn('⚠️ [ZoomPreJoin] Dispositivos não encontrados');
           setPermissionDenied(true);
-          setPermissionError('Nenhuma câmera ou microfone foi encontrado no seu dispositivo.');
+          setPermissionError('Nenhuma câmera ou microfone foi encontrado.');
+          setVideoEnabled(false);
+          setAudioEnabled(false);
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          console.warn('⚠️ [ZoomPreJoin] Dispositivos em uso ou não acessíveis');
+          setPermissionDenied(true);
+          setPermissionError('Dispositivos estão em uso por outro aplicativo.');
           setVideoEnabled(false);
           setAudioEnabled(false);
         } else {
-          console.error('❌ [ZoomPreJoin] Erro desconhecido:', error.name);
+          console.error('❌ [ZoomPreJoin] Erro desconhecido:', error.name, error.message);
           setPermissionDenied(true);
-          setPermissionError('Erro ao acessar dispositivos. Você pode entrar sem mídia.');
+          setPermissionError('Erro ao acessar dispositivos. Verifique suas configurações.');
           setVideoEnabled(false);
           setAudioEnabled(false);
         }
@@ -138,12 +144,23 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
         {/* Permission Denied Warning */}
         {permissionDenied && (
           <div className="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-            <p className="text-sm text-yellow-200 text-center">
+            <p className="text-sm text-yellow-200 text-center font-medium mb-2">
               ⚠️ {permissionError}
             </p>
-            <p className="text-xs text-yellow-300/70 text-center mt-2">
-              Você pode entrar na reunião sem áudio/vídeo.
+            <p className="text-xs text-yellow-300/70 text-center mb-3">
+              Você pode entrar na reunião sem áudio/vídeo, ou configurar seus dispositivos.
             </p>
+            <div className="flex justify-center">
+              <Button
+                onClick={() => setShowDeviceSettings(true)}
+                size="sm"
+                variant="outline"
+                className="bg-yellow-500/20 border-yellow-500/50 text-yellow-200 hover:bg-yellow-500/30"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar dispositivos
+              </Button>
+            </div>
           </div>
         )}
 

@@ -1130,6 +1130,25 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     });
   }, [toast]);
 
+  // ========== MOVER TODOS OS HOOKS PARA ANTES DOS EARLY RETURNS ==========
+  const handleApprovalGranted = useCallback(async () => {
+    console.log('✅ [handleApprovalGranted] Participante aprovado! Gerando token...');
+    setIsWaitingApproval(false);
+    const finalUsername = preJoinChoices?.username || participantName || 'Convidado';
+    console.log('👤 [handleApprovalGranted] Nome do usuário:', finalUsername);
+    await generateToken(finalUsername);
+    console.log('✅ [handleApprovalGranted] Token gerado, entrando na sala...');
+  }, [preJoinChoices, participantName, generateToken]);
+
+  const handleApprovalRejected = useCallback(() => {
+    toast({
+      title: "Acesso negado",
+      description: "O anfitrião rejeitou sua entrada na reunião",
+      variant: "destructive",
+    });
+    setTimeout(() => onLeave(), 2000);
+  }, [toast, onLeave]);
+  // ========================================================================
 
   // Loading state for permissions
   if (requestingPermissions) {
@@ -1206,24 +1225,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       </div>
     );
   }
-
-  const handleApprovalGranted = useCallback(async () => {
-    console.log('✅ [handleApprovalGranted] Participante aprovado! Gerando token...');
-    setIsWaitingApproval(false);
-    const finalUsername = preJoinChoices?.username || participantName || 'Convidado';
-    console.log('👤 [handleApprovalGranted] Nome do usuário:', finalUsername);
-    await generateToken(finalUsername);
-    console.log('✅ [handleApprovalGranted] Token gerado, entrando na sala...');
-  }, [preJoinChoices, participantName, generateToken]);
-
-  const handleApprovalRejected = useCallback(() => {
-    toast({
-      title: "Acesso negado",
-      description: "O anfitrião rejeitou sua entrada na reunião",
-      variant: "destructive",
-    });
-    setTimeout(() => onLeave(), 2000);
-  }, [toast, onLeave]);
 
   console.log('🎬 [Render] Estados atuais:', {
     showPreJoin,

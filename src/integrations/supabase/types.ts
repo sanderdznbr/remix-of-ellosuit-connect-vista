@@ -2199,10 +2199,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      can_view_room_participants: {
-        Args: { p_room_id: string; p_user_id: string }
-        Returns: boolean
-      }
       cleanup_meeting_rooms: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2213,6 +2209,18 @@ export type Database = {
       }
       is_company_admin_or_manager: {
         Args: { company_id: string; user_id: string }
+        Returns: boolean
+      }
+      is_participant_in_room: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_room_active: {
+        Args: { _room_id: string }
+        Returns: boolean
+      }
+      is_room_creator: {
+        Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
       is_room_host: {

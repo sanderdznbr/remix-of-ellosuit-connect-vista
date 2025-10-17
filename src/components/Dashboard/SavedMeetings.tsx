@@ -196,7 +196,9 @@ const SavedMeetings = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">
-                        {meeting.transcript.substring(0, 150)}...
+                        {meeting.transcript 
+                          ? meeting.transcript.substring(0, 150) + '...' 
+                          : 'Transcrição em processamento...'}
                       </p>
                     </div>
                     <div className="flex gap-2">

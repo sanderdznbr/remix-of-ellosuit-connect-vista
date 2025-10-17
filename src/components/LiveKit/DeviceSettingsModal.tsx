@@ -40,37 +40,89 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
   useEffect(() => {
     const getDevices = async () => {
       try {
-        // Request permissions first
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log('🎥 [DeviceSettings] Solicitando permissões e listando dispositivos...');
         
+        // Request permissions first
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        console.log('✅ [DeviceSettings] Permissões concedidas');
+        
+        // Now enumerate devices - they should have labels now
         const devices = await navigator.mediaDevices.enumerateDevices();
+        
+        console.log('📱 [DeviceSettings] Dispositivos encontrados:', devices.length);
         
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
         
+        console.log('🎥 [DeviceSettings] Câmeras:', videoDevices.length);
+        console.log('🎤 [DeviceSettings] Microfones:', audioInputDevices.length);
+        
+        videoDevices.forEach(d => console.log('  Câmera:', d.label || d.deviceId));
+        audioInputDevices.forEach(d => console.log('  Microfone:', d.label || d.deviceId));
+        
         setCameras(videoDevices);
         setMicrophones(audioInputDevices);
         
-        // Set default selections
-        if (videoDevices.length > 0) setSelectedCamera(videoDevices[0].deviceId);
-        if (audioInputDevices.length > 0) setSelectedMicrophone(audioInputDevices[0].deviceId);
+        // Load saved preferences or use first device
+        const savedCamera = localStorage.getItem('preferred_video_device');
+        const savedMic = localStorage.getItem('preferred_audio_device');
         
-      } catch (error) {
-        console.error('Error getting media devices:', error);
+        if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
+          setSelectedCamera(savedCamera);
+          console.log('📹 [DeviceSettings] Usando câmera salva:', savedCamera);
+        } else if (videoDevices.length > 0) {
+          setSelectedCamera(videoDevices[0].deviceId);
+          console.log('📹 [DeviceSettings] Usando primeira câmera disponível');
+        }
+        
+        if (savedMic && audioInputDevices.some(d => d.deviceId === savedMic)) {
+          setSelectedMicrophone(savedMic);
+          console.log('🎤 [DeviceSettings] Usando microfone salvo:', savedMic);
+        } else if (audioInputDevices.length > 0) {
+          setSelectedMicrophone(audioInputDevices[0].deviceId);
+          console.log('🎤 [DeviceSettings] Usando primeiro microfone disponível');
+        }
+        
+        // Stop the stream after getting device list
+        stream.getTracks().forEach(track => track.stop());
+        
+      } catch (error: any) {
+        console.error('❌ [DeviceSettings] Erro ao listar dispositivos:', error);
+        toast({
+          title: "Erro ao acessar dispositivos",
+          description: error.name === 'NotAllowedError' 
+            ? "Permissão negada. Permita o acesso à câmera e microfone."
+            : "Não foi possível acessar os dispositivos.",
+          variant: "destructive"
+        });
       }
     };
 
     if (isOpen) {
       getDevices();
     }
-  }, [isOpen]);
+  }, [isOpen, toast]);
 
   const handleSave = () => {
-    // TODO: Apply device settings
-    console.log('Saving device settings:', {
-      camera: selectedCamera,
-      microphone: selectedMicrophone
+    // Save preferences to localStorage
+    if (selectedCamera) {
+      localStorage.setItem('preferred_video_device', selectedCamera);
+      console.log('💾 [DeviceSettings] Câmera salva:', selectedCamera);
+    }
+    if (selectedMicrophone) {
+      localStorage.setItem('preferred_audio_device', selectedMicrophone);
+      console.log('💾 [DeviceSettings] Microfone salvo:', selectedMicrophone);
+    }
+    
+    toast({
+      title: "Configurações salvas",
+      description: "Suas preferências de dispositivos foram salvas com sucesso.",
     });
+    
     onClose();
   };
 
@@ -143,12 +195,18 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
               <SelectTrigger className="bg-white border-gray-300">
                 <SelectValue placeholder="Selecione uma câmera" />
               </SelectTrigger>
-              <SelectContent>
-                {cameras.map((camera) => (
-                  <SelectItem key={camera.deviceId} value={camera.deviceId}>
-                    {camera.label || `Câmera ${camera.deviceId.substring(0, 8)}`}
-                  </SelectItem>
-                ))}
+              <SelectContent className="bg-white border-gray-300 z-[9999]">
+                {cameras.length === 0 ? (
+                  <div className="px-4 py-2 text-sm text-gray-500">
+                    Nenhuma câmera encontrada
+                  </div>
+                ) : (
+                  cameras.map((camera) => (
+                    <SelectItem key={camera.deviceId} value={camera.deviceId}>
+                      {camera.label || `Câmera ${camera.deviceId.substring(0, 8)}`}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -163,12 +221,18 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
               <SelectTrigger className="bg-white border-gray-300">
                 <SelectValue placeholder="Selecione um microfone" />
               </SelectTrigger>
-              <SelectContent>
-                {microphones.map((mic) => (
-                  <SelectItem key={mic.deviceId} value={mic.deviceId}>
-                    {mic.label || `Microfone ${mic.deviceId.substring(0, 8)}`}
-                  </SelectItem>
-                ))}
+              <SelectContent className="bg-white border-gray-300 z-[9999]">
+                {microphones.length === 0 ? (
+                  <div className="px-4 py-2 text-sm text-gray-500">
+                    Nenhum microfone encontrado
+                  </div>
+                ) : (
+                  microphones.map((mic) => (
+                    <SelectItem key={mic.deviceId} value={mic.deviceId}>
+                      {mic.label || `Microfone ${mic.deviceId.substring(0, 8)}`}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

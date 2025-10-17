@@ -101,7 +101,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [isInitialConnection, setIsInitialConnection] = useState(true);
   const [connectionStable, setConnectionStable] = useState(false);
-  const [requestingPermissions, setRequestingPermissions] = useState(false);
   const hasCheckedHostRef = useRef(false); // Prevenir múltiplas execuções
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
@@ -119,51 +118,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     userId: user?.id
   });
 
-  // Function to request host permissions
-  const requestHostPermissions = async (): Promise<boolean> => {
-    try {
-      console.log('🎤 [SimpleLiveKitRoom] Solicitando permissões para host...');
-      setRequestingPermissions(true);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      
-      console.log('✅ [SimpleLiveKitRoom] Permissões concedidas para host!');
-      
-      // Parar as tracks imediatamente (só precisávamos da permissão)
-      stream.getTracks().forEach(track => track.stop());
-      
-      // NÃO desativar requestingPermissions aqui - manter loading ativo
-      // será desativado junto com isCheckingHost após generateToken
-      return true;
-    } catch (error: any) {
-      console.error('❌ [SimpleLiveKitRoom] Erro ao solicitar permissões:', error);
-      
-      let errorMessage = 'Erro ao acessar câmera e microfone';
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Você precisa permitir acesso à câmera e microfone para entrar na reunião';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = 'Nenhuma câmera ou microfone foi encontrado';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Câmera ou microfone já está em uso por outro aplicativo';
-      }
-      
-      setError(errorMessage);
-      setRequestingPermissions(false);
-      return false;
-    }
-  };
+  // Host permissions removed - users can enter without devices and configure later
 
   // Check if user is the first to enter (becomes host automatically)
   useEffect(() => {
@@ -239,19 +194,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           console.log('👑 [SimpleLiveKitRoom] ✨ PRIMEIRO A ENTRAR - VIRANDO HOST AUTOMATICAMENTE!');
           setIsHost(true);
           
-          // ===== SOLICITAR PERMISSÕES ANTES DE ENTRAR =====
-          console.log('🎤 [SimpleLiveKitRoom] Solicitando permissões para host...');
-          const permissionsGranted = await requestHostPermissions();
-          
-          if (!permissionsGranted) {
-            console.error('❌ [SimpleLiveKitRoom] Permissões negadas - abortando entrada');
-            setRequestingPermissions(false);
-            setIsCheckingHost(false);
-            return; // Não entra na sala sem permissões
-          }
-          // requestingPermissions ainda está true aqui - vai desativar depois
-          // ================================================
-          
           // Create participant record as host
           console.log('💾 [SimpleLiveKitRoom] Criando registro como host...');
           const peerId = `peer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -301,12 +243,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           
           setShowPreJoin(false);
           
-          // IMPORTANTE: Manter requestingPermissions=true e isCheckingHost=true
-          // até generateToken ser chamado para evitar tela preta
-          console.log('🎫 [SimpleLiveKitRoom] Gerando token para host (mantendo loading ativo)...');
+          // Gerar token e entrar direto na sala
+          console.log('🎫 [SimpleLiveKitRoom] Gerando token para host...');
           await generateToken(userName);
-          
-          // Desativar apenas isCheckingHost - requestingPermissions será desativado dentro do generateToken
           setIsCheckingHost(false);
           
           console.log('✅ [SimpleLiveKitRoom] ✨ HOST (primeiro a entrar) na sala com sucesso!');
@@ -462,7 +401,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       setToken(tokenData.token);
       setServerUrl(tokenData.url);
       setConnectingToRoom(false);
-      setRequestingPermissions(false); // ✅ Desativar loading de permissões APÓS token gerado com sucesso
       
       // Set timeout de segurança: se após 30 segundos não conectar, mostrar erro
       connectionTimeoutRef.current = setTimeout(() => {
@@ -1149,82 +1087,6 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTimeout(() => onLeave(), 2000);
   }, [toast, onLeave]);
   // ========================================================================
-
-  // Loading state for permissions
-  if (requestingPermissions) {
-    return (
-      <div className="h-screen w-full bg-[#101010] flex items-center justify-center">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <img src={logoEllo} alt="ELLOSUIT" className="h-12" />
-          </div>
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-white text-lg mb-2">Solicitando permissões...</p>
-          <p className="text-gray-400 text-sm">
-            Por favor, permita o acesso à câmera e microfone
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="h-screen w-full bg-[#101010] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#1C1C1E] rounded-2xl p-8 border border-red-500/20">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <img src={logoEllo} alt="ELLOSUIT" className="h-12" />
-          </div>
-
-          {/* Ícone de erro */}
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-red-500" />
-            </div>
-          </div>
-
-          {/* Mensagem de erro */}
-          <h2 className="text-xl font-semibold text-white text-center mb-2">
-            Não foi possível acessar seus dispositivos
-          </h2>
-          <p className="text-gray-400 text-center mb-6">
-            {error}
-          </p>
-
-          {/* Instruções */}
-          <div className="bg-[#2C2C2E] rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-300 mb-2 font-medium">Como resolver:</p>
-            <ol className="text-sm text-gray-400 space-y-2 list-decimal list-inside">
-              <li>Clique no ícone de cadeado 🔒 na barra de endereço</li>
-              <li>Permita o acesso à câmera e microfone</li>
-              <li>Recarregue a página</li>
-            </ol>
-          </div>
-
-          {/* Botões */}
-          <div className="space-y-3">
-            <Button
-              onClick={() => window.location.reload()}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Tentar novamente
-            </Button>
-            
-            <Button
-              onClick={onLeave}
-              variant="outline"
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              Voltar para o dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   console.log('🎬 [Render] Estados atuais:', {
     showPreJoin,

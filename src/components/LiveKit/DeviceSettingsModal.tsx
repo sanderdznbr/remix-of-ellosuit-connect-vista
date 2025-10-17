@@ -42,10 +42,17 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
       try {
         console.log('🎥 [DeviceSettings] Solicitando permissões e listando dispositivos...');
         
-        // Request permissions first
+        // ALWAYS request permissions first to ensure we get device labels
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
         });
         
         console.log('✅ [DeviceSettings] Permissões concedidas');
@@ -92,11 +99,20 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
         
       } catch (error: any) {
         console.error('❌ [DeviceSettings] Erro ao listar dispositivos:', error);
+        
+        let errorMessage = "Não foi possível acessar os dispositivos.";
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          errorMessage = "Permissão negada. Por favor, permita o acesso à câmera e microfone nas configurações do navegador e recarregue a página.";
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = "Nenhum dispositivo de câmera ou microfone foi encontrado.";
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = "Os dispositivos estão sendo usados por outro aplicativo.";
+        }
+        
         toast({
           title: "Erro ao acessar dispositivos",
-          description: error.name === 'NotAllowedError' 
-            ? "Permissão negada. Permita o acesso à câmera e microfone."
-            : "Não foi possível acessar os dispositivos.",
+          description: errorMessage,
           variant: "destructive"
         });
       }

@@ -30,53 +30,63 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   const [permissionError, setPermissionError] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const getMedia = async () => {
-      try {
-        console.log('🎥 [ZoomPreJoin] Solicitando acesso à câmera e microfone...');
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        console.log('✅ [ZoomPreJoin] Acesso concedido');
-        setStream(mediaStream);
-        setPermissionDenied(false);
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+  const requestPermissions = async () => {
+    try {
+      console.log('🎥 [ZoomPreJoin] Solicitando acesso à câmera e microfone...');
+      setPermissionDenied(false);
+      setPermissionError('');
+      
+      // Request permissions explicitly
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
         }
-      } catch (error: any) {
-        console.error('❌ [ZoomPreJoin] Erro ao acessar dispositivos:', error);
-        
-        // Tratar diferentes tipos de erro de permissão
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          console.warn('⚠️ [ZoomPreJoin] Permissões negadas pelo usuário');
-          setPermissionDenied(true);
-          setPermissionError('Você negou o acesso à câmera e microfone.');
-          setVideoEnabled(false);
-          setAudioEnabled(false);
-        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-          console.warn('⚠️ [ZoomPreJoin] Dispositivos não encontrados');
-          setPermissionDenied(true);
-          setPermissionError('Nenhuma câmera ou microfone foi encontrado.');
-          setVideoEnabled(false);
-          setAudioEnabled(false);
-        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-          console.warn('⚠️ [ZoomPreJoin] Dispositivos em uso ou não acessíveis');
-          setPermissionDenied(true);
-          setPermissionError('Dispositivos estão em uso por outro aplicativo.');
-          setVideoEnabled(false);
-          setAudioEnabled(false);
-        } else {
-          console.error('❌ [ZoomPreJoin] Erro desconhecido:', error.name, error.message);
-          setPermissionDenied(true);
-          setPermissionError('Erro ao acessar dispositivos. Verifique suas configurações.');
-          setVideoEnabled(false);
-          setAudioEnabled(false);
-        }
+      });
+      
+      console.log('✅ [ZoomPreJoin] Acesso concedido');
+      setStream(mediaStream);
+      setPermissionDenied(false);
+      setVideoEnabled(true);
+      setAudioEnabled(true);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
       }
-    };
+    } catch (error: any) {
+      console.error('❌ [ZoomPreJoin] Erro ao acessar dispositivos:', error);
+      
+      // Handle permission errors
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        console.warn('⚠️ [ZoomPreJoin] Permissões negadas pelo usuário');
+        setPermissionDenied(true);
+        setPermissionError('Você precisa permitir o acesso à câmera e microfone para entrar na reunião.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        console.warn('⚠️ [ZoomPreJoin] Dispositivos não encontrados');
+        setPermissionDenied(true);
+        setPermissionError('Nenhuma câmera ou microfone foi encontrado no seu dispositivo.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        console.warn('⚠️ [ZoomPreJoin] Dispositivos em uso ou não acessíveis');
+        setPermissionDenied(true);
+        setPermissionError('Os dispositivos estão sendo usados por outro aplicativo. Feche outros aplicativos e tente novamente.');
+      } else {
+        console.error('❌ [ZoomPreJoin] Erro desconhecido:', error.name, error.message);
+        setPermissionDenied(true);
+        setPermissionError('Erro ao acessar dispositivos. Verifique suas configurações do navegador.');
+      }
+      
+      setVideoEnabled(false);
+      setAudioEnabled(false);
+    }
+  };
 
-    getMedia();
+  useEffect(() => {
+    requestPermissions();
 
     return () => {
       if (stream) {
@@ -104,6 +114,11 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
   }, [videoEnabled, audioEnabled, stream]);
 
   const handleJoin = () => {
+    if (!stream) {
+      console.warn('⚠️ [ZoomPreJoin] Tentativa de entrar sem permissões');
+      return;
+    }
+    
     const finalName = name.trim() || participantName || 'Convidado';
     console.log('✅ [ZoomPreJoin] === BOTÃO ENTRAR CLICADO ===');
     console.log('✅ [ZoomPreJoin] Entrando na sala:', {
@@ -141,26 +156,39 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </p>
         </div>
 
-        {/* Permission Denied Warning */}
+        {/* Permission Error - BLOCKING */}
         {permissionDenied && (
-          <div className="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-            <p className="text-sm text-yellow-200 text-center font-medium mb-2">
-              ⚠️ {permissionError}
-            </p>
-            <p className="text-xs text-yellow-300/70 text-center mb-3">
-              Você pode entrar na reunião sem áudio/vídeo, ou configurar seus dispositivos.
-            </p>
-            <div className="flex justify-center">
+          <div className="mb-4 p-5 rounded-lg bg-red-500/10 border-2 border-red-500/50">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20 mb-3">
+                <VideoOff className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-base text-red-200 font-semibold mb-2">
+                Acesso aos dispositivos necessário
+              </p>
+              <p className="text-sm text-red-300/80 mb-4">
+                {permissionError}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={requestPermissions}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                Solicitar permissão novamente
+              </Button>
               <Button
                 onClick={() => setShowDeviceSettings(true)}
-                size="sm"
                 variant="outline"
-                className="bg-yellow-500/20 border-yellow-500/50 text-yellow-200 hover:bg-yellow-500/30"
+                className="w-full bg-red-500/10 border-red-500/50 text-red-200 hover:bg-red-500/20"
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Configurar dispositivos
+                Abrir configurações
               </Button>
             </div>
+            <p className="text-xs text-red-300/60 text-center mt-3">
+              💡 Se o problema persistir, verifique as configurações do seu navegador
+            </p>
           </div>
         )}
 
@@ -262,10 +290,11 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </Button>
           <Button
             onClick={handleJoin}
-            className="flex-1 text-white"
-            style={{ backgroundColor: '#3600FF' }}
+            disabled={!stream}
+            className="flex-1 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: !stream ? '#666' : '#3600FF' }}
           >
-            Entrar na reunião
+            {!stream ? 'Permita o acesso aos dispositivos' : 'Entrar na reunião'}
           </Button>
         </div>
 

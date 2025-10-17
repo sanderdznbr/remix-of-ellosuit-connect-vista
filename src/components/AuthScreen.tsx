@@ -12,8 +12,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, Building, AlertCircle, Loader2 } from 'lucide-react';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
 
 const AuthScreen = () => {
+  const { isMobile } = useIsMobile();
+
+  // Se for mobile, usar a versão mobile
+  if (isMobile) {
+    return <MobileAuthScreen />;
+  }
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

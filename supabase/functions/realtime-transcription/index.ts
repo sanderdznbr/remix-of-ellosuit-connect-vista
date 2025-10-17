@@ -84,8 +84,8 @@ serve(async (req) => {
       formData.append('language', 'pt');
       formData.append('response_format', 'verbose_json');
       formData.append('temperature', '0.0'); // Usar temperatura 0 para transcrições mais precisas
-      // Prompt mais específico para evitar legendas falsas e ruídos
-      formData.append('prompt', 'Reunião profissional. Transcreva apenas fala humana clara. Ignore completamente: ruídos, sons ambiente, legendas automáticas, repetições sem sentido.');
+      // Prompt ainda mais rigoroso para evitar legendas falsas, YouTube e ruídos
+      formData.append('prompt', 'Reunião profissional brasileira. Transcreva APENAS fala humana clara e audível. IGNORE COMPLETAMENTE: legendas do YouTube, watermarks, ruídos de fundo, sons ambiente, cliques, respiração, legendas automáticas de vídeos, repetições sem contexto, onomatopeias.');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -107,19 +107,19 @@ serve(async (req) => {
       const text = result.text?.trim() || '';
       const noSpeechProb = result.segments?.[0]?.no_speech_prob || 0;
       
-      // Se a probabilidade de "não fala" é muito alta, ignorar
-      if (noSpeechProb > 0.5) {
+      // Se a probabilidade de "não fala" é muito alta, ignorar (threshold mais rigoroso)
+      if (noSpeechProb > 0.4) {
         console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
         return '';
       }
       
-      // Filtrar transcrições muito curtas (menos de 15 caracteres)
-      if (text.length < 15) {
+      // Filtrar transcrições muito curtas (menos de 20 caracteres - mais rigoroso)
+      if (text.length < 20) {
         console.log('⚠️ Transcrição muito curta, ignorando:', text);
         return '';
       }
       
-      // Filtrar padrões de ruído comuns - versão mais rigorosa
+      // Filtrar padrões de ruído comuns - versão MUITO mais rigorosa incluindo YouTube
       const noisePatterns = [
         /^[eéaáií\s]+$/i,              // "E aí", "é é é"
         /^(e\s*aí\s*){2,}/i,           // "E aí E aí E aí"
@@ -134,6 +134,15 @@ serve(async (req) => {
         /^(\w{1,3}\s*){5,}$/i,         // Palavras muito curtas repetidas
         /subtitles?\s+by/i,            // "Subtitles by"
         /^[^\w]*$/,                    // Apenas caracteres não-palavra
+        /youtube/i,                    // "YouTube" em qualquer lugar
+        /inscreva[-\s]se/i,            // "Inscreva-se"
+        /se\s+inscrever?/i,            // "se inscrever"
+        /curtir?\s+(e|o)?\s*vídeo/i,   // "curtir o vídeo"
+        /ativar?\s+o?\s*sino/i,        // "ativar o sino"
+        /notificaç(ões|ao)/i,          // "notificações"
+        /deixe?\s+seu\s+like/i,        // "deixe seu like"
+        /compartilhe?\s+o?\s*vídeo/i,  // "compartilhe o vídeo"
+        /^(www\.|http)/i,              // URLs
       ];
       
       for (const pattern of noisePatterns) {
@@ -143,12 +152,12 @@ serve(async (req) => {
         }
       }
       
-      // Verificar se tem palavras reais (não apenas repetições)
+      // Verificar se tem palavras reais (não apenas repetições) - threshold mais rigoroso
       const words = text.toLowerCase().split(/\s+/);
       const uniqueWords = new Set(words);
       
-      // Se mais de 70% das palavras são repetições, provavelmente é ruído
-      if (words.length > 3 && uniqueWords.size / words.length < 0.3) {
+      // Se mais de 60% das palavras são repetições, provavelmente é ruído (mais rigoroso que 70%)
+      if (words.length > 3 && uniqueWords.size / words.length < 0.4) {
         console.log('⚠️ Muitas repetições detectadas, ignorando:', text);
         return '';
       }

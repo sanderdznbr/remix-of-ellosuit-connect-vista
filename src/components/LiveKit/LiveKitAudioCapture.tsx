@@ -199,7 +199,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     
     // Threshold mais rigoroso para detectar silêncio
     // Aumentado significativamente para evitar capturar ruídos
-    const SILENCE_THRESHOLD = 800;
+    const SILENCE_THRESHOLD = 1500;
     
     // Log do nível de áudio para debug
     if (rms > SILENCE_THRESHOLD / 2) {
@@ -222,9 +222,9 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
 
     // Send only if:
-    // 1. Buffer has at least 5 seconds of audio (aumentado para 5)
-    // 2. At least 4 seconds passed since last send (aumentado para 4)
-    if (bufferDurationMs >= 5000 && timeSinceLastSend >= 4000) {
+    // 1. Buffer has at least 8 seconds of audio (aumentado para 8)
+    // 2. At least 6 seconds passed since last send (aumentado para 6)
+    if (bufferDurationMs >= 8000 && timeSinceLastSend >= 6000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms, RMS: ${rms.toFixed(2)})`);
         
@@ -255,13 +255,28 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   const connectWebSocket = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
-        const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
+        const wsUrl = `wss://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/realtime-transcription`;
         console.log('🔌 Conectando WebSocket:', wsUrl);
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
+        // Timeout de 10 segundos para conexão
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) {
+            console.error('❌ Timeout na conexão WebSocket');
+            ws.close();
+            reject(new Error('Timeout ao conectar com serviço de transcrição'));
+            toast({
+              title: "Erro de Conexão",
+              description: "Timeout ao conectar com serviço de transcrição",
+              variant: "destructive"
+            });
+          }
+        }, 10000);
+
         ws.onopen = () => {
+          clearTimeout(connectionTimeout);
           console.log('✅ WebSocket conectado para transcrição');
           setIsConnected(true);
           
@@ -325,28 +340,43 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         };
 
         ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           console.error('❌ WebSocket error:', error);
           setIsConnected(false);
           toast({
             title: "Erro de Conexão",
-            description: "Falha na conexão com serviço de transcrição",
+            description: "Falha na conexão com serviço de transcrição. Verifique os logs.",
             variant: "destructive"
           });
           reject(error);
         };
 
         ws.onclose = (event) => {
+          clearTimeout(connectionTimeout);
           console.log('🔌 WebSocket desconectado:', event.code, event.reason);
           setIsConnected(false);
           
-          // Try to reconnect if not a normal closure
-          if (isActive && event.code !== 1000) {
-            console.log('🔄 Tentando reconectar em 3 segundos...');
+          // Mensagens específicas por código de erro
+          if (event.code !== 1000 && isActive) {
+            let errorMsg = "Conexão com serviço de transcrição perdida";
+            if (event.code === 1006) {
+              errorMsg = "Serviço de transcrição não alcançável. Verifique a edge function.";
+            } else if (event.code === 1011) {
+              errorMsg = "Erro interno no serviço de transcrição";
+            }
+            
+            toast({
+              title: "Desconectado",
+              description: errorMsg,
+              variant: "destructive"
+            });
+            
+            console.log('🔄 Tentando reconectar em 5 segundos...');
             setTimeout(() => {
               if (isActive) {
                 connectWebSocket();
               }
-            }, 3000);
+            }, 5000);
           }
         };
 

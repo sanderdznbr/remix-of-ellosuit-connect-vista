@@ -306,8 +306,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           console.log('🎫 [SimpleLiveKitRoom] Gerando token para host (mantendo loading ativo)...');
           await generateToken(userName);
           
-          // Agora sim, desativar TODOS os loadings após token gerado
-          setRequestingPermissions(false);
+          // Desativar apenas isCheckingHost - requestingPermissions será desativado dentro do generateToken
           setIsCheckingHost(false);
           
           console.log('✅ [SimpleLiveKitRoom] ✨ HOST (primeiro a entrar) na sala com sucesso!');
@@ -463,6 +462,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       setToken(tokenData.token);
       setServerUrl(tokenData.url);
       setConnectingToRoom(false);
+      setRequestingPermissions(false); // ✅ Desativar loading de permissões APÓS token gerado com sucesso
       
       // Set timeout de segurança: se após 30 segundos não conectar, mostrar erro
       connectionTimeoutRef.current = setTimeout(() => {

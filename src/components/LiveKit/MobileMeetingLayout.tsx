@@ -53,6 +53,12 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Debug logs para mobile
+  console.log('[MobileMeetingLayout] Total de participantes:', allParticipants.length);
+  allParticipants.forEach(p => {
+    console.log('[MobileMeetingLayout] Participante:', p.identity, 'Nome:', p.name, 'Câmera:', p.isCameraEnabled);
+  });
+
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -60,6 +66,8 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
 
   const screenShareTrack = tracks.find(t => t.source === Track.Source.ScreenShare);
   const cameraParticipants = allParticipants;
+  
+  console.log('[MobileMeetingLayout] Participantes na câmera:', cameraParticipants.length);
 
   // Grid classes
   const getGridClass = (count: number) => {

@@ -8,7 +8,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Volume2, Mic, Camera, Monitor, Upload, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,12 +24,8 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
 }) => {
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
-  const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [selectedMicrophone, setSelectedMicrophone] = useState<string>('');
-  const [selectedSpeaker, setSelectedSpeaker] = useState<string>('');
-  const [micVolume, setMicVolume] = useState([80]);
-  const [speakerVolume, setSpeakerVolume] = useState([70]);
   const [audioFiles, setAudioFiles] = useState<{
     joined: File | null;
     waiting: File | null;
@@ -52,16 +47,13 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
         
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
-        const audioOutputDevices = devices.filter(device => device.kind === 'audiooutput');
         
         setCameras(videoDevices);
         setMicrophones(audioInputDevices);
-        setSpeakers(audioOutputDevices);
         
         // Set default selections
         if (videoDevices.length > 0) setSelectedCamera(videoDevices[0].deviceId);
         if (audioInputDevices.length > 0) setSelectedMicrophone(audioInputDevices[0].deviceId);
-        if (audioOutputDevices.length > 0) setSelectedSpeaker(audioOutputDevices[0].deviceId);
         
       } catch (error) {
         console.error('Error getting media devices:', error);
@@ -77,22 +69,9 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
     // TODO: Apply device settings
     console.log('Saving device settings:', {
       camera: selectedCamera,
-      microphone: selectedMicrophone,
-      speaker: selectedSpeaker,
-      micVolume: micVolume[0],
-      speakerVolume: speakerVolume[0]
+      microphone: selectedMicrophone
     });
     onClose();
-  };
-
-  const testSpeaker = () => {
-    // TODO: Play test sound
-    console.log('Testing speaker...');
-  };
-
-  const testMicrophone = () => {
-    // TODO: Test microphone
-    console.log('Testing microphone...');
   };
 
   const handleFileUpload = (type: 'joined' | 'waiting' | 'left', file: File | null) => {
@@ -192,72 +171,6 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-xs text-gray-600">Volume do Microfone</Label>
-                <span className="text-xs text-gray-500">{micVolume[0]}%</span>
-              </div>
-              <Slider
-                value={micVolume}
-                onValueChange={setMicVolume}
-                max={100}
-                min={0}
-                step={1}
-                className="w-full"
-              />
-              <Button
-                onClick={testMicrophone}
-                variant="outline"
-                size="sm"
-                className="w-full text-xs"
-              >
-                Testar Microfone
-              </Button>
-            </div>
-          </div>
-
-          {/* Speaker Settings */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Volume2 className="h-4 w-4" />
-              Alto-falante
-            </Label>
-            <Select value={selectedSpeaker} onValueChange={setSelectedSpeaker}>
-              <SelectTrigger className="bg-white border-gray-300">
-                <SelectValue placeholder="Selecione um alto-falante" />
-              </SelectTrigger>
-              <SelectContent>
-                {speakers.map((speaker) => (
-                  <SelectItem key={speaker.deviceId} value={speaker.deviceId}>
-                    {speaker.label || `Alto-falante ${speaker.deviceId.substring(0, 8)}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="text-xs text-gray-600">Volume do Alto-falante</Label>
-                <span className="text-xs text-gray-500">{speakerVolume[0]}%</span>
-              </div>
-              <Slider
-                value={speakerVolume}
-                onValueChange={setSpeakerVolume}
-                max={100}
-                min={0}
-                step={1}
-                className="w-full"
-              />
-              <Button
-                onClick={testSpeaker}
-                variant="outline"
-                size="sm"
-                className="w-full text-xs"
-              >
-                Testar Alto-falante
-              </Button>
-            </div>
           </div>
 
           {/* Meeting Audio Settings */}

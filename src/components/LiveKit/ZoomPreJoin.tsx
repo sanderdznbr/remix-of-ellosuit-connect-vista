@@ -164,18 +164,19 @@ const ZoomPreJoin: React.FC<ZoomPreJoinProps> = ({
           </div>
         )}
 
-        {/* Video Preview */}
-        <div className="relative w-full rounded-xl overflow-hidden mb-6 border border-gray-700 bg-[#2a2a2a]" style={{ height: '280px' }}>
+        {/* Video Preview - Suporte para câmera vertical */}
+        <div className="relative w-full rounded-xl overflow-hidden mb-6 border border-gray-700 flex items-center justify-center" style={{ minHeight: '280px', maxHeight: '400px', backgroundColor: '#000' }}>
           {videoEnabled && stream ? (
             <video
               ref={videoRef}
               autoPlay
               muted
               playsInline
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
+              style={{ backgroundColor: '#000' }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2a2a2a' }}>
+            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2a2a2a', minHeight: '280px' }}>
               <div className="text-center">
                 <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-400">

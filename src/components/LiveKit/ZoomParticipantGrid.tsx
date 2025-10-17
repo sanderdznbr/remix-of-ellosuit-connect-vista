@@ -11,6 +11,13 @@ import { MicOff, Wifi, Video } from 'lucide-react';
 
 const ZoomParticipantGrid: React.FC = () => {
   const participants = useParticipants();
+  
+  // Log para debug no mobile
+  console.log('[ZoomParticipantGrid] Total de participantes:', participants.length);
+  participants.forEach(p => {
+    console.log('[ZoomParticipantGrid] Participante:', p.identity, 'Câmera:', p.isCameraEnabled);
+  });
+  
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -19,6 +26,10 @@ const ZoomParticipantGrid: React.FC = () => {
   const screenShareTracks = tracks.filter(t => t.source === Track.Source.ScreenShare);
   const cameraTracks = tracks.filter(t => t.source === Track.Source.Camera);
   const hasScreenShare = screenShareTracks.length > 0;
+  
+  // Log tracks no mobile
+  console.log('[ZoomParticipantGrid] Total de tracks de câmera:', cameraTracks.length);
+  console.log('[ZoomParticipantGrid] Total de tracks de screen share:', screenShareTracks.length);
 
   // Grid dinâmico responsivo - NUNCA corta participantes
   const getGridClass = (count: number) => {

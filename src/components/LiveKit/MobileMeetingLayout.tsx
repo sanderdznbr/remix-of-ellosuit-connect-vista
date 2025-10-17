@@ -1,23 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParticipants, useLocalParticipant, useRoomContext, useTracks } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { useParticipants, useLocalParticipant, useRoomContext, useTracks, VideoTrack } from '@livekit/components-react';
+import { Track, Participant } from 'livekit-client';
 import { 
   Mic, MicOff, Video as VideoIcon, VideoOff, 
   PhoneOff, MessageSquare, Users, 
-  FileText, Share2, Monitor, MonitorOff, X, ChevronLeft, Settings
+  FileText, Monitor, MonitorOff, X, Settings, Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import DeviceSettingsModal from './DeviceSettingsModal';
-import logoEllo from '@/assets/logoellosuit.png';
-import ResizableVideoTile from './ResizableVideoTile';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { TrackReference } from '@livekit/components-react';
-import '@/styles/mobile-meeting-improved.css';
 
 interface TranscriptionMessage {
   text: string;
@@ -35,28 +29,21 @@ interface MobileMeetingLayoutProps {
 const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   roomName,
   onLeave,
-  onShareMeeting
 }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
   const [inputMessage, setInputMessage] = useState('');
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [meetingDuration, setMeetingDuration] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState<Array<{
-    id: string;
     sender: string;
-    message: string;
-    time: string;
-    userId?: string;
+    text: string;
   }>>([]);
   const [transcriptionMessages, setTranscriptionMessages] = useState<TranscriptionMessage[]>([]);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number>(0);
 
-  const participants = useParticipants();
+  const allParticipants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
   const { user } = useAuth();
@@ -67,22 +54,27 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
 
-  const screenShareTracks = tracks.filter(t => t.source === Track.Source.ScreenShare);
-  const cameraTracks = tracks.filter(t => t.source === Track.Source.Camera);
-  const hasScreenShare = screenShareTracks.length > 0;
+  const screenShareTrack = tracks.find(t => t.source === Track.Source.ScreenShare);
+  const cameraParticipants = allParticipants;
 
-  // Meeting duration timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setMeetingDuration(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Grid classes
+  const getGridClass = (count: number) => {
+    if (count === 1) return 'grid-cols-1';
+    if (count === 2) return 'grid-cols-1';
+    if (count <= 4) return 'grid-cols-2';
+    return 'grid-cols-2';
+  };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const getParticipantName = (participant: Participant) => {
+    return participant.name || participant.identity || 'Participante';
+  };
+
+  const getParticipantInitial = (participant: Participant) => {
+    return getParticipantName(participant).charAt(0).toUpperCase();
+  };
+
+  const isMuted = (participant: Participant) => {
+    return !participant.isMicrophoneEnabled;
   };
 
   // Listen for chat messages
@@ -90,22 +82,18 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     if (!room) return;
 
     const handleDataReceived = (payload: Uint8Array, participant: any) => {
-      const decoder = new TextDecoder();
-      const data = JSON.parse(decoder.decode(payload));
-      
-      if (data.type === 'chat') {
-        const newMessage = {
-          id: Date.now().toString(),
-          sender: participant?.name || 'Participante',
-          message: data.message,
-          time: new Date().toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          userId: participant?.identity
-        };
+      try {
+        const decoder = new TextDecoder();
+        const data = JSON.parse(decoder.decode(payload));
         
-        setMessages(prev => [...prev, newMessage]);
+        if (data.type === 'chat') {
+          setMessages(prev => [...prev, {
+            sender: participant?.name || 'Participante',
+            text: data.message
+          }]);
+        }
+      } catch (e) {
+        console.error('Error processing message:', e);
       }
     };
 
@@ -118,16 +106,16 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
 
   const toggleMic = async () => {
     if (!localParticipant) return;
-    const enabled = !isMicOn;
+    const enabled = !isAudioEnabled;
     await localParticipant.setMicrophoneEnabled(enabled);
-    setIsMicOn(enabled);
+    setIsAudioEnabled(enabled);
   };
 
   const toggleCamera = async () => {
     if (!localParticipant) return;
-    const enabled = !isCameraOn;
+    const enabled = !isVideoEnabled;
     await localParticipant.setCameraEnabled(enabled);
-    setIsCameraOn(enabled);
+    setIsVideoEnabled(enabled);
   };
 
   const handleScreenShare = async () => {
@@ -149,7 +137,6 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       console.error('Erro ao compartilhar tela:', error);
       toast({
         title: 'Erro ao compartilhar tela',
-        description: 'Verifique as permissões do navegador',
         variant: 'destructive'
       });
     }
@@ -160,37 +147,19 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       const messageData = {
         type: 'chat',
         message: inputMessage.trim(),
-        sender: localParticipant.name || user?.user_metadata?.full_name || 'Você',
-        timestamp: Date.now()
       };
 
       const encoder = new TextEncoder();
       const data = encoder.encode(JSON.stringify(messageData));
       await localParticipant.publishData(data, { reliable: true });
 
-      const newMessage = {
-        id: Date.now().toString(),
+      setMessages(prev => [...prev, {
         sender: 'Você',
-        message: inputMessage.trim(),
-        time: new Date().toLocaleTimeString('pt-BR', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        userId: localParticipant.identity
-      };
+        text: inputMessage.trim()
+      }]);
       
-      setMessages(prev => [...prev, newMessage]);
       setInputMessage('');
     }
-  };
-
-  const openSidebar = (tab: 'chat' | 'participants' | 'transcription') => {
-    setActiveTab(tab);
-    setIsSidebarOpen(true);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
   };
 
   const handleTranscriptionUpdate = (message: TranscriptionMessage) => {
@@ -206,331 +175,338 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
     });
   };
 
-  // Swipe gesture handlers
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      if (isSidebarOpen) {
-        touchStartX.current = e.touches[0].clientX;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isSidebarOpen) return;
-      
-      const touchX = e.touches[0].clientX;
-      const diff = touchX - touchStartX.current;
-      
-      if (diff > 100) {
-        closeSidebar();
-      }
-    };
-
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchmove', handleTouchMove);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [isSidebarOpen]);
-
   return (
-    <div className="mobile-meeting-container">
-      {/* Header */}
-      <div className="mobile-meeting-header">
-        <img 
-          src={logoEllo}
-          alt="ElloSuit Meeting" 
-          className="mobile-meeting-header-logo"
-        />
+    <div className="fixed inset-0 flex flex-col bg-[#101010] overflow-hidden">
+      {/* Top bar com logo - igual ao web */}
+      <div className="absolute top-0 left-0 right-0 z-50 bg-[#101010]/95 backdrop-blur-sm border-b border-white/10 p-3">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <svg width="140" height="32" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="10" y="28" fontFamily="system-ui, -apple-system, sans-serif" fontSize="24" fontWeight="600" fill="white">
+                ellosuit <tspan fill="#3600FF">Meeting</tspan>
+              </text>
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Video Grid */}
-      <div className="mobile-video-grid">
-        {hasScreenShare ? (
-          <div className="mobile-screenshare-layout flex flex-col h-full overflow-hidden">
-            {/* Tela compartilhada - ocupa a maior parte */}
-            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden bg-black">
-              {screenShareTracks.map((trackRef: TrackReference, index: number) => (
-                <div 
-                  key={`screenshare-${trackRef.participant.identity}-${index}`} 
-                  className="w-full h-full flex items-center justify-center"
-                >
-                  <ResizableVideoTile
-                    trackRef={trackRef}
-                    isScreenShare={true}
-                    defaultWidth={Math.min(800, window.innerWidth - 16)}
-                    defaultHeight={Math.min(600, window.innerHeight * 0.6)}
-                  />
-                </div>
-              ))}
+      <div className="flex-1 relative pt-16 pb-20 bg-[#101010]">
+        {screenShareTrack ? (
+          <div className="h-full flex flex-col lg:flex-row gap-2 p-2">
+            {/* Screen share - área principal responsiva */}
+            {screenShareTrack.publication && (
+              <div 
+                className="flex-1 bg-black rounded-lg overflow-hidden relative"
+                style={{ 
+                  maxWidth: '100%',
+                  height: 'auto',
+                  aspectRatio: '16/9'
+                }}
+              >
+                <VideoTrack
+                  trackRef={screenShareTrack}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
             </div>
-            
-            {/* Participantes - scroll horizontal na parte inferior */}
-            <div className="flex-shrink-0 flex gap-2 overflow-x-auto p-2 pb-4 bg-background/50">
-              {cameraTracks.map((trackRef: TrackReference, index: number) => (
-                <div 
-                  key={`camera-strip-${trackRef.participant.identity}-${index}`} 
-                  className="mobile-video-tile flex-shrink-0 relative"
-                  style={{ width: '120px', height: '90px' }}
-                >
-                  <ResizableVideoTile
-                    trackRef={trackRef}
-                    isScreenShare={false}
-                    defaultWidth={120}
-                    defaultHeight={90}
-                  />
-                  <div className="mobile-participant-name absolute bottom-1 left-1 right-1 text-center text-xs text-white bg-black/70 rounded px-1 truncate">
-                    {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
-                  </div>
-                </div>
-              ))}
+
+            {/* Participants - lado direito no desktop, embaixo no mobile */}
+            <div className="flex-shrink-0 lg:w-64 overflow-y-auto lg:overflow-x-hidden overflow-x-auto pb-2 lg:pb-0">
+              <div className="flex lg:flex-col gap-2 min-w-min lg:min-w-0 px-2 lg:px-0">
+                {cameraParticipants.map((participant) => {
+                  const cameraTrack = participant.getTrackPublication(Track.Source.Camera);
+                  const track = cameraTrack || participant.getTrackPublication(Track.Source.Camera)?.track;
+                  
+                  return (
+                    <div
+                      key={participant.identity}
+                      className="relative flex-shrink-0 w-32 h-24 lg:w-full lg:h-auto lg:aspect-video bg-[#1f1f1f] rounded-lg overflow-hidden"
+                    >
+                      {cameraTrack && cameraTrack.publication ? (
+                        <VideoTrack
+                          trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack.publication }}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[#1f1f1f]">
+                          <div className="w-10 h-10 rounded-full bg-[#3600FF] flex items-center justify-center text-white font-semibold">
+                            {getParticipantInitial(participant)}
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute bottom-1 left-1 right-1 text-xs text-white bg-black/70 px-2 py-0.5 rounded truncate">
+                        {getParticipantName(participant)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ) : (
-          cameraTracks.map((trackRef: TrackReference, index: number) => (
-            <div 
-              key={`camera-${trackRef.participant.identity}-${index}`} 
-              className="mobile-video-tile"
-            >
-              <ResizableVideoTile
-                trackRef={trackRef}
-                isScreenShare={false}
-                defaultWidth={window.innerWidth - 32}
-                defaultHeight={window.innerHeight * 0.65}
-              />
-              <div className="mobile-participant-name">
-                {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
+          <div className={cn(
+            "grid gap-2 p-2 h-full bg-[#101010]",
+            getGridClass(cameraParticipants.length)
+          )}>
+            {cameraParticipants.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-white/60">
+                  <p>Aguardando participantes...</p>
+                </div>
               </div>
-            </div>
-          ))
+            ) : (
+              cameraParticipants.map((participant) => {
+                const cameraTrack = participant.getTrackPublication(Track.Source.Camera);
+                const track = cameraTrack || participant.getTrackPublication(Track.Source.Camera)?.track;
+                
+                return (
+                  <div
+                    key={participant.identity}
+                    className="relative bg-[#1f1f1f] rounded-lg overflow-hidden flex items-center justify-center"
+                  >
+                    {cameraTrack && cameraTrack.publication ? (
+                      <VideoTrack
+                        trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack.publication }}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-[#3600FF] flex items-center justify-center text-white text-2xl font-semibold">
+                        {getParticipantInitial(participant)}
+                      </div>
+                    )}
+                    
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-black/70 px-3 py-2 rounded">
+                      <span className="text-sm text-white font-medium truncate">
+                        {getParticipantName(participant)}
+                      </span>
+                      {isMuted(participant) && (
+                        <MicOff className="w-4 h-4 text-red-500 flex-shrink-0 ml-2" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         )}
       </div>
 
-      {/* Controls Bar with Horizontal Scroll */}
-      <div className="mobile-controls-bar">
-        <div className="mobile-controls-scroll">
-          <button
+      {/* Bottom Controls */}
+      <div className="absolute bottom-0 left-0 right-0 z-50 bg-[#101010]/95 backdrop-blur-sm border-t border-white/10 p-4">
+        <div className="flex items-center justify-center gap-3 max-w-xl mx-auto">
+          <Button
             onClick={toggleMic}
-            className={`mobile-control-btn ${isMicOn ? 'active' : ''}`}
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-12 w-12 rounded-full bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white",
+              !isAudioEnabled && "bg-red-500 hover:bg-red-600 text-white border-red-500"
+            )}
           >
-            {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
-          </button>
+            {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          </Button>
 
-          <button
+          <Button
             onClick={toggleCamera}
-            className={`mobile-control-btn ${isCameraOn ? 'active' : ''}`}
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-12 w-12 rounded-full bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white",
+              !isVideoEnabled && "bg-red-500 hover:bg-red-600 text-white border-red-500"
+            )}
           >
-            {isCameraOn ? <VideoIcon size={20} /> : <VideoOff size={20} />}
-          </button>
+            {isVideoEnabled ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+          </Button>
 
-          <button
+          <Button
             onClick={handleScreenShare}
-            className={`mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-12 w-12 rounded-full bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white",
+              isScreenSharing && "bg-[#3600FF] hover:bg-[#4510FF] text-white border-[#3600FF]"
+            )}
           >
-            {isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />}
-          </button>
+            {isScreenSharing ? <MonitorOff className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+          </Button>
 
-          <button
-            onClick={() => openSidebar('chat')}
-            className="mobile-control-btn"
+          <Button
+            onClick={() => setShowSidebar(!showSidebar)}
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full relative bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white"
           >
-            <MessageSquare size={20} />
-          </button>
+            <MessageSquare className="h-5 w-5" />
+          </Button>
 
-          <button
-            onClick={() => openSidebar('participants')}
-            className="mobile-control-btn"
+          <Button
+            onClick={() => setShowSettings(true)}
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white"
           >
-            <Users size={20} />
-          </button>
+            <Settings className="h-5 w-5" />
+          </Button>
 
-          <button
-            onClick={() => openSidebar('transcription')}
-            className="mobile-control-btn"
-          >
-            <FileText size={20} />
-          </button>
-
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="mobile-control-btn"
-          >
-            <Settings size={20} />
-          </button>
-
-          <button
-            onClick={() => onShareMeeting?.()}
-            className="mobile-control-btn"
-          >
-            <Share2 size={20} />
-          </button>
-
-          <button
+          <Button
             onClick={onLeave}
-            className="mobile-control-btn danger"
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-red-500 hover:bg-red-600 text-white border-red-500"
           >
-            <PhoneOff size={20} />
-          </button>
+            <PhoneOff className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
-      {/* Sidebar Overlay */}
-      <div 
-        className={cn("mobile-sidebar-overlay", isSidebarOpen && "visible")}
-        onClick={closeSidebar}
-        style={{ zIndex: 199 }}
-      />
-
-      {/* Sidebar Sheet */}
-      <div 
-        ref={sidebarRef}
-        className={cn("mobile-sidebar-sheet", isSidebarOpen && "open")}
-        style={{ zIndex: 200 }}
-      >
-        <div className="mobile-modal-header">
-          <h3 className="text-lg font-semibold text-white">
-            {activeTab === 'chat' && 'Chat'}
-            {activeTab === 'participants' && 'Participantes'}
-            {activeTab === 'transcription' && 'Transcrição'}
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={closeSidebar}
-            className="text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="mobile-modal-content">
-          {activeTab === 'chat' && (
+      {/* Sidebar Drawer */}
+      {showSidebar && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 z-[60]"
+            onClick={() => setShowSidebar(false)}
+          />
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#1a1a1a] z-[70] shadow-2xl transform transition-transform duration-300 ease-out">
             <div className="flex flex-col h-full">
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-2">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                        {msg.sender.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-white">
-                            {msg.sender}
-                          </span>
-                          <span className="text-xs text-white/50">
-                            {msg.time}
-                          </span>
-                        </div>
-                        <p className="text-sm text-white/90 bg-white/5 px-3 py-2 rounded-lg break-words">
-                          {msg.message}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {messages.length === 0 && (
-                    <div className="text-center py-12 text-white/50">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">Nenhuma mensagem ainda</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-              <div className="mobile-modal-footer">
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <div className="flex gap-2">
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  />
                   <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputMessage.trim()}
-                    size="icon"
-                    className="bg-primary hover:bg-primary/90"
+                    variant={activeTab === 'chat' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveTab('chat')}
+                    className={activeTab === 'chat' ? 'bg-[#3600FF] text-white' : 'bg-[#2a2a2a] text-white border-white/20'}
                   >
-                    <Share2 className="h-4 w-4" />
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Chat
+                  </Button>
+                  <Button
+                    variant={activeTab === 'participants' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveTab('participants')}
+                    className={activeTab === 'participants' ? 'bg-[#3600FF] text-white' : 'bg-[#2a2a2a] text-white border-white/20'}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Participantes
+                  </Button>
+                  <Button
+                    variant={activeTab === 'transcription' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveTab('transcription')}
+                    className={activeTab === 'transcription' ? 'bg-[#3600FF] text-white' : 'bg-[#2a2a2a] text-white border-white/20'}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    IA
                   </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSidebar(false)}
+                  className="text-white hover:bg-[#2a2a2a]"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-            </div>
-          )}
 
-          {activeTab === 'participants' && (
-            <ScrollArea className="h-full p-4">
-              <div className="space-y-2">
-                {participants.map((participant) => (
-                  <div
-                    key={participant.identity}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
-                      {(participant.name || 'P').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {participant.name || `Participante ${participant.identity.slice(-4)}`}
-                        {participant.identity === localParticipant?.identity && ' (Você)'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {participant.isMicrophoneEnabled === false && (
-                        <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center">
-                          <MicOff className="w-3 h-3 text-red-400" />
+              <div className="flex-1 overflow-y-auto p-4 bg-[#1a1a1a]">
+                {activeTab === 'chat' && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-white">Chat</h3>
+                    <div className="space-y-2">
+                      {messages.map((msg, i) => (
+                        <div key={i} className="p-3 bg-[#2a2a2a] rounded-lg">
+                          <div className="font-medium text-sm text-white">{msg.sender}</div>
+                          <div className="text-sm text-white/80">{msg.text}</div>
+                        </div>
+                      ))}
+                      {messages.length === 0 && (
+                        <div className="text-center text-white/40 py-8">
+                          Nenhuma mensagem ainda
                         </div>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
+                )}
 
-          {activeTab === 'transcription' && (
-            <ScrollArea className="h-full p-4">
-              <div className="space-y-3">
-                {transcriptionMessages.filter(m => m.is_final).map((msg, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-white/5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-primary">
-                        {msg.speaker || 'Participante'}
-                      </span>
-                      <span className="text-xs text-white/40">
-                        {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                {activeTab === 'participants' && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-white">Participantes ({allParticipants.length})</h3>
+                    <div className="space-y-2">
+                      {allParticipants.map((participant) => (
+                        <div
+                          key={participant.identity}
+                          className="flex items-center gap-3 p-3 bg-[#2a2a2a] rounded-lg"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-[#3600FF] flex items-center justify-center text-white font-semibold">
+                            {getParticipantInitial(participant)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-white">{getParticipantName(participant)}</div>
+                          </div>
+                          {isMuted(participant) && (
+                            <MicOff className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-sm text-white/90">{msg.text}</p>
                   </div>
-                ))}
-                {transcriptionMessages.filter(m => m.is_final).length === 0 && (
-                  <div className="text-center py-12 text-white/50">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">Aguardando transcrição...</p>
+                )}
+
+                {activeTab === 'transcription' && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-white">Transcrição</h3>
+                    <div className="space-y-2">
+                      {transcriptionMessages.map((msg, i) => (
+                        <div key={i} className="p-3 bg-[#2a2a2a] rounded-lg">
+                          <div className="font-medium text-sm text-white">{msg.speaker || 'Participante'}</div>
+                          <div className="text-sm text-white/80">{msg.text}</div>
+                        </div>
+                      ))}
+                      {transcriptionMessages.length === 0 && (
+                        <div className="text-center text-white/40 py-8">
+                          Nenhuma transcrição disponível
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-            </ScrollArea>
-          )}
-        </div>
-      </div>
 
-      {/* LiveKit Audio Capture for Transcription */}
+              {activeTab === 'chat' && (
+                <div className="p-4 border-t border-white/10 bg-[#1a1a1a]">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      placeholder="Digite sua mensagem..."
+                      className="flex-1 px-3 py-2 bg-[#2a2a2a] text-white border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3600FF] placeholder-white/40"
+                    />
+                    <Button onClick={handleSendMessage} size="icon" className="bg-[#3600FF] hover:bg-[#4510FF]">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Device Settings Modal */}
+      <DeviceSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      {/* Audio Capture */}
       <LiveKitAudioCapture 
         isActive={true}
         roomName={roomName}
         onTranscriptionUpdate={handleTranscriptionUpdate} 
-      />
-
-      {/* Device Settings Modal */}
-      <DeviceSettingsModal 
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

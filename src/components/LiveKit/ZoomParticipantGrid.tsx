@@ -46,7 +46,7 @@ const ZoomParticipantGrid: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col" style={{ backgroundColor: '#101010' }}>
+    <div className="w-full h-full flex flex-col bg-[#101010]">
       {/* Screen Share Area - Layout Responsivo */}
       {hasScreenShare && (
         <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">

@@ -9,9 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Volume2, Mic, Camera, Monitor } from 'lucide-react';
-import MeetingAudioSettings from './MeetingAudioSettings';
 
 interface DeviceSettingsModalProps {
   isOpen: boolean;
@@ -96,13 +94,7 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="devices" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="devices">Dispositivos</TabsTrigger>
-            <TabsTrigger value="audio">Áudios Personalizados</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="devices" className="space-y-6 mt-6">
+        <div className="space-y-6 mt-6">
             {/* Camera Settings */}
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -225,12 +217,7 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
                 Salvar Configurações
               </Button>
             </div>
-          </TabsContent>
-
-          <TabsContent value="audio" className="mt-6">
-            <MeetingAudioSettings companyId={companyId} />
-          </TabsContent>
-        </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

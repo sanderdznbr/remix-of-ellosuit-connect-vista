@@ -47,19 +47,18 @@ const ZoomParticipantGrid: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col" style={{ backgroundColor: '#101010' }}>
-      {/* Screen Share Area */}
+      {/* Screen Share Area - Layout Responsivo */}
       {hasScreenShare && (
-        <div className="flex-1 flex flex-col gap-3 p-3">
-          <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
+          {/* Tela Compartilhada - 75% em desktop, 100% em mobile */}
+          <div className="flex-1 lg:flex-[0_0_75%] flex items-center justify-center">
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                className="flex items-center justify-center bg-black rounded-lg overflow-hidden"
+                className="flex items-center justify-center bg-black rounded-lg overflow-hidden w-full h-full"
                 style={{ 
-                  maxWidth: '1200px',
-                  maxHeight: '675px',
-                  width: '100%',
-                  aspectRatio: '16/9'
+                  maxWidth: '100%',
+                  maxHeight: '100%'
                 }}
               >
                 <VideoTrack
@@ -70,39 +69,40 @@ const ZoomParticipantGrid: React.FC = () => {
             ))}
           </div>
           
-          {/* Camera carousel quando há compartilhamento de tela */}
+          {/* Participantes - Sidebar vertical em desktop, horizontal em mobile */}
           {cameraTracks.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 px-2">
+            <div className="lg:flex-[0_0_25%] flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden pb-2 lg:pb-0 px-2 lg:px-0">
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
-                  key={`camera-carousel-${trackRef.participant.identity}-${index}`}
-                  className="relative flex-shrink-0 w-32 h-24 rounded-3xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                  key={`camera-sidebar-${trackRef.participant.identity}-${index}`}
+                  className="relative flex-shrink-0 lg:flex-shrink lg:w-full w-32 lg:h-auto h-24 lg:aspect-video rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                   style={{ backgroundColor: '#1a1a1a' }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
-                    <div className="w-full h-full bg-black rounded-3xl flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="max-w-full max-h-full object-cover rounded-3xl"
-                        style={{ aspectRatio: '16/9' }}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-3xl">
-                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-2xl">
+                      <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-base lg:text-xl">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
                     </div>
                   )}
-                  <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between">
-                    <span className="text-white text-xs font-medium bg-black/70 px-2 py-0.5 rounded truncate max-w-[80px]">
-                      {getParticipantName(trackRef.participant)}
-                    </span>
-                    {isParticipantMuted(trackRef.participant) && (
-                      <div className="bg-destructive rounded-full p-1">
-                        <MicOff className="h-2.5 w-2.5 text-destructive-foreground" />
-                      </div>
-                    )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-white text-xs font-medium truncate">
+                        {getParticipantName(trackRef.participant)}
+                      </span>
+                      {isParticipantMuted(trackRef.participant) && (
+                        <div className="bg-destructive rounded-full p-1 flex-shrink-0">
+                          <MicOff className="h-2.5 w-2.5 text-destructive-foreground" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

@@ -248,33 +248,31 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       {/* Video Grid */}
       <div className="mobile-video-grid">
         {hasScreenShare ? (
-          <div className="mobile-screenshare-layout">
-            <div className="mobile-screenshare-main flex items-center justify-center">
+          <div className="mobile-screenshare-layout flex flex-col h-full overflow-hidden">
+            {/* Tela compartilhada - ocupa a maior parte */}
+            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden bg-black">
               {screenShareTracks.map((trackRef: TrackReference, index: number) => (
                 <div 
                   key={`screenshare-${trackRef.participant.identity}-${index}`} 
-                  className="flex items-center justify-center"
-                  style={{
-                    maxWidth: '1200px',
-                    maxHeight: '675px',
-                    width: '100%',
-                    aspectRatio: '16/9'
-                  }}
+                  className="w-full h-full flex items-center justify-center"
                 >
                   <ResizableVideoTile
                     trackRef={trackRef}
                     isScreenShare={true}
                     defaultWidth={Math.min(800, window.innerWidth - 16)}
-                    defaultHeight={Math.min(600, window.innerHeight * 0.5)}
+                    defaultHeight={Math.min(600, window.innerHeight * 0.6)}
                   />
                 </div>
               ))}
             </div>
-            <div className="mobile-participants-strip">
+            
+            {/* Participantes - scroll horizontal na parte inferior */}
+            <div className="flex-shrink-0 flex gap-2 overflow-x-auto p-2 pb-4 bg-background/50">
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div 
                   key={`camera-strip-${trackRef.participant.identity}-${index}`} 
-                  className="mobile-video-tile"
+                  className="mobile-video-tile flex-shrink-0 relative"
+                  style={{ width: '120px', height: '90px' }}
                 >
                   <ResizableVideoTile
                     trackRef={trackRef}
@@ -282,7 +280,7 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                     defaultWidth={120}
                     defaultHeight={90}
                   />
-                  <div className="mobile-participant-name">
+                  <div className="mobile-participant-name absolute bottom-1 left-1 right-1 text-center text-xs text-white bg-black/70 rounded px-1 truncate">
                     {trackRef.participant.name || `P${trackRef.participant.identity.slice(-4)}`}
                   </div>
                 </div>

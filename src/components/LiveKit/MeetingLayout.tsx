@@ -4,7 +4,6 @@ import ZoomParticipantGrid from './ZoomParticipantGrid';
 import NewMeetingControls from './NewMeetingControls';
 import MeetingChatSidebar from './MeetingChatSidebar';
 import InviteUsersModal from './InviteUsersModal';
-import MeetingSettingsModal from './MeetingSettingsModal';
 
 interface MeetingLayoutProps {
   roomName: string;
@@ -46,7 +45,6 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
   isRecording,
 }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
 
   return (
@@ -117,7 +115,10 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         <NewMeetingControls
           ref={meetingControlsRef}
           onLeave={onLeave}
-          onSettingsClick={() => setShowSettingsModal(true)}
+          onSettingsClick={() => {
+            console.log('🎛️ [MeetingLayout] Abrindo configurações de dispositivos');
+            onDeviceSettings();
+          }}
           onTranscriptionClick={onTranscriptionClick}
           onToggleRecording={onToggleRecording}
           isRecording={isRecording}
@@ -130,12 +131,6 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
         onClose={() => setShowInviteModal(false)}
         roomCode={roomName}
       />
-
-      <MeetingSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-      />
-
     </div>
   );
 };

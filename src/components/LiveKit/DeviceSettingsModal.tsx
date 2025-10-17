@@ -31,88 +31,92 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    const getDevices = async () => {
-      try {
-        console.log('🎥 [DeviceSettings] Solicitando permissões e listando dispositivos...');
-        
-        // ALWAYS request permissions first to ensure we get device labels
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
-        
-        console.log('✅ [DeviceSettings] Permissões concedidas');
-        
-        // Now enumerate devices - they should have labels now
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        
-        console.log('📱 [DeviceSettings] Dispositivos encontrados:', devices.length);
-        
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
-        
-        console.log('🎥 [DeviceSettings] Câmeras:', videoDevices.length);
-        console.log('🎤 [DeviceSettings] Microfones:', audioInputDevices.length);
-        
-        videoDevices.forEach(d => console.log('  Câmera:', d.label || d.deviceId));
-        audioInputDevices.forEach(d => console.log('  Microfone:', d.label || d.deviceId));
-        
-        setCameras(videoDevices);
-        setMicrophones(audioInputDevices);
-        
-        // Load saved preferences or use first device
-        const savedCamera = localStorage.getItem('preferred_video_device');
-        const savedMic = localStorage.getItem('preferred_audio_device');
-        
-        if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
-          setSelectedCamera(savedCamera);
-          console.log('📹 [DeviceSettings] Usando câmera salva:', savedCamera);
-        } else if (videoDevices.length > 0) {
-          setSelectedCamera(videoDevices[0].deviceId);
-          console.log('📹 [DeviceSettings] Usando primeira câmera disponível');
-        }
-        
-        if (savedMic && audioInputDevices.some(d => d.deviceId === savedMic)) {
-          setSelectedMicrophone(savedMic);
-          console.log('🎤 [DeviceSettings] Usando microfone salvo:', savedMic);
-        } else if (audioInputDevices.length > 0) {
-          setSelectedMicrophone(audioInputDevices[0].deviceId);
-          console.log('🎤 [DeviceSettings] Usando primeiro microfone disponível');
-        }
-        
-        // Stop the stream after getting device list
-        stream.getTracks().forEach(track => track.stop());
-        
-      } catch (error: any) {
-        console.error('❌ [DeviceSettings] Erro ao listar dispositivos:', error);
-        
-        let errorMessage = "Não foi possível acessar os dispositivos.";
-        
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          errorMessage = "Permissão negada. Por favor, permita o acesso à câmera e microfone nas configurações do navegador e recarregue a página.";
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = "Nenhum dispositivo de câmera ou microfone foi encontrado.";
-        } else if (error.name === 'NotReadableError') {
-          errorMessage = "Os dispositivos estão sendo usados por outro aplicativo.";
-        }
-        
-        toast({
-          title: "Erro ao acessar dispositivos",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      }
-    };
-
     if (isOpen) {
+      console.log('🎛️ [DeviceSettings] Modal aberto, listando dispositivos...');
+      
+      const getDevices = async () => {
+        try {
+          console.log('🎥 [DeviceSettings] Solicitando permissões e listando dispositivos...');
+          
+          // ALWAYS request permissions first to ensure we get device labels
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+          
+          console.log('✅ [DeviceSettings] Permissões concedidas');
+          
+          // Now enumerate devices - they should have labels now
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          
+          console.log('📱 [DeviceSettings] Dispositivos encontrados:', devices.length);
+          
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+          const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
+          
+          console.log('🎥 [DeviceSettings] Câmeras:', videoDevices.length);
+          console.log('🎤 [DeviceSettings] Microfones:', audioInputDevices.length);
+          
+          videoDevices.forEach(d => console.log('  Câmera:', d.label || d.deviceId));
+          audioInputDevices.forEach(d => console.log('  Microfone:', d.label || d.deviceId));
+          
+          setCameras(videoDevices);
+          setMicrophones(audioInputDevices);
+          
+          // Load saved preferences or use first device
+          const savedCamera = localStorage.getItem('preferred_video_device');
+          const savedMic = localStorage.getItem('preferred_audio_device');
+          
+          if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
+            setSelectedCamera(savedCamera);
+            console.log('📹 [DeviceSettings] Usando câmera salva:', savedCamera);
+          } else if (videoDevices.length > 0) {
+            setSelectedCamera(videoDevices[0].deviceId);
+            console.log('📹 [DeviceSettings] Usando primeira câmera disponível');
+          }
+          
+          if (savedMic && audioInputDevices.some(d => d.deviceId === savedMic)) {
+            setSelectedMicrophone(savedMic);
+            console.log('🎤 [DeviceSettings] Usando microfone salvo:', savedMic);
+          } else if (audioInputDevices.length > 0) {
+            setSelectedMicrophone(audioInputDevices[0].deviceId);
+            console.log('🎤 [DeviceSettings] Usando primeiro microfone disponível');
+          }
+          
+          // Stop the stream after getting device list
+          stream.getTracks().forEach(track => track.stop());
+          
+        } catch (error: any) {
+          console.error('❌ [DeviceSettings] Erro ao listar dispositivos:', error);
+          
+          let errorMessage = "Não foi possível acessar os dispositivos.";
+          
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            errorMessage = "Permissão negada. Por favor, permita o acesso à câmera e microfone nas configurações do navegador e recarregue a página.";
+          } else if (error.name === 'NotFoundError') {
+            errorMessage = "Nenhum dispositivo de câmera ou microfone foi encontrado.";
+          } else if (error.name === 'NotReadableError') {
+            errorMessage = "Os dispositivos estão sendo usados por outro aplicativo.";
+          }
+          
+          toast({
+            title: "Erro ao acessar dispositivos",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        }
+      };
+
       getDevices();
+    } else {
+      console.log('🎛️ [DeviceSettings] Modal fechado');
     }
   }, [isOpen, toast]);
 
@@ -197,8 +201,12 @@ const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-white border-gray-200">
+    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
+      <DialogContent 
+        className="sm:max-w-md bg-white border-gray-200 z-[10000]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-gray-900 flex items-center gap-2">
             <Monitor className="h-5 w-5" />

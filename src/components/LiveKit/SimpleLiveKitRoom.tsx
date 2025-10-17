@@ -860,7 +860,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   };
   
   const handleDisconnected = useCallback(async () => {
-    console.log('🔴 [handleDisconnected] Desconectado da sala LiveKit');
+    console.log('🔴 [handleDisconnected] === DESCONEXÃO DETECTADA ===');
     console.log('🔍 [handleDisconnected] Estado da conexão:', {
       isInitialConnection,
       connectionStable,
@@ -868,10 +868,25 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       timeSinceConnect: livekitConnectedAt > 0 ? Date.now() - livekitConnectedAt : 0
     });
     
-    // Se for a conexão inicial e não estabilizou, IGNORAR a desconexão
-    if (isInitialConnection && !connectionStable) {
-      console.warn('⚠️ [handleDisconnected] Desconexão durante conexão inicial - IGNORANDO!');
-      console.log('⚠️ [handleDisconnected] Esta é uma desconexão falsa durante o handshake inicial');
+    // PROTEÇÃO CRÍTICA: Ignorar TODAS as desconexões nos primeiros 15 segundos
+    if (livekitConnectedAt > 0) {
+      const connectionTime = Date.now() - livekitConnectedAt;
+      console.log('⏱️ [handleDisconnected] Tempo desde conexão:', connectionTime, 'ms');
+      
+      if (connectionTime < 15000) {
+        console.warn('🛡️ [handleDisconnected] BLOQUEADO - Desconexão nos primeiros 15 segundos!');
+        console.log('🛡️ [handleDisconnected] Ignorando para prevenir desconexão prematura');
+        toast({
+          title: "Estabilizando conexão...",
+          description: "Aguarde enquanto estabelecemos a conexão com a sala",
+        });
+        return;
+      }
+    }
+    
+    // Se não há timestamp de conexão mas ainda está inicial, também ignorar
+    if (isInitialConnection || !connectionStable) {
+      console.warn('🛡️ [handleDisconnected] BLOQUEADO - Conexão ainda não estável!');
       toast({
         title: "Conectando...",
         description: "Estabelecendo conexão com a sala...",
@@ -879,24 +894,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       return;
     }
     
-    // Verificar se a desconexão está acontecendo muito cedo (menos de 10 segundos após conectar)
-    if (livekitConnectedAt > 0 && connectionStable) {
-      const connectionTime = Date.now() - livekitConnectedAt;
-      console.log('⏱️ [handleDisconnected] Tempo de conexão:', connectionTime, 'ms');
-      
-      if (connectionTime < 10000) {
-        console.warn('⚠️ [handleDisconnected] Desconexão prematura detectada! Ignorando...');
-        console.log('⚠️ [handleDisconnected] Tempo de conexão muito curto:', connectionTime, 'ms');
-        toast({
-          title: "Reconectando...",
-          description: "Tentando restabelecer a conexão...",
-        });
-        // Não executar onLeave se desconexão foi muito rápida (pode ser erro de rede temporário)
-        return;
-      }
-    }
-    
-    console.log('✅ [handleDisconnected] Desconexão válida, processando saída...');
+    console.log('✅ [handleDisconnected] Desconexão válida após conexão estável, processando saída...');
     
     // Stop all local media tracks before leaving
     if (roomRef.current?.localParticipant) {
@@ -1078,25 +1076,27 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             onDisconnected={handleDisconnected}
             onError={handleError}
             onConnected={() => {
-              console.log('🟢 [LiveKitRoom] Conectado com sucesso à sala LiveKit!');
+              console.log('🟢 [LiveKitRoom] === CONECTADO COM SUCESSO ===');
               console.log('🎉 [LiveKitRoom] Token válido, sessão iniciada');
               const now = Date.now();
               setLivekitConnectedAt(now);
               
               // Marcar que não é mais conexão inicial
+              console.log('✅ [LiveKitRoom] Marcando como não-inicial');
               setIsInitialConnection(false);
               
               // Limpar timeout de conexão se existir
               if (connectionTimeoutRef.current) {
+                console.log('🔄 [LiveKitRoom] Limpando timeout de conexão');
                 clearTimeout(connectionTimeoutRef.current);
                 connectionTimeoutRef.current = undefined;
               }
               
-              // Aguardar 3 segundos para marcar a conexão como estável
+              // Aguardar 5 segundos para marcar a conexão como estável
               setTimeout(() => {
-                console.log('✅ [LiveKitRoom] Conexão estabilizada');
+                console.log('✅ [LiveKitRoom] ⭐ CONEXÃO ESTABILIZADA - proteção ativa');
                 setConnectionStable(true);
-              }, 3000);
+              }, 5000);
               
               toast({
                 title: "Conectado!",
@@ -1105,7 +1105,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             }}
           options={{
             adaptiveStream: true,
-            disconnectOnPageLeave: true,
+            disconnectOnPageLeave: false,
             publishDefaults: {
               simulcast: false,
               stopMicTrackOnMute: false,
@@ -1121,7 +1121,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 });
                 
                 // Durante a conexão inicial, tentar mais agressivamente
-                if (isInitialConnection) {
+                if (isInitialConnection || !connectionStable) {
                   console.log('🔄 [LiveKitRoom] Conexão inicial - retry rápido');
                   return 500;
                 }

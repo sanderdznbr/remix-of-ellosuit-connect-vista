@@ -177,31 +177,16 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#101010] overflow-hidden">
-      {/* Top bar com logo - igual ao web */}
-      <div className="absolute top-0 left-0 right-0 z-50 bg-[#101010]/95 backdrop-blur-sm border-b border-white/10 p-3">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <svg width="140" height="32" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <text x="10" y="28" fontFamily="system-ui, -apple-system, sans-serif" fontSize="24" fontWeight="600" fill="white">
-                ellosuit <tspan fill="#3600FF">Meeting</tspan>
-              </text>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {/* Video Grid */}
-      <div className="flex-1 relative pt-16 pb-20 bg-[#101010]">
+      {/* Video Grid - sem header branco */}
+      <div className="flex-1 relative pb-20 bg-[#101010]">
         {screenShareTrack ? (
-          <div className="h-full flex flex-col lg:flex-row gap-2 p-2">
-            {/* Screen share - área principal responsiva */}
+          <div className="h-full flex flex-col p-2 gap-2">
+            {/* Screen share - área maior, sem cortar */}
             {screenShareTrack && screenShareTrack.publication && (
               <div 
-                className="flex-1 bg-black rounded-lg overflow-hidden relative"
+                className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center"
                 style={{ 
-                  maxWidth: '100%',
-                  height: 'auto',
-                  aspectRatio: '16/9'
+                  minHeight: 0
                 }}
               >
                 <VideoTrack
@@ -211,34 +196,38 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                     publication: screenShareTrack.publication
                   }}
                   className="w-full h-full object-contain"
+                  style={{ backgroundColor: '#000' }}
                 />
               </div>
             )}
 
-            {/* Participants - lado direito no desktop, embaixo no mobile */}
-            <div className="flex-shrink-0 lg:w-64 overflow-y-auto lg:overflow-x-hidden overflow-x-auto pb-2 lg:pb-0">
-              <div className="flex lg:flex-col gap-2 min-w-min lg:min-w-0 px-2 lg:px-0">
+            {/* Participants - strip horizontal fixo na parte inferior */}
+            <div className="flex-shrink-0 h-28 overflow-x-auto overflow-y-hidden">
+              <div className="flex gap-2 h-full">
                 {cameraParticipants.map((participant) => {
                   const cameraTrack = participant.getTrackPublication(Track.Source.Camera);
                   
                   return (
                     <div
                       key={participant.identity}
-                      className="relative flex-shrink-0 w-32 h-24 lg:w-full lg:h-auto lg:aspect-video bg-[#1f1f1f] rounded-lg overflow-hidden"
+                      className="relative flex-shrink-0 w-36 h-full bg-[#1f1f1f] rounded-lg overflow-hidden"
                     >
                       {cameraTrack ? (
-                        <VideoTrack
-                          trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
-                          className="w-full h-full object-cover"
-                        />
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                          <VideoTrack
+                            trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
+                            className="w-full h-full object-contain"
+                            style={{ backgroundColor: '#000' }}
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-[#1f1f1f]">
-                          <div className="w-10 h-10 rounded-full bg-[#3600FF] flex items-center justify-center text-white font-semibold">
+                          <div className="w-12 h-12 rounded-full bg-[#3600FF] flex items-center justify-center text-white font-semibold">
                             {getParticipantInitial(participant)}
                           </div>
                         </div>
                       )}
-                      <div className="absolute bottom-1 left-1 right-1 text-xs text-white bg-black/70 px-2 py-0.5 rounded truncate">
+                      <div className="absolute bottom-2 left-2 right-2 text-xs text-white bg-black/80 px-2 py-1 rounded truncate">
                         {getParticipantName(participant)}
                       </div>
                     </div>
@@ -265,12 +254,13 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
                 return (
                   <div
                     key={participant.identity}
-                    className="relative bg-[#1f1f1f] rounded-lg overflow-hidden flex items-center justify-center"
+                    className="relative bg-black rounded-lg overflow-hidden flex items-center justify-center"
                   >
                     {cameraTrack ? (
                       <VideoTrack
                         trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
+                        style={{ backgroundColor: '#000' }}
                       />
                     ) : (
                       <div className="w-20 h-20 rounded-full bg-[#3600FF] flex items-center justify-center text-white text-2xl font-semibold">

@@ -82,7 +82,8 @@ const ZoomParticipantGrid: React.FC = () => {
                     <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
+                        style={{ backgroundColor: '#000' }}
                       />
                     </div>
                   ) : (
@@ -144,8 +145,8 @@ const ZoomParticipantGrid: React.FC = () => {
                     <div className="w-full h-full bg-black rounded-3xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="max-w-full max-h-full object-cover rounded-3xl"
-                        style={{ aspectRatio: '16/9' }}
+                        className="w-full h-full object-contain rounded-3xl"
+                        style={{ backgroundColor: '#000' }}
                       />
                     </div>
                   ) : (

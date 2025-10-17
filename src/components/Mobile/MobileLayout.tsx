@@ -1,8 +1,8 @@
 import React from 'react';
 import { MobileSidebar } from './MobileSidebar';
+import Sidebar from '@/components/Dashboard/Sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
-import { Menu } from 'lucide-react';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -11,11 +11,15 @@ interface MobileLayoutProps {
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const { isMobile } = useIsMobile();
 
+  // Desktop view - mostrar a sidebar azul completa
   if (!isMobile) {
     return (
-      <main className="flex-1 w-full bg-background">
-        {children}
-      </main>
+      <div className="flex min-h-screen w-full">
+        <Sidebar />
+        <main className="flex-1 w-full bg-background">
+          {children}
+        </main>
+      </div>
     );
   }
 

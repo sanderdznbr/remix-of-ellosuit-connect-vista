@@ -88,6 +88,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [isCheckingHost, setIsCheckingHost] = useState(true); // Começar true - verificando primeiro
   const [whiteboardBgColor, setWhiteboardBgColor] = useState<'white' | 'black'>('white');
   const [meetingStartTime] = useState<number>(Date.now());
+  const [livekitConnectedAt, setLivekitConnectedAt] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>('');
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
@@ -554,19 +555,38 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   };
   
   const handleDisconnected = useCallback(async () => {
-    console.log('Disconnected from room');
+    console.log('🔴 [handleDisconnected] Desconectado da sala LiveKit');
+    
+    // Verificar se a desconexão está acontecendo muito cedo (menos de 5 segundos após conectar)
+    if (livekitConnectedAt > 0) {
+      const connectionTime = Date.now() - livekitConnectedAt;
+      console.log('⏱️ [handleDisconnected] Tempo de conexão:', connectionTime, 'ms');
+      
+      if (connectionTime < 5000) {
+        console.warn('⚠️ [handleDisconnected] Desconexão prematura detectada! Ignorando...');
+        console.log('⚠️ [handleDisconnected] Tempo de conexão muito curto:', connectionTime, 'ms');
+        toast({
+          title: "Reconectando...",
+          description: "Detectamos uma desconexão prematura. Tentando reconectar.",
+        });
+        // Não executar onLeave se desconexão foi muito rápida (pode ser erro de conexão inicial)
+        return;
+      }
+    }
+    
+    console.log('✅ [handleDisconnected] Desconexão válida, processando saída...');
     
     // Stop all local media tracks before leaving
     if (roomRef.current?.localParticipant) {
       try {
-        console.log('Stopping all local media tracks...');
+        console.log('⏹️ [handleDisconnected] Parando todas as tracks de mídia...');
         
         // Stop all audio tracks
         roomRef.current.localParticipant.audioTrackPublications.forEach((publication) => {
           const track = publication.track;
           if (track) {
             track.stop();
-            console.log('Stopped audio track:', track.sid);
+            console.log('🔇 Stopped audio track:', track.sid);
           }
         });
         
@@ -575,11 +595,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           const track = publication.track;
           if (track) {
             track.stop();
-            console.log('Stopped video track:', track.sid);
+            console.log('📹 Stopped video track:', track.sid);
           }
         });
         
-        console.log('All media tracks stopped successfully');
+        console.log('✅ [handleDisconnected] Todas as tracks de mídia paradas com sucesso');
 
         const { data: { user } } = await supabase.auth.getUser();
         const { data: roomData } = await supabase
@@ -597,15 +617,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             })
             .eq('room_code', roomName);
           
-          console.log('Room marked as inactive by host');
+          console.log('👑 [handleDisconnected] Sala marcada como inativa pelo host');
         }
       } catch (error) {
-        console.error('Error during disconnection:', error);
+        console.error('❌ [handleDisconnected] Erro durante desconexão:', error);
       }
     }
     
     const audio = new Audio();
-    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
+    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAzuJzfPJdSgEJnzE8N+MSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqrl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q9bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIyvXEdCgEJnzE8N+NSg0PVqvl7q5bGgtBluL0u2EaAzqIy';
     audio.play().catch(() => {
       console.log('Could not play disconnect sound');
     });
@@ -616,9 +636,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     });
     
     setTimeout(() => {
+      console.log('🚪 [handleDisconnected] Chamando onLeave()...');
       onLeave();
     }, 500);
-  }, [onLeave, toast, roomName]);
+  }, [onLeave, toast, roomName, livekitConnectedAt]);
 
   const handleError = useCallback((error: Error) => {
     console.error('LiveKit error:', error);
@@ -660,9 +681,12 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   }
 
   const handleApprovalGranted = useCallback(async () => {
+    console.log('✅ [handleApprovalGranted] Participante aprovado! Gerando token...');
     setIsWaitingApproval(false);
     const finalUsername = preJoinChoices?.username || participantName || 'Convidado';
+    console.log('👤 [handleApprovalGranted] Nome do usuário:', finalUsername);
     await generateToken(finalUsername);
+    console.log('✅ [handleApprovalGranted] Token gerado, entrando na sala...');
   }, [preJoinChoices, participantName, generateToken]);
 
   const handleApprovalRejected = useCallback(() => {
@@ -731,6 +755,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             serverUrl={serverUrl}
             onDisconnected={handleDisconnected}
             onError={handleError}
+            onConnected={() => {
+              console.log('🟢 [LiveKitRoom] Conectado com sucesso à sala LiveKit!');
+              console.log('🎉 [LiveKitRoom] Token válido, sessão iniciada');
+              setLivekitConnectedAt(Date.now());
+              toast({
+                title: "Conectado!",
+                description: "Você está na reunião",
+              });
+            }}
           options={{
             adaptiveStream: true,
             disconnectOnPageLeave: false,
@@ -741,6 +774,10 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
             },
             reconnectPolicy: {
               nextRetryDelayInMs: (context) => {
+                console.log('🔄 [LiveKitRoom] Tentando reconectar...', { 
+                  tentativa: context.retryCount,
+                  tempoDecorrido: context.elapsedMs 
+                });
                 if (context.elapsedMs < 10_000) {
                   return 1000;
                 }

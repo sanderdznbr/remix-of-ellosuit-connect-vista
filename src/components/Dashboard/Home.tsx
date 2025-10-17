@@ -1,7 +1,7 @@
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileHomeScreen from '@/components/Mobile/MobileHomeScreen';
-import ExecutiveDashboard from './ExecutiveDashboard';
+import AIAssistantHome from './AIAssistantHome';
 
 interface HomeProps {
   onNavigate: (item: string) => void;
@@ -15,8 +15,8 @@ const Home = ({ onNavigate }: HomeProps) => {
     return <MobileHomeScreen onNavigate={onNavigate} />;
   }
 
-  // Desktop: usar o Dashboard Executivo Inteligente
-  return <ExecutiveDashboard onNavigate={onNavigate} />;
+  // Desktop: usar o novo assistente AI
+  return <AIAssistantHome />;
 };
 
 export default Home;

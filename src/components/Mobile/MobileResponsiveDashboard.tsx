@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileLayout from './MobileLayout';
+
+// Import components
 import Home from '@/components/Dashboard/Home';
 import MyCalendar from '@/components/Dashboard/MyCalendar';
 import EmailDashboard from '@/components/Dashboard/EmailDashboard';
@@ -21,7 +23,6 @@ import ImprovedAgendaAberta from '@/components/Dashboard/ImprovedAgendaAberta';
 import EmployeeManagement from '@/components/Dashboard/EmployeeManagement';
 import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboardCustomizer';
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
-import AccountManagement from '@/components/Dashboard/AccountManagement';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
@@ -49,7 +50,6 @@ const MobileResponsiveDashboard = () => {
       <div className="min-h-full">
         <Routes>
           <Route path="/" element={<Home onNavigate={handleNavigate} />} />
-          <Route path="/account" element={<AccountManagement />} />
           <Route path="/agenda" element={<MyCalendar />} />
           <Route path="/reunioes" element={<MeetingRooms />} />
           <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />

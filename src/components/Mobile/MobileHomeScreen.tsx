@@ -14,14 +14,10 @@ import {
   Bot,
   Zap,
   BarChart3,
-  Settings,
-  Send,
-  Sparkles,
   Clock,
   CalendarDays,
   TrendingUp
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
@@ -46,10 +42,7 @@ const quickAccessItems = [
 ];
 
 const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
-  const [query, setQuery] = useState('');
-  const [response, setResponse] = useState('');
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const [stats, setStats] = useState({
     meetingsToday: 0,
@@ -57,45 +50,6 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
     nextEvent: null as any,
     totalClients: 0
   });
-
-  const findBestMatch = (input: string) => {
-    const normalizedInput = input.toLowerCase().trim();
-    
-    for (const item of quickAccessItems) {
-      if (item.keywords.some(keyword => normalizedInput.includes(keyword))) {
-        return item;
-      }
-    }
-    
-    return null;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!query.trim()) {
-      toast({
-        title: "Digite algo",
-        description: "Por favor, descreva o que você deseja fazer.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const match = findBestMatch(query);
-    
-    if (match) {
-      setResponse(`Entendi! Vou te levar para ${match.label}...`);
-      
-      setTimeout(() => {
-        navigate(match.path);
-        setQuery('');
-        setResponse('');
-      }, 800);
-    } else {
-      setResponse("Desculpe, não consegui entender. Tente: 'criar reunião', 'ver agenda', 'gerenciar clientes', etc.");
-    }
-  };
 
   const handleQuickAccess = (path: string) => {
     navigate(path);
@@ -183,61 +137,14 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
   return (
     <div className="space-y-6 pb-6 animate-fade-in">
       {/* Welcome Section */}
-      <Card className="border-none shadow-lg bg-gradient-to-br from-primary/5 to-purple-50 rounded-2xl">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-3 rounded-full bg-gradient-to-br from-primary to-purple-600 shadow-lg">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">
-                Olá, {userName}! 👋
-              </h2>
-              <p className="text-sm text-gray-600">
-                O que deseja fazer hoje?
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Ex: Quero criar uma reunião..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="h-12 px-4 text-base rounded-xl border-2 border-gray-200 focus:border-primary transition-colors pr-12"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="absolute right-1 top-1 h-10 w-10 rounded-lg bg-primary hover:bg-primary/90"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {response && (
-              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
-                <p className="text-blue-900 text-sm text-center">{response}</p>
-              </div>
-            )}
-          </form>
-
-          <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
-            <span className="text-xs text-gray-500">Sugestões:</span>
-            {['criar reunião', 'ver agenda', 'enviar email'].map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => setQuery(suggestion)}
-                className="px-2 py-0.5 text-xs rounded-full bg-white hover:bg-gray-50 text-gray-700 transition-colors border border-gray-200"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
+          Olá, {userName}! 👋
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Bem-vindo ao seu dashboard
+        </p>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3">

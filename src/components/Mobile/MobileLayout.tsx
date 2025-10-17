@@ -27,24 +27,31 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen w-full bg-background relative">
       {/* Mobile Top Navbar - Fixed */}
-      <div className="mobile-top-navbar bg-primary" style={{ zIndex: 50 }}>
-        <UnifiedSidebar 
-          isMobile={true} 
-          isOpen={sidebarOpen} 
-          onOpenChange={setSidebarOpen} 
-        />
-        <Link to="/dashboard">
+      <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center justify-center px-4" style={{ zIndex: 50 }}>
+        {/* Menu Hambúrguer - Posição Absoluta Esquerda */}
+        <div className="absolute left-4">
+          <UnifiedSidebar 
+            isMobile={true} 
+            isOpen={sidebarOpen} 
+            onOpenChange={setSidebarOpen} 
+          />
+        </div>
+        
+        {/* Logo Centralizada */}
+        <Link to="/dashboard" className="flex items-center justify-center">
           <img 
             src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
             alt="ElloSuit Logo" 
             className="h-6 w-auto filter brightness-0 invert"
           />
         </Link>
-        <div className="w-10" /> {/* Spacer for center alignment */}
       </div>
       
-      {/* Main content with padding for navbar */}
-      <main className="mobile-content-with-navbar w-full bg-background">
+      {/* Spacer para compensar o header fixo */}
+      <div className="h-14" />
+      
+      {/* Main content */}
+      <main className="w-full bg-background px-4 pt-4">
         {children}
       </main>
     </div>

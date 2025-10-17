@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -16,10 +16,16 @@ import {
   BarChart3,
   Settings,
   Send,
-  Sparkles
+  Sparkles,
+  Clock,
+  CalendarDays,
+  TrendingUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface MobileHomeScreenProps {
   onNavigate: (item: string) => void;
@@ -45,6 +51,12 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    meetingsToday: 0,
+    nextMeeting: null as any,
+    nextEvent: null as any,
+    totalClients: 0
+  });
 
   const findBestMatch = (input: string) => {
     const normalizedInput = input.toLowerCase().trim();
@@ -91,6 +103,82 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
 
   // Pegar nome do usuário
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
+
+  useEffect(() => {
+    loadDashboardStats();
+  }, [user]);
+
+  const loadDashboardStats = async () => {
+    if (!user) return;
+
+    // Get company_id
+    const { data: companyUsers } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .limit(1);
+
+    if (!companyUsers || companyUsers.length === 0) return;
+    const companyId = companyUsers[0].company_id;
+
+    // Get today's date range
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get meetings today
+    const { data: meetingsToday } = await supabase
+      .from('meeting_rooms')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString());
+
+    // Get next upcoming meeting
+    const { data: nextMeeting } = await supabase
+      .from('meeting_rooms')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .gte('created_at', new Date().toISOString())
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    // Get next event
+    const { data: nextEvent } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('company_id', companyId)
+      .gte('start_date', new Date().toISOString())
+      .order('start_date', { ascending: true })
+      .limit(1);
+
+    // Get total clients
+    const { count: totalClients } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId);
+
+    setStats({
+      meetingsToday: meetingsToday?.length || 0,
+      nextMeeting: nextMeeting?.[0] || null,
+      nextEvent: nextEvent?.[0] || null,
+      totalClients: totalClients || 0
+    });
+  };
+
+  const formatEventDate = (dateString: string) => {
+    const date = parseISO(dateString);
+    if (isToday(date)) {
+      return `Hoje às ${format(date, 'HH:mm')}`;
+    }
+    if (isTomorrow(date)) {
+      return `Amanhã às ${format(date, 'HH:mm')}`;
+    }
+    return format(date, "dd/MM 'às' HH:mm", { locale: ptBR });
+  };
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in">
@@ -150,6 +238,93 @@ const MobileHomeScreen: React.FC<MobileHomeScreenProps> = ({ onNavigate }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Reuniões Hoje */}
+        <Card className="border-none shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Reuniões Hoje
+            </CardTitle>
+            <Video className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.meetingsToday}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.meetingsToday === 0 ? 'Nenhuma' : 'agendadas'}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Próxima Reunião */}
+        <Card className="border-none shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Próxima Reunião
+            </CardTitle>
+            <Clock className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            {stats.nextMeeting ? (
+              <>
+                <div className="text-sm font-bold truncate">
+                  {stats.nextMeeting.title}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatEventDate(stats.nextMeeting.created_at)}
+                </p>
+              </>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                Nenhuma agendada
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Próximo Evento */}
+        <Card className="border-none shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Próximo Evento
+            </CardTitle>
+            <CalendarDays className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            {stats.nextEvent ? (
+              <>
+                <div className="text-sm font-bold truncate">
+                  {stats.nextEvent.title}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatEventDate(stats.nextEvent.start_date)}
+                </p>
+              </>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                Nenhum agendado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Total de Clientes */}
+        <Card className="border-none shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Total Clientes
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalClients}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              cadastrados
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Quick Access */}
       <Card className="border-none shadow-lg rounded-2xl">

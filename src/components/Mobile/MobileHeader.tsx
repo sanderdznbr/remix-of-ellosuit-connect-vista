@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import MobileButton from '@/components/ui/mobile-button';
+import logoEllo from '@/assets/logoellosuit.png';
 import {
   Drawer,
   DrawerClose,
@@ -40,39 +41,29 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
       {/* Header Principal */}
       <div className="fixed top-0 left-0 right-0 z-50 mobile-header-blur mobile-safe-top md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Lado Esquerdo */}
-          <div className="flex items-center space-x-3">
-            <Drawer>
-              <DrawerTrigger asChild>
-                <MobileButton variant="ghost" size="sm" className="h-10 w-10 p-0">
-                  <Menu className="h-5 w-5" />
-                </MobileButton>
-              </DrawerTrigger>
-              <DrawerContent className="h-[80vh]">
-                <DrawerHeader>
-                  <DrawerTitle>Menu</DrawerTitle>
-                  <DrawerDescription>
-                    Navegue pelas funcionalidades do app
-                  </DrawerDescription>
-                </DrawerHeader>
-                <div className="px-4 pb-8">
-                  <MobileMenuContent />
-                </div>
-              </DrawerContent>
-            </Drawer>
-            
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900 truncate">
-                {title}
-              </h1>
-              <p className="text-xs text-gray-500">
-                {new Date().toLocaleDateString('pt-BR', { 
-                  weekday: 'short', 
-                  day: 'numeric', 
-                  month: 'short' 
-                })}
-              </p>
-            </div>
+          {/* Lado Esquerdo - Menu */}
+          <Drawer>
+            <DrawerTrigger asChild>
+              <MobileButton variant="ghost" size="sm" className="h-10 w-10 p-0">
+                <Menu className="h-5 w-5" />
+              </MobileButton>
+            </DrawerTrigger>
+            <DrawerContent className="h-[80vh]">
+              <DrawerHeader>
+                <DrawerTitle>Menu</DrawerTitle>
+                <DrawerDescription>
+                  Navegue pelas funcionalidades do app
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="px-4 pb-8">
+                <MobileMenuContent />
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          {/* Centro - Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <img src={logoEllo} alt="ElloSuit" className="h-8 w-auto" />
           </div>
 
           {/* Lado Direito */}

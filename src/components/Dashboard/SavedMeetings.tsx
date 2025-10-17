@@ -115,35 +115,39 @@ const SavedMeetings = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">Carregando reuniões...</p>
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <Card className="bg-card">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Carregando reuniões...</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (meetings.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Reuniões Salvas</CardTitle>
-          <CardDescription>Nenhuma reunião gravada ainda</CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-12">
-          <p className="text-muted-foreground">
-            Suas reuniões gravadas aparecerão aqui
-          </p>
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <Card className="bg-card">
+          <CardHeader>
+            <CardTitle className="text-foreground">Reuniões Salvas</CardTitle>
+            <CardDescription>Nenhuma reunião gravada ainda</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center py-12">
+            <p className="text-muted-foreground">
+              Suas reuniões gravadas aparecerão aqui
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <>
-      <Card>
+    <div className="p-6">
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle>Reuniões Salvas</CardTitle>
+          <CardTitle className="text-foreground">Reuniões Salvas</CardTitle>
           <CardDescription>
             {meetings.length} reuniõe(s) gravada(s)
           </CardDescription>
@@ -152,12 +156,12 @@ const SavedMeetings = () => {
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-3">
               {meetings.map((meeting) => (
-              <Card key={meeting.id} className="border-2">
+              <Card key={meeting.id} className="border-2 bg-card">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg truncate">
+                        <h3 className="font-semibold text-lg truncate text-foreground">
                           {meeting.title}
                         </h3>
                         {meeting.type && (
@@ -233,7 +237,7 @@ const SavedMeetings = () => {
           meeting={selectedMeeting}
         />
       )}
-    </>
+    </div>
   );
 };
 

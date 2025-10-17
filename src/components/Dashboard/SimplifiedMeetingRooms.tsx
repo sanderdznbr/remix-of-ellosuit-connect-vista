@@ -254,19 +254,19 @@ const SimplifiedMeetingRooms = () => {
         </Dialog>
 
         <Dialog open={showRecordingsDialog} onOpenChange={setShowRecordingsDialog}>
-          <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+          <DialogContent className="max-w-6xl max-h-[90vh] p-0 bg-background">
             <MeetingRecordings />
           </DialogContent>
         </Dialog>
 
         <Dialog open={showInPersonDialog} onOpenChange={setShowInPersonDialog}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogContent className="max-w-4xl max-h-[90vh] bg-background">
             <InPersonMeeting />
           </DialogContent>
         </Dialog>
 
         <Dialog open={showSavedMeetingsDialog} onOpenChange={setShowSavedMeetingsDialog}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogContent className="max-w-4xl max-h-[90vh] bg-background">
             <SavedMeetings />
           </DialogContent>
         </Dialog>

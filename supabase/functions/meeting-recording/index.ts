@@ -1,68 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
-
-// Helper to call LiveKit Egress with robust auth (JWT first, then fallback)
-async function egressFetch(url: string, body: any, opts: { apiKey: string; apiSecret: string }) {
-  const { apiKey, apiSecret } = opts;
-
-  // Build a minimal JWT compatible with LiveKit Egress
-  const token = await buildJwt(apiKey, apiSecret, { video: { roomRecord: true } });
-
-  // Attempt 1: Bearer JWT
-  let res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (res.ok) return res;
-
-  const t1 = await res.text();
-  console.error('Egress JWT attempt failed:', t1);
-
-  // Attempt 2: Bearer apiKey:apiSecret (some deployments accept this)
-  res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}:${apiSecret}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (res.ok) return res;
-
-  const t2 = await res.text();
-  console.error('Egress key:secret attempt failed:', t2);
-
-  // Attempt 3: explicit headers (defensive)
-  res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'LiveKit-Api-Key': apiKey,
-      'LiveKit-Api-Secret': apiSecret,
-    } as any,
-    body: JSON.stringify(body),
-  });
-  return res;
-}
-
-// Small JWT builder (Deno compatible)
-async function buildJwt(apiKey: string, apiSecret: string, payloadExt: Record<string, unknown>) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'HS256', typ: 'JWT' } as const;
-  const payload = { iss: apiKey, iat: now, exp: now + 60 * 10, ...payloadExt };
-  const enc = (obj: any) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj))))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/g, '');
-  const data = `${enc(header)}.${enc(payload)}`;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(apiSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
-  const signature = btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/g, '');
-  return `${data}.${signature}`;
-}
+import { RoomCompositeEgressRequest, EgressClient } from 'npm:livekit-server-sdk@2.6.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,6 +15,8 @@ const supabase = createClient(
 const LIVEKIT_API_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? '';
 const LIVEKIT_API_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? '';
 const LIVEKIT_URL = (Deno.env.get('LIVEKIT_URL') ?? '').replace('wss://', 'https://');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -125,12 +65,16 @@ serve(async (req) => {
       }
     }
 
+    // Initialize LiveKit Egress Client
+    const egressClient = new EgressClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+
     if (action === 'start') {
       // Create the recording record FIRST to ensure we have a valid file path
       let recording = null;
       const timestamp = Date.now();
       const fileName = `${roomName}-${timestamp}.mp4`;
-      const filePath = `meeting-recordings/${fileName}`; // Use full path with bucket name
+      const bucketName = 'meeting-recordings';
+      const filePath = `${fileName}`;
       
       if (roomId && companyId && userId) {
         const { data: rec, error } = await supabase
@@ -140,7 +84,7 @@ serve(async (req) => {
             company_id: companyId,
             created_by: userId,
             title: `Gravação - ${new Date().toLocaleString('pt-BR')}`,
-            file_url: filePath, // Set file path immediately
+            file_url: `${bucketName}/${filePath}`,
           })
           .select()
           .single();
@@ -154,33 +98,48 @@ serve(async (req) => {
         }
       }
 
-      // Configure LiveKit egress with proper output specification
-      const egressBody = {
-        room_name: roomName,
-        layout: 'speaker-dark',
-        audio_only: false,
-        video_only: false,
-        custom_base_url: '',
-        // Fixed: Add proper output configuration
-        output: {
-          case: 'file',
-          file: {
-            filepath: filePath,
-            output: 'MP4',
-          }
-        }
-      };
+      try {
+        // Configure RoomComposite Egress request with proper output specification
+        const egressRequest: RoomCompositeEgressRequest = {
+          roomName: roomName,
+          layout: 'speaker-dark', // Valid layouts: grid, speaker, single-speaker (+ -light/-dark suffix)
+          audioOnly: false,
+          videoOnly: false,
+          // Correct output configuration using file_outputs
+          fileOutputs: [
+            {
+              fileType: 'MP4', // MP4, OGG, or WEBM
+              filepath: filePath,
+              // Upload directly to Supabase Storage
+              s3: {
+                accessKey: '', // Will use presigned URL instead
+                secret: '',
+                region: '',
+                endpoint: `${SUPABASE_URL}/storage/v1/s3/${bucketName}`,
+                bucket: bucketName,
+                forcePathStyle: true,
+              },
+            },
+          ],
+        };
 
-      // Start recording via LiveKit Recording API with robust auth
-      let recordingResponse = await egressFetch(
-        `${LIVEKIT_URL}/twirp/livekit.Egress/StartRoomCompositeEgress`,
-        egressBody,
-        { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
-      );
+        console.log('Starting LiveKit Egress with config:', JSON.stringify(egressRequest, null, 2));
 
-      if (!recordingResponse.ok) {
-        const errorText = await recordingResponse.text();
-        console.error('LiveKit recording error:', errorText);
+        // Start recording via LiveKit SDK
+        const egressInfo = await egressClient.startRoomCompositeEgress(roomName, egressRequest);
+        
+        console.log('LiveKit recording started:', egressInfo);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          recording_id: recording?.id || '',
+          livekit_recording_id: egressInfo.egressId || ''
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+
+      } catch (error) {
+        console.error('LiveKit recording error:', error);
         
         // If LiveKit fails but we created a database record, keep it for manual recording
         if (recording) {
@@ -194,37 +153,18 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         } else {
-          throw new Error('Falha ao iniciar gravação');
+          throw error;
         }
       }
 
-      const recordingData = await recordingResponse.json();
-      console.log('LiveKit recording started:', recordingData);
-
-      return new Response(JSON.stringify({ 
-        success: true, 
-        recording_id: recording?.id || '',
-        livekit_recording_id: recordingData.egress_id || recordingData.id || ''
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
     } else if (action === 'stop') {
-      // Only attempt LiveKit stop if we have the required data
+      // Stop recording via LiveKit SDK
       if (livekitRecordingId && LIVEKIT_API_KEY && LIVEKIT_API_SECRET && LIVEKIT_URL) {
-        const stopBody = { egress_id: livekitRecordingId };
-
-        const stopResponse = await egressFetch(
-          `${LIVEKIT_URL}/twirp/livekit.Egress/StopEgress`,
-          stopBody,
-          { apiKey: LIVEKIT_API_KEY, apiSecret: LIVEKIT_API_SECRET }
-        );
-
-        if (!stopResponse.ok) {
-          const t = await stopResponse.text();
-          console.error('Failed to stop LiveKit recording:', t);
-        } else {
-          console.log('LiveKit recording stopped successfully');
+        try {
+          const egressInfo = await egressClient.stopEgress(livekitRecordingId);
+          console.log('LiveKit recording stopped successfully:', egressInfo);
+        } catch (error) {
+          console.error('Failed to stop LiveKit recording:', error);
         }
       }
 
@@ -233,7 +173,7 @@ serve(async (req) => {
         const { error } = await supabase
           .from('meeting_recordings')
           .update({ 
-            file_url: `meeting-recordings/${roomName || 'room'}-${Date.now()}.mp4`,
+            // File URL already set during creation
             duration_seconds: 0 // Will be updated by webhook when available
           })
           .eq('id', recordingId);

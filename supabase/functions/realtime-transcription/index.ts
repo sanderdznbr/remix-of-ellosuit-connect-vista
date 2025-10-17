@@ -36,8 +36,8 @@ serve(async (req) => {
     console.log('WebSocket connection established with client');
   };
 
-  // Helper function to convert PCM to WAV format
-  const pcmToWav = (pcmData: Uint8Array, sampleRate: number = 24000): Uint8Array => {
+  // Helper function to convert PCM to WAV format - otimizado para 48kHz
+  const pcmToWav = (pcmData: Uint8Array, sampleRate: number = 48000): Uint8Array => {
     const wavHeader = new ArrayBuffer(44);
     const view = new DataView(wavHeader);
     
@@ -81,11 +81,14 @@ serve(async (req) => {
       const blob = new Blob([wavData], { type: 'audio/wav' });
       formData.append('file', blob, 'audio.wav');
       formData.append('model', 'whisper-1');
-      formData.append('language', 'pt');
+      
+      // Otimizações críticas para português brasileiro
+      formData.append('language', 'pt'); // Português
       formData.append('response_format', 'verbose_json');
-      formData.append('temperature', '0.0'); // Usar temperatura 0 para transcrições mais precisas
-      // Prompt ainda mais rigoroso para evitar legendas falsas, YouTube e ruídos
-      formData.append('prompt', 'Reunião profissional brasileira. Transcreva APENAS fala humana clara e audível. IGNORE COMPLETAMENTE: legendas do YouTube, watermarks, ruídos de fundo, sons ambiente, cliques, respiração, legendas automáticas de vídeos, repetições sem contexto, onomatopeias.');
+      formData.append('temperature', '0.2'); // 0.2 é melhor que 0.0 para português - mais flexível
+      
+      // Prompt MUITO específico para português brasileiro com vocabulário comum
+      formData.append('prompt', 'Esta é uma reunião de negócios em português brasileiro. Vocabulário esperado: reunião, projeto, cliente, equipe, prazo, tarefa, objetivo, estratégia, planejamento, desenvolvimento, apresentação, proposta, orçamento, cronograma, entrega, feedback, análise, relatório, aprovação, contrato. Transcreva com precisão usando ortografia brasileira. Ignore ruídos e legendas de vídeos.');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -106,16 +109,30 @@ serve(async (req) => {
       // Validar qualidade da transcrição
       const text = result.text?.trim() || '';
       const noSpeechProb = result.segments?.[0]?.no_speech_prob || 0;
+      const avgLogprob = result.segments?.[0]?.avg_logprob || 0;
       
-      // Se a probabilidade de "não fala" é muito alta, ignorar (threshold mais rigoroso)
-      if (noSpeechProb > 0.4) {
+      console.log('📊 Qualidade da transcrição:', {
+        text: text.substring(0, 50),
+        noSpeechProb,
+        avgLogprob,
+        length: text.length
+      });
+      
+      // Se a probabilidade de "não fala" é muito alta, ignorar
+      if (noSpeechProb > 0.5) {
         console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
         return '';
       }
       
-      // Filtrar transcrições muito curtas (menos de 20 caracteres - mais rigoroso)
-      if (text.length < 20) {
+      // Filtrar transcrições muito curtas (menos de 15 caracteres)
+      if (text.length < 15) {
         console.log('⚠️ Transcrição muito curta, ignorando:', text);
+        return '';
+      }
+      
+      // Se a confiança média é muito baixa, pode ser ruído
+      if (avgLogprob < -1.0) {
+        console.log('⚠️ Confiança muito baixa na transcrição:', avgLogprob);
         return '';
       }
       
@@ -218,13 +235,14 @@ serve(async (req) => {
           
           audioBuffer.push(bytes);
           
-          // Process buffer every 3-4 seconds (better for real-time quality)
+          // Process buffer every 5 seconds or when large enough (melhor qualidade com chunks maiores)
           const bufferSize = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
           const timeSinceStart = Date.now() - bufferStartTime;
           
           console.log(`📊 Buffer status: ${bufferSize} bytes, ${timeSinceStart}ms elapsed`);
           
-          if (timeSinceStart >= 3000 || bufferSize >= 3 * 1024 * 1024) {
+          // Chunks maiores = melhor contexto e precisão para português
+          if (timeSinceStart >= 5000 || bufferSize >= 4 * 1024 * 1024) {
             console.log('🔄 Processing audio buffer NOW - size:', bufferSize, 'time:', timeSinceStart);
             
             // Combine all chunks

@@ -75,8 +75,8 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         throw new Error('Room não disponível');
       }
 
-      // Create AudioContext para mixar todos os áudios
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+      // Create AudioContext com sample rate otimizado para qualidade
+      audioContextRef.current = new AudioContext({ sampleRate: 48000 });
       console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
 
       // Criar um mixer node para combinar todos os áudios
@@ -134,10 +134,10 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     if (!audioContextRef.current || !mixerNodeRef.current) return;
 
     try {
-      // Obter o microfone local
+      // Obter o microfone local com configurações otimizadas para português
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 24000,
+          sampleRate: 48000, // Sample rate mais alto para melhor qualidade
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -219,12 +219,12 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
     const now = Date.now();
     const timeSinceLastSend = now - lastSendTimeRef.current;
-    const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
+    const bufferDurationMs = (audioBufferRef.current.length / 48000) * 1000; // Atualizado para 48kHz
 
     // Send only if:
-    // 1. Buffer has at least 8 seconds of audio (aumentado para 8)
-    // 2. At least 6 seconds passed since last send (aumentado para 6)
-    if (bufferDurationMs >= 8000 && timeSinceLastSend >= 6000) {
+    // 1. Buffer has at least 10 seconds of audio (maior = melhor contexto para Whisper)
+    // 2. At least 8 seconds passed since last send
+    if (bufferDurationMs >= 10000 && timeSinceLastSend >= 8000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms, RMS: ${rms.toFixed(2)})`);
         

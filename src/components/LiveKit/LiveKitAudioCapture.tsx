@@ -72,12 +72,20 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       console.log('📍 Capturando áudio local + remoto via LiveKit');
 
       if (!room) {
-        throw new Error('Room não disponível');
+        const errorMsg = 'Room não disponível';
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
       }
 
       // Create AudioContext para mixar todos os áudios
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
+      try {
+        audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+        console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
+      } catch (audioError) {
+        const errorMsg = 'Erro ao criar AudioContext: ' + (audioError instanceof Error ? audioError.message : 'desconhecido');
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
+      }
 
       // Criar um mixer node para combinar todos os áudios
       mixerNodeRef.current = audioContextRef.current.createGain();
@@ -121,19 +129,26 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       console.log('✅ Pipeline de áudio mixado conectado - Capturando TODOS participantes');
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       console.error('❌ Erro ao iniciar captura:', error);
+      console.error('❌ Stack trace:', error instanceof Error ? error.stack : '');
       toast({
         title: "Erro na Transcrição",
-        description: "Não foi possível iniciar transcrição de todos os participantes",
+        description: `Não foi possível iniciar transcrição: ${errorMessage}`,
         variant: "destructive"
       });
     }
   };
 
   const setupLocalAudio = async () => {
-    if (!audioContextRef.current || !mixerNodeRef.current) return;
+    if (!audioContextRef.current || !mixerNodeRef.current) {
+      const errorMsg = 'AudioContext ou MixerNode não inicializado';
+      console.error('❌', errorMsg);
+      throw new Error(errorMsg);
+    }
 
     try {
+      console.log('🎙️ Solicitando permissão de microfone...');
       // Obter o microfone local
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -155,7 +170,15 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       
       console.log('✅ Áudio LOCAL conectado ao mixer');
     } catch (error) {
-      console.error('❌ Erro ao capturar áudio local:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('❌ Erro ao capturar áudio local:', errorMsg);
+      
+      // Se o usuário negou permissão
+      if (errorMsg.includes('Permission denied') || errorMsg.includes('NotAllowedError')) {
+        throw new Error('Permissão de microfone negada. Por favor, permita o acesso ao microfone.');
+      }
+      
+      throw new Error(`Erro ao capturar áudio local: ${errorMsg}`);
     }
   };
 
@@ -266,7 +289,13 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
           if (ws.readyState !== WebSocket.OPEN) {
             console.error('⏱️ Timeout ao conectar WebSocket');
             ws.close();
-            reject(new Error('Timeout de conexão'));
+            const error = new Error('Timeout de conexão. Verifique sua conexão com a internet.');
+            toast({
+              title: "Erro de Conexão",
+              description: error.message,
+              variant: "destructive"
+            });
+            reject(error);
           }
         }, 10000);
 
@@ -323,11 +352,22 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
               }
             } else if (data.type === 'error') {
               console.error('❌ Erro do servidor:', data.error);
-              toast({
-                title: "Erro na Transcrição",
-                description: data.error,
-                variant: "destructive"
-              });
+              const errorMsg = data.error || 'Erro desconhecido no servidor';
+              
+              // Se for erro de API key, mostrar mensagem específica
+              if (errorMsg.includes('OPENAI_API_KEY')) {
+                toast({
+                  title: "Erro de Configuração",
+                  description: "A chave OPENAI_API_KEY não está configurada. Entre em contato com o administrador.",
+                  variant: "destructive"
+                });
+              } else {
+                toast({
+                  title: "Erro na Transcrição",
+                  description: errorMsg,
+                  variant: "destructive"
+                });
+              }
             } else if (data.type === 'transcription_started') {
               console.log('✅ Servidor confirmou início da transcrição');
             }
@@ -340,7 +380,13 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
           clearTimeout(connectionTimeout);
           console.error('❌ WebSocket error:', error);
           setIsConnected(false);
-          reject(error);
+          const errorMsg = 'Erro de conexão com o servidor de transcrição';
+          toast({
+            title: "Erro de Conexão",
+            description: errorMsg,
+            variant: "destructive"
+          });
+          reject(new Error(errorMsg));
         };
 
         ws.onclose = (event) => {
@@ -348,24 +394,41 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
           console.log('🔌 WebSocket desconectado:', event.code, event.reason);
           setIsConnected(false);
           
+          // Mostrar mensagem dependendo do código de fechamento
+          if (event.code === 1006) {
+            console.error('❌ Conexão WebSocket fechada anormalmente (código 1006)');
+            toast({
+              title: "Erro de Conexão",
+              description: "Conexão perdida com o servidor de transcrição. Verifique o OPENAI_API_KEY.",
+              variant: "destructive"
+            });
+          } else if (event.code === 1002) {
+            toast({
+              title: "Erro no Servidor",
+              description: "O servidor de transcrição encontrou um erro. Tente novamente.",
+              variant: "destructive"
+            });
+          }
+          
           // Try to reconnect if not a normal closure and still active
           if (isActive && event.code !== 1000 && event.code !== 1001) {
-            console.log('🔄 Tentando reconectar em 3 segundos...');
+            console.log('🔄 Tentando reconectar em 5 segundos...');
             setTimeout(() => {
               if (isActive && wsRef.current?.readyState !== WebSocket.OPEN) {
                 connectWebSocket().catch(err => {
                   console.error('❌ Falha na reconexão:', err);
                 });
               }
-            }, 3000);
+            }, 5000);
           }
         };
 
       } catch (error) {
         console.error('❌ Erro ao conectar WebSocket:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         toast({
           title: "Erro de Conexão",
-          description: "Não foi possível conectar ao serviço de transcrição",
+          description: `Não foi possível conectar ao serviço de transcrição: ${errorMsg}`,
           variant: "destructive"
         });
         reject(error);

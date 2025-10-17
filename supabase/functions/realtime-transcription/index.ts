@@ -14,6 +14,10 @@ const supabase = createClient(
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
+if (!OPENAI_API_KEY) {
+  console.error('❌ OPENAI_API_KEY não está configurado!');
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -29,6 +33,17 @@ serve(async (req) => {
     return new Response("Expected WebSocket connection", { 
       status: 400,
       headers: corsHeaders 
+    });
+  }
+
+  // Verificar se OPENAI_API_KEY está configurado ANTES de fazer upgrade
+  if (!OPENAI_API_KEY) {
+    console.error('❌ OPENAI_API_KEY não configurado, recusando conexão');
+    return new Response(JSON.stringify({ 
+      error: 'OPENAI_API_KEY não está configurado. Configure a chave antes de usar transcrição.' 
+    }), { 
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 

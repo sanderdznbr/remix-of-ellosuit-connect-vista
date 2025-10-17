@@ -14,12 +14,13 @@ interface Meeting {
   created_at: string;
   duration_seconds: number;
   file_url: string;
-  speaker_mapping?: Record<string, string>;
+  speaker_mapping?: Record<string, string> | any;
   transcript_with_timestamps?: Array<{
     timestamp_seconds: number;
     speaker: string;
     text: string;
-  }>;
+  }> | any;
+  type?: 'presencial' | 'online';
 }
 
 const SavedMeetings = () => {
@@ -38,14 +39,31 @@ const SavedMeetings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // Buscar reuniões presenciais
+      const { data: inPersonData, error: inPersonError } = await supabase
         .from('in_person_meetings')
         .select('id, title, transcript, created_at, duration_seconds, file_url, speaker_mapping, transcript_with_timestamps')
         .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setMeetings((data || []) as Meeting[]);
+      if (inPersonError) throw inPersonError;
+
+      // Buscar gravações online
+      const { data: recordingsData, error: recordingsError } = await supabase
+        .from('meeting_recordings')
+        .select('id, title, transcript, created_at, duration_seconds, file_url, speaker_mapping, transcript_with_timestamps')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (recordingsError) throw recordingsError;
+
+      // Combinar e ordenar por data
+      const combined = [
+        ...(inPersonData || []).map(m => ({ ...m, type: 'presencial' as const })),
+        ...(recordingsData || []).map(m => ({ ...m, type: 'online' as const })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setMeetings(combined as Meeting[]);
     } catch (error) {
       console.error('Erro ao carregar reuniões:', error);
       toast({
@@ -138,9 +156,22 @@ const SavedMeetings = () => {
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-2 truncate">
-                        {meeting.title}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-lg truncate">
+                          {meeting.title}
+                        </h3>
+                        {meeting.type && (
+                          <span 
+                            className="text-xs px-2 py-1 rounded-full font-medium flex-shrink-0"
+                            style={{
+                              backgroundColor: meeting.type === 'online' ? '#3600FF20' : '#10B98120',
+                              color: meeting.type === 'online' ? '#3600FF' : '#10B981'
+                            }}
+                          >
+                            {meeting.type === 'online' ? '🎥 Online' : '🎙️ Presencial'}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />

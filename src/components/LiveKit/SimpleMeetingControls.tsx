@@ -11,6 +11,8 @@ interface SimpleMeetingControlsProps {
   onShowTranscription: () => void;
   isChatOpen: boolean;
   isParticipantsOpen: boolean;
+  onToggleRecording: () => void;
+  isRecording: boolean;
 }
 
 const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
@@ -21,7 +23,9 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
   onSettingsClick,
   onShowTranscription,
   isChatOpen,
-  isParticipantsOpen
+  isParticipantsOpen,
+  onToggleRecording,
+  isRecording
 }, ref) => {
   const { localParticipant } = useLocalParticipant();
   const { toast } = useToast();
@@ -87,6 +91,29 @@ const SimpleMeetingControls = forwardRef<any, SimpleMeetingControlsProps>(({
         <svg width="21" height="25" viewBox="0 0 21 25" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M13 9C13 11.209 11.209 13 9 13C6.791 13 5 11.209 5 9V2C5 -0.209 6.791 -2 9 -2C11.209 -2 13 -0.209 13 2V9ZM17 7V9C17 13.418 13.418 17 9 17C4.582 17 1 13.418 1 9V7H3V9C3 12.309 5.691 15 9 15C12.309 15 15 12.309 15 9V7H17ZM10 20V18H8V20H4V22H14V20H10Z" fill="white"/>
         </svg>
+      </button>
+
+      {/* Recording Button */}
+      <button
+        onClick={onToggleRecording}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105"
+        style={{ 
+          width: '57px', 
+          height: '57px', 
+          backgroundColor: isRecording ? '#DC2626' : '#161616',
+          animation: isRecording ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+        }}
+        title={isRecording ? "Parar gravação" : "Iniciar gravação"}
+      >
+        {isRecording ? (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="8" fill="white"/>
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="8" stroke="white" strokeWidth="2" fill="none"/>
+          </svg>
+        )}
       </button>
 
       {/* Emoji */}

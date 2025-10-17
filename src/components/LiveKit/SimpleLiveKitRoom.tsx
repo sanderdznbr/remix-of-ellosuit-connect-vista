@@ -92,6 +92,9 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [livekitConnectedAt, setLivekitConnectedAt] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingId, setRecordingId] = useState<string>('');
+  const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const { user } = useAuth();
@@ -467,8 +470,86 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     setTranscriptionMessages(prev => [...prev, message]);
   }, []);
 
+  const startRecording = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('meeting-recording', {
+        body: {
+          action: 'start',
+          roomName: roomName,
+          userId: user?.id,
+          companyId: companyId
+        }
+      });
+
+      if (error) throw error;
+
+      setIsRecording(true);
+      setRecordingId(data.recording_id);
+      setLivekitRecordingId(data.livekit_recording_id || '');
+
+      toast({
+        title: "Gravação iniciada",
+        description: "A reunião está sendo gravada",
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast({
+        title: "Erro ao gravar",
+        description: "Não foi possível iniciar a gravação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingId) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('meeting-recording', {
+        body: {
+          action: 'stop',
+          roomName: roomName,
+          recordingId: recordingId,
+          livekitRecordingId: livekitRecordingId
+        }
+      });
+
+      if (error) throw error;
+
+      setIsRecording(false);
+      setRecordingId('');
+      setLivekitRecordingId('');
+
+      toast({
+        title: "Gravação finalizada",
+        description: "A gravação foi salva em 'Reuniões Salvas'",
+      });
+    } catch (error) {
+      console.error('Erro ao parar gravação:', error);
+      toast({
+        title: "Erro ao parar gravação",
+        description: "Não foi possível finalizar a gravação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      await stopRecording();
+    } else {
+      await startRecording();
+    }
+  };
+
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
+    
+    // Stop recording if active
+    if (isRecording && recordingId) {
+      console.log('🔴 Parando gravação antes de sair...');
+      await stopRecording();
+    }
     
     // Clear meeting duration timer
     if (meetingDurationTimerRef.current) {
@@ -818,6 +899,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
               roomName={roomName}
               onLeave={onLeave}
               onShareMeeting={() => setShowShareModal(true)}
+              onToggleRecording={toggleRecording}
+              isRecording={isRecording}
             />
           ) : (
             <>
@@ -861,6 +944,8 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
                 onShareMeeting={() => setShowShareModal(true)}
                 onTranscriptionClick={() => setShowTranscriptionModal(true)}
                 meetingControlsRef={meetingControlsRef}
+                onToggleRecording={toggleRecording}
+                isRecording={isRecording}
               />
               
               {/* Modals */}

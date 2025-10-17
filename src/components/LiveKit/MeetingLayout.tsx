@@ -22,6 +22,8 @@ interface MeetingLayoutProps {
   onShareMeeting: () => void;
   onTranscriptionClick: () => void;
   meetingControlsRef: React.RefObject<any>;
+  onToggleRecording: () => void;
+  isRecording: boolean;
 }
 
 const MeetingLayout: React.FC<MeetingLayoutProps> = ({
@@ -40,6 +42,8 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
   onShareMeeting,
   onTranscriptionClick,
   meetingControlsRef,
+  onToggleRecording,
+  isRecording,
 }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -115,6 +119,8 @@ const MeetingLayout: React.FC<MeetingLayoutProps> = ({
           onLeave={onLeave}
           onSettingsClick={() => setShowSettingsModal(true)}
           onTranscriptionClick={onTranscriptionClick}
+          onToggleRecording={onToggleRecording}
+          isRecording={isRecording}
         />
       </div>
 

@@ -7,12 +7,16 @@ interface NewMeetingControlsProps {
   onLeave: () => void;
   onSettingsClick: () => void;
   onTranscriptionClick: () => void;
+  onToggleRecording: () => void;
+  isRecording: boolean;
 }
 
 const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
   onLeave,
   onSettingsClick,
   onTranscriptionClick,
+  onToggleRecording,
+  isRecording,
 }, ref) => {
   const { localParticipant } = useLocalParticipant();
   const { toast } = useToast();
@@ -135,6 +139,30 @@ const NewMeetingControls = forwardRef<any, NewMeetingControlsProps>(({
             </clipPath>
           </defs>
         </svg>
+      </button>
+
+      {/* Recording Button */}
+      <button
+        onClick={onToggleRecording}
+        className="flex items-center justify-center rounded-full transition-all hover:scale-105 hover:shadow-lg"
+        style={{ 
+          width: '52px', 
+          height: '52px', 
+          backgroundColor: isRecording ? '#DC2626' : '#2D2D2D',
+          boxShadow: isRecording ? '0 0 20px rgba(220, 38, 38, 0.6)' : 'none',
+          animation: isRecording ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+        }}
+        title={isRecording ? "Parar gravação" : "Iniciar gravação"}
+      >
+        {isRecording ? (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7" fill="white"/>
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7" stroke="white" strokeWidth="2" fill="none"/>
+          </svg>
+        )}
       </button>
 
       {/* Transcription Button */}

@@ -39,7 +39,7 @@ const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, meetingLink 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md bg-white" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="text-gray-900 text-center">
             Convide usuários para a reunião

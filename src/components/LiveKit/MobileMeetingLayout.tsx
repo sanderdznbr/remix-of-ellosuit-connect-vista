@@ -24,11 +24,15 @@ interface MobileMeetingLayoutProps {
   roomName: string;
   onLeave: () => void;
   onShareMeeting?: () => void;
+  onToggleRecording: () => void;
+  isRecording: boolean;
 }
 
 const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
   roomName,
   onLeave,
+  onToggleRecording,
+  isRecording,
 }) => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'transcription'>('chat');
@@ -330,6 +334,24 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
             className="h-12 w-12 rounded-full relative bg-[#2a2a2a] border-white/20 hover:bg-[#3a3a3a] text-white"
           >
             <MessageSquare className="h-5 w-5" />
+          </Button>
+
+          <Button
+            onClick={onToggleRecording}
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full border-white/20 hover:bg-[#3a3a3a] text-white"
+            style={{
+              backgroundColor: isRecording ? '#DC2626' : '#2a2a2a',
+              borderColor: isRecording ? '#DC2626' : 'rgba(255,255,255,0.2)',
+              animation: isRecording ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+            }}
+          >
+            {isRecording ? (
+              <div className="w-3 h-3 rounded-full bg-white" />
+            ) : (
+              <div className="w-3 h-3 rounded-full border-2 border-white" />
+            )}
           </Button>
 
           <Button

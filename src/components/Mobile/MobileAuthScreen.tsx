@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Apple, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 const MobileAuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +18,16 @@ const MobileAuthScreen = () => {
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirecionar automaticamente se já estiver logado
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 [Mobile] Usuário já logado, redirecionando para /dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +46,10 @@ const MobileAuthScreen = () => {
         title: "Bem-vindo!",
         description: "Login realizado com sucesso.",
       });
+
+      // Redirecionar para o dashboard após login bem-sucedido
+      console.log('✅ [Mobile] Login bem-sucedido, redirecionando para /dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
       toast({
         title: "Erro no login",
@@ -51,7 +67,7 @@ const MobileAuthScreen = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -59,16 +75,27 @@ const MobileAuthScreen = () => {
             full_name: name,
             company_name: company,
           },
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Conta criada!",
-        description: "Verifique seu email para confirmar a conta.",
-      });
+      // Verificar se precisa confirmar email ou se já está logado
+      if (data?.user && !data.session) {
+        toast({
+          title: "Conta criada!",
+          description: "Verifique seu email para confirmar a conta.",
+        });
+      } else if (data?.session) {
+        toast({
+          title: "Conta criada!",
+          description: "Bem-vindo ao ElloSuit.",
+        });
+        // Redirecionar para o dashboard após cadastro e login automático
+        console.log('✅ [Mobile] Cadastro e login bem-sucedidos, redirecionando para /dashboard');
+        navigate('/dashboard', { replace: true });
+      }
     } catch (error: any) {
       toast({
         title: "Erro no cadastro",

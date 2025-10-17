@@ -2215,6 +2215,10 @@ export type Database = {
         Args: { company_id: string; user_id: string }
         Returns: boolean
       }
+      is_room_host: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_belongs_to_company: {
         Args: { company_id: string; user_id: string }
         Returns: boolean

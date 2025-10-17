@@ -54,7 +54,13 @@ const ZoomParticipantGrid: React.FC = () => {
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                className="w-full h-full max-h-full flex items-center justify-center bg-black rounded-lg overflow-hidden"
+                className="flex items-center justify-center bg-black rounded-lg overflow-hidden"
+                style={{ 
+                  maxWidth: '1200px',
+                  maxHeight: '675px',
+                  width: '100%',
+                  aspectRatio: '16/9'
+                }}
               >
                 <VideoTrack
                   trackRef={trackRef}

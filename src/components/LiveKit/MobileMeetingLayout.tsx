@@ -249,14 +249,23 @@ const MobileMeetingLayout: React.FC<MobileMeetingLayoutProps> = ({
       <div className="mobile-video-grid">
         {hasScreenShare ? (
           <div className="mobile-screenshare-layout">
-            <div className="mobile-screenshare-main">
+            <div className="mobile-screenshare-main flex items-center justify-center">
               {screenShareTracks.map((trackRef: TrackReference, index: number) => (
-                <div key={`screenshare-${trackRef.participant.identity}-${index}`} className="w-full h-full">
+                <div 
+                  key={`screenshare-${trackRef.participant.identity}-${index}`} 
+                  className="flex items-center justify-center"
+                  style={{
+                    maxWidth: '1200px',
+                    maxHeight: '675px',
+                    width: '100%',
+                    aspectRatio: '16/9'
+                  }}
+                >
                   <ResizableVideoTile
                     trackRef={trackRef}
                     isScreenShare={true}
-                    defaultWidth={window.innerWidth - 16}
-                    defaultHeight={window.innerHeight * 0.6}
+                    defaultWidth={Math.min(800, window.innerWidth - 16)}
+                    defaultHeight={Math.min(600, window.innerHeight * 0.5)}
                   />
                 </div>
               ))}

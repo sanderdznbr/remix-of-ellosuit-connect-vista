@@ -1141,6 +1141,7 @@ export type Database = {
           file_size: number | null
           file_url: string
           id: string
+          livekit_recording_id: string | null
           room_id: string
           speaker_mapping: Json | null
           title: string
@@ -1156,6 +1157,7 @@ export type Database = {
           file_size?: number | null
           file_url: string
           id?: string
+          livekit_recording_id?: string | null
           room_id: string
           speaker_mapping?: Json | null
           title: string
@@ -1171,6 +1173,7 @@ export type Database = {
           file_size?: number | null
           file_url?: string
           id?: string
+          livekit_recording_id?: string | null
           room_id?: string
           speaker_mapping?: Json | null
           title?: string

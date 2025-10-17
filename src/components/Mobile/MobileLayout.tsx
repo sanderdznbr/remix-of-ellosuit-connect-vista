@@ -1,6 +1,5 @@
 import React from 'react';
 import { MobileSidebar } from './MobileSidebar';
-import Sidebar from '@/components/Dashboard/Sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
@@ -12,22 +11,14 @@ interface MobileLayoutProps {
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const { isMobile } = useIsMobile();
 
-  // DESKTOP: Mostrar sidebar lateral azul sempre
   if (!isMobile) {
     return (
-      <div className="flex min-h-screen w-full bg-background">
-        {/* Sidebar azul lateral - sempre visível no desktop */}
-        <Sidebar />
-        
-        {/* Conteúdo principal */}
-        <main className="flex-1 overflow-x-hidden bg-background">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 w-full bg-background">
+        {children}
+      </main>
     );
   }
 
-  // MOBILE: Layout mobile com navbar superior
   return (
     <div className="min-h-screen w-full bg-background relative">
       {/* Mobile Top Navbar - Fixed */}

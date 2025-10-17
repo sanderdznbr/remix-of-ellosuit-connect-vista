@@ -24,7 +24,7 @@ const InviteUsersModal: React.FC<InviteUsersModalProps> = ({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const meetingLink = `${window.location.origin}/meet/${roomCode}`;
+  const meetingLink = `${window.location.origin}/livekit/${roomCode}`;
 
   const handleCopy = async () => {
     try {

@@ -25,7 +25,13 @@ serve(async (req) => {
 
   try {
     const { action, roomName, userId, companyId, recordingId, livekitRecordingId } = await req.json();
-    console.log('Recording action:', { action, roomName, userId, companyId, recordingId, livekitRecordingId });
+    console.log('📹 [meeting-recording] ===== INÍCIO =====');
+    console.log('📹 [meeting-recording] Action:', action);
+    console.log('📹 [meeting-recording] Room Name:', roomName);
+    console.log('📹 [meeting-recording] User ID:', userId);
+    console.log('📹 [meeting-recording] Company ID:', companyId);
+    console.log('📹 [meeting-recording] Recording ID:', recordingId);
+    console.log('📹 [meeting-recording] LiveKit Recording ID:', livekitRecordingId);
 
     // Resolve room_id (uuid) from room_code (text) first
     const { data: room, error: roomErr } = await supabase
@@ -35,9 +41,10 @@ serve(async (req) => {
       .single();
 
     if (roomErr || !room) {
-      console.error('Room lookup error:', roomErr);
+      console.error('❌ [meeting-recording] Room lookup error:', roomErr);
       // If LiveKit fails, still allow fallback recording by returning a success response
       if (action === 'start') {
+        console.warn('⚠️ [meeting-recording] Using fallback recording method');
         return new Response(JSON.stringify({ 
           success: true, 
           fallback: true,
@@ -50,10 +57,11 @@ serve(async (req) => {
     }
 
     const roomId: string = room.id as string;
+    console.log('✅ [meeting-recording] Room ID resolved:', roomId);
 
     // Check LiveKit credentials - if missing, use fallback
     if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
-      console.warn('LiveKit credentials not configured, using fallback');
+      console.warn('⚠️ [meeting-recording] LiveKit credentials not configured, using fallback');
       if (action === 'start') {
         return new Response(JSON.stringify({ 
           success: true, 
@@ -66,15 +74,21 @@ serve(async (req) => {
     }
 
     // Initialize LiveKit Egress Client
+    console.log('🔧 [meeting-recording] Initializing LiveKit Egress Client');
     const egressClient = new EgressClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
 
     if (action === 'start') {
+      console.log('🎬 [meeting-recording] Starting recording...');
+      
       // Create the recording record FIRST to ensure we have a valid file path
       let recording = null;
       const timestamp = Date.now();
       const fileName = `${roomName}-${timestamp}.mp4`;
       const bucketName = 'meeting-recordings';
       const filePath = `${fileName}`;
+      
+      console.log('📝 [meeting-recording] Creating database record...');
+      console.log('📝 [meeting-recording] File path:', filePath);
       
       if (roomId && companyId && userId) {
         const { data: rec, error } = await supabase
@@ -91,11 +105,11 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          console.error('Database error:', error);
+          console.error('❌ [meeting-recording] Database error:', error);
           throw new Error('Erro ao criar registro de gravação');
         } else {
           recording = rec;
-          console.log('Recording record created:', recording.id);
+          console.log('✅ [meeting-recording] Recording record created:', recording.id);
         }
       }
 
@@ -108,7 +122,9 @@ serve(async (req) => {
           filepath: filePath,
         });
 
-        console.log('Starting LiveKit Egress with file output:', filePath);
+        console.log('🚀 [meeting-recording] Starting LiveKit Egress...');
+        console.log('🚀 [meeting-recording] Room:', roomName);
+        console.log('🚀 [meeting-recording] File output path:', filePath);
 
         // Start recording via LiveKit SDK using v2 format
         const egressInfo = await egressClient.startRoomCompositeEgress(roomName, {
@@ -118,16 +134,26 @@ serve(async (req) => {
           videoOnly: false,
         });
         
-        console.log('LiveKit recording started:', egressInfo);
+        console.log('✅ [meeting-recording] LiveKit recording started!');
+        console.log('✅ [meeting-recording] Egress ID:', egressInfo.egressId);
+        console.log('✅ [meeting-recording] Full egress info:', JSON.stringify(egressInfo, null, 2));
 
         // Atualizar registro com LiveKit Recording ID
         if (recording) {
-          await supabase
+          console.log('📝 [meeting-recording] Updating database with LiveKit Recording ID...');
+          const { error: updateError } = await supabase
             .from('meeting_recordings')
             .update({ livekit_recording_id: egressInfo.egressId })
             .eq('id', recording.id);
+
+          if (updateError) {
+            console.error('❌ [meeting-recording] Error updating record:', updateError);
+          } else {
+            console.log('✅ [meeting-recording] Database record updated successfully');
+          }
         }
 
+        console.log('🎉 [meeting-recording] Recording start complete!');
         return new Response(JSON.stringify({ 
           success: true, 
           recording_id: recording?.id || '',
@@ -137,11 +163,12 @@ serve(async (req) => {
         });
 
       } catch (error) {
-        console.error('LiveKit recording error:', error);
+        console.error('❌ [meeting-recording] LiveKit recording error:', error);
+        console.error('❌ [meeting-recording] Error details:', JSON.stringify(error, null, 2));
         
         // If LiveKit fails but we created a database record, keep it for manual recording
         if (recording) {
-          console.log('Recording started: manual/fallback mode');
+          console.log('⚠️ [meeting-recording] Recording started: manual/fallback mode');
           return new Response(JSON.stringify({ 
             success: true, 
             recording_id: recording.id,
@@ -156,34 +183,45 @@ serve(async (req) => {
       }
 
     } else if (action === 'stop') {
+      console.log('🛑 [meeting-recording] Stopping recording...');
+      console.log('🛑 [meeting-recording] LiveKit Recording ID:', livekitRecordingId);
+      console.log('🛑 [meeting-recording] Database Recording ID:', recordingId);
+      
       // Stop recording via LiveKit SDK
       if (livekitRecordingId && LIVEKIT_API_KEY && LIVEKIT_API_SECRET && LIVEKIT_URL) {
         try {
+          console.log('🛑 [meeting-recording] Calling LiveKit stopEgress...');
           const egressInfo = await egressClient.stopEgress(livekitRecordingId);
-          console.log('LiveKit recording stopped successfully:', egressInfo);
+          console.log('✅ [meeting-recording] LiveKit recording stopped successfully!');
+          console.log('✅ [meeting-recording] Egress info:', JSON.stringify(egressInfo, null, 2));
         } catch (error) {
-          console.error('Failed to stop LiveKit recording:', error);
+          console.error('❌ [meeting-recording] Failed to stop LiveKit recording:', error);
+          console.error('❌ [meeting-recording] Error details:', JSON.stringify(error, null, 2));
         }
+      } else {
+        console.warn('⚠️ [meeting-recording] Missing LiveKit credentials or recording ID, skipping LiveKit stop');
       }
 
       // Update recording status only if we have a valid recordingId
       if (recordingId) {
+        console.log('📝 [meeting-recording] Updating database record...');
         const { error } = await supabase
           .from('meeting_recordings')
           .update({ 
-            // File URL already set during creation
+            // File URL will be updated by webhook
             duration_seconds: 0 // Will be updated by webhook when available
           })
           .eq('id', recordingId);
 
         if (error) {
-          console.error('Database update error:', error);
+          console.error('❌ [meeting-recording] Database update error:', error);
         } else {
-          console.log('Recording database record updated');
+          console.log('✅ [meeting-recording] Recording database record updated');
         }
       }
 
-      console.log('Recording stopped:', livekitRecordingId || 'fallback');
+      console.log('🎉 [meeting-recording] Recording stop complete!');
+      console.log('🎉 [meeting-recording] Recording ID:', livekitRecordingId || 'fallback');
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -98,6 +98,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
   const [livekitRecordingId, setLivekitRecordingId] = useState<string>('');
   const [showRecordingConsent, setShowRecordingConsent] = useState(false);
   const [pendingRecordingRequest, setPendingRecordingRequest] = useState(false);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const meetingControlsRef = useRef<any>(null);
   const meetingDurationTimerRef = useRef<NodeJS.Timeout>();
   const { user } = useAuth();
@@ -673,7 +674,15 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     if (!recordingId) return;
 
     try {
-      const { error } = await supabase.functions.invoke('meeting-recording', {
+      console.log('🔴 [stopRecording] Parando gravação...', { recordingId, livekitRecordingId });
+      setIsProcessingRecording(true);
+
+      toast({
+        title: "Processando gravação",
+        description: "Aguarde enquanto finalizamos a gravação...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('meeting-recording', {
         body: {
           action: 'stop',
           roomName: roomName,
@@ -682,18 +691,25 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [stopRecording] Erro:', error);
+        throw error;
+      }
+
+      console.log('✅ [stopRecording] Gravação parada com sucesso:', data);
 
       setIsRecording(false);
       setRecordingId('');
       setLivekitRecordingId('');
+      setIsProcessingRecording(false);
 
       toast({
-        title: "Gravação finalizada",
-        description: "A gravação foi salva em 'Reuniões Salvas'",
+        title: "Gravação salva!",
+        description: "A gravação foi finalizada e salva em 'Gravações Salvas'. O vídeo será processado nos próximos minutos.",
       });
     } catch (error) {
-      console.error('Erro ao parar gravação:', error);
+      console.error('❌ [stopRecording] Erro ao parar gravação:', error);
+      setIsProcessingRecording(false);
       toast({
         title: "Erro ao parar gravação",
         description: "Não foi possível finalizar a gravação",
@@ -716,6 +732,11 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     // Stop recording if active
     if (isRecording && recordingId) {
       console.log('🔴 Parando gravação antes de sair...');
+      setIsProcessingRecording(true);
+      toast({
+        title: "Finalizando gravação",
+        description: "Aguarde enquanto salvamos a gravação...",
+      });
       await stopRecording();
     }
     
@@ -730,6 +751,13 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       setIsProcessingTranscript(true);
       await autoSaveMeeting();
       setIsProcessingTranscript(false);
+    }
+    
+    // Wait a bit if recording was just stopped to ensure it's processed
+    if (isProcessingRecording) {
+      console.log('⏳ Aguardando processamento da gravação...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsProcessingRecording(false);
     }
     
     // Immediate disconnect
@@ -1072,6 +1100,22 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           ) : (
             <>
               {/* Loading States */}
+              {isProcessingRecording && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                  <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
+                    <div className="mb-4">
+                      <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Exportando gravação...</h3>
+                    <p className="text-muted-foreground">
+                      Aguarde enquanto finalizamos e salvamos a gravação da reunião.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {isProcessingTranscript && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
                   <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">

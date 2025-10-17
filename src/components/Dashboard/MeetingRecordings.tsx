@@ -69,6 +69,8 @@ const MeetingRecordings: React.FC = () => {
     if (!companyId) return;
     
     try {
+      console.log('🔍 [MeetingRecordings] Loading recordings for company:', companyId);
+      
       const { data, error } = await supabase
         .from('meeting_recordings')
         .select(`
@@ -79,7 +81,7 @@ const MeetingRecordings: React.FC = () => {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error loading recordings:', error);
+        console.error('❌ [MeetingRecordings] Error loading recordings:', error);
         toast({
           title: 'Erro',
           description: 'Erro ao carregar gravações',
@@ -88,9 +90,12 @@ const MeetingRecordings: React.FC = () => {
         return;
       }
       
+      console.log('✅ [MeetingRecordings] Loaded recordings:', data?.length || 0);
+      console.log('📹 [MeetingRecordings] Recordings data:', data);
+      
       setRecordings(data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ [MeetingRecordings] Error:', error);
     } finally {
       setLoading(false);
     }
@@ -353,21 +358,30 @@ const MeetingRecordings: React.FC = () => {
                   )}
                   
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => playRecording(recording)}
-                      className="flex-1"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Reproduzir
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => downloadRecording(recording)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    {recording.file_url ? (
+                      <>
+                        <Button 
+                          size="sm" 
+                          onClick={() => playRecording(recording)}
+                          className="flex-1"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Reproduzir
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => downloadRecording(recording)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 bg-amber-50 rounded py-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-600 border-t-transparent"></div>
+                        <span className="text-sm font-medium">Processando...</span>
+                      </div>
+                    )}
                     <Button 
                       size="sm" 
                       variant="destructive"

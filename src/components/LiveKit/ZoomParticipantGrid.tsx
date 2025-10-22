@@ -58,48 +58,56 @@ const ZoomParticipantGrid: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-[#101010]">
-      {/* Screen Share Area - Layout Responsivo */}
+      {/* Screen Share Area - Layout Responsivo para múltiplas telas */}
       {hasScreenShare && (
-        <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
-          {/* Tela Compartilhada - 75% em desktop, 100% em mobile */}
-          <div className="flex-1 lg:flex-[0_0_75%] flex items-center justify-center">
+        <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden">
+          {/* Telas Compartilhadas - Grid quando há múltiplas */}
+          <div className={cn(
+            "flex gap-3 overflow-auto",
+            screenShareTracks.length === 1 ? "flex-[0_0_70%]" : "flex-[0_0_60%]",
+            screenShareTracks.length > 1 && "grid grid-cols-1 lg:grid-cols-2"
+          )}>
             {screenShareTracks.map((trackRef: TrackReference, index: number) => (
               <div
                 key={`screenshare-${trackRef.participant.identity}-${index}`}
-                className="flex items-center justify-center bg-black rounded-lg overflow-hidden w-full h-full"
-                style={{ 
-                  maxWidth: '100%',
-                  maxHeight: '100%'
-                }}
+                className="flex flex-col items-center justify-center bg-black rounded-lg overflow-hidden min-h-[300px]"
               >
                 <VideoTrack
                   trackRef={trackRef}
                   className="w-full h-full object-contain"
                 />
+                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="text-white text-xs font-medium">
+                    {getParticipantName(trackRef.participant)}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
           
-          {/* Participantes - Sidebar vertical em desktop, horizontal em mobile */}
+          {/* Participantes - Grid horizontal embaixo */}
           {cameraTracks.length > 0 && (
-            <div className="lg:flex-[0_0_25%] flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden pb-2 lg:pb-0 px-2 lg:px-0">
+            <div className={cn(
+              "flex gap-2 overflow-x-auto overflow-y-hidden pb-2 px-2",
+              screenShareTracks.length === 1 ? "flex-[0_0_30%]" : "flex-[0_0_40%]"
+            )}>
               {cameraTracks.map((trackRef: TrackReference, index: number) => (
                 <div
-                  key={`camera-sidebar-${trackRef.participant.identity}-${index}`}
-                  className="relative flex-shrink-0 lg:flex-shrink lg:w-full w-32 lg:h-auto h-24 lg:aspect-video rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                  key={`camera-bottom-${trackRef.participant.identity}-${index}`}
+                  className="relative flex-shrink-0 w-40 lg:w-48 aspect-video rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary transition-all"
                   style={{ backgroundColor: '#1a1a1a' }}
                 >
                   {isVideoEnabled(trackRef.participant) ? (
                     <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center overflow-hidden">
                       <VideoTrack
                         trackRef={trackRef}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                         style={{ backgroundColor: '#000' }}
                       />
                     </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted rounded-2xl">
-                      <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-base lg:text-xl">
+                      <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-base lg:text-lg">
                         {getParticipantName(trackRef.participant).charAt(0).toUpperCase()}
                       </div>
                     </div>

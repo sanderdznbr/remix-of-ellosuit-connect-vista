@@ -85,10 +85,10 @@ serve(async (req) => {
       // Otimizações críticas para português brasileiro
       formData.append('language', 'pt'); // Português
       formData.append('response_format', 'verbose_json');
-      formData.append('temperature', '0.2'); // 0.2 é melhor que 0.0 para português - mais flexível
+      formData.append('temperature', '0.3'); // Mais flexível para fala natural
       
-      // Prompt MUITO específico para português brasileiro com vocabulário comum
-      formData.append('prompt', 'Esta é uma reunião de negócios em português brasileiro. Vocabulário esperado: reunião, projeto, cliente, equipe, prazo, tarefa, objetivo, estratégia, planejamento, desenvolvimento, apresentação, proposta, orçamento, cronograma, entrega, feedback, análise, relatório, aprovação, contrato. Transcreva com precisão usando ortografia brasileira. Ignore ruídos e legendas de vídeos.');
+      // Prompt mais simples e natural
+      formData.append('prompt', 'Esta é uma reunião de negócios em português brasileiro. Transcreva exatamente o que foi dito pelos participantes, usando pontuação natural e vocabulário profissional. Ignore ruídos de fundo.');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -118,14 +118,14 @@ serve(async (req) => {
         length: text.length
       });
       
-      // Se a probabilidade de "não fala" é muito alta, ignorar
-      if (noSpeechProb > 0.5) {
+      // Se a probabilidade de "não fala" é MUITO alta, ignorar (mais permissivo)
+      if (noSpeechProb > 0.65) {
         console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
         return '';
       }
       
-      // Filtrar transcrições muito curtas (menos de 15 caracteres)
-      if (text.length < 15) {
+      // Filtrar transcrições muito curtas (menos de 10 caracteres - mais permissivo)
+      if (text.length < 10) {
         console.log('⚠️ Transcrição muito curta, ignorando:', text);
         return '';
       }
@@ -136,30 +136,15 @@ serve(async (req) => {
         return '';
       }
       
-      // Filtrar padrões de ruído comuns - versão MUITO mais rigorosa incluindo YouTube
+      // Filtrar padrões de ruído comuns - mais focado apenas em ruídos óbvios
       const noisePatterns = [
-        /^[eéaáií\s]+$/i,              // "E aí", "é é é"
-        /^(e\s*aí\s*){2,}/i,           // "E aí E aí E aí"
-        /^(da)+$/i,                    // "DADADADA"
-        /^(pa|ra|rá)+$/i,              // "Parará, parará"
-        /amara\.?org/i,                // "Amara.org" ou "Amara org"
-        /legendas?\s+(pela\s+)?comunidade/i, // "Legendas pela comunidade"
-        /^[a-záéíóú]{1,2}(\s[a-záéíóú]{1,2})+$/i, // Repetições de letras curtas
-        /^[\.\s]+$/,                   // Apenas pontos e espaços
-        /^(tchau[,\s]*){2,}/i,         // "Tchau, tchau!"
-        /^(oi[,\s]*){2,}/i,            // "Oi oi oi"
-        /^(\w{1,3}\s*){5,}$/i,         // Palavras muito curtas repetidas
-        /subtitles?\s+by/i,            // "Subtitles by"
-        /^[^\w]*$/,                    // Apenas caracteres não-palavra
-        /youtube/i,                    // "YouTube" em qualquer lugar
-        /inscreva[-\s]se/i,            // "Inscreva-se"
-        /se\s+inscrever?/i,            // "se inscrever"
-        /curtir?\s+(e|o)?\s*vídeo/i,   // "curtir o vídeo"
-        /ativar?\s+o?\s*sino/i,        // "ativar o sino"
-        /notificaç(ões|ao)/i,          // "notificações"
-        /deixe?\s+seu\s+like/i,        // "deixe seu like"
-        /compartilhe?\s+o?\s*vídeo/i,  // "compartilhe o vídeo"
-        /^(www\.|http)/i,              // URLs
+        /^[,.!?;:\s]+$/,                  // Apenas pontuação
+        /^(uh+|um+|ah+|eh+|hm+|mhm+|mmm+|hmm+)$/i, // Sons de preenchimento
+        /^(\w)\1{8,}$/,                   // Repetição de caractere único (aaaaaaaa) - mais permissivo
+        /^[^a-zA-ZÀ-ÿ]+$/,                // Sem letras reais
+        /^(youtube|inscreva-se no canal|like e compartilh)/i, // YouTube jargon específico
+        /^\[.*\]$/,                       // Sons entre colchetes [MÚSICA], [RUÍDO]
+        /^www\.|http/i,                   // URLs
       ];
       
       for (const pattern of noisePatterns) {

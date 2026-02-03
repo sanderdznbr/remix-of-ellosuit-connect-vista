@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import WhatsAppQRModal from './WhatsAppQRModal';
+import WhatsAppKanbanView from './WhatsAppKanbanView';
+import ConversationLabelsManager from './ConversationLabelsManager';
+import SaveLeadModal from './SaveLeadModal';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -21,6 +24,12 @@ interface WhatsAppSession {
   profile_picture?: string;
   connected_at?: string;
   created_at: string;
+}
+
+interface ConversationLabel {
+  id: string;
+  name: string;
+  color: string;
 }
 
 interface WhatsAppConversationData {
@@ -36,6 +45,8 @@ interface WhatsAppConversationData {
   assigned_agent_id?: string;
   is_demo?: boolean;
   is_ai_agent?: boolean;
+  pipeline_stage?: string;
+  labels?: string[];
 }
 
 interface WhatsAppMessage {
@@ -174,6 +185,14 @@ const WhatsAppCRM: React.FC = () => {
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [demoMessagesState, setDemoMessagesState] = useState<Record<string, WhatsAppMessage[]>>(DEMO_MESSAGES);
   const [agentChatHistory, setAgentChatHistory] = useState<Record<string, WhatsAppMessage[]>>({});
+  
+  // New CRM Features State
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [labels, setLabels] = useState<ConversationLabel[]>([]);
+  const [showLabelsManager, setShowLabelsManager] = useState(false);
+  const [showSaveLeadModal, setShowSaveLeadModal] = useState(false);
+  const [selectedConversationForLabels, setSelectedConversationForLabels] = useState<WhatsAppConversationData | null>(null);
+  const [selectedConversationForLead, setSelectedConversationForLead] = useState<WhatsAppConversationData | null>(null);
 
   // Load persisted chat history from localStorage
   useEffect(() => {
@@ -303,6 +322,83 @@ const WhatsAppCRM: React.FC = () => {
     setAiAgents(data || []);
   };
 
+  // Load labels
+  const loadLabels = async () => {
+    if (!companyId) return;
+    
+    const { data } = await supabase
+      .from('conversation_labels')
+      .select('*')
+      .eq('company_id', companyId);
+    
+    setLabels(data || []);
+  };
+
+  // Create label
+  const handleCreateLabel = async (name: string, color: string) => {
+    if (!companyId || !user?.id) return;
+    
+    const { data, error } = await supabase
+      .from('conversation_labels')
+      .insert({ name, color, company_id: companyId, created_by: user.id })
+      .select()
+      .single();
+    
+    if (!error && data) {
+      setLabels(prev => [...prev, data]);
+      toast({ title: 'Sucesso', description: 'Etiqueta criada!' });
+    }
+  };
+
+  // Delete label
+  const handleDeleteLabel = async (labelId: string) => {
+    const { error } = await supabase
+      .from('conversation_labels')
+      .delete()
+      .eq('id', labelId);
+    
+    if (!error) {
+      setLabels(prev => prev.filter(l => l.id !== labelId));
+      toast({ title: 'Sucesso', description: 'Etiqueta removida!' });
+    }
+  };
+
+  // Toggle label on conversation
+  const handleToggleLabel = (labelId: string) => {
+    if (!selectedConversationForLabels) return;
+    
+    setConversations(prev => prev.map(c => {
+      if (c.id === selectedConversationForLabels.id) {
+        const currentLabels = c.labels || [];
+        const newLabels = currentLabels.includes(labelId)
+          ? currentLabels.filter(l => l !== labelId)
+          : [...currentLabels, labelId];
+        return { ...c, labels: newLabels };
+      }
+      return c;
+    }));
+  };
+
+  // Update pipeline stage (for Kanban)
+  const handleUpdateStage = (conversationId: string, newStage: string) => {
+    setConversations(prev => prev.map(c => 
+      c.id === conversationId ? { ...c, pipeline_stage: newStage } : c
+    ));
+    toast({ title: 'Movido', description: `Conversa movida para ${newStage}` });
+  };
+
+  // Open labels manager for a conversation
+  const openLabelsManager = (conv: WhatsAppConversationData) => {
+    setSelectedConversationForLabels(conv);
+    setShowLabelsManager(true);
+  };
+
+  // Open save lead modal
+  const openSaveLeadModal = (conv: WhatsAppConversationData) => {
+    setSelectedConversationForLead(conv);
+    setShowSaveLeadModal(true);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!companyId) return;
@@ -310,7 +406,8 @@ const WhatsAppCRM: React.FC = () => {
       await Promise.all([
         loadSessions(),
         loadConversations(),
-        loadAiAgents()
+        loadAiAgents(),
+        loadLabels()
       ]);
       setLoading(false);
     };
@@ -527,87 +624,124 @@ const WhatsAppCRM: React.FC = () => {
   const currentMessages = selectedAgent ? agentChatMessages : messages;
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-background flex overflow-hidden">
-      {/* Conversations List - Left Panel */}
-      <div className={cn(
-        "w-full md:w-96 lg:w-[400px] border-r flex flex-col bg-card",
-        showMobileChat && "hidden md:flex"
-      )}>
-        {/* Header */}
-        <div className="p-4 border-b space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-6 w-6 text-blue-600" />
-              <h1 className="font-bold text-lg">Conversas</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                size="sm" 
-                onClick={() => setShowQRModal(true)} 
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <QrCode className="h-4 w-4 mr-1" />
-                Conectar
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowQRModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nova Conexão
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configurações
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+    <div className="h-[calc(100vh-64px)] bg-background flex flex-col overflow-hidden">
+      {/* Top Header - Always visible */}
+      <div className="p-4 border-b bg-card flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            <h1 className="font-bold text-lg">CRM WhatsApp</h1>
           </div>
           
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar conversas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-7 px-2"
+            >
+              <List className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Lista</span>
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-7 px-2"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Kanban</span>
+            </Button>
           </div>
-          
-          {/* Filter Tabs */}
-          <div className="flex gap-1">
-            {['all', 'unread', 'open', 'closed'].map((tab) => (
-              <Button
-                key={tab}
-                variant={activeTab === tab ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab(tab as any)}
-                className={cn(
-                  "flex-1 text-xs",
-                  activeTab === tab && "bg-blue-600 hover:bg-blue-700"
-                )}
-              >
-                {tab === 'all' ? 'Todas' : tab === 'unread' ? 'Não lidas' : tab === 'open' ? 'Abertas' : 'Fechadas'}
-              </Button>
-            ))}
-          </div>
-          
-          {/* Connection Status */}
-          {connectedSessions.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />
-              {connectedSessions.length} conexão(ões) ativa(s)
-            </div>
-          )}
         </div>
         
-        {/* AI Agents Section */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedConversationForLabels(null);
+              setShowLabelsManager(true);
+            }}
+            className="h-8"
+          >
+            <Tag className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Etiquetas</span>
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setShowQRModal(true)} 
+            className="bg-primary hover:bg-primary/90"
+          >
+            <QrCode className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Conectar</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      {viewMode === 'kanban' ? (
+        <WhatsAppKanbanView
+          conversations={filteredConversations}
+          labels={labels}
+          onSelectConversation={(conv) => {
+            setSelectedConversation(conv);
+            setViewMode('list');
+            setShowMobileChat(true);
+          }}
+          onSaveLead={openSaveLeadModal}
+          onManageLabels={openLabelsManager}
+          onUpdateStage={handleUpdateStage}
+        />
+      ) : (
+        <div className="flex-1 flex overflow-hidden">
+          {/* Conversations List - Left Panel */}
+          <div className={cn(
+            "w-full md:w-96 lg:w-[400px] border-r flex flex-col bg-card",
+            showMobileChat && "hidden md:flex"
+          )}>
+            {/* Search & Filters */}
+            <div className="p-4 border-b space-y-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar conversas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Filter Tabs */}
+              <div className="flex gap-1">
+                {['all', 'unread', 'open', 'closed'].map((tab) => (
+                  <Button
+                    key={tab}
+                    variant={activeTab === tab ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveTab(tab as any)}
+                    className={cn(
+                      "flex-1 text-xs",
+                      activeTab === tab && "bg-primary hover:bg-primary/90"
+                    )}
+                  >
+                    {tab === 'all' ? 'Todas' : tab === 'unread' ? 'Não lidas' : tab === 'open' ? 'Abertas' : 'Fechadas'}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Connection Status */}
+              {connectedSessions.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
+                  {connectedSessions.length} conexão(ões) ativa(s)
+                </div>
+              )}
+            </div>
+        
+            {/* AI Agents Section */}
         {aiAgents.length > 0 && (
           <div className="border-b">
             <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
@@ -949,6 +1083,9 @@ const WhatsAppCRM: React.FC = () => {
           </div>
         )}
       </div>
+      {/* End of list view */}
+      </div>
+      )}
 
       {/* QR Modal */}
       {companyId && user?.id && (
@@ -960,6 +1097,33 @@ const WhatsAppCRM: React.FC = () => {
           onSuccess={handleSessionSuccess}
         />
       )}
+
+      {/* Labels Manager Modal */}
+      <ConversationLabelsManager
+        isOpen={showLabelsManager}
+        onClose={() => {
+          setShowLabelsManager(false);
+          setSelectedConversationForLabels(null);
+        }}
+        labels={labels}
+        selectedLabels={selectedConversationForLabels?.labels || []}
+        onToggleLabel={handleToggleLabel}
+        onCreateLabel={handleCreateLabel}
+        onDeleteLabel={handleDeleteLabel}
+        mode={selectedConversationForLabels ? 'assign' : 'manage'}
+      />
+
+      {/* Save Lead Modal */}
+      <SaveLeadModal
+        isOpen={showSaveLeadModal}
+        onClose={() => {
+          setShowSaveLeadModal(false);
+          setSelectedConversationForLead(null);
+        }}
+        conversation={selectedConversationForLead}
+        companyId={companyId}
+        onSuccess={() => toast({ title: 'Lead salvo!', description: 'Contato adicionado ao banco de dados' })}
+      />
     </div>
   );
 };

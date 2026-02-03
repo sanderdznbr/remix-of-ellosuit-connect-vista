@@ -472,6 +472,41 @@ export type Database = {
           },
         ]
       }
+      conversation_labels: {
+        Row: {
+          color: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_labels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_widgets: {
         Row: {
           company_id: string
@@ -1967,8 +2002,10 @@ export type Database = {
           created_at: string
           id: string
           integration_id: string
+          labels: string[] | null
           last_message: string | null
           last_message_at: string | null
+          pipeline_stage: string | null
           profile_picture: string | null
           session_id: string | null
           status: string | null
@@ -1984,8 +2021,10 @@ export type Database = {
           created_at?: string
           id?: string
           integration_id: string
+          labels?: string[] | null
           last_message?: string | null
           last_message_at?: string | null
+          pipeline_stage?: string | null
           profile_picture?: string | null
           session_id?: string | null
           status?: string | null
@@ -2001,8 +2040,10 @@ export type Database = {
           created_at?: string
           id?: string
           integration_id?: string
+          labels?: string[] | null
           last_message?: string | null
           last_message_at?: string | null
+          pipeline_stage?: string | null
           profile_picture?: string | null
           session_id?: string | null
           status?: string | null

@@ -3,13 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, FileText, Eye, Clock, Users, BarChart, ExternalLink, Trash2 } from 'lucide-react';
+import { Upload, FileText, Eye, Clock, Users, BarChart, ExternalLink, Trash2, RefreshCw, Calendar, Timer, MousePointer, Smartphone, Monitor, Globe } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { extractAndUploadPdfPages } from '@/utils/pdf-extractor';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface TrackableDocument {
   id: string;
@@ -397,132 +402,238 @@ toast({
             <>
               <Card className="border-none shadow-lg rounded-2xl bg-card">
                 <CardHeader className="p-6">
-                  <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5" />
-                    Estatísticas: {selectedDocument.title}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      Estatísticas
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fetchDocumentStats(selectedDocument)}
+                      disabled={statsLoading}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${statsLoading ? 'animate-spin' : ''}`} />
+                      Atualizar
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{selectedDocument.title}</p>
                 </CardHeader>
                 <CardContent className="p-6 pt-0">
                   {statsLoading ? (
-                    <div className="text-center py-8">Carregando estatísticas...</div>
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                      <p>Carregando estatísticas...</p>
+                    </div>
                   ) : documentStats ? (
                     <div className="space-y-6">
-                                      {/* Overview Stats */}
-                                      <div className="grid grid-cols-3 gap-4 mb-6">
-                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                          <div className="text-3xl font-bold text-blue-600">{documentStats.totalSessions}</div>
-                                          <div className="text-sm text-blue-600 font-medium">Sessões Total</div>
-                                        </div>
-                                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                                          <div className="text-3xl font-bold text-green-600">{documentStats.uniqueVisitors}</div>
-                                          <div className="text-sm text-green-600 font-medium">Visitantes Únicos</div>
-                                        </div>
-                                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                                          <div className="text-3xl font-bold text-purple-600">{documentStats.totalEvents}</div>
-                                          <div className="text-sm text-purple-600 font-medium">Total de Interações</div>
-                                        </div>
-                                      </div>
+                      {/* Overview Stats */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center p-4 bg-primary/10 rounded-xl">
+                          <Users className="h-5 w-5 mx-auto mb-2 text-primary" />
+                          <div className="text-2xl font-bold text-primary">{documentStats.totalSessions}</div>
+                          <div className="text-xs text-muted-foreground">Aberturas</div>
+                        </div>
+                        <div className="text-center p-4 bg-green-500/10 rounded-xl">
+                          <Globe className="h-5 w-5 mx-auto mb-2 text-green-600" />
+                          <div className="text-2xl font-bold text-green-600">{documentStats.uniqueVisitors}</div>
+                          <div className="text-xs text-muted-foreground">Visitantes</div>
+                        </div>
+                        <div className="text-center p-4 bg-purple-500/10 rounded-xl">
+                          <MousePointer className="h-5 w-5 mx-auto mb-2 text-purple-600" />
+                          <div className="text-2xl font-bold text-purple-600">{documentStats.totalEvents}</div>
+                          <div className="text-xs text-muted-foreground">Interações</div>
+                        </div>
+                      </div>
 
-                      {/* Sessions Details */}
-                      {documentStats.sessions && documentStats.sessions.length > 0 && (
-                        <div>
-                          <h4 className="font-medium mb-4">👥 Sessões Detalhadas ({documentStats.sessions.length})</h4>
-                          <div className="space-y-4 max-h-96 overflow-y-auto">
-                            {documentStats.sessions.map((session, index) => {
-                              const sessionDuration = session.duration ? Math.round(session.duration / 1000) : 0;
-                              const sessionStartDate = new Date(session.startTime);
-                              
-                              return (
-                                <Card key={session.sessionId} className="p-4 border border-gray-200">
-                                  <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                      <h5 className="font-medium text-sm">Sessão #{index + 1}</h5>
-                                      <p className="text-xs text-muted-foreground">
-                                        {sessionStartDate.toLocaleDateString()} às {sessionStartDate.toLocaleTimeString()}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Visitante: {session.visitorId?.substring(0, 8)}...
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-medium text-primary">
-                                        {Math.floor(sessionDuration / 60)}m {sessionDuration % 60}s
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {session.totalPagesVisited} páginas
-                                      </div>
-                                    </div>
-                                  </div>
+                      <Tabs defaultValue="sessions" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="sessions">Sessões</TabsTrigger>
+                          <TabsTrigger value="pages">Páginas</TabsTrigger>
+                          <TabsTrigger value="events">Eventos</TabsTrigger>
+                        </TabsList>
+                        
+                        {/* Sessions Tab */}
+                        <TabsContent value="sessions" className="mt-4">
+                          {documentStats.sessions && documentStats.sessions.length > 0 ? (
+                            <ScrollArea className="h-[400px] pr-4">
+                              <div className="space-y-3">
+                                {documentStats.sessions.map((session, index) => {
+                                  const sessionDuration = session.duration ? Math.round(session.duration / 1000) : 0;
+                                  const sessionStartDate = session.startTime ? new Date(session.startTime) : null;
                                   
-                                  {/* Page Timeline */}
-                                  <div className="space-y-2">
-                                    <h6 className="text-xs font-medium text-gray-600 mb-2">Timeline de Navegação:</h6>
-                                    <div className="space-y-1">
-                                      {session.pageSequence.map((pageInfo, pageIndex) => (
-                                        <div key={`${pageInfo.page}-${pageIndex}`} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                                              <span className="text-xs text-blue-600">{pageInfo.page}</span>
-                                            </div>
-                                            <span>Página {pageInfo.page}</span>
+                                  return (
+                                    <Card key={session.sessionId} className="p-4 border">
+                                      <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Badge variant="outline" className="text-xs">
+                                              Sessão #{index + 1}
+                                            </Badge>
+                                            {sessionDuration > 60 && (
+                                              <Badge className="bg-green-500/10 text-green-600 text-xs">
+                                                Engajado
+                                              </Badge>
+                                            )}
                                           </div>
-                                          <div className="text-right">
-                                            {pageInfo.duration ? (
-                                              <span className="text-green-600 font-medium">
-                                                {Math.floor(pageInfo.duration / 60)}m {pageInfo.duration % 60}s
-                                              </span>
+                                          {sessionStartDate && (
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                              <Calendar className="h-3 w-3" />
+                                              {format(sessionStartDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="flex items-center gap-1 text-sm font-medium text-primary">
+                                            <Timer className="h-4 w-4" />
+                                            {sessionDuration > 0 ? (
+                                              <>
+                                                {Math.floor(sessionDuration / 60)}m {sessionDuration % 60}s
+                                              </>
                                             ) : (
-                                              <span className="text-gray-400">--</span>
+                                              'Em andamento'
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            {session.totalPagesVisited} página{session.totalPagesVisited !== 1 ? 's' : ''}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Page Timeline */}
+                                      {session.pageSequence && session.pageSequence.length > 0 && (
+                                        <div className="mt-3 pt-3 border-t">
+                                          <p className="text-xs font-medium text-muted-foreground mb-2">Páginas visitadas:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {session.pageSequence.slice(0, 10).map((pageInfo, pageIndex) => (
+                                              <Badge 
+                                                key={`${pageInfo.page}-${pageIndex}`} 
+                                                variant="secondary"
+                                                className="text-xs"
+                                              >
+                                                Pág. {pageInfo.page}
+                                                {pageInfo.duration ? ` (${pageInfo.duration}s)` : ''}
+                                              </Badge>
+                                            ))}
+                                            {session.pageSequence.length > 10 && (
+                                              <Badge variant="outline" className="text-xs">
+                                                +{session.pageSequence.length - 10}
+                                              </Badge>
                                             )}
                                           </div>
                                         </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                                      )}
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            </ScrollArea>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Users className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                              <p>Nenhuma sessão registrada ainda</p>
+                              <p className="text-xs mt-1">Compartilhe o link para começar a rastrear</p>
+                            </div>
+                          )}
+                        </TabsContent>
 
-                      {/* Page Stats Summary */}
-                      {documentStats.pageStats.length > 0 && (
-                        <div>
-                          <h4 className="font-medium mb-3">📊 Resumo por Página</h4>
-                          <div className="space-y-2">
-                            {documentStats.pageStats
-                              .slice(0, 10)
-                              .map((page) => (
-                                <div key={page.page} className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                      <span className="text-sm font-medium text-primary">{page.page}</span>
+                        {/* Pages Tab */}
+                        <TabsContent value="pages" className="mt-4">
+                          {documentStats.pageStats && documentStats.pageStats.length > 0 ? (
+                            <ScrollArea className="h-[400px] pr-4">
+                              <div className="space-y-2">
+                                {documentStats.pageStats.map((page) => (
+                                  <div key={page.page} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                        <span className="font-bold text-primary">{page.page}</span>
+                                      </div>
+                                      <div>
+                                        <p className="font-medium">Página {page.page}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {page.views} visualização{page.views !== 1 ? 'ões' : ''}
+                                        </p>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="font-medium">Página {page.page}</span>
-                                      <p className="text-sm text-muted-foreground">{page.uniqueVisitors} visitante{page.uniqueVisitors !== 1 ? 's' : ''}</p>
+                                    <div className="text-right">
+                                      <div className="flex items-center gap-1 font-medium text-sm">
+                                        <Clock className="h-3 w-3" />
+                                        {page.timeSpent > 0 ? (
+                                          <>{Math.floor(page.timeSpent / 60)}m {page.timeSpent % 60}s</>
+                                        ) : (
+                                          '--'
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {page.uniqueVisitors} visitante{page.uniqueVisitors !== 1 ? 's' : ''}
+                                      </p>
                                     </div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="font-medium">{Math.floor(page.timeSpent / 60)}m {page.timeSpent % 60}s</div>
-                                    <div className="text-sm text-muted-foreground">{page.views} visualizações</div>
-                                  </div>
-                                </div>
-                              ))
-                            }
-                          </div>
-                        </div>
-                      )}
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <FileText className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                              <p>Nenhuma página visualizada ainda</p>
+                            </div>
+                          )}
+                        </TabsContent>
+
+                        {/* Events Tab */}
+                        <TabsContent value="events" className="mt-4">
+                          {documentStats.recentEvents && documentStats.recentEvents.length > 0 ? (
+                            <ScrollArea className="h-[400px] pr-4">
+                              <div className="space-y-2">
+                                {documentStats.recentEvents.slice(0, 30).map((event, index) => {
+                                  const eventDate = new Date(event.timestamp);
+                                  const eventLabels: Record<string, { label: string, color: string }> = {
+                                    'document_open': { label: 'Abriu documento', color: 'bg-green-500' },
+                                    'page_view': { label: `Visualizou página ${event.page_number}`, color: 'bg-blue-500' },
+                                    'page_navigation': { label: `Navegou para página ${event.page_number}`, color: 'bg-purple-500' },
+                                    'time_spent': { label: `Tempo na página ${event.page_number}`, color: 'bg-orange-500' },
+                                    'session_end': { label: 'Encerrou sessão', color: 'bg-red-500' },
+                                    'page_leave': { label: `Saiu da página ${event.page_number}`, color: 'bg-gray-500' },
+                                  };
+                                  
+                                  const eventInfo = eventLabels[event.event_type] || { label: event.event_type, color: 'bg-gray-500' };
+                                  
+                                  return (
+                                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                                      <div className={`w-2 h-2 rounded-full ${eventInfo.color}`} />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm truncate">{eventInfo.label}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {format(eventDate, "dd/MM HH:mm:ss", { locale: ptBR })}
+                                        </p>
+                                      </div>
+                                      {event.data?.duration && (
+                                        <Badge variant="outline" className="text-xs shrink-0">
+                                          {Math.round(event.data.duration / 1000)}s
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </ScrollArea>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <BarChart className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                              <p>Nenhum evento registrado ainda</p>
+                            </div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
 
                       {/* Public Link */}
-                      <div>
-                        <Label>Link Público do Documento</Label>
+                      <div className="pt-4 border-t">
+                        <Label className="text-xs text-muted-foreground">Link Público do Documento</Label>
                         <div className="flex gap-2 mt-1">
                           <Input 
                             value={getPublicViewUrl(selectedDocument)}
                             readOnly
-                            className="bg-muted"
+                            className="bg-muted text-xs"
                           />
                           <Button 
                             onClick={() => copyToClipboard(getPublicViewUrl(selectedDocument))}
@@ -535,7 +646,9 @@ toast({
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      Nenhuma estatística disponível ainda
+                      <BarChart className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                      <p>Nenhuma estatística disponível</p>
+                      <p className="text-xs mt-1">Compartilhe o link para começar a rastrear</p>
                     </div>
                   )}
                 </CardContent>
@@ -544,9 +657,12 @@ toast({
           ) : (
             <Card className="border-none shadow-lg rounded-2xl bg-card">
               <CardContent className="p-6 text-center py-12">
-                <BarChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <BarChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
                 <p className="text-muted-foreground">
-                  Selecione um documento para ver suas estatísticas de visualização
+                  Selecione um documento para ver estatísticas
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clique no ícone de estatísticas ao lado do documento
                 </p>
               </CardContent>
             </Card>

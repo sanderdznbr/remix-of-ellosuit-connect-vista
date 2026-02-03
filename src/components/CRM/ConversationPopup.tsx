@@ -1,0 +1,238 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+interface ConversationLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface WhatsAppConversationData {
+  id: string;
+  contact_phone: string;
+  contact_name?: string;
+  last_message_at: string;
+  last_message?: string;
+  status: string;
+  unread_count?: number;
+  profile_picture?: string;
+  pipeline_stage?: string;
+  labels?: string[];
+  is_demo?: boolean;
+}
+
+interface WhatsAppMessage {
+  id: string;
+  conversation_id: string;
+  content: string;
+  from_me: boolean;
+  status: string;
+  created_at: string;
+}
+
+interface ConversationPopupProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  conversation: WhatsAppConversationData | null;
+  messages: WhatsAppMessage[];
+  labels: ConversationLabel[];
+  onSendMessage: (message: string) => void;
+  onManageLabels: () => void;
+  onSaveLead: () => void;
+  sendingMessage?: boolean;
+}
+
+const ConversationPopup: React.FC<ConversationPopupProps> = ({
+  open,
+  onOpenChange,
+  conversation,
+  messages,
+  labels,
+  onSendMessage,
+  onManageLabels,
+  onSaveLead,
+  sendingMessage = false,
+}) => {
+  const [inputMessage, setInputMessage] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      }
+    }
+  }, [messages]);
+
+  if (!conversation) return null;
+
+  const handleSend = () => {
+    if (!inputMessage.trim() || sendingMessage) return;
+    onSendMessage(inputMessage.trim());
+    setInputMessage('');
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const conversationLabels = labels.filter(l => conversation.labels?.includes(l.id));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl h-[80vh] p-0 gap-0 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-4 border-b bg-card">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={conversation.profile_picture} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold truncate">
+              {conversation.contact_name || conversation.contact_phone}
+            </h3>
+            <p className="text-xs text-muted-foreground truncate">
+              {conversation.contact_phone}
+            </p>
+          </div>
+
+          {/* Labels */}
+          {conversationLabels.length > 0 && (
+            <div className="hidden sm:flex items-center gap-1">
+              {conversationLabels.slice(0, 2).map(label => (
+                <Badge 
+                  key={label.id}
+                  variant="outline"
+                  className="text-xs"
+                  style={{ 
+                    borderColor: label.color,
+                    color: label.color,
+                    backgroundColor: `${label.color}15`
+                  }}
+                >
+                  {label.name}
+                </Badge>
+              ))}
+              {conversationLabels.length > 2 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{conversationLabels.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => window.open(`tel:${conversation.contact_phone}`)}>
+                <Phone className="h-4 w-4 mr-2" />
+                Ligar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onManageLabels}>
+                <Tag className="h-4 w-4 mr-2" />
+                Etiquetas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onSaveLead}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Salvar Lead
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Messages */}
+        <ScrollArea ref={scrollRef} className="flex-1 p-4 bg-[#e5ddd5] dark:bg-muted/30">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground text-sm">Nenhuma mensagem ainda</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
+                      message.from_me
+                        ? 'bg-[#dcf8c6] dark:bg-primary/20 text-foreground'
+                        : 'bg-white dark:bg-card text-foreground'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className="flex items-center gap-1 justify-end mt-1">
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatTime(message.created_at)}
+                      </span>
+                      {message.from_me && (
+                        <span className="text-[10px] text-blue-500">
+                          {message.status === 'read' ? '✓✓' : message.status === 'delivered' ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="p-4 border-t bg-card">
+          <div className="flex gap-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              placeholder="Digite uma mensagem..."
+              disabled={sendingMessage || conversation.is_demo}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!inputMessage.trim() || sendingMessage || conversation.is_demo}
+              size="icon"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {sendingMessage ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          {conversation.is_demo && (
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Esta é uma conversa de demonstração
+            </p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default ConversationPopup;

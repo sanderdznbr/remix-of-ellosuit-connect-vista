@@ -21,6 +21,7 @@ import LiveKitMeeting from "./pages/LiveKitMeeting";
 import DocumentViewer from './pages/DocumentViewer';
 import SharedContent from './pages/SharedContent';
 import RecoverMeeting from './pages/RecoverMeeting';
+import LinkRedirect from './pages/LinkRedirect';
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/:companyName/:slug" element={<ImprovedBookingCalendar />} />
             <Route path="/document/:linkId" element={<DocumentViewer />} />
             <Route path="/shared/:shareId" element={<SharedContent />} />
+            <Route path="/l/:code" element={<LinkRedirect />} />
             <Route path="/team" element={<Team />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

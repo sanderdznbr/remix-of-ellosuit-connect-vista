@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Pencil } from 'lucide-react';
+import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Phone, Link2, BarChart3, TrendingUp, Clock, Target, MessageSquare, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import BotIAChat from './BotIAChat';
 import EditAgentModal from './EditAgentModal';
 
@@ -39,6 +39,35 @@ interface AgentTemplate {
   instructions: string;
   icon: React.ComponentType<{ className?: string }>;
 }
+
+// Demo analytics data
+const conversationsData = [
+  { name: 'Seg', conversas: 45, resolvidas: 38 },
+  { name: 'Ter', conversas: 52, resolvidas: 48 },
+  { name: 'Qua', conversas: 38, resolvidas: 35 },
+  { name: 'Qui', conversas: 65, resolvidas: 58 },
+  { name: 'Sex', conversas: 58, resolvidas: 52 },
+  { name: 'Sáb', conversas: 22, resolvidas: 20 },
+  { name: 'Dom', conversas: 15, resolvidas: 14 },
+];
+
+const satisfactionData = [
+  { name: 'Excelente', value: 45 },
+  { name: 'Bom', value: 30 },
+  { name: 'Regular', value: 15 },
+  { name: 'Ruim', value: 10 },
+];
+
+const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
+
+const responseTimeData = [
+  { name: '00h', tempo: 2.5 },
+  { name: '04h', tempo: 1.8 },
+  { name: '08h', tempo: 3.2 },
+  { name: '12h', tempo: 4.5 },
+  { name: '16h', tempo: 3.8 },
+  { name: '20h', tempo: 2.1 },
+];
 
 const AGENT_TEMPLATES: AgentTemplate[] = [
   {
@@ -112,6 +141,13 @@ const AI_MODELS = [
   { value: 'openai/gpt-5', label: 'GPT-5 (Avançado)' },
 ];
 
+// Demo connected channels
+const DEMO_CHANNELS = [
+  { id: '1', name: 'WhatsApp Business', number: '+55 11 99999-0001', type: 'whatsapp' },
+  { id: '2', name: 'WhatsApp Vendas', number: '+55 11 99999-0002', type: 'whatsapp' },
+  { id: '3', name: 'WhatsApp Suporte', number: '+55 11 99999-0003', type: 'whatsapp' },
+];
+
 const BotIADashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -126,7 +162,9 @@ const BotIADashboard: React.FC = () => {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showChannelModal, setShowChannelModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
   
   // Form states
   const [agentName, setAgentName] = useState('');
@@ -136,18 +174,25 @@ const BotIADashboard: React.FC = () => {
   const [agentModel, setAgentModel] = useState('google/gemini-3-flash-preview');
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
 
+  // Analytics stats
+  const [analyticsStats] = useState({
+    totalConversations: 295,
+    resolvedConversations: 265,
+    avgResponseTime: '2.8s',
+    satisfactionRate: 94,
+    activeAgents: 0,
+    messagesProcessed: 1847
+  });
+
   // Ensure user has a company
   const ensureCompany = async (): Promise<string | null> => {
     if (!user?.id) return null;
     
-    // Check user metadata first
     const metadataCompanyId = user.user_metadata?.company_id;
     if (metadataCompanyId) {
-      console.log('✅ Company found in metadata:', metadataCompanyId);
       return metadataCompanyId;
     }
     
-    // Check company_users table
     const { data: existingCompanyUser } = await supabase
       .from('company_users')
       .select('company_id')
@@ -155,16 +200,12 @@ const BotIADashboard: React.FC = () => {
       .single();
     
     if (existingCompanyUser?.company_id) {
-      console.log('✅ Company found in company_users:', existingCompanyUser.company_id);
-      // Update user metadata
       await supabase.auth.updateUser({
         data: { company_id: existingCompanyUser.company_id }
       });
       return existingCompanyUser.company_id;
     }
     
-    // Create new company
-    console.log('🏢 Creating new company for user...');
     const companyName = user.user_metadata?.company_name || 
                        user.user_metadata?.username || 
                        user.email?.split('@')[0] || 
@@ -177,34 +218,15 @@ const BotIADashboard: React.FC = () => {
       .single();
     
     if (companyError || !newCompany) {
-      console.error('❌ Error creating company:', companyError);
-      toast({ 
-        title: 'Erro', 
-        description: 'Não foi possível criar a empresa. Tente novamente.', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Erro', description: 'Não foi possível criar a empresa.', variant: 'destructive' });
       return null;
     }
     
-    // Link user to company
-    const { error: linkError } = await supabase
+    await supabase
       .from('company_users')
-      .insert({
-        company_id: newCompany.id,
-        user_id: user.id,
-        role: 'admin'
-      });
+      .insert({ company_id: newCompany.id, user_id: user.id, role: 'admin' });
     
-    if (linkError) {
-      console.error('❌ Error linking user to company:', linkError);
-    }
-    
-    // Update user metadata
-    await supabase.auth.updateUser({
-      data: { company_id: newCompany.id }
-    });
-    
-    console.log('✅ Company created:', newCompany.id);
+    await supabase.auth.updateUser({ data: { company_id: newCompany.id } });
     toast({ title: 'Empresa criada', description: `"${companyName}" configurada com sucesso!` });
     
     return newCompany.id;
@@ -218,12 +240,9 @@ const BotIADashboard: React.FC = () => {
       .eq('company_id', cId)
       .order('created_at', { ascending: false });
     
-    if (error) {
-      console.error('Error loading agents:', error);
-      return;
+    if (!error) {
+      setAgents(data || []);
     }
-    
-    setAgents(data || []);
   };
 
   useEffect(() => {
@@ -268,12 +287,10 @@ const BotIADashboard: React.FC = () => {
       });
     
     if (error) {
-      console.error('Error creating agent:', error);
       toast({ title: 'Erro', description: 'Erro ao criar agente: ' + error.message, variant: 'destructive' });
       return;
     }
     
-    // Reset form
     setAgentName('');
     setAgentDescription('');
     setAgentPersonality('');
@@ -288,7 +305,6 @@ const BotIADashboard: React.FC = () => {
   // Use template
   const useTemplate = () => {
     if (!selectedTemplate) return;
-    
     setAgentName(selectedTemplate.name);
     setAgentDescription(selectedTemplate.description);
     setAgentPersonality(selectedTemplate.personality);
@@ -310,29 +326,30 @@ const BotIADashboard: React.FC = () => {
     }
     
     if (companyId) loadAgents(companyId);
+    toast({ title: 'Sucesso', description: isActive ? 'Agente pausado' : 'Agente ativado' });
+  };
+
+  // Assign agent to channel
+  const assignAgentToChannel = () => {
+    if (!selectedAgent || !selectedChannel) {
+      toast({ title: 'Erro', description: 'Selecione um canal', variant: 'destructive' });
+      return;
+    }
+    
+    const channel = DEMO_CHANNELS.find(c => c.id === selectedChannel);
     toast({ 
-      title: 'Sucesso', 
-      description: isActive ? 'Agente pausado' : 'Agente ativado' 
+      title: 'Agente Atribuído!', 
+      description: `${selectedAgent.name} agora responderá automaticamente em ${channel?.name}` 
     });
-  };
-
-  // Chat with agent
-  const chatWithAgent = (agent: AIAgent) => {
-    setSelectedAgent(agent);
-    setShowChatModal(true);
-  };
-
-  // Edit agent
-  const editAgent = (agent: AIAgent) => {
-    setSelectedAgent(agent);
-    setShowEditModal(true);
+    setShowChannelModal(false);
+    setSelectedChannel('');
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando agentes IA...</p>
         </div>
       </div>
@@ -340,24 +357,26 @@ const BotIADashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 page-content">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 p-6 page-content">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl">
-            <Bot className="h-8 w-8 text-primary" />
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+            <Bot className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Agentes de IA</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Agentes de IA
+            </h1>
             <p className="text-muted-foreground text-sm">Crie e gerencie assistentes virtuais inteligentes</p>
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl">
-            <Brain className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl border-blue-200 hover:bg-blue-50">
+            <Brain className="h-4 w-4 mr-2 text-blue-600" />
             Templates
           </Button>
-          <Button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-primary hover:bg-primary/90">
+          <Button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Novo Agente
           </Button>
@@ -365,54 +384,62 @@ const BotIADashboard: React.FC = () => {
       </div>
 
       <Tabs defaultValue="agents" className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="agents" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Meus Agentes</TabsTrigger>
-          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Análises</TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Configurações</TabsTrigger>
+        <TabsList className="bg-white shadow-sm p-1 rounded-xl border">
+          <TabsTrigger value="agents" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            Meus Agentes
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            Análises
+          </TabsTrigger>
+          <TabsTrigger value="chatbot" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            Chatbot Fluxos
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            Configurações
+          </TabsTrigger>
         </TabsList>
 
+        {/* Agents Tab */}
         <TabsContent value="agents" className="space-y-6">
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl overflow-hidden">
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Agentes Ativos</p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {agents.filter(a => a.is_active).length}
-                    </p>
+                    <p className="text-sm font-medium text-blue-100 mb-1">Agentes Ativos</p>
+                    <p className="text-3xl font-bold">{agents.filter(a => a.is_active).length}</p>
                   </div>
-                  <div className="p-3 bg-blue-500/10 rounded-xl">
-                    <Bot className="h-6 w-6 text-blue-600" />
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <Bot className="h-6 w-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-2xl overflow-hidden">
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total de Agentes</p>
-                    <p className="text-3xl font-bold text-foreground">{agents.length}</p>
+                    <p className="text-sm font-medium text-indigo-100 mb-1">Total de Agentes</p>
+                    <p className="text-3xl font-bold">{agents.length}</p>
                   </div>
-                  <div className="p-3 bg-purple-500/10 rounded-xl">
-                    <Brain className="h-6 w-6 text-purple-600" />
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <Brain className="h-6 w-6" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl overflow-hidden">
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Conversas Hoje</p>
-                    <p className="text-3xl font-bold text-foreground">0</p>
+                    <p className="text-sm font-medium text-cyan-100 mb-1">Conversas Hoje</p>
+                    <p className="text-3xl font-bold">28</p>
                   </div>
-                  <div className="p-3 bg-green-500/10 rounded-xl">
-                    <MessageCircle className="h-6 w-6 text-green-600" />
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <MessageCircle className="h-6 w-6" />
                   </div>
                 </div>
               </CardContent>
@@ -421,22 +448,20 @@ const BotIADashboard: React.FC = () => {
 
           {/* Agents Grid */}
           {agents.length === 0 ? (
-            <Card className="border-0 shadow-sm rounded-2xl">
+            <Card className="border-0 shadow-lg rounded-2xl">
               <CardContent className="text-center py-16">
-                <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <Bot className="h-10 w-10 text-primary" />
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Bot className="h-10 w-10 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  Nenhum agente criado
-                </h3>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Nenhum agente criado</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Comece criando seu primeiro agente IA inteligente para automatizar atendimentos
+                  Comece criando seu primeiro agente IA para automatizar atendimentos
                 </p>
                 <div className="flex justify-center gap-3">
                   <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl">
                     Ver Templates
                   </Button>
-                  <Button onClick={() => setShowCreateModal(true)} className="rounded-xl">
+                  <Button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">
                     Criar Agente
                   </Button>
                 </div>
@@ -445,12 +470,12 @@ const BotIADashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {agents.map(agent => (
-                <Card key={agent.id} className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden group">
-                  <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-transparent">
+                <Card key={agent.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-blue-50 to-indigo-50">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl group-hover:scale-105 transition-transform">
-                          <Bot className="h-5 w-5 text-primary" />
+                        <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl group-hover:scale-105 transition-transform shadow-md">
+                          <Bot className="h-5 w-5 text-white" />
                         </div>
                         <div>
                           <CardTitle className="text-lg font-semibold">{agent.name}</CardTitle>
@@ -461,64 +486,64 @@ const BotIADashboard: React.FC = () => {
                       </div>
                       <Badge 
                         variant={agent.is_active ? 'default' : 'secondary'}
-                        className={`rounded-lg ${agent.is_active ? 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-0' : ''}`}
+                        className={`rounded-lg ${agent.is_active ? 'bg-green-500 text-white border-0' : ''}`}
                       >
                         {agent.is_active ? '● Ativo' : 'Pausado'}
                       </Badge>
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="pt-2">
+                  <CardContent className="pt-4">
                     <div className="space-y-4">
                       {agent.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {agent.description}
-                        </p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{agent.description}</p>
                       )}
                       
-                      <div className="bg-muted/30 rounded-xl p-3">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <div className="bg-blue-50 rounded-xl p-3">
+                        <label className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">
                           Personalidade
                         </label>
-                        <p className="text-sm text-foreground line-clamp-2 mt-1">
-                          {agent.personality}
-                        </p>
+                        <p className="text-sm text-foreground line-clamp-2 mt-1">{agent.personality}</p>
                       </div>
                       
-                      <div className="flex justify-between items-center pt-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
-                          variant="default"
                           size="sm"
-                          onClick={() => chatWithAgent(agent)}
-                          className="rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+                          onClick={() => { setSelectedAgent(agent); setShowChatModal(true); }}
+                          className="rounded-xl bg-blue-500 hover:bg-blue-600 flex-1"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Conversar
                         </Button>
                         
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => editAgent(agent)}
-                            title="Configurar"
-                            className="rounded-xl hover:bg-muted"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleAgent(agent.id, agent.is_active)}
-                            className="rounded-xl hover:bg-muted"
-                          >
-                            {agent.is_active ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setSelectedAgent(agent); setShowChannelModal(true); }}
+                          className="rounded-xl border-blue-200 hover:bg-blue-50"
+                        >
+                          <Phone className="h-4 w-4 mr-1" />
+                          Atribuir Canal
+                        </Button>
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setSelectedAgent(agent); setShowEditModal(true); }}
+                          className="rounded-xl hover:bg-blue-50"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAgent(agent.id, agent.is_active)}
+                          className="rounded-xl hover:bg-blue-50"
+                        >
+                          {agent.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -528,52 +553,199 @@ const BotIADashboard: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <Card className="border-0 shadow-sm rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-lg">Análises de Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-16">
-                <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Bot className="h-8 w-8 text-muted-foreground" />
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Analytics KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-blue-100 rounded-xl w-fit mx-auto mb-2">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  Análises em desenvolvimento
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Em breve você poderá ver métricas de performance dos seus agentes
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                <p className="text-2xl font-bold text-foreground">{analyticsStats.totalConversations}</p>
+                <p className="text-xs text-muted-foreground">Conversas Totais</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-green-100 rounded-xl w-fit mx-auto mb-2">
+                  <Target className="h-5 w-5 text-green-600" />
+                </div>
+                <p className="text-2xl font-bold text-foreground">{analyticsStats.resolvedConversations}</p>
+                <p className="text-xs text-muted-foreground">Resolvidas</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-indigo-100 rounded-xl w-fit mx-auto mb-2">
+                  <Clock className="h-5 w-5 text-indigo-600" />
+                </div>
+                <p className="text-2xl font-bold text-foreground">{analyticsStats.avgResponseTime}</p>
+                <p className="text-xs text-muted-foreground">Tempo Médio</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-yellow-100 rounded-xl w-fit mx-auto mb-2">
+                  <TrendingUp className="h-5 w-5 text-yellow-600" />
+                </div>
+                <p className="text-2xl font-bold text-foreground">{analyticsStats.satisfactionRate}%</p>
+                <p className="text-xs text-muted-foreground">Satisfação</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-2">
+                  <Bot className="h-5 w-5 text-purple-600" />
+                </div>
+                <p className="text-2xl font-bold text-foreground">{agents.filter(a => a.is_active).length}</p>
+                <p className="text-xs text-muted-foreground">Agentes Ativos</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
+              <CardContent className="p-4 text-center">
+                <div className="p-3 bg-cyan-100 rounded-xl w-fit mx-auto mb-2">
+                  <Eye className="h-5 w-5 text-cyan-600" />
+                </div>
+                <p className="text-2xl font-bold text-foreground">{analyticsStats.messagesProcessed}</p>
+                <p className="text-xs text-muted-foreground">Mensagens</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Conversations Chart */}
+            <Card className="border-0 shadow-lg rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Conversas por Dia
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={conversationsData}>
+                      <defs>
+                        <linearGradient id="colorConversas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorResolvidas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
+                      <YAxis stroke="#9ca3af" fontSize={12} />
+                      <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                      <Area type="monotone" dataKey="conversas" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorConversas)" name="Total" />
+                      <Area type="monotone" dataKey="resolvidas" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorResolvidas)" name="Resolvidas" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Satisfaction Pie */}
+            <Card className="border-0 shadow-lg rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  Satisfação dos Clientes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={satisfactionData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                        {satisfactionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-4 mt-2">
+                  {satisfactionData.map((item, index) => (
+                    <span key={item.name} className="flex items-center gap-1 text-sm">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
+                      {item.name}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Response Time */}
+            <Card className="border-0 shadow-lg rounded-2xl lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  Tempo de Resposta (segundos)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={responseTimeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
+                      <YAxis stroke="#9ca3af" fontSize={12} />
+                      <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                      <Bar dataKey="tempo" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Tempo (s)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
+        {/* Chatbot Flows Tab */}
+        <TabsContent value="chatbot" className="space-y-6">
+          <ChatbotFlowsSection />
+        </TabsContent>
+
+        {/* Settings Tab */}
         <TabsContent value="settings">
-          <Card className="border-0 shadow-sm rounded-2xl">
+          <Card className="border-0 shadow-lg rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-lg">Configurações Globais</CardTitle>
+              <CardTitle className="text-lg font-semibold">Configurações Globais</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
                   <div>
                     <label className="text-sm font-medium">Logs de Conversas</label>
-                    <p className="text-xs text-muted-foreground">
-                      Salvar conversas para análise e melhoria
-                    </p>
+                    <p className="text-xs text-muted-foreground">Salvar conversas para análise e melhoria</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
                   <div>
                     <label className="text-sm font-medium">Modo de Desenvolvimento</label>
-                    <p className="text-xs text-muted-foreground">
-                      Exibir logs detalhados para debug
-                    </p>
+                    <p className="text-xs text-muted-foreground">Exibir logs detalhados para debug</p>
                   </div>
                   <Switch />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
+                  <div>
+                    <label className="text-sm font-medium">Respostas Automáticas</label>
+                    <p className="text-xs text-muted-foreground">Permitir agentes responder automaticamente</p>
+                  </div>
+                  <Switch defaultChecked />
                 </div>
               </div>
             </CardContent>
@@ -592,14 +764,14 @@ const BotIADashboard: React.FC = () => {
               <Card 
                 key={index} 
                 className={`cursor-pointer hover:shadow-md transition-all rounded-xl border-2 ${
-                  selectedTemplate?.name === template.name ? 'border-primary bg-primary/5' : 'border-transparent'
+                  selectedTemplate?.name === template.name ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:border-blue-200'
                 }`}
                 onClick={() => setSelectedTemplate(template)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <template.icon className="h-5 w-5 text-primary" />
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <template.icon className="h-5 w-5 text-blue-600" />
                     </div>
                     <CardTitle className="text-base">{template.name}</CardTitle>
                   </div>
@@ -611,10 +783,8 @@ const BotIADashboard: React.FC = () => {
             ))}
           </div>
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowTemplateModal(false)} className="rounded-xl">
-              Cancelar
-            </Button>
-            <Button onClick={useTemplate} disabled={!selectedTemplate} className="rounded-xl">
+            <Button variant="outline" onClick={() => setShowTemplateModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={useTemplate} disabled={!selectedTemplate} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">
               Usar Template
             </Button>
           </div>
@@ -623,7 +793,7 @@ const BotIADashboard: React.FC = () => {
 
       {/* Create Agent Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-2xl max-h-[90vh] rounded-2xl">
           <DialogHeader>
             <DialogTitle>Criar Novo Agente</DialogTitle>
           </DialogHeader>
@@ -631,34 +801,23 @@ const BotIADashboard: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Nome do Agente *</label>
-                <Input
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  placeholder="Ex: Assistente de Vendas"
-                />
+                <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Ex: Assistente de Vendas" className="rounded-xl" />
               </div>
               
               <div>
                 <label className="text-sm font-medium">Descrição</label>
-                <Textarea
-                  value={agentDescription}
-                  onChange={(e) => setAgentDescription(e.target.value)}
-                  placeholder="Breve descrição do agente..."
-                  rows={2}
-                />
+                <Textarea value={agentDescription} onChange={(e) => setAgentDescription(e.target.value)} placeholder="Breve descrição do agente..." rows={2} className="rounded-xl" />
               </div>
               
               <div>
                 <label className="text-sm font-medium">Modelo de IA</label>
                 <Select value={agentModel} onValueChange={setAgentModel}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {AI_MODELS.map(model => (
-                      <SelectItem key={model.value} value={model.value}>
-                        {model.label}
-                      </SelectItem>
+                      <SelectItem key={model.value} value={model.value}>{model.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -666,31 +825,57 @@ const BotIADashboard: React.FC = () => {
               
               <div>
                 <label className="text-sm font-medium">Personalidade *</label>
-                <Textarea
-                  value={agentPersonality}
-                  onChange={(e) => setAgentPersonality(e.target.value)}
-                  placeholder="Ex: Profissional, amigável e prestativo..."
-                  rows={2}
-                />
+                <Textarea value={agentPersonality} onChange={(e) => setAgentPersonality(e.target.value)} placeholder="Ex: Profissional, amigável e prestativo..." rows={2} className="rounded-xl" />
               </div>
               
               <div>
                 <label className="text-sm font-medium">Instruções *</label>
-                <Textarea
-                  value={agentInstructions}
-                  onChange={(e) => setAgentInstructions(e.target.value)}
-                  placeholder="Instruções detalhadas sobre como o agente deve se comportar..."
-                  rows={6}
-                />
+                <Textarea value={agentInstructions} onChange={(e) => setAgentInstructions(e.target.value)} placeholder="Instruções detalhadas sobre como o agente deve se comportar..." rows={6} className="rounded-xl" />
               </div>
             </div>
           </ScrollArea>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={createAgent}>
-              Criar Agente
+            <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={createAgent} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">Criar Agente</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Channel Modal */}
+      <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-blue-600" />
+              Atribuir a Canal de Vendas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione o canal que o agente <strong>{selectedAgent?.name}</strong> irá atender automaticamente.
+            </p>
+            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Selecione um canal..." />
+              </SelectTrigger>
+              <SelectContent>
+                {DEMO_CHANNELS.map(channel => (
+                  <SelectItem key={channel.id} value={channel.id}>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <span>{channel.name}</span>
+                      <span className="text-muted-foreground text-xs">({channel.number})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowChannelModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={assignAgentToChannel} disabled={!selectedChannel} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">
+              <Link2 className="h-4 w-4 mr-2" />
+              Atribuir
             </Button>
           </div>
         </DialogContent>
@@ -698,13 +883,8 @@ const BotIADashboard: React.FC = () => {
 
       {/* Chat Modal */}
       <Dialog open={showChatModal} onOpenChange={setShowChatModal}>
-        <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
-          {selectedAgent && (
-            <BotIAChat 
-              agent={selectedAgent} 
-              onClose={() => setShowChatModal(false)} 
-            />
-          )}
+        <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 rounded-2xl">
+          {selectedAgent && <BotIAChat agent={selectedAgent} onClose={() => setShowChatModal(false)} />}
         </DialogContent>
       </Dialog>
 
@@ -718,6 +898,163 @@ const BotIADashboard: React.FC = () => {
           onDelete={() => companyId && loadAgents(companyId)}
         />
       )}
+    </div>
+  );
+};
+
+// Chatbot Flows Section Component
+const ChatbotFlowsSection: React.FC = () => {
+  const { toast } = useToast();
+  const [flows, setFlows] = useState<any[]>([
+    { id: '1', name: 'Boas-vindas', trigger: 'Início da conversa', responses: 2, active: true },
+    { id: '2', name: 'Horário de Funcionamento', trigger: 'Palavra-chave: horário', responses: 1, active: true },
+    { id: '3', name: 'Preços e Valores', trigger: 'Palavra-chave: preço, valor', responses: 3, active: false },
+  ]);
+  const [showCreateFlow, setShowCreateFlow] = useState(false);
+  const [newFlow, setNewFlow] = useState({ name: '', trigger: '', triggerType: 'keyword', responses: [''] });
+
+  const addResponse = () => {
+    setNewFlow(prev => ({ ...prev, responses: [...prev.responses, ''] }));
+  };
+
+  const updateResponse = (index: number, value: string) => {
+    const updated = [...newFlow.responses];
+    updated[index] = value;
+    setNewFlow(prev => ({ ...prev, responses: updated }));
+  };
+
+  const createFlow = () => {
+    if (!newFlow.name || !newFlow.trigger) {
+      toast({ title: 'Erro', description: 'Preencha nome e gatilho', variant: 'destructive' });
+      return;
+    }
+    
+    setFlows(prev => [...prev, {
+      id: Date.now().toString(),
+      name: newFlow.name,
+      trigger: newFlow.trigger,
+      responses: newFlow.responses.filter(r => r).length,
+      active: true
+    }]);
+    
+    setNewFlow({ name: '', trigger: '', triggerType: 'keyword', responses: [''] });
+    setShowCreateFlow(false);
+    toast({ title: 'Sucesso', description: 'Fluxo criado com sucesso!' });
+  };
+
+  const toggleFlow = (id: string) => {
+    setFlows(prev => prev.map(f => f.id === id ? { ...f, active: !f.active } : f));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Fluxos de Chatbot</h2>
+          <p className="text-sm text-muted-foreground">Configure respostas pré-definidas estilo Blurtalk</p>
+        </div>
+        <Button onClick={() => setShowCreateFlow(true)} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Fluxo
+        </Button>
+      </div>
+
+      {/* Flows List */}
+      <div className="grid gap-4">
+        {flows.map(flow => (
+          <Card key={flow.id} className="border-0 shadow-md rounded-2xl hover:shadow-lg transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-xl ${flow.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <MessageCircle className={`h-5 w-5 ${flow.active ? 'text-blue-600' : 'text-gray-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{flow.name}</h3>
+                    <p className="text-sm text-muted-foreground">{flow.trigger}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Badge variant="outline" className="rounded-lg">
+                    {flow.responses} {flow.responses === 1 ? 'resposta' : 'respostas'}
+                  </Badge>
+                  <Switch checked={flow.active} onCheckedChange={() => toggleFlow(flow.id)} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Create Flow Modal */}
+      <Dialog open={showCreateFlow} onOpenChange={setShowCreateFlow}>
+        <DialogContent className="max-w-xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Fluxo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium">Nome do Fluxo</label>
+              <Input 
+                value={newFlow.name} 
+                onChange={(e) => setNewFlow(prev => ({ ...prev, name: e.target.value }))} 
+                placeholder="Ex: Boas-vindas" 
+                className="rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Tipo de Gatilho</label>
+              <Select value={newFlow.triggerType} onValueChange={(v) => setNewFlow(prev => ({ ...prev, triggerType: v }))}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="keyword">Palavra-chave</SelectItem>
+                  <SelectItem value="start">Início da Conversa</SelectItem>
+                  <SelectItem value="button">Botão de Resposta</SelectItem>
+                  <SelectItem value="schedule">Agendamento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Gatilho</label>
+              <Input 
+                value={newFlow.trigger} 
+                onChange={(e) => setNewFlow(prev => ({ ...prev, trigger: e.target.value }))} 
+                placeholder="Ex: horário, preço, ajuda" 
+                className="rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Respostas</label>
+              <div className="space-y-2">
+                {newFlow.responses.map((resp, idx) => (
+                  <Textarea 
+                    key={idx}
+                    value={resp}
+                    onChange={(e) => updateResponse(idx, e.target.value)}
+                    placeholder={`Resposta ${idx + 1}...`}
+                    rows={2}
+                    className="rounded-xl"
+                  />
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={addResponse} className="mt-2 rounded-xl">
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Resposta
+              </Button>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCreateFlow(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={createFlow} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">Criar Fluxo</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -17,10 +17,10 @@ import {
   Menu,
   Shield,
   HelpCircle,
-  Layers,
-  Radio,
   ChevronRight,
-  Database
+  FolderOpen,
+  Radio,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,86 +33,70 @@ import { ElloLogo } from "@/components/shared/ElloLogo";
 // Define menu groups with their icons and items
 const menuGroups = [
   {
-    id: 'sistema',
-    label: 'Sistema',
+    id: 'dashboard',
+    label: 'Dashboard',
     icon: Home,
     items: [
-      { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
-      { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
+      { id: 'home', path: '/dashboard', icon: Home, label: 'Home' }
     ]
   },
   {
-    id: 'banco-dados',
-    label: 'Banco de Dados',
-    icon: Database,
+    id: 'inteligencia-artificial',
+    label: 'Inteligência Artificial',
+    icon: Sparkles,
     items: [
-      { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
-      { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-      { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
-      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' }
+      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes de IA' }
     ]
   },
   {
-    id: 'ello-flows',
-    label: 'Ello Flows',
-    icon: Zap,
-    items: [
-      { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
-      { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de Produção' },
-      { id: 'calendar', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
-      { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Online' },
-      { id: 'meetings', path: '/dashboard/reunioes', icon: Video, label: 'Ello Meetings' }
-    ]
-  },
-  {
-    id: 'ello-omni',
-    label: 'Ello Omni',
+    id: 'comunicacao',
+    label: 'Comunicação',
     icon: MessageSquare,
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
-      { id: 'email-default', path: '/dashboard/email', icon: Mail, label: 'Email padrão' },
-      { id: 'email-marketing', path: '/dashboard/email-marketing', icon: Mail, label: 'Email marketing' }
+      { id: 'email', path: '/dashboard/email', icon: Mail, label: 'Email' }
     ]
   },
   {
-    id: 'ello-track',
-    label: 'Ello Track',
-    icon: Radio,
+    id: 'produtividade',
+    label: 'Produtividade',
+    icon: Calendar,
     items: [
-      { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de PDF' },
-      { id: 'link-tracking', path: '/dashboard/rastreamento-link', icon: FileText, label: 'Rastreamento de Link' },
-      { id: 'video-tracking', path: '/dashboard/rastreamento-video', icon: Video, label: 'Rastreamento de Vídeo' }
+      { id: 'agenda', path: '/dashboard/agenda', icon: Calendar, label: 'Agenda' },
+      { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: Calendar, label: 'Agenda Online' },
+      { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
+      { id: 'reunioes', path: '/dashboard/reunioes', icon: Video, label: 'Reuniões' },
+      { id: 'fluxos', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos' }
     ]
   },
   {
-    id: 'analise-relatorio',
-    label: 'Análise & Relatório',
+    id: 'gestao',
+    label: 'Gestão',
+    icon: Users,
+    items: [
+      { id: 'cadastros', path: '/dashboard/cadastros', icon: Users, label: 'Cadastros' },
+      { id: 'arquivos', path: '/dashboard/drive', icon: FolderOpen, label: 'Arquivos' },
+      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: Radio, label: 'Rastreamento' }
+    ]
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
     icon: BarChart3,
     items: [
-      { id: 'vision', path: '/dashboard/ello-vision', icon: BarChart3, label: 'Ello Vision' },
-      { id: 'analytics', path: '/dashboard/analytics', icon: BarChart3, label: 'Análises' },
-      { id: 'reports', path: '/dashboard/relatorios', icon: FileText, label: 'Relatórios' }
+      { id: 'analytics', path: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
+      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: BarChart3, label: 'Ello Vision' },
+      { id: 'relatorios', path: '/dashboard/relatorios', icon: FileText, label: 'Relatórios' }
     ]
   },
   {
-    id: 'ajuda-suporte',
-    label: 'Ajuda & Suporte',
-    icon: HelpCircle,
-    items: [
-      { id: 'support', path: '/dashboard/suporte', icon: MessageSquare, label: 'Suporte' },
-      { id: 'report-problem', path: '/dashboard/reportar-problema', icon: FileText, label: 'Reporte um problema' },
-      { id: 'terms', path: '/terms', icon: FileText, label: 'Termos & Políticas' }
-    ]
-  },
-  {
-    id: 'config-privacidade',
+    id: 'configuracoes',
     label: 'Configurações',
     icon: Settings,
     items: [
-      { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
-      { id: 'customize', path: '/dashboard/personalizar', icon: Layers, label: 'Personalização' },
-      { id: 'security', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança & Privacidade' }
+      { id: 'preferencias', path: '/dashboard/configuracoes', icon: Settings, label: 'Preferências' },
+      { id: 'seguranca', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança' },
+      { id: 'suporte', path: '/dashboard/suporte', icon: HelpCircle, label: 'Suporte' }
     ]
   }
 ];

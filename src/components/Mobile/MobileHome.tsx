@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Calendar, Mail, Users, BarChart3 } from 'lucide-react';
 import { useCalendarData } from '@/hooks/useCalendarData';
@@ -28,7 +27,7 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
   }).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30">
       <MobileHeader 
         title="Dashboard"
         showSearch={true}
@@ -48,9 +47,10 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
           
           <MobileStatsCard
             title="Emails"
-            value="12"
+            value="—"
+            subtitle="Em breve"
             icon={<Mail className="h-5 w-5" />}
-            color="green"
+            color="blue"
             onClick={() => onNavigate('email')}
           />
           
@@ -58,15 +58,15 @@ const MobileHome: React.FC<MobileHomeProps> = ({ onNavigate }) => {
             title="Clientes"
             value={clientsLoading ? "..." : clients.length.toString()}
             icon={<Users className="h-5 w-5" />}
-            color="purple"
+            color="blue"
             onClick={() => onNavigate('clients')}
           />
           
           <MobileStatsCard
             title="Analytics"
-            value="View"
+            value="Ver"
             icon={<BarChart3 className="h-5 w-5" />}
-            color="orange"
+            color="blue"
             onClick={() => onNavigate('analytics')}
           />
         </div>

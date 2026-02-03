@@ -58,7 +58,7 @@ const ImprovedBookingCalendar = () => {
   const loadBookingLink = async () => {
     try {
       const { data: linkData, error: linkError } = await supabase
-        .from('booking_links')
+        .from('public_booking_links')
         .select('*')
         .eq('link_slug', slug)
         .eq('is_active', true)
@@ -75,16 +75,16 @@ const ImprovedBookingCalendar = () => {
 
       setBookingLink(linkData);
 
-      // Load availability
+      // Load availability - try availability_schedules first
       const { data: availabilityData, error: availabilityError } = await supabase
-        .from('user_availability')
+        .from('availability_schedules')
         .select('*')
         .eq('user_id', linkData.user_id)
         .eq('is_active', true)
         .order('day_of_week');
 
-      if (!availabilityError) {
-        setAvailability(availabilityData || []);
+      if (!availabilityError && availabilityData) {
+        setAvailability(availabilityData);
       }
 
     } catch (error) {
@@ -144,12 +144,19 @@ const ImprovedBookingCalendar = () => {
     setSubmitting(true);
 
     try {
+      // Get company_id from the booking link
+      const { data: linkDetails } = await supabase
+        .from('public_booking_links')
+        .select('company_id')
+        .eq('id', bookingLink.id)
+        .single();
+
       const { error } = await supabase
-        .from('scheduled_bookings')
+        .from('public_bookings')
         .insert({
           booking_link_id: bookingLink.id,
           user_id: bookingLink.user_id,
-          company_id: bookingLink.user_id,
+          company_id: linkDetails?.company_id || bookingLink.user_id,
           client_name: formData.client_name,
           client_email: formData.client_email,
           client_phone: formData.client_phone,

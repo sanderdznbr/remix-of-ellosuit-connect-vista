@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Sparkles, CheckCircle, ArrowRight, ArrowLeft, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -63,14 +60,11 @@ export const AIOnboardingWizard: React.FC<AIOnboardingWizardProps> = ({ onComple
 
   const analyzeAndRecommend = async () => {
     setIsAnalyzing(true);
-    
-    // Simular análise de IA (em produção, chamar edge function)
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const selectedSegment = SEGMENTS.find(s => s.id === segment);
     const tools = selectedSegment?.tools || ['agenda', 'email', 'tasks'];
     
-    // Adicionar ferramentas baseadas nos objetivos
     const goalBasedTools: string[] = [];
     if (selectedGoals.includes('vendas')) goalBasedTools.push('analytics', 'crm-whatsapp');
     if (selectedGoals.includes('automacao')) goalBasedTools.push('bot-ia', 'fluxos');
@@ -92,218 +86,231 @@ export const AIOnboardingWizard: React.FC<AIOnboardingWizardProps> = ({ onComple
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-2xl border-0 overflow-hidden">
-        <CardContent className="p-0">
-          {/* Header com progresso */}
-          <div className="bg-primary p-6 text-white">
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="h-8 w-8" />
-              <div>
-                <h1 className="text-2xl font-bold">Configuração Inteligente</h1>
-                <p className="text-white/80 text-sm">Vamos personalizar sua experiência</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        {/* Step Dots */}
+        <div className="flex justify-center gap-2 mb-8">
+          {[1, 2, 3, 4].map((i) => (
+            <div 
+              key={i}
+              className={`h-2 w-2 rounded-full transition-all ${
+                i <= step ? 'bg-white' : 'bg-white/30'
+              } ${i === step ? 'w-6' : ''}`}
+            />
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {/* Step 1: Segmento */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <Sparkles className="h-12 w-12 text-white mx-auto mb-4" />
+                <h1 className="text-3xl font-bold text-white mb-2">Bem-vindo ao ELLOsuit!</h1>
+                <p className="text-white/80">Qual é o seu segmento de atuação?</p>
               </div>
-            </div>
-            
-            {/* Progress bar */}
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div 
-                  key={i}
-                  className={`h-1.5 flex-1 rounded-full transition-all ${
-                    i <= step ? 'bg-white' : 'bg-white/30'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
 
-          <div className="p-6">
-            <AnimatePresence mode="wait">
-              {/* Step 1: Segmento */}
-              {step === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {SEGMENTS.map((seg) => (
+                  <button
+                    key={seg.id}
+                    onClick={() => setSegment(seg.id)}
+                    className={`p-4 rounded-2xl transition-all text-center ${
+                      segment === seg.id 
+                        ? 'bg-white text-blue-700 shadow-xl scale-105' 
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <span className="text-3xl mb-2 block">{seg.icon}</span>
+                    <span className="text-sm font-medium">{seg.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <button 
+                  onClick={onSkip} 
+                  className="text-white/60 hover:text-white text-sm transition-colors"
                 >
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl font-semibold text-foreground">Qual é o seu segmento?</h2>
-                    <p className="text-muted-foreground">Isso nos ajuda a recomendar as melhores ferramentas</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {SEGMENTS.map((seg) => (
-                      <button
-                        key={seg.id}
-                        onClick={() => setSegment(seg.id)}
-                        className={`p-4 rounded-xl border-2 transition-all text-center hover:border-primary/50 ${
-                          segment === seg.id 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border'
-                        }`}
-                      >
-                        <span className="text-2xl mb-2 block">{seg.icon}</span>
-                        <span className="text-sm font-medium text-foreground">{seg.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-between pt-4">
-                    <Button variant="ghost" onClick={onSkip}>Pular configuração</Button>
-                    <Button onClick={() => setStep(2)} disabled={!segment}>
-                      Continuar <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 2: Tamanho da empresa */}
-              {step === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
+                  Pular configuração
+                </button>
+                <Button 
+                  onClick={() => setStep(2)} 
+                  disabled={!segment}
+                  className="bg-white text-blue-700 hover:bg-white/90 rounded-xl px-6"
                 >
-                  <div className="text-center mb-6">
-                    <Building2 className="h-10 w-10 mx-auto text-primary mb-2" />
-                    <h2 className="text-xl font-semibold text-foreground">Qual o tamanho da sua equipe?</h2>
-                    <p className="text-muted-foreground">Adaptamos recursos para sua realidade</p>
-                  </div>
+                  Continuar <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {COMPANY_SIZES.map((size) => (
-                      <button
-                        key={size.id}
-                        onClick={() => setCompanySize(size.id)}
-                        className={`p-4 rounded-xl border-2 transition-all text-left hover:border-primary/50 ${
-                          companySize === size.id 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border'
-                        }`}
-                      >
-                        <span className="font-semibold text-foreground block">{size.label}</span>
-                        <span className="text-sm text-muted-foreground">{size.description}</span>
-                      </button>
-                    ))}
-                  </div>
+          {/* Step 2: Tamanho da empresa */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <Building2 className="h-12 w-12 text-white mx-auto mb-4" />
+                <h1 className="text-3xl font-bold text-white mb-2">Qual o tamanho da sua equipe?</h1>
+                <p className="text-white/80">Adaptamos os recursos para sua realidade</p>
+              </div>
 
-                  <div className="flex justify-between pt-4">
-                    <Button variant="outline" onClick={() => setStep(1)}>
-                      <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-                    </Button>
-                    <Button onClick={() => setStep(3)} disabled={!companySize}>
-                      Continuar <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
+              <div className="grid grid-cols-2 gap-4">
+                {COMPANY_SIZES.map((size) => (
+                  <button
+                    key={size.id}
+                    onClick={() => setCompanySize(size.id)}
+                    className={`p-5 rounded-2xl transition-all text-left ${
+                      companySize === size.id 
+                        ? 'bg-white text-blue-700 shadow-xl scale-105' 
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <span className="font-bold block mb-1">{size.label}</span>
+                    <span className={`text-sm ${companySize === size.id ? 'text-blue-600' : 'text-white/70'}`}>
+                      {size.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-              {/* Step 3: Objetivos */}
-              {step === 3 && (
-                <motion.div
-                  key="step3"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
+              <div className="flex justify-between pt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setStep(1)}
+                  className="text-white hover:bg-white/10 rounded-xl"
                 >
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl font-semibold text-foreground">Quais são seus principais objetivos?</h2>
-                    <p className="text-muted-foreground">Selecione até 3 objetivos</p>
-                  </div>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                </Button>
+                <Button 
+                  onClick={() => setStep(3)} 
+                  disabled={!companySize}
+                  className="bg-white text-blue-700 hover:bg-white/90 rounded-xl px-6"
+                >
+                  Continuar <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {GOALS.map((goal) => (
-                      <button
-                        key={goal.id}
-                        onClick={() => handleGoalToggle(goal.id)}
-                        disabled={selectedGoals.length >= 3 && !selectedGoals.includes(goal.id)}
-                        className={`p-4 rounded-xl border-2 transition-all text-center ${
-                          selectedGoals.includes(goal.id)
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border hover:border-primary/50'
-                        } ${selectedGoals.length >= 3 && !selectedGoals.includes(goal.id) ? 'opacity-50' : ''}`}
-                      >
-                        <span className="text-2xl mb-2 block">{goal.icon}</span>
-                        <span className="text-sm font-medium text-foreground">{goal.label}</span>
-                      </button>
-                    ))}
-                  </div>
+          {/* Step 3: Objetivos */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-white mb-2">Quais são seus objetivos?</h1>
+                <p className="text-white/80">Selecione até 3 objetivos principais</p>
+              </div>
 
-                  <div className="flex justify-between pt-4">
-                    <Button variant="outline" onClick={() => setStep(2)}>
-                      <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-                    </Button>
-                    <Button 
-                      onClick={analyzeAndRecommend} 
-                      disabled={selectedGoals.length === 0 || isAnalyzing}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {GOALS.map((goal) => (
+                  <button
+                    key={goal.id}
+                    onClick={() => handleGoalToggle(goal.id)}
+                    disabled={selectedGoals.length >= 3 && !selectedGoals.includes(goal.id)}
+                    className={`p-4 rounded-2xl transition-all text-center ${
+                      selectedGoals.includes(goal.id)
+                        ? 'bg-white text-blue-700 shadow-xl scale-105' 
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    } ${selectedGoals.length >= 3 && !selectedGoals.includes(goal.id) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="text-2xl mb-2 block">{goal.icon}</span>
+                    <span className="text-sm font-medium">{goal.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setStep(2)}
+                  className="text-white hover:bg-white/10 rounded-xl"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                </Button>
+                <Button 
+                  onClick={analyzeAndRecommend} 
+                  disabled={selectedGoals.length === 0 || isAnalyzing}
+                  className="bg-white text-blue-700 hover:bg-white/90 rounded-xl px-6"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analisando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Gerar recomendações
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Recomendações */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 rounded-full bg-white/20 mx-auto flex items-center justify-center mb-4">
+                  <CheckCircle className="h-10 w-10 text-white" />
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">Tudo pronto!</h1>
+                <p className="text-white/80">Recomendamos estas ferramentas para você:</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {recommendations.map((tool) => (
+                    <span 
+                      key={tool} 
+                      className="px-4 py-2 bg-white text-blue-700 rounded-xl text-sm font-medium"
                     >
-                      {isAnalyzing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Analisando...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Gerar recomendações
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
+                      {getToolLabel(tool)}
+                    </span>
+                  ))}
+                </div>
+              </div>
 
-              {/* Step 4: Recomendações */}
-              {step === 4 && (
-                <motion.div
-                  key="step4"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="space-y-6"
+              <p className="text-center text-white/60 text-sm">
+                💡 Você pode personalizar a sidebar a qualquer momento nas configurações
+              </p>
+
+              <div className="flex justify-center pt-4">
+                <Button 
+                  onClick={handleComplete} 
+                  size="lg" 
+                  className="bg-white text-blue-700 hover:bg-white/90 rounded-xl px-10 py-6 text-lg font-semibold shadow-xl"
                 >
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 rounded-full bg-green-100 mx-auto flex items-center justify-center mb-4">
-                      <CheckCircle className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-foreground">Suas ferramentas recomendadas</h2>
-                    <p className="text-muted-foreground">Baseado no seu perfil, recomendamos começar com:</p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {recommendations.map((tool) => (
-                      <Badge 
-                        key={tool} 
-                        variant="secondary"
-                        className="px-4 py-2 text-sm bg-primary/10 text-primary"
-                      >
-                        {getToolLabel(tool)}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="bg-muted/50 rounded-xl p-4 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      💡 Você poderá personalizar a sidebar a qualquer momento nas configurações
-                    </p>
-                  </div>
-
-                  <div className="flex justify-center pt-4">
-                    <Button onClick={handleComplete} size="lg" className="px-8 bg-primary text-primary-foreground">
-                      Começar a usar <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </CardContent>
-      </Card>
+                  Começar a usar <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

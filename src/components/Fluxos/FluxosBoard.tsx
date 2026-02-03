@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent, closestCorners, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent, closestCorners, DragOverEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -206,8 +206,19 @@ const TrelloColumn: React.FC<{
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
 
+  // Make the column a droppable area
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: { type: 'column', column }
+  });
+
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col bg-muted/40 backdrop-blur-sm rounded-2xl max-h-[calc(100vh-220px)] border border-border/50">
+    <div 
+      ref={setNodeRef}
+      className={`w-80 flex-shrink-0 flex flex-col bg-muted/40 backdrop-blur-sm rounded-2xl max-h-[calc(100vh-220px)] border transition-all ${
+        isOver ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border/50'
+      }`}
+    >
       {/* Column Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -263,9 +274,11 @@ const TrelloColumn: React.FC<{
           </SortableContext>
           
           {cards.length === 0 && !isAddingCard && (
-            <div className="text-center py-6 text-muted-foreground text-xs">
-              <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl p-4">
-                Arraste cards aqui
+            <div className={`text-center py-6 text-xs transition-all ${isOver ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`border-2 border-dashed rounded-xl p-4 transition-all ${
+                isOver ? 'border-primary bg-primary/10 scale-105' : 'border-muted-foreground/20'
+              }`}>
+                {isOver ? '📥 Solte o card aqui!' : 'Arraste cards aqui'}
               </div>
             </div>
           )}

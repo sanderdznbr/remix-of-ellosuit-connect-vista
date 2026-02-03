@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { UnifiedSidebar } from '@/components/Dashboard/UnifiedSidebar';
+import { ModularSidebar } from '@/components/Dashboard/ModularSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 import ImprovedMobileNavbar from './ImprovedMobileNavbar';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { AIOnboardingWizard } from '@/components/Onboarding/AIOnboardingWizard';
+import { GuidedTour } from '@/components/Onboarding/GuidedTour';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -11,15 +14,43 @@ interface MobileLayoutProps {
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const { isMobile } = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { 
+    hasCompletedOnboarding, 
+    hasSeenTour, 
+    loading,
+    completeOnboarding, 
+    completeTour,
+    skipOnboarding 
+  } = useOnboarding();
+
+  // Show onboarding wizard for new users
+  if (!loading && !hasCompletedOnboarding) {
+    return (
+      <AIOnboardingWizard 
+        onComplete={(preferences) => {
+          completeOnboarding(preferences);
+        }}
+        onSkip={skipOnboarding}
+      />
+    );
+  }
 
   // Desktop view - mostrar a sidebar azul completa fixa
   if (!isMobile) {
     return (
       <div className="flex min-h-screen w-full">
-        <UnifiedSidebar isMobile={false} />
+        <ModularSidebar isMobile={false} />
         <main className="flex-1 w-full bg-background">
           {children}
         </main>
+        
+        {/* Guided tour for new users */}
+        {!hasSeenTour && (
+          <GuidedTour 
+            onComplete={completeTour}
+            onSkip={completeTour}
+          />
+        )}
       </div>
     );
   }
@@ -31,7 +62,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center justify-center px-4 z-50">
         {/* Menu Hambúrguer - Posição Absoluta Esquerda */}
         <div className="absolute left-4">
-          <UnifiedSidebar 
+          <ModularSidebar 
             isMobile={true} 
             isOpen={sidebarOpen} 
             onOpenChange={setSidebarOpen} 
@@ -58,6 +89,14 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
       {/* Bottom Navigation */}
       <ImprovedMobileNavbar />
+      
+      {/* Guided tour for new users */}
+      {!hasSeenTour && (
+        <GuidedTour 
+          onComplete={completeTour}
+          onSkip={completeTour}
+        />
+      )}
     </div>
   );
 };

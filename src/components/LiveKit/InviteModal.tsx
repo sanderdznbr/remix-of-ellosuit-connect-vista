@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { APP_CONFIG } from '@/config/app';
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -18,10 +19,14 @@ interface InviteModalProps {
 const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, meetingLink }) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  
+  // Extract room code and use production URL
+  const roomCode = meetingLink.split('/').pop() || '';
+  const productionLink = APP_CONFIG.getMeetingUrl(roomCode);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(meetingLink);
+      await navigator.clipboard.writeText(productionLink);
       setCopied(true);
       toast({
         title: "Link copiado!",
@@ -54,7 +59,7 @@ const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, meetingLink 
           <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <input
               type="text"
-              value={meetingLink}
+              value={productionLink}
               readOnly
               className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
             />
@@ -74,7 +79,7 @@ const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, meetingLink 
 
           <Button
             onClick={onClose}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             Fechar
           </Button>

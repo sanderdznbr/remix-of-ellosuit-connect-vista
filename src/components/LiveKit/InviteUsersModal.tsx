@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { APP_CONFIG } from '@/config/app';
 
 interface InviteUsersModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ const InviteUsersModal: React.FC<InviteUsersModalProps> = ({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   
-  const meetingLink = `${window.location.origin}/meet/${roomCode}`;
+  const meetingLink = APP_CONFIG.getMeetingUrl(roomCode);
 
   const handleCopy = async () => {
     try {

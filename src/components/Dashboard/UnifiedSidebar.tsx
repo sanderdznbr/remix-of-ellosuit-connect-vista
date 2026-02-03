@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   Calendar, 
@@ -19,7 +19,8 @@ import {
   HelpCircle,
   Layers,
   Radio,
-  ChevronRight
+  ChevronRight,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,12 +37,19 @@ const menuGroups = [
     icon: Home,
     items: [
       { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
+      { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
+    ]
+  },
+  {
+    id: 'banco-dados',
+    label: 'Banco de Dados',
+    icon: Database,
+    items: [
       { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
       { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
       { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
-      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
-      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
-      { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
+      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' }
     ]
   },
   {
@@ -115,7 +123,8 @@ interface UnifiedSidebarProps {
 }
 
 export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: UnifiedSidebarProps) {
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -127,14 +136,23 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
   };
 
   const handleLinkClick = () => {
-    setExpandedGroup(null);
+    setHoveredGroup(null);
     if (isMobile && onOpenChange) {
       onOpenChange(false);
     }
   };
 
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroup(prev => prev === groupId ? null : groupId);
+  const handleMouseEnter = (groupId: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setHoveredGroup(groupId);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredGroup(null);
+    }, 150);
   };
 
   const hasActiveItemInGroup = (group: typeof menuGroups[0]) => {
@@ -142,7 +160,7 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
   };
 
   const sidebarContent = (
-    <div className="h-full flex">
+    <div className="h-full flex" onMouseLeave={handleMouseLeave}>
       {/* Main icon strip */}
       <div className="w-16 bg-primary flex flex-col h-full">
         {/* Logo */}
@@ -161,30 +179,37 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
           <TooltipProvider delayDuration={0}>
             {menuGroups.map((group) => {
               const IconComponent = group.icon;
-              const isExpanded = expandedGroup === group.id;
+              const isHovered = hoveredGroup === group.id;
               const hasActive = hasActiveItemInGroup(group);
               
               return (
-                <Tooltip key={group.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => toggleGroup(group.id)}
-                      className={cn(
-                        "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
-                        isExpanded 
-                          ? "bg-white text-primary shadow-lg" 
-                          : hasActive 
-                            ? "bg-white/20 text-white" 
-                            : "text-white/70 hover:bg-white/10 hover:text-white"
-                      )}
-                    >
-                      <IconComponent className="h-5 w-5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="rounded-lg font-medium">
-                    {group.label}
-                  </TooltipContent>
-                </Tooltip>
+                <div
+                  key={group.id}
+                  onMouseEnter={() => handleMouseEnter(group.id)}
+                  className="relative"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className={cn(
+                          "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
+                          isHovered 
+                            ? "bg-white text-primary shadow-lg scale-105" 
+                            : hasActive 
+                              ? "bg-white/20 text-white" 
+                              : "text-white/70 hover:bg-white/10 hover:text-white"
+                        )}
+                      >
+                        <IconComponent className="h-5 w-5" />
+                      </button>
+                    </TooltipTrigger>
+                    {!isHovered && (
+                      <TooltipContent side="right" className="rounded-lg font-medium">
+                        {group.label}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
               );
             })}
           </TooltipProvider>
@@ -232,26 +257,31 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
         </div>
       </div>
 
-      {/* Expandable Panel */}
+      {/* Expandable Panel - appears on hover */}
       <div 
         className={cn(
-          "bg-primary/95 backdrop-blur-sm border-l border-white/10 overflow-hidden transition-all duration-300 ease-in-out",
-          expandedGroup ? "w-56" : "w-0"
+          "bg-primary/95 backdrop-blur-sm border-l border-white/10 overflow-hidden transition-all duration-200 ease-out",
+          hoveredGroup ? "w-56 opacity-100" : "w-0 opacity-0"
         )}
+        onMouseEnter={() => {
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+          }
+        }}
       >
-        {expandedGroup && (
-          <div className="w-56 h-full flex flex-col">
+        {hoveredGroup && (
+          <div className="w-56 h-full flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
             {/* Panel Header */}
             <div className="h-14 px-4 flex items-center border-b border-white/10">
               <h3 className="text-white font-semibold text-sm">
-                {menuGroups.find(g => g.id === expandedGroup)?.label}
+                {menuGroups.find(g => g.id === hoveredGroup)?.label}
               </h3>
             </div>
 
             {/* Panel Items */}
             <div className="flex-1 py-2 px-2">
               <nav className="space-y-1">
-                {menuGroups.find(g => g.id === expandedGroup)?.items.map((item) => {
+                {menuGroups.find(g => g.id === hoveredGroup)?.items.map((item) => {
                   const ItemIcon = item.icon;
                   const active = isActive(item.path);
                   

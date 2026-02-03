@@ -22,6 +22,11 @@ interface BookingLink {
   duration_minutes: number;
   user_id: string;
   is_active: boolean;
+  logo_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  background_color?: string;
+  custom_message?: string;
 }
 
 interface UserAvailability {
@@ -254,26 +259,37 @@ const ImprovedBookingCalendar = () => {
 
   const timeSlots = generateTimeSlots(selectedDate);
 
+  const primaryColor = bookingLink.primary_color || '#3600FF';
+  const secondaryColor = bookingLink.secondary_color || '#FFFFFF';
+  const bgColor = bookingLink.background_color || '#F9FAFB';
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white border-b">
           <div className="px-6 py-8 text-center">
-            <div className="w-24 h-12 mx-auto mb-4">
+            <div className="w-24 h-16 mx-auto mb-4">
               <img 
-                src={ellosuitLogo} 
-                alt="ELLOsuit" 
+                src={bookingLink.logo_url || ellosuitLogo} 
+                alt={bookingLink.title} 
                 className="h-full w-auto object-contain mx-auto"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold mb-2" style={{ color: primaryColor }}>
               {bookingLink.title}
             </h1>
             {bookingLink.description && (
-              <p className="text-gray-600 mb-4">{bookingLink.description}</p>
+              <p className="text-muted-foreground mb-4">{bookingLink.description}</p>
             )}
-            <Badge variant="outline" className="flex items-center gap-2 w-fit mx-auto">
+            {bookingLink.custom_message && (
+              <p className="text-sm text-muted-foreground mb-4">{bookingLink.custom_message}</p>
+            )}
+            <Badge 
+              variant="outline" 
+              className="flex items-center gap-2 w-fit mx-auto"
+              style={{ borderColor: primaryColor, color: primaryColor }}
+            >
               <Clock className="h-4 w-4" />
               {bookingLink.duration_minutes} minutos
             </Badge>
@@ -315,13 +331,13 @@ const ImprovedBookingCalendar = () => {
                   nav_button_next: "absolute right-1",
                   table: "w-full border-collapse space-y-1",
                   head_row: "flex",
-                  head_cell: "text-gray-500 rounded-md w-10 font-normal text-sm",
+                  head_cell: "text-muted-foreground rounded-md w-10 font-normal text-sm",
                   row: "flex w-full mt-2",
                   cell: "text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-                  day: "inline-flex items-center justify-center rounded-md text-sm font-medium h-10 w-10 hover:bg-blue-100",
-                  day_selected: "bg-blue-600 text-white hover:bg-blue-600",
-                  day_today: "bg-gray-100 text-gray-900",
-                  day_outside: "text-gray-300",
+                  day: "inline-flex items-center justify-center rounded-md text-sm font-medium h-10 w-10 hover:opacity-80",
+                  day_selected: "text-white hover:opacity-100",
+                  day_today: "bg-muted",
+                  day_outside: "text-muted-foreground/30",
                   day_disabled: "text-gray-300 opacity-50 cursor-not-allowed",
                   day_hidden: "invisible",
                 }}
@@ -342,6 +358,7 @@ const ImprovedBookingCalendar = () => {
                       size="sm"
                       onClick={() => setSelectedTime(time)}
                       className="h-10"
+                      style={selectedTime === time ? { backgroundColor: primaryColor, color: secondaryColor } : {}}
                     >
                       {time}
                     </Button>
@@ -352,20 +369,23 @@ const ImprovedBookingCalendar = () => {
           </div>
 
           {/* Form Side */}
-          <div className="bg-gray-50 p-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
-              <User className="h-6 w-6 text-blue-600" />
+          <div className="p-8" style={{ backgroundColor: `${primaryColor}08` }}>
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-3">
+              <User className="h-6 w-6" style={{ color: primaryColor }} />
               Suas informações
             </h2>
 
             {selectedDate && selectedTime ? (
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                  <div className="flex items-center gap-2 text-blue-800 font-medium mb-1">
+                <div 
+                  className="p-4 rounded-lg mb-6"
+                  style={{ backgroundColor: `${primaryColor}15` }}
+                >
+                  <div className="flex items-center gap-2 font-medium mb-1" style={{ color: primaryColor }}>
                     <CalendarIcon className="h-4 w-4" />
                     {format(selectedDate, 'EEEE, d \'de\' MMMM', { locale: ptBR })}
                   </div>
-                  <div className="flex items-center gap-2 text-blue-700">
+                  <div className="flex items-center gap-2" style={{ color: `${primaryColor}CC` }}>
                     <Clock className="h-4 w-4" />
                     {selectedTime} - {bookingLink.duration_minutes} minutos
                   </div>
@@ -423,6 +443,7 @@ const ImprovedBookingCalendar = () => {
                 <Button
                   type="submit"
                   className="w-full h-12 text-lg font-semibold"
+                  style={{ backgroundColor: primaryColor, color: secondaryColor }}
                   disabled={submitting}
                 >
                   {submitting ? 'Agendando...' : 'Confirmar Agendamento'}

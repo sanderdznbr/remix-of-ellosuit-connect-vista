@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
-  HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, GripVertical
+  HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, GripVertical, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +34,7 @@ import { CSS } from '@dnd-kit/utilities';
 // Icon mapping
 const iconMap: Record<string, any> = {
   Home, Calendar, Mail, Users, FileText, Settings, Video, CheckSquare,
-  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles
+  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles, Eye
 };
 
 // Default menu groups
@@ -61,7 +61,8 @@ const DEFAULT_MENU_GROUPS = [
     icon: 'MessageSquare',
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
-      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email' }
+      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' },
+      { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
     ]
   },
   {

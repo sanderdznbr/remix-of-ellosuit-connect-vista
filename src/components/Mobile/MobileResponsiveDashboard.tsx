@@ -7,6 +7,7 @@ import MobileLayout from './MobileLayout';
 import Home from '@/components/Dashboard/Home';
 import MyCalendar from '@/components/Dashboard/MyCalendar';
 import EmailDashboard from '@/components/Dashboard/EmailDashboard';
+import SentEmailTracker from '@/components/Dashboard/SentEmailTracker';
 import Analytics from '@/components/Dashboard/Analytics';
 import GroupedSidebarEditor from '@/components/Dashboard/GroupedSidebarEditor';
 import MeetingRooms from '@/components/Dashboard/MeetingRooms';
@@ -66,6 +67,7 @@ const MobileResponsiveDashboard = () => {
           {/* Comunicação */}
           <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
           <Route path="/email/*" element={<EmailDashboard />} />
+          <Route path="/email-tracker" element={<SentEmailTracker />} />
           
           {/* Produtividade */}
           <Route path="/agenda" element={<MyCalendar />} />

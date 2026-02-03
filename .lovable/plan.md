@@ -1,92 +1,84 @@
 
-# Plano: Corrigir Criação de Agentes de IA e Conectar ao Lovable AI
 
-## Problema Identificado
+# Plano: Melhorias CRM WhatsApp + Reorganização Sidebar
 
-O erro "Preencha todos os campos obrigatórios" ocorre porque:
-1. A validação no código verifica `companyId` que vem de `user?.user_metadata?.company_id`
-2. Se o usuário não tem `company_id` nos metadados, essa variável é `undefined`
-3. A tabela `ai_agents` exige `company_id` como NOT NULL
+## Parte 1: Conversas Demo no WhatsApp CRM
 
-Além disso:
-- A edge function `ai-chat` usa `OPENAI_API_KEY` diretamente em vez do Lovable AI Gateway (recomendado)
-- Não há suporte a streaming para respostas em tempo real
+### Dados Simulados
+Adicionar conversas de exemplo realistas que aparecem automaticamente:
+
+| Contato | Última Mensagem | Status | Não Lidas |
+|---------|-----------------|--------|-----------|
+| Maria Silva | "Olá, gostaria de saber sobre o produto X" | open | 2 |
+| João Pereira | "Obrigado pelo atendimento!" | closed | 0 |
+| Ana Costa | "Preciso de suporte urgente" | open | 5 |
+| Pedro Santos | "Qual o prazo de entrega?" | open | 1 |
+| Empresa ABC | "Podemos agendar uma reunião?" | open | 3 |
+
+### Mensagens de Exemplo
+Cada conversa terá um histórico simulado com mensagens de ida e volta para demonstrar a funcionalidade.
 
 ---
 
-## Solução Proposta
+## Parte 2: Agentes de IA no CRM
 
-### Parte 1: Corrigir Criação de Agentes
+### Nova Seção na Lista de Conversas
+- Seção "Agentes IA" acima das conversas normais no CRM
+- Ícone de robô para diferenciar de contatos humanos
+- Ao clicar, abre chat com o agente no painel direito
+- Usa a edge function `ai-chat` existente para respostas
 
-**Arquivo**: `src/components/BotIA/BotIADashboard.tsx`
+---
 
-Modificações:
-- Criar função para auto-criar company se não existir
-- Usar `user.id` como fallback para `company_id` quando não disponível
-- Adicionar verificação e criação automática de company no carregamento
+## Parte 3: Reorganização da Sidebar (Atualizada)
+
+### Nova Estrutura com Grupo IA Separado
 
 ```text
-Lógica:
-1. Ao carregar o componente, verificar se usuário tem company_id
-2. Se não tiver, criar automaticamente uma company com o nome do usuário
-3. Atualizar os metadados do usuário com o novo company_id
-4. Usar esse company_id para criar agentes
++-------------------------+
+|  DASHBOARD              |
+|  - Home                 |
++-------------------------+
+|  INTELIGÊNCIA ARTIFICIAL|  <- NOVO GRUPO
+|  - Agentes de IA        |
++-------------------------+
+|  COMUNICAÇÃO            |
+|  - CRM WhatsApp         |
+|  - Email                |
++-------------------------+
+|  PRODUTIVIDADE          |
+|  - Agenda               |
+|  - Tarefas              |
+|  - Reuniões             |
+|  - Fluxos               |
++-------------------------+
+|  GESTÃO                 |
+|  - Cadastros            | <- Unifica Clientes/Fornecedores/Prospectos/Usuários
+|  - Arquivos             |
+|  - Rastreamento         | <- Unifica PDF/Link/Vídeo
++-------------------------+
+|  INSIGHTS               |
+|  - Analytics            |
++-------------------------+
+|  CONFIGURAÇÕES          |
+|  - Preferências         |
+|  - Segurança            |
+|  - Suporte              |
++-------------------------+
 ```
 
-### Parte 2: Atualizar Edge Function para Lovable AI
+### Página Unificada de Cadastros
+Uma única página com tabs:
+- **Clientes**: Listagem com filtros e ações
+- **Fornecedores**: Mesma estrutura
+- **Prospectos**: Mesma estrutura  
+- **Colaboradores**: Mesma estrutura
 
-**Arquivo**: `supabase/functions/ai-chat/index.ts`
-
-Substituir implementação atual por:
-- Usar Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`)
-- Usar `LOVABLE_API_KEY` em vez de `OPENAI_API_KEY`
-- Implementar suporte a streaming SSE
-- Tratar erros 429 (rate limit) e 402 (payment required)
-- Modelo padrão: `google/gemini-3-flash-preview`
-
-```typescript
-// Estrutura da nova edge function
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "google/gemini-3-flash-preview",
-    messages: [...],
-    stream: true,
-  }),
-});
-```
-
-### Parte 3: Atualizar Chat com Streaming
-
-**Arquivo**: `src/components/BotIA/BotIAChat.tsx`
-
-Implementar:
-- Parser SSE para streaming token-por-token
-- Atualização progressiva das mensagens
-- Indicador de "digitando" mais responsivo
-- Tratamento de erros de rate limit
-
-### Parte 4: Criar Tabela de Conversas (Opcional)
-
-**Migração SQL** para persistir histórico de conversas:
-
-```sql
-CREATE TABLE ai_conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_id UUID REFERENCES ai_agents(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id),
-  title TEXT,
-  messages JSONB DEFAULT '[]',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
+### Página Unificada de Rastreamento
+Uma única página com tabs:
+- **Documentos PDF**: Dashboard de rastreamento
+- **Links**: Dashboard de rastreamento
+- **Vídeos**: Dashboard de rastreamento
 
 ---
 
@@ -94,68 +86,50 @@ CREATE TABLE ai_conversations (
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/components/BotIA/BotIADashboard.tsx` | Modificar | Adicionar auto-criação de company e validação melhorada |
-| `supabase/functions/ai-chat/index.ts` | Reescrever | Usar Lovable AI com streaming |
-| `src/components/BotIA/BotIAChat.tsx` | Modificar | Implementar streaming SSE no frontend |
-| `src/hooks/useAuth.tsx` | Modificar | Adicionar função para atualizar user metadata |
-| Nova migração SQL | Criar | Tabela de conversas (opcional) |
-
----
-
-## Fluxo de Funcionamento
-
-```text
-1. Usuário acessa "Agentes de IA"
-   |
-2. Sistema verifica se tem company_id
-   |
-   ├── SIM → Carrega agentes normalmente
-   |
-   └── NÃO → Cria company automaticamente
-           → Atualiza user metadata
-           → Prossegue com carregamento
-   |
-3. Usuário cria novo agente
-   |
-4. Agente salvo no banco com company_id válido
-   |
-5. Usuário clica "Conversar"
-   |
-6. Chat abre e envia mensagem
-   |
-7. Edge function processa via Lovable AI
-   |
-8. Resposta streamed em tempo real
-```
+| `src/components/CRM/WhatsAppCRM.tsx` | Modificar | Adicionar dados demo + seção de agentes IA |
+| `src/components/Dashboard/UnifiedSidebar.tsx` | Modificar | Reorganizar com grupo IA separado |
+| `src/components/Dashboard/UnifiedCadastros.tsx` | Criar | Página unificada com tabs |
+| `src/components/Dashboard/UnifiedTracking.tsx` | Criar | Página unificada de rastreamento |
+| `src/components/Mobile/MobileResponsiveDashboard.tsx` | Modificar | Adicionar novas rotas |
 
 ---
 
 ## Detalhes Técnicos
 
-### Modelo de IA Recomendado
-- **Padrão**: `google/gemini-3-flash-preview` (rápido, eficiente)
-- **Alternativas no select**: 
-  - `google/gemini-2.5-flash` 
-  - `google/gemini-2.5-pro` (para tarefas complexas)
-  - `openai/gpt-5-mini`
+### Estrutura do Demo Data
+```typescript
+const DEMO_CONVERSATIONS = [
+  {
+    id: 'demo-1',
+    contact_name: 'Maria Silva',
+    contact_phone: '+55 11 99999-1234',
+    last_message: 'Olá, gostaria de saber sobre o produto X',
+    last_message_at: new Date().toISOString(),
+    status: 'open',
+    unread_count: 2
+  },
+  // ... mais conversas
+];
+```
 
-### Tratamento de Erros
-- **429 Too Many Requests**: "Limite de requisições atingido, tente novamente em alguns segundos"
-- **402 Payment Required**: "Créditos insuficientes, adicione créditos na sua conta Lovable"
-- **500 Internal Error**: Fallback genérico com retry
-
-### Integração WhatsApp (Futuro)
-A estrutura permite futura integração onde:
-- Um webhook recebe mensagens do WhatsApp
-- O agente processa e responde automaticamente
-- Histórico é salvo na tabela de conversas
+### Novo Grupo na Sidebar
+```typescript
+{
+  title: "Inteligência Artificial",
+  icon: Bot,
+  items: [
+    { title: "Agentes de IA", path: "/dashboard/agentes-ia", icon: Bot }
+  ]
+}
+```
 
 ---
 
 ## Resultado Esperado
 
-Após implementação:
-1. Criação de agentes funcionará sem erros
-2. Chat terá respostas em tempo real via streaming
-3. Sistema usará Lovable AI (mais estável e gerenciado)
-4. Usuários sem company serão tratados automaticamente
+1. **CRM com Exemplos**: Conversas demo para demonstrar a interface
+2. **Chat com IA no CRM**: Agentes aparecem e respondem em tempo real
+3. **Grupo IA Destacado**: Seção própria na sidebar para funcionalidades de IA
+4. **Sidebar Organizada**: Navegação mais intuitiva
+5. **Páginas Unificadas**: Cadastros e Rastreamento em páginas únicas com tabs
+

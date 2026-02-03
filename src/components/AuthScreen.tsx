@@ -2,26 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, User, Building, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
 
 const AuthScreen = () => {
+  // TODOS os hooks devem ser chamados ANTES de qualquer return condicional
   const { isMobile } = useIsMobile();
-
-  // Se for mobile, usar a versão mobile
-  if (isMobile) {
-    return <MobileAuthScreen />;
-  }
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +37,6 @@ const AuthScreen = () => {
     return returnTo === 'tarefas' ? '/tarefas' : '/dashboard';
   };
 
-  // Verificar se o usuário está específicamente acessando tarefas
-  const isFromTarefas = () => {
-    const urlParams = new URLSearchParams(location.search);
-    return urlParams.get('returnTo') === 'tarefas';
-  };
-
   // Redirecionamento automático se já estiver logado
   useEffect(() => {
     if (user) {
@@ -58,6 +45,11 @@ const AuthScreen = () => {
       navigate(returnPath, { replace: true });
     }
   }, [user, navigate, location.search]);
+
+  // Se for mobile, usar a versão mobile (APÓS todos os hooks)
+  if (isMobile) {
+    return <MobileAuthScreen />;
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +65,7 @@ const AuthScreen = () => {
         } else if (error.message.includes('Email not confirmed')) {
           setError('Por favor, confirme seu email antes de fazer login.');
         } else {
-          setError(`Erro no login: ${error.message}`);
+          setError(`Erro no login: ${String(error.message)}`);
         }
         return;
       }
@@ -113,7 +105,7 @@ const AuthScreen = () => {
         } else if (error.message.includes('Password should be at least 6 characters')) {
           setError('A senha deve ter pelo menos 6 caracteres.');
         } else {
-          setError(`Erro no cadastro: ${error.message}`);
+          setError(`Erro no cadastro: ${String(error.message)}`);
         }
         return;
       }
@@ -143,7 +135,7 @@ const AuthScreen = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
-        setError(`Erro no login com Google: ${error.message}`);
+        setError(`Erro no login com Google: ${String(error.message)}`);
       }
       // O redirecionamento será tratado automaticamente pelo Google OAuth
     } catch (error: any) {
@@ -163,19 +155,6 @@ const AuthScreen = () => {
     setSuccess(null);
   };
 
-  // Customização visual para tela de tarefas
-  const isTarefasLogin = isFromTarefas();
-  const containerClass = isTarefasLogin 
-    ? "min-h-screen bg-black flex items-center justify-center p-4"
-    : "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4";
-
-  const cardClass = isTarefasLogin
-    ? "w-full max-w-md bg-gray-900 border-gray-700"
-    : "w-full max-w-md";
-
-  const titleColor = isTarefasLogin ? "text-white" : "text-gray-900";
-  const descriptionColor = isTarefasLogin ? "text-gray-300" : "text-gray-600";
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left side - Form */}
@@ -194,14 +173,14 @@ const AuthScreen = () => {
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{String(error)}</AlertDescription>
             </Alert>
           )}
           
           {success && (
             <Alert className="bg-green-50 border-green-200">
               <AlertCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{success}</AlertDescription>
+              <AlertDescription className="text-green-800">{String(success)}</AlertDescription>
             </Alert>
           )}
 

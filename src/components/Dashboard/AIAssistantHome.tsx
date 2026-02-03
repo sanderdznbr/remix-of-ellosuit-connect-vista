@@ -120,16 +120,6 @@ const AIAssistantHome = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Bem-vindo de volta! 👋
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Aqui está um resumo do seu dia
-          </p>
-        </div>
-
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all rounded-2xl">

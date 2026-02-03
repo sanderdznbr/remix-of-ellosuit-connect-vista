@@ -693,8 +693,7 @@ const FolderCard = ({ folder, viewMode, onClick, onShare, onDelete }: {
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: folder.color + '20' }}
+              className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 border"
             >
               <Folder className="h-6 w-6" style={{ color: folder.color }} />
             </div>

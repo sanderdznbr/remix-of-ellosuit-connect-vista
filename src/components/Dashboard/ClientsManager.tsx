@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,18 +20,71 @@ import {
   Trash2,
   Plus,
   Search,
-  Eye
+  Eye,
+  Package,
+  Building2
 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import ClientForm from './ClientForm';
 
-const ClientsManager = () => {
+interface ClientsManagerProps {
+  contactType?: 'cliente' | 'fornecedor' | 'prospecto' | 'all';
+}
+
+const ClientsManager = ({ contactType = 'all' }: ClientsManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
 
-  const { clients, loading, createClient, updateClient, deleteClient } = useClients();
+  const { clients, loading, createClient, updateClient, deleteClient, refetch } = useClients(contactType);
+
+  // Config baseado no tipo de contato
+  const typeConfig = {
+    cliente: {
+      title: 'Clientes',
+      subtitle: 'Gerencie seus clientes e relacionamentos',
+      icon: Users,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      newButtonText: 'Novo Cliente',
+      emptyTitle: 'Nenhum cliente encontrado',
+      emptyText: 'Comece adicionando seu primeiro cliente'
+    },
+    fornecedor: {
+      title: 'Fornecedores',
+      subtitle: 'Gerencie seus fornecedores e parceiros',
+      icon: Package,
+      iconColor: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      newButtonText: 'Novo Fornecedor',
+      emptyTitle: 'Nenhum fornecedor encontrado',
+      emptyText: 'Comece adicionando seu primeiro fornecedor'
+    },
+    prospecto: {
+      title: 'Prospectos',
+      subtitle: 'Gerencie seus leads e oportunidades',
+      icon: Target,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      newButtonText: 'Novo Prospecto',
+      emptyTitle: 'Nenhum prospecto encontrado',
+      emptyText: 'Comece adicionando seu primeiro prospecto'
+    },
+    all: {
+      title: 'Contatos',
+      subtitle: 'Gerencie todos os seus contatos',
+      icon: Building2,
+      iconColor: 'text-gray-600',
+      bgColor: 'bg-gray-50',
+      newButtonText: 'Novo Contato',
+      emptyTitle: 'Nenhum contato encontrado',
+      emptyText: 'Comece adicionando seu primeiro contato'
+    }
+  };
+
+  const config = typeConfig[contactType];
+  const IconComponent = config.icon;
 
   const handleAddClient = () => {
     setEditingClient(null);
@@ -44,15 +97,21 @@ const ClientsManager = () => {
   };
 
   const handleSaveClient = async (clientData: any) => {
+    // Se for um tipo específico, incluir o client_type
+    const dataToSave = {
+      ...clientData,
+      client_type: contactType !== 'all' ? contactType : clientData.client_type || 'cliente'
+    };
+
     if (editingClient) {
-      await updateClient(editingClient.id, clientData);
+      await updateClient(editingClient.id, dataToSave);
     } else {
-      await createClient(clientData);
+      await createClient(dataToSave);
     }
   };
 
   const handleDeleteClient = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+    if (confirm(`Tem certeza que deseja excluir este ${contactType === 'all' ? 'contato' : contactType}?`)) {
       await deleteClient(id);
     }
   };
@@ -117,16 +176,21 @@ const ClientsManager = () => {
     <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Clientes</h1>
-          <p className="text-base text-gray-600 mt-2">Gerencie seus clientes e relacionamentos</p>
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-2xl ${config.bgColor}`}>
+            <IconComponent className={`h-8 w-8 ${config.iconColor}`} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{config.title}</h1>
+            <p className="text-base text-gray-600 mt-1">{config.subtitle}</p>
+          </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Buscar clientes..."
+              placeholder={`Buscar ${config.title.toLowerCase()}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-64 rounded-xl"
@@ -147,7 +211,7 @@ const ClientsManager = () => {
 
           <Button onClick={handleAddClient} className="rounded-xl">
             <Plus className="h-4 w-4 mr-2" />
-            Novo Cliente
+            {config.newButtonText}
           </Button>
         </div>
       </div>
@@ -158,11 +222,11 @@ const ClientsManager = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total de Clientes</p>
+                <p className="text-sm text-gray-600 mb-1">Total</p>
                 <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
               </div>
-              <div className="p-4 rounded-full bg-blue-50">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className={`p-4 rounded-full ${config.bgColor}`}>
+                <IconComponent className={`h-6 w-6 ${config.iconColor}`} />
               </div>
             </div>
           </CardContent>
@@ -172,7 +236,7 @@ const ClientsManager = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Clientes Ativos</p>
+                <p className="text-sm text-gray-600 mb-1">Ativos</p>
                 <p className="text-3xl font-bold text-gray-900">{activeClients}</p>
               </div>
               <div className="p-4 rounded-full bg-green-50">
@@ -214,28 +278,30 @@ const ClientsManager = () => {
       {/* Clients Table */}
       <Card className="border-none shadow-lg rounded-2xl bg-white">
         <CardHeader className="p-6 pb-4">
-          <CardTitle className="text-lg font-semibold">Lista de Clientes</CardTitle>
+          <CardTitle className="text-lg font-semibold">Lista de {config.title}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {filteredClients.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <div className={`h-16 w-16 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                <IconComponent className={`h-8 w-8 ${config.iconColor}`} />
+              </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhum cliente encontrado
+                {config.emptyTitle}
               </h3>
               <p className="text-gray-500 mb-4">
-                Comece adicionando seu primeiro cliente
+                {config.emptyText}
               </p>
               <Button onClick={handleAddClient}>
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Cliente
+                {config.newButtonText}
               </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow className="border-b">
-                  <TableHead className="text-sm text-gray-600 font-medium p-6">CLIENTE</TableHead>
+                  <TableHead className="text-sm text-gray-600 font-medium p-6">NOME</TableHead>
                   <TableHead className="text-sm text-gray-600 font-medium p-6">CONTATO</TableHead>
                   <TableHead className="text-sm text-gray-600 font-medium p-6">STATUS</TableHead>
                   <TableHead className="text-sm text-gray-600 font-medium p-6">CRIADO EM</TableHead>
@@ -249,7 +315,7 @@ const ClientsManager = () => {
                       <div className="flex items-center gap-3">
                         <Avatar>
                           <AvatarImage src={client.avatar_url} />
-                          <AvatarFallback className="bg-blue-50 text-blue-600">
+                          <AvatarFallback className={`${config.bgColor} ${config.iconColor}`}>
                             {client.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>

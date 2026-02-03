@@ -1,38 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   FolderPlus, 
   Upload, 
   Search, 
-  MoreHorizontal,
   Folder,
   File,
   Download,
   Trash2,
-  Edit3,
-  Share2,
   Grid3X3,
   List,
-  SortAsc,
-  Filter,
   Star,
   Clock,
   Eye,
-  ArrowLeft,
   Home,
   Link,
-  Archive
+  HardDrive,
+  Image,
+  FileText,
+  Film,
+  Music,
+  Archive,
+  MoreVertical,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useDropzone } from 'react-dropzone';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface DriveFile {
   id: string;
@@ -63,6 +64,7 @@ const DriveManager = () => {
   
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [folders, setFolders] = useState<DriveFolder[]>([]);
+  const [allFiles, setAllFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +72,7 @@ const DriveManager = () => {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<Array<{id: string, name: string}>>([]);
+  const [sidebarView, setSidebarView] = useState<'drive' | 'recent' | 'starred'>('drive');
   
   const [folderForm, setFolderForm] = useState({
     name: '',
@@ -101,8 +104,18 @@ const DriveManager = () => {
     if (companyId) {
       loadFolders();
       loadFiles();
+      loadAllFiles();
     }
   }, [companyId, currentFolder]);
+
+  const loadAllFiles = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('company_id', companyId);
+    setAllFiles(data || []);
+  };
 
   const loadFolders = async () => {
     if (!companyId) return;
@@ -114,7 +127,6 @@ const DriveManager = () => {
       .order('name');
 
     if (currentFolder === null) {
-      // Root level
       query = query.is('parent_folder_id', null);
     } else {
       query = query.eq('parent_folder_id', currentFolder);
@@ -133,7 +145,7 @@ const DriveManager = () => {
       .from('documents')
       .select('*')
       .eq('company_id', companyId)
-      .order('name');
+      .order('created_at', { ascending: false });
 
     if (currentFolder === null) {
       query = query.is('folder_id', null);
@@ -145,6 +157,7 @@ const DriveManager = () => {
     
     if (!error) setFiles(data || []);
   };
+
   const createFolder = async () => {
     if (!user?.id || !companyId) return;
 
@@ -192,7 +205,6 @@ const DriveManager = () => {
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${companyId}/${fileName}`;
 
-    // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('documents')
       .upload(filePath, file);
@@ -206,12 +218,10 @@ const DriveManager = () => {
       return;
     }
 
-    // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('documents')
       .getPublicUrl(filePath);
 
-    // Save to database
     const { error: dbError } = await supabase
       .from('documents')
       .insert({
@@ -239,9 +249,9 @@ const DriveManager = () => {
     });
 
     loadFiles();
+    loadAllFiles();
   };
 
-  // Share folder or file
   const generateShareableLink = async (item: DriveFile | DriveFolder, type: 'file' | 'folder') => {
     const baseUrl = window.location.origin;
     const shareId = `${type}-${item.id}`;
@@ -262,74 +272,35 @@ const DriveManager = () => {
     }
   };
 
-  // Download folder as ZIP
-  const downloadFolderAsZip = async (folder: DriveFolder) => {
-    try {
-      // Dynamic import JSZip
-      const JSZip = (await import('jszip')).default;
-      
-      // Get all files in the folder
-      const { data: folderFiles, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('folder_id', folder.id)
-        .eq('company_id', companyId);
+  const deleteFile = async (fileId: string) => {
+    const { error } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', fileId);
 
-      if (error) throw error;
-
-      if (!folderFiles || folderFiles.length === 0) {
-        toast({
-          title: 'Pasta vazia',
-          description: 'Esta pasta não contém arquivos para download',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Preparando download...',
-        description: `Preparando ${folderFiles.length} arquivos para download`,
-      });
-
-      const zip = new JSZip();
-
-      // Add files to ZIP
-      for (const file of folderFiles) {
-        if (file.file_url) {
-          try {
-            const response = await fetch(file.file_url);
-            const blob = await response.blob();
-            zip.file(file.name, blob);
-          } catch (error) {
-            console.error(`Error adding file ${file.name} to ZIP:`, error);
-          }
-        }
-      }
-
-      // Generate ZIP file
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      
-      // Download ZIP file
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(zipBlob);
-      link.download = `${folder.name}.zip`;
-      link.click();
-
-      // Clean up
-      URL.revokeObjectURL(link.href);
-
-      toast({
-        title: 'Download concluído',
-        description: `Pasta "${folder.name}" baixada como ZIP`,
-      });
-    } catch (error) {
-      console.error('Error downloading folder as ZIP:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao baixar pasta como ZIP',
-        variant: 'destructive',
-      });
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao excluir arquivo', variant: 'destructive' });
+      return;
     }
+
+    toast({ title: 'Sucesso', description: 'Arquivo excluído' });
+    loadFiles();
+    loadAllFiles();
+  };
+
+  const deleteFolder = async (folderId: string) => {
+    const { error } = await supabase
+      .from('document_folders')
+      .delete()
+      .eq('id', folderId);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao excluir pasta', variant: 'destructive' });
+      return;
+    }
+
+    toast({ title: 'Sucesso', description: 'Pasta excluída' });
+    loadFolders();
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -340,14 +311,12 @@ const DriveManager = () => {
   };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.includes('image')) return '🖼️';
-    if (fileType.includes('video')) return '🎥';
-    if (fileType.includes('audio')) return '🎵';
-    if (fileType.includes('pdf')) return '📄';
-    if (fileType.includes('word')) return '📝';
-    if (fileType.includes('excel')) return '📊';
-    if (fileType.includes('powerpoint')) return '📈';
-    return '📄';
+    if (fileType.includes('image')) return <Image className="h-6 w-6 text-pink-500" />;
+    if (fileType.includes('video')) return <Film className="h-6 w-6 text-purple-500" />;
+    if (fileType.includes('audio')) return <Music className="h-6 w-6 text-green-500" />;
+    if (fileType.includes('pdf')) return <FileText className="h-6 w-6 text-red-500" />;
+    if (fileType.includes('zip') || fileType.includes('rar')) return <Archive className="h-6 w-6 text-amber-500" />;
+    return <File className="h-6 w-6 text-blue-500" />;
   };
 
   const filteredFiles = files.filter(file =>
@@ -358,395 +327,534 @@ const DriveManager = () => {
     folder.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calcular armazenamento usado
+  const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB
+  const usedStorage = allFiles.reduce((acc, file) => acc + (file.file_size || 0), 0);
+  const storagePercentage = (usedStorage / totalStorage) * 100;
+
+  // Arquivos recentes
+  const recentFiles = [...allFiles]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 10);
+
   if (loading) {
     return (
-      <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            <File className="inline-block mr-2 h-8 w-8" />
-            Arquivos
-          </h1>
-          <p className="text-base text-gray-600 mt-2">
-            Organize seus arquivos e documentos de forma inteligente
-          </p>
-          
-          {/* Breadcrumb Navigation */}
-          {folderPath.length > 0 && (
-            <nav className="flex items-center space-x-2 mt-2">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => {
-                  setCurrentFolder(null);
-                  setFolderPath([]);
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                <Home className="h-4 w-4 mr-1" />
-                Início
-              </Button>
-              {folderPath.map((folder, index) => (
-                <React.Fragment key={folder.id}>
-                  <span className="text-gray-400">/</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setCurrentFolder(folder.id);
-                      setFolderPath(folderPath.slice(0, index + 1));
-                    }}
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                  >
-                    {folder.name}
-                  </Button>
-                </React.Fragment>
-              ))}
-            </nav>
-          )}
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside className="w-64 border-r bg-card p-4 hidden lg:flex flex-col">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <HardDrive className="h-6 w-6 text-primary" />
+            Meu Drive
+          </h2>
         </div>
-        
-        <div className="flex gap-2">
-          <Dialog open={showCreateFolder} onOpenChange={setShowCreateFolder}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-xl">
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Nova Pasta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Nova Pasta</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Nome da pasta</Label>
-                  <Input
-                    value={folderForm.name}
-                    onChange={(e) => setFolderForm({...folderForm, name: e.target.value})}
-                    placeholder="Digite o nome da pasta"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Descrição (opcional)</Label>
-                  <Input
-                    value={folderForm.description}
-                    onChange={(e) => setFolderForm({...folderForm, description: e.target.value})}
-                    placeholder="Descreva o conteúdo desta pasta"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Cor</Label>
-                  <div className="flex gap-2 mt-2">
-                    {['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setFolderForm({...folderForm, color})}
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          folderForm.color === color ? 'border-gray-800' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setShowCreateFolder(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={createFolder} disabled={!folderForm.name}>
-                    Criar Pasta
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
+        <nav className="space-y-1 flex-1">
+          <Button
+            variant={sidebarView === 'drive' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => {
+              setSidebarView('drive');
+              setCurrentFolder(null);
+              setFolderPath([]);
+            }}
+          >
+            <Home className="h-4 w-4 mr-3" />
+            Meu Drive
+          </Button>
+          <Button
+            variant={sidebarView === 'recent' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setSidebarView('recent')}
+          >
+            <Clock className="h-4 w-4 mr-3" />
+            Recentes
+          </Button>
+          <Button
+            variant={sidebarView === 'starred' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setSidebarView('starred')}
+          >
+            <Star className="h-4 w-4 mr-3" />
+            Favoritos
+          </Button>
+        </nav>
+
+        {/* Storage Info */}
+        <div className="mt-auto pt-6 border-t">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Armazenamento</span>
+              <span className="font-medium">{formatFileSize(usedStorage)} / 10 GB</span>
+            </div>
+            <Progress value={storagePercentage} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {storagePercentage.toFixed(1)}% utilizado
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 overflow-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {sidebarView === 'drive' ? 'Meu Drive' : sidebarView === 'recent' ? 'Recentes' : 'Favoritos'}
+            </h1>
+            
+            {/* Breadcrumb */}
+            {sidebarView === 'drive' && folderPath.length > 0 && (
+              <nav className="flex items-center gap-1 mt-2 text-sm">
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="p-0 h-auto text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setCurrentFolder(null);
+                    setFolderPath([]);
+                  }}
+                >
+                  Meu Drive
+                </Button>
+                {folderPath.map((folder, index) => (
+                  <React.Fragment key={folder.id}>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="p-0 h-auto text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setCurrentFolder(folder.id);
+                        setFolderPath(folderPath.slice(0, index + 1));
+                      }}
+                    >
+                      {folder.name}
+                    </Button>
+                  </React.Fragment>
+                ))}
+              </nav>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
+            
+            <div className="flex gap-1 bg-muted p-1 rounded-lg">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {sidebarView === 'drive' && (
+              <>
+                <Dialog open={showCreateFolder} onOpenChange={setShowCreateFolder}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Nova Pasta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Criar Nova Pasta</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Nome da pasta</Label>
+                        <Input
+                          value={folderForm.name}
+                          onChange={(e) => setFolderForm({...folderForm, name: e.target.value})}
+                          placeholder="Digite o nome da pasta"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>Descrição (opcional)</Label>
+                        <Input
+                          value={folderForm.description}
+                          onChange={(e) => setFolderForm({...folderForm, description: e.target.value})}
+                          placeholder="Descreva o conteúdo desta pasta"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>Cor</Label>
+                        <div className="flex gap-2 mt-2">
+                          {['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'].map((color) => (
+                            <button
+                              key={color}
+                              onClick={() => setFolderForm({...folderForm, color})}
+                              className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                                folderForm.color === color ? 'border-foreground scale-110' : 'border-transparent'
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setShowCreateFolder(false)} className="flex-1">
+                          Cancelar
+                        </Button>
+                        <Button onClick={createFolder} disabled={!folderForm.name} className="flex-1">
+                          Criar Pasta
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <div
+                  {...getRootProps()}
+                  className={`transition-colors ${isDragActive ? 'opacity-50' : ''}`}
+                >
+                  <input {...getInputProps()} />
+                  <Button className="bg-primary hover:bg-primary/90">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Drag and Drop Zone */}
+        {sidebarView === 'drive' && (
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-xl p-4 transition-colors ${
-              isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300'
+            className={`mb-6 border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+              isDragActive 
+                ? 'border-primary bg-primary/5' 
+                : 'border-muted-foreground/20 hover:border-muted-foreground/40'
             }`}
           >
             <input {...getInputProps()} />
-            <Button className="rounded-xl">
-              <Upload className="h-4 w-4 mr-2" />
-              {isDragActive ? 'Solte aqui' : 'Upload'}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and View Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Pesquisar arquivos e pastas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl"
-            />
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            className="rounded-xl"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-            className="rounded-xl"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="space-y-6">
-        {/* Folders */}
-        {filteredFolders.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">📁 Pastas</h3>
-            <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4' : 'space-y-2'}>
-              {filteredFolders.map((folder) => (
-                 <Card 
-                  key={folder.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow rounded-2xl"
-                  onClick={() => {
-                    setCurrentFolder(folder.id);
-                    setFolderPath([...folderPath, { id: folder.id, name: folder.name }]);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    {viewMode === 'grid' ? (
-                      <div className="text-center">
-                        <div 
-                          className="w-16 h-16 rounded-xl mx-auto mb-2 flex items-center justify-center"
-                          style={{ backgroundColor: folder.color + '20' }}
-                        >
-                          <Folder className="h-8 w-8" style={{ color: folder.color }} />
-                        </div>
-                        <p className="font-medium text-sm truncate">{folder.name}</p>
-                        {folder.description && (
-                          <p className="text-xs text-gray-500 truncate">{folder.description}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: folder.color + '20' }}
-                        >
-                          <Folder className="h-5 w-5" style={{ color: folder.color }} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{folder.name}</p>
-                          {folder.description && (
-                            <p className="text-sm text-gray-500">{folder.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Upload className={`h-10 w-10 mx-auto mb-3 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+            <p className="text-muted-foreground">
+              {isDragActive 
+                ? 'Solte os arquivos aqui...' 
+                : 'Arraste arquivos para cá ou clique para fazer upload'
+              }
+            </p>
           </div>
         )}
 
-        {/* Files */}
-        {filteredFiles.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">📄 Arquivos</h3>
-            <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4' : 'space-y-2'}>
-              {filteredFiles.map((file) => (
-                <Card key={file.id} className="hover:shadow-lg transition-shadow rounded-2xl group">
-                  <CardContent className="p-4">
-                    {viewMode === 'grid' ? (
-                       <div className="text-center">
-                         <div className="w-16 h-16 bg-gray-100 rounded-xl mx-auto mb-2 flex items-center justify-center text-2xl relative">
-                           {getFileIcon(file.file_type)}
-                           
-                           {/* Share button overlay */}
-                           <Button
-                             size="icon"
-                             variant="secondary"
-                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                             onClick={() => generateShareableLink(file, 'file')}
-                             title="Compartilhar arquivo"
-                           >
-                             <Link className="h-3 w-3" />
-                           </Button>
-                         </div>
-                         <p className="font-medium text-sm truncate">{file.name}</p>
-                         <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
-                         
-                         <div className="flex justify-center gap-1 mt-2">
-                           {file.file_url && (
-                             <>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-6 w-6 text-blue-600 hover:text-blue-700"
-                                 onClick={() => window.open(file.file_url, '_blank')}
-                                 title="Visualizar"
-                               >
-                                 <Eye className="h-3 w-3" />
-                               </Button>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-6 w-6 text-green-600 hover:text-green-700"
-                                 onClick={() => {
-                                   const link = document.createElement('a');
-                                   link.href = file.file_url!;
-                                   link.download = file.name;
-                                   link.click();
-                                 }}
-                                 title="Baixar"
-                               >
-                                 <Download className="h-3 w-3" />
-                               </Button>
-                             </>
-                           )}
-                           <Button 
-                             variant="ghost" 
-                             size="icon" 
-                             className="h-6 w-6 text-red-600 hover:text-red-700"
-                             onClick={() => {
-                               if (confirm('Deseja excluir este arquivo?')) {
-                                 console.log('Excluir arquivo:', file.id);
-                               }
-                             }}
-                             title="Excluir"
-                           >
-                             <Trash2 className="h-3 w-3" />
-                           </Button>
-                         </div>
-                       </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-lg">{getFileIcon(file.file_type)}</span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{file.name}</p>
-                          <p className="text-sm text-gray-500">{formatFileSize(file.file_size)}</p>
-                        </div>
-                       <div className="flex gap-1">
-                           <Button 
-                             variant="ghost" 
-                             size="icon" 
-                             className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                             onClick={() => generateShareableLink(file, 'file')}
-                             title="Compartilhar"
-                           >
-                             <Link className="h-4 w-4" />
-                           </Button>
-                           {file.file_url && (
-                             <>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-8 w-8"
-                                 onClick={() => window.open(file.file_url, '_blank')}
-                                 title="Visualizar"
-                               >
-                                 <Eye className="h-4 w-4" />
-                               </Button>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-8 w-8"
-                                 onClick={() => {
-                                   const link = document.createElement('a');
-                                   link.href = file.file_url!;
-                                   link.download = file.name;
-                                   link.click();
-                                 }}
-                                 title="Baixar"
-                               >
-                                 <Download className="h-4 w-4" />
-                               </Button>
-                             </>
-                           )}
-                           <Button 
-                             variant="ghost" 
-                             size="icon" 
-                             className="h-8 w-8 text-red-600 hover:text-red-700"
-                             onClick={() => {
-                               if (confirm('Deseja excluir este arquivo?')) {
-                                 console.log('Excluir arquivo:', file.id);
-                               }
-                             }}
-                             title="Excluir"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+        {/* Content based on view */}
+        {sidebarView === 'recent' ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Arquivos Recentes</h3>
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4' 
+              : 'space-y-2'
+            }>
+              {recentFiles.map((file) => (
+                <FileCard 
+                  key={file.id} 
+                  file={file} 
+                  viewMode={viewMode}
+                  getFileIcon={getFileIcon}
+                  formatFileSize={formatFileSize}
+                  onShare={() => generateShareableLink(file, 'file')}
+                  onDelete={() => deleteFile(file.id)}
+                />
               ))}
             </div>
           </div>
-        )}
-
-        {/* Empty State */}
-        {filteredFiles.length === 0 && filteredFolders.length === 0 && !searchTerm && (
-          <Card className="border-none shadow-lg rounded-2xl">
-            <CardContent className="text-center py-16">
-              <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <File className="h-12 w-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                Seu DRIVE está vazio
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Comece criando uma pasta ou fazendo upload de seus primeiros arquivos
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Button onClick={() => setShowCreateFolder(true)}>
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  Criar Pasta
-                </Button>
-                <div {...getRootProps()}>
-                  <input {...getInputProps()} />
-                  <Button variant="outline">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Arquivo
-                  </Button>
+        ) : sidebarView === 'starred' ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhum arquivo favoritado ainda</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Folders */}
+            {filteredFolders.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Pastas</h3>
+                <div className={viewMode === 'grid' 
+                  ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4' 
+                  : 'space-y-2'
+                }>
+                  {filteredFolders.map((folder) => (
+                    <FolderCard
+                      key={folder.id}
+                      folder={folder}
+                      viewMode={viewMode}
+                      onClick={() => {
+                        setCurrentFolder(folder.id);
+                        setFolderPath([...folderPath, { id: folder.id, name: folder.name }]);
+                      }}
+                      onShare={() => generateShareableLink(folder, 'folder')}
+                      onDelete={() => deleteFolder(folder.id)}
+                    />
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            {/* Files */}
+            {filteredFiles.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Arquivos</h3>
+                <div className={viewMode === 'grid' 
+                  ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4' 
+                  : 'space-y-2'
+                }>
+                  {filteredFiles.map((file) => (
+                    <FileCard 
+                      key={file.id} 
+                      file={file} 
+                      viewMode={viewMode}
+                      getFileIcon={getFileIcon}
+                      formatFileSize={formatFileSize}
+                      onShare={() => generateShareableLink(file, 'file')}
+                      onDelete={() => deleteFile(file.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {filteredFiles.length === 0 && filteredFolders.length === 0 && !searchTerm && (
+              <div className="text-center py-16">
+                <div className="w-20 h-20 bg-muted rounded-full mx-auto mb-6 flex items-center justify-center">
+                  <HardDrive className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-medium mb-2">Seu Drive está vazio</h3>
+                <p className="text-muted-foreground mb-6">
+                  Comece criando uma pasta ou fazendo upload de arquivos
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button variant="outline" onClick={() => setShowCreateFolder(true)}>
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Criar Pasta
+                  </Button>
+                  <div {...getRootProps()}>
+                    <input {...getInputProps()} />
+                    <Button>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
-      </div>
+      </main>
     </div>
+  );
+};
+
+// Componente de Card de Pasta
+const FolderCard = ({ folder, viewMode, onClick, onShare, onDelete }: {
+  folder: DriveFolder;
+  viewMode: 'grid' | 'list';
+  onClick: () => void;
+  onShare: () => void;
+  onDelete: () => void;
+}) => {
+  if (viewMode === 'grid') {
+    return (
+      <Card className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50" onClick={onClick}>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: folder.color + '20' }}
+            >
+              <Folder className="h-6 w-6" style={{ color: folder.color }} />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onShare(); }}>
+                  <Link className="h-4 w-4 mr-2" /> Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <p className="font-medium text-sm truncate">{folder.name}</p>
+          {folder.description && (
+            <p className="text-xs text-muted-foreground truncate mt-1">{folder.description}</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="group cursor-pointer hover:shadow-sm transition-all" onClick={onClick}>
+      <CardContent className="p-3 flex items-center gap-3">
+        <div 
+          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: folder.color + '20' }}
+        >
+          <Folder className="h-5 w-5" style={{ color: folder.color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{folder.name}</p>
+          {folder.description && (
+            <p className="text-sm text-muted-foreground truncate">{folder.description}</p>
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onShare(); }}>
+              <Link className="h-4 w-4 mr-2" /> Compartilhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" /> Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Componente de Card de Arquivo
+const FileCard = ({ file, viewMode, getFileIcon, formatFileSize, onShare, onDelete }: {
+  file: DriveFile;
+  viewMode: 'grid' | 'list';
+  getFileIcon: (type: string) => React.ReactNode;
+  formatFileSize: (bytes?: number) => string;
+  onShare: () => void;
+  onDelete: () => void;
+}) => {
+  if (viewMode === 'grid') {
+    return (
+      <Card className="group hover:shadow-md transition-all hover:border-primary/50">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center">
+              {getFileIcon(file.file_type)}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {file.file_url && (
+                  <>
+                    <DropdownMenuItem onClick={() => window.open(file.file_url, '_blank')}>
+                      <Eye className="h-4 w-4 mr-2" /> Visualizar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = file.file_url!;
+                      link.download = file.name;
+                      link.click();
+                    }}>
+                      <Download className="h-4 w-4 mr-2" /> Download
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem onClick={onShare}>
+                  <Link className="h-4 w-4 mr-2" /> Compartilhar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <p className="font-medium text-sm truncate">{file.name}</p>
+          <p className="text-xs text-muted-foreground mt-1">{formatFileSize(file.file_size)}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="group hover:shadow-sm transition-all">
+      <CardContent className="p-3 flex items-center gap-3">
+        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+          {getFileIcon(file.file_type)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{file.name}</p>
+          <p className="text-sm text-muted-foreground">{formatFileSize(file.file_size)}</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {file.file_url && (
+              <>
+                <DropdownMenuItem onClick={() => window.open(file.file_url, '_blank')}>
+                  <Eye className="h-4 w-4 mr-2" /> Visualizar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = file.file_url!;
+                  link.download = file.name;
+                  link.click();
+                }}>
+                  <Download className="h-4 w-4 mr-2" /> Download
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem onClick={onShare}>
+              <Link className="h-4 w-4 mr-2" /> Compartilhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onDelete} className="text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" /> Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardContent>
+    </Card>
   );
 };
 

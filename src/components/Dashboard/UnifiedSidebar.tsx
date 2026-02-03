@@ -15,38 +15,31 @@ import {
   Zap,
   BarChart3,
   Menu,
-  ChevronDown,
-  ChevronRight,
   Shield,
-  ChevronLeft,
-  PanelLeftClose,
-  PanelLeft
+  HelpCircle,
+  Layers,
+  Radio,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+// Define menu groups with their icons and items
 const menuGroups = [
   {
     id: 'sistema',
     label: 'Sistema',
+    icon: Home,
     items: [
       { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
-      { 
-        id: 'contatos', 
-        label: 'Contatos',
-        icon: Users,
-        subItems: [
-          { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
-          { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-          { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
-          { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
-        ]
-      },
+      { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
+      { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+      { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
+      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
       { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
       { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
     ]
@@ -54,6 +47,7 @@ const menuGroups = [
   {
     id: 'ello-flows',
     label: 'Ello Flows',
+    icon: Zap,
     items: [
       { id: 'tasks', path: '/dashboard/tasks', icon: CheckSquare, label: 'Tarefas' },
       { id: 'flows', path: '/dashboard/fluxos', icon: Zap, label: 'Fluxos de Produção' },
@@ -65,22 +59,17 @@ const menuGroups = [
   {
     id: 'ello-omni',
     label: 'Ello Omni',
+    icon: MessageSquare,
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: MessageSquare, label: 'CRM WhatsApp' },
-      { 
-        id: 'email-group',
-        label: 'Email',
-        icon: Mail,
-        subItems: [
-          { id: 'email-default', path: '/dashboard/email', icon: Mail, label: 'Email padrão' },
-          { id: 'email-marketing', path: '/dashboard/email-marketing', icon: Mail, label: 'Email marketing' }
-        ]
-      }
+      { id: 'email-default', path: '/dashboard/email', icon: Mail, label: 'Email padrão' },
+      { id: 'email-marketing', path: '/dashboard/email-marketing', icon: Mail, label: 'Email marketing' }
     ]
   },
   {
     id: 'ello-track',
     label: 'Ello Track',
+    icon: Radio,
     items: [
       { id: 'document-tracking', path: '/dashboard/rastreamento-documento', icon: FileText, label: 'Rastreamento de PDF' },
       { id: 'link-tracking', path: '/dashboard/rastreamento-link', icon: FileText, label: 'Rastreamento de Link' },
@@ -90,6 +79,7 @@ const menuGroups = [
   {
     id: 'analise-relatorio',
     label: 'Análise & Relatório',
+    icon: BarChart3,
     items: [
       { id: 'vision', path: '/dashboard/ello-vision', icon: BarChart3, label: 'Ello Vision' },
       { id: 'analytics', path: '/dashboard/analytics', icon: BarChart3, label: 'Análises' },
@@ -99,6 +89,7 @@ const menuGroups = [
   {
     id: 'ajuda-suporte',
     label: 'Ajuda & Suporte',
+    icon: HelpCircle,
     items: [
       { id: 'support', path: '/dashboard/suporte', icon: MessageSquare, label: 'Suporte' },
       { id: 'report-problem', path: '/dashboard/reportar-problema', icon: FileText, label: 'Reporte um problema' },
@@ -107,22 +98,15 @@ const menuGroups = [
   },
   {
     id: 'config-privacidade',
-    label: 'Configurações & Privacidade',
+    label: 'Configurações',
+    icon: Settings,
     items: [
       { id: 'settings', path: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
-      { id: 'customize', path: '/dashboard/personalizar', icon: Settings, label: 'Personalização' },
+      { id: 'customize', path: '/dashboard/personalizar', icon: Layers, label: 'Personalização' },
       { id: 'security', path: '/dashboard/seguranca', icon: Shield, label: 'Segurança & Privacidade' }
     ]
   }
 ];
-
-interface MenuItem {
-  id: string;
-  path?: string;
-  icon: any;
-  label: string;
-  subItems?: MenuItem[];
-}
 
 interface UnifiedSidebarProps {
   isMobile: boolean;
@@ -131,16 +115,7 @@ interface UnifiedSidebarProps {
 }
 
 export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: UnifiedSidebarProps) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    sistema: false,
-    'ello-flows': false,
-    'ello-omni': false,
-    'ello-track': false,
-    'analise-relatorio': false,
-    'ajuda-suporte': false,
-    'config-privacidade': false
-  });
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -152,263 +127,161 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
   };
 
   const handleLinkClick = () => {
+    setExpandedGroup(null);
     if (isMobile && onOpenChange) {
       onOpenChange(false);
     }
   };
 
   const toggleGroup = (groupId: string) => {
-    if (isCollapsed) {
-      setIsCollapsed(false);
-    }
-    setOpenGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
+    setExpandedGroup(prev => prev === groupId ? null : groupId);
   };
 
-  const renderMenuItem = (item: MenuItem) => {
-    const IconComponent = item.icon;
-    
-    if (item.subItems && item.subItems.length > 0) {
-      const isGroupOpen = openGroups[item.id];
-      const hasActiveChild = item.subItems.some(subItem => subItem.path && isActive(subItem.path));
-      
-      if (isCollapsed) {
-        return (
-          <TooltipProvider key={item.id} delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => toggleGroup(item.id)}
-                  className={cn(
-                    "w-full flex items-center justify-center p-2.5 rounded-xl transition-colors",
-                    hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
-                  )}
-                >
-                  <IconComponent className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="rounded-xl">
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      }
-      
-      return (
-        <Collapsible key={item.id} open={isGroupOpen} onOpenChange={() => toggleGroup(item.id)}>
-          <CollapsibleTrigger className={cn(
-            "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-colors",
-            hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
-          )}>
-            <div className="flex items-center">
-              <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </div>
-            {isGroupOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="ml-8 mt-1 space-y-1">
-            {item.subItems.map(subItem => {
-              const SubIconComponent = subItem.icon;
-              const active = subItem.path ? isActive(subItem.path) : false;
-              
-              return (
-                <Link
-                  key={subItem.id}
-                  to={subItem.path || '#'}
-                  onClick={handleLinkClick}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors",
-                    active 
-                      ? 'bg-white/20 text-white' 
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  )}
-                >
-                  <SubIconComponent className="h-4 w-4 mr-3 flex-shrink-0" />
-                  <span className="truncate">{subItem.label}</span>
-                </Link>
-              );
-            })}
-          </CollapsibleContent>
-        </Collapsible>
-      );
-    }
-    
-    const active = item.path ? isActive(item.path) : false;
-    
-    if (isCollapsed) {
-      return (
-        <TooltipProvider key={item.id} delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to={item.path || '#'}
-                onClick={handleLinkClick}
-                className={cn(
-                  "flex items-center justify-center p-2.5 rounded-xl transition-colors",
-                  active 
-                    ? 'bg-white/20 text-white' 
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
-                )}
-              >
-                <IconComponent className="h-5 w-5" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="rounded-xl">
-              {item.label}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-    
-    return (
-      <Link
-        key={item.id}
-        to={item.path || '#'}
-        onClick={handleLinkClick}
-        className={cn(
-          "flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-colors",
-          active 
-            ? 'bg-white/20 text-white' 
-            : 'text-white/80 hover:bg-white/10 hover:text-white'
-        )}
-      >
-        <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
-        <span className="truncate">{item.label}</span>
-      </Link>
-    );
+  const hasActiveItemInGroup = (group: typeof menuGroups[0]) => {
+    return group.items.some(item => isActive(item.path));
   };
 
   const sidebarContent = (
-    <>
-      {/* Header with Logo and Collapse Button */}
-      <div className={cn(
-        "p-4 border-b border-white/10 flex items-center",
-        isCollapsed ? "justify-center" : "justify-between"
-      )}>
-        {!isCollapsed && (
+    <div className="h-full flex">
+      {/* Main icon strip */}
+      <div className="w-16 bg-primary flex flex-col h-full">
+        {/* Logo */}
+        <div className="h-14 flex items-center justify-center border-b border-white/10">
           <Link to="/dashboard" onClick={handleLinkClick}>
             <img 
               src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
               alt="ElloSuit Logo" 
-              className="h-8 w-auto filter brightness-0 invert"
+              className="h-6 w-auto filter brightness-0 invert"
             />
           </Link>
-        )}
-        
-        {!isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl h-9 w-9"
-          >
-            {isCollapsed ? (
-              <PanelLeft className="h-5 w-5" />
-            ) : (
-              <PanelLeftClose className="h-5 w-5" />
-            )}
-          </Button>
-        )}
-      </div>
+        </div>
 
-      {/* Menu Groups */}
-      <div className="flex-1 py-4 overflow-y-auto">
-        {menuGroups.map((group) => (
-          <div key={group.id} className={cn("mb-2", isCollapsed ? "px-2" : "px-3")}>
-            {isCollapsed ? (
-              <div className="space-y-1">
-                {group.items.map(renderMenuItem)}
-              </div>
-            ) : (
-              <Collapsible 
-                open={openGroups[group.id]} 
-                onOpenChange={() => toggleGroup(group.id)}
-              >
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white text-left hover:bg-white/10 rounded-xl transition-colors">
-                  <span>{group.label}</span>
-                  {openGroups[group.id] ? (
-                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                  )}
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent className="mt-1">
-                  <nav className="space-y-1">
-                    {group.items.map(renderMenuItem)}
-                  </nav>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-          </div>
-        ))}
-      </div>
+        {/* Menu Group Icons */}
+        <div className="flex-1 py-2 flex flex-col items-center">
+          <TooltipProvider delayDuration={0}>
+            {menuGroups.map((group) => {
+              const IconComponent = group.icon;
+              const isExpanded = expandedGroup === group.id;
+              const hasActive = hasActiveItemInGroup(group);
+              
+              return (
+                <Tooltip key={group.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => toggleGroup(group.id)}
+                      className={cn(
+                        "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
+                        isExpanded 
+                          ? "bg-white text-primary shadow-lg" 
+                          : hasActive 
+                            ? "bg-white/20 text-white" 
+                            : "text-white/70 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="rounded-lg font-medium">
+                    {group.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </TooltipProvider>
+        </div>
 
-      {/* User Profile */}
-      <div className="border-t border-white/10 p-4">
-        {user && !isCollapsed && (
-          <div className="flex items-center space-x-3 mb-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={user.user_metadata?.avatar_url} />
-              <AvatarFallback className="bg-white/20 text-white text-sm">
-                {user.email?.substring(0, 2).toUpperCase() || 'US'}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user.user_metadata?.full_name || 'Usuário'}
-              </p>
-              <p className="text-xs text-white/70 truncate">
-                {user.email}
-              </p>
-            </div>
-          </div>
-        )}
-        
-        {isCollapsed ? (
+        {/* User Avatar & Logout */}
+        <div className="py-3 flex flex-col items-center border-t border-white/10">
+          {user && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-9 w-9 mb-2 cursor-pointer">
+                    <AvatarImage src={user.user_metadata?.avatar_url} />
+                    <AvatarFallback className="bg-white/20 text-white text-xs">
+                      {user.email?.substring(0, 2).toUpperCase() || 'US'}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="rounded-lg">
+                  <p className="font-medium">{user.user_metadata?.full_name || 'Usuário'}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <button
                   onClick={() => {
                     signOut();
                     handleLinkClick();
                   }}
-                  className="w-full text-white hover:bg-white/10 rounded-xl"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/70 hover:bg-white/10 hover:text-white transition-colors"
                 >
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                  <LogOut className="h-4 w-4" />
+                </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="rounded-xl">
+              <TooltipContent side="right" className="rounded-lg">
                 Sair
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        ) : (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              signOut();
-              handleLinkClick();
-            }}
-            className="w-full justify-start text-white hover:bg-white/10 rounded-xl"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+        </div>
+      </div>
+
+      {/* Expandable Panel */}
+      <div 
+        className={cn(
+          "bg-primary/95 backdrop-blur-sm border-l border-white/10 overflow-hidden transition-all duration-300 ease-in-out",
+          expandedGroup ? "w-56" : "w-0"
+        )}
+      >
+        {expandedGroup && (
+          <div className="w-56 h-full flex flex-col">
+            {/* Panel Header */}
+            <div className="h-14 px-4 flex items-center border-b border-white/10">
+              <h3 className="text-white font-semibold text-sm">
+                {menuGroups.find(g => g.id === expandedGroup)?.label}
+              </h3>
+            </div>
+
+            {/* Panel Items */}
+            <div className="flex-1 py-2 px-2">
+              <nav className="space-y-1">
+                {menuGroups.find(g => g.id === expandedGroup)?.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  const active = isActive(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      onClick={handleLinkClick}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                        active 
+                          ? "bg-white text-primary shadow-sm" 
+                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <ItemIcon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                      {active && <ChevronRight className="h-4 w-4 ml-auto" />}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
         )}
       </div>
-    </>
+    </div>
   );
 
-  // Mobile: Renderizar como Sheet
+  // Mobile: Render as Sheet
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -424,23 +297,20 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
         
         <SheetContent 
           side="left" 
-          className="w-[280px] p-0 bg-primary flex flex-col"
+          className="w-auto p-0 bg-transparent border-none"
           style={{ zIndex: 100 }}
         >
-          {sidebarContent}
+          <div className="h-full">
+            {sidebarContent}
+          </div>
         </SheetContent>
       </Sheet>
     );
   }
 
-  // Desktop: Renderizar como div fixo com transição
+  // Desktop: Render as fixed div
   return (
-    <div 
-      className={cn(
-        "h-screen bg-primary flex flex-col sticky top-0 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-[72px]" : "w-[280px]"
-      )}
-    >
+    <div className="h-screen sticky top-0 flex">
       {sidebarContent}
     </div>
   );

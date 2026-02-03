@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import BotIAChat from './BotIAChat';
 import EditAgentModal from './EditAgentModal';
+import ChatbotFlowBuilder from './ChatbotFlowBuilder';
 
 interface AIAgent {
   id: string;
@@ -401,45 +402,45 @@ const BotIADashboard: React.FC = () => {
 
         {/* Agents Tab */}
         <TabsContent value="agents" className="space-y-6">
-          {/* Stats */}
+          {/* Stats - White Background */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-100 mb-1">Agentes Ativos</p>
-                    <p className="text-3xl font-bold">{agents.filter(a => a.is_active).length}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Agentes Ativos</p>
+                    <p className="text-3xl font-bold text-blue-600">{agents.filter(a => a.is_active).length}</p>
                   </div>
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <Bot className="h-6 w-6" />
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <Bot className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-indigo-100 mb-1">Total de Agentes</p>
-                    <p className="text-3xl font-bold">{agents.length}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Total de Agentes</p>
+                    <p className="text-3xl font-bold text-indigo-600">{agents.length}</p>
                   </div>
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <Brain className="h-6 w-6" />
+                  <div className="p-3 bg-indigo-100 rounded-xl">
+                    <Brain className="h-6 w-6 text-indigo-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-cyan-100 mb-1">Conversas Hoje</p>
-                    <p className="text-3xl font-bold">28</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Conversas Hoje</p>
+                    <p className="text-3xl font-bold text-cyan-600">28</p>
                   </div>
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <MessageCircle className="h-6 w-6" />
+                  <div className="p-3 bg-cyan-100 rounded-xl">
+                    <MessageCircle className="h-6 w-6 text-cyan-600" />
                   </div>
                 </div>
               </CardContent>
@@ -555,64 +556,64 @@ const BotIADashboard: React.FC = () => {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          {/* Analytics KPIs */}
+          {/* Analytics KPIs - White Background */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-blue-100 rounded-xl w-fit mx-auto mb-2">
                   <MessageSquare className="h-5 w-5 text-blue-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{analyticsStats.totalConversations}</p>
+                <p className="text-2xl font-bold text-blue-600">{analyticsStats.totalConversations}</p>
                 <p className="text-xs text-muted-foreground">Conversas Totais</p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-green-100 rounded-xl w-fit mx-auto mb-2">
                   <Target className="h-5 w-5 text-green-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{analyticsStats.resolvedConversations}</p>
+                <p className="text-2xl font-bold text-green-600">{analyticsStats.resolvedConversations}</p>
                 <p className="text-xs text-muted-foreground">Resolvidas</p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-indigo-100 rounded-xl w-fit mx-auto mb-2">
                   <Clock className="h-5 w-5 text-indigo-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{analyticsStats.avgResponseTime}</p>
+                <p className="text-2xl font-bold text-indigo-600">{analyticsStats.avgResponseTime}</p>
                 <p className="text-xs text-muted-foreground">Tempo Médio</p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
-                <div className="p-3 bg-yellow-100 rounded-xl w-fit mx-auto mb-2">
-                  <TrendingUp className="h-5 w-5 text-yellow-600" />
+                <div className="p-3 bg-amber-100 rounded-xl w-fit mx-auto mb-2">
+                  <TrendingUp className="h-5 w-5 text-amber-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{analyticsStats.satisfactionRate}%</p>
+                <p className="text-2xl font-bold text-amber-600">{analyticsStats.satisfactionRate}%</p>
                 <p className="text-xs text-muted-foreground">Satisfação</p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-2">
                   <Bot className="h-5 w-5 text-purple-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{agents.filter(a => a.is_active).length}</p>
+                <p className="text-2xl font-bold text-purple-600">{agents.filter(a => a.is_active).length}</p>
                 <p className="text-xs text-muted-foreground">Agentes Ativos</p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-md rounded-2xl">
+            <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-cyan-100 rounded-xl w-fit mx-auto mb-2">
                   <Eye className="h-5 w-5 text-cyan-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{analyticsStats.messagesProcessed}</p>
+                <p className="text-2xl font-bold text-cyan-600">{analyticsStats.messagesProcessed}</p>
                 <p className="text-xs text-muted-foreground">Mensagens</p>
               </CardContent>
             </Card>
@@ -713,7 +714,7 @@ const BotIADashboard: React.FC = () => {
 
         {/* Chatbot Flows Tab */}
         <TabsContent value="chatbot" className="space-y-6">
-          <ChatbotFlowsSection />
+          <ChatbotFlowBuilder />
         </TabsContent>
 
         {/* Settings Tab */}
@@ -898,163 +899,6 @@ const BotIADashboard: React.FC = () => {
           onDelete={() => companyId && loadAgents(companyId)}
         />
       )}
-    </div>
-  );
-};
-
-// Chatbot Flows Section Component
-const ChatbotFlowsSection: React.FC = () => {
-  const { toast } = useToast();
-  const [flows, setFlows] = useState<any[]>([
-    { id: '1', name: 'Boas-vindas', trigger: 'Início da conversa', responses: 2, active: true },
-    { id: '2', name: 'Horário de Funcionamento', trigger: 'Palavra-chave: horário', responses: 1, active: true },
-    { id: '3', name: 'Preços e Valores', trigger: 'Palavra-chave: preço, valor', responses: 3, active: false },
-  ]);
-  const [showCreateFlow, setShowCreateFlow] = useState(false);
-  const [newFlow, setNewFlow] = useState({ name: '', trigger: '', triggerType: 'keyword', responses: [''] });
-
-  const addResponse = () => {
-    setNewFlow(prev => ({ ...prev, responses: [...prev.responses, ''] }));
-  };
-
-  const updateResponse = (index: number, value: string) => {
-    const updated = [...newFlow.responses];
-    updated[index] = value;
-    setNewFlow(prev => ({ ...prev, responses: updated }));
-  };
-
-  const createFlow = () => {
-    if (!newFlow.name || !newFlow.trigger) {
-      toast({ title: 'Erro', description: 'Preencha nome e gatilho', variant: 'destructive' });
-      return;
-    }
-    
-    setFlows(prev => [...prev, {
-      id: Date.now().toString(),
-      name: newFlow.name,
-      trigger: newFlow.trigger,
-      responses: newFlow.responses.filter(r => r).length,
-      active: true
-    }]);
-    
-    setNewFlow({ name: '', trigger: '', triggerType: 'keyword', responses: [''] });
-    setShowCreateFlow(false);
-    toast({ title: 'Sucesso', description: 'Fluxo criado com sucesso!' });
-  };
-
-  const toggleFlow = (id: string) => {
-    setFlows(prev => prev.map(f => f.id === id ? { ...f, active: !f.active } : f));
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Fluxos de Chatbot</h2>
-          <p className="text-sm text-muted-foreground">Configure respostas pré-definidas estilo Blurtalk</p>
-        </div>
-        <Button onClick={() => setShowCreateFlow(true)} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Fluxo
-        </Button>
-      </div>
-
-      {/* Flows List */}
-      <div className="grid gap-4">
-        {flows.map(flow => (
-          <Card key={flow.id} className="border-0 shadow-md rounded-2xl hover:shadow-lg transition-all">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${flow.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                    <MessageCircle className={`h-5 w-5 ${flow.active ? 'text-blue-600' : 'text-gray-400'}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{flow.name}</h3>
-                    <p className="text-sm text-muted-foreground">{flow.trigger}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="rounded-lg">
-                    {flow.responses} {flow.responses === 1 ? 'resposta' : 'respostas'}
-                  </Badge>
-                  <Switch checked={flow.active} onCheckedChange={() => toggleFlow(flow.id)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Create Flow Modal */}
-      <Dialog open={showCreateFlow} onOpenChange={setShowCreateFlow}>
-        <DialogContent className="max-w-xl rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Criar Novo Fluxo</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium">Nome do Fluxo</label>
-              <Input 
-                value={newFlow.name} 
-                onChange={(e) => setNewFlow(prev => ({ ...prev, name: e.target.value }))} 
-                placeholder="Ex: Boas-vindas" 
-                className="rounded-xl"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Tipo de Gatilho</label>
-              <Select value={newFlow.triggerType} onValueChange={(v) => setNewFlow(prev => ({ ...prev, triggerType: v }))}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="keyword">Palavra-chave</SelectItem>
-                  <SelectItem value="start">Início da Conversa</SelectItem>
-                  <SelectItem value="button">Botão de Resposta</SelectItem>
-                  <SelectItem value="schedule">Agendamento</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Gatilho</label>
-              <Input 
-                value={newFlow.trigger} 
-                onChange={(e) => setNewFlow(prev => ({ ...prev, trigger: e.target.value }))} 
-                placeholder="Ex: horário, preço, ajuda" 
-                className="rounded-xl"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Respostas</label>
-              <div className="space-y-2">
-                {newFlow.responses.map((resp, idx) => (
-                  <Textarea 
-                    key={idx}
-                    value={resp}
-                    onChange={(e) => updateResponse(idx, e.target.value)}
-                    placeholder={`Resposta ${idx + 1}...`}
-                    rows={2}
-                    className="rounded-xl"
-                  />
-                ))}
-              </div>
-              <Button variant="outline" size="sm" onClick={addResponse} className="mt-2 rounded-xl">
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Resposta
-              </Button>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowCreateFlow(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={createFlow} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600">Criar Fluxo</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

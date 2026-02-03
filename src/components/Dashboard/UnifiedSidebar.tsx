@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { ElloLogo } from "@/components/shared/ElloLogo";
 
 // Define menu groups with their icons and items
 const menuGroups = [
@@ -166,11 +167,7 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
         {/* Logo */}
         <div className="h-14 flex items-center justify-center border-b border-white/10">
           <Link to="/dashboard" onClick={handleLinkClick}>
-            <img 
-              src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-              alt="ElloSuit Logo" 
-              className="h-6 w-auto filter brightness-0 invert"
-            />
+            <ElloLogo className="h-7 w-auto" color="white" />
           </Link>
         </div>
 

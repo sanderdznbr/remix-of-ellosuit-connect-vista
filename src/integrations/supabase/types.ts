@@ -1044,6 +1044,56 @@ export type Database = {
         }
         Relationships: []
       }
+      link_clicks: {
+        Row: {
+          browser: string | null
+          city: string | null
+          clicked_at: string
+          country: string | null
+          device_type: string | null
+          id: string
+          ip_address: unknown
+          link_id: string
+          os: string | null
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          clicked_at?: string
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: unknown
+          link_id: string
+          os?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          clicked_at?: string
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: unknown
+          link_id?: string
+          os?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "tracked_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_audio_settings: {
         Row: {
           audio_type: string
@@ -1677,6 +1727,48 @@ export type Database = {
           public_link_id?: string
           title?: string
           tracking_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tracked_links: {
+        Row: {
+          clicks: number | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          original_url: string
+          short_code: string
+          title: string | null
+          unique_visitors: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          original_url: string
+          short_code: string
+          title?: string | null
+          unique_visitors?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          original_url?: string
+          short_code?: string
+          title?: string | null
+          unique_visitors?: number | null
           updated_at?: string
           user_id?: string
         }

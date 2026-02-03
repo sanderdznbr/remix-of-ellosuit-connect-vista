@@ -1,10 +1,9 @@
-// AI Chat function using OpenAI API for Bot IA
+// AI Chat function using Lovable AI Gateway
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -14,22 +13,22 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, message, personality, instructions, model = 'gpt-4o-mini' } = await req.json();
+    const { messages, message, personality, instructions, model = 'google/gemini-3-flash-preview', stream = false } = await req.json();
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Support both old (message) and new (messages) format
+    // Build messages array
     let apiMessages = [];
     
     if (messages && Array.isArray(messages)) {
-      // New format with messages array
+      // New format with messages array - already includes system prompt
       apiMessages = messages;
     } else if (message) {
-      // Old format with single message
-      const systemPrompt = `${personality ? `Personalidade: ${personality}\n\n` : ''}${instructions || 'Você é um assistente IA útil e amigável.'}`;
+      // Old format with single message - build system prompt
+      const systemPrompt = `${personality ? `Personalidade: ${personality}\n\n` : ''}${instructions || 'Você é um assistente IA útil e amigável. Responda sempre em português brasileiro.'}`;
       apiMessages = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }
@@ -38,31 +37,57 @@ serve(async (req) => {
       throw new Error('Either "messages" array or "message" string is required');
     }
 
-    console.log('🤖 Processing chat request:', { model, messageCount: apiMessages.length });
+    console.log('🤖 Processing chat request:', { model, messageCount: apiMessages.length, stream });
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: model,
         messages: apiMessages,
-        max_tokens: 2000,
-        temperature: 0.7,
-        stream: false
+        stream: stream,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('❌ OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+      const errorText = await response.text();
+      console.error('❌ AI Gateway error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          error: 'Limite de requisições atingido. Tente novamente em alguns segundos.' 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ 
+          error: 'Créditos insuficientes. Adicione créditos na sua conta Lovable.' 
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
     }
 
+    // If streaming, pass through the response
+    if (stream) {
+      console.log('📡 Streaming response...');
+      return new Response(response.body, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+      });
+    }
+
+    // Non-streaming response
     const data = await response.json();
-    console.log('✅ OpenAI response received');
+    console.log('✅ AI response received');
     
     const assistantMessage = data.choices[0].message.content;
 
@@ -76,7 +101,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('❌ Error in ai-chat function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
     return new Response(JSON.stringify({ 
       error: errorMessage 
     }), {

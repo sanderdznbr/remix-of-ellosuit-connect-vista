@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Phone, Link2, BarChart3, TrendingUp, Clock, Target, MessageSquare, Eye } from 'lucide-react';
+import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Phone, Link2, BarChart3, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import BotIAChat from './BotIAChat';
 import EditAgentModal from './EditAgentModal';
 import ChatbotFlowBuilder from './ChatbotFlowBuilder';
+
 
 interface AIAgent {
   id: string;
@@ -40,35 +40,6 @@ interface AgentTemplate {
   instructions: string;
   icon: React.ComponentType<{ className?: string }>;
 }
-
-// Demo analytics data
-const conversationsData = [
-  { name: 'Seg', conversas: 45, resolvidas: 38 },
-  { name: 'Ter', conversas: 52, resolvidas: 48 },
-  { name: 'Qua', conversas: 38, resolvidas: 35 },
-  { name: 'Qui', conversas: 65, resolvidas: 58 },
-  { name: 'Sex', conversas: 58, resolvidas: 52 },
-  { name: 'Sáb', conversas: 22, resolvidas: 20 },
-  { name: 'Dom', conversas: 15, resolvidas: 14 },
-];
-
-const satisfactionData = [
-  { name: 'Excelente', value: 45 },
-  { name: 'Bom', value: 30 },
-  { name: 'Regular', value: 15 },
-  { name: 'Ruim', value: 10 },
-];
-
-const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
-
-const responseTimeData = [
-  { name: '00h', tempo: 2.5 },
-  { name: '04h', tempo: 1.8 },
-  { name: '08h', tempo: 3.2 },
-  { name: '12h', tempo: 4.5 },
-  { name: '16h', tempo: 3.8 },
-  { name: '20h', tempo: 2.1 },
-];
 
 const AGENT_TEMPLATES: AgentTemplate[] = [
   {
@@ -174,16 +145,6 @@ const BotIADashboard: React.FC = () => {
   const [agentInstructions, setAgentInstructions] = useState('');
   const [agentModel, setAgentModel] = useState('google/gemini-3-flash-preview');
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
-
-  // Analytics stats
-  const [analyticsStats] = useState({
-    totalConversations: 295,
-    resolvedConversations: 265,
-    avgResponseTime: '2.8s',
-    satisfactionRate: 94,
-    activeAgents: 0,
-    messagesProcessed: 1847
-  });
 
   // Ensure user has a company
   const ensureCompany = async (): Promise<string | null> => {
@@ -556,160 +517,54 @@ const BotIADashboard: React.FC = () => {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          {/* Analytics KPIs - White Background */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {/* Real Analytics Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-blue-100 rounded-xl w-fit mx-auto mb-2">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                  <Bot className="h-5 w-5 text-blue-600" />
                 </div>
-                <p className="text-2xl font-bold text-blue-600">{analyticsStats.totalConversations}</p>
-                <p className="text-xs text-muted-foreground">Conversas Totais</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <div className="p-3 bg-green-100 rounded-xl w-fit mx-auto mb-2">
-                  <Target className="h-5 w-5 text-green-600" />
-                </div>
-                <p className="text-2xl font-bold text-green-600">{analyticsStats.resolvedConversations}</p>
-                <p className="text-xs text-muted-foreground">Resolvidas</p>
+                <p className="text-2xl font-bold text-blue-600">{agents.length}</p>
+                <p className="text-xs text-muted-foreground">Total de Agentes</p>
               </CardContent>
             </Card>
 
             <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
                 <div className="p-3 bg-indigo-100 rounded-xl w-fit mx-auto mb-2">
-                  <Clock className="h-5 w-5 text-indigo-600" />
+                  <Target className="h-5 w-5 text-indigo-600" />
                 </div>
-                <p className="text-2xl font-bold text-indigo-600">{analyticsStats.avgResponseTime}</p>
-                <p className="text-xs text-muted-foreground">Tempo Médio</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <div className="p-3 bg-amber-100 rounded-xl w-fit mx-auto mb-2">
-                  <TrendingUp className="h-5 w-5 text-amber-600" />
-                </div>
-                <p className="text-2xl font-bold text-amber-600">{analyticsStats.satisfactionRate}%</p>
-                <p className="text-xs text-muted-foreground">Satisfação</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-2">
-                  <Bot className="h-5 w-5 text-purple-600" />
-                </div>
-                <p className="text-2xl font-bold text-purple-600">{agents.filter(a => a.is_active).length}</p>
+                <p className="text-2xl font-bold text-indigo-600">{agents.filter(a => a.is_active).length}</p>
                 <p className="text-xs text-muted-foreground">Agentes Ativos</p>
               </CardContent>
             </Card>
 
             <Card className="bg-white border-0 shadow-lg rounded-2xl">
               <CardContent className="p-4 text-center">
-                <div className="p-3 bg-cyan-100 rounded-xl w-fit mx-auto mb-2">
-                  <Eye className="h-5 w-5 text-cyan-600" />
+                <div className="p-3 bg-purple-100 rounded-xl w-fit mx-auto mb-2">
+                  <Brain className="h-5 w-5 text-purple-600" />
                 </div>
-                <p className="text-2xl font-bold text-cyan-600">{analyticsStats.messagesProcessed}</p>
-                <p className="text-xs text-muted-foreground">Mensagens</p>
+                <p className="text-2xl font-bold text-purple-600">{agents.filter(a => !a.is_active).length}</p>
+                <p className="text-xs text-muted-foreground">Agentes Inativos</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Conversations Chart */}
-            <Card className="border-0 shadow-lg rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-blue-600" />
-                  Conversas por Dia
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={conversationsData}>
-                      <defs>
-                        <linearGradient id="colorConversas" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorResolvidas" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                      <YAxis stroke="#9ca3af" fontSize={12} />
-                      <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                      <Area type="monotone" dataKey="conversas" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorConversas)" name="Total" />
-                      <Area type="monotone" dataKey="resolvidas" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorResolvidas)" name="Resolvidas" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Satisfaction Pie */}
-            <Card className="border-0 shadow-lg rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  Satisfação dos Clientes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={satisfactionData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
-                        {satisfactionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-wrap justify-center gap-4 mt-2">
-                  {satisfactionData.map((item, index) => (
-                    <span key={item.name} className="flex items-center gap-1 text-sm">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
-                      {item.name}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Response Time */}
-            <Card className="border-0 shadow-lg rounded-2xl lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  Tempo de Resposta (segundos)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={responseTimeData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                      <YAxis stroke="#9ca3af" fontSize={12} />
-                      <Tooltip contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                      <Bar dataKey="tempo" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Tempo (s)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Coming Soon Placeholder */}
+          <Card className="border-0 shadow-lg rounded-2xl">
+            <CardContent className="py-16 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <BarChart3 className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Análises Avançadas</h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                Estatísticas detalhadas de conversas, satisfação e desempenho dos seus agentes estarão disponíveis em breve.
+              </p>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                Em breve
+              </Badge>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Chatbot Flows Tab */}

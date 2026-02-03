@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, MoreHorizontal, Users, Calendar, Paperclip, MessageSquare, Tag, Zap, GripVertical } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar, Tag, GripVertical, X, Trash2, Edit2, Clock, CheckSquare, Star, Search, Filter, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent, closestCorners, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface WorkflowGroup {
   id: string;
@@ -52,95 +52,275 @@ interface WorkflowCard {
 }
 
 const priorityConfig = {
-  low: { label: 'Baixa', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  medium: { label: 'Média', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  high: { label: 'Alta', color: 'bg-rose-100 text-rose-700 border-rose-200' }
+  low: { label: 'Baixa', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+  medium: { label: 'Média', color: 'bg-amber-500', textColor: 'text-amber-600' },
+  high: { label: 'Alta', color: 'bg-rose-500', textColor: 'text-rose-600' }
 };
 
-const columnColors = [
-  { name: 'Cinza', value: '#6B7280' },
-  { name: 'Azul', value: '#3B82F6' },
-  { name: 'Verde', value: '#10B981' },
-  { name: 'Amarelo', value: '#F59E0B' },
-  { name: 'Vermelho', value: '#EF4444' },
-  { name: 'Roxo', value: '#8B5CF6' },
-  { name: 'Rosa', value: '#EC4899' },
+const labelColors = [
+  '#61bd4f', '#f2d600', '#ff9f1a', '#eb5a46', '#c377e0', 
+  '#0079bf', '#00c2e0', '#51e898', '#ff78cb', '#344563'
 ];
 
-const SortableCard: React.FC<{ 
+const boardBackgrounds = [
+  { name: 'Azul', value: 'from-blue-600 to-blue-800' },
+  { name: 'Verde', value: 'from-emerald-600 to-emerald-800' },
+  { name: 'Roxo', value: 'from-purple-600 to-purple-800' },
+  { name: 'Rosa', value: 'from-pink-600 to-pink-800' },
+  { name: 'Laranja', value: 'from-orange-500 to-red-600' },
+  { name: 'Cinza', value: 'from-slate-600 to-slate-800' },
+];
+
+const TrelloCard: React.FC<{ 
   card: WorkflowCard; 
-  onEdit: () => void; 
-}> = ({ card, onEdit }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
+  onEdit: () => void;
+  onDelete: () => void;
+}> = ({ card, onEdit, onDelete }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: card.id,
+    data: { type: 'card', card }
+  });
   
   const style = { 
     transform: CSS.Transform.toString(transform), 
     transition,
-    opacity: isDragging ? 0.5 : 1,
   } as React.CSSProperties;
 
   const priority = priorityConfig[card.priority as keyof typeof priorityConfig] || priorityConfig.medium;
+  const isOverdue = card.due_date && new Date(card.due_date) < new Date();
+
+  if (isDragging) {
+    return (
+      <div 
+        ref={setNodeRef} 
+        style={style}
+        className="bg-muted/50 rounded-lg border-2 border-dashed border-primary/30 h-20"
+      />
+    );
+  }
 
   return (
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="bg-card rounded-lg border shadow-sm hover:shadow-md transition-all cursor-pointer group"
+      className="group bg-card hover:bg-card/90 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border border-border/50 hover:border-primary/30"
     >
-      <div className="p-3" onClick={onEdit}>
+      {/* Color bar for priority */}
+      <div className={`h-1 rounded-t-lg ${priority.color}`} />
+      
+      <div className="p-3">
         <div className="flex items-start gap-2">
           <div 
             {...attributes} 
             {...listeners}
-            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mt-0.5"
+            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mt-0.5 -ml-1"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-foreground text-sm leading-tight">{card.title}</p>
+          
+          <div className="flex-1 min-w-0" onClick={onEdit}>
+            <p className="font-medium text-foreground text-sm leading-snug mb-1">{card.title}</p>
+            
             {card.description && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{card.description}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{card.description}</p>
             )}
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between mt-3 pt-2 border-t">
-          <Badge variant="outline" className={`text-xs ${priority.color}`}>
-            {priority.label}
-          </Badge>
-          {card.due_date && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(card.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-            </span>
-          )}
-        </div>
-        
-        {card.tags && card.tags.length > 0 && (
-          <div className="flex gap-1 flex-wrap mt-2">
-            {card.tags.slice(0, 3).map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs px-1.5 py-0">
-                {tag}
-              </Badge>
-            ))}
-            {card.tags.length > 3 && (
-              <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                +{card.tags.length - 3}
-              </Badge>
+            
+            {/* Tags */}
+            {card.tags && card.tags.length > 0 && (
+              <div className="flex gap-1 flex-wrap mb-2">
+                {card.tags.slice(0, 4).map((tag, index) => (
+                  <span 
+                    key={index} 
+                    className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                    style={{ 
+                      backgroundColor: labelColors[index % labelColors.length] + '20',
+                      color: labelColors[index % labelColors.length]
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             )}
+            
+            {/* Footer with metadata */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {card.due_date && (
+                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                  isOverdue ? 'bg-destructive/10 text-destructive' : 'bg-muted'
+                }`}>
+                  <Clock className="h-3 w-3" />
+                  {new Date(card.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                </span>
+              )}
+              
+              {card.description && (
+                <span className="flex items-center gap-1">
+                  <CheckSquare className="h-3 w-3" />
+                </span>
+              )}
+            </div>
           </div>
-        )}
+          
+          {/* Quick actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );
 };
 
-const CardDetailsModal: React.FC<{
+const TrelloColumn: React.FC<{
+  column: WorkflowColumn;
+  cards: WorkflowCard[];
+  onAddCard: () => void;
+  onEditCard: (card: WorkflowCard) => void;
+  onDeleteCard: (cardId: string) => void;
+  onDeleteColumn: () => void;
+  onEditColumn: () => void;
+}> = ({ column, cards, onAddCard, onEditCard, onDeleteCard, onDeleteColumn, onEditColumn }) => {
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [newCardTitle, setNewCardTitle] = useState('');
+
+  const handleQuickAdd = () => {
+    if (newCardTitle.trim()) {
+      // Call parent's add card logic with title
+      setNewCardTitle('');
+      setIsAddingCard(false);
+      onAddCard();
+    }
+  };
+
+  return (
+    <div className="w-72 flex-shrink-0 flex flex-col bg-muted/80 backdrop-blur-sm rounded-xl max-h-[calc(100vh-200px)] shadow-sm">
+      {/* Column Header */}
+      <div className="p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div 
+            className="w-2 h-2 rounded-full flex-shrink-0" 
+            style={{ backgroundColor: column.color }}
+          />
+          <h3 className="font-semibold text-sm text-foreground truncate">{column.name}</h3>
+          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+            {cards.length}
+          </span>
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onAddCard}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar card
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onEditColumn}>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Editar coluna
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDeleteColumn} className="text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir coluna
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      
+      {/* Cards Container */}
+      <ScrollArea className="flex-1 px-2">
+        <div className="space-y-2 pb-2">
+          <SortableContext 
+            items={cards.map(c => c.id)} 
+            strategy={verticalListSortingStrategy}
+          >
+            {cards.map(card => (
+              <TrelloCard
+                key={card.id}
+                card={card}
+                onEdit={() => onEditCard(card)}
+                onDelete={() => onDeleteCard(card.id)}
+              />
+            ))}
+          </SortableContext>
+          
+          {cards.length === 0 && !isAddingCard && (
+            <div className="text-center py-4 text-muted-foreground text-xs">
+              Nenhum card
+            </div>
+          )}
+          
+          {/* Quick Add Card */}
+          {isAddingCard && (
+            <div className="bg-card rounded-lg shadow-sm border p-2 space-y-2">
+              <Textarea
+                value={newCardTitle}
+                onChange={(e) => setNewCardTitle(e.target.value)}
+                placeholder="Digite o título do card..."
+                className="min-h-[60px] text-sm resize-none"
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleQuickAdd} disabled={!newCardTitle.trim()}>
+                  Adicionar
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsAddingCard(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+      
+      {/* Add Card Button */}
+      {!isAddingCard && (
+        <div className="p-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-background/50 h-8"
+            onClick={() => setIsAddingCard(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar card
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CardModal: React.FC<{
   card: WorkflowCard | null;
   open: boolean;
   onClose: () => void;
   onSave: (cardData: Partial<WorkflowCard>) => void;
-}> = ({ card, open, onClose, onSave }) => {
+  onDelete?: () => void;
+}> = ({ card, open, onClose, onSave, onDelete }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
@@ -162,7 +342,7 @@ const CardDetailsModal: React.FC<{
       setDueDate('');
       setTags([]);
     }
-  }, [card]);
+  }, [card, open]);
 
   const handleSave = () => {
     onSave({
@@ -186,46 +366,65 @@ const CardDetailsModal: React.FC<{
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{card ? 'Editar Card' : 'Novo Card'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-primary" />
+            {card ? 'Editar Card' : 'Novo Card'}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Título</label>
+            <label className="text-sm font-medium mb-1.5 block">Título</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Digite o título..."
+              className="font-medium"
             />
           </div>
           
           <div>
-            <label className="text-sm font-medium">Descrição</label>
+            <label className="text-sm font-medium mb-1.5 block">Descrição</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Digite a descrição..."
-              rows={3}
+              placeholder="Adicione uma descrição mais detalhada..."
+              rows={4}
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Prioridade</label>
+              <label className="text-sm font-medium mb-1.5 block">Prioridade</label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">🟢 Baixa</SelectItem>
-                  <SelectItem value="medium">🟡 Média</SelectItem>
-                  <SelectItem value="high">🔴 Alta</SelectItem>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Baixa
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      Média
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500" />
+                      Alta
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div>
-              <label className="text-sm font-medium">Data de Vencimento</label>
+              <label className="text-sm font-medium mb-1.5 block">Data Limite</label>
               <Input
                 type="date"
                 value={dueDate}
@@ -235,40 +434,53 @@ const CardDetailsModal: React.FC<{
           </div>
           
           <div>
-            <label className="text-sm font-medium">Tags</label>
+            <label className="text-sm font-medium mb-1.5 block">Etiquetas</label>
             <div className="flex gap-2 mb-2">
               <Input
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Nova tag..."
+                placeholder="Nova etiqueta..."
+                className="flex-1"
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
               />
-              <Button onClick={addTag} size="sm" variant="secondary">
-                <Tag className="h-4 w-4" />
+              <Button onClick={addTag} size="icon" variant="secondary">
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {tags.map((tag, index) => (
-                <Badge 
+                <span 
                   key={index} 
-                  variant="secondary" 
-                  className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                  className="text-xs px-2 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: labelColors[index % labelColors.length] + '20',
+                    color: labelColors[index % labelColors.length]
+                  }}
                   onClick={() => setTags(tags.filter(t => t !== tag))}
                 >
-                  {tag} ×
-                </Badge>
+                  {tag}
+                  <X className="h-3 w-3" />
+                </span>
               ))}
             </div>
           </div>
         </div>
         
-        <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={!title.trim()}>
-            {card ? 'Salvar' : 'Criar'}
-          </Button>
+        <div className="flex justify-between pt-4 border-t">
+          {card && onDelete && (
+            <Button variant="ghost" onClick={onDelete} className="text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={!title.trim()}>
+              {card ? 'Salvar' : 'Criar Card'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -279,7 +491,7 @@ const FluxosBoard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { distance: 8 }
+    activationConstraint: { distance: 5 }
   }));
 
   const [groups, setGroups] = useState<WorkflowGroup[]>([]);
@@ -290,6 +502,7 @@ const FluxosBoard: React.FC = () => {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [activeCard, setActiveCard] = useState<WorkflowCard | null>(null);
+  const [boardBackground, setBoardBackground] = useState(boardBackgrounds[0].value);
 
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -297,13 +510,18 @@ const FluxosBoard: React.FC = () => {
   const [showCardModal, setShowCardModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<WorkflowCard | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('');
+  const [editingColumn, setEditingColumn] = useState<WorkflowColumn | null>(null);
 
   const [groupName, setGroupName] = useState('');
   const [workflowName, setWorkflowName] = useState('');
   const [columnName, setColumnName] = useState('');
-  const [columnColor, setColumnColor] = useState('#6B7280');
+  const [columnColor, setColumnColor] = useState('#3B82F6');
 
   const [companyId, setCompanyId] = useState<string | null>(null);
+
+  const columnColors = [
+    '#6B7280', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'
+  ];
 
   useEffect(() => {
     const fetchCompanyId = async () => {
@@ -407,7 +625,7 @@ const FluxosBoard: React.FC = () => {
     setGroupName('');
     setShowGroupModal(false);
     loadGroups();
-    toast({ title: 'Quadro criado!' });
+    toast({ title: 'Quadro criado com sucesso!' });
   };
 
   const createWorkflow = async () => {
@@ -423,7 +641,7 @@ const FluxosBoard: React.FC = () => {
     setWorkflowName('');
     setShowWorkflowModal(false);
     loadWorkflows();
-    toast({ title: 'Fluxo criado!' });
+    toast({ title: 'Fluxo criado com sucesso!' });
   };
 
   const createColumn = async () => {
@@ -438,10 +656,34 @@ const FluxosBoard: React.FC = () => {
     });
     
     setColumnName('');
-    setColumnColor('#6B7280');
+    setColumnColor('#3B82F6');
     setShowColumnModal(false);
+    setEditingColumn(null);
     loadColumns();
-    toast({ title: 'Coluna criada!' });
+    toast({ title: 'Coluna criada com sucesso!' });
+  };
+
+  const updateColumn = async () => {
+    if (!columnName || !editingColumn) return;
+    
+    await supabase
+      .from('workflow_columns')
+      .update({ name: columnName, color: columnColor })
+      .eq('id', editingColumn.id);
+    
+    setColumnName('');
+    setColumnColor('#3B82F6');
+    setShowColumnModal(false);
+    setEditingColumn(null);
+    loadColumns();
+    toast({ title: 'Coluna atualizada!' });
+  };
+
+  const deleteColumn = async (columnId: string) => {
+    await supabase.from('workflow_columns').delete().eq('id', columnId);
+    loadColumns();
+    loadCards();
+    toast({ title: 'Coluna excluída!' });
   };
 
   const saveCard = async (cardData: Partial<WorkflowCard>) => {
@@ -452,6 +694,7 @@ const FluxosBoard: React.FC = () => {
         .from('workflow_cards')
         .update(cardData)
         .eq('id', selectedCard.id);
+      toast({ title: 'Card atualizado!' });
     } else {
       await supabase.from('workflow_cards').insert({
         title: cardData.title || 'Novo Card',
@@ -464,10 +707,16 @@ const FluxosBoard: React.FC = () => {
         created_by: user.id,
         position: cards.filter(c => c.column_id === selectedColumnId).length
       });
+      toast({ title: 'Card criado!' });
     }
     
     loadCards();
-    toast({ title: selectedCard ? 'Card atualizado!' : 'Card criado!' });
+  };
+
+  const deleteCard = async (cardId: string) => {
+    await supabase.from('workflow_cards').delete().eq('id', cardId);
+    loadCards();
+    toast({ title: 'Card excluído!' });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -475,299 +724,310 @@ const FluxosBoard: React.FC = () => {
     setActiveCard(card || null);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeCard = cards.find(c => c.id === active.id);
+    if (!activeCard) return;
+
+    // Check if dropping over a column
+    const overColumn = columns.find(col => col.id === over.id);
+    if (overColumn && activeCard.column_id !== overColumn.id) {
+      setCards(prev => prev.map(card => 
+        card.id === activeCard.id 
+          ? { ...card, column_id: overColumn.id }
+          : card
+      ));
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveCard(null);
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeCard = cards.find(c => c.id === active.id);
-    const overCard = cards.find(c => c.id === over.id);
-    
-    if (!activeCard || !overCard) return;
+    if (!activeCard) return;
 
+    // Find target column
+    let targetColumnId = activeCard.column_id;
+    const overCard = cards.find(c => c.id === over.id);
+    const overColumn = columns.find(col => col.id === over.id);
+    
+    if (overCard) {
+      targetColumnId = overCard.column_id;
+    } else if (overColumn) {
+      targetColumnId = overColumn.id;
+    }
+
+    // Update in database
     await supabase
       .from('workflow_cards')
-      .update({ column_id: overCard.column_id, position: overCard.position })
+      .update({ column_id: targetColumnId })
       .eq('id', activeCard.id);
 
     loadCards();
   };
 
+  const currentGroup = groups.find(g => g.id === selectedGroup);
+  const currentWorkflow = workflows.find(w => w.id === selectedWorkflow);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">Carregando quadros...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state - no boards
+  if (groups.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-primary/5 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
+            <CheckSquare className="h-12 w-12 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold mb-3">Ello Flows</h1>
+          <p className="text-muted-foreground mb-8 text-lg">
+            Organize projetos, tarefas e equipes em quadros Kanban intuitivos.
+          </p>
+          <Button onClick={() => setShowGroupModal(true)} size="lg" className="gap-2">
+            <Plus className="h-5 w-5" />
+            Criar Primeiro Quadro
+          </Button>
+        </div>
+        
+        {/* Group Modal */}
+        <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Quadro</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Nome do Quadro</label>
+                <Input
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Ex: Marketing, Desenvolvimento, Vendas..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowGroupModal(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={createGroup} disabled={!groupName.trim()}>
+                  Criar Quadro
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card p-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className={`min-h-screen bg-gradient-to-br ${boardBackground}`}>
+      {/* Top Header Bar */}
+      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
+        <div className="px-4 py-2 flex items-center justify-between gap-4">
+          {/* Left: Board selector */}
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Zap className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Fluxos de Trabalho</h1>
-              <p className="text-sm text-muted-foreground">Organize projetos em quadros Kanban</p>
-            </div>
+            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+              <SelectTrigger className="w-44 bg-white/10 border-white/20 text-white hover:bg-white/20">
+                <SelectValue placeholder="Quadro..." />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map(group => (
+                  <SelectItem key={group.id} value={group.id}>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-3 w-3 text-amber-500" />
+                      {group.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowGroupModal(true)}
+              className="text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
           
-          <div className="flex items-center gap-3 flex-wrap">
-            {groups.length > 0 && (
-              <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Selecionar quadro..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map(group => (
-                    <SelectItem key={group.id} value={group.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: group.color }} />
-                        {group.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            
-            <Button onClick={() => setShowGroupModal(true)} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Quadro
-            </Button>
+          {/* Center: Workflow tabs */}
+          {selectedGroup && (
+            <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
+              {workflows.map(workflow => (
+                <Button
+                  key={workflow.id}
+                  variant={selectedWorkflow === workflow.id ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setSelectedWorkflow(workflow.id)}
+                  className={selectedWorkflow === workflow.id 
+                    ? "bg-white/20 text-white" 
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                  }
+                >
+                  {workflow.name}
+                </Button>
+              ))}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowWorkflowModal(true)}
+                className="text-white/70 hover:text-white hover:bg-white/10"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Fluxo
+              </Button>
+            </div>
+          )}
+          
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Fundo
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {boardBackgrounds.map(bg => (
+                  <DropdownMenuItem 
+                    key={bg.value} 
+                    onClick={() => setBoardBackground(bg.value)}
+                  >
+                    <div className={`w-6 h-4 rounded mr-2 bg-gradient-to-r ${bg.value}`} />
+                    {bg.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
 
-      {/* Empty State */}
-      {groups.length === 0 ? (
-        <div className="flex items-center justify-center min-h-[70vh]">
-          <div className="text-center max-w-md">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Zap className="h-10 w-10 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold mb-3">Bem-vindo aos Fluxos!</h2>
-            <p className="text-muted-foreground mb-6">
-              Crie seu primeiro quadro para organizar projetos, tarefas e fluxos de trabalho.
-            </p>
-            <Button onClick={() => setShowGroupModal(true)} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Criar Primeiro Quadro
-            </Button>
-          </div>
+      {/* Board Title Bar */}
+      {currentWorkflow && (
+        <div className="px-4 py-3 flex items-center gap-4">
+          <h1 className="text-xl font-bold text-white">{currentWorkflow.name}</h1>
+          <Badge className="bg-white/20 text-white border-0">
+            {columns.length} colunas • {cards.length} cards
+          </Badge>
         </div>
-      ) : (
-        <>
-          {/* Workflow Selector */}
-          {selectedGroup && (
-            <div className="border-b bg-muted/30 p-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Selecionar fluxo..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {workflows.map(workflow => (
-                        <SelectItem key={workflow.id} value={workflow.id}>
-                          {workflow.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button onClick={() => setShowWorkflowModal(true)} variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Fluxo
-                  </Button>
-                  
-                  {selectedWorkflow && (
-                    <Button onClick={() => setShowColumnModal(true)} size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nova Coluna
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+      )}
 
-          {/* Kanban Board - Trello Style */}
-          {selectedWorkflow && (
-            <div className="p-4 overflow-x-auto">
-              <DndContext 
-                sensors={sensors} 
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <div className="flex gap-4 min-w-max pb-4">
-                  {columns.length === 0 ? (
-                    <div className="flex items-center justify-center w-full min-h-[50vh]">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                          <MoreHorizontal className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-medium mb-2">Nenhuma coluna criada</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Adicione colunas como "A Fazer", "Em Progresso", "Concluído"
-                        </p>
-                        <Button onClick={() => setShowColumnModal(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Criar Primeira Coluna
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {columns.map(column => {
-                        const columnCards = cards.filter(c => c.column_id === column.id);
-                        
-                        return (
-                          <div 
-                            key={column.id} 
-                            className="w-72 flex-shrink-0 bg-muted/50 rounded-xl flex flex-col max-h-[calc(100vh-280px)]"
-                          >
-                            {/* Column Header */}
-                            <div 
-                              className="p-3 rounded-t-xl flex items-center justify-between"
-                              style={{ backgroundColor: column.color + '15' }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
-                                  style={{ backgroundColor: column.color }}
-                                />
-                                <h3 className="font-semibold text-sm">{column.name}</h3>
-                                <Badge variant="secondary" className="text-xs">
-                                  {columnCards.length}
-                                </Badge>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 hover:bg-white/50"
-                                onClick={() => {
-                                  setSelectedColumnId(column.id);
-                                  setSelectedCard(null);
-                                  setShowCardModal(true);
-                                }}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            
-                            {/* Cards Container */}
-                            <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                              <SortableContext 
-                                items={columnCards.map(c => c.id)} 
-                                strategy={verticalListSortingStrategy}
-                              >
-                                {columnCards.map(card => (
-                                  <SortableCard
-                                    key={card.id}
-                                    card={card}
-                                    onEdit={() => {
-                                      setSelectedCard(card);
-                                      setShowCardModal(true);
-                                    }}
-                                  />
-                                ))}
-                              </SortableContext>
-                              
-                              {columnCards.length === 0 && (
-                                <div className="text-center py-8 text-muted-foreground text-sm">
-                                  <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4">
-                                    Arraste cards aqui
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Add Card Button */}
-                            <div className="p-2 border-t border-muted-foreground/10">
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-muted-foreground hover:text-foreground"
-                                onClick={() => {
-                                  setSelectedColumnId(column.id);
-                                  setSelectedCard(null);
-                                  setShowCardModal(true);
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Adicionar card
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Add Column Button */}
-                      <div className="w-72 flex-shrink-0">
-                        <Button 
-                          variant="outline" 
-                          className="w-full h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5"
-                          onClick={() => setShowColumnModal(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Coluna
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
+      {/* Kanban Board */}
+      {selectedWorkflow ? (
+        <div className="px-4 pb-4 overflow-x-auto">
+          <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-3 min-w-max">
+              {columns.map(column => {
+                const columnCards = cards.filter(c => c.column_id === column.id);
                 
-                <DragOverlay>
-                  {activeCard && (
-                    <div className="bg-card rounded-lg border shadow-lg p-3 w-72 opacity-90">
-                      <p className="font-medium text-sm">{activeCard.title}</p>
-                    </div>
-                  )}
-                </DragOverlay>
-              </DndContext>
-            </div>
-          )}
-
-          {/* No Workflow Selected */}
-          {selectedGroup && workflows.length === 0 && (
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Nenhum fluxo criado</h3>
-                <p className="text-muted-foreground mb-4">
-                  Crie um fluxo para organizar suas tarefas
-                </p>
-                <Button onClick={() => setShowWorkflowModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeiro Fluxo
+                return (
+                  <TrelloColumn
+                    key={column.id}
+                    column={column}
+                    cards={columnCards}
+                    onAddCard={() => {
+                      setSelectedColumnId(column.id);
+                      setSelectedCard(null);
+                      setShowCardModal(true);
+                    }}
+                    onEditCard={(card) => {
+                      setSelectedCard(card);
+                      setShowCardModal(true);
+                    }}
+                    onDeleteCard={deleteCard}
+                    onDeleteColumn={() => deleteColumn(column.id)}
+                    onEditColumn={() => {
+                      setEditingColumn(column);
+                      setColumnName(column.name);
+                      setColumnColor(column.color);
+                      setShowColumnModal(true);
+                    }}
+                  />
+                );
+              })}
+              
+              {/* Add Column */}
+              <div className="w-72 flex-shrink-0">
+                <Button 
+                  variant="ghost"
+                  className="w-full h-12 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border-2 border-dashed border-white/20 hover:border-white/40 rounded-xl"
+                  onClick={() => {
+                    setEditingColumn(null);
+                    setColumnName('');
+                    setColumnColor('#3B82F6');
+                    setShowColumnModal(true);
+                  }}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Adicionar Lista
                 </Button>
               </div>
             </div>
-          )}
-        </>
-      )}
+            
+            <DragOverlay>
+              {activeCard && (
+                <div className="bg-card rounded-lg shadow-2xl border p-3 w-72 rotate-3">
+                  <div className={`h-1 rounded-t-lg mb-2 ${priorityConfig[activeCard.priority as keyof typeof priorityConfig]?.color || 'bg-amber-500'}`} />
+                  <p className="font-medium text-sm">{activeCard.title}</p>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      ) : workflows.length === 0 && selectedGroup ? (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center text-white">
+            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <CheckSquare className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Nenhum fluxo criado</h3>
+            <p className="text-white/70 mb-4">Crie um fluxo para começar a organizar suas tarefas</p>
+            <Button onClick={() => setShowWorkflowModal(true)} className="bg-white text-primary hover:bg-white/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Fluxo
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Modals */}
       <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Quadro de Trabalho</DialogTitle>
+            <DialogTitle>Novo Quadro</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Nome do Quadro</label>
+              <label className="text-sm font-medium mb-1.5 block">Nome do Quadro</label>
               <Input
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Ex: Projeto Website, Marketing..."
+                placeholder="Ex: Marketing, Desenvolvimento..."
+                autoFocus
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -788,49 +1048,60 @@ const FluxosBoard: React.FC = () => {
             <DialogTitle>Novo Fluxo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input
-              value={workflowName}
-              onChange={(e) => setWorkflowName(e.target.value)}
-              placeholder="Nome do fluxo..."
-            />
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Nome do Fluxo</label>
+              <Input
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                placeholder="Ex: Sprint 1, Campanha Q1..."
+                autoFocus
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowWorkflowModal(false)}>
                 Cancelar
               </Button>
               <Button onClick={createWorkflow} disabled={!workflowName.trim()}>
-                Criar
+                Criar Fluxo
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showColumnModal} onOpenChange={setShowColumnModal}>
+      <Dialog open={showColumnModal} onOpenChange={(open) => {
+        setShowColumnModal(open);
+        if (!open) {
+          setEditingColumn(null);
+          setColumnName('');
+          setColumnColor('#3B82F6');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Coluna</DialogTitle>
+            <DialogTitle>{editingColumn ? 'Editar Lista' : 'Nova Lista'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Nome da Coluna</label>
+              <label className="text-sm font-medium mb-1.5 block">Nome da Lista</label>
               <Input
                 value={columnName}
                 onChange={(e) => setColumnName(e.target.value)}
                 placeholder="Ex: A Fazer, Em Progresso, Concluído..."
+                autoFocus
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Cor</label>
-              <div className="flex gap-2 mt-2">
+              <label className="text-sm font-medium mb-2 block">Cor</label>
+              <div className="flex gap-2 flex-wrap">
                 {columnColors.map((color) => (
                   <button
-                    key={color.value}
-                    onClick={() => setColumnColor(color.value)}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                      columnColor === color.value ? 'border-foreground scale-110' : 'border-transparent'
+                    key={color}
+                    onClick={() => setColumnColor(color)}
+                    className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 ${
+                      columnColor === color ? 'border-foreground scale-110 shadow-md' : 'border-transparent'
                     }`}
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
+                    style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
@@ -839,15 +1110,18 @@ const FluxosBoard: React.FC = () => {
               <Button variant="outline" onClick={() => setShowColumnModal(false)}>
                 Cancelar
               </Button>
-              <Button onClick={createColumn} disabled={!columnName.trim()}>
-                Criar
+              <Button 
+                onClick={editingColumn ? updateColumn : createColumn} 
+                disabled={!columnName.trim()}
+              >
+                {editingColumn ? 'Salvar' : 'Criar Lista'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <CardDetailsModal
+      <CardModal
         card={selectedCard}
         open={showCardModal}
         onClose={() => {
@@ -855,7 +1129,22 @@ const FluxosBoard: React.FC = () => {
           setSelectedCard(null);
         }}
         onSave={saveCard}
+        onDelete={selectedCard ? () => {
+          deleteCard(selectedCard.id);
+          setShowCardModal(false);
+          setSelectedCard(null);
+        } : undefined}
       />
+      
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };

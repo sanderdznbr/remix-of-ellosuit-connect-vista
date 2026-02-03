@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UnifiedSidebar } from '@/components/Dashboard/UnifiedSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
+import ImprovedMobileNavbar from './ImprovedMobileNavbar';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -23,11 +24,11 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     );
   }
 
-  // Mobile view - sidebar como Sheet
+  // Mobile view - com nova navbar inferior
   return (
     <div className="min-h-screen w-full bg-background relative">
       {/* Mobile Top Navbar - Fixed */}
-      <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center justify-center px-4" style={{ zIndex: 50 }}>
+      <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center justify-center px-4 z-50">
         {/* Menu Hambúrguer - Posição Absoluta Esquerda */}
         <div className="absolute left-4">
           <UnifiedSidebar 
@@ -50,10 +51,13 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       {/* Spacer para compensar o header fixo */}
       <div className="h-14" />
       
-      {/* Main content */}
-      <main className="w-full bg-background px-4 pt-4">
+      {/* Main content - com padding inferior para a navbar */}
+      <main className="w-full bg-background px-4 pt-4 pb-24">
         {children}
       </main>
+
+      {/* Bottom Navigation */}
+      <ImprovedMobileNavbar />
     </div>
   );
 };

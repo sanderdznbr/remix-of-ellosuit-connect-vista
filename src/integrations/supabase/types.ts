@@ -621,7 +621,7 @@ export type Database = {
           duration_seconds: number | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           os: string | null
           page_number: number | null
           referrer: string | null
@@ -640,7 +640,7 @@ export type Database = {
           duration_seconds?: number | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           os?: string | null
           page_number?: number | null
           referrer?: string | null
@@ -659,7 +659,7 @@ export type Database = {
           duration_seconds?: number | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           os?: string | null
           page_number?: number | null
           referrer?: string | null
@@ -811,7 +811,7 @@ export type Database = {
           email_id: string
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           timestamp: string
           user_agent: string | null
@@ -820,7 +820,7 @@ export type Database = {
           email_id: string
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           timestamp?: string
           user_agent?: string | null
@@ -829,7 +829,7 @@ export type Database = {
           email_id?: string
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           timestamp?: string
           user_agent?: string | null
@@ -2234,13 +2234,10 @@ export type Database = {
     }
     Functions: {
       associate_existing_users_with_companies: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: undefined
       }
-      cleanup_meeting_rooms: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_meeting_rooms: { Args: never; Returns: undefined }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -2253,10 +2250,7 @@ export type Database = {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
-      is_room_active: {
-        Args: { _room_id: string }
-        Returns: boolean
-      }
+      is_room_active: { Args: { _room_id: string }; Returns: boolean }
       is_room_creator: {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean

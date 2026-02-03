@@ -1,12 +1,13 @@
 import React from 'react';
-import { DndContext, DragEndEvent, closestCorners, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, closestCorners, DragOverlay, DragStartEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Clock, Tag, UserPlus } from 'lucide-react';
+import { MessageSquare, Clock, Tag, UserPlus, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ConversationLabel {
@@ -29,13 +30,13 @@ interface WhatsAppConversationData {
   is_demo?: boolean;
 }
 
-interface KanbanColumn {
+export interface KanbanColumn {
   id: string;
   title: string;
   color: string;
 }
 
-const DEFAULT_COLUMNS: KanbanColumn[] = [
+export const DEFAULT_COLUMNS: KanbanColumn[] = [
   { id: 'novo', title: 'Novos', color: '#3B82F6' },
   { id: 'em_atendimento', title: 'Em Atendimento', color: '#F59E0B' },
   { id: 'aguardando', title: 'Aguardando', color: '#8B5CF6' },
@@ -94,20 +95,18 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
       {...attributes}
       {...listeners}
       className={cn(
-        "bg-card rounded-xl border shadow-sm p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md",
+        "bg-card rounded-xl border shadow-sm p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-50 rotate-2 scale-105"
       )}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(conversation);
+      }}
     >
-      <div 
-        className="flex items-start gap-3"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(conversation);
-        }}
-      >
+      <div className="flex items-start gap-3">
         <Avatar className="h-10 w-10 flex-shrink-0">
           <AvatarImage src={conversation.profile_picture} />
-          <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+          <AvatarFallback className="bg-primary/10 text-primary text-xs">
             {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -118,7 +117,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
               {conversation.contact_name || conversation.contact_phone}
             </span>
             {(conversation.unread_count || 0) > 0 && (
-              <Badge className="bg-blue-600 text-white text-[10px] px-1.5 py-0">
+              <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0">
                 {conversation.unread_count}
               </Badge>
             )}
@@ -183,22 +182,48 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
   );
 };
 
+// Droppable Column Component
+const DroppableColumn: React.FC<{
+  column: KanbanColumn;
+  children: React.ReactNode;
+}> = ({ column, children }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "space-y-2 min-h-[200px] transition-colors rounded-lg p-1",
+        isOver && "bg-primary/5 ring-2 ring-primary/20"
+      )}
+    >
+      {children}
+    </div>
+  );
+};
+
 interface WhatsAppKanbanViewProps {
   conversations: WhatsAppConversationData[];
   labels: ConversationLabel[];
+  columns: KanbanColumn[];
   onSelectConversation: (conv: WhatsAppConversationData) => void;
   onSaveLead: (conv: WhatsAppConversationData) => void;
   onManageLabels: (conv: WhatsAppConversationData) => void;
   onUpdateStage: (conversationId: string, newStage: string) => void;
+  onConfigureColumns: () => void;
 }
 
 const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
   conversations,
   labels,
+  columns,
   onSelectConversation,
   onSaveLead,
   onManageLabels,
   onUpdateStage,
+  onConfigureColumns,
 }) => {
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -220,8 +245,11 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
     const newStage = over.id as string;
     
     // Check if dropped on a column
-    if (DEFAULT_COLUMNS.some(col => col.id === newStage)) {
-      onUpdateStage(conversationId, newStage);
+    if (columns.some(col => col.id === newStage)) {
+      const currentConversation = conversations.find(c => c.id === conversationId);
+      if (currentConversation?.pipeline_stage !== newStage) {
+        onUpdateStage(conversationId, newStage);
+      }
     }
   };
 
@@ -233,71 +261,84 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 h-full overflow-x-auto p-4 bg-muted/30">
-        {DEFAULT_COLUMNS.map(column => {
-          const columnConversations = getConversationsByStage(column.id);
-          
-          return (
-            <div 
-              key={column.id}
-              className="flex-shrink-0 w-72 flex flex-col bg-background rounded-xl border"
-            >
-              {/* Column Header */}
+      <div className="flex flex-col h-full">
+        {/* Config button */}
+        <div className="flex justify-end p-2 border-b bg-background">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onConfigureColumns}
+            className="gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Configurar Colunas
+          </Button>
+        </div>
+
+        {/* Kanban board */}
+        <div className="flex gap-4 h-full overflow-x-auto p-4 bg-muted/30">
+          {columns.map(column => {
+            const columnConversations = getConversationsByStage(column.id);
+            
+            return (
               <div 
-                className="p-3 border-b rounded-t-xl"
-                style={{ backgroundColor: `${column.color}15` }}
+                key={column.id}
+                className="flex-shrink-0 w-80 flex flex-col bg-background rounded-xl border shadow-sm"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: column.color }}
-                    />
-                    <h3 className="font-semibold text-sm">{column.title}</h3>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {columnConversations.length}
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* Column Content */}
-              <ScrollArea className="flex-1 p-2">
-                <SortableContext
-                  items={columnConversations.map(c => c.id)}
-                  strategy={verticalListSortingStrategy}
-                  id={column.id}
+                {/* Column Header - Fixed styling */}
+                <div 
+                  className="p-3 rounded-t-xl"
+                  style={{ backgroundColor: column.color }}
                 >
-                  <div 
-                    className="space-y-2 min-h-[200px]"
-                    data-column={column.id}
-                  >
-                    {columnConversations.length === 0 ? (
-                      <div 
-                        className="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg text-muted-foreground"
-                        id={column.id}
-                      >
-                        <MessageSquare className="h-6 w-6 mb-2 opacity-50" />
-                        <span className="text-xs">Arraste conversas aqui</span>
-                      </div>
-                    ) : (
-                      columnConversations.map(conversation => (
-                        <KanbanCard
-                          key={conversation.id}
-                          conversation={conversation}
-                          labels={labels}
-                          onSelect={onSelectConversation}
-                          onSaveLead={onSaveLead}
-                          onManageLabels={onManageLabels}
-                        />
-                      ))
-                    )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm text-white drop-shadow-sm">
+                        {column.title}
+                      </h3>
+                    </div>
+                    <Badge 
+                      className="text-xs font-medium"
+                      style={{ 
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        color: column.color 
+                      }}
+                    >
+                      {columnConversations.length}
+                    </Badge>
                   </div>
-                </SortableContext>
-              </ScrollArea>
-            </div>
-          );
-        })}
+                </div>
+                
+                {/* Column Content */}
+                <ScrollArea className="flex-1 p-2">
+                  <SortableContext
+                    items={columnConversations.map(c => c.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <DroppableColumn column={column}>
+                      {columnConversations.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg text-muted-foreground">
+                          <MessageSquare className="h-6 w-6 mb-2 opacity-50" />
+                          <span className="text-xs">Arraste conversas aqui</span>
+                        </div>
+                      ) : (
+                        columnConversations.map(conversation => (
+                          <KanbanCard
+                            key={conversation.id}
+                            conversation={conversation}
+                            labels={labels}
+                            onSelect={onSelectConversation}
+                            onSaveLead={onSaveLead}
+                            onManageLabels={onManageLabels}
+                          />
+                        ))
+                      )}
+                    </DroppableColumn>
+                  </SortableContext>
+                </ScrollArea>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <DragOverlay>
@@ -305,12 +346,12 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
           <div className="bg-card rounded-xl border shadow-lg p-3 w-72 rotate-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
                   {(activeConversation.contact_name || activeConversation.contact_phone).substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium text-sm">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">
                   {activeConversation.contact_name || activeConversation.contact_phone}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">

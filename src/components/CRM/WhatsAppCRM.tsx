@@ -10,9 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import WhatsAppQRModal from './WhatsAppQRModal';
-import WhatsAppKanbanView from './WhatsAppKanbanView';
+import WhatsAppKanbanView, { DEFAULT_COLUMNS, KanbanColumn } from './WhatsAppKanbanView';
 import ConversationLabelsManager from './ConversationLabelsManager';
 import SaveLeadModal from './SaveLeadModal';
+import ConversationPopup from './ConversationPopup';
+import KanbanColumnConfig from './KanbanColumnConfig';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -193,6 +195,16 @@ const WhatsAppCRM: React.FC = () => {
   const [showSaveLeadModal, setShowSaveLeadModal] = useState(false);
   const [selectedConversationForLabels, setSelectedConversationForLabels] = useState<WhatsAppConversationData | null>(null);
   const [selectedConversationForLead, setSelectedConversationForLead] = useState<WhatsAppConversationData | null>(null);
+  
+  // Kanban specific state
+  const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>(() => {
+    const saved = localStorage.getItem('whatsapp_kanban_columns');
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+  });
+  const [showColumnConfig, setShowColumnConfig] = useState(false);
+  const [showConversationPopup, setShowConversationPopup] = useState(false);
+  const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
+  const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
 
   // Load persisted chat history from localStorage
   useEffect(() => {
@@ -685,14 +697,27 @@ const WhatsAppCRM: React.FC = () => {
         <WhatsAppKanbanView
           conversations={filteredConversations}
           labels={labels}
+          columns={kanbanColumns}
           onSelectConversation={(conv) => {
-            setSelectedConversation(conv);
-            setViewMode('list');
-            setShowMobileChat(true);
+            setPopupConversation(conv);
+            // Load messages for popup
+            if (conv.id.startsWith('demo-')) {
+              setPopupMessages(demoMessagesState[conv.id] || DEMO_MESSAGES[conv.id] || []);
+            } else {
+              supabase
+                .from('whatsapp_messages')
+                .select('*')
+                .eq('conversation_id', conv.id)
+                .order('created_at', { ascending: true })
+                .limit(100)
+                .then(({ data }) => setPopupMessages(data || []));
+            }
+            setShowConversationPopup(true);
           }}
           onSaveLead={openSaveLeadModal}
           onManageLabels={openLabelsManager}
           onUpdateStage={handleUpdateStage}
+          onConfigureColumns={() => setShowColumnConfig(true)}
         />
       ) : (
         <div className="flex-1 flex overflow-hidden">
@@ -1123,6 +1148,55 @@ const WhatsAppCRM: React.FC = () => {
         conversation={selectedConversationForLead}
         companyId={companyId}
         onSuccess={() => toast({ title: 'Lead salvo!', description: 'Contato adicionado ao banco de dados' })}
+      />
+
+      {/* Conversation Popup (for Kanban view) */}
+      <ConversationPopup
+        open={showConversationPopup}
+        onOpenChange={setShowConversationPopup}
+        conversation={popupConversation}
+        messages={popupMessages}
+        labels={labels}
+        onSendMessage={(message) => {
+          // Demo handling
+          if (popupConversation?.is_demo || popupConversation?.id.startsWith('demo-')) {
+            const newMsg: WhatsAppMessage = {
+              id: `demo-msg-${Date.now()}`,
+              conversation_id: popupConversation.id,
+              content: message,
+              from_me: true,
+              status: 'sent',
+              created_at: new Date().toISOString()
+            };
+            setPopupMessages(prev => [...prev, newMsg]);
+            setDemoMessagesState(prev => ({
+              ...prev,
+              [popupConversation.id]: [...(prev[popupConversation.id] || []), newMsg]
+            }));
+          }
+        }}
+        onManageLabels={() => {
+          if (popupConversation) {
+            openLabelsManager(popupConversation);
+          }
+        }}
+        onSaveLead={() => {
+          if (popupConversation) {
+            openSaveLeadModal(popupConversation);
+          }
+        }}
+        sendingMessage={sendingMessage}
+      />
+
+      {/* Kanban Column Config */}
+      <KanbanColumnConfig
+        open={showColumnConfig}
+        onOpenChange={setShowColumnConfig}
+        columns={kanbanColumns}
+        onColumnsChange={(newColumns) => {
+          setKanbanColumns(newColumns);
+          localStorage.setItem('whatsapp_kanban_columns', JSON.stringify(newColumns));
+        }}
       />
     </div>
   );

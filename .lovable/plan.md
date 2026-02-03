@@ -1,135 +1,172 @@
 
+# Plan: Clean Onboarding, Fix KPIs, Public Booking, and Mobile UX
 
-# Plano: Melhorias CRM WhatsApp + Reorganização Sidebar
-
-## Parte 1: Conversas Demo no WhatsApp CRM
-
-### Dados Simulados
-Adicionar conversas de exemplo realistas que aparecem automaticamente:
-
-| Contato | Última Mensagem | Status | Não Lidas |
-|---------|-----------------|--------|-----------|
-| Maria Silva | "Olá, gostaria de saber sobre o produto X" | open | 2 |
-| João Pereira | "Obrigado pelo atendimento!" | closed | 0 |
-| Ana Costa | "Preciso de suporte urgente" | open | 5 |
-| Pedro Santos | "Qual o prazo de entrega?" | open | 1 |
-| Empresa ABC | "Podemos agendar uma reunião?" | open | 3 |
-
-### Mensagens de Exemplo
-Cada conversa terá um histórico simulado com mensagens de ida e volta para demonstrar a funcionalidade.
+## Summary
+This plan addresses 4 key areas: (1) redesigning the onboarding wizard with a clean blue theme, (2) removing fictitious KPI data, (3) fixing the public booking link error, and (4) improving mobile UX.
 
 ---
 
-## Parte 2: Agentes de IA no CRM
+## 1. Redesign Onboarding Wizard (Clean Blue Theme)
 
-### Nova Seção na Lista de Conversas
-- Seção "Agentes IA" acima das conversas normais no CRM
-- Ícone de robô para diferenciar de contatos humanos
-- Ao clicar, abre chat com o agente no painel direito
-- Usa a edge function `ai-chat` existente para respostas
+**Current Issue:** The wizard has a light gradient background with cards - looks cluttered.
+
+**Solution:** Complete redesign with:
+- Full-screen blue gradient background (`bg-gradient-to-br from-blue-600 to-blue-800`)
+- White text on blue background
+- Simplified step indicators (dots instead of progress bars)
+- Larger, cleaner selection cards with white backgrounds
+- Smooth animations between steps
+- Modern, minimalist aesthetic
+
+**File:** `src/components/Onboarding/AIOnboardingWizard.tsx`
+
+**Key Visual Changes:**
+- Full blue background throughout
+- White cards floating on blue
+- Simple dot navigation
+- Large touch-friendly buttons
+- Icon-centric design for segments
+- "Skip" option more subtle
 
 ---
 
-## Parte 3: Reorganização da Sidebar (Atualizada)
+## 2. Remove Fictitious KPI Data
 
-### Nova Estrutura com Grupo IA Separado
+**Current Issue:** Charts show fake demo data, making the dashboard look buggy.
 
+**Affected Files:**
+1. `src/components/Dashboard/AIAssistantHome.tsx` - Lines 32-57 have hardcoded demo arrays
+2. `src/components/BotIA/BotIADashboard.tsx` - Lines 44-71 have demo analytics data
+3. `src/components/Mobile/MobileHome.tsx` - Line 52 has hardcoded "Emails: 12"
+
+**Solution:**
+- Remove static chart sections until real data exists
+- Show KPI cards with real database counts only
+- Add empty states when no data: "Comece a usar para ver estatisticas"
+- Remove charts entirely OR show placeholder "Em breve" state
+- MobileHome: fetch real email count from database
+
+---
+
+## 3. Fix Public Booking Link Error
+
+**Current Issue:** `ImprovedBookingCalendar.tsx` queries wrong table (`booking_links` instead of `public_booking_links`).
+
+**Root Cause Analysis:**
+- Route `/:companyName/:slug` uses `ImprovedBookingCalendar.tsx`
+- This file queries `booking_links` table (line 61)
+- Should query `public_booking_links` table
+- Also queries `user_availability` but should fallback to `availability_schedules`
+- Insert goes to `scheduled_bookings` but should go to `public_bookings`
+
+**File:** `src/pages/ImprovedBookingCalendar.tsx`
+
+**Changes:**
+1. Line 61: Change `booking_links` to `public_booking_links`
+2. Lines 79-84: Add fallback from `availability_schedules` (like ImprovedBookingPublic does)
+3. Line 148: Change `scheduled_bookings` to `public_bookings`
+
+---
+
+## 4. Improve Mobile UX
+
+**Current Issues:**
+- MobileHome shows hardcoded data
+- Navigation could be more intuitive
+- Cards could use better styling
+
+**Solution:**
+- Update `MobileHome.tsx` to use the more modern `MobileHomeScreen.tsx` design
+- Fetch real email counts from database
+- Add proper loading states
+- Improve card styling with blue accents
+- Better spacing and touch targets
+- Add pull-to-refresh gestures
+- Consistent rounded corners (rounded-2xl)
+
+**Files to Update:**
+- `src/components/Mobile/MobileHome.tsx` - Major improvements
+- `src/components/Mobile/MobileStatsCard.tsx` - Better styling
+
+---
+
+## Technical Implementation Details
+
+### A. AIOnboardingWizard.tsx - Full Rewrite
 ```text
-+-------------------------+
-|  DASHBOARD              |
-|  - Home                 |
-+-------------------------+
-|  INTELIGÊNCIA ARTIFICIAL|  <- NOVO GRUPO
-|  - Agentes de IA        |
-+-------------------------+
-|  COMUNICAÇÃO            |
-|  - CRM WhatsApp         |
-|  - Email                |
-+-------------------------+
-|  PRODUTIVIDADE          |
-|  - Agenda               |
-|  - Tarefas              |
-|  - Reuniões             |
-|  - Fluxos               |
-+-------------------------+
-|  GESTÃO                 |
-|  - Cadastros            | <- Unifica Clientes/Fornecedores/Prospectos/Usuários
-|  - Arquivos             |
-|  - Rastreamento         | <- Unifica PDF/Link/Vídeo
-+-------------------------+
-|  INSIGHTS               |
-|  - Analytics            |
-+-------------------------+
-|  CONFIGURAÇÕES          |
-|  - Preferências         |
-|  - Segurança            |
-|  - Suporte              |
-+-------------------------+
+Structure:
+- Full-screen blue gradient container
+- Centered white content card (max-w-xl)
+- Step dots at top
+- Clean typography (white on blue header)
+- Large segment cards in 2x4 grid
+- Simple "Continuar" button
+- Subtle "Pular" link
 ```
 
-### Página Unificada de Cadastros
-Uma única página com tabs:
-- **Clientes**: Listagem com filtros e ações
-- **Fornecedores**: Mesma estrutura
-- **Prospectos**: Mesma estrutura  
-- **Colaboradores**: Mesma estrutura
+### B. AIAssistantHome.tsx - Remove Demo Charts
+```text
+Remove:
+- weeklyActivityData array
+- distributionData array  
+- performanceData array
+- Weekly Activity Chart section
+- Distribution Chart section
+- Performance Chart section
 
-### Página Unificada de Rastreamento
-Uma única página com tabs:
-- **Documentos PDF**: Dashboard de rastreamento
-- **Links**: Dashboard de rastreamento
-- **Vídeos**: Dashboard de rastreamento
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/CRM/WhatsAppCRM.tsx` | Modificar | Adicionar dados demo + seção de agentes IA |
-| `src/components/Dashboard/UnifiedSidebar.tsx` | Modificar | Reorganizar com grupo IA separado |
-| `src/components/Dashboard/UnifiedCadastros.tsx` | Criar | Página unificada com tabs |
-| `src/components/Dashboard/UnifiedTracking.tsx` | Criar | Página unificada de rastreamento |
-| `src/components/Mobile/MobileResponsiveDashboard.tsx` | Modificar | Adicionar novas rotas |
-
----
-
-## Detalhes Técnicos
-
-### Estrutura do Demo Data
-```typescript
-const DEMO_CONVERSATIONS = [
-  {
-    id: 'demo-1',
-    contact_name: 'Maria Silva',
-    contact_phone: '+55 11 99999-1234',
-    last_message: 'Olá, gostaria de saber sobre o produto X',
-    last_message_at: new Date().toISOString(),
-    status: 'open',
-    unread_count: 2
-  },
-  // ... mais conversas
-];
+Keep:
+- KPI cards (they use real data)
+- Quick Access buttons
+- Quick Actions cards
 ```
 
-### Novo Grupo na Sidebar
-```typescript
-{
-  title: "Inteligência Artificial",
-  icon: Bot,
-  items: [
-    { title: "Agentes de IA", path: "/dashboard/agentes-ia", icon: Bot }
-  ]
-}
+### C. BotIADashboard.tsx - Remove Demo Analytics
+```text
+Remove:
+- conversationsData array
+- satisfactionData array
+- responseTimeData array
+- Charts in Analytics tab
+
+Replace with:
+- "Em breve" placeholder in Analytics tab
+- Or simple stats from real agent data
+```
+
+### D. ImprovedBookingCalendar.tsx - Fix Queries
+```text
+Line 61: 'booking_links' -> 'public_booking_links'
+Line 79: Add fallback to 'availability_schedules'  
+Line 148: 'scheduled_bookings' -> 'public_bookings'
+```
+
+### E. MobileHome.tsx - Improvements
+```text
+- Fetch real email count
+- Use blue color scheme (match design system)
+- Better card shadows
+- Proper loading states
+- Remove hardcoded "12"
 ```
 
 ---
 
-## Resultado Esperado
+## Files to Modify
 
-1. **CRM com Exemplos**: Conversas demo para demonstrar a interface
-2. **Chat com IA no CRM**: Agentes aparecem e respondem em tempo real
-3. **Grupo IA Destacado**: Seção própria na sidebar para funcionalidades de IA
-4. **Sidebar Organizada**: Navegação mais intuitiva
-5. **Páginas Unificadas**: Cadastros e Rastreamento em páginas únicas com tabs
+| File | Changes |
+|------|---------|
+| `src/components/Onboarding/AIOnboardingWizard.tsx` | Full redesign with blue theme |
+| `src/components/Dashboard/AIAssistantHome.tsx` | Remove demo charts |
+| `src/components/BotIA/BotIADashboard.tsx` | Remove demo analytics |
+| `src/pages/ImprovedBookingCalendar.tsx` | Fix table names |
+| `src/components/Mobile/MobileHome.tsx` | Fetch real data, improve styling |
+| `src/components/Mobile/MobileStatsCard.tsx` | Blue color scheme |
 
+---
+
+## Expected Results
+
+1. **Onboarding**: Clean, professional blue-themed wizard that's easy to use
+2. **Dashboard KPIs**: Only real data shown, no fake charts
+3. **Public Booking**: Links will work correctly
+4. **Mobile UX**: Modern, consistent, real data everywhere

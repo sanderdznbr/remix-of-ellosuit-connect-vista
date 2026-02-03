@@ -4,7 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 import ImprovedMobileNavbar from './ImprovedMobileNavbar';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { AIOnboardingWizard } from '@/components/Onboarding/AIOnboardingWizard';
+import ConversationalOnboarding from '@/components/Onboarding/ConversationalOnboarding';
 import { GuidedTour } from '@/components/Onboarding/GuidedTour';
 
 interface MobileLayoutProps {
@@ -26,7 +26,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   // Show onboarding wizard for new users
   if (!loading && !hasCompletedOnboarding) {
     return (
-      <AIOnboardingWizard 
+      <ConversationalOnboarding 
         onComplete={(preferences) => {
           completeOnboarding(preferences);
         }}

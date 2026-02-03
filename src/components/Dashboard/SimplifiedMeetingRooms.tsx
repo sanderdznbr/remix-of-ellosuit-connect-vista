@@ -11,6 +11,7 @@ import MeetingRecordings from './MeetingRecordings';
 import InPersonMeeting from './InPersonMeeting';
 import SavedMeetings from './SavedMeetings';
 import MeetingsChatAI from './MeetingsChatAI';
+import { APP_CONFIG } from '@/config/app';
 
 const SimplifiedMeetingRooms = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -51,8 +52,8 @@ const SimplifiedMeetingRooms = () => {
       setShowCreateDialog(false);
       setNewRoomTitle('');
       
-      // Redirecionar para a página da reunião (mesma janela)
-      window.location.href = `/meet/${room.room_code}`;
+      // Redirecionar para a página da reunião usando domínio de produção
+      window.location.href = APP_CONFIG.getMeetingUrl(room.room_code);
     } else {
       // Se createRoom retornou null, o erro já foi exibido pelo hook
       console.error('❌ Falha ao criar sala - verifique autenticação');
@@ -70,7 +71,8 @@ const SimplifiedMeetingRooms = () => {
     }
 
     setShowJoinDialog(false);
-    window.open(`/meet/${roomCode.toUpperCase()}?name=${encodeURIComponent(displayName)}`, '_blank');
+    const meetingUrl = `${APP_CONFIG.getMeetingUrl(roomCode.toUpperCase())}?name=${encodeURIComponent(displayName)}`;
+    window.open(meetingUrl, '_blank');
     setRoomCode('');
     setDisplayName('');
   };

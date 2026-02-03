@@ -172,6 +172,44 @@ const WhatsAppCRM: React.FC = () => {
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [agentChatMessages, setAgentChatMessages] = useState<WhatsAppMessage[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [demoMessagesState, setDemoMessagesState] = useState<Record<string, WhatsAppMessage[]>>(DEMO_MESSAGES);
+  const [agentChatHistory, setAgentChatHistory] = useState<Record<string, WhatsAppMessage[]>>({});
+
+  // Load persisted chat history from localStorage
+  useEffect(() => {
+    const savedDemoMessages = localStorage.getItem('whatsapp_demo_messages');
+    const savedAgentHistory = localStorage.getItem('whatsapp_agent_history');
+    
+    if (savedDemoMessages) {
+      try {
+        setDemoMessagesState(JSON.parse(savedDemoMessages));
+      } catch (e) {
+        console.error('Error loading demo messages:', e);
+      }
+    }
+    
+    if (savedAgentHistory) {
+      try {
+        setAgentChatHistory(JSON.parse(savedAgentHistory));
+      } catch (e) {
+        console.error('Error loading agent history:', e);
+      }
+    }
+  }, []);
+
+  // Save demo messages to localStorage
+  useEffect(() => {
+    if (Object.keys(demoMessagesState).length > 0) {
+      localStorage.setItem('whatsapp_demo_messages', JSON.stringify(demoMessagesState));
+    }
+  }, [demoMessagesState]);
+
+  // Save agent chat history to localStorage
+  useEffect(() => {
+    if (Object.keys(agentChatHistory).length > 0) {
+      localStorage.setItem('whatsapp_agent_history', JSON.stringify(agentChatHistory));
+    }
+  }, [agentChatHistory]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -237,7 +275,7 @@ const WhatsAppCRM: React.FC = () => {
   const loadMessages = async (conversationId: string) => {
     // Check if it's a demo conversation
     if (conversationId.startsWith('demo-')) {
-      setMessages(DEMO_MESSAGES[conversationId] || []);
+      setMessages(demoMessagesState[conversationId] || DEMO_MESSAGES[conversationId] || []);
       return;
     }
 
@@ -301,16 +339,19 @@ const WhatsAppCRM: React.FC = () => {
     if (!newMessage.trim() || !selectedAgent) return;
     
     setSendingMessage(true);
+    const agentKey = `agent-${selectedAgent.id}`;
     const userMessage: WhatsAppMessage = {
       id: `agent-msg-${Date.now()}`,
-      conversation_id: `agent-${selectedAgent.id}`,
+      conversation_id: agentKey,
       content: newMessage,
       from_me: true,
       status: 'sent',
       created_at: new Date().toISOString()
     };
     
-    setAgentChatMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...agentChatMessages, userMessage];
+    setAgentChatMessages(updatedMessages);
+    setAgentChatHistory(prev => ({ ...prev, [agentKey]: updatedMessages }));
     setNewMessage('');
     setIsAiTyping(true);
     
@@ -328,7 +369,7 @@ const WhatsAppCRM: React.FC = () => {
       
       const aiMessage: WhatsAppMessage = {
         id: `agent-msg-${Date.now() + 1}`,
-        conversation_id: `agent-${selectedAgent.id}`,
+        conversation_id: agentKey,
         content: response.data?.response || 'Desculpe, não consegui processar sua mensagem.',
         from_me: false,
         status: 'delivered',
@@ -336,7 +377,9 @@ const WhatsAppCRM: React.FC = () => {
         sender_name: selectedAgent.name
       };
       
-      setAgentChatMessages(prev => [...prev, aiMessage]);
+      const finalMessages = [...updatedMessages, aiMessage];
+      setAgentChatMessages(finalMessages);
+      setAgentChatHistory(prev => ({ ...prev, [agentKey]: finalMessages }));
     } catch (error) {
       console.error('Error calling AI:', error);
       toast({
@@ -369,8 +412,17 @@ const WhatsAppCRM: React.FC = () => {
         created_at: new Date().toISOString()
       };
       
-      setMessages(prev => [...prev, tempMessage]);
+      const updatedMessages = [...messages, tempMessage];
+      setMessages(updatedMessages);
       setNewMessage('');
+      
+      // Persist demo conversation messages
+      if (selectedConversation.is_demo) {
+        setDemoMessagesState(prev => ({
+          ...prev,
+          [selectedConversation.id]: updatedMessages
+        }));
+      }
       
       // Update last message in conversation
       setConversations(prev => prev.map(c => 
@@ -399,7 +451,15 @@ const WhatsAppCRM: React.FC = () => {
             status: 'delivered',
             created_at: new Date().toISOString()
           };
-          setMessages(prev => [...prev, responseMessage]);
+          setMessages(prev => {
+            const newMsgs = [...prev, responseMessage];
+            // Persist the response too
+            setDemoMessagesState(prevState => ({
+              ...prevState,
+              [selectedConversation.id]: newMsgs
+            }));
+            return newMsgs;
+          });
         }, 1500);
       }
     } catch (e) {
@@ -413,7 +473,9 @@ const WhatsAppCRM: React.FC = () => {
   const selectAgent = (agent: AIAgent) => {
     setSelectedAgent(agent);
     setSelectedConversation(null);
-    setAgentChatMessages([]);
+    // Load persisted history for this agent
+    const agentKey = `agent-${agent.id}`;
+    setAgentChatMessages(agentChatHistory[agentKey] || []);
     setShowMobileChat(true);
   };
 
@@ -770,12 +832,12 @@ const WhatsAppCRM: React.FC = () => {
                       >
                         <div
                           className={cn(
-                            "max-w-[70%] rounded-lg px-3 py-2 shadow-sm",
+                            "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm",
                             message.from_me
-                              ? "bg-blue-600 text-white rounded-br-none"
+                              ? "bg-blue-600 rounded-br-sm"
                               : selectedAgent
-                                ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-foreground rounded-bl-none border border-blue-100 dark:border-blue-800"
-                                : "bg-card text-foreground rounded-bl-none"
+                                ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-foreground rounded-bl-sm border border-blue-100 dark:border-blue-800"
+                                : "bg-card text-foreground rounded-bl-sm border"
                           )}
                         >
                           {!message.from_me && selectedAgent && (
@@ -786,10 +848,15 @@ const WhatsAppCRM: React.FC = () => {
                               </span>
                             </div>
                           )}
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className={cn(
+                            "text-sm whitespace-pre-wrap",
+                            message.from_me ? "text-white" : "text-foreground"
+                          )}>
+                            {message.content}
+                          </p>
                           <div className={cn(
                             "flex items-center justify-end gap-1 mt-1",
-                            message.from_me ? "text-blue-100" : "text-muted-foreground"
+                            message.from_me ? "text-white/70" : "text-muted-foreground"
                           )}>
                             <span className="text-[10px]">
                               {new Date(message.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -798,9 +865,9 @@ const WhatsAppCRM: React.FC = () => {
                               message.status === 'read' ? (
                                 <CheckCheck className="h-3 w-3 text-cyan-300" />
                               ) : message.status === 'delivered' ? (
-                                <CheckCheck className="h-3 w-3" />
+                                <CheckCheck className="h-3 w-3 text-white/70" />
                               ) : (
-                                <Check className="h-3 w-3" />
+                                <Check className="h-3 w-3 text-white/70" />
                               )
                             )}
                           </div>

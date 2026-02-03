@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Phone, MessageSquare, Settings, Play, Pause, BarChart3, QrCode, Trash2, Users, Bot } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import WhatsAppQRModal from './WhatsAppQRModal';
-import WhatsAppConversation from './WhatsAppConversation';
+import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
   id: string;
@@ -37,6 +37,16 @@ interface WhatsAppConversationData {
   assigned_agent_id?: string;
 }
 
+interface WhatsAppMessage {
+  id: string;
+  conversation_id: string;
+  content: string;
+  from_me: boolean;
+  status: string;
+  created_at: string;
+  sender_name?: string;
+}
+
 interface AIAgent {
   id: string;
   name: string;
@@ -50,14 +60,19 @@ const WhatsAppCRM: React.FC = () => {
   // State
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
   const [conversations, setConversations] = useState<WhatsAppConversationData[]>([]);
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   
-  // Modal states
+  // UI State
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversationData | null>(null);
-  const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'open' | 'closed'>('all');
+  const [showMobileChat, setShowMobileChat] = useState(false);
 
   // Get company ID
   useEffect(() => {
@@ -107,10 +122,23 @@ const WhatsAppCRM: React.FC = () => {
       .select('*')
       .eq('company_id', companyId)
       .order('last_message_at', { ascending: false })
-      .limit(50);
+      .limit(100);
     
     if (!error) {
       setConversations(data || []);
+    }
+  };
+
+  const loadMessages = async (conversationId: string) => {
+    const { data, error } = await supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(100);
+    
+    if (!error) {
+      setMessages(data || []);
     }
   };
 
@@ -141,23 +169,19 @@ const WhatsAppCRM: React.FC = () => {
     loadData();
   }, [companyId]);
 
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (selectedConversation) {
+      loadMessages(selectedConversation.id);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedConversation?.id]);
+
   // Handle session success
   const handleSessionSuccess = (session: WhatsAppSession) => {
     loadSessions();
     toast({ title: 'Sucesso', description: 'WhatsApp conectado!' });
-  };
-
-  // Disconnect session
-  const disconnectSession = async (session: WhatsAppSession) => {
-    try {
-      await supabase.functions.invoke('whatsapp-api', {
-        body: { action: 'disconnect', sessionId: session.id }
-      });
-      loadSessions();
-      toast({ title: 'Sucesso', description: 'WhatsApp desconectado' });
-    } catch (e) {
-      toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
-    }
   };
 
   // Delete session
@@ -173,21 +197,75 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Open conversation
-  const openConversation = (conversation: WhatsAppConversationData) => {
-    const session = sessions.find(s => s.id === conversation.session_id);
-    if (session) {
-      setSelectedSession(session);
-      setSelectedConversation(conversation);
-    } else if (sessions.length > 0) {
-      setSelectedSession(sessions[0]);
-      setSelectedConversation(conversation);
+  // Send message
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+    
+    setSendingMessage(true);
+    try {
+      // In demo mode, just add to local state
+      const tempMessage: WhatsAppMessage = {
+        id: Date.now().toString(),
+        conversation_id: selectedConversation.id,
+        content: newMessage,
+        from_me: true,
+        status: 'sent',
+        created_at: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, tempMessage]);
+      setNewMessage('');
+      
+      // Update last message in conversation
+      setConversations(prev => prev.map(c => 
+        c.id === selectedConversation.id 
+          ? { ...c, last_message: newMessage, last_message_at: new Date().toISOString() }
+          : c
+      ));
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Erro ao enviar mensagem', variant: 'destructive' });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Filter conversations
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = searchQuery === '' || 
+      conv.contact_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conv.contact_phone.includes(searchQuery);
+    
+    const matchesTab = activeTab === 'all' || 
+      (activeTab === 'unread' && (conv.unread_count || 0) > 0) ||
+      (activeTab === 'open' && conv.status === 'open') ||
+      (activeTab === 'closed' && conv.status === 'closed');
+    
+    return matchesSearch && matchesTab;
+  });
+
+  const connectedSessions = sessions.filter(s => s.status === 'connected');
+
+  // Format time
+  const formatTime = (date: string) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } else if (days === 1) {
+      return 'Ontem';
+    } else if (days < 7) {
+      return d.toLocaleDateString('pt-BR', { weekday: 'short' });
+    } else {
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando CRM WhatsApp...</p>
@@ -196,369 +274,331 @@ const WhatsAppCRM: React.FC = () => {
     );
   }
 
-  // Show conversation view
-  if (selectedConversation && selectedSession) {
-    return (
-      <div className="h-screen">
-        <WhatsAppConversation
-          conversation={selectedConversation}
-          sessionId={selectedSession.id}
-          onBack={() => {
-            setSelectedConversation(null);
-            setSelectedSession(null);
-          }}
-        />
-      </div>
-    );
-  }
-
-  const connectedSessions = sessions.filter(s => s.status === 'connected');
-
   return (
-    <div className="min-h-screen bg-background p-6 page-content">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <MessageSquare className="h-8 w-8 text-green-600" />
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">CRM WhatsApp</h1>
-            <p className="text-muted-foreground">Gerencie suas conversas do WhatsApp</p>
-          </div>
-        </div>
-        <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
-          <QrCode className="h-4 w-4 mr-2" />
-          Conectar WhatsApp
-        </Button>
-      </div>
-
-      <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="conversations">Conversas</TabsTrigger>
-          <TabsTrigger value="connections">Conexões</TabsTrigger>
-          <TabsTrigger value="agents">Agentes IA</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Conexões Ativas
-                  </CardTitle>
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {connectedSessions.length}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Conversas Abertas
-                  </CardTitle>
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {conversations.filter(c => c.status === 'open').length}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Agentes Ativos
-                  </CardTitle>
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {agents.filter(a => a.is_active).length}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total de Leads
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {conversations.length}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          {connectedSessions.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  Nenhum WhatsApp Conectado
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Conecte seu WhatsApp via QR Code para começar a receber leads
-                </p>
-                <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Conectar Agora
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Conversas Recentes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nenhuma conversa ainda</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {conversations.slice(0, 5).map(conversation => (
-                      <div 
-                        key={conversation.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                        onClick={() => openConversation(conversation)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-100 rounded-full">
-                            <MessageSquare className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium">
-                              {conversation.contact_name || conversation.contact_phone}
-                            </div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">
-                              {conversation.last_message || 'Nova conversa'}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          {conversation.unread_count && conversation.unread_count > 0 && (
-                            <Badge className="bg-green-600">{conversation.unread_count}</Badge>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {new Date(conversation.last_message_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="conversations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Todas as Conversas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[calc(100vh-300px)]">
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nenhuma conversa encontrada</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {conversations.map(conversation => (
-                      <div 
-                        key={conversation.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                        onClick={() => openConversation(conversation)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-100 rounded-full">
-                            <MessageSquare className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium">
-                              {conversation.contact_name || conversation.contact_phone}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {conversation.contact_phone}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <Badge variant={conversation.status === 'open' ? 'default' : 'secondary'}>
-                            {conversation.status === 'open' ? 'Aberta' : 'Fechada'}
-                          </Badge>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {new Date(conversation.last_message_at).toLocaleString('pt-BR')}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="connections">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Conexões WhatsApp</CardTitle>
-              <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Conexão
+    <div className="h-[calc(100vh-64px)] bg-background flex overflow-hidden">
+      {/* Conversations List - Left Panel */}
+      <div className={cn(
+        "w-full md:w-96 lg:w-[400px] border-r flex flex-col bg-card",
+        showMobileChat && "hidden md:flex"
+      )}>
+        {/* Header */}
+        <div className="p-4 border-b space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-6 w-6 text-green-600" />
+              <h1 className="font-bold text-lg">Conversas</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                onClick={() => setShowQRModal(true)} 
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <QrCode className="h-4 w-4 mr-1" />
+                Conectar
               </Button>
-            </CardHeader>
-            <CardContent>
-              {sessions.length === 0 ? (
-                <div className="text-center py-12">
-                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    Nenhuma conexão configurada
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Conecte seu primeiro WhatsApp via QR Code
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowQRModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Conexão
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurações
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar conversas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          {/* Filter Tabs */}
+          <div className="flex gap-1">
+            {['all', 'unread', 'open', 'closed'].map((tab) => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab(tab as any)}
+                className={cn(
+                  "flex-1 text-xs",
+                  activeTab === tab && "bg-green-600 hover:bg-green-700"
+                )}
+              >
+                {tab === 'all' ? 'Todas' : tab === 'unread' ? 'Não lidas' : tab === 'open' ? 'Abertas' : 'Fechadas'}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Connection Status */}
+          {connectedSessions.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+              {connectedSessions.length} conexão(ões) ativa(s)
+            </div>
+          )}
+        </div>
+        
+        {/* Conversations List */}
+        <ScrollArea className="flex-1">
+          {filteredConversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center p-4">
+              {conversations.length === 0 ? (
+                <>
+                  <QrCode className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Nenhuma conversa ainda</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Conecte seu WhatsApp para começar a receber mensagens
                   </p>
-                  <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
+                  <Button 
+                    onClick={() => setShowQRModal(true)} 
+                    className="bg-green-600 hover:bg-green-700"
+                  >
                     <QrCode className="h-4 w-4 mr-2" />
                     Conectar WhatsApp
                   </Button>
-                </div>
+                </>
               ) : (
-                <div className="space-y-4">
-                  {sessions.map(session => (
-                    <div 
-                      key={session.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full ${session.status === 'connected' ? 'bg-green-100' : 'bg-muted'}`}>
-                          <Phone className={`h-5 w-5 ${session.status === 'connected' ? 'text-green-600' : 'text-muted-foreground'}`} />
-                        </div>
-                        <div>
-                          <div className="font-medium">{session.instance_name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {session.phone_number || 'Aguardando conexão'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <Badge variant={session.status === 'connected' ? 'default' : 'secondary'}>
-                          {session.status === 'connected' ? 'Conectado' : session.status === 'connecting' ? 'Conectando...' : 'Desconectado'}
-                        </Badge>
-                        
-                        {session.status === 'connected' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => disconnectSession(session)}
-                          >
-                            <Pause className="h-4 w-4" />
-                          </Button>
-                        )}
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir Conexão?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. A conexão "{session.instance_name}" será permanentemente excluída.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteSession(session)} className="bg-destructive hover:bg-destructive/90">
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Nenhum resultado</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Tente outra busca ou filtro
+                  </p>
+                </>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredConversations.map(conversation => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    setSelectedConversation(conversation);
+                    setShowMobileChat(true);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors",
+                    selectedConversation?.id === conversation.id && "bg-muted"
+                  )}
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={conversation.profile_picture} />
+                    <AvatarFallback className="bg-green-100 text-green-700">
+                      {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium truncate">
+                        {conversation.contact_name || conversation.contact_phone}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTime(conversation.last_message_at)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground truncate pr-2">
+                        {conversation.last_message || 'Nova conversa'}
+                      </p>
+                      {(conversation.unread_count || 0) > 0 && (
+                        <Badge className="bg-green-600 text-white text-xs px-2 py-0.5 min-w-[20px] justify-center">
+                          {conversation.unread_count}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
 
-        <TabsContent value="agents">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                Agentes IA no WhatsApp
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {agents.length === 0 ? (
-                <div className="text-center py-8">
-                  <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground mb-2">Nenhum agente configurado para WhatsApp</p>
+      {/* Chat Area - Right Panel */}
+      <div className={cn(
+        "flex-1 flex flex-col",
+        !showMobileChat && "hidden md:flex"
+      )}>
+        {selectedConversation ? (
+          <>
+            {/* Chat Header */}
+            <div className="h-16 border-b flex items-center justify-between px-4 bg-card">
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="md:hidden"
+                  onClick={() => setShowMobileChat(false)}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={selectedConversation.profile_picture} />
+                  <AvatarFallback className="bg-green-100 text-green-700">
+                    {(selectedConversation.contact_name || selectedConversation.contact_phone).substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="font-medium">
+                    {selectedConversation.contact_name || selectedConversation.contact_phone}
+                  </h2>
                   <p className="text-xs text-muted-foreground">
-                    Vá em "Agentes de IA" e ative a integração WhatsApp em um agente
+                    {selectedConversation.contact_phone}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {agents.map(agent => (
-                    <div 
-                      key={agent.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Badge variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}>
+                  {selectedConversation.status === 'open' ? 'Aberta' : 'Fechada'}
+                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Users className="h-4 w-4 mr-2" />
+                      Ver perfil
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Bot className="h-4 w-4 mr-2" />
+                      Atribuir agente IA
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 p-4 bg-[#e5ddd5] dark:bg-muted/30">
+              <div className="space-y-2 max-w-3xl mx-auto">
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full py-20">
+                    <div className="text-center">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        Nenhuma mensagem ainda. Inicie a conversa!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map(message => (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "flex",
+                        message.from_me ? 'justify-end' : 'justify-start'
+                      )}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-full">
-                          <Bot className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{agent.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Responde automaticamente
-                          </div>
+                      <div
+                        className={cn(
+                          "max-w-[70%] rounded-lg px-3 py-2 shadow-sm",
+                          message.from_me
+                            ? "bg-green-600 text-white rounded-br-none"
+                            : "bg-card text-foreground rounded-bl-none"
+                        )}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        <div className={cn(
+                          "flex items-center justify-end gap-1 mt-1",
+                          message.from_me ? "text-green-100" : "text-muted-foreground"
+                        )}>
+                          <span className="text-[10px]">
+                            {new Date(message.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {message.from_me && (
+                            message.status === 'read' ? (
+                              <CheckCheck className="h-3 w-3 text-blue-300" />
+                            ) : message.status === 'delivered' ? (
+                              <CheckCheck className="h-3 w-3" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )
+                          )}
                         </div>
                       </div>
-                      <Badge variant={agent.is_active ? 'default' : 'secondary'}>
-                        {agent.is_active ? 'Ativo' : 'Pausado'}
-                      </Badge>
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+            
+            {/* Input Area */}
+            <div className="p-4 border-t bg-card">
+              <div className="flex items-center gap-2 max-w-3xl mx-auto">
+                <Button variant="ghost" size="icon">
+                  <Smile className="h-5 w-5 text-muted-foreground" />
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <Paperclip className="h-5 w-5 text-muted-foreground" />
+                </Button>
+                <Input
+                  placeholder="Digite uma mensagem..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={!newMessage.trim() || sendingMessage}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Empty State */
+          <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 text-center p-8">
+            <div className="w-64 h-64 mb-8 opacity-50">
+              <MessageSquare className="w-full h-full text-muted-foreground/20" />
+            </div>
+            <h2 className="text-2xl font-bold text-muted-foreground mb-2">
+              CRM WhatsApp
+            </h2>
+            <p className="text-muted-foreground max-w-md">
+              Selecione uma conversa à esquerda para visualizar e responder mensagens.
+              {connectedSessions.length === 0 && (
+                <span className="block mt-2">
+                  Conecte seu WhatsApp para começar a receber mensagens.
+                </span>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </p>
+            {connectedSessions.length === 0 && (
+              <Button 
+                onClick={() => setShowQRModal(true)} 
+                className="mt-6 bg-green-600 hover:bg-green-700"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Conectar WhatsApp
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* QR Modal */}
       {companyId && user?.id && (

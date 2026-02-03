@@ -29,6 +29,8 @@ export type Database = {
           personality: string
           settings: Json | null
           updated_at: string
+          whatsapp_enabled: boolean | null
+          whatsapp_session_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -44,6 +46,8 @@ export type Database = {
           personality: string
           settings?: Json | null
           updated_at?: string
+          whatsapp_enabled?: boolean | null
+          whatsapp_session_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -59,8 +63,18 @@ export type Database = {
           personality?: string
           settings?: Json | null
           updated_at?: string
+          whatsapp_enabled?: boolean | null
+          whatsapp_session_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_whatsapp_session_id_fkey"
+            columns: ["whatsapp_session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       availability_schedules: {
         Row: {
@@ -1945,6 +1959,7 @@ export type Database = {
       }
       whatsapp_conversations: {
         Row: {
+          assigned_agent_id: string | null
           assigned_to: string | null
           company_id: string
           contact_name: string | null
@@ -1952,11 +1967,16 @@ export type Database = {
           created_at: string
           id: string
           integration_id: string
+          last_message: string | null
           last_message_at: string | null
+          profile_picture: string | null
+          session_id: string | null
           status: string | null
+          unread_count: number | null
           updated_at: string
         }
         Insert: {
+          assigned_agent_id?: string | null
           assigned_to?: string | null
           company_id: string
           contact_name?: string | null
@@ -1964,11 +1984,16 @@ export type Database = {
           created_at?: string
           id?: string
           integration_id: string
+          last_message?: string | null
           last_message_at?: string | null
+          profile_picture?: string | null
+          session_id?: string | null
           status?: string | null
+          unread_count?: number | null
           updated_at?: string
         }
         Update: {
+          assigned_agent_id?: string | null
           assigned_to?: string | null
           company_id?: string
           contact_name?: string | null
@@ -1976,16 +2001,34 @@ export type Database = {
           created_at?: string
           id?: string
           integration_id?: string
+          last_message?: string | null
           last_message_at?: string | null
+          profile_picture?: string | null
+          session_id?: string | null
           status?: string | null
+          unread_count?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_conversations_integration_id_fkey"
             columns: ["integration_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -2028,6 +2071,153 @@ export type Database = {
           webhook_url?: string | null
         }
         Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          company_id: string
+          content: string | null
+          conversation_id: string | null
+          created_at: string
+          from_me: boolean
+          id: string
+          media_type: string | null
+          media_url: string | null
+          message_id: string | null
+          message_type: string
+          metadata: Json | null
+          recipient_name: string | null
+          recipient_phone: string
+          sender_name: string | null
+          sender_phone: string
+          session_id: string
+          status: string
+          timestamp: string
+        }
+        Insert: {
+          company_id: string
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          message_type?: string
+          metadata?: Json | null
+          recipient_name?: string | null
+          recipient_phone: string
+          sender_name?: string | null
+          sender_phone: string
+          session_id: string
+          status?: string
+          timestamp?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          message_type?: string
+          metadata?: Json | null
+          recipient_name?: string | null
+          recipient_phone?: string
+          sender_name?: string | null
+          sender_phone?: string
+          session_id?: string
+          status?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_sessions: {
+        Row: {
+          company_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_id: string | null
+          instance_name: string
+          last_seen_at: string | null
+          phone_name: string | null
+          phone_number: string | null
+          profile_picture: string | null
+          qr_code: string | null
+          settings: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_name: string
+          last_seen_at?: string | null
+          phone_name?: string | null
+          phone_number?: string | null
+          profile_picture?: string | null
+          qr_code?: string | null
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_name?: string
+          last_seen_at?: string | null
+          phone_name?: string | null
+          phone_number?: string | null
+          profile_picture?: string | null
+          qr_code?: string | null
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_card_assignments: {
         Row: {

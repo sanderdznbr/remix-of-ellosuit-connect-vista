@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { addDays, addWeeks, addMonths, isBefore, parseISO } from 'date-fns';
 
 interface CalendarEvent {
   id: string;
@@ -26,7 +27,76 @@ interface CalendarEvent {
   meeting_data?: any;
   updated_at?: string;
   created_at?: string;
+  parent_event_id?: string;
 }
+
+export interface RecurrenceConfig {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  interval: number;
+  daysOfWeek: number[];
+  endType: 'never' | 'after' | 'on';
+  occurrences: number;
+  endDate: string;
+}
+
+// Função para gerar eventos recorrentes
+const generateRecurringEvents = (
+  baseEvent: Omit<CalendarEvent, 'id'>,
+  recurrence: RecurrenceConfig,
+  maxEvents: number = 52 // Limitar a 1 ano de eventos semanais
+): Omit<CalendarEvent, 'id'>[] => {
+  if (!recurrence.enabled) return [baseEvent];
+
+  const events: Omit<CalendarEvent, 'id'>[] = [];
+  const startDate = parseISO(baseEvent.start_date);
+  const endDate = parseISO(baseEvent.end_date);
+  const duration = endDate.getTime() - startDate.getTime();
+
+  let currentDate = startDate;
+  let count = 0;
+  const maxOccurrences = recurrence.endType === 'after' ? recurrence.occurrences : maxEvents;
+  const untilDate = recurrence.endType === 'on' ? parseISO(recurrence.endDate) : null;
+
+  while (count < maxOccurrences) {
+    if (untilDate && isBefore(untilDate, currentDate)) break;
+
+    // Para semanal, verificar se o dia está nos dias selecionados
+    if (recurrence.frequency === 'weekly') {
+      const dayOfWeek = currentDate.getDay();
+      if (recurrence.daysOfWeek.includes(dayOfWeek)) {
+        events.push({
+          ...baseEvent,
+          start_date: currentDate.toISOString(),
+          end_date: new Date(currentDate.getTime() + duration).toISOString(),
+          recurrence_rule: JSON.stringify(recurrence)
+        });
+        count++;
+      }
+      currentDate = addDays(currentDate, 1);
+      // Resetar a cada semana * intervalo
+      if (currentDate.getDay() === 0 && recurrence.interval > 1) {
+        currentDate = addWeeks(currentDate, recurrence.interval - 1);
+      }
+    } else {
+      events.push({
+        ...baseEvent,
+        start_date: currentDate.toISOString(),
+        end_date: new Date(currentDate.getTime() + duration).toISOString(),
+        recurrence_rule: JSON.stringify(recurrence)
+      });
+      count++;
+
+      if (recurrence.frequency === 'daily') {
+        currentDate = addDays(currentDate, recurrence.interval);
+      } else if (recurrence.frequency === 'monthly') {
+        currentDate = addMonths(currentDate, recurrence.interval);
+      }
+    }
+  }
+
+  return events;
+};
 
 export const useCalendarData = () => {
   const { user } = useAuth();
@@ -79,8 +149,11 @@ export const useCalendarData = () => {
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
-  // Criar evento
-  const createEvent = async (eventData: Omit<CalendarEvent, 'id' | 'company_id' | 'created_by'>) => {
+  // Criar evento (com suporte a recorrência)
+  const createEvent = async (
+    eventData: Omit<CalendarEvent, 'id' | 'company_id' | 'created_by'>,
+    recurrence?: RecurrenceConfig
+  ) => {
     if (!user) {
       toast({
         title: "Erro",
@@ -91,7 +164,7 @@ export const useCalendarData = () => {
     }
 
     try {
-      console.log('📅 Criando evento:', eventData.title);
+      console.log('📅 Criando evento:', eventData.title, recurrence?.enabled ? '(recorrente)' : '');
 
       const { data: companyData } = await supabase
         .from('company_users')
@@ -103,36 +176,46 @@ export const useCalendarData = () => {
         throw new Error('Usuário não está associado a uma empresa');
       }
 
+      const baseEvent = {
+        ...eventData,
+        company_id: companyData.company_id,
+        created_by: user.id,
+        attendees: eventData.attendees || [],
+        color: eventData.color || '#3600FF',
+        status: eventData.status || 'pending',
+        source: eventData.source || 'local'
+      };
+
+      // Gerar eventos recorrentes se necessário
+      const eventsToCreate = recurrence?.enabled 
+        ? generateRecurringEvents(baseEvent as any, recurrence)
+        : [baseEvent];
+
+      console.log(`📅 Criando ${eventsToCreate.length} evento(s)...`);
+
       const { data, error } = await supabase
         .from('calendar_events')
-        .insert({
-          ...eventData,
-          company_id: companyData.company_id,
-          created_by: user.id,
-          attendees: eventData.attendees || [],
-          color: eventData.color || '#3600FF',
-          status: eventData.status || 'pending',
-          source: eventData.source || 'local'
-        })
-        .select()
-        .single();
+        .insert(eventsToCreate)
+        .select();
 
       if (error) {
         console.error('❌ Erro ao criar evento:', error);
         throw error;
       }
 
-      console.log('✅ Evento criado com sucesso:', data.id);
+      console.log(`✅ ${data.length} evento(s) criado(s) com sucesso`);
       
       // Invalidar e refetch dos eventos
       await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       
       toast({
         title: "Sucesso",
-        description: "Evento criado com sucesso!"
+        description: recurrence?.enabled 
+          ? `${data.length} eventos recorrentes criados!`
+          : "Evento criado com sucesso!"
       });
 
-      return data;
+      return data[0];
     } catch (error: any) {
       console.error('💥 Erro ao criar evento:', error);
       toast({
@@ -248,6 +331,53 @@ export const useCalendarData = () => {
     }
   };
 
+  // Deletar múltiplos eventos em massa
+  const bulkDeleteEvents = async (eventIds: string[]) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (eventIds.length === 0) return;
+
+    try {
+      console.log(`🗑️ Deletando ${eventIds.length} eventos em massa...`);
+
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .in('id', eventIds)
+        .eq('created_by', user.id);
+
+      if (error) {
+        console.error('❌ Erro ao deletar eventos:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${eventIds.length} eventos deletados com sucesso`);
+      
+      // Invalidar e refetch dos eventos
+      await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      
+      toast({
+        title: "Sucesso",
+        description: `${eventIds.length} eventos excluídos com sucesso!`
+      });
+    } catch (error: any) {
+      console.error('💥 Erro ao deletar eventos:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao excluir eventos: ${error.message}`,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   // Buscar eventos por data
   const getEventsByDate = (date: Date) => {
     const targetDate = date.toISOString().split('T')[0];
@@ -288,9 +418,12 @@ export const useCalendarData = () => {
     createEvent,
     updateEvent,
     deleteEvent,
+    bulkDeleteEvents,
     getEventsByDate,
     getUpcomingEvents,
     refreshEvents,
     refetch
   };
 };
+
+export { generateRecurringEvents };

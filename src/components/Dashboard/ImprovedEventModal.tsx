@@ -11,15 +11,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { Video, Calendar, Users, Clock, Settings, Palette } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ColorPicker from './ColorPicker';
+import RecurrenceSelector, { RecurrenceConfig } from './RecurrenceSelector';
 
 interface ImprovedEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: string | null;
   selectedRange?: { start: string; end: string } | null;
-  onCreateEvent: (eventData: any) => Promise<void>;
+  onCreateEvent: (eventData: any, recurrence?: RecurrenceConfig) => Promise<void>;
   onNavigateToSettings?: () => void;
 }
+
+const defaultRecurrence: RecurrenceConfig = {
+  enabled: false,
+  frequency: 'weekly',
+  interval: 1,
+  daysOfWeek: [],
+  endType: 'after',
+  occurrences: 10,
+  endDate: ''
+};
 
 const ImprovedEventModal = ({ 
   isOpen, 
@@ -41,6 +52,7 @@ const ImprovedEventModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3600FF');
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig>(defaultRecurrence);
 
   const { toast } = useToast();
   const { isConnected: isGoogleConnected, createGoogleMeetEvent } = useGoogleCalendar();
@@ -80,6 +92,7 @@ const ImprovedEventModal = ({
     setIsAllDay(false);
     setSelectedMeetingProvider(null);
     setSelectedColor('#3600FF');
+    setRecurrence(defaultRecurrence);
   };
 
   const createZoomMeeting = async (eventData: any) => {
@@ -205,11 +218,14 @@ const ImprovedEventModal = ({
         color: selectedColor
       };
 
-      await onCreateEvent(eventData);
+      // Passar recorrência se estiver ativada
+      await onCreateEvent(eventData, recurrence.enabled ? recurrence : undefined);
       
       toast({
         title: "Sucesso",
-        description: "Reunião criada com sucesso!"
+        description: recurrence.enabled 
+          ? "Eventos recorrentes criados com sucesso!"
+          : "Reunião criada com sucesso!"
       });
       
       resetForm();
@@ -425,7 +441,15 @@ const ImprovedEventModal = ({
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          {/* Seção de Recorrência */}
+          <div className="col-span-2">
+            <RecurrenceSelector
+              config={recurrence}
+              onChange={setRecurrence}
+            />
+          </div>
+
+          <div className="col-span-2 flex gap-3 pt-4">
             <Button
               type="button"
               variant="outline"

@@ -6,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -15,9 +15,11 @@ import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
 import EventTypeSelector from './EventTypeSelector';
 import EventClusterModal from './EventClusterModal';
 import CalendarSkeleton from './CalendarSkeleton';
+import BulkDeleteModal from './BulkDeleteModal';
 import { useCalendarData } from '@/hooks/useCalendarData';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useRealtimeGoogleSync } from '@/hooks/useRealtimeGoogleSync';
+import { RecurrenceConfig } from './RecurrenceSelector';
 import './calendar-styles.css';
 
 interface MyCalendarProps {
@@ -31,13 +33,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showClusterModal, setShowClusterModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [clusterEvents, setClusterEvents] = useState<any[]>([]);
   const [currentView, setCurrentView] = useState('dayGridMonth');
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
-  const { events, loading, createEvent, refreshEvents } = useCalendarData();
+  const { events, loading, createEvent, bulkDeleteEvents, refreshEvents } = useCalendarData();
   const { isConnected } = useGoogleCalendar();
   const { lastSyncTime, syncGoogleCalendar } = useRealtimeGoogleSync();
   const { toast } = useToast();
@@ -101,13 +104,22 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     }
   };
 
-  const handleCreateEvent = async (eventData: any) => {
+  const handleCreateEvent = async (eventData: any, recurrence?: RecurrenceConfig) => {
     try {
-      await createEvent(eventData);
+      await createEvent(eventData, recurrence);
       await refreshEvents();
       handleCloseAllModals();
     } catch (error) {
       console.error('Error creating event:', error);
+    }
+  };
+
+  const handleBulkDelete = async (eventIds: string[]) => {
+    try {
+      await bulkDeleteEvents(eventIds);
+      await refreshEvents();
+    } catch (error) {
+      console.error('Error bulk deleting events:', error);
     }
   };
 
@@ -204,6 +216,14 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
         
         <div className="flex space-x-3">
+          <Button 
+            onClick={() => setShowBulkDeleteModal(true)}
+            variant="outline"
+            className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir em Massa
+          </Button>
           <Button 
             onClick={() => setShowTypeSelector(true)}
             className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90 rounded-xl shadow-lg"
@@ -330,6 +350,13 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           setShowClusterModal(false);
           setShowDetailsModal(true);
         }}
+      />
+
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        events={events}
+        onDelete={handleBulkDelete}
       />
     </div>
   );

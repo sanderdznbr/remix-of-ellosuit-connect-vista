@@ -17,13 +17,18 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
-  Shield
+  Shield,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const menuGroups = [
   {
@@ -135,6 +140,7 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
     'ajuda-suporte': false,
     'config-privacidade': false
   });
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -152,6 +158,9 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
   };
 
   const toggleGroup = (groupId: string) => {
+    if (isCollapsed) {
+      setIsCollapsed(false);
+    }
     setOpenGroups(prev => ({
       ...prev,
       [groupId]: !prev[groupId]
@@ -165,12 +174,35 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
       const isGroupOpen = openGroups[item.id];
       const hasActiveChild = item.subItems.some(subItem => subItem.path && isActive(subItem.path));
       
+      if (isCollapsed) {
+        return (
+          <TooltipProvider key={item.id} delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => toggleGroup(item.id)}
+                  className={cn(
+                    "w-full flex items-center justify-center p-2.5 rounded-xl transition-colors",
+                    hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <IconComponent className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="rounded-xl">
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+      
       return (
         <Collapsible key={item.id} open={isGroupOpen} onOpenChange={() => toggleGroup(item.id)}>
-          <CollapsibleTrigger className={`
-            w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
-            ${hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}
-          `}>
+          <CollapsibleTrigger className={cn(
+            "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-colors",
+            hasActiveChild ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
+          )}>
             <div className="flex items-center">
               <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
               <span className="truncate">{item.label}</span>
@@ -187,13 +219,12 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
                   key={subItem.id}
                   to={subItem.path || '#'}
                   onClick={handleLinkClick}
-                  className={`
-                    flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                    ${active 
+                  className={cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors",
+                    active 
                       ? 'bg-white/20 text-white' 
                       : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    }
-                  `}
+                  )}
                 >
                   <SubIconComponent className="h-4 w-4 mr-3 flex-shrink-0" />
                   <span className="truncate">{subItem.label}</span>
@@ -207,18 +238,43 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
     
     const active = item.path ? isActive(item.path) : false;
     
+    if (isCollapsed) {
+      return (
+        <TooltipProvider key={item.id} delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to={item.path || '#'}
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center justify-center p-2.5 rounded-xl transition-colors",
+                  active 
+                    ? 'bg-white/20 text-white' 
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                <IconComponent className="h-5 w-5" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="rounded-xl">
+              {item.label}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
     return (
       <Link
         key={item.id}
         to={item.path || '#'}
         onClick={handleLinkClick}
-        className={`
-          flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
-          ${active 
+        className={cn(
+          "flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-colors",
+          active 
             ? 'bg-white/20 text-white' 
             : 'text-white/80 hover:bg-white/10 hover:text-white'
-          }
-        `}
+        )}
       >
         <IconComponent className="h-5 w-5 mr-3 flex-shrink-0" />
         <span className="truncate">{item.label}</span>
@@ -228,46 +284,73 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
 
   const sidebarContent = (
     <>
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
-        <Link to="/dashboard" onClick={handleLinkClick}>
-          <img 
-            src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
-            alt="ElloSuit Logo" 
-            className="h-8 w-auto filter brightness-0 invert"
-          />
-        </Link>
+      {/* Header with Logo and Collapse Button */}
+      <div className={cn(
+        "p-4 border-b border-white/10 flex items-center",
+        isCollapsed ? "justify-center" : "justify-between"
+      )}>
+        {!isCollapsed && (
+          <Link to="/dashboard" onClick={handleLinkClick}>
+            <img 
+              src="/lovable-uploads/1ace337d-1080-46b1-b9e6-15dba227814c.png" 
+              alt="ElloSuit Logo" 
+              className="h-8 w-auto filter brightness-0 invert"
+            />
+          </Link>
+        )}
+        
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl h-9 w-9"
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-5 w-5" />
+            ) : (
+              <PanelLeftClose className="h-5 w-5" />
+            )}
+          </Button>
+        )}
       </div>
 
-      {/* Menu Groups - Collapsible */}
+      {/* Menu Groups */}
       <div className="flex-1 py-4 overflow-y-auto">
         {menuGroups.map((group) => (
-          <div key={group.id} className="mb-2 px-3">
-            <Collapsible 
-              open={openGroups[group.id]} 
-              onOpenChange={() => toggleGroup(group.id)}
-            >
-              <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white text-left hover:bg-white/10 rounded-lg transition-colors">
-                <span>{group.label}</span>
-                {openGroups[group.id] ? (
-                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                )}
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="mt-1">
-                <nav className="space-y-1">
-                  {group.items.map(renderMenuItem)}
-                </nav>
-              </CollapsibleContent>
-            </Collapsible>
+          <div key={group.id} className={cn("mb-2", isCollapsed ? "px-2" : "px-3")}>
+            {isCollapsed ? (
+              <div className="space-y-1">
+                {group.items.map(renderMenuItem)}
+              </div>
+            ) : (
+              <Collapsible 
+                open={openGroups[group.id]} 
+                onOpenChange={() => toggleGroup(group.id)}
+              >
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold uppercase tracking-wider text-white text-left hover:bg-white/10 rounded-xl transition-colors">
+                  <span>{group.label}</span>
+                  {openGroups[group.id] ? (
+                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                  )}
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="mt-1">
+                  <nav className="space-y-1">
+                    {group.items.map(renderMenuItem)}
+                  </nav>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         ))}
       </div>
 
       {/* User Profile */}
       <div className="border-t border-white/10 p-4">
-        {user && (
+        {user && !isCollapsed && (
           <div className="flex items-center space-x-3 mb-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={user.user_metadata?.avatar_url} />
@@ -287,17 +370,40 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
           </div>
         )}
         
-        <Button
-          variant="ghost"
-          onClick={() => {
-            signOut();
-            handleLinkClick();
-          }}
-          className="w-full justify-start text-white hover:bg-white/10"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Sair
-        </Button>
+        {isCollapsed ? (
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    signOut();
+                    handleLinkClick();
+                  }}
+                  className="w-full text-white hover:bg-white/10 rounded-xl"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="rounded-xl">
+                Sair
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              signOut();
+              handleLinkClick();
+            }}
+            className="w-full justify-start text-white hover:bg-white/10 rounded-xl"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
+        )}
       </div>
     </>
   );
@@ -310,7 +416,7 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/10"
+            className="text-white hover:bg-white/10 rounded-xl"
           >
             <Menu className="h-6 w-6" />
           </Button>
@@ -327,9 +433,14 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
     );
   }
 
-  // Desktop: Renderizar como div fixo
+  // Desktop: Renderizar como div fixo com transição
   return (
-    <div className="w-[280px] h-screen bg-primary flex flex-col sticky top-0">
+    <div 
+      className={cn(
+        "h-screen bg-primary flex flex-col sticky top-0 transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-[72px]" : "w-[280px]"
+      )}
+    >
       {sidebarContent}
     </div>
   );

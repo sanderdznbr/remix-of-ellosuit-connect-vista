@@ -340,22 +340,24 @@ const BotIADashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 page-content">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 page-content">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Bot className="h-8 w-8 text-foreground" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl">
+            <Bot className="h-8 w-8 text-primary" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Agentes de IA</h1>
-            <p className="text-muted-foreground">Crie e gerencie agentes de IA inteligentes para automação</p>
+            <p className="text-muted-foreground text-sm">Crie e gerencie assistentes virtuais inteligentes</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowTemplateModal(true)}>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl">
             <Brain className="h-4 w-4 mr-2" />
             Templates
           </Button>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             Novo Agente
           </Button>
@@ -363,144 +365,152 @@ const BotIADashboard: React.FC = () => {
       </div>
 
       <Tabs defaultValue="agents" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="agents">Meus Agentes</TabsTrigger>
-          <TabsTrigger value="analytics">Análises</TabsTrigger>
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
+        <TabsList className="bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="agents" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Meus Agentes</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Análises</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Configurações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agents" className="space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl overflow-hidden">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Agentes Ativos
-                  </CardTitle>
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {agents.filter(a => a.is_active).length}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Agentes Ativos</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {agents.filter(a => a.is_active).length}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-500/10 rounded-xl">
+                    <Bot className="h-6 w-6 text-blue-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-2xl overflow-hidden">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total de Agentes
-                  </CardTitle>
-                  <Brain className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Total de Agentes</p>
+                    <p className="text-3xl font-bold text-foreground">{agents.length}</p>
+                  </div>
+                  <div className="p-3 bg-purple-500/10 rounded-xl">
+                    <Brain className="h-6 w-6 text-purple-600" />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{agents.length}</div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl overflow-hidden">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Conversas Hoje
-                  </CardTitle>
-                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Conversas Hoje</p>
+                    <p className="text-3xl font-bold text-foreground">0</p>
+                  </div>
+                  <div className="p-3 bg-green-500/10 rounded-xl">
+                    <MessageCircle className="h-6 w-6 text-green-600" />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Agents Grid */}
           {agents.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
+            <Card className="border-0 shadow-sm rounded-2xl">
+              <CardContent className="text-center py-16">
+                <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <Bot className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   Nenhum agente criado
                 </h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece criando seu primeiro agente IA inteligente
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Comece criando seu primeiro agente IA inteligente para automatizar atendimentos
                 </p>
-                <div className="flex justify-center gap-2">
-                  <Button variant="outline" onClick={() => setShowTemplateModal(true)}>
+                <div className="flex justify-center gap-3">
+                  <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl">
                     Ver Templates
                   </Button>
-                  <Button onClick={() => setShowCreateModal(true)}>
+                  <Button onClick={() => setShowCreateModal(true)} className="rounded-xl">
                     Criar Agente
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {agents.map(agent => (
-                <Card key={agent.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
+                <Card key={agent.id} className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden group">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-transparent">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-full">
+                        <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl group-hover:scale-105 transition-transform">
                           <Bot className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{agent.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <CardTitle className="text-lg font-semibold">{agent.name}</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {AI_MODELS.find(m => m.value === agent.model)?.label || agent.model}
                           </p>
                         </div>
                       </div>
-                      <Badge variant={agent.is_active ? 'default' : 'secondary'}>
-                        {agent.is_active ? 'Ativo' : 'Pausado'}
+                      <Badge 
+                        variant={agent.is_active ? 'default' : 'secondary'}
+                        className={`rounded-lg ${agent.is_active ? 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-0' : ''}`}
+                      >
+                        {agent.is_active ? '● Ativo' : 'Pausado'}
                       </Badge>
                     </div>
                   </CardHeader>
                   
-                  <CardContent>
-                    <div className="space-y-3">
+                  <CardContent className="pt-2">
+                    <div className="space-y-4">
                       {agent.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {agent.description}
                         </p>
                       )}
                       
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">
-                          PERSONALIDADE
+                      <div className="bg-muted/30 rounded-xl p-3">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Personalidade
                         </label>
-                        <p className="text-sm text-foreground line-clamp-2">
+                        <p className="text-sm text-foreground line-clamp-2 mt-1">
                           {agent.personality}
                         </p>
                       </div>
                       
                       <div className="flex justify-between items-center pt-2">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={() => chatWithAgent(agent)}
+                          className="rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Conversar
                         </Button>
                         
-                        <div className="flex gap-1">
+                        <div className="flex gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => editAgent(agent)}
-                            title="Editar"
+                            title="Configurar"
+                            className="rounded-xl hover:bg-muted"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Settings className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => toggleAgent(agent.id, agent.is_active)}
+                            className="rounded-xl hover:bg-muted"
                           >
                             {agent.is_active ? (
                               <Pause className="h-4 w-4" />
@@ -519,17 +529,19 @@ const BotIADashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader>
-              <CardTitle>Análises de Performance</CardTitle>
+              <CardTitle className="text-lg">Análises de Performance</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Bot className="h-8 w-8 text-muted-foreground" />
+                </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
                   Análises em desenvolvimento
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Em breve você poderá ver métricas de performance dos seus agentes
                 </p>
               </div>
@@ -538,13 +550,13 @@ const BotIADashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="settings">
-          <Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader>
-              <CardTitle>Configurações Globais</CardTitle>
+              <CardTitle className="text-lg">Configurações Globais</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
                   <div>
                     <label className="text-sm font-medium">Logs de Conversas</label>
                     <p className="text-xs text-muted-foreground">
@@ -554,9 +566,7 @@ const BotIADashboard: React.FC = () => {
                   <Switch defaultChecked />
                 </div>
                 
-                <Separator />
-                
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
                   <div>
                     <label className="text-sm font-medium">Modo de Desenvolvimento</label>
                     <p className="text-xs text-muted-foreground">
@@ -573,22 +583,24 @@ const BotIADashboard: React.FC = () => {
 
       {/* Templates Modal */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Templates de Agentes</DialogTitle>
+            <DialogTitle className="text-xl">Templates de Agentes</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {AGENT_TEMPLATES.map((template, index) => (
               <Card 
                 key={index} 
-                className={`cursor-pointer hover:shadow-md transition-shadow ${
-                  selectedTemplate?.name === template.name ? 'ring-2 ring-primary' : ''
+                className={`cursor-pointer hover:shadow-md transition-all rounded-xl border-2 ${
+                  selectedTemplate?.name === template.name ? 'border-primary bg-primary/5' : 'border-transparent'
                 }`}
                 onClick={() => setSelectedTemplate(template)}
               >
                 <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <template.icon className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <template.icon className="h-5 w-5 text-primary" />
+                    </div>
                     <CardTitle className="text-base">{template.name}</CardTitle>
                   </div>
                 </CardHeader>
@@ -598,11 +610,11 @@ const BotIADashboard: React.FC = () => {
               </Card>
             ))}
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowTemplateModal(false)}>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setShowTemplateModal(false)} className="rounded-xl">
               Cancelar
             </Button>
-            <Button onClick={useTemplate} disabled={!selectedTemplate}>
+            <Button onClick={useTemplate} disabled={!selectedTemplate} className="rounded-xl">
               Usar Template
             </Button>
           </div>

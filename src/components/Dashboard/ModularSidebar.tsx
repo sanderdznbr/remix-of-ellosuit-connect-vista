@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Calendar, Mail, Home, Users, FileText, Settings, LogOut, Video,
+  Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
   HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, GripVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { useSidebarSettings } from "@/hooks/useSidebarSettings";
+import { UserProfileMenu } from "./UserProfileMenu";
 import {
   DndContext,
   closestCenter,
@@ -186,7 +186,7 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
   const [menuGroups, setMenuGroups] = useState(DEFAULT_MENU_GROUPS);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { settings, updateSettings } = useSidebarSettings();
 
   const sensors = useSensors(
@@ -312,45 +312,9 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
           </button>
         </div>
 
-        {/* User Avatar & Logout */}
+        {/* User Avatar with Profile Menu */}
         <div className="py-3 flex flex-col items-center border-t border-white/10">
-          {user && (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Avatar className="h-9 w-9 mb-2 cursor-pointer">
-                    <AvatarImage src={user.user_metadata?.avatar_url} />
-                    <AvatarFallback className="bg-white/20 text-white text-xs">
-                      {user.email?.substring(0, 2).toUpperCase() || 'US'}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="rounded-lg">
-                  <p className="font-medium">{user.user_metadata?.full_name || 'Usuário'}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {
-                    signOut();
-                    handleLinkClick();
-                  }}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="rounded-lg">
-                Sair
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <UserProfileMenu onLinkClick={handleLinkClick} />
         </div>
       </div>
 

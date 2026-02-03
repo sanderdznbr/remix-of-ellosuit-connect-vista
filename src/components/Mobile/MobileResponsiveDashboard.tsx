@@ -3,10 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileLayout from './MobileLayout';
-import { 
-  Link, Video, Eye, FileText, HelpCircle, AlertTriangle, Shield, 
-  Truck, Users, Bot, Mail, BarChart3 
-} from 'lucide-react';
 
 // Import components
 import Home from '@/components/Dashboard/Home';
@@ -26,7 +22,15 @@ import EmployeeManagement from '@/components/Dashboard/EmployeeManagement';
 import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboardCustomizer';
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
-import PlaceholderPage from '@/components/Dashboard/PlaceholderPage';
+
+// New dashboard pages
+import LinkTrackingDashboard from '@/components/Dashboard/LinkTrackingDashboard';
+import VideoTrackingDashboard from '@/components/Dashboard/VideoTrackingDashboard';
+import ElloVisionDashboard from '@/components/Dashboard/ElloVisionDashboard';
+import ReportsDashboard from '@/components/Dashboard/ReportsDashboard';
+import SupportDashboard from '@/components/Dashboard/SupportDashboard';
+import ReportProblemForm from '@/components/Dashboard/ReportProblemForm';
+import SecuritySettings from '@/components/Dashboard/SecuritySettings';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
@@ -79,77 +83,14 @@ const MobileResponsiveDashboard = () => {
           <Route path="/email-marketing" element={<EmailDashboard />} />
           <Route path="/analytics" element={<Analytics onNavigate={handleNavigate} />} />
           
-          {/* Placeholders para páginas em desenvolvimento */}
-          <Route 
-            path="/rastreamento-link" 
-            element={
-              <PlaceholderPage 
-                title="Rastreamento de Links" 
-                description="Acompanhe cliques e engajamento dos seus links compartilhados."
-                icon={Link}
-              />
-            } 
-          />
-          <Route 
-            path="/rastreamento-video" 
-            element={
-              <PlaceholderPage 
-                title="Rastreamento de Vídeos" 
-                description="Analise visualizações e engajamento dos seus vídeos."
-                icon={Video}
-              />
-            } 
-          />
-          <Route 
-            path="/ello-vision" 
-            element={
-              <PlaceholderPage 
-                title="Ello Vision" 
-                description="Visualização avançada com inteligência artificial."
-                icon={Eye}
-              />
-            } 
-          />
-          <Route 
-            path="/relatorios" 
-            element={
-              <PlaceholderPage 
-                title="Relatórios" 
-                description="Gere relatórios detalhados sobre suas atividades."
-                icon={FileText}
-              />
-            } 
-          />
-          <Route 
-            path="/suporte" 
-            element={
-              <PlaceholderPage 
-                title="Suporte" 
-                description="Central de ajuda e suporte ao cliente."
-                icon={HelpCircle}
-              />
-            } 
-          />
-          <Route 
-            path="/reportar-problema" 
-            element={
-              <PlaceholderPage 
-                title="Reportar Problema" 
-                description="Relate bugs ou problemas encontrados na plataforma."
-                icon={AlertTriangle}
-              />
-            } 
-          />
-          <Route 
-            path="/seguranca" 
-            element={
-              <PlaceholderPage 
-                title="Segurança" 
-                description="Configurações de segurança e privacidade da sua conta."
-                icon={Shield}
-              />
-            } 
-          />
+          {/* Novas páginas funcionais */}
+          <Route path="/rastreamento-link" element={<LinkTrackingDashboard />} />
+          <Route path="/rastreamento-video" element={<VideoTrackingDashboard />} />
+          <Route path="/ello-vision" element={<ElloVisionDashboard />} />
+          <Route path="/relatorios" element={<ReportsDashboard />} />
+          <Route path="/suporte" element={<SupportDashboard />} />
+          <Route path="/reportar-problema" element={<ReportProblemForm />} />
+          <Route path="/seguranca" element={<SecuritySettings />} />
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

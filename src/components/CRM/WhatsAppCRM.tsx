@@ -1,41 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Phone, MessageSquare, Settings, ExternalLink, Play, Pause, BarChart3 } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, Play, Pause, BarChart3, QrCode, Trash2, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import WhatsAppQRModal from './WhatsAppQRModal';
+import WhatsAppConversation from './WhatsAppConversation';
 
-interface WhatsAppIntegration {
+interface WhatsAppSession {
   id: string;
-  phone_number: string;
-  access_token: string;
-  is_active: boolean;
-  settings: any;
+  instance_name: string;
+  status: string;
+  phone_number?: string;
+  phone_name?: string;
+  profile_picture?: string;
+  connected_at?: string;
   created_at: string;
 }
 
-interface WhatsAppConversation {
+interface WhatsAppConversationData {
   id: string;
   contact_phone: string;
   contact_name?: string;
   last_message_at: string;
+  last_message?: string;
   status: string;
-  assigned_to?: string;
+  unread_count?: number;
+  profile_picture?: string;
+  session_id?: string;
+  assigned_agent_id?: string;
 }
 
-interface MessageTemplate {
+interface AIAgent {
   id: string;
   name: string;
-  content: string;
-  category: string;
+  is_active: boolean;
 }
 
 const WhatsAppCRM: React.FC = () => {
@@ -43,40 +48,55 @@ const WhatsAppCRM: React.FC = () => {
   const { toast } = useToast();
   
   // State
-  const [integrations, setIntegrations] = useState<WhatsAppIntegration[]>([]);
-  const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
-  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
+  const [conversations, setConversations] = useState<WhatsAppConversationData[]>([]);
+  const [agents, setAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   
   // Modal states
-  const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  
-  // Form states
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [accessToken, setAccessToken] = useState('');
-  const [templateName, setTemplateName] = useState('');
-  const [templateContent, setTemplateContent] = useState('');
-  const [templateCategory, setTemplateCategory] = useState('general');
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversationData | null>(null);
+  const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
 
-  const companyId = user?.user_metadata?.company_id;
+  // Get company ID
+  useEffect(() => {
+    const getCompanyId = async () => {
+      if (!user?.id) return;
+      
+      const metadataCompanyId = user.user_metadata?.company_id;
+      if (metadataCompanyId) {
+        setCompanyId(metadataCompanyId);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data?.company_id) {
+        setCompanyId(data.company_id);
+      }
+    };
+
+    getCompanyId();
+  }, [user?.id]);
 
   // Load data
-  const loadIntegrations = async () => {
-    if (!user?.id) return;
+  const loadSessions = async () => {
+    if (!companyId) return;
     
     const { data, error } = await supabase
-      .from('whatsapp_integrations')
+      .from('whatsapp_sessions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false });
     
-    if (error) {
-      console.error('Error loading integrations:', error);
-      return;
+    if (!error) {
+      setSessions(data || []);
     }
-    
-    setIntegrations(data || []);
   };
 
   const loadConversations = async () => {
@@ -89,99 +109,124 @@ const WhatsAppCRM: React.FC = () => {
       .order('last_message_at', { ascending: false })
       .limit(50);
     
-    if (error) {
-      console.error('Error loading conversations:', error);
-      return;
+    if (!error) {
+      setConversations(data || []);
     }
+  };
+
+  const loadAgents = async () => {
+    if (!companyId) return;
     
-    setConversations(data || []);
+    const { data } = await supabase
+      .from('ai_agents')
+      .select('id, name, is_active')
+      .eq('company_id', companyId)
+      .eq('whatsapp_enabled', true);
+    
+    setAgents(data || []);
   };
 
   useEffect(() => {
     const loadData = async () => {
+      if (!companyId) return;
+      
       await Promise.all([
-        loadIntegrations(),
-        loadConversations()
+        loadSessions(),
+        loadConversations(),
+        loadAgents()
       ]);
       setLoading(false);
     };
     
     loadData();
-  }, [user?.id, companyId]);
+  }, [companyId]);
 
-  // Setup WhatsApp integration
-  const setupIntegration = async () => {
-    if (!phoneNumber || !accessToken || !user?.id || !companyId) {
-      toast({ title: 'Erro', description: 'Preencha todos os campos', variant: 'destructive' });
-      return;
-    }
-    
-    const { error } = await supabase
-      .from('whatsapp_integrations')
-      .insert({
-        phone_number: phoneNumber,
-        access_token: accessToken,
-        user_id: user.id,
-        company_id: companyId,
-        is_active: true,
-        settings: {}
-      });
-    
-    if (error) {
-      toast({ title: 'Erro', description: 'Erro ao configurar WhatsApp', variant: 'destructive' });
-      return;
-    }
-    
-    setPhoneNumber('');
-    setAccessToken('');
-    setShowSetupModal(false);
-    loadIntegrations();
-    toast({ title: 'Sucesso', description: 'WhatsApp configurado com sucesso!' });
+  // Handle session success
+  const handleSessionSuccess = (session: WhatsAppSession) => {
+    loadSessions();
+    toast({ title: 'Sucesso', description: 'WhatsApp conectado!' });
   };
 
-  // Toggle integration status
-  const toggleIntegration = async (id: string, isActive: boolean) => {
-    const { error } = await supabase
-      .from('whatsapp_integrations')
-      .update({ is_active: !isActive })
-      .eq('id', id);
-    
-    if (error) {
-      toast({ title: 'Erro', description: 'Erro ao alterar status', variant: 'destructive' });
-      return;
+  // Disconnect session
+  const disconnectSession = async (session: WhatsAppSession) => {
+    try {
+      await supabase.functions.invoke('whatsapp-api', {
+        body: { action: 'disconnect', sessionId: session.id }
+      });
+      loadSessions();
+      toast({ title: 'Sucesso', description: 'WhatsApp desconectado' });
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
     }
-    
-    loadIntegrations();
-    toast({ 
-      title: 'Sucesso', 
-      description: isActive ? 'Integração pausada' : 'Integração ativada' 
-    });
+  };
+
+  // Delete session
+  const deleteSession = async (session: WhatsAppSession) => {
+    try {
+      await supabase.functions.invoke('whatsapp-api', {
+        body: { action: 'delete_session', sessionId: session.id }
+      });
+      loadSessions();
+      toast({ title: 'Sucesso', description: 'Sessão excluída' });
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Erro ao excluir', variant: 'destructive' });
+    }
+  };
+
+  // Open conversation
+  const openConversation = (conversation: WhatsAppConversationData) => {
+    const session = sessions.find(s => s.id === conversation.session_id);
+    if (session) {
+      setSelectedSession(session);
+      setSelectedConversation(conversation);
+    } else if (sessions.length > 0) {
+      setSelectedSession(sessions[0]);
+      setSelectedConversation(conversation);
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando CRM WhatsApp...</p>
+          <p className="text-muted-foreground">Carregando CRM WhatsApp...</p>
         </div>
       </div>
     );
   }
 
+  // Show conversation view
+  if (selectedConversation && selectedSession) {
+    return (
+      <div className="h-screen">
+        <WhatsAppConversation
+          conversation={selectedConversation}
+          sessionId={selectedSession.id}
+          onBack={() => {
+            setSelectedConversation(null);
+            setSelectedSession(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  const connectedSessions = sessions.filter(s => s.status === 'connected');
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6 page-content">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <MessageSquare className="h-8 w-8 text-green-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">CRM WhatsApp</h1>
-            <p className="text-gray-600">Gerencie suas conversas do WhatsApp Business</p>
+            <h1 className="text-2xl font-bold text-foreground">CRM WhatsApp</h1>
+            <p className="text-muted-foreground">Gerencie suas conversas do WhatsApp</p>
           </div>
         </div>
-        <Button onClick={() => setShowSetupModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
+          <QrCode className="h-4 w-4 mr-2" />
           Conectar WhatsApp
         </Button>
       </div>
@@ -190,9 +235,8 @@ const WhatsAppCRM: React.FC = () => {
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="conversations">Conversas</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="analytics">Análises</TabsTrigger>
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
+          <TabsTrigger value="connections">Conexões</TabsTrigger>
+          <TabsTrigger value="agents">Agentes IA</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
@@ -201,15 +245,15 @@ const WhatsAppCRM: React.FC = () => {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Integrações Ativas
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Conexões Ativas
                   </CardTitle>
-                  <Phone className="h-4 w-4 text-gray-400" />
+                  <Phone className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {integrations.filter(i => i.is_active).length}
+                <div className="text-2xl font-bold text-foreground">
+                  {connectedSessions.length}
                 </div>
               </CardContent>
             </Card>
@@ -217,14 +261,14 @@ const WhatsAppCRM: React.FC = () => {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-600">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
                     Conversas Abertas
                   </CardTitle>
-                  <MessageSquare className="h-4 w-4 text-gray-400" />
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-foreground">
                   {conversations.filter(c => c.status === 'open').length}
                 </div>
               </CardContent>
@@ -233,136 +277,143 @@ const WhatsAppCRM: React.FC = () => {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Templates
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Agentes Ativos
                   </CardTitle>
-                  <Settings className="h-4 w-4 text-gray-400" />
+                  <Bot className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{templates.length}</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {agents.filter(a => a.is_active).length}
+                </div>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-600">
-                    Taxa de Resposta
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total de Leads
                   </CardTitle>
-                  <BarChart3 className="h-4 w-4 text-gray-400" />
+                  <Users className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">85%</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {conversations.length}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Active Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Integrações do WhatsApp</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {integrations.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Nenhuma integração configurada
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Conecte sua conta do WhatsApp Business para começar
-                  </p>
-                  <Button onClick={() => setShowSetupModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Conectar WhatsApp
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {integrations.map(integration => (
-                    <div 
-                      key={integration.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-green-100 rounded-full">
-                          <Phone className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{integration.phone_number}</div>
-                          <div className="text-sm text-gray-600">
-                            Conectado em {new Date(integration.created_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <Badge variant={integration.is_active ? 'default' : 'secondary'}>
-                          {integration.is_active ? 'Ativo' : 'Pausado'}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleIntegration(integration.id, integration.is_active)}
-                        >
-                          {integration.is_active ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="conversations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Conversas Recentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-96">
+          {/* Quick Actions */}
+          {connectedSessions.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Nenhum WhatsApp Conectado
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Conecte seu WhatsApp via QR Code para começar a receber leads
+                </p>
+                <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Conectar Agora
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversas Recentes</CardTitle>
+              </CardHeader>
+              <CardContent>
                 {conversations.length === 0 ? (
                   <div className="text-center py-8">
-                    <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-600">Nenhuma conversa encontrada</p>
+                    <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">Nenhuma conversa ainda</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {conversations.map(conversation => (
+                  <div className="space-y-2">
+                    {conversations.slice(0, 5).map(conversation => (
                       <div 
                         key={conversation.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                        onClick={() => openConversation(conversation)}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-gray-100 rounded-full">
-                            <MessageSquare className="h-4 w-4 text-gray-600" />
+                          <div className="p-2 bg-green-100 rounded-full">
+                            <MessageSquare className="h-4 w-4 text-green-600" />
                           </div>
                           <div>
                             <div className="font-medium">
                               {conversation.contact_name || conversation.contact_phone}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-muted-foreground line-clamp-1">
+                              {conversation.last_message || 'Nova conversa'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          {conversation.unread_count && conversation.unread_count > 0 && (
+                            <Badge className="bg-green-600">{conversation.unread_count}</Badge>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(conversation.last_message_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="conversations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Todas as Conversas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-300px)]">
+                {conversations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">Nenhuma conversa encontrada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {conversations.map(conversation => (
+                      <div 
+                        key={conversation.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                        onClick={() => openConversation(conversation)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-full">
+                            <MessageSquare className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {conversation.contact_name || conversation.contact_phone}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
                               {conversation.contact_phone}
                             </div>
                           </div>
                         </div>
                         
                         <div className="text-right">
-                          <Badge variant={
-                            conversation.status === 'open' ? 'default' : 'secondary'
-                          }>
-                            {conversation.status}
+                          <Badge variant={conversation.status === 'open' ? 'default' : 'secondary'}>
+                            {conversation.status === 'open' ? 'Aberta' : 'Fechada'}
                           </Badge>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {new Date(conversation.last_message_at).toLocaleString()}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(conversation.last_message_at).toLocaleString('pt-BR')}
                           </div>
                         </div>
                       </div>
@@ -374,143 +425,151 @@ const WhatsAppCRM: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="templates">
+        <TabsContent value="connections">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Templates de Mensagem</CardTitle>
-              <Button onClick={() => setShowTemplateModal(true)}>
+              <CardTitle>Conexões WhatsApp</CardTitle>
+              <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-2" />
-                Novo Template
+                Nova Conexão
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Settings className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-600">Templates em desenvolvimento</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análises e Métricas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-600">Análises em desenvolvimento</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Conexão via QR Code</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Para conectar o WhatsApp usando QR Code, você pode usar bibliotecas como:
+              {sessions.length === 0 ? (
+                <div className="text-center py-12">
+                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    Nenhuma conexão configurada
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    Conecte seu primeiro WhatsApp via QR Code
                   </p>
-                  <ul className="list-disc list-inside space-y-2 text-sm text-gray-600 mb-4">
-                    <li><strong>whatsapp-web.js</strong> - Para conexão via WhatsApp Web</li>
-                    <li><strong>Baileys</strong> - Biblioteca completa para WhatsApp</li>
-                    <li><strong>Venom-bot</strong> - Bot para WhatsApp Web</li>
-                    <li>Integração com serviços como ChatWoot, Evolution API</li>
-                  </ul>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-2">
-                      <div className="w-4 h-4 bg-yellow-400 rounded-full flex-shrink-0 mt-0.5"></div>
-                      <div>
-                        <h4 className="font-medium text-yellow-800 mb-1">Implementação Necessária</h4>
-                        <p className="text-sm text-yellow-700">
-                          Para conectar via QR Code, é necessário implementar um backend em Node.js 
-                          com uma das bibliotecas mencionadas. Isso requer infraestrutura adicional.
-                        </p>
+                  <Button onClick={() => setShowQRModal(true)} className="bg-green-600 hover:bg-green-700">
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Conectar WhatsApp
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {sessions.map(session => (
+                    <div 
+                      key={session.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${session.status === 'connected' ? 'bg-green-100' : 'bg-muted'}`}>
+                          <Phone className={`h-5 w-5 ${session.status === 'connected' ? 'text-green-600' : 'text-muted-foreground'}`} />
+                        </div>
+                        <div>
+                          <div className="font-medium">{session.instance_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {session.phone_number || 'Aguardando conexão'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <Badge variant={session.status === 'connected' ? 'default' : 'secondary'}>
+                          {session.status === 'connected' ? 'Conectado' : session.status === 'connecting' ? 'Conectando...' : 'Desconectado'}
+                        </Badge>
+                        
+                        {session.status === 'connected' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => disconnectSession(session)}
+                          >
+                            <Pause className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Conexão?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. A conexão "{session.instance_name}" será permanentemente excluída.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteSession(session)} className="bg-destructive hover:bg-destructive/90">
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <ExternalLink className="h-4 w-4" />
-                      WhatsApp Business API (Meta)
-                    </Button>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <ExternalLink className="h-4 w-4" />
-                      Evolution API
-                    </Button>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <ExternalLink className="h-4 w-4" />
-                      ChatWoot
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-2">WhatsApp Business API</h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Para implementação oficial da Meta (recomendado para empresas):
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="agents">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                Agentes IA no WhatsApp
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {agents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground mb-2">Nenhum agente configurado para WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vá em "Agentes de IA" e ative a integração WhatsApp em um agente
                   </p>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 mb-4">
-                    <li>Criar conta no Meta Business</li>
-                    <li>Configurar aplicativo WhatsApp Business</li>
-                    <li>Verificar número de telefone</li>
-                    <li>Configurar webhooks</li>
-                  </ul>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {agents.map(agent => (
+                    <div 
+                      key={agent.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Bot className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{agent.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Responde automaticamente
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant={agent.is_active ? 'default' : 'secondary'}>
+                        {agent.is_active ? 'Ativo' : 'Pausado'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Setup Modal */}
-      <Dialog open={showSetupModal} onOpenChange={setShowSetupModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conectar WhatsApp Business</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Número do WhatsApp</label>
-              <Input
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+55 11 99999-9999"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Token de Acesso</label>
-              <Input
-                type="password"
-                value={accessToken}
-                onChange={(e) => setAccessToken(e.target.value)}
-                placeholder="Token da API do WhatsApp Business"
-              />
-            </div>
-            
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setShowSetupModal(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={setupIntegration}>
-                Conectar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* QR Modal */}
+      {companyId && user?.id && (
+        <WhatsAppQRModal
+          isOpen={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          companyId={companyId}
+          userId={user.id}
+          onSuccess={handleSessionSuccess}
+        />
+      )}
     </div>
   );
 };

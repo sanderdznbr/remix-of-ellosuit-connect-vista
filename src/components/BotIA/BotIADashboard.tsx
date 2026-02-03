@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users } from 'lucide-react';
+import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import BotIAChat from './BotIAChat';
+import EditAgentModal from './EditAgentModal';
 
 interface AIAgent {
   id: string;
@@ -27,6 +28,8 @@ interface AIAgent {
   avatar_url?: string;
   settings: any;
   created_at: string;
+  whatsapp_enabled?: boolean;
+  whatsapp_session_id?: string;
 }
 
 interface AgentTemplate {
@@ -122,6 +125,7 @@ const BotIADashboard: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
   
   // Form states
@@ -318,6 +322,12 @@ const BotIADashboard: React.FC = () => {
     setShowChatModal(true);
   };
 
+  // Edit agent
+  const editAgent = (agent: AIAgent) => {
+    setSelectedAgent(agent);
+    setShowEditModal(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -482,6 +492,14 @@ const BotIADashboard: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => editAgent(agent)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => toggleAgent(agent.id, agent.is_active)}
                           >
                             {agent.is_active ? (
@@ -489,9 +507,6 @@ const BotIADashboard: React.FC = () => {
                             ) : (
                               <Play className="h-4 w-4" />
                             )}
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Settings className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -680,6 +695,17 @@ const BotIADashboard: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Modal */}
+      {selectedAgent && (
+        <EditAgentModal
+          agent={selectedAgent}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={() => companyId && loadAgents(companyId)}
+          onDelete={() => companyId && loadAgents(companyId)}
+        />
+      )}
     </div>
   );
 };

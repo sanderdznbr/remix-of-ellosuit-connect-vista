@@ -1,236 +1,259 @@
 
-# Plano de Melhorias: Auth, PDF Tracking, Páginas e Mobile UX
+# Plano de Correção: Rotas e Layouts
 
-## 1. Tela de Autenticação Mobile (Clean Design)
+## Problemas Identificados
 
-### Problemas Identificados
-- Logo aparece 2 vezes (header + footer)
-- Design não está clean e minimalista
-- Botões de login social com ícones desabilitados desnecessários
+### 1. Rota `/termos` Não Funciona
+**Causa**: A sidebar em `UnifiedSidebar.tsx` aponta para `/termos`, mas em `App.tsx` a rota está definida como `/terms`.
 
-### Solução
-**Arquivo: `src/components/Mobile/MobileAuthScreen.tsx`**
+**Solução**: Corrigir o caminho na sidebar para `/terms` ou adicionar a rota `/termos` no App.tsx.
 
-- Remover logo do footer (manter apenas no header)
-- Simplificar layout removendo botões sociais desabilitados (Apple, Phone, etc.)
-- Manter apenas Google como opção de login social
-- Melhorar espaçamentos e tipografia
-- Adicionar animação suave de fade-in
-- Design mais minimalista com foco nos campos de entrada
+### 2. Rotas `/fornecedores` e `/prospectos` Não Funcionam
+**Causa**: Ambas rotas apontam para o mesmo componente `ClientsManager` sem diferenciação. O componente não recebe um parâmetro de tipo para filtrar os dados.
 
-```text
-Layout Proposto:
-+---------------------------+
-|    [Header Azul + Logo]   |
-+---------------------------+
-|                           |
-|   Bem-vindo novamente!    |
-|   Entre no seu ellosuit   |
-|                           |
-|   [Entrar] [Cadastrar]    |
-|                           |
-|   [Email Input]           |
-|   [Password Input]        |
-|                           |
-|   [Botão Entrar]          |
-|                           |
-|   ---- ou continue ----   |
-|   [Google Login]          |
-|                           |
-|   Termos e Privacidade    |
-+---------------------------+
-```
+**Solução**: 
+- Modificar `ClientsManager` para aceitar uma prop `contactType` 
+- Atualizar as rotas para passar o tipo apropriado
+- Filtrar dados baseado no tipo de contato
 
----
+### 3. Rotas `/usuarios` e `/clientes` São Iguais
+**Causa**: Analisando o código:
+- `/dashboard/funcionarios` -> `EmployeeManagement` (gerenciar funcionários da empresa)
+- `/dashboard/clientes` -> `ClientsManager` (gerenciar clientes)
 
-## 2. Rastreamento de PDF (Correções)
+Não existe rota `/usuarios` definida. O problema é que a sidebar não tem `/usuarios`. A rota de usuários é `/funcionarios` que corretamente usa `EmployeeManagement`.
 
-### Problemas Identificados
-- A extração de páginas pode falhar silenciosamente
-- O PDFViewerFallback pode não rastrear corretamente
-- Bucket de storage pode não existir ou ter permissões incorretas
+**Solução**: Verificar se existe uma rota `/usuarios` duplicada ou se é apenas confusão de nomenclatura. Criar distinção clara entre:
+- Funcionários (usuários internos da empresa)
+- Clientes (contatos externos)
+- Fornecedores (tipo específico de contato)
+- Prospectos (leads/potenciais clientes)
 
-### Soluções
+### 4. Layout `/drive` Precisa Melhorar
+**Causa**: O layout atual é funcional mas básico, sem o visual moderno de um Google Drive.
 
-**Arquivo: `src/utils/pdf-extractor.ts`**
-- Adicionar melhor tratamento de erros com retry logic
-- Verificar se bucket existe antes de upload
-- Adicionar logs mais detalhados para debug
+**Solução**: Redesenhar com:
+- Sidebar lateral com armazenamento usado, pastas favoritas, lixeira
+- Área de drag-and-drop mais proeminente
+- Cards de arquivo maiores com preview de imagem
+- Barra de progresso de upload
+- Menu de contexto (clique direito)
+- Filtros por tipo de arquivo
 
-**Arquivo: `src/components/DocumentTracking/CustomPDFViewer.tsx`**
-- Melhorar fallback quando imagens não existem
-- Adicionar retry automático se falhar ao carregar
+### 5. Layout `/fluxos` Precisa Parecer com Trello
+**Causa**: O FluxosBoard já tem estrutura Kanban básica, mas precisa de melhorias visuais.
 
-**Arquivo: `src/components/DocumentTracking/DocumentTrackingDashboard.tsx`**
-- Melhorar feedback visual do upload
-- Adicionar botão para re-extrair páginas
-- Mostrar status de extração de páginas
+**Solução**: Melhorar com:
+- Scroll horizontal para colunas (overflow-x-auto)
+- Colunas com largura fixa e altura máxima com scroll interno
+- Cores de coluna mais vibrantes nos headers
+- Contador de cards por coluna
+- Botão de adicionar coluna no final
+- Melhor visual dos cards com avatares, labels coloridas
+- Animações de drag mais suaves
 
 ---
 
-## 3. Desenvolvimento das Páginas Placeholder
+## Implementação Detalhada
 
-### Páginas a Implementar
+### Etapa 1: Corrigir Rota `/termos`
 
-| Rota | Funcionalidade |
-|------|----------------|
-| `/rastreamento-link` | Rastreamento de links compartilhados |
-| `/rastreamento-video` | Rastreamento de visualização de vídeos |
-| `/ello-vision` | Dashboard de insights com IA |
-| `/relatorios` | Gerador de relatórios |
-| `/suporte` | Central de ajuda |
-| `/reportar-problema` | Formulário de bug report |
-| `/seguranca` | Configurações de segurança |
+**Arquivo: `src/components/Dashboard/UnifiedSidebar.tsx`**
+- Alterar linha 100: `path: '/termos'` para `path: '/terms'`
 
-### Implementação por Página
+### Etapa 2: Criar Componentes para Tipos de Contato
 
-**3.1 Rastreamento de Link** (`src/components/Dashboard/LinkTrackingDashboard.tsx`)
-- Upload/criar links rastreáveis
-- Dashboard com estatísticas de cliques
-- Geolocalização dos acessos
-- Gráfico de cliques por hora/dia
+**Arquivo: `src/components/Dashboard/ClientsManager.tsx`**
 
-**3.2 Rastreamento de Vídeo** (`src/components/Dashboard/VideoTrackingDashboard.tsx`)
-- Upload de vídeos ou URLs do YouTube/Vimeo
-- Rastreamento de tempo assistido
-- Pontos de abandono
-- Engajamento por segundo
-
-**3.3 Ello Vision** (`src/components/Dashboard/ElloVisionDashboard.tsx`)
-- Dashboard consolidado de métricas
-- Insights gerados por IA
-- Gráficos interativos
-- Resumo executivo
-
-**3.4 Relatórios** (`src/components/Dashboard/ReportsDashboard.tsx`)
-- Seletor de tipo de relatório
-- Filtros de data
-- Preview e download em PDF
-- Agendamento de relatórios
-
-**3.5 Suporte** (`src/components/Dashboard/SupportDashboard.tsx`)
-- FAQ com busca
-- Chat com assistente IA
-- Tickets de suporte
-- Base de conhecimento
-
-**3.6 Reportar Problema** (`src/components/Dashboard/ReportProblemForm.tsx`)
-- Formulário estruturado
-- Captura de screenshot
-- Envio de logs do console
-- Status do ticket
-
-**3.7 Segurança** (`src/components/Dashboard/SecuritySettings.tsx`)
-- Alterar senha
-- Autenticação 2FA
-- Sessões ativas
-- Logs de acesso
-- Configurações de privacidade
-
----
-
-## 4. Mobile Bottom Navigation Melhorada
-
-### Conceito
-Navbar fixa na parte inferior com 5 itens principais + botão central que abre menu completo
-
-### Componentes
-
-**Arquivo: `src/components/Mobile/ImprovedMobileNavbar.tsx`**
-
-```text
-Layout da Navbar:
-+----+----+----+----+----+
-| 🏠 | 📅 | ➕ | 📧 | 👥 |
-+----+----+----+----+----+
-Home Agenda Menu Email CRM
-```
-
-- 4 ícones de navegação rápida
-- Botão central "+" que abre modal com todas as opções da sidebar
-- Animação suave ao abrir/fechar
-- Indicador visual do item ativo
-- Badge de notificações
-
-**Arquivo: `src/components/Mobile/QuickActionsModal.tsx`**
-
-Modal que abre ao clicar no "+":
-- Grid de ícones com todas as funcionalidades
-- Agrupados por categoria (Sistema, Flows, Omni, Track, etc.)
-- Busca rápida por funcionalidade
-- Animação de entrada bottom-to-top
-
-### Integração
-**Arquivo: `src/components/Mobile/MobileLayout.tsx`**
-- Adicionar navbar fixa no bottom
-- Ajustar padding do conteúdo para não sobrepor
-
----
-
-## 5. Arquivos a Criar/Modificar
-
-### Novos Arquivos
-1. `src/components/Dashboard/LinkTrackingDashboard.tsx`
-2. `src/components/Dashboard/VideoTrackingDashboard.tsx`
-3. `src/components/Dashboard/ElloVisionDashboard.tsx`
-4. `src/components/Dashboard/ReportsDashboard.tsx`
-5. `src/components/Dashboard/SupportDashboard.tsx`
-6. `src/components/Dashboard/ReportProblemForm.tsx`
-7. `src/components/Dashboard/SecuritySettings.tsx`
-8. `src/components/Mobile/ImprovedMobileNavbar.tsx`
-9. `src/components/Mobile/QuickActionsModal.tsx`
-
-### Arquivos a Modificar
-1. `src/components/Mobile/MobileAuthScreen.tsx` - Design clean
-2. `src/components/Mobile/MobileLayout.tsx` - Integrar nova navbar
-3. `src/components/Mobile/MobileResponsiveDashboard.tsx` - Novas rotas
-4. `src/utils/pdf-extractor.ts` - Melhorias de robustez
-5. `src/components/DocumentTracking/DocumentTrackingDashboard.tsx` - UX melhorada
-
----
-
-## 6. Detalhes Técnicos
-
-### Estrutura do QuickActionsModal
+Modificar para aceitar prop `contactType`:
 
 ```tsx
-interface QuickAction {
-  id: string;
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  category: string;
-  badge?: number;
+interface ClientsManagerProps {
+  contactType?: 'cliente' | 'fornecedor' | 'prospecto' | 'all';
 }
 
-// Categorias
-const categories = [
-  { id: 'sistema', label: 'Sistema', color: 'blue' },
-  { id: 'flows', label: 'Ello Flows', color: 'green' },
-  { id: 'omni', label: 'Ello Omni', color: 'purple' },
-  { id: 'track', label: 'Ello Track', color: 'orange' },
-  { id: 'analise', label: 'Análise', color: 'pink' }
-];
+const ClientsManager = ({ contactType = 'all' }: ClientsManagerProps) => {
+  // Título dinâmico baseado no tipo
+  const titles = {
+    cliente: 'Clientes',
+    fornecedor: 'Fornecedores', 
+    prospecto: 'Prospectos',
+    all: 'Contatos'
+  };
+  
+  // Filtrar dados baseado no tipo
+  // ...
+}
 ```
 
-### Animações CSS
+**Arquivo: `src/components/Mobile/MobileResponsiveDashboard.tsx`**
 
-```css
-/* Navbar slide-up */
-.mobile-navbar {
-  animation: slideUp 0.3s ease-out;
-}
+Atualizar rotas:
+```tsx
+<Route path="/clientes" element={<ClientsManager contactType="cliente" />} />
+<Route path="/fornecedores" element={<ClientsManager contactType="fornecedor" />} />
+<Route path="/prospectos" element={<ClientsManager contactType="prospecto" />} />
+```
 
-/* Modal backdrop */
-.quick-actions-backdrop {
-  animation: fadeIn 0.2s ease-out;
-}
+### Etapa 3: Redesenhar DriveManager
 
-/* Grid items stagger */
-.quick-action-item {
-  animation: scaleIn 0.2s ease-out;
-  animation-fill-mode: backwards;
-}
+**Arquivo: `src/components/Dashboard/DriveManager.tsx`**
+
+Novo layout inspirado no Google Drive:
+
+```text
++------------------------------------------+
+|  📁 Meu Drive                      [🔍]  |
++----------+-------------------------------+
+| Sidebar  |  📁 Pastas                    |
+| ---------|  +----+ +----+ +----+         |
+| 🏠 Meu   |  |    | |    | |    |         |
+| ⭐ Fav   |  +----+ +----+ +----+         |
+| 🗑 Lixo  |                               |
+| ---------|  📄 Arquivos Recentes         |
+| 💾 12GB  |  +----+ +----+ +----+         |
+| usado    |  |    | |    | |    |         |
++----------+-------------------------------+
+```
+
+Principais mudanças:
+- Adicionar sidebar lateral com navegação rápida
+- Cards de arquivo com preview de thumbnail
+- Barra de progresso de armazenamento
+- Drag-and-drop zone em tela cheia
+- Grid responsivo melhor dimensionado
+
+### Etapa 4: Melhorar FluxosBoard (Estilo Trello)
+
+**Arquivo: `src/components/Fluxos/FluxosBoard.tsx`**
+
+Novo layout estilo Trello:
+
+```text
++----------------------------------------------------------+
+| 🚀 Projeto X                    [+ Adicionar Quadro]     |
++----------------------------------------------------------+
+| +------------+ +------------+ +------------+ +----------+|
+| | 📋 A Fazer | |⏳ Progresso| | ✅ Feito   | | + Coluna ||
+| | (5)        | | (3)        | | (12)       | |          ||
+| +------------+ +------------+ +------------+ +----------+|
+| | [Card 1]   | | [Card 4]   | | [Card 7]   |            |
+| | [Card 2]   | | [Card 5]   | | [Card 8]   |            |
+| | [Card 3]   | | [Card 6]   | | ...        |            |
+| | [+ Card]   | | [+ Card]   | |            |            |
+| +------------+ +------------+ +------------+            |
++----------------------------------------------------------+
+```
+
+Principais mudanças:
+- Container com `overflow-x-auto` para scroll horizontal
+- Colunas com `flex-shrink-0` e largura fixa (280-320px)
+- Headers de coluna coloridos com contador
+- Cards com design mais rico (avatar, tags, data)
+- Botão de adicionar coluna visível no final
+- Altura máxima das colunas com scroll interno
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/components/Dashboard/UnifiedSidebar.tsx` | Corrigir rota `/termos` -> `/terms` |
+| `src/components/Dashboard/ClientsManager.tsx` | Adicionar prop `contactType` e lógica de filtro |
+| `src/components/Mobile/MobileResponsiveDashboard.tsx` | Passar `contactType` para rotas |
+| `src/components/Dashboard/DriveManager.tsx` | Redesenhar layout completo |
+| `src/components/Fluxos/FluxosBoard.tsx` | Melhorar layout estilo Trello |
+
+---
+
+## Detalhes Técnicos
+
+### ClientsManager com Tipos de Contato
+
+```tsx
+// Adicionar coluna client_type na tabela clients se não existir
+// Ou usar o status existente para diferenciar
+
+// No hook useClients, adicionar filtro por tipo:
+const fetchClients = async (type?: string) => {
+  let query = supabase.from('clients').select('*');
+  
+  if (type && type !== 'all') {
+    query = query.eq('client_type', type);
+  }
+  
+  // ...
+};
+```
+
+### DriveManager com Sidebar
+
+```tsx
+// Estrutura do novo layout
+<div className="flex h-full">
+  {/* Sidebar */}
+  <div className="w-64 border-r bg-gray-50 p-4">
+    <nav className="space-y-2">
+      <Button variant="ghost">🏠 Meu Drive</Button>
+      <Button variant="ghost">⭐ Favoritos</Button>
+      <Button variant="ghost">🕐 Recentes</Button>
+      <Button variant="ghost">🗑 Lixeira</Button>
+    </nav>
+    
+    {/* Storage Info */}
+    <div className="mt-8">
+      <Progress value={45} />
+      <p className="text-sm">4.5 GB de 10 GB</p>
+    </div>
+  </div>
+  
+  {/* Main Content */}
+  <div className="flex-1 p-6">
+    {/* ... conteúdo existente melhorado */}
+  </div>
+</div>
+```
+
+### FluxosBoard Estilo Trello
+
+```tsx
+// Container principal com scroll horizontal
+<div className="overflow-x-auto pb-4">
+  <div className="flex gap-4 min-w-max">
+    {columns.map(column => (
+      <div 
+        key={column.id} 
+        className="w-72 flex-shrink-0 bg-gray-100 rounded-lg"
+      >
+        {/* Header colorido */}
+        <div 
+          className="p-3 rounded-t-lg text-white font-medium"
+          style={{ backgroundColor: column.color }}
+        >
+          {column.name} ({cards.filter(c => c.column_id === column.id).length})
+        </div>
+        
+        {/* Cards com scroll interno */}
+        <div className="p-2 max-h-[calc(100vh-250px)] overflow-y-auto">
+          {/* Cards */}
+        </div>
+        
+        {/* Adicionar card */}
+        <Button variant="ghost" className="w-full">
+          + Adicionar Card
+        </Button>
+      </div>
+    ))}
+    
+    {/* Adicionar coluna */}
+    <div className="w-72 flex-shrink-0">
+      <Button variant="outline" className="w-full h-12">
+        + Adicionar Coluna
+      </Button>
+    </div>
+  </div>
+</div>
 ```
 
 ---
@@ -238,8 +261,10 @@ const categories = [
 ## Resultado Esperado
 
 Após implementação:
-- Tela de auth mobile limpa com apenas uma logo e layout minimalista
-- Rastreamento de PDF funcionando com feedback visual claro
-- Todas as 7 páginas placeholder desenvolvidas e funcionais
-- Navbar mobile moderna com menu de ações rápidas
-- UX mobile muito mais fluida e profissional
+- `/termos` redirecionará para a página de Termos de Uso
+- `/fornecedores` mostrará apenas fornecedores
+- `/prospectos` mostrará apenas prospectos/leads
+- `/clientes` mostrará apenas clientes
+- `/drive` terá visual moderno estilo Google Drive com sidebar
+- `/fluxos` terá visual estilo Trello com colunas horizontais e scroll
+

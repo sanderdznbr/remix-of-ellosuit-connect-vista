@@ -4,17 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { 
   Calendar as CalendarIcon, Clock, User, Mail, Phone, 
-  CheckCircle, ArrowLeft, ArrowRight, Loader2, MapPin,
-  Sparkles
+  CheckCircle, ChevronLeft, ChevronRight, Loader2, MessageSquare
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import { cn } from '@/lib/utils';
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isBefore, startOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isBefore, startOfDay, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,8 +39,10 @@ interface UserAvailability {
 
 type BookingStep = 'date' | 'time' | 'form' | 'success';
 
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
 const ImprovedBookingCalendar = () => {
-  const { companyName, slug } = useParams();
+  const { slug } = useParams();
   const { toast } = useToast();
   
   const [bookingLink, setBookingLink] = useState<BookingLink | null>(null);
@@ -62,9 +62,7 @@ const ImprovedBookingCalendar = () => {
   });
 
   useEffect(() => {
-    if (slug) {
-      loadBookingLink();
-    }
+    if (slug) loadBookingLink();
   }, [slug]);
 
   const loadBookingLink = async () => {
@@ -97,7 +95,6 @@ const ImprovedBookingCalendar = () => {
       if (availabilityData) {
         setAvailability(availabilityData);
       }
-
     } catch (error) {
       console.error('Error loading booking link:', error);
     } finally {
@@ -119,7 +116,7 @@ const ImprovedBookingCalendar = () => {
     
     if (!dayAvailability) return [];
     
-    const slots = [];
+    const slots: string[] = [];
     const [startHour, startMinute] = dayAvailability.start_time.split(':').map(Number);
     const [endHour, endMinute] = dayAvailability.end_time.split(':').map(Number);
     
@@ -153,7 +150,6 @@ const ImprovedBookingCalendar = () => {
     setSubmitting(true);
 
     try {
-      // Create booking
       const { error: bookingError } = await supabase
         .from('public_bookings')
         .insert({
@@ -171,7 +167,6 @@ const ImprovedBookingCalendar = () => {
 
       if (bookingError) throw bookingError;
 
-      // Create calendar event for the owner
       const startDateTime = new Date(selectedDate);
       const [hours, minutes] = selectedTime.split(':').map(Number);
       startDateTime.setHours(hours, minutes, 0, 0);
@@ -193,7 +188,6 @@ const ImprovedBookingCalendar = () => {
           status: 'confirmed'
         });
 
-      // Try to save/update client
       const { data: existingClient } = await supabase
         .from('clients')
         .select('id')
@@ -217,11 +211,6 @@ const ImprovedBookingCalendar = () => {
       }
 
       setStep('success');
-      toast({
-        title: 'Agendamento confirmado!',
-        description: 'Seu horário foi reservado com sucesso.'
-      });
-
     } catch (error) {
       console.error('Error creating booking:', error);
       toast({
@@ -240,28 +229,22 @@ const ImprovedBookingCalendar = () => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  
-  // Pad to start from Sunday
   const startPadding = monthStart.getDay();
   const paddedDays = Array(startPadding).fill(null).concat(daysInMonth);
-
   const timeSlots = generateTimeSlots(selectedDate);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!bookingLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="text-center">
           <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
             <CalendarIcon className="h-10 w-10 text-muted-foreground" />
           </div>
@@ -274,65 +257,82 @@ const ImprovedBookingCalendar = () => {
     );
   }
 
+  const stepTitles = {
+    date: 'Selecione a data',
+    time: 'Selecione o horário',
+    form: 'Seus dados',
+    success: 'Confirmado!'
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="max-w-lg mx-auto px-4 py-8 sm:py-12">
+        {/* Header Card */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="bg-white rounded-3xl shadow-xl shadow-primary/5 p-6 mb-6 text-center"
         >
-          <div className="w-16 h-16 mx-auto mb-4">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl overflow-hidden bg-white shadow-md flex items-center justify-center">
             <img 
               src={bookingLink.logo_url || ellosuitLogo} 
               alt={bookingLink.title} 
-              className="h-full w-auto object-contain mx-auto"
+              className="h-10 w-auto object-contain"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">
+          <h1 className="text-xl font-bold text-foreground mb-1">
             {bookingLink.title}
           </h1>
           {bookingLink.description && (
-            <p className="text-muted-foreground mb-3">{bookingLink.description}</p>
+            <p className="text-sm text-muted-foreground mb-3">{bookingLink.description}</p>
           )}
-          <Badge variant="secondary" className="gap-2">
-            <Clock className="h-3.5 w-3.5" />
+          <div 
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
+            style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
+          >
+            <Clock className="h-4 w-4" />
             {bookingLink.duration_minutes} minutos
-          </Badge>
+          </div>
         </motion.div>
 
         {/* Progress Steps */}
         {step !== 'success' && (
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {['date', 'time', 'form'].map((s, i) => (
-              <div key={s} className="flex items-center">
-                <div 
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
-                    step === s 
-                      ? "bg-primary text-primary-foreground shadow-lg" 
-                      : ['date', 'time', 'form'].indexOf(step) > i
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted text-muted-foreground"
+          <div className="flex items-center justify-center gap-3 mb-6">
+            {(['date', 'time', 'form'] as const).map((s, i) => {
+              const stepIndex = ['date', 'time', 'form'].indexOf(step);
+              const isActive = step === s;
+              const isCompleted = stepIndex > i;
+              
+              return (
+                <React.Fragment key={s}>
+                  <div 
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
+                      isActive && "shadow-lg scale-110",
+                      isCompleted && "bg-primary/20"
+                    )}
+                    style={{ 
+                      backgroundColor: isActive ? primaryColor : isCompleted ? `${primaryColor}30` : '#e5e7eb',
+                      color: isActive ? 'white' : isCompleted ? primaryColor : '#9ca3af'
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle className="h-5 w-5" /> : i + 1}
+                  </div>
+                  {i < 2 && (
+                    <div 
+                      className="w-8 h-1 rounded-full transition-all duration-300"
+                      style={{ backgroundColor: stepIndex > i ? primaryColor : '#e5e7eb' }}
+                    />
                   )}
-                >
-                  {i + 1}
-                </div>
-                {i < 2 && (
-                  <div className={cn(
-                    "w-12 h-0.5 mx-1",
-                    ['date', 'time', 'form'].indexOf(step) > i ? "bg-primary/40" : "bg-muted"
-                  )} />
-                )}
-              </div>
-            ))}
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
 
         {/* Main Card */}
         <motion.div 
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="bg-white rounded-3xl shadow-xl shadow-primary/5 overflow-hidden"
           layout
         >
           <AnimatePresence mode="wait">
@@ -340,42 +340,44 @@ const ImprovedBookingCalendar = () => {
             {step === 'date' && (
               <motion.div
                 key="date"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-8"
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.3 }}
+                className="p-6"
               >
-                <h2 className="text-xl font-semibold text-center mb-6">
-                  Escolha uma data disponível
+                <h2 className="text-lg font-semibold text-center mb-6 flex items-center justify-center gap-2">
+                  <CalendarIcon className="h-5 w-5" style={{ color: primaryColor }} />
+                  {stepTitles.date}
                 </h2>
 
                 {/* Month Navigation */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
-                    className="rounded-full"
+                    onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                    className="rounded-full h-9 w-9"
                   >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <h3 className="text-lg font-semibold capitalize">
+                  <h3 className="text-base font-semibold capitalize">
                     {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
                   </h3>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
-                    className="rounded-full"
+                    onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                    className="rounded-full h-9 w-9"
                   >
-                    <ArrowRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
 
                 {/* Weekday Headers */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
-                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
+                  {WEEKDAYS.map((day, i) => (
+                    <div key={i} className="text-center text-xs font-semibold text-muted-foreground py-2">
                       {day}
                     </div>
                   ))}
@@ -398,21 +400,24 @@ const ImprovedBookingCalendar = () => {
                         onClick={() => available && setSelectedDate(day)}
                         disabled={!available}
                         className={cn(
-                          "aspect-square rounded-xl flex flex-col items-center justify-center transition-all relative",
-                          available && !selected && "hover:bg-primary/10 cursor-pointer",
-                          selected && "bg-primary text-primary-foreground shadow-lg",
-                          !available && "text-muted-foreground/30 cursor-not-allowed",
-                          today && !selected && "ring-2 ring-primary/30"
+                          "aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 relative text-sm",
+                          available && !selected && "hover:scale-105 cursor-pointer",
+                          !available && "opacity-30 cursor-not-allowed"
                         )}
+                        style={{
+                          backgroundColor: selected ? primaryColor : 'transparent',
+                          color: selected ? 'white' : available ? '#1f2937' : '#9ca3af',
+                          boxShadow: selected ? `0 4px 14px ${primaryColor}40` : 'none'
+                        }}
                       >
-                        <span className={cn(
-                          "text-sm font-medium",
-                          selected && "text-primary-foreground"
-                        )}>
+                        <span className={cn("font-medium", today && !selected && "underline underline-offset-2")}>
                           {format(day, 'd')}
                         </span>
                         {available && !selected && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5" />
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full mt-0.5" 
+                            style={{ backgroundColor: primaryColor }}
+                          />
                         )}
                       </button>
                     );
@@ -420,17 +425,18 @@ const ImprovedBookingCalendar = () => {
                 </div>
 
                 {/* Continue Button */}
-                <div className="mt-8">
-                  <Button
-                    onClick={() => setStep('time')}
-                    disabled={!selectedDate}
-                    className="w-full h-12 rounded-xl text-base font-semibold"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    Continuar
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => setStep('time')}
+                  disabled={!selectedDate}
+                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6 transition-all duration-300"
+                  style={{ 
+                    backgroundColor: selectedDate ? primaryColor : '#e5e7eb',
+                    color: selectedDate ? 'white' : '#9ca3af'
+                  }}
+                >
+                  Continuar
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </Button>
               </motion.div>
             )}
 
@@ -438,164 +444,172 @@ const ImprovedBookingCalendar = () => {
             {step === 'time' && (
               <motion.div
                 key="time"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-8"
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.3 }}
+                className="p-6"
               >
                 <button
                   onClick={() => setStep('date')}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
                   Voltar
                 </button>
 
-                <h2 className="text-xl font-semibold text-center mb-2">
-                  Escolha um horário
+                <h2 className="text-lg font-semibold text-center mb-2 flex items-center justify-center gap-2">
+                  <Clock className="h-5 w-5" style={{ color: primaryColor }} />
+                  {stepTitles.time}
                 </h2>
-                <p className="text-center text-muted-foreground mb-6 capitalize">
+                <p className="text-center text-sm text-muted-foreground mb-6 capitalize">
                   {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
                 </p>
 
                 {timeSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-3 mb-8">
-                    {timeSlots.map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={cn(
-                          "py-3 px-4 rounded-xl text-sm font-medium transition-all",
-                          selectedTime === time
-                            ? "bg-primary text-primary-foreground shadow-lg"
-                            : "bg-muted hover:bg-muted/80 text-foreground"
-                        )}
-                      >
-                        {time}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                    {timeSlots.map((time) => {
+                      const isSelected = selectedTime === time;
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => setSelectedTime(time)}
+                          className={cn(
+                            "py-3 px-3 rounded-xl text-sm font-medium transition-all duration-200",
+                            !isSelected && "bg-slate-100 hover:bg-slate-200 text-foreground"
+                          )}
+                          style={{
+                            backgroundColor: isSelected ? primaryColor : undefined,
+                            color: isSelected ? 'white' : undefined,
+                            boxShadow: isSelected ? `0 4px 14px ${primaryColor}40` : 'none'
+                          }}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                    <p>Nenhum horário disponível para esta data.</p>
+                    <p>Nenhum horário disponível neste dia.</p>
                   </div>
                 )}
 
                 <Button
                   onClick={() => setStep('form')}
                   disabled={!selectedTime}
-                  className="w-full h-12 rounded-xl text-base font-semibold"
-                  style={{ backgroundColor: primaryColor }}
+                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6 transition-all duration-300"
+                  style={{ 
+                    backgroundColor: selectedTime ? primaryColor : '#e5e7eb',
+                    color: selectedTime ? 'white' : '#9ca3af'
+                  }}
                 >
                   Continuar
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </motion.div>
             )}
 
-            {/* Step 3: Client Form */}
+            {/* Step 3: Form */}
             {step === 'form' && (
               <motion.div
                 key="form"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-8"
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.3 }}
+                className="p-6"
               >
                 <button
                   onClick={() => setStep('time')}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
                   Voltar
                 </button>
 
-                <h2 className="text-xl font-semibold text-center mb-2">
-                  Seus dados
+                <h2 className="text-lg font-semibold text-center mb-6 flex items-center justify-center gap-2">
+                  <User className="h-5 w-5" style={{ color: primaryColor }} />
+                  {stepTitles.form}
                 </h2>
-                <p className="text-center text-muted-foreground mb-6">
-                  Preencha suas informações para confirmar
-                </p>
 
-                {/* Selected Summary */}
-                <div className="bg-primary/5 rounded-2xl p-4 mb-6">
-                  <div className="flex items-center gap-3 text-sm">
-                    <CalendarIcon className="h-5 w-5 text-primary" />
-                    <span className="capitalize">
-                      {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm mt-2">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <span>{selectedTime} • {bookingLink.duration_minutes} minutos</span>
+                {/* Summary */}
+                <div 
+                  className="rounded-2xl p-4 mb-6 text-sm"
+                  style={{ backgroundColor: `${primaryColor}08` }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" style={{ color: primaryColor }} />
+                      <span className="capitalize">
+                        {selectedDate && format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" style={{ color: primaryColor }} />
+                      <span>{selectedTime}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name" className="text-sm font-medium">
+                    <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
                       Nome completo *
                     </Label>
-                    <div className="relative mt-1.5">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        value={formData.client_name}
-                        onChange={(e) => setFormData({...formData, client_name: e.target.value})}
-                        placeholder="Seu nome completo"
-                        required
-                        className="pl-10 h-12 rounded-xl"
-                      />
-                    </div>
+                    <Input
+                      id="name"
+                      value={formData.client_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))}
+                      placeholder="Seu nome"
+                      className="h-12 rounded-xl border-slate-200 focus:border-primary"
+                    />
                   </div>
 
                   <div>
-                    <Label htmlFor="email" className="text-sm font-medium">
+                    <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                       Email *
                     </Label>
-                    <div className="relative mt-1.5">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.client_email}
-                        onChange={(e) => setFormData({...formData, client_email: e.target.value})}
-                        placeholder="seu@email.com"
-                        required
-                        className="pl-10 h-12 rounded-xl"
-                      />
-                    </div>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.client_email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, client_email: e.target.value }))}
+                      placeholder="seu@email.com"
+                      className="h-12 rounded-xl border-slate-200 focus:border-primary"
+                    />
                   </div>
 
                   <div>
-                    <Label htmlFor="phone" className="text-sm font-medium">
+                    <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       Telefone
                     </Label>
-                    <div className="relative mt-1.5">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.client_phone}
-                        onChange={(e) => setFormData({...formData, client_phone: e.target.value})}
-                        placeholder="(00) 00000-0000"
-                        className="pl-10 h-12 rounded-xl"
-                      />
-                    </div>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.client_phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, client_phone: e.target.value }))}
+                      placeholder="(00) 00000-0000"
+                      className="h-12 rounded-xl border-slate-200 focus:border-primary"
+                    />
                   </div>
 
                   <div>
-                    <Label htmlFor="notes" className="text-sm font-medium">
+                    <Label htmlFor="notes" className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
                       Observações
                     </Label>
                     <Textarea
                       id="notes"
                       value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      placeholder="Algo que gostaria de compartilhar..."
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Algo que devemos saber?"
                       rows={3}
-                      className="mt-1.5 rounded-xl resize-none"
+                      className="rounded-xl border-slate-200 focus:border-primary resize-none"
                     />
                   </div>
                 </div>
@@ -603,7 +617,7 @@ const ImprovedBookingCalendar = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting || !formData.client_name || !formData.client_email}
-                  className="w-full h-12 rounded-xl text-base font-semibold mt-6"
+                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6"
                   style={{ backgroundColor: primaryColor }}
                 >
                   {submitting ? (
@@ -613,15 +627,15 @@ const ImprovedBookingCalendar = () => {
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="mr-2 h-5 w-5" />
                       Confirmar Agendamento
+                      <CheckCircle className="ml-2 h-5 w-5" />
                     </>
                   )}
                 </Button>
               </motion.div>
             )}
 
-            {/* Step 4: Success */}
+            {/* Success */}
             {step === 'success' && (
               <motion.div
                 key="success"
@@ -629,67 +643,60 @@ const ImprovedBookingCalendar = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="p-8 text-center"
               >
-                <div 
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                   className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
                   style={{ backgroundColor: `${primaryColor}15` }}
                 >
                   <CheckCircle className="h-10 w-10" style={{ color: primaryColor }} />
-                </div>
-
+                </motion.div>
+                
                 <h2 className="text-2xl font-bold mb-2">Agendamento Confirmado!</h2>
-                <p className="text-muted-foreground mb-8">
-                  Seu horário foi reservado com sucesso. Enviamos os detalhes para seu email.
+                <p className="text-muted-foreground mb-6">
+                  Enviamos os detalhes para o seu email.
                 </p>
 
-                <div className="bg-muted/50 rounded-2xl p-6 text-left space-y-4 mb-6">
+                <div 
+                  className="rounded-2xl p-5 text-left space-y-3"
+                  style={{ backgroundColor: `${primaryColor}08` }}
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <CalendarIcon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Data</p>
-                      <p className="font-semibold capitalize">
-                        {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
+                    <CalendarIcon className="h-5 w-5" style={{ color: primaryColor }} />
+                    <span className="capitalize">
+                      {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </span>
                   </div>
-
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Horário</p>
-                      <p className="font-semibold">
-                        {selectedTime} • {bookingLink.duration_minutes} minutos
-                      </p>
-                    </div>
+                    <Clock className="h-5 w-5" style={{ color: primaryColor }} />
+                    <span>{selectedTime} • {bookingLink.duration_minutes} minutos</span>
                   </div>
-
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Participante</p>
-                      <p className="font-semibold">{formData.client_name}</p>
-                    </div>
+                    <User className="h-5 w-5" style={{ color: primaryColor }} />
+                    <span>{formData.client_name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5" style={{ color: primaryColor }} />
+                    <span>{formData.client_email}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4" />
-                  <span>Agendado via ELLOsuit</span>
-                </div>
+                {bookingLink.custom_message && (
+                  <p className="mt-6 text-sm text-muted-foreground italic">
+                    "{bookingLink.custom_message}"
+                  </p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-xs text-muted-foreground">
-          Powered by <span className="font-semibold">ELLOsuit</span>
-        </div>
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Powered by{' '}
+          <span className="font-semibold" style={{ color: primaryColor }}>ellosuit</span>
+        </p>
       </div>
     </div>
   );

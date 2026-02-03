@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   Calendar, 
@@ -19,7 +19,8 @@ import {
   HelpCircle,
   Layers,
   Radio,
-  ChevronRight
+  ChevronRight,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,12 +35,19 @@ const menuGroups = [
     icon: Home,
     items: [
       { id: 'home', path: '/dashboard', icon: Home, label: 'Dashboard' },
+      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
+      { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
+    ]
+  },
+  {
+    id: 'banco-dados',
+    label: 'Banco de Dados',
+    icon: Database,
+    items: [
       { id: 'users', path: '/dashboard/funcionarios', icon: Users, label: 'Usuários' },
       { id: 'clients', path: '/dashboard/clientes', icon: Users, label: 'Clientes' },
       { id: 'suppliers', path: '/dashboard/fornecedores', icon: Users, label: 'Fornecedores' },
-      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' },
-      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: Bot, label: 'Agentes Ello IA' },
-      { id: 'documents', path: '/dashboard/drive', icon: FileText, label: 'Arquivos' }
+      { id: 'prospects', path: '/dashboard/prospectos', icon: Users, label: 'Prospectos' }
     ]
   },
   {

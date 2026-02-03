@@ -62,7 +62,7 @@ const MobileResponsiveDashboard = () => {
           <Route path="/reunioes" element={<MeetingRooms />} />
           <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />
           <Route path="/email/*" element={<EmailDashboard />} />
-          <Route path="/clientes" element={<ClientsManager />} />
+          <Route path="/clientes" element={<ClientsManager contactType="cliente" />} />
           <Route path="/drive" element={<DriveManager />} />
           <Route path="/agenda-aberta" element={<ImprovedAgendaAberta />} />
           <Route path="/analises" element={<Navigate to="/dashboard/email" replace />} />
@@ -77,8 +77,8 @@ const MobileResponsiveDashboard = () => {
           <Route path="/personalizar" element={<ImprovedDashboardCustomizer />} />
           
           {/* Rotas adicionais da sidebar */}
-          <Route path="/fornecedores" element={<ClientsManager />} />
-          <Route path="/prospectos" element={<ClientsManager />} />
+          <Route path="/fornecedores" element={<ClientsManager contactType="fornecedor" />} />
+          <Route path="/prospectos" element={<ClientsManager contactType="prospecto" />} />
           <Route path="/bot-ia" element={<BotIADashboard />} />
           <Route path="/email-marketing" element={<EmailDashboard />} />
           <Route path="/analytics" element={<Analytics onNavigate={handleNavigate} />} />

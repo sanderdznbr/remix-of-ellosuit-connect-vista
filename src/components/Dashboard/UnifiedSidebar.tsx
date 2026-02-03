@@ -97,7 +97,7 @@ const menuGroups = [
     items: [
       { id: 'support', path: '/dashboard/suporte', icon: MessageSquare, label: 'Suporte' },
       { id: 'report-problem', path: '/dashboard/reportar-problema', icon: FileText, label: 'Reporte um problema' },
-      { id: 'terms', path: '/termos', icon: FileText, label: 'Termos & Políticas' }
+      { id: 'terms', path: '/terms', icon: FileText, label: 'Termos & Políticas' }
     ]
   },
   {

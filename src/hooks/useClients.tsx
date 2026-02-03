@@ -36,7 +36,7 @@ interface Client {
   annual_revenue?: number;
 }
 
-export const useClients = () => {
+export const useClients = (contactType: 'cliente' | 'fornecedor' | 'prospecto' | 'all' = 'all') => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -46,10 +46,17 @@ export const useClients = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Filtrar por tipo se não for 'all'
+      if (contactType !== 'all') {
+        query = query.eq('client_type', contactType);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setClients(data || []);
@@ -57,7 +64,7 @@ export const useClients = () => {
       console.error('Error fetching clients:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar clientes",
+        description: "Erro ao carregar contatos",
         variant: "destructive"
       });
     } finally {
@@ -90,7 +97,7 @@ export const useClients = () => {
       
       toast({
         title: "Sucesso",
-        description: "Cliente criado com sucesso"
+        description: "Contato criado com sucesso"
       });
 
       fetchClients();
@@ -98,7 +105,7 @@ export const useClients = () => {
       console.error('Error creating client:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar cliente",
+        description: "Erro ao criar contato",
         variant: "destructive"
       });
     }
@@ -115,7 +122,7 @@ export const useClients = () => {
       
       toast({
         title: "Sucesso",
-        description: "Cliente atualizado com sucesso"
+        description: "Contato atualizado com sucesso"
       });
 
       fetchClients();
@@ -123,7 +130,7 @@ export const useClients = () => {
       console.error('Error updating client:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar cliente",
+        description: "Erro ao atualizar contato",
         variant: "destructive"
       });
     }
@@ -140,7 +147,7 @@ export const useClients = () => {
       
       toast({
         title: "Sucesso",
-        description: "Cliente excluído com sucesso"
+        description: "Contato excluído com sucesso"
       });
 
       fetchClients();
@@ -148,7 +155,7 @@ export const useClients = () => {
       console.error('Error deleting client:', error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir cliente",
+        description: "Erro ao excluir contato",
         variant: "destructive"
       });
     }
@@ -158,7 +165,7 @@ export const useClients = () => {
     if (user) {
       fetchClients();
     }
-  }, [user]);
+  }, [user, contactType]);
 
   return {
     clients,

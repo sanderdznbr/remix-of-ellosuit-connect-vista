@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, MoreHorizontal, Calendar, GripVertical, X, Trash2, Edit2, Clock, CheckSquare, Star, Filter, Paperclip, MessageSquare, Link2, Users, Share2, Copy, ExternalLink, Image, FileText, Tag } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar, GripVertical, X, Trash2, Edit2, Clock, CheckSquare, Star, Filter, Paperclip, MessageSquare, Link2, Users, Share2, Copy, ExternalLink, Image, FileText, Tag, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useCompanyEmployees } from '@/hooks/useCompanyEmployees';
 
 interface WorkflowGroup {
   id: string;
@@ -55,6 +56,7 @@ interface WorkflowCard {
   attachments?: string[];
   links?: string[];
   comments?: { author: string; text: string; date: string }[];
+  assigned_user_id?: string;
 }
 
 const priorityConfig = {
@@ -78,7 +80,8 @@ const TrelloCard: React.FC<{
   card: WorkflowCard; 
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ card, onEdit, onDelete }) => {
+  employees?: any[];
+}> = ({ card, onEdit, onDelete, employees = [] }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
     id: card.id,
     data: { type: 'card', card }
@@ -91,6 +94,7 @@ const TrelloCard: React.FC<{
 
   const priority = priorityConfig[card.priority as keyof typeof priorityConfig] || priorityConfig.medium;
   const isOverdue = card.due_date && new Date(card.due_date) < new Date();
+  const assignedUser = employees.find(e => e.user_id === card.assigned_user_id);
 
   if (isDragging) {
     return (
@@ -148,6 +152,14 @@ const TrelloCard: React.FC<{
               <Badge variant="outline" className={`text-xs px-2 py-0.5 rounded-lg ${priority.bgLight} ${priority.textColor} border-0`}>
                 {priority.label}
               </Badge>
+
+              {assignedUser && (
+                <Avatar className="h-5 w-5">
+                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                    {assignedUser.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               
               {card.attachments && card.attachments.length > 0 && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -202,7 +214,8 @@ const TrelloColumn: React.FC<{
   onDeleteCard: (cardId: string) => void;
   onDeleteColumn: () => void;
   onEditColumn: () => void;
-}> = ({ column, cards, onAddCard, onEditCard, onDeleteCard, onDeleteColumn, onEditColumn }) => {
+  employees?: any[];
+}> = ({ column, cards, onAddCard, onEditCard, onDeleteCard, onDeleteColumn, onEditColumn, employees = [] }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
 
@@ -269,6 +282,7 @@ const TrelloColumn: React.FC<{
                 card={card}
                 onEdit={() => onEditCard(card)}
                 onDelete={() => onDeleteCard(card.id)}
+                employees={employees}
               />
             ))}
           </SortableContext>
@@ -330,7 +344,8 @@ const EnhancedCardModal: React.FC<{
   onClose: () => void;
   onSave: (cardData: Partial<WorkflowCard>) => void;
   onDelete?: () => void;
-}> = ({ card, open, onClose, onSave, onDelete }) => {
+  employees?: any[];
+}> = ({ card, open, onClose, onSave, onDelete, employees = [] }) => {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -344,6 +359,7 @@ const EnhancedCardModal: React.FC<{
   const [newComment, setNewComment] = useState('');
   const [collaboratorEmail, setCollaboratorEmail] = useState('');
   const [activeTab, setActiveTab] = useState('details');
+  const [assignedUserId, setAssignedUserId] = useState<string>('');
 
   useEffect(() => {
     if (card) {
@@ -354,6 +370,7 @@ const EnhancedCardModal: React.FC<{
       setTags(card.tags || []);
       setLinks(card.links || []);
       setComments(card.comments || []);
+      setAssignedUserId(card.assigned_user_id || '');
     } else {
       setTitle('');
       setDescription('');
@@ -362,6 +379,7 @@ const EnhancedCardModal: React.FC<{
       setTags([]);
       setLinks([]);
       setComments([]);
+      setAssignedUserId('');
     }
     setActiveTab('details');
   }, [card, open]);
@@ -375,6 +393,7 @@ const EnhancedCardModal: React.FC<{
       tags: tags.length > 0 ? tags : undefined,
       links: links.length > 0 ? links : undefined,
       comments: comments.length > 0 ? comments : undefined,
+      assigned_user_id: assignedUserId || undefined,
     });
     onClose();
   };
@@ -501,6 +520,36 @@ const EnhancedCardModal: React.FC<{
                   />
                 </div>
               </div>
+
+              {/* Atribuir a */}
+              {employees.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                    <User className="h-4 w-4 inline mr-1" />
+                    Atribuir a
+                  </label>
+                  <Select value={assignedUserId} onValueChange={setAssignedUserId}>
+                    <SelectTrigger className="rounded-xl h-11">
+                      <SelectValue placeholder="Selecione um membro" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="" className="rounded-lg">Nenhum</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.user_id} value={emp.user_id} className="rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {emp.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {emp.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
               {/* Labels/Tags */}
               <div>
@@ -750,6 +799,7 @@ const EnhancedCardModal: React.FC<{
 const FluxosBoard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { employees } = useCompanyEmployees();
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { distance: 5 }
   }));
@@ -1184,6 +1234,7 @@ const FluxosBoard: React.FC = () => {
                     key={column.id}
                     column={column}
                     cards={columnCards}
+                    employees={employees}
                     onAddCard={() => {
                       setSelectedColumnId(column.id);
                       setSelectedCard(null);
@@ -1372,6 +1423,7 @@ const FluxosBoard: React.FC = () => {
           setShowCardModal(false);
           setSelectedCard(null);
         } : undefined}
+        employees={employees}
       />
     </div>
   );

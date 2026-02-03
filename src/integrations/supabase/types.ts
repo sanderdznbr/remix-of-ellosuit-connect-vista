@@ -159,6 +159,7 @@ export type Database = {
       }
       calendar_events: {
         Row: {
+          assigned_user_id: string | null
           attendees: Json | null
           audio_url: string | null
           color: string | null
@@ -186,6 +187,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_user_id?: string | null
           attendees?: Json | null
           audio_url?: string | null
           color?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_user_id?: string | null
           attendees?: Json | null
           audio_url?: string | null
           color?: string | null
@@ -1751,6 +1754,77 @@ export type Database = {
         }
         Relationships: []
       }
+      task_routines: {
+        Row: {
+          assigned_user_id: string | null
+          color: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string
+          day_of_month: number | null
+          days_of_week: number[] | null
+          description: string | null
+          duration_minutes: number | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          priority: string | null
+          time_of_day: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          color?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          description?: string | null
+          duration_minutes?: number | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          priority?: string | null
+          time_of_day?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_user_id?: string | null
+          color?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          description?: string | null
+          duration_minutes?: number | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          priority?: string | null
+          time_of_day?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_routines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trackable_documents: {
         Row: {
           company_id: string
@@ -2394,6 +2468,7 @@ export type Database = {
       }
       workflow_cards: {
         Row: {
+          assigned_user_id: string | null
           checklist: Json | null
           column_id: string
           company_id: string
@@ -2410,6 +2485,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_user_id?: string | null
           checklist?: Json | null
           column_id: string
           company_id: string
@@ -2426,6 +2502,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_user_id?: string | null
           checklist?: Json | null
           column_id?: string
           company_id?: string

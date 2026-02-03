@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { 
   Calendar, Mail, Users, Video, FileText, CheckSquare, Bot, Zap, 
   BarChart3, Settings, Clock, TrendingUp, ArrowRight,
-  FolderOpen
+  FolderOpen, Pencil
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import DashboardEditor from './DashboardEditor';
 
 const quickAccessItems = [
   { icon: Video, label: 'Reuniões', path: '/dashboard/reunioes', color: 'from-blue-500 to-blue-600' },
@@ -28,6 +29,7 @@ const quickAccessItems = [
 const AIAssistantHome = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [showEditor, setShowEditor] = useState(false);
   const [stats, setStats] = useState({
     meetingsToday: 0,
     nextMeeting: null as any,
@@ -89,6 +91,19 @@ const AIAssistantHome = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Edit Button */}
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditor(true)}
+            className="rounded-xl gap-2 hover:bg-primary/5"
+          >
+            <Pencil className="h-4 w-4" />
+            Personalizar
+          </Button>
+        </div>
+
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all rounded-2xl">
@@ -251,6 +266,13 @@ const AIAssistantHome = () => {
           </Card>
         </div>
       </div>
+
+      {/* Dashboard Editor Modal */}
+      <DashboardEditor
+        open={showEditor}
+        onClose={() => setShowEditor(false)}
+        onSave={() => loadDashboardStats()}
+      />
     </div>
   );
 };

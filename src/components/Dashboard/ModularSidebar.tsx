@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
@@ -37,12 +37,14 @@ const iconMap: Record<string, any> = {
   MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles, Eye
 };
 
-// Default menu groups - reorganized
+// Default menu groups - reorganized with hub colors
 const DEFAULT_MENU_GROUPS = [
   {
     id: 'dashboard',
     label: 'Dashboard',
     icon: 'Home',
+    color: '#3B82F6',
+    hubPath: '/dashboard',
     items: [
       { id: 'home', path: '/dashboard', icon: 'Home', label: 'Home' }
     ]
@@ -51,6 +53,8 @@ const DEFAULT_MENU_GROUPS = [
     id: 'inteligencia-artificial',
     label: 'Inteligência Artificial',
     icon: 'Sparkles',
+    color: '#8B5CF6',
+    hubPath: '/dashboard/bot-ia',
     items: [
       { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' }
     ]
@@ -59,19 +63,25 @@ const DEFAULT_MENU_GROUPS = [
     id: 'ellosuit-omni',
     label: 'Ellosuit Omni',
     icon: 'MessageSquare',
+    color: '#E34800',
+    hubPath: '/dashboard/omni',
     items: [
-      { id: 'omni-hub', path: '/dashboard/omni', icon: 'Sparkles', label: 'Central Omni' },
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
-      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' }
+      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' },
+      { id: 'clientes', path: '/dashboard/cadastros', icon: 'Users', label: 'Banco de Clientes' },
+      { id: 'agentes-ia-omni', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' }
     ]
   },
   {
     id: 'ellosuit-track',
     label: 'Ellosuit Track',
     icon: 'Radio',
+    color: '#00E371',
+    hubPath: '/dashboard/track',
     items: [
-      { id: 'track-hub', path: '/dashboard/track', icon: 'Radio', label: 'Central Track' },
-      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento Geral' },
+      { id: 'rastreamento-docs', path: '/dashboard/rastreamento?tab=documents', icon: 'FileText', label: 'Rastrear Documentos' },
+      { id: 'rastreamento-links', path: '/dashboard/rastreamento?tab=links', icon: 'Radio', label: 'Rastrear Links' },
+      { id: 'rastreamento-videos', path: '/dashboard/rastreamento?tab=videos', icon: 'Video', label: 'Rastrear Vídeos' },
       { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
     ]
   },
@@ -79,12 +89,14 @@ const DEFAULT_MENU_GROUPS = [
     id: 'ellosuit-flow',
     label: 'Ellosuit Flow',
     icon: 'Zap',
+    color: '#007DE3',
+    hubPath: '/dashboard/flows',
     items: [
-      { id: 'flow-hub', path: '/dashboard/flows', icon: 'Zap', label: 'Central Flow' },
       { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
       { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
       { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas' },
       { id: 'reunioes', path: '/dashboard/reunioes', icon: 'Video', label: 'Reuniões' },
+      { id: 'gravacoes', path: '/dashboard/reunioes/gravacoes', icon: 'Video', label: 'Gravações' },
       { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos' }
     ]
   },
@@ -92,6 +104,8 @@ const DEFAULT_MENU_GROUPS = [
     id: 'gestao',
     label: 'Gestão',
     icon: 'Users',
+    color: '#6366F1',
+    hubPath: '/dashboard/cadastros',
     items: [
       { id: 'cadastros', path: '/dashboard/cadastros', icon: 'Users', label: 'Cadastros' },
       { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' }
@@ -101,6 +115,8 @@ const DEFAULT_MENU_GROUPS = [
     id: 'insights',
     label: 'Insights',
     icon: 'BarChart3',
+    color: '#EC4899',
+    hubPath: '/dashboard/analytics',
     items: [
       { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Analytics' },
       { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'BarChart3', label: 'Ello Vision' },
@@ -111,6 +127,8 @@ const DEFAULT_MENU_GROUPS = [
     id: 'configuracoes',
     label: 'Configurações',
     icon: 'Settings',
+    color: '#64748B',
+    hubPath: '/dashboard/configuracoes',
     items: [
       { id: 'preferencias', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Preferências' },
       { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança' },
@@ -125,9 +143,10 @@ interface SortableMenuGroupProps {
   hasActive: boolean;
   onHover: (id: string) => void;
   isEditMode: boolean;
+  onNavigate: (path: string) => void;
 }
 
-function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }: SortableMenuGroupProps) {
+function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode, onNavigate }: SortableMenuGroupProps) {
   const {
     attributes,
     listeners,
@@ -144,6 +163,13 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
   };
 
   const IconComponent = iconMap[group.icon] || Home;
+  const groupColor = group.color || '#3B82F6';
+
+  const handleClick = () => {
+    if (!isEditMode && group.hubPath) {
+      onNavigate(group.hubPath);
+    }
+  };
 
   return (
     <div
@@ -156,15 +182,17 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              onClick={handleClick}
               className={cn(
                 "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
-                isHovered 
-                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105" 
-                  : hasActive 
-                    ? "bg-blue-500/20 text-blue-400" 
-                    : "text-gray-400 hover:bg-white/5 hover:text-white",
                 isDragging && "cursor-grabbing"
               )}
+              style={{
+                backgroundColor: isHovered ? groupColor : hasActive ? `${groupColor}20` : 'transparent',
+                color: isHovered ? 'white' : hasActive ? groupColor : '#9CA3AF',
+                boxShadow: isHovered ? `0 10px 20px -5px ${groupColor}50` : 'none',
+                transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+              }}
               {...(isEditMode ? { ...attributes, ...listeners } : {})}
             >
               {isEditMode ? (
@@ -197,6 +225,7 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
   const [menuGroups, setMenuGroups] = useState(DEFAULT_MENU_GROUPS);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { settings, updateSettings } = useSidebarSettings();
 
@@ -303,6 +332,13 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
                   hasActive={hasActiveItemInGroup(group)}
                   onHover={handleMouseEnter}
                   isEditMode={isEditMode}
+                  onNavigate={(path) => {
+                    navigate(path);
+                    setHoveredGroup(null);
+                    if (isMobile && onOpenChange) {
+                      onOpenChange(false);
+                    }
+                  }}
                 />
               ))}
             </SortableContext>
@@ -354,18 +390,32 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
                 {menuGroups.find(g => g.id === hoveredGroup)?.items.map((item) => {
                   const ItemIcon = iconMap[item.icon] || Home;
                   const active = isActive(item.path);
+                  const currentGroup = menuGroups.find(g => g.id === hoveredGroup);
+                  const groupColor = currentGroup?.color || '#3B82F6';
                   
                   return (
                     <Link
                       key={item.id}
                       to={item.path}
                       onClick={handleLinkClick}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                        active 
-                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
-                          : "text-gray-400 hover:bg-white/5 hover:text-white"
-                      )}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor: active ? groupColor : 'transparent',
+                        color: active ? 'white' : '#9CA3AF',
+                        boxShadow: active ? `0 10px 20px -5px ${groupColor}40` : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                          e.currentTarget.style.color = 'white';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = '#9CA3AF';
+                        }
+                      }}
                     >
                       <ItemIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">{item.label}</span>

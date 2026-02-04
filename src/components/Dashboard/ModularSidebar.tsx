@@ -37,7 +37,7 @@ const iconMap: Record<string, any> = {
   MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles, Eye
 };
 
-// Default menu groups
+// Default menu groups - reorganized
 const DEFAULT_MENU_GROUPS = [
   {
     id: 'dashboard',
@@ -56,19 +56,27 @@ const DEFAULT_MENU_GROUPS = [
     ]
   },
   {
-    id: 'comunicacao',
-    label: 'Comunicação',
+    id: 'ellosuit-omni',
+    label: 'Ellosuit Omni',
     icon: 'MessageSquare',
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
-      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' },
+      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' }
+    ]
+  },
+  {
+    id: 'ellosuit-track',
+    label: 'Ellosuit Track',
+    icon: 'Radio',
+    items: [
+      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento Geral' },
       { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
     ]
   },
   {
-    id: 'produtividade',
-    label: 'Produtividade',
-    icon: 'Calendar',
+    id: 'ellosuit-flow',
+    label: 'Ellosuit Flow',
+    icon: 'Zap',
     items: [
       { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
       { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
@@ -83,8 +91,7 @@ const DEFAULT_MENU_GROUPS = [
     icon: 'Users',
     items: [
       { id: 'cadastros', path: '/dashboard/cadastros', icon: 'Users', label: 'Cadastros' },
-      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' },
-      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento' }
+      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' }
     ]
   },
   {
@@ -149,10 +156,10 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
               className={cn(
                 "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
                 isHovered 
-                  ? "bg-white text-primary shadow-lg scale-105" 
+                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105" 
                   : hasActive 
-                    ? "bg-white/20 text-white" 
-                    : "text-white/70 hover:bg-white/10 hover:text-white",
+                    ? "bg-blue-500/20 text-blue-400" 
+                    : "text-gray-400 hover:bg-white/5 hover:text-white",
                 isDragging && "cursor-grabbing"
               )}
               {...(isEditMode ? { ...attributes, ...listeners } : {})}
@@ -165,7 +172,7 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
             </button>
           </TooltipTrigger>
           {!isHovered && (
-            <TooltipContent side="right" className="rounded-lg font-medium">
+            <TooltipContent side="right" className="rounded-lg font-medium bg-gray-900 border-gray-800 text-white">
               {group.label}
             </TooltipContent>
           )}
@@ -265,8 +272,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
 
   const sidebarContent = (
     <div className="h-full flex" onMouseLeave={handleMouseLeave}>
-      {/* Main icon strip */}
-      <div className="w-16 bg-primary flex flex-col h-full">
+      {/* Main icon strip - BLACK */}
+      <div className="w-16 bg-black flex flex-col h-full">
         {/* Logo */}
         <div className="h-14 flex items-center justify-center border-b border-white/10">
           <Link to="/dashboard" onClick={handleLinkClick}>
@@ -304,8 +311,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
             className={cn(
               "w-9 h-9 rounded-xl flex items-center justify-center mt-2 transition-colors",
               isEditMode 
-                ? "bg-white text-primary" 
-                : "text-white/50 hover:bg-white/10 hover:text-white"
+                ? "bg-blue-500 text-white" 
+                : "text-gray-500 hover:bg-white/5 hover:text-white"
             )}
             title={isEditMode ? "Salvar ordem" : "Reordenar menu"}
           >
@@ -319,10 +326,10 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
         </div>
       </div>
 
-      {/* Expandable Panel */}
+      {/* Expandable Panel - Dark gray */}
       <div 
         className={cn(
-          "bg-primary/95 backdrop-blur-sm border-l border-white/10 overflow-hidden transition-all duration-200 ease-out",
+          "bg-gray-900 backdrop-blur-sm border-l border-white/5 overflow-hidden transition-all duration-200 ease-out",
           hoveredGroup ? "w-56 opacity-100" : "w-0 opacity-0"
         )}
         onMouseEnter={() => {
@@ -333,7 +340,7 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
       >
         {hoveredGroup && (
           <div className="w-56 h-full flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
-            <div className="h-14 px-4 flex items-center border-b border-white/10">
+            <div className="h-14 px-4 flex items-center border-b border-white/5">
               <h3 className="text-white font-semibold text-sm">
                 {menuGroups.find(g => g.id === hoveredGroup)?.label}
               </h3>
@@ -353,8 +360,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                         active 
-                          ? "bg-white text-primary shadow-sm" 
-                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                          : "text-gray-400 hover:bg-white/5 hover:text-white"
                       )}
                     >
                       <ItemIcon className="h-4 w-4 flex-shrink-0" />

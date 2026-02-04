@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Mail, Users, Bot, TrendingUp, Send, UserPlus, Clock } from "lucide-react";
+import { MessageSquare, Mail, Users, Bot, TrendingUp, Send, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,51 +93,52 @@ export default function OmniHub() {
 
   const stats = [
     { label: "Contatos", value: clientsCount, icon: Users },
-    { label: "Agentes IA Ativos", value: agentsCount, icon: Bot },
+    { label: "Agentes IA", value: agentsCount, icon: Bot },
     { label: "Emails Enviados", value: emailsCount, icon: Send },
     { label: "Conversas Hoje", value: 0, icon: MessageSquare },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Hero Header */}
       <div 
-        className="text-white"
+        className="relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${OMNI_COLOR} 0%, #B33800 100%)` }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-              <MessageSquare className="h-8 w-8 text-white" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNiAyNnYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+        <div className="max-w-7xl mx-auto px-6 py-16 relative">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+              <MessageSquare className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Ellosuit Omni</h1>
-              <p className="text-white/80">Central de Comunicação Multicanal</p>
+              <h1 className="text-4xl font-bold text-white">Ellosuit Omni</h1>
+              <p className="text-white/80 text-lg">Central de Comunicação Multicanal</p>
             </div>
           </div>
-          <p className="text-white/90 max-w-2xl">
-            Unifique todos os seus canais de comunicação em um só lugar. 
-            WhatsApp, Email e Agentes de IA trabalhando juntos.
+          <p className="text-white/90 max-w-2xl text-lg">
+            Unifique todos os seus canais de comunicação. WhatsApp, Email e Agentes de IA 
+            trabalhando juntos para maximizar seu alcance e conversões.
           </p>
         </div>
       </div>
 
       {/* KPI Stats */}
-      <div className="max-w-7xl mx-auto px-6 -mt-6">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, i) => {
               const Icon = stat.icon;
               return (
                 <div key={i} className="text-center">
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
-                    style={{ backgroundColor: `${OMNI_COLOR}15` }}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ backgroundColor: `${OMNI_COLOR}10` }}
                   >
-                    <Icon className="h-6 w-6" style={{ color: OMNI_COLOR }} />
+                    <Icon className="h-7 w-7" style={{ color: OMNI_COLOR }} />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
+                  <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
                 </div>
               );
             })}
@@ -146,54 +147,48 @@ export default function OmniHub() {
       </div>
 
       {/* Modules Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Módulos</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">Módulos</h2>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
           {omniModules.map((module) => {
             const Icon = module.icon;
             return (
               <Link
                 key={module.id}
                 to={module.path}
-                className="group relative bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group relative bg-white rounded-2xl border-2 border-gray-100 p-8 hover:border-transparent transition-all duration-300 hover:-translate-y-1"
                 style={{ 
                   boxShadow: 'none',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = `0 20px 40px -15px ${OMNI_COLOR}30`;
+                  e.currentTarget.style.boxShadow = `0 25px 50px -12px ${OMNI_COLOR}25`;
+                  e.currentTarget.style.borderColor = `${OMNI_COLOR}30`;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = '#F3F4F6';
                 }}
               >
-                {/* Gradient accent */}
-                <div 
-                  className="absolute inset-x-0 top-0 h-1 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ backgroundColor: OMNI_COLOR }}
-                />
-                
-                <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: OMNI_COLOR }}
-                >
-                  <Icon className="h-7 w-7 text-white" />
+                <div className="flex items-start justify-between">
+                  <div 
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{ backgroundColor: OMNI_COLOR }}
+                  >
+                    <Icon className="h-8 w-8 text-white" />
+                  </div>
+                  <ArrowRight 
+                    className="h-5 w-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all"
+                  />
                 </div>
                 
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mt-6 mb-2">
                   {module.title}
                 </h3>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-gray-500 leading-relaxed">
                   {module.description}
                 </p>
-                
-                <div className="flex items-center justify-end pt-4 mt-4 border-t border-gray-100">
-                  <span 
-                    className="text-sm font-medium group-hover:translate-x-1 transition-transform"
-                    style={{ color: OMNI_COLOR }}
-                  >
-                    Acessar →
-                  </span>
-                </div>
               </Link>
             );
           })}

@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
-  HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, Eye,
-  Search, X, Link2, PlayCircle, Palette, AlertCircle, BookOpen
+  HelpCircle, FolderOpen, Eye, Search, X, Link2, PlayCircle, Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +17,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 // Icon mapping
 const iconMap: Record<string, any> = {
   Home, Calendar, Mail, Users, FileText, Settings, Video, CheckSquare,
-  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, 
-  Sparkles, Eye, Link2, PlayCircle, Palette, AlertCircle, BookOpen
+  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, 
+  Eye, Link2, PlayCircle, Palette
 };
 
 // Menu sections with colors
@@ -94,86 +93,6 @@ const QUICK_ICONS = [
   { id: 'settings', path: '/dashboard/configuracoes', icon: 'Settings' },
 ];
 
-// Shared Quick Menu Content Component
-function QuickMenuContent({ 
-  searchQuery, 
-  setSearchQuery, 
-  onNavigate, 
-  isActive 
-}: { 
-  searchQuery: string; 
-  setSearchQuery: (q: string) => void;
-  onNavigate: (path: string) => void;
-  isActive: (path: string) => boolean;
-}) {
-  // Filter items based on search
-  const filteredSections = MENU_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(item => 
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(section => section.items.length > 0);
-
-  return (
-    <>
-      {/* Search */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar funcionalidade..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-100 border-0 rounded-xl h-11 focus-visible:ring-primary"
-          />
-        </div>
-      </div>
-
-      {/* Menu Sections */}
-      <ScrollArea className="flex-1">
-        <div className="px-4 py-4 space-y-6">
-          {filteredSections.map(section => (
-            <div key={section.id}>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                {section.label}
-              </h3>
-              <div className="grid grid-cols-4 gap-3">
-                {section.items.map(item => {
-                  const IconComponent = iconMap[item.icon] || Home;
-                  const active = isActive(item.path);
-                  
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => onNavigate(item.path)}
-                      className="flex flex-col items-center gap-2 group"
-                    >
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200",
-                        active 
-                          ? `${item.color} shadow-lg ring-2 ring-offset-2 ring-${item.color.replace('bg-', '')}` 
-                          : `${item.color} opacity-80 group-hover:opacity-100 group-hover:scale-110`
-                      )}>
-                        <IconComponent className="h-5 w-5 text-white" />
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-medium text-center leading-tight max-w-[60px]",
-                        active ? "text-gray-900" : "text-gray-600"
-                      )}>
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-    </>
-  );
-}
-
 // Mobile Quick Menu Component
 function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,6 +111,14 @@ function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
     onClose();
   };
 
+  // Filter items based on search
+  const filteredSections = MENU_SECTIONS.map(section => ({
+    ...section,
+    items: section.items.filter(item => 
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(section => section.items.length > 0);
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="left" className="w-full max-w-md p-0 bg-white border-none">
@@ -206,12 +133,60 @@ function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
           </button>
         </div>
 
-        <QuickMenuContent 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onNavigate={handleNavigate}
-          isActive={isActive}
-        />
+        {/* Search */}
+        <div className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar funcionalidade..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-100 border-0 rounded-xl h-11 focus-visible:ring-primary"
+            />
+          </div>
+        </div>
+
+        {/* Menu Sections */}
+        <ScrollArea className="h-[calc(100vh-140px)]">
+          <div className="px-4 pb-6 space-y-6">
+            {filteredSections.map(section => (
+              <div key={section.id}>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  {section.label}
+                </h3>
+                <div className="grid grid-cols-4 gap-3">
+                  {section.items.map(item => {
+                    const IconComponent = iconMap[item.icon] || Home;
+                    const active = isActive(item.path);
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavigate(item.path)}
+                        className="flex flex-col items-center gap-2 group"
+                      >
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          active 
+                            ? `${item.color} shadow-lg` 
+                            : `${item.color} opacity-90 group-hover:opacity-100 group-hover:scale-105`
+                        )}>
+                          <IconComponent className="h-6 w-6 text-white" />
+                        </div>
+                        <span className={cn(
+                          "text-xs font-medium text-center leading-tight max-w-[70px]",
+                          active ? "text-gray-900" : "text-gray-600"
+                        )}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );
@@ -258,6 +233,14 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
     }, 200);
   };
 
+  // Filter sections for expanded view
+  const filteredSections = MENU_SECTIONS.map(section => ({
+    ...section,
+    items: section.items.filter(item => 
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(section => section.items.length > 0);
+
   // Mobile: Use sheet menu
   if (isMobile) {
     return (
@@ -275,81 +258,105 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
     );
   }
 
-  // Desktop: Expandable sidebar
+  // Desktop: Single expandable sidebar
   return (
     <div 
-      className="h-screen sticky top-0 flex z-40"
+      className={cn(
+        "h-screen sticky top-0 bg-primary flex flex-col z-40 transition-all duration-300 ease-out",
+        isHovered ? "w-80" : "w-16"
+      )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Collapsed Icon Strip */}
-      <div className={cn(
-        "w-16 bg-primary flex flex-col h-full transition-all duration-300",
-        isHovered && "opacity-0 pointer-events-none absolute"
-      )}>
-        {/* Logo */}
-        <div className="h-14 flex items-center justify-center border-b border-white/10">
-          <Link to="/dashboard">
-            <ElloLogo className="h-7 w-auto" color="white" />
-          </Link>
-        </div>
-
-        {/* Quick Icons */}
-        <div className="flex-1 py-3 flex flex-col items-center gap-1">
-          {QUICK_ICONS.map((item) => {
-            const IconComponent = iconMap[item.icon] || Home;
-            const active = isActive(item.path);
-            
-            return (
-              <Link
-                key={item.id}
-                to={item.path}
-                className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-                  active 
-                    ? "bg-white text-primary shadow-lg" 
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <IconComponent className="h-5 w-5" />
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* User Avatar */}
-        <div className="py-3 flex flex-col items-center border-t border-white/10">
-          <UserProfileMenu onLinkClick={() => {}} />
-        </div>
+      {/* Header */}
+      <div className="h-14 flex items-center px-4 border-b border-white/10">
+        <Link to="/dashboard" className="flex items-center gap-3">
+          <ElloLogo className="h-7 w-auto flex-shrink-0" color="white" />
+          {isHovered && (
+            <span className="text-white font-semibold text-sm whitespace-nowrap">
+              Menu Rápido
+            </span>
+          )}
+        </Link>
       </div>
 
-      {/* Expanded Panel - Quick Menu Style */}
-      <div 
-        className={cn(
-          "bg-white shadow-2xl overflow-hidden transition-all duration-300 ease-out flex flex-col",
-          isHovered ? "w-80 opacity-100" : "w-16 opacity-100"
-        )}
-      >
-        {/* Header with Logo */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-gray-100 bg-primary">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <ElloLogo className="h-7 w-auto" color="white" />
-          </Link>
-          {isHovered && (
-            <span className="text-white/90 text-sm font-medium">Menu Rápido</span>
-          )}
-        </div>
+      {/* Content */}
+      {isHovered ? (
+        // Expanded: Show full menu with search and grid
+        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+          {/* Search */}
+          <div className="p-4 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar funcionalidade..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-100 border-0 rounded-xl h-10 focus-visible:ring-primary text-sm"
+                autoFocus
+              />
+            </div>
+          </div>
 
-        {isHovered ? (
-          <QuickMenuContent 
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onNavigate={handleNavigate}
-            isActive={isActive}
-          />
-        ) : (
-          // Collapsed state - show icons only
-          <div className="flex-1 py-3 flex flex-col items-center gap-1">
+          {/* Menu Sections Grid */}
+          <ScrollArea className="flex-1">
+            <div className="px-4 py-4 space-y-5">
+              {filteredSections.map(section => (
+                <div key={section.id}>
+                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    {section.label}
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {section.items.map(item => {
+                      const IconComponent = iconMap[item.icon] || Home;
+                      const active = isActive(item.path);
+                      
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleNavigate(item.path)}
+                          className="flex flex-col items-center gap-1.5 group py-1"
+                        >
+                          <div className={cn(
+                            "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
+                            active 
+                              ? `${item.color} shadow-lg scale-105` 
+                              : `${item.color} opacity-80 group-hover:opacity-100 group-hover:scale-110`
+                          )}>
+                            <IconComponent className="h-5 w-5 text-white" />
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-medium text-center leading-tight",
+                            active ? "text-gray-900" : "text-gray-500 group-hover:text-gray-700"
+                          )}>
+                            {item.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          {/* User Profile */}
+          <div className="p-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center gap-3">
+              <UserProfileMenu onLinkClick={() => setIsHovered(false)} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-900 truncate">
+                  {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                </p>
+                <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Collapsed: Show icon strip only
+        <>
+          <div className="flex-1 py-3 flex flex-col items-center gap-1 overflow-y-auto">
             {QUICK_ICONS.map((item) => {
               const IconComponent = iconMap[item.icon] || Home;
               const active = isActive(item.path);
@@ -361,8 +368,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
                     active 
-                      ? "bg-primary text-white shadow-lg" 
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-white text-primary shadow-lg" 
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   <IconComponent className="h-5 w-5" />
@@ -370,28 +377,13 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
               );
             })}
           </div>
-        )}
 
-        {/* User Profile at bottom */}
-        <div className={cn(
-          "py-3 border-t border-gray-100 flex items-center justify-center",
-          isHovered ? "px-4" : ""
-        )}>
-          {isHovered ? (
-            <div className="flex items-center gap-3 w-full">
-              <UserProfileMenu onLinkClick={() => setIsHovered(false)} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-                </p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-              </div>
-            </div>
-          ) : (
+          {/* User Avatar */}
+          <div className="py-3 flex flex-col items-center border-t border-white/10">
             <UserProfileMenu onLinkClick={() => {}} />
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

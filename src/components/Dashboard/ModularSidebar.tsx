@@ -4,7 +4,7 @@ import {
   Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
   HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, GripVertical, Eye,
-  Search, X, Link2, PlayCircle
+  Search, X, Link2, PlayCircle, Palette, AlertCircle, BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,72 +37,86 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 // Icon mapping
 const iconMap: Record<string, any> = {
   Home, Calendar, Mail, Users, FileText, Settings, Video, CheckSquare,
-  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles, Eye, Link2, PlayCircle
+  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, 
+  Sparkles, Eye, Link2, PlayCircle, Palette, AlertCircle, BookOpen
 };
 
-// Menu items for grid layout
+// Menu sections following the mind map structure
 const MENU_SECTIONS = [
   {
     id: 'sistema',
     label: 'SISTEMA',
+    color: 'bg-amber-500',
     items: [
-      { id: 'home', path: '/dashboard', icon: 'Home', label: 'Início', color: 'bg-blue-500' },
-      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda', color: 'bg-blue-500' },
-      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email', color: 'bg-blue-500' },
-      { id: 'cadastros', path: '/dashboard/cadastros', icon: 'Users', label: 'Cadastros', color: 'bg-blue-500' },
-      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Drive', color: 'bg-blue-500' },
+      { id: 'dashboard', path: '/dashboard', icon: 'Home', label: 'Dashboard', color: 'bg-amber-500' },
+      { id: 'usuarios', path: '/dashboard/funcionarios', icon: 'Users', label: 'Usuários', color: 'bg-amber-500' },
+      { id: 'clientes', path: '/dashboard/clientes', icon: 'Users', label: 'Clientes', color: 'bg-amber-400' },
+      { id: 'fornecedores', path: '/dashboard/fornecedores', icon: 'Users', label: 'Fornecedores', color: 'bg-amber-400' },
+      { id: 'prospectos', path: '/dashboard/prospectos', icon: 'Users', label: 'Prospectos', color: 'bg-amber-400' },
+      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes Ello IA', color: 'bg-violet-500' },
+      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos', color: 'bg-amber-500' },
     ]
   },
   {
-    id: 'comunicacao',
-    label: 'COMUNICAÇÃO',
+    id: 'ello-flows',
+    label: 'ELLO FLOWS',
+    color: 'bg-teal-500',
     items: [
-      { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'WhatsApp CRM', color: 'bg-green-500' },
-      { id: 'bot-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes IA', color: 'bg-purple-500' },
+      { id: 'tarefas', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas', color: 'bg-teal-500' },
+      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos de Produção', color: 'bg-teal-500' },
+      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda', color: 'bg-teal-500' },
+      { id: 'agenda-online', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online', color: 'bg-teal-500' },
+      { id: 'ello-meetings', path: '/dashboard/reunioes', icon: 'Video', label: 'Ello Meetings', color: 'bg-teal-500' },
     ]
   },
   {
-    id: 'reunioes',
-    label: 'REUNIÕES',
+    id: 'ello-omni',
+    label: 'ELLO OMNI',
+    color: 'bg-teal-600',
     items: [
-      { id: 'reunioes', path: '/dashboard/reunioes', icon: 'Video', label: 'Reuniões', color: 'bg-blue-500' },
-      { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Aberta', color: 'bg-blue-400' },
+      { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp', color: 'bg-green-500' },
+      { id: 'email-padrao', path: '/dashboard/email', icon: 'Mail', label: 'Email padrão', color: 'bg-blue-500' },
+      { id: 'email-marketing', path: '/dashboard/email-marketing', icon: 'Mail', label: 'Email marketing', color: 'bg-blue-600' },
     ]
   },
   {
-    id: 'rastreamento',
-    label: 'RASTREAMENTO',
+    id: 'ello-track',
+    label: 'ELLO TRACK',
+    color: 'bg-teal-500',
     items: [
-      { id: 'rastrear-docs', path: '/dashboard/rastreamento', icon: 'FileText', label: 'Rastrear Docs', color: 'bg-blue-500' },
-      { id: 'rastrear-links', path: '/dashboard/rastreamento-link', icon: 'Link2', label: 'Rastrear Links', color: 'bg-purple-500' },
-      { id: 'rastrear-videos', path: '/dashboard/rastreamento-video', icon: 'PlayCircle', label: 'Rastrear Vídeos', color: 'bg-red-500' },
-      { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails', color: 'bg-orange-500' },
+      { id: 'rastrear-pdf', path: '/dashboard/rastreamento', icon: 'FileText', label: 'Rastreamento de PDF', color: 'bg-teal-500' },
+      { id: 'rastrear-link', path: '/dashboard/rastreamento-link', icon: 'Link2', label: 'Rastreamento de Link', color: 'bg-teal-500' },
+      { id: 'rastrear-video', path: '/dashboard/rastreamento-video', icon: 'PlayCircle', label: 'Rastreamento de Vídeo', color: 'bg-teal-500' },
     ]
   },
   {
-    id: 'analise',
-    label: 'ANÁLISE',
+    id: 'analise-relatorio',
+    label: 'ANÁLISE & RELATÓRIO',
+    color: 'bg-violet-500',
     items: [
-      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'Eye', label: 'Ello Vision', color: 'bg-gray-700' },
-      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Analytics', color: 'bg-blue-500' },
-      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios', color: 'bg-amber-500' },
+      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'Eye', label: 'Ello Vision', color: 'bg-violet-500' },
+      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Análises', color: 'bg-violet-500' },
+      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios', color: 'bg-violet-500' },
     ]
   },
   {
-    id: 'ferramentas',
-    label: 'FERRAMENTAS',
+    id: 'ajuda-suporte',
+    label: 'AJUDA & SUPORTE',
+    color: 'bg-violet-400',
     items: [
-      { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas', color: 'bg-blue-500' },
-      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos', color: 'bg-amber-500' },
+      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte', color: 'bg-violet-400' },
+      { id: 'reportar', path: '/dashboard/reportar-problema', icon: 'AlertCircle', label: 'Reporte um problema', color: 'bg-violet-400' },
+      { id: 'termos', path: '/termos', icon: 'BookOpen', label: 'Termos & Políticas', color: 'bg-violet-400' },
     ]
   },
   {
     id: 'configuracoes',
-    label: 'CONFIGURAÇÕES',
+    label: 'CONFIGURAÇÕES & PRIVACIDADE',
+    color: 'bg-blue-500',
     items: [
-      { id: 'preferencias', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Config.', color: 'bg-gray-500' },
-      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança', color: 'bg-gray-600' },
-      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte', color: 'bg-blue-500' },
+      { id: 'config', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Configurações', color: 'bg-blue-500' },
+      { id: 'personalizacao', path: '/dashboard/personalizar', icon: 'Palette', label: 'Personalização', color: 'bg-blue-500' },
+      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança & Privacidade', color: 'bg-blue-500' },
     ]
   }
 ];
@@ -110,80 +124,79 @@ const MENU_SECTIONS = [
 // Desktop menu groups for icon strip
 const DESKTOP_MENU_GROUPS = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
+    id: 'sistema',
+    label: 'Sistema',
     icon: 'Home',
     items: [
-      { id: 'home', path: '/dashboard', icon: 'Home', label: 'Home' }
+      { id: 'dashboard', path: '/dashboard', icon: 'Home', label: 'Dashboard' },
+      { id: 'usuarios', path: '/dashboard/funcionarios', icon: 'Users', label: 'Usuários' },
+      { id: 'clientes', path: '/dashboard/clientes', icon: 'Users', label: 'Clientes' },
+      { id: 'fornecedores', path: '/dashboard/fornecedores', icon: 'Users', label: 'Fornecedores' },
+      { id: 'prospectos', path: '/dashboard/prospectos', icon: 'Users', label: 'Prospectos' },
+      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes Ello IA' },
+      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' },
     ]
   },
   {
-    id: 'inteligencia-artificial',
-    label: 'Inteligência Artificial',
-    icon: 'Sparkles',
+    id: 'ello-flows',
+    label: 'Ello Flows',
+    icon: 'Zap',
     items: [
-      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' }
+      { id: 'tarefas', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas' },
+      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos de Produção' },
+      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
+      { id: 'agenda-online', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
+      { id: 'ello-meetings', path: '/dashboard/reunioes', icon: 'Video', label: 'Ello Meetings' },
     ]
   },
   {
-    id: 'ellosuit-omni',
-    label: 'Ellosuit Omni',
+    id: 'ello-omni',
+    label: 'Ello Omni',
     icon: 'MessageSquare',
     items: [
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
-      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' }
+      { id: 'email-padrao', path: '/dashboard/email', icon: 'Mail', label: 'Email padrão' },
+      { id: 'email-marketing', path: '/dashboard/email-marketing', icon: 'Mail', label: 'Email marketing' },
     ]
   },
   {
-    id: 'ellosuit-track',
-    label: 'Ellosuit Track',
+    id: 'ello-track',
+    label: 'Ello Track',
     icon: 'Radio',
     items: [
-      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento Geral' },
-      { id: 'rastrear-links', path: '/dashboard/rastreamento-link', icon: 'Link2', label: 'Rastrear Links' },
-      { id: 'rastrear-videos', path: '/dashboard/rastreamento-video', icon: 'PlayCircle', label: 'Rastrear Vídeos' },
-      { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
+      { id: 'rastrear-pdf', path: '/dashboard/rastreamento', icon: 'FileText', label: 'Rastreamento de PDF' },
+      { id: 'rastrear-link', path: '/dashboard/rastreamento-link', icon: 'Link2', label: 'Rastreamento de Link' },
+      { id: 'rastrear-video', path: '/dashboard/rastreamento-video', icon: 'PlayCircle', label: 'Rastreamento de Vídeo' },
     ]
   },
   {
-    id: 'ellosuit-flow',
-    label: 'Ellosuit Flow',
-    icon: 'Zap',
-    items: [
-      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
-      { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
-      { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas' },
-      { id: 'reunioes', path: '/dashboard/reunioes', icon: 'Video', label: 'Reuniões' },
-      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos' }
-    ]
-  },
-  {
-    id: 'gestao',
-    label: 'Gestão',
-    icon: 'Users',
-    items: [
-      { id: 'cadastros', path: '/dashboard/cadastros', icon: 'Users', label: 'Cadastros' },
-      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' }
-    ]
-  },
-  {
-    id: 'insights',
-    label: 'Insights',
+    id: 'analise-relatorio',
+    label: 'Análise & Relatório',
     icon: 'BarChart3',
     items: [
-      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Analytics' },
-      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'BarChart3', label: 'Ello Vision' },
-      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios' }
+      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'Eye', label: 'Ello Vision' },
+      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Análises' },
+      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios' },
+    ]
+  },
+  {
+    id: 'ajuda-suporte',
+    label: 'Ajuda & Suporte',
+    icon: 'HelpCircle',
+    items: [
+      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte' },
+      { id: 'reportar', path: '/dashboard/reportar-problema', icon: 'AlertCircle', label: 'Reporte um problema' },
+      { id: 'termos', path: '/termos', icon: 'BookOpen', label: 'Termos & Políticas' },
     ]
   },
   {
     id: 'configuracoes',
-    label: 'Configurações',
+    label: 'Configurações & Privacidade',
     icon: 'Settings',
     items: [
-      { id: 'preferencias', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Preferências' },
-      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança' },
-      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte' }
+      { id: 'config', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Configurações' },
+      { id: 'personalizacao', path: '/dashboard/personalizar', icon: 'Palette', label: 'Personalização' },
+      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança & Privacidade' },
     ]
   }
 ];
@@ -228,10 +241,10 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
               className={cn(
                 "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
                 isHovered 
-                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105" 
+                  ? "bg-white text-primary shadow-lg scale-105" 
                   : hasActive 
-                    ? "bg-blue-500/20 text-blue-400" 
-                    : "text-gray-400 hover:bg-white/5 hover:text-white",
+                    ? "bg-white/20 text-white" 
+                    : "text-white/70 hover:bg-white/10 hover:text-white",
                 isDragging && "cursor-grabbing"
               )}
               {...(isEditMode ? { ...attributes, ...listeners } : {})}
@@ -244,7 +257,7 @@ function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }:
             </button>
           </TooltipTrigger>
           {!isHovered && (
-            <TooltipContent side="right" className="rounded-lg font-medium bg-gray-900 border-gray-800 text-white">
+            <TooltipContent side="right" className="rounded-lg font-medium">
               {group.label}
             </TooltipContent>
           )}
@@ -302,7 +315,7 @@ function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
               placeholder="Buscar funcionalidade..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-100 border-0 rounded-xl h-11 focus-visible:ring-blue-500"
+              className="pl-10 bg-gray-100 border-0 rounded-xl h-11 focus-visible:ring-primary"
             />
           </div>
         </div>
@@ -335,7 +348,7 @@ function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                           <IconComponent className="h-6 w-6 text-white" />
                         </div>
                         <span className={cn(
-                          "text-xs font-medium text-center leading-tight",
+                          "text-xs font-medium text-center leading-tight max-w-[70px]",
                           active ? "text-gray-900" : "text-gray-600"
                         )}>
                           {item.label}
@@ -461,8 +474,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
   // Desktop: Keep icon strip sidebar
   const sidebarContent = (
     <div className="h-full flex" onMouseLeave={handleMouseLeave}>
-      {/* Main icon strip - BLACK */}
-      <div className="w-16 bg-black flex flex-col h-full">
+      {/* Main icon strip - BLUE */}
+      <div className="w-16 bg-primary flex flex-col h-full">
         {/* Logo */}
         <div className="h-14 flex items-center justify-center border-b border-white/10">
           <Link to="/dashboard" onClick={handleLinkClick}>
@@ -500,8 +513,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
             className={cn(
               "w-9 h-9 rounded-xl flex items-center justify-center mt-2 transition-colors",
               isEditMode 
-                ? "bg-blue-500 text-white" 
-                : "text-gray-500 hover:bg-white/5 hover:text-white"
+                ? "bg-white text-primary" 
+                : "text-white/50 hover:bg-white/10 hover:text-white"
             )}
             title={isEditMode ? "Salvar ordem" : "Reordenar menu"}
           >
@@ -515,11 +528,11 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
         </div>
       </div>
 
-      {/* Expandable Panel - Dark gray */}
+      {/* Expandable Panel - Light */}
       <div 
         className={cn(
-          "bg-gray-900 backdrop-blur-sm border-l border-white/5 overflow-hidden transition-all duration-200 ease-out",
-          hoveredGroup ? "w-56 opacity-100" : "w-0 opacity-0"
+          "bg-white border-l border-gray-200 overflow-hidden transition-all duration-200 ease-out shadow-lg",
+          hoveredGroup ? "w-60 opacity-100" : "w-0 opacity-0"
         )}
         onMouseEnter={() => {
           if (hoverTimeoutRef.current) {
@@ -528,9 +541,9 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
         }}
       >
         {hoveredGroup && (
-          <div className="w-56 h-full flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
-            <div className="h-14 px-4 flex items-center border-b border-white/5">
-              <h3 className="text-white font-semibold text-sm">
+          <div className="w-60 h-full flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="h-14 px-4 flex items-center border-b border-gray-100">
+              <h3 className="text-gray-900 font-semibold text-sm">
                 {menuGroups.find(g => g.id === hoveredGroup)?.label}
               </h3>
             </div>
@@ -549,8 +562,8 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                         active 
-                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
-                          : "text-gray-400 hover:bg-white/5 hover:text-white"
+                          ? "bg-primary text-white shadow-sm" 
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                       )}
                     >
                       <ItemIcon className="h-4 w-4 flex-shrink-0" />

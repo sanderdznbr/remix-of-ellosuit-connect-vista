@@ -60,6 +60,7 @@ const DEFAULT_MENU_GROUPS = [
     label: 'Ellosuit Omni',
     icon: 'MessageSquare',
     items: [
+      { id: 'omni-hub', path: '/dashboard/omni', icon: 'Sparkles', label: 'Central Omni' },
       { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
       { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' }
     ]
@@ -69,6 +70,7 @@ const DEFAULT_MENU_GROUPS = [
     label: 'Ellosuit Track',
     icon: 'Radio',
     items: [
+      { id: 'track-hub', path: '/dashboard/track', icon: 'Radio', label: 'Central Track' },
       { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento Geral' },
       { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
     ]
@@ -78,6 +80,7 @@ const DEFAULT_MENU_GROUPS = [
     label: 'Ellosuit Flow',
     icon: 'Zap',
     items: [
+      { id: 'flow-hub', path: '/dashboard/flows', icon: 'Zap', label: 'Central Flow' },
       { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
       { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
       { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas' },

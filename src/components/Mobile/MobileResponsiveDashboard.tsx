@@ -24,6 +24,11 @@ import BotIADashboard from '@/components/BotIA/BotIADashboard';
 import UnifiedCadastros from '@/components/Dashboard/UnifiedCadastros';
 import UnifiedTracking from '@/components/Dashboard/UnifiedTracking';
 
+// Hub pages
+import OmniHub from '@/components/Dashboard/OmniHub';
+import FlowsHub from '@/components/Dashboard/FlowsHub';
+import TrackHub from '@/components/Dashboard/TrackHub';
+
 // Additional dashboard pages
 import ElloVisionDashboard from '@/components/Dashboard/ElloVisionDashboard';
 import ReportsDashboard from '@/components/Dashboard/ReportsDashboard';
@@ -63,6 +68,11 @@ const MobileResponsiveDashboard = () => {
           
           {/* Inteligência Artificial */}
           <Route path="/bot-ia" element={<BotIADashboard />} />
+          
+          {/* Hub Pages */}
+          <Route path="/omni" element={<OmniHub />} />
+          <Route path="/flows" element={<FlowsHub />} />
+          <Route path="/track" element={<TrackHub />} />
           
           {/* Comunicação */}
           <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />

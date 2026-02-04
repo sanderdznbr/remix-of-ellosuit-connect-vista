@@ -281,18 +281,19 @@ const AIAssistantHome = () => {
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card 
-            className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
-            onClick={() => navigate('/dashboard/crm-whatsapp')}
+            className="border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
+            onClick={() => navigate('/dashboard/omni')}
+            style={{ background: 'linear-gradient(135deg, #E34800 0%, #B33800 100%)' }}
           >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-white/80" />
-                    <span className="text-xs text-white/70 font-medium">Ellosuit Omni</span>
+                    <span className="text-xs text-white/70 font-medium">Central de Comunicação</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">CRM WhatsApp</h3>
-                  <p className="text-sm text-white/80">Gerencie conversas</p>
+                  <h3 className="text-lg font-semibold text-white">Ellosuit Omni</h3>
+                  <p className="text-sm text-white/80">WhatsApp, Email e IA</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
               </div>
@@ -300,37 +301,39 @@ const AIAssistantHome = () => {
           </Card>
 
           <Card 
-            className="bg-gradient-to-br from-gray-800 to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
-            onClick={() => navigate('/dashboard/rastreamento')}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Radio className="h-4 w-4 text-blue-400" />
-                    <span className="text-xs text-gray-400 font-medium">Ellosuit Track</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Rastreamento</h3>
-                  <p className="text-sm text-gray-400">Monitore tudo</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
-            onClick={() => navigate('/dashboard/fluxos')}
+            className="border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
+            onClick={() => navigate('/dashboard/flows')}
+            style={{ background: 'linear-gradient(135deg, #007DE3 0%, #0056A3 100%)' }}
           >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-white/80" />
-                    <span className="text-xs text-white/70 font-medium">Ellosuit Flow</span>
+                    <span className="text-xs text-white/70 font-medium">Produtividade</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Automações</h3>
-                  <p className="text-sm text-white/80">Crie fluxos</p>
+                  <h3 className="text-lg font-semibold text-white">Ellosuit Flow</h3>
+                  <p className="text-sm text-white/80">Agenda, Tarefas e Reuniões</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group rounded-2xl" 
+            onClick={() => navigate('/dashboard/track')}
+            style={{ background: 'linear-gradient(135deg, #00E371 0%, #00B35A 100%)' }}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Radio className="h-4 w-4 text-white/80" />
+                    <span className="text-xs text-white/70 font-medium">Rastreamento</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Ellosuit Track</h3>
+                  <p className="text-sm text-white/80">Docs, Links e Emails</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
               </div>

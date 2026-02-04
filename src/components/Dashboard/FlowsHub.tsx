@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Calendar, CheckSquare, Video, Zap, CalendarCheck, ListTodo, Clock, Target } from "lucide-react";
+import { Calendar, CheckSquare, Video, Zap, CalendarCheck, ListTodo, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,29 +9,29 @@ const FLOW_COLOR = "#007DE3";
 const flowModules = [
   {
     id: "agenda",
-    title: "Agenda",
-    description: "Visualize e gerencie todos os seus compromissos e eventos",
+    title: "Minha Agenda",
+    description: "Visualize e gerencie todos os seus compromissos e eventos do dia a dia",
     icon: Calendar,
     path: "/dashboard/agenda",
   },
   {
     id: "agenda-online",
     title: "Agenda Online",
-    description: "Links de agendamento para clientes marcarem horários",
+    description: "Crie links de agendamento para clientes marcarem horários com você",
     icon: CalendarCheck,
     path: "/dashboard/agenda-aberta",
   },
   {
     id: "tasks",
     title: "Tarefas",
-    description: "Organize suas atividades com listas e lembretes",
+    description: "Organize suas atividades diárias com listas, prioridades e lembretes",
     icon: CheckSquare,
     path: "/dashboard/tasks",
   },
   {
     id: "reunioes",
-    title: "Reuniões",
-    description: "Crie e participe de videoconferências com gravação",
+    title: "Videoconferência",
+    description: "Crie e participe de reuniões com vídeo, gravação e transcrição",
     icon: Video,
     path: "/dashboard/reunioes",
   },
@@ -45,7 +45,7 @@ const flowModules = [
   {
     id: "fluxos",
     title: "Fluxos de Trabalho",
-    description: "Kanban e automações para gerenciar projetos",
+    description: "Kanban e automações para gerenciar projetos e processos",
     icon: Zap,
     path: "/dashboard/fluxos",
   }
@@ -110,45 +110,46 @@ export default function FlowsHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Hero Header */}
       <div 
-        className="text-white"
+        className="relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${FLOW_COLOR} 0%, #0056A3 100%)` }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-              <Zap className="h-8 w-8 text-white" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNiAyNnYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+        <div className="max-w-7xl mx-auto px-6 py-16 relative">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+              <Zap className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Ellosuit Flow</h1>
-              <p className="text-white/80">Produtividade e Organização</p>
+              <h1 className="text-4xl font-bold text-white">Ellosuit Flow</h1>
+              <p className="text-white/80 text-lg">Produtividade e Organização</p>
             </div>
           </div>
-          <p className="text-white/90 max-w-2xl">
+          <p className="text-white/90 max-w-2xl text-lg">
             Mantenha sua rotina organizada e produtiva. Agenda, tarefas, reuniões 
-            e fluxos de trabalho integrados.
+            e fluxos de trabalho integrados para você alcançar mais resultados.
           </p>
         </div>
       </div>
 
       {/* KPI Stats */}
-      <div className="max-w-7xl mx-auto px-6 -mt-6">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, i) => {
               const Icon = stat.icon;
               return (
                 <div key={i} className="text-center">
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
-                    style={{ backgroundColor: `${FLOW_COLOR}15` }}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ backgroundColor: `${FLOW_COLOR}10` }}
                   >
-                    <Icon className="h-6 w-6" style={{ color: FLOW_COLOR }} />
+                    <Icon className="h-7 w-7" style={{ color: FLOW_COLOR }} />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
+                  <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
                 </div>
               );
             })}
@@ -157,51 +158,46 @@ export default function FlowsHub() {
       </div>
 
       {/* Modules Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Módulos</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">Módulos</h2>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {flowModules.map((module) => {
             const Icon = module.icon;
             return (
               <Link
                 key={module.id}
                 to={module.path}
-                className="group relative bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group relative bg-white rounded-2xl border-2 border-gray-100 p-8 hover:border-transparent transition-all duration-300 hover:-translate-y-1"
                 style={{ boxShadow: 'none' }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = `0 20px 40px -15px ${FLOW_COLOR}30`;
+                  e.currentTarget.style.boxShadow = `0 25px 50px -12px ${FLOW_COLOR}25`;
+                  e.currentTarget.style.borderColor = `${FLOW_COLOR}30`;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = '#F3F4F6';
                 }}
               >
-                <div 
-                  className="absolute inset-x-0 top-0 h-1 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ backgroundColor: FLOW_COLOR }}
-                />
-                
-                <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: FLOW_COLOR }}
-                >
-                  <Icon className="h-7 w-7 text-white" />
+                <div className="flex items-start justify-between">
+                  <div 
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{ backgroundColor: FLOW_COLOR }}
+                  >
+                    <Icon className="h-8 w-8 text-white" />
+                  </div>
+                  <ArrowRight 
+                    className="h-5 w-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all"
+                  />
                 </div>
                 
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mt-6 mb-2">
                   {module.title}
                 </h3>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-gray-500 leading-relaxed">
                   {module.description}
                 </p>
-                
-                <div className="flex items-center justify-end pt-4 mt-4 border-t border-gray-100">
-                  <span 
-                    className="text-sm font-medium group-hover:translate-x-1 transition-transform"
-                    style={{ color: FLOW_COLOR }}
-                  >
-                    Acessar →
-                  </span>
-                </div>
               </Link>
             );
           })}

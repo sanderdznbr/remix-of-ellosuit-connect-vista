@@ -1,194 +1,184 @@
-import { useState, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { 
   Calendar, Mail, Home, Users, FileText, Settings, Video,
   CheckSquare, MessageSquare, Bot, Zap, BarChart3, Menu, Shield,
-  HelpCircle, FolderOpen, Eye, Search, X, Link2, PlayCircle, Palette
+  HelpCircle, ChevronRight, FolderOpen, Radio, Sparkles, GripVertical, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ElloLogo } from "@/components/shared/ElloLogo";
+import { useSidebarSettings } from "@/hooks/useSidebarSettings";
 import { UserProfileMenu } from "./UserProfileMenu";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Icon mapping
 const iconMap: Record<string, any> = {
   Home, Calendar, Mail, Users, FileText, Settings, Video, CheckSquare,
-  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, 
-  Eye, Link2, PlayCircle, Palette
+  MessageSquare, Bot, Zap, BarChart3, Shield, HelpCircle, FolderOpen, Radio, Sparkles, Eye
 };
 
-// Menu sections with colors
-const MENU_SECTIONS = [
+// Default menu groups - reorganized
+const DEFAULT_MENU_GROUPS = [
   {
-    id: 'sistema',
-    label: 'SISTEMA',
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: 'Home',
     items: [
-      { id: 'dashboard', path: '/dashboard', icon: 'Home', label: 'Início', color: 'bg-blue-500' },
-      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda', color: 'bg-blue-500' },
-      { id: 'email-padrao', path: '/dashboard/email', icon: 'Mail', label: 'Email', color: 'bg-blue-500' },
-      { id: 'clientes', path: '/dashboard/clientes', icon: 'Users', label: 'Clientes', color: 'bg-blue-500' },
-      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Drive', color: 'bg-blue-500' },
+      { id: 'home', path: '/dashboard', icon: 'Home', label: 'Home' }
     ]
   },
   {
-    id: 'reunioes',
-    label: 'REUNIÕES',
+    id: 'inteligencia-artificial',
+    label: 'Inteligência Artificial',
+    icon: 'Sparkles',
     items: [
-      { id: 'ello-meetings', path: '/dashboard/reunioes', icon: 'Video', label: 'Reuniões', color: 'bg-blue-600' },
-      { id: 'agenda-online', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Aberta', color: 'bg-blue-600' },
+      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' }
     ]
   },
   {
-    id: 'rastreamento',
-    label: 'RASTREAMENTO',
+    id: 'ellosuit-omni',
+    label: 'Ellosuit Omni',
+    icon: 'MessageSquare',
     items: [
-      { id: 'rastrear-pdf', path: '/dashboard/rastreamento', icon: 'FileText', label: 'Rastrear Docs', color: 'bg-orange-500' },
-      { id: 'rastrear-link', path: '/dashboard/rastreamento-link', icon: 'Link2', label: 'Rastrear Links', color: 'bg-orange-500' },
-      { id: 'rastrear-video', path: '/dashboard/rastreamento-video', icon: 'PlayCircle', label: 'Rastrear Vídeos', color: 'bg-orange-500' },
+      { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'CRM WhatsApp' },
+      { id: 'email', path: '/dashboard/email', icon: 'Mail', label: 'Email Marketing' }
     ]
   },
   {
-    id: 'analise',
-    label: 'ANÁLISE',
+    id: 'ellosuit-track',
+    label: 'Ellosuit Track',
+    icon: 'Radio',
     items: [
-      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'Eye', label: 'Ello Vision', color: 'bg-purple-500' },
-      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Analytics', color: 'bg-purple-500' },
-      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios', color: 'bg-purple-500' },
+      { id: 'rastreamento', path: '/dashboard/rastreamento', icon: 'Radio', label: 'Rastreamento Geral' },
+      { id: 'email-tracker', path: '/dashboard/email-tracker', icon: 'Eye', label: 'Rastrear Emails' }
     ]
   },
   {
-    id: 'ferramentas',
-    label: 'FERRAMENTAS',
+    id: 'ellosuit-flow',
+    label: 'Ellosuit Flow',
+    icon: 'Zap',
     items: [
-      { id: 'tarefas', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas', color: 'bg-green-500' },
-      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos', color: 'bg-green-500' },
-      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes IA', color: 'bg-violet-500' },
-      { id: 'crm-whatsapp', path: '/dashboard/crm-whatsapp', icon: 'MessageSquare', label: 'WhatsApp CRM', color: 'bg-green-600' },
+      { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar', label: 'Agenda' },
+      { id: 'agenda-aberta', path: '/dashboard/agenda-aberta', icon: 'Calendar', label: 'Agenda Online' },
+      { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare', label: 'Tarefas' },
+      { id: 'reunioes', path: '/dashboard/reunioes', icon: 'Video', label: 'Reuniões' },
+      { id: 'fluxos', path: '/dashboard/fluxos', icon: 'Zap', label: 'Fluxos' }
+    ]
+  },
+  {
+    id: 'gestao',
+    label: 'Gestão',
+    icon: 'Users',
+    items: [
+      { id: 'cadastros', path: '/dashboard/cadastros', icon: 'Users', label: 'Cadastros' },
+      { id: 'arquivos', path: '/dashboard/drive', icon: 'FolderOpen', label: 'Arquivos' }
+    ]
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    icon: 'BarChart3',
+    items: [
+      { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3', label: 'Analytics' },
+      { id: 'ello-vision', path: '/dashboard/ello-vision', icon: 'BarChart3', label: 'Ello Vision' },
+      { id: 'relatorios', path: '/dashboard/relatorios', icon: 'FileText', label: 'Relatórios' }
     ]
   },
   {
     id: 'configuracoes',
-    label: 'CONFIGURAÇÕES',
+    label: 'Configurações',
+    icon: 'Settings',
     items: [
-      { id: 'config', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Config', color: 'bg-gray-500' },
-      { id: 'personalizacao', path: '/dashboard/personalizar', icon: 'Palette', label: 'Personalizar', color: 'bg-gray-500' },
-      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança', color: 'bg-gray-500' },
-      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte', color: 'bg-gray-500' },
+      { id: 'preferencias', path: '/dashboard/configuracoes', icon: 'Settings', label: 'Preferências' },
+      { id: 'seguranca', path: '/dashboard/seguranca', icon: 'Shield', label: 'Segurança' },
+      { id: 'suporte', path: '/dashboard/suporte', icon: 'HelpCircle', label: 'Suporte' }
     ]
   }
 ];
 
-// Quick access icons for collapsed state
-const QUICK_ICONS = [
-  { id: 'home', path: '/dashboard', icon: 'Home' },
-  { id: 'agenda', path: '/dashboard/agenda', icon: 'Calendar' },
-  { id: 'email', path: '/dashboard/email', icon: 'Mail' },
-  { id: 'meetings', path: '/dashboard/reunioes', icon: 'Video' },
-  { id: 'tasks', path: '/dashboard/tasks', icon: 'CheckSquare' },
-  { id: 'analytics', path: '/dashboard/analytics', icon: 'BarChart3' },
-  { id: 'settings', path: '/dashboard/configuracoes', icon: 'Settings' },
-];
+interface SortableMenuGroupProps {
+  group: typeof DEFAULT_MENU_GROUPS[0];
+  isHovered: boolean;
+  hasActive: boolean;
+  onHover: (id: string) => void;
+  isEditMode: boolean;
+}
 
-// Mobile Quick Menu Component
-function MobileQuickMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-  const location = useLocation();
+function SortableMenuGroup({ group, isHovered, hasActive, onHover, isEditMode }: SortableMenuGroupProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: group.id, disabled: !isEditMode });
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard' || location.pathname === '/dashboard/';
-    }
-    return location.pathname.startsWith(path);
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    onClose();
-  };
-
-  // Filter items based on search
-  const filteredSections = MENU_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(item => 
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(section => section.items.length > 0);
+  const IconComponent = iconMap[group.icon] || Home;
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="left" className="w-full max-w-md p-0 bg-white border-none">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Menu Rápido</h2>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar funcionalidade..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-100 border-0 rounded-xl h-11 focus-visible:ring-primary"
-            />
-          </div>
-        </div>
-
-        {/* Menu Sections */}
-        <ScrollArea className="h-[calc(100vh-140px)]">
-          <div className="px-4 pb-6 space-y-6">
-            {filteredSections.map(section => (
-              <div key={section.id}>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  {section.label}
-                </h3>
-                <div className="grid grid-cols-4 gap-3">
-                  {section.items.map(item => {
-                    const IconComponent = iconMap[item.icon] || Home;
-                    const active = isActive(item.path);
-                    
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => handleNavigate(item.path)}
-                        className="flex flex-col items-center gap-2 group"
-                      >
-                        <div className={cn(
-                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
-                          active 
-                            ? `${item.color} shadow-lg` 
-                            : `${item.color} opacity-90 group-hover:opacity-100 group-hover:scale-105`
-                        )}>
-                          <IconComponent className="h-6 w-6 text-white" />
-                        </div>
-                        <span className={cn(
-                          "text-xs font-medium text-center leading-tight max-w-[70px]",
-                          active ? "text-gray-900" : "text-gray-600"
-                        )}>
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative"
+      onMouseEnter={() => onHover(group.id)}
+    >
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={cn(
+                "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
+                isHovered 
+                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105" 
+                  : hasActive 
+                    ? "bg-blue-500/20 text-blue-400" 
+                    : "text-gray-400 hover:bg-white/5 hover:text-white",
+                isDragging && "cursor-grabbing"
+              )}
+              {...(isEditMode ? { ...attributes, ...listeners } : {})}
+            >
+              {isEditMode ? (
+                <GripVertical className="h-5 w-5" />
+              ) : (
+                <IconComponent className="h-5 w-5" />
+              )}
+            </button>
+          </TooltipTrigger>
+          {!isHovered && (
+            <TooltipContent side="right" className="rounded-lg font-medium bg-gray-900 border-gray-800 text-white">
+              {group.label}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }
 
@@ -199,12 +189,55 @@ interface ModularSidebarProps {
 }
 
 export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: ModularSidebarProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [menuGroups, setMenuGroups] = useState(DEFAULT_MENU_GROUPS);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings, updateSettings } = useSidebarSettings();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Load saved order from settings
+  useEffect(() => {
+    if (settings.menu_order && settings.menu_order.length > 0) {
+      const orderedGroups = settings.menu_order
+        .map(id => DEFAULT_MENU_GROUPS.find(g => g.id === id))
+        .filter(Boolean) as typeof DEFAULT_MENU_GROUPS;
+      
+      // Add any missing groups at the end
+      DEFAULT_MENU_GROUPS.forEach(group => {
+        if (!orderedGroups.find(g => g.id === group.id)) {
+          orderedGroups.push(group);
+        }
+      });
+      
+      setMenuGroups(orderedGroups);
+    }
+  }, [settings.menu_order]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setMenuGroups((items) => {
+        const oldIndex = items.findIndex(i => i.id === active.id);
+        const newIndex = items.findIndex(i => i.id === over.id);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Save new order
+        updateSettings({ menu_order: newOrder.map(g => g.id) });
+        
+        return newOrder;
+      });
+    }
+  };
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -213,177 +246,157 @@ export function ModularSidebar({ isMobile, isOpen = false, onOpenChange }: Modul
     return location.pathname.startsWith(path);
   };
 
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    setIsHovered(false);
-    setSearchQuery('');
+  const handleLinkClick = () => {
+    setHoveredGroup(null);
+    if (isMobile && onOpenChange) {
+      onOpenChange(false);
+    }
   };
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = (groupId: string) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
-    setIsHovered(true);
+    setHoveredGroup(groupId);
   };
 
   const handleMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
-      setSearchQuery('');
-    }, 200);
+      setHoveredGroup(null);
+    }, 150);
   };
 
-  // Filter sections for expanded view
-  const filteredSections = MENU_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(item => 
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(section => section.items.length > 0);
+  const hasActiveItemInGroup = (group: typeof DEFAULT_MENU_GROUPS[0]) => {
+    return group.items.some(item => isActive(item.path));
+  };
 
-  // Mobile: Use sheet menu
+  const sidebarContent = (
+    <div className="h-full flex" onMouseLeave={handleMouseLeave}>
+      {/* Main icon strip - BLACK */}
+      <div className="w-16 bg-black flex flex-col h-full">
+        {/* Logo */}
+        <div className="h-14 flex items-center justify-center border-b border-white/10">
+          <Link to="/dashboard" onClick={handleLinkClick}>
+            <ElloLogo className="h-7 w-auto" color="white" />
+          </Link>
+        </div>
+
+        {/* Menu Group Icons with DnD */}
+        <div className="flex-1 py-2 flex flex-col items-center overflow-y-auto">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={menuGroups.map(g => g.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {menuGroups.map((group) => (
+                <SortableMenuGroup
+                  key={group.id}
+                  group={group}
+                  isHovered={hoveredGroup === group.id}
+                  hasActive={hasActiveItemInGroup(group)}
+                  onHover={handleMouseEnter}
+                  isEditMode={isEditMode}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+          
+          {/* Edit mode toggle */}
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={cn(
+              "w-9 h-9 rounded-xl flex items-center justify-center mt-2 transition-colors",
+              isEditMode 
+                ? "bg-blue-500 text-white" 
+                : "text-gray-500 hover:bg-white/5 hover:text-white"
+            )}
+            title={isEditMode ? "Salvar ordem" : "Reordenar menu"}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* User Avatar with Profile Menu */}
+        <div className="py-3 flex flex-col items-center border-t border-white/10">
+          <UserProfileMenu onLinkClick={handleLinkClick} />
+        </div>
+      </div>
+
+      {/* Expandable Panel - Dark gray */}
+      <div 
+        className={cn(
+          "bg-gray-900 backdrop-blur-sm border-l border-white/5 overflow-hidden transition-all duration-200 ease-out",
+          hoveredGroup ? "w-56 opacity-100" : "w-0 opacity-0"
+        )}
+        onMouseEnter={() => {
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+          }
+        }}
+      >
+        {hoveredGroup && (
+          <div className="w-56 h-full flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="h-14 px-4 flex items-center border-b border-white/5">
+              <h3 className="text-white font-semibold text-sm">
+                {menuGroups.find(g => g.id === hoveredGroup)?.label}
+              </h3>
+            </div>
+
+            <div className="flex-1 py-2 px-2">
+              <nav className="space-y-1">
+                {menuGroups.find(g => g.id === hoveredGroup)?.items.map((item) => {
+                  const ItemIcon = iconMap[item.icon] || Home;
+                  const active = isActive(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      onClick={handleLinkClick}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                        active 
+                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                          : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      <ItemIcon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                      {active && <ChevronRight className="h-4 w-4 ml-auto" />}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (isMobile) {
     return (
-      <>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-white hover:bg-white/10 rounded-xl"
-          onClick={() => onOpenChange?.(true)}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-        <MobileQuickMenu isOpen={isOpen} onClose={() => onOpenChange?.(false)} />
-      </>
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-xl">
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
+        
+        <SheetContent side="left" className="w-auto p-0 bg-transparent border-none" style={{ zIndex: 100 }}>
+          <div className="h-full">{sidebarContent}</div>
+        </SheetContent>
+      </Sheet>
     );
   }
 
-  // Desktop: Single expandable sidebar
   return (
-    <div 
-      className={cn(
-        "h-screen sticky top-0 bg-primary flex flex-col z-40 transition-all duration-300 ease-out",
-        isHovered ? "w-80" : "w-16"
-      )}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Header */}
-      <div className="h-14 flex items-center px-4 border-b border-white/10">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <ElloLogo className="h-7 w-auto flex-shrink-0" color="white" />
-          {isHovered && (
-            <span className="text-white font-semibold text-sm whitespace-nowrap">
-              Menu Rápido
-            </span>
-          )}
-        </Link>
-      </div>
-
-      {/* Content */}
-      {isHovered ? (
-        // Expanded: Show full menu with search and grid
-        <div className="flex-1 flex flex-col bg-white overflow-hidden">
-          {/* Search */}
-          <div className="p-4 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar funcionalidade..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-100 border-0 rounded-xl h-10 focus-visible:ring-primary text-sm"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* Menu Sections Grid */}
-          <ScrollArea className="flex-1">
-            <div className="px-4 py-4 space-y-5">
-              {filteredSections.map(section => (
-                <div key={section.id}>
-                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                    {section.label}
-                  </h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {section.items.map(item => {
-                      const IconComponent = iconMap[item.icon] || Home;
-                      const active = isActive(item.path);
-                      
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => handleNavigate(item.path)}
-                          className="flex flex-col items-center gap-1.5 group py-1"
-                        >
-                          <div className={cn(
-                            "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
-                            active 
-                              ? `${item.color} shadow-lg scale-105` 
-                              : `${item.color} opacity-80 group-hover:opacity-100 group-hover:scale-110`
-                          )}>
-                            <IconComponent className="h-5 w-5 text-white" />
-                          </div>
-                          <span className={cn(
-                            "text-[10px] font-medium text-center leading-tight",
-                            active ? "text-gray-900" : "text-gray-500 group-hover:text-gray-700"
-                          )}>
-                            {item.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* User Profile */}
-          <div className="p-3 border-t border-gray-100 bg-gray-50">
-            <div className="flex items-center gap-3">
-              <UserProfileMenu onLinkClick={() => setIsHovered(false)} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 truncate">
-                  {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-                </p>
-                <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Collapsed: Show icon strip only
-        <>
-          <div className="flex-1 py-3 flex flex-col items-center gap-1 overflow-y-auto">
-            {QUICK_ICONS.map((item) => {
-              const IconComponent = iconMap[item.icon] || Home;
-              const active = isActive(item.path);
-              
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-                    active 
-                      ? "bg-white text-primary shadow-lg" 
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
-                  )}
-                >
-                  <IconComponent className="h-5 w-5" />
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* User Avatar */}
-          <div className="py-3 flex flex-col items-center border-t border-white/10">
-            <UserProfileMenu onLinkClick={() => {}} />
-          </div>
-        </>
-      )}
+    <div className="h-screen sticky top-0 flex">
+      {sidebarContent}
     </div>
   );
 }

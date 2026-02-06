@@ -350,7 +350,7 @@ export function MegaMenuHeader() {
                           {column.title}
                         </h4>
                         <div className="space-y-1">
-                          {column.items.map((item) => {
+                        {column.items.map((item) => {
                             const Icon = item.icon;
                             const active = isActive(item.path);
                             return (
@@ -358,24 +358,24 @@ export function MegaMenuHeader() {
                                 key={item.id}
                                 to={item.path}
                                 onClick={() => setActiveMenu(null)}
-                                className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-gray-50 group"
+                                className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-gray-50/80 group"
                                 style={{
-                                  backgroundColor: active ? `${currentGroup.color}08` : 'transparent',
+                                  backgroundColor: active ? `${currentGroup.color}10` : 'transparent',
                                 }}
                               >
                                 <div 
-                                  className="p-2 rounded-lg transition-colors"
+                                  className="p-2.5 rounded-xl transition-all shadow-sm"
                                   style={{
-                                    backgroundColor: active ? currentGroup.color : '#F3F4F6',
-                                    color: active ? 'white' : '#6B7280',
+                                    backgroundColor: active ? currentGroup.color : `${currentGroup.color}15`,
+                                    color: active ? 'white' : currentGroup.color,
                                   }}
                                 >
                                   <Icon className="h-4 w-4" />
                                 </div>
                                 <div>
                                   <span 
-                                    className="text-sm font-medium block"
-                                    style={{ color: active ? currentGroup.color : '#111827' }}
+                                    className="text-sm font-medium block text-gray-800 group-hover:text-gray-900"
+                                    style={{ color: active ? currentGroup.color : undefined }}
                                   >
                                     {item.label}
                                   </span>

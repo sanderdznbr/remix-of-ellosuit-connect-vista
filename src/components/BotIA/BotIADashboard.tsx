@@ -17,6 +17,7 @@ import BotIAChat from './BotIAChat';
 import EditAgentModal from './EditAgentModal';
 import ChatbotFlowBuilder from './ChatbotFlowBuilder';
 
+const OMNI_COLOR = "#E34800";
 
 interface AIAgent {
   id: string;
@@ -309,106 +310,114 @@ const BotIADashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando agentes IA...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: OMNI_COLOR }}></div>
+          <p className="text-gray-500">Carregando agentes IA...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-background to-indigo-50/30 p-6 page-content">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-            <Bot className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-white">
+      {/* Hero Header */}
+      <div 
+        className="relative overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${OMNI_COLOR} 0%, #B33800 100%)` }}
+      >
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNiAyNnYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+        <div className="max-w-7xl mx-auto px-6 py-12 relative">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+                <Bot className="h-10 w-10 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Agentes de IA</h1>
+                <p className="text-white/80">Crie e gerencie assistentes virtuais inteligentes</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowTemplateModal(true)} 
+                className="rounded-xl border-white/30 text-white hover:bg-white/10 bg-white/10"
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                Templates
+              </Button>
+              <Button 
+                onClick={() => setShowCreateModal(true)} 
+                className="rounded-xl bg-white text-[#E34800] hover:bg-white/90 shadow-lg"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Agente
+              </Button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Agentes de IA
-            </h1>
-            <p className="text-muted-foreground text-sm">Crie e gerencie assistentes virtuais inteligentes</p>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setShowTemplateModal(true)} className="rounded-xl border-blue-200 hover:bg-blue-50">
-            <Brain className="h-4 w-4 mr-2 text-blue-600" />
-            Templates
-          </Button>
-          <Button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agente
-          </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="agents" className="space-y-6">
-        <TabsList className="bg-white shadow-sm p-1 rounded-xl border">
-          <TabsTrigger value="agents" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-            Meus Agentes
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-            Análises
-          </TabsTrigger>
-          <TabsTrigger value="chatbot" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-            Chatbot Fluxos
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-            Configurações
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Agents Tab */}
-        <TabsContent value="agents" className="space-y-6">
-          {/* Stats - White Background */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Agentes Ativos</p>
-                    <p className="text-3xl font-bold text-blue-600">{agents.filter(a => a.is_active).length}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-xl">
-                    <Bot className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total de Agentes</p>
-                    <p className="text-3xl font-bold text-indigo-600">{agents.length}</p>
-                  </div>
-                  <div className="p-3 bg-indigo-100 rounded-xl">
-                    <Brain className="h-6 w-6 text-indigo-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-white border-0 shadow-lg rounded-2xl">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Conversas Hoje</p>
-                    <p className="text-3xl font-bold text-cyan-600">28</p>
-                  </div>
-                  <div className="p-3 bg-cyan-100 rounded-xl">
-                    <MessageCircle className="h-6 w-6 text-cyan-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* KPI Stats */}
+      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="text-center">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: `${OMNI_COLOR}10` }}
+              >
+                <Bot className="h-6 w-6" style={{ color: OMNI_COLOR }} />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{agents.filter(a => a.is_active).length}</div>
+              <div className="text-sm text-gray-500">Agentes Ativos</div>
+            </div>
+            <div className="text-center">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: `${OMNI_COLOR}10` }}
+              >
+                <Brain className="h-6 w-6" style={{ color: OMNI_COLOR }} />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{agents.length}</div>
+              <div className="text-sm text-gray-500">Total de Agentes</div>
+            </div>
+            <div className="text-center">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: `${OMNI_COLOR}10` }}
+              >
+                <MessageCircle className="h-6 w-6" style={{ color: OMNI_COLOR }} />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">28</div>
+              <div className="text-sm text-gray-500">Conversas Hoje</div>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Agents Grid */}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <Tabs defaultValue="agents" className="space-y-6">
+          <TabsList className="bg-white shadow-sm p-1 rounded-xl border border-gray-100">
+            <TabsTrigger value="agents" className="rounded-lg data-[state=active]:bg-[#E3480010] data-[state=active]:text-[#E34800]">
+              Meus Agentes
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-[#E3480010] data-[state=active]:text-[#E34800]">
+              Análises
+            </TabsTrigger>
+            <TabsTrigger value="chatbot" className="rounded-lg data-[state=active]:bg-[#E3480010] data-[state=active]:text-[#E34800]">
+              Chatbot Fluxos
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-[#E3480010] data-[state=active]:text-[#E34800]">
+              Configurações
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Agents Tab */}
+          <TabsContent value="agents" className="space-y-6">
+            {/* Agents Grid */}
           {agents.length === 0 ? (
             <Card className="border-0 shadow-lg rounded-2xl">
               <CardContent className="text-center py-16">
@@ -608,6 +617,7 @@ const BotIADashboard: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* Templates Modal */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>

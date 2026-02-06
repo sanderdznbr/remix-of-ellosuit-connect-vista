@@ -364,13 +364,12 @@ export function MegaMenuHeader() {
                                 }}
                               >
                                 <div 
-                                  className="p-2.5 rounded-xl transition-all"
+                                  className="p-2.5 rounded-xl transition-all shadow-sm"
                                   style={{
                                     backgroundColor: currentGroup.color,
-                                    color: 'white',
                                   }}
                                 >
-                                  <Icon className="h-4 w-4" />
+                                  <Icon className="h-4 w-4 text-white" />
                                 </div>
                                 <div>
                                   <span 

@@ -624,10 +624,10 @@ const WhatsAppCRM: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E34800] mx-auto mb-4"></div>
-          <p className="text-gray-500">Carregando CRM WhatsApp...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando CRM WhatsApp...</p>
         </div>
       </div>
     );
@@ -636,84 +636,59 @@ const WhatsAppCRM: React.FC = () => {
   const currentMessages = selectedAgent ? agentChatMessages : messages;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
-      {/* Hero Header */}
-      <div 
-        className="relative overflow-hidden flex-shrink-0"
-        style={{ background: `linear-gradient(135deg, #E34800 0%, #B33800 100%)` }}
-      >
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAzMHYySDI0di0yaDEyek0zNiAyNnYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
-        <div className="max-w-7xl mx-auto px-6 py-6 relative">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                <MessageSquare className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">CRM WhatsApp</h1>
-                <p className="text-white/80 text-sm">Gerencie conversas e leads</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {/* View Toggle */}
-              <div className="flex items-center gap-1 bg-white/20 rounded-lg p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    "h-7 px-2 text-white hover:bg-white/20",
-                    viewMode === 'list' && "bg-white/30"
-                  )}
-                >
-                  <List className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline text-xs">Lista</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('kanban')}
-                  className={cn(
-                    "h-7 px-2 text-white hover:bg-white/20",
-                    viewMode === 'kanban' && "bg-white/30"
-                  )}
-                >
-                  <LayoutGrid className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline text-xs">Kanban</span>
-                </Button>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedConversationForLabels(null);
-                  setShowLabelsManager(true);
-                }}
-                className="h-8 text-white hover:bg-white/20"
-              >
-                <Tag className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Etiquetas</span>
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={() => setShowQRModal(true)} 
-                className="bg-white text-[#E34800] hover:bg-white/90"
-              >
-                <QrCode className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Conectar</span>
-              </Button>
-            </div>
+    <div className="h-[calc(100vh-64px)] bg-background flex flex-col overflow-hidden">
+      {/* Top Header - Always visible */}
+      <div className="p-4 border-b bg-card flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            <h1 className="font-bold text-lg">CRM WhatsApp</h1>
           </div>
           
-          {/* Connection Status */}
-          {connectedSessions.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-white/80 mt-3">
-              <Circle className="h-2 w-2 fill-emerald-400 text-emerald-400" />
-              {connectedSessions.length} conexão(ões) ativa(s)
-            </div>
-          )}
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-7 px-2"
+            >
+              <List className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Lista</span>
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-7 px-2"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Kanban</span>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedConversationForLabels(null);
+              setShowLabelsManager(true);
+            }}
+            className="h-8"
+          >
+            <Tag className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Etiquetas</span>
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setShowQRModal(true)} 
+            className="bg-primary hover:bg-primary/90"
+          >
+            <QrCode className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Conectar</span>
+          </Button>
         </div>
       </div>
 
@@ -774,22 +749,30 @@ const WhatsAppCRM: React.FC = () => {
                     onClick={() => setActiveTab(tab as any)}
                     className={cn(
                       "flex-1 text-xs",
-                      activeTab === tab && "bg-[#E34800] hover:bg-[#E34800]/90"
+                      activeTab === tab && "bg-primary hover:bg-primary/90"
                     )}
                   >
                     {tab === 'all' ? 'Todas' : tab === 'unread' ? 'Não lidas' : tab === 'open' ? 'Abertas' : 'Fechadas'}
                   </Button>
                 ))}
               </div>
+              
+              {/* Connection Status */}
+              {connectedSessions.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
+                  {connectedSessions.length} conexão(ões) ativa(s)
+                </div>
+              )}
             </div>
         
             {/* AI Agents Section */}
         {aiAgents.length > 0 && (
           <div className="border-b">
-            <div className="p-3" style={{ background: 'linear-gradient(to right, #E3480010, #E3480005)' }}>
+            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-[#E34800]" />
-                <span className="text-sm font-medium text-[#E34800]">Agentes IA</span>
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Agentes IA</span>
               </div>
               <div className="space-y-1">
                 {aiAgents.map(agent => (
@@ -799,20 +782,20 @@ const WhatsAppCRM: React.FC = () => {
                     className={cn(
                       "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
                       selectedAgent?.id === agent.id 
-                        ? "bg-[#E3480015]" 
-                        : "hover:bg-[#E3480008]"
+                        ? "bg-blue-100 dark:bg-blue-900/30" 
+                        : "hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     )}
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={agent.avatar_url || undefined} />
-                      <AvatarFallback className="bg-[#E34800] text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
                         <Bot className="h-5 w-5" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm truncate">{agent.name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-[#E3480015] text-[#E34800]">
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                           IA
                         </Badge>
                       </div>
@@ -854,7 +837,7 @@ const WhatsAppCRM: React.FC = () => {
                 >
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={conversation.profile_picture} />
-                    <AvatarFallback className="bg-[#E3480015] text-[#E34800]">
+                    <AvatarFallback className="bg-blue-100 text-blue-700">
                       {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -880,7 +863,7 @@ const WhatsAppCRM: React.FC = () => {
                         {conversation.last_message || 'Nova conversa'}
                       </p>
                       {(conversation.unread_count || 0) > 0 && (
-                        <Badge className="bg-[#E34800] text-white text-xs px-2 py-0.5 min-w-[20px] justify-center">
+                        <Badge className="bg-blue-600 text-white text-xs px-2 py-0.5 min-w-[20px] justify-center">
                           {conversation.unread_count}
                         </Badge>
                       )}

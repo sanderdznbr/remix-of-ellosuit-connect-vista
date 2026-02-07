@@ -571,13 +571,41 @@ serve(async (req) => {
             } else {
               const errorText = await sendResponse.text();
               console.error('Baileys send error:', errorText);
-              return new Response(JSON.stringify({ error: 'Falha ao enviar mensagem', details: errorText }), {
+              
+              // Parse error message for better user feedback
+              let errorMessage = 'Falha ao enviar mensagem';
+              let errorDetails = errorText;
+              
+              try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error === 'Session not connected') {
+                  errorMessage = 'WhatsApp desconectado no servidor';
+                  errorDetails = 'A sessão foi desconectada. Reconecte escaneando o QR Code novamente.';
+                  
+                  // Update session status in database
+                  await supabase
+                    .from('whatsapp_sessions')
+                    .update({ status: 'disconnected', connected_at: null })
+                    .eq('id', sessionId);
+                }
+              } catch {
+                // Not JSON, use raw error
+              }
+              
+              return new Response(JSON.stringify({ error: errorMessage, details: errorDetails }), {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
             }
-          } catch (e) {
+          } catch (e: any) {
             console.error('Error sending via Baileys:', e);
+            return new Response(JSON.stringify({ 
+              error: 'Erro de conexão com servidor', 
+              details: e.message || 'Não foi possível conectar ao servidor WhatsApp'
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
         }
 

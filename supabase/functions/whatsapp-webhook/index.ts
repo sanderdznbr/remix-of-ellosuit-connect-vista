@@ -359,22 +359,37 @@ serve(async (req) => {
           const isGroup = isGroupJid(remoteJid);
           
           // ============== GROUP MESSAGE: Extract actual sender ==============
-          // In group messages, messageKey.participant contains the sender's JID
+          // Server v3.1.0+ sends senderPhone and senderName directly
+          // Fallback to extracting from messageKey.participant for older servers
           let senderPhone = '';
           let senderName = '';
           
-          if (isGroup && !fromMe) {
-            // For incoming group messages, extract the actual sender
+          // First try direct fields from server v3.1.0+
+          if (msg.senderPhone) {
+            senderPhone = msg.senderPhone;
+          }
+          if (msg.senderName) {
+            senderName = msg.senderName;
+          }
+          
+          // Fallback: extract from participant JID for older server versions
+          if (isGroup && !fromMe && !senderPhone) {
             const participantJid = messageKey.participant || msg.participant;
             if (participantJid) {
               senderPhone = extractPhoneFromJid(participantJid, false) || '';
-              // pushName contains the sender's WhatsApp name
-              senderName = msg.pushName || msg.senderName || senderPhone;
-              console.log(`[GROUP] Sender: ${senderName} (${senderPhone})`);
+              if (!senderName) {
+                senderName = msg.pushName || '';
+              }
             }
-          } else if (!isGroup && !fromMe) {
-            // For individual chats, sender is the contact
-            senderName = msg.pushName || msg.senderName || '';
+          }
+          
+          // For individual chats, sender is the contact
+          if (!isGroup && !fromMe && !senderName) {
+            senderName = msg.pushName || '';
+          }
+          
+          if (isGroup && (senderName || senderPhone)) {
+            console.log(`[GROUP] Sender: ${senderName} (${senderPhone})`);
           }
           
           // Extract and validate identifier (allows groups now)

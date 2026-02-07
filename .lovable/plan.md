@@ -1,239 +1,145 @@
 
-# Plano: Renovação Completa do Email Marketing
+# Plano: Corrigir Loop Infinito de QR Code do WhatsApp
 
-## Visão Geral
+## Diagnóstico
 
-Transformar o sistema de Email Marketing em uma experiência moderna e interativa com fluxo step-by-step, construtor visual drag-and-drop, integração com IA e limite de envios diários.
+O problema é um **loop de reconexão infinito** no servidor Baileys:
 
----
+1. Sessão é criada
+2. Baileys desconecta imediatamente com `Code: undefined` (antes de gerar QR)
+3. Lógica de reconexão tenta reconectar após 3 segundos
+4. Sessão é deletada e recriada infinitamente
+5. QR Code nunca é gerado porque a sessão não fica ativa tempo suficiente
 
-## Parte 1: Reorganização da Interface Principal
+**Sobre inserir número de telefone:** NÃO é necessário. O WhatsApp Web funciona escaneando o QR Code - o número é detectado automaticamente após escanear.
 
-### Mudanças no Layout
+## Solução
 
-**Antes:** Tab "Conexão" ocupando espaço completo
-**Depois:** Status de conexão discreto no header
+### 1. Corrigir Lógica de Reconexão do Servidor (v2.2.0)
 
-```text
-+--------------------------------------------------+
-|  Email Marketing           [Gmail Conectado ▾]   |
-|  Envie campanhas...                              |
-+--------------------------------------------------+
-|  [📧 Compor] [📊 Campanhas] [🎨 Design] [📈 Métricas] |
-+--------------------------------------------------+
-```
-
-**Componente afetado:** `CleanEmailMarketing.tsx`
-- Remover tab "Conexão"
-- Adicionar dropdown discreto no header para gerenciar conexão
-- Badge de status + botão de desconectar em popover
-
----
-
-## Parte 2: Novo Fluxo Step-by-Step para Compor Email
-
-### Etapas do Wizard
+Atualizar o `index.js` do servidor Baileys para:
+- **Não reconectar** se a sessão nunca foi conectada (evita loop infinito)
+- Manter a sessão em memória por mais tempo para dar tempo de gerar QR
+- Adicionar um contador de tentativas para evitar loops eternos
 
 ```text
-Step 1: Destinatários     Step 2: Assunto           Step 3: Conteúdo          Step 4: Revisar
-     [●]────────────────────[○]────────────────────[○]────────────────────[○]
+Lógica atual (problemática):
+┌──────────────────────────────────────────────┐
+│ Sessão criada                                │
+│      ↓                                       │
+│ Desconecta (Code: undefined)                 │
+│      ↓                                       │
+│ shouldReconnect = true (sempre!)             │
+│      ↓                                       │
+│ Deleta sessão + Recria = LOOP INFINITO       │
+└──────────────────────────────────────────────┘
+
+Lógica corrigida:
+┌──────────────────────────────────────────────┐
+│ Sessão criada → wasConnected = false         │
+│      ↓                                       │
+│ Desconecta (Code: undefined)                 │
+│      ↓                                       │
+│ wasConnected? NÃO → Não reconecta, mantém    │
+│ sessão ativa esperando QR ser escaneado      │
+│      ↓                                       │
+│ QR escaneado → Conecta → wasConnected = true │
+└──────────────────────────────────────────────┘
 ```
 
-**Etapa 1 - Destinatários:**
-- Input para digitar emails manualmente (um por um ou separados por vírgula)
-- Botão "Importar Lista" (CSV/TXT)
-- Opção "Selecionar da Agenda" (buscar clientes do banco)
-- Contador de destinatários selecionados
+### 2. Atualizar Edge Function
 
-**Etapa 2 - Assunto:**
-- Input para digitar o assunto
-- Botão "Melhorar com IA" que chama a OpenAI para sugerir versões
-- Preview de como aparecerá na caixa de entrada
+- Reduzir frequência de polling (de 2s para 3s)
+- Não recriar instância se ela foi criada nos últimos 30 segundos
+- Adicionar timeout máximo para geração de QR (2 minutos)
 
-**Etapa 3 - Conteúdo:**
-- Duas opções:
-  - "Escolher Template" - abre seletor de templates salvos
-  - "Criar do Zero" - redireciona ao Designer Visual
-- Editor de texto rico para ajustes finais
+### 3. Atualizar Frontend (WhatsAppQRModal)
 
-**Etapa 4 - Revisão:**
-- Preview completo do email
-- Resumo: X destinatários, assunto, remetente
-- Botão "Enviar" ou "Agendar"
+- Adicionar indicador de tentativas
+- Timeout automático após 2 minutos sem QR
+- Botão para cancelar e tentar novamente limpo
 
-**Novo arquivo:** `src/components/Dashboard/EmailComposerWizard.tsx`
+## Arquivos a Modificar
 
----
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/CRM/BaileysServerDownload.tsx` | Servidor v2.2.0 com lógica corrigida |
+| `supabase/functions/whatsapp-api/index.ts` | Rate-limiting e proteção contra loop |
+| `src/components/CRM/WhatsAppQRModal.tsx` | Timeout e melhor feedback visual |
 
-## Parte 3: Construtor Visual de Email Marketing (Drag-and-Drop)
+## Detalhes Técnicos
 
-### Componentes a Criar/Melhorar
+### Mudanças no Servidor (index.js)
 
-O sistema atual já tem base em `src/components/EmailDesigner/`, mas precisa de melhorias significativas:
+```javascript
+// Adicionar flag wasConnected na sessão
+const session = {
+  sessionId,
+  instanceName,
+  socket: null,
+  qrCode: null,
+  isConnected: false,
+  wasConnected: false,  // NOVO: rastreia se já conectou
+  retryCount: 0,        // NOVO: conta tentativas
+  createdAt: Date.now() // NOVO: timestamp de criação
+};
 
-**Novos Elementos no Palette:**
-- Header (logo + título)
-- Parágrafo
-- Lista (bullet points)
-- Coluna dupla (2 colunas)
-- Imagem com legenda
-- Social Icons (Facebook, Instagram, LinkedIn, WhatsApp)
-- Footer (endereço + unsubscribe)
-- Vídeo placeholder
-- Countdown timer
-
-**Melhorias no Canvas:**
-- Reordenação via drag-and-drop (usando @dnd-kit/sortable)
-- Duplicar elemento
-- Copiar/Colar estilos
-- Undo/Redo
-- Zoom in/out
-
-**Melhorias no Properties Panel:**
-- Presets de cores da marca
-- Upload de imagem direto
-- Link para URL no botão
-- Responsividade (visualizar mobile/desktop)
-
-**Novos Arquivos:**
-- `src/components/EmailDesigner/ImprovedDesignCanvas.tsx`
-- `src/components/EmailDesigner/EnhancedElementsPalette.tsx`
-- `src/components/EmailDesigner/ResponsivePreview.tsx`
-- `src/components/EmailDesigner/TemplateGallery.tsx`
-
-**Geração de HTML:**
-- Melhorar função `generateHTML()` para criar código responsivo
-- Inline CSS para compatibilidade com clientes de email
-- Adicionar meta tags para preview
-
----
-
-## Parte 4: Limite de 500 Emails Diários
-
-### Implementação
-
-**Banco de Dados:**
-Nova tabela `email_send_limits`:
-```sql
-CREATE TABLE email_send_limits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  company_id UUID NOT NULL,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  sent_count INTEGER NOT NULL DEFAULT 0,
-  daily_limit INTEGER NOT NULL DEFAULT 500,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, date)
-);
-```
-
-**Edge Function (send-email/index.ts):**
-Adicionar verificação antes de enviar:
-```typescript
-// Check daily limit
-const today = new Date().toISOString().split('T')[0];
-const { data: limitData } = await supabase
-  .from('email_send_limits')
-  .select('sent_count, daily_limit')
-  .eq('user_id', user_id)
-  .eq('date', today)
-  .single();
-
-if (limitData && limitData.sent_count >= limitData.daily_limit) {
-  throw new Error('Limite diário de 500 emails atingido');
+// Na lógica de connection.update:
+if (connection === 'open') {
+  session.isConnected = true;
+  session.wasConnected = true;  // Marca que já conectou
+  session.retryCount = 0;
+  // ...
 }
 
-// Increment counter after sending
-await supabase.rpc('increment_email_count', { p_user_id: user_id });
+if (connection === 'close') {
+  session.isConnected = false;
+  
+  // SÓ reconectar se:
+  // 1. Já tinha conectado antes (wasConnected = true)
+  // 2. Não fez logout
+  // 3. Menos de 5 tentativas
+  const shouldReconnect = 
+    session.wasConnected && 
+    statusCode !== DisconnectReason?.loggedOut &&
+    session.retryCount < 5;
+  
+  if (!shouldReconnect && !session.wasConnected) {
+    // Sessão nova que nunca conectou - manter ativa esperando QR
+    console.log(`[SESSION] ${instanceName} aguardando QR (não reconectar)`);
+    // NÃO deletar a sessão!
+  }
+}
 ```
 
-**Frontend:**
-- Barra de progresso mostrando "X/500 emails enviados hoje"
-- Alerta quando próximo do limite (80%)
-- Bloqueio visual quando atingido
+### Mudanças no Edge Function
 
----
-
-## Parte 5: Integração com IA
-
-### Recursos
-
-**Melhorar Assunto:**
-- Usa OpenAI para gerar 3 variações do assunto
-- Mostra taxa de abertura estimada (simulada)
-- Permite escolher ou editar
-
-**Melhorar Texto:**
-- Botão no editor para melhorar gramática/tom
-- Sugestões de CTA (Call to Action)
-
-**Edge Function:** Usar `ai-chat/index.ts` existente ou criar `ai-email-helper/index.ts`
-
----
-
-## Estrutura de Arquivos
-
-```text
-src/components/Dashboard/
-├── CleanEmailMarketing.tsx      (MODIFICAR - layout principal)
-├── EmailComposerWizard.tsx      (NOVO - wizard step-by-step)
-├── EmailLimitIndicator.tsx      (NOVO - indicador de limite)
-├── EmailConnectionPopover.tsx   (NOVO - conexão discreta)
-
-src/components/EmailDesigner/
-├── EmailDesigner.tsx            (MODIFICAR - melhorias gerais)
-├── DesignCanvas.tsx             (MODIFICAR - reordenação)
-├── ElementsPalette.tsx          (MODIFICAR - novos elementos)
-├── PropertiesPanel.tsx          (MODIFICAR - mais opções)
-├── ResponsivePreview.tsx        (NOVO - preview mobile/desktop)
-├── TemplateGallery.tsx          (NOVO - galeria de templates prontos)
-├── AISubjectHelper.tsx          (NOVO - melhorar assunto com IA)
-
-supabase/functions/send-email/
-├── index.ts                     (MODIFICAR - adicionar limite)
-
-Database:
-├── email_send_limits            (NOVA TABELA)
+```typescript
+// Adicionar rate-limiting
+case 'get_qr_code': {
+  const session = await getSession(sessionId);
+  
+  // Não recriar se a sessão é recente (< 30s)
+  const sessionAge = Date.now() - new Date(session.created_at).getTime();
+  if (qrResponse.status === 404 && sessionAge < 30000) {
+    // Apenas aguardar, não recriar
+    return { status: 'generating', message: 'Aguardando servidor...' };
+  }
+  // ...
+}
 ```
 
----
+## Passos de Implementação
 
-## Fluxo de Usuário Final
+1. Atualizar código do servidor no `BaileysServerDownload.tsx`
+2. Deploy da edge function atualizada
+3. Atualizar frontend com melhor feedback
+4. **Usuário deve baixar novo servidor (v2.2.0) e atualizar no Railway**
 
-```text
-1. Usuário acessa /dashboard/email
-2. Vê header com "Gmail Conectado" discreto
-3. Clica em "Compor Email"
-4. Wizard Step 1: Adiciona destinatários
-5. Wizard Step 2: Escreve assunto, clica "Melhorar com IA"
-6. Wizard Step 3: Escolhe template ou cria no Designer
-7. Wizard Step 4: Revisa e envia
-8. Sistema verifica limite (500/dia)
-9. Email enviado, contador incrementado
-```
+## Resultado Esperado
 
----
-
-## Resumo das Alterações
-
-| Item | Tipo | Prioridade |
-|------|------|------------|
-| Conexão discreta no header | Modificar | Alta |
-| Wizard step-by-step | Novo | Alta |
-| Limite 500 emails/dia | Novo | Alta |
-| Designer visual melhorado | Modificar | Média |
-| Integração IA (assunto) | Novo | Média |
-| Novos elementos no palette | Novo | Média |
-| Preview responsivo | Novo | Baixa |
-| Galeria de templates prontos | Novo | Baixa |
-
----
-
-## Tecnologias Utilizadas
-
-- **React** + **TypeScript** para componentes
-- **@dnd-kit** para drag-and-drop (já instalado)
-- **Supabase** para banco de dados e edge functions
-- **OpenAI** para melhorias com IA (secret já configurado)
-- **Tailwind CSS** para estilização
-- **Framer Motion** para animações do wizard
+Após as mudanças:
+- Sessão criada permanece ativa esperando escaneamento do QR
+- Sem loops de reconexão infinitos
+- QR Code aparece em ~5-10 segundos
+- Feedback claro do progresso

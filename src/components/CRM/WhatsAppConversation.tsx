@@ -76,7 +76,7 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
 
     loadMessages();
 
-    // Subscribe to new messages
+    // Subscribe to new messages with deduplication
     const channel = supabase
       .channel(`messages-${conversation.id}`)
       .on('postgres_changes', {
@@ -86,16 +86,26 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
         filter: `conversation_id=eq.${conversation.id}`
       }, (payload) => {
         const newMsg = payload.new as any;
-        setMessages(prev => [...prev, {
-          id: newMsg.id,
-          from_me: newMsg.from_me,
-          content: newMsg.content || '',
-          timestamp: newMsg.timestamp,
-          status: newMsg.status,
-          message_type: newMsg.message_type || 'text',
-          media_url: newMsg.media_url || '',
-          media_caption: newMsg.media_caption || ''
-        }]);
+        setMessages(prev => {
+          // Deduplicate: check if message already exists by id or content+timestamp
+          const exists = prev.some(m => 
+            m.id === newMsg.id || 
+            (m.content === newMsg.content && m.from_me === newMsg.from_me && 
+             Math.abs(new Date(m.timestamp).getTime() - new Date(newMsg.timestamp).getTime()) < 5000)
+          );
+          if (exists) return prev;
+          
+          return [...prev, {
+            id: newMsg.id,
+            from_me: newMsg.from_me,
+            content: newMsg.content || '',
+            timestamp: newMsg.timestamp,
+            status: newMsg.status,
+            message_type: newMsg.message_type || 'text',
+            media_url: newMsg.media_url || '',
+            media_caption: newMsg.media_caption || ''
+          }];
+        });
       })
       .subscribe();
 
@@ -131,12 +141,14 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
 
       if (error) throw error;
 
-      // Add message locally immediately
+      // Add message locally immediately with temp ID
+      const tempId = `temp-${Date.now()}`;
+      const tempTimestamp = new Date().toISOString();
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id: tempId,
         from_me: true,
         content: messageContent,
-        timestamp: new Date().toISOString(),
+        timestamp: tempTimestamp,
         status: 'sent'
       }]);
 

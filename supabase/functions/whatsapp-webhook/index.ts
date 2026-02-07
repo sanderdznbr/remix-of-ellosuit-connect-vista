@@ -6,26 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-secret',
 };
 
-// ============== HELPER: Validate phone number (filter LIDs) ==============
-function isValidPhoneNumber(phone: string): boolean {
-  if (!phone) return false;
-  
-  // Remove all non-digits
-  const digits = phone.replace(/\D/g, '');
-  
-  // Filter out invalid numbers:
-  // 1. Empty or too short (< 8 digits)
-  // 2. Too long (> 15 digits) - likely a LID
-  // 3. Starts with invalid patterns
-  if (digits.length < 8 || digits.length > 15) {
-    return false;
-  }
-  
-  return true;
+// ============== HELPER: Check if JID is a group ==============
+function isGroupJid(jid: string): boolean {
+  return jid?.includes('@g.us') || false;
 }
 
-// ============== HELPER: Clean phone number from JID ==============
-function extractPhoneFromJid(jid: string): string | null {
+// ============== HELPER: Validate phone/group ID ==============
+function isValidIdentifier(id: string, isGroup: boolean): boolean {
+  if (!id) return false;
+  
+  const digits = id.replace(/\D/g, '');
+  
+  if (isGroup) {
+    // Groups have longer IDs (typically 18+ digits) - just check minimum
+    return digits.length >= 8;
+  } else {
+    // Individual chats: 8-15 digits (filter LIDs which are 15+ digits)
+    return digits.length >= 8 && digits.length <= 15;
+  }
+}
+
+// ============== HELPER: Clean phone/ID from JID ==============
+function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string | null {
   if (!jid) return null;
   
   // Handle @lid format (WhatsApp Linked ID) - these are not real phone numbers
@@ -34,20 +36,27 @@ function extractPhoneFromJid(jid: string): string | null {
     return null;
   }
   
-  // Extract phone from standard JID formats
-  let phone = jid
+  const isGroup = isGroupJid(jid);
+  
+  // Skip groups if not allowed
+  if (isGroup && !allowGroups) {
+    return null;
+  }
+  
+  // Extract identifier from JID
+  let identifier = jid
     .replace('@s.whatsapp.net', '')
     .replace('@g.us', '')
     .replace('@c.us', '')
     .replace(/\D/g, ''); // Remove any remaining non-digits
   
-  // Validate the extracted phone
-  if (!isValidPhoneNumber(phone)) {
-    console.log(`[LID FILTER] Invalid phone number: ${phone} (length: ${phone.length})`);
+  // Validate the extracted identifier
+  if (!isValidIdentifier(identifier, isGroup)) {
+    console.log(`[FILTER] Invalid identifier: ${identifier} (length: ${identifier.length}, isGroup: ${isGroup})`);
     return null;
   }
   
-  return phone;
+  return identifier;
 }
 
 serve(async (req) => {
@@ -190,11 +199,11 @@ serve(async (req) => {
             const jid = chat.id || chat.jid;
             if (!jid || jid === 'status@broadcast') continue;
             
-            // Skip groups for now
-            if (jid.includes('@g.us')) continue;
+            const isGroup = isGroupJid(jid);
             
-            // Extract and validate phone number (filters LIDs)
-            const phoneNumber = extractPhoneFromJid(jid);
+            // Extract and validate identifier (phone number or group ID)
+            // Allow groups now - they have longer IDs but are valid
+            const phoneNumber = extractPhoneFromJid(jid, true);
             if (!phoneNumber) continue;
             
             // Get contact name - try multiple sources
@@ -347,10 +356,12 @@ serve(async (req) => {
             continue;
           }
           
-          // Extract and validate phone number (filters LIDs)
-          const phoneNumber = extractPhoneFromJid(remoteJid);
+          const isGroup = isGroupJid(remoteJid);
+          
+          // Extract and validate identifier (allows groups now)
+          const phoneNumber = extractPhoneFromJid(remoteJid, true);
           if (!phoneNumber) {
-            console.log(`[LID FILTER] Skipping message - invalid phone from JID: ${remoteJid}`);
+            console.log(`[FILTER] Skipping message - invalid identifier from JID: ${remoteJid}`);
             continue;
           }
           

@@ -989,15 +989,15 @@ const WhatsAppCRM: React.FC = () => {
   const hasDisconnectedSessions = sessions.some(s => s.status === 'disconnected' && !connectedSessions.length);
 
   // Helper function to check if a phone number is a status broadcast or invalid
+  // NOTE: Groups have 18+ digit IDs - these are VALID and should NOT be filtered
   const isStatusBroadcastOrInvalid = (phone: string | undefined): boolean => {
     if (!phone) return true;
     const cleaned = phone.replace(/\D/g, '');
-    // Status broadcasts typically have unusual formats
-    // They often start with specific patterns or have lengths that don't match real phone numbers
-    if (cleaned.length > 15) return true; // Too long to be a real phone
+    // Only filter truly invalid patterns
+    if (cleaned.length < 8) return true; // Too short
     if (cleaned.startsWith('status')) return true;
-    // WhatsApp status IDs often have a specific pattern
-    if (phone.includes('@broadcast') || phone.includes('@s.whatsapp.net') && cleaned.length > 13) return true;
+    if (phone.includes('@broadcast')) return true;
+    // Don't filter by length - groups have 18+ digits and are valid
     return false;
   };
 
@@ -1018,17 +1018,13 @@ const WhatsAppCRM: React.FC = () => {
     
     // Filter out self-conversations (where contact_phone matches ANY connected session phone)
     // Use endsWith to handle country code differences (e.g., 5511999999 vs 11999999)
-    if (contactPhone && connectedPhones.some(cp => 
+    // Only apply self-filter for normal phone numbers (8-15 digits), not groups (18+ digits)
+    if (contactPhone && contactPhone.length <= 15 && connectedPhones.some(cp => 
       cp === contactPhone || 
       cp?.endsWith(contactPhone) || 
       contactPhone?.endsWith(cp)
     )) {
       return false; // Exclude self-chat
-    }
-    
-    // Also filter out phone numbers that are suspiciously long (likely status IDs)
-    if (contactPhone && contactPhone.length > 15) {
-      return false;
     }
     
     const matchesSearch = searchQuery === '' || 

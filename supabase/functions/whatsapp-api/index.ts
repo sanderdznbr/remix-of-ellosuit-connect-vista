@@ -549,22 +549,11 @@ serve(async (req) => {
             if (sendResponse.ok) {
               const sendData = await sendResponse.json();
               
-              // Save message to database
-              await supabase
-                .from('whatsapp_messages')
-                .insert({
-                  conversation_id: conversation?.id,
-                  session_id: sessionId,
-                  company_id: session.company_id,
-                  wa_message_id: sendData.messageId || sendData.key?.id,
-                  from_me: true,
-                  content: message,
-                  message_type: 'text',
-                  status: 'sent',
-                  timestamp: new Date().toISOString()
-                });
-
-              // Update conversation
+              // DON'T insert message here - the webhook will handle it
+              // This prevents duplicate messages (one from API, one from webhook)
+              // The webhook has proper deduplication by wa_message_id
+              
+              // Just update conversation last_message
               await supabase
                 .from('whatsapp_conversations')
                 .update({

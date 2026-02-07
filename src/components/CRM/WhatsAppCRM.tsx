@@ -49,6 +49,7 @@ interface WhatsAppConversationData {
   profile_picture?: string;
   session_id?: string;
   assigned_agent_id?: string;
+  ai_auto_reply_enabled?: boolean;
   is_demo?: boolean;
   is_ai_agent?: boolean;
   pipeline_stage?: string;
@@ -397,20 +398,42 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Toggle label on conversation
-  const handleToggleLabel = (labelId: string) => {
+  // Toggle label on conversation - persists to database
+  const handleToggleLabel = async (labelId: string) => {
     if (!selectedConversationForLabels) return;
     
+    const currentLabels = selectedConversationForLabels.labels || [];
+    const newLabels = currentLabels.includes(labelId)
+      ? currentLabels.filter(l => l !== labelId)
+      : [...currentLabels, labelId];
+    
+    // Optimistic update
     setConversations(prev => prev.map(c => {
       if (c.id === selectedConversationForLabels.id) {
-        const currentLabels = c.labels || [];
-        const newLabels = currentLabels.includes(labelId)
-          ? currentLabels.filter(l => l !== labelId)
-          : [...currentLabels, labelId];
         return { ...c, labels: newLabels };
       }
       return c;
     }));
+    setSelectedConversationForLabels(prev => prev ? { ...prev, labels: newLabels } : null);
+    
+    // Persist to database
+    const { error } = await supabase
+      .from('whatsapp_conversations')
+      .update({ labels: newLabels })
+      .eq('id', selectedConversationForLabels.id);
+    
+    if (error) {
+      console.error('Error updating labels:', error);
+      // Rollback on error
+      setConversations(prev => prev.map(c => {
+        if (c.id === selectedConversationForLabels.id) {
+          return { ...c, labels: currentLabels };
+        }
+        return c;
+      }));
+      setSelectedConversationForLabels(prev => prev ? { ...prev, labels: currentLabels } : null);
+      toast({ title: 'Erro', description: 'Erro ao salvar etiqueta', variant: 'destructive' });
+    }
   };
 
   // Update pipeline stage (for Kanban)
@@ -488,11 +511,14 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Assign AI agent to conversation
-  const handleAssignAgent = async (conv: WhatsAppConversationData, agentId: string | null) => {
+  // Assign AI agent to conversation with auto-reply toggle
+  const handleAssignAgent = async (conv: WhatsAppConversationData, agentId: string | null, enableAutoReply: boolean = true) => {
     const { error } = await supabase
       .from('whatsapp_conversations')
-      .update({ assigned_agent_id: agentId })
+      .update({ 
+        assigned_agent_id: agentId,
+        ai_auto_reply_enabled: agentId ? enableAutoReply : false
+      })
       .eq('id', conv.id);
     
     if (!error) {
@@ -757,7 +783,7 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Send message to WhatsApp conversation
+  // Send message to WhatsApp conversation with Optimistic UI
   const sendMessage = async () => {
     if (selectedAgent) {
       return sendMessageToAgent();
@@ -769,14 +795,35 @@ const WhatsAppCRM: React.FC = () => {
     const messageContent = newMessage;
     setNewMessage('');
     
+    // Create optimistic message
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: WhatsAppMessage = {
+      id: tempId,
+      conversation_id: selectedConversation.id,
+      content: messageContent,
+      from_me: true,
+      status: 'sending',
+      created_at: new Date().toISOString()
+    };
+    
+    // OPTIMISTIC: Add message to UI immediately (instant feedback)
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Update conversation in list immediately
+    setConversations(prev => prev.map(c => 
+      c.contact_phone === selectedConversation.contact_phone 
+        ? { ...c, last_message: messageContent, last_message_at: new Date().toISOString() }
+        : c
+    ));
+    
     try {
       // Check if this is a real conversation with a connected session
       const connectedSession = sessions.find(s => 
         s.id === selectedConversation.session_id && s.status === 'connected'
-      );
+      ) || sessions.find(s => s.status === 'connected');
       
       if (connectedSession && !selectedConversation.is_demo) {
-        // Send via real WhatsApp API - DON'T add temp message, it will come from DB
+        // Send via real WhatsApp API
         const { error } = await supabase.functions.invoke('whatsapp-api', {
           body: {
             action: 'send_message',
@@ -788,32 +835,27 @@ const WhatsAppCRM: React.FC = () => {
         
         if (error) throw error;
         
-        // Immediately refetch messages from DB
-        await loadMessagesByPhone(selectedConversation.contact_phone);
-        await loadConversations();
-      } else {
-        // Demo mode or no session - add temp message locally only
-        const tempMessage: WhatsAppMessage = {
-          id: `temp-${Date.now()}`,
-          conversation_id: selectedConversation.id,
-          content: messageContent,
-          from_me: true,
-          status: 'sent',
-          created_at: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, tempMessage]);
+        // Update optimistic message status to sent
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
+        ));
         
-        // Update conversation in list
-        setConversations(prev => prev.map(c => 
-          c.contact_phone === selectedConversation.contact_phone 
-            ? { ...c, last_message: messageContent, last_message_at: new Date().toISOString() }
-            : c
+        // Background refresh to sync with server (removes duplicate when real message arrives)
+        loadMessagesByPhone(selectedConversation.contact_phone);
+        loadConversations();
+      } else {
+        // Demo mode - just mark as sent
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
         ));
       }
     } catch (e: any) {
       console.error('Error sending message:', e);
+      // Mark message as failed
+      setMessages(prev => prev.map(m => 
+        m.id === tempId ? { ...m, status: 'failed' } : m
+      ));
       toast({ title: 'Erro', description: e.message || 'Erro ao enviar mensagem', variant: 'destructive' });
-      setNewMessage(messageContent); // Restore message on error
     } finally {
       setSendingMessage(false);
     }
@@ -1146,13 +1188,6 @@ const WhatsAppCRM: React.FC = () => {
                 ))}
               </div>
               
-              {/* Connection Status */}
-              {connectedSessions.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
-                  {connectedSessions.length} conexão(ões) ativa(s)
-                </div>
-              )}
             </div>
         
             {/* AI Agents Section */}
@@ -1370,7 +1405,7 @@ const WhatsAppCRM: React.FC = () => {
                             {aiAgents.map(agent => (
                               <DropdownMenuItem 
                                 key={agent.id}
-                                onClick={() => handleAssignAgent(selectedConversation, agent.id)}
+                                onClick={() => handleAssignAgent(selectedConversation, agent.id, true)}
                                 className={selectedConversation.assigned_agent_id === agent.id ? "bg-blue-50 dark:bg-blue-950" : ""}
                               >
                                 <Bot className="h-4 w-4 mr-2 text-blue-500" />
@@ -1381,14 +1416,56 @@ const WhatsAppCRM: React.FC = () => {
                               </DropdownMenuItem>
                             ))}
                             {selectedConversation.assigned_agent_id && (
-                              <DropdownMenuItem onClick={() => handleAssignAgent(selectedConversation, null)}>
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Remover Agente
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem 
+                                  onClick={async () => {
+                                    const newState = !selectedConversation.ai_auto_reply_enabled;
+                                    const { error } = await supabase
+                                      .from('whatsapp_conversations')
+                                      .update({ ai_auto_reply_enabled: newState })
+                                      .eq('id', selectedConversation.id);
+                                    
+                                    if (!error) {
+                                      setConversations(prev => prev.map(c => 
+                                        c.id === selectedConversation.id 
+                                          ? { ...c, ai_auto_reply_enabled: newState } 
+                                          : c
+                                      ));
+                                      setSelectedConversation(prev => prev 
+                                        ? { ...prev, ai_auto_reply_enabled: newState } 
+                                        : null
+                                      );
+                                      toast({
+                                        title: newState ? 'Auto-resposta ativada' : 'Auto-resposta desativada',
+                                        description: newState 
+                                          ? 'O agente IA responderá automaticamente' 
+                                          : 'O agente IA não responderá automaticamente'
+                                      });
+                                    }
+                                  }}
+                                  className={selectedConversation.ai_auto_reply_enabled ? "text-green-600" : "text-muted-foreground"}
+                                >
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  {selectedConversation.ai_auto_reply_enabled ? '✓ Auto-resposta ON' : 'Auto-resposta OFF'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAssignAgent(selectedConversation, null)}>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remover Agente
+                                </DropdownMenuItem>
+                              </>
                             )}
                             <DropdownMenuSeparator />
                           </>
                         )}
+                        <DropdownMenuItem onClick={() => openLabelsManager(selectedConversation)}>
+                          <Tag className="h-4 w-4 mr-2" />
+                          Gerenciar Etiquetas
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openSaveLeadModal(selectedConversation)}>
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Adicionar à Base de Clientes
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => handleArchiveConversation(selectedConversation)}
                           className="text-amber-600"
@@ -1464,7 +1541,7 @@ const WhatsAppCRM: React.FC = () => {
                           
                           {/* Render image if message is an image */}
                           {message.message_type === 'image' && message.media_url ? (
-                            <div className="mb-2">
+                            <div className="mb-2 relative group">
                               <img 
                                 src={message.media_url} 
                                 alt="Imagem" 
@@ -1475,6 +1552,37 @@ const WhatsAppCRM: React.FC = () => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
+                              {/* Download button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Fetch and download as blob for cross-origin images
+                                  fetch(message.media_url!)
+                                    .then(res => res.blob())
+                                    .then(blob => {
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = `whatsapp-image-${message.id}.jpg`;
+                                      a.click();
+                                      URL.revokeObjectURL(url);
+                                    })
+                                    .catch(() => {
+                                      // Fallback: open in new tab
+                                      window.open(message.media_url, '_blank');
+                                    });
+                                }}
+                                className={cn(
+                                  "absolute top-2 right-2 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
+                                  message.from_me ? "bg-white/20 hover:bg-white/30 text-white" : "bg-black/20 hover:bg-black/30 text-white"
+                                )}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                  <polyline points="7 10 12 15 17 10"/>
+                                  <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                              </button>
                               {message.media_caption && (
                                 <p className={cn(
                                   "text-sm whitespace-pre-wrap mt-2",

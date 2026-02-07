@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2, Image as ImageIcon, Archive, Trash2 } from 'lucide-react';
+import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2, Image as ImageIcon, Archive, Trash2, Download, Users } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface ConversationLabel {
   id: string;
@@ -51,6 +52,23 @@ interface ConversationPopupProps {
   onSaveLead: () => void;
   sendingMessage?: boolean;
 }
+
+// Helper function to download image
+const downloadImage = async (url: string, filename: string) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    // Fallback: open in new tab
+    window.open(url, '_blank');
+  }
+};
 
 const ConversationPopup: React.FC<ConversationPopupProps> = ({
   open,
@@ -149,13 +167,14 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
                 <Phone className="h-4 w-4 mr-2" />
                 Ligar
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onManageLabels}>
                 <Tag className="h-4 w-4 mr-2" />
-                Etiquetas
+                Gerenciar Etiquetas
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onSaveLead}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Salvar Lead
+                Adicionar à Base de Clientes
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -187,13 +206,26 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
                   >
                     {/* Render image if message is an image */}
                     {message.message_type === 'image' && message.media_url ? (
-                      <div className="mb-2">
+                      <div className="mb-2 relative group">
                         <img 
                           src={message.media_url} 
                           alt="Imagem" 
                           className="rounded-lg max-w-full max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => window.open(message.media_url, '_blank')}
                         />
+                        {/* Download button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadImage(message.media_url!, `whatsapp-image-${message.id}.jpg`);
+                          }}
+                          className={cn(
+                            "absolute top-2 right-2 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
+                            message.from_me ? "bg-white/20 hover:bg-white/30 text-white" : "bg-black/20 hover:bg-black/30 text-white"
+                          )}
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
                         {message.media_caption && (
                           <p className="text-sm whitespace-pre-wrap mt-2">{message.media_caption}</p>
                         )}

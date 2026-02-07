@@ -851,7 +851,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.9.3.zip';
+      a.download = 'baileys-server-v2.9.4.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -859,7 +859,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.9.3 - Fix erro 515'
+        description: 'Servidor v2.9.4 - Fix QR Lock bloqueando 515'
       });
       
       setIsOpen(false);
@@ -892,22 +892,22 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.9.3
+              Servidor Baileys v2.9.4
             </DialogTitle>
             <DialogDescription>
-              Fix: Erro 515 após escanear QR Code
+              Fix: QR Lock bloqueando reconexão após pareamento
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✅ Correções v2.9.3
+                ✅ Correções v2.9.4
               </h4>
               <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <li>⚡ <strong>Reconexão imediata no 515</strong> - 1s ao invés de 15s</li>
-                <li>🔐 <strong>Preserva credenciais</strong> - Não limpa auth após pareamento</li>
-                <li>🔒 <strong>QR Lock 60s</strong> - Impede regeneração enquanto escaneia</li>
+                <li>🔥 <strong>515 tem PRIORIDADE</strong> - Verificado ANTES do QR Lock</li>
+                <li>🔓 <strong>Limpa QR Lock no 515</strong> - Remove bloqueio após pareamento</li>
+                <li>⚡ <strong>Reconexão imediata</strong> - 1s após detectar pareamento</li>
                 <li>🖥️ <strong>Browsers.macOS("Desktop")</strong></li>
               </ul>
             </div>
@@ -917,9 +917,9 @@ process.on('unhandledRejection', (reason) => {
                 ⚡ Por que funciona
               </h4>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                O erro 515 é <strong>ESPERADO</strong> após escanear o QR - é o WhatsApp 
-                pedindo reconexão. A v2.9.3 reconecta em <strong>1 segundo</strong>, 
-                permitindo que a conexão seja estabelecida antes do timeout do celular.
+                Na v2.9.3, o <strong>QR Lock</strong> bloqueava a reconexão do 515 porque 
+                o check vinha primeiro. Na v2.9.4, o <strong>515 é verificado ANTES</strong> 
+                e limpa o lock, permitindo reconexão imediata.
               </p>
             </div>
 
@@ -928,7 +928,7 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (v2.9.3 - fix erro 515)
+                  index.js (v2.9.4 - fix QR Lock)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -971,7 +971,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.9.3
+              Baixar v2.9.4
             </Button>
           </div>
         </DialogContent>

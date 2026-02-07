@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +83,121 @@ interface AIAgent {
   avatar_url?: string;
   is_active: boolean;
 }
+
+// Audio Player Component for WhatsApp-style audio messages
+const AudioPlayer: React.FC<{ mediaUrl: string; fromMe: boolean; isPTT?: boolean }> = ({ mediaUrl, fromMe, isPTT }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [mediaUrl]);
+
+  const togglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    audioRef.current.currentTime = percentage * duration;
+    setProgress(percentage * 100);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={cn(
+      "flex items-center gap-3 min-w-[200px] max-w-[260px] p-2 rounded-xl",
+      fromMe ? "bg-white/10" : "bg-gray-100 dark:bg-gray-800"
+    )}>
+      <button
+        onClick={togglePlay}
+        className={cn(
+          "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all",
+          isPTT 
+            ? "bg-[#25D366] hover:bg-[#22c55e]" 
+            : "bg-[#00a884] hover:bg-[#008f72]"
+        )}
+      >
+        {isPlaying ? (
+          <Pause className="h-5 w-5 text-white" fill="white" />
+        ) : (
+          <Play className="h-5 w-5 text-white ml-0.5" fill="white" />
+        )}
+      </button>
+
+      <div className="flex-1 flex flex-col gap-1">
+        <div 
+          className="h-[20px] flex items-center gap-[2px] cursor-pointer"
+          onClick={handleProgressClick}
+        >
+          {Array.from({ length: 25 }).map((_, i) => {
+            const heights = [10, 6, 14, 8, 16, 12, 6, 14, 10, 4, 12, 16, 8, 14, 6, 10, 14, 4, 12, 8, 16, 6, 14, 10, 4];
+            const isActive = (i / 25) * 100 <= progress;
+            return (
+              <div
+                key={i}
+                className={cn(
+                  "w-[2px] rounded-full transition-colors",
+                  isActive ? "bg-[#25D366]" : (fromMe ? "bg-white/40" : "bg-gray-400/40")
+                )}
+                style={{ height: `${heights[i % heights.length]}px` }}
+              />
+            );
+          })}
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className={cn("text-[10px]", fromMe ? "text-white/70" : "text-gray-500")}>
+            {duration > 0 ? formatTime(isPlaying ? (progress / 100) * duration : duration) : '0:00'}
+          </span>
+          {isPTT && <Mic className="h-3 w-3 text-[#25D366]" />}
+        </div>
+      </div>
+
+      <audio ref={audioRef} src={mediaUrl} preload="metadata" className="hidden" />
+    </div>
+  );
+};
 
 // No demo data - real conversations only
 
@@ -929,6 +1044,20 @@ const WhatsAppCRM: React.FC = () => {
     }
     
     if (!newMessage.trim() || !selectedConversation) return;
+    
+    // Check if connected before sending
+    const connectedSession = sessions.find(s => 
+      s.id === selectedConversation.session_id && s.status === 'connected'
+    ) || sessions.find(s => s.status === 'connected');
+    
+    if (!connectedSession && !selectedConversation.is_demo) {
+      toast({ 
+        title: 'WhatsApp Desconectado', 
+        description: 'Você precisa conectar seu WhatsApp para enviar mensagens. Clique em "Desconectado" para reconectar.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setSendingMessage(true);
     const messageContent = newMessage;
@@ -1869,7 +1998,13 @@ const WhatsAppCRM: React.FC = () => {
                                 🎥 {message.content || '[Vídeo]'}
                               </span>
                             </div>
-                          ) : message.message_type === 'audio' || message.message_type === 'ptt' ? (
+                          ) : (message.message_type === 'audio' || message.message_type === 'ptt') && message.media_url ? (
+                            <AudioPlayer 
+                              mediaUrl={message.media_url} 
+                              fromMe={message.from_me}
+                              isPTT={message.message_type === 'ptt'}
+                            />
+                          ) : (message.message_type === 'audio' || message.message_type === 'ptt') ? (
                             <div className="flex items-center gap-2 mb-1">
                               <span className={cn("text-sm", message.from_me ? "text-white" : "text-foreground")}>
                                 🎵 {message.content || '[Áudio]'}

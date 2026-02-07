@@ -266,12 +266,32 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   // Helper: Check if phone number is valid (filter LIDs only)
-  // NOTE: We no longer filter by length since groups have long IDs (18+ digits)
-  // The webhook already handles filtering - if it's in the database, display it
+  // NOTE: Groups have long IDs (18+ digits) - only show if they have a proper name
+  // Conversations where contact_name equals contact_phone (and is 16+ digits) are likely invalid
+  const isValidConversation = (conv: WhatsAppConversationData): boolean => {
+    if (!conv.contact_phone) return false;
+    const digits = conv.contact_phone.replace(/\D/g, '');
+    
+    // Too short is invalid
+    if (digits.length < 8) return false;
+    
+    // If it's a long numeric ID (likely group), check if it has a proper name
+    if (digits.length >= 16) {
+      // If name equals phone number (no name resolved), hide it
+      const nameDigits = conv.contact_name?.replace(/\D/g, '') || '';
+      if (nameDigits === digits || !conv.contact_name || conv.contact_name === conv.contact_phone) {
+        console.log(`[FILTER] Hiding unresolved group: ${conv.contact_phone}`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  // Legacy helper for backwards compatibility
   const isValidPhoneNumber = (phone: string): boolean => {
     if (!phone) return false;
     const digits = phone.replace(/\D/g, '');
-    // Only filter out extremely invalid: empty or too short (< 8 digits)
     return digits.length >= 8;
   };
 
@@ -290,14 +310,13 @@ const WhatsAppCRM: React.FC = () => {
       return;
     }
     
-    // Filter out invalid phone numbers (LIDs) and deduplicate by contact_phone
+    // Filter out invalid conversations (LIDs without names) and deduplicate by contact_phone
     const uniqueByPhone = new Map<string, typeof data[0]>();
     (data || []).forEach(conv => {
       const phone = conv.contact_phone;
       
-      // Skip invalid phone numbers (likely LIDs)
-      if (!isValidPhoneNumber(phone)) {
-        console.log(`[LID FILTER] Skipping conversation with invalid phone: ${phone}`);
+      // Skip invalid conversations (LIDs or groups without proper names)
+      if (!isValidConversation(conv)) {
         return;
       }
       
@@ -1751,6 +1770,15 @@ const WhatsAppCRM: React.FC = () => {
                               <Bot className="h-3 w-3 text-blue-500" />
                               <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">
                                 {selectedAgent.name}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Group message: show sender name */}
+                          {!message.from_me && !selectedAgent && message.sender_name && (
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <span className="text-xs font-semibold text-primary">
+                                {message.sender_name}
                               </span>
                             </div>
                           )}

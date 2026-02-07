@@ -1,9 +1,10 @@
 /**
  * ============================================
- * BAILEYS SERVER v3.3.0
+ * BAILEYS SERVER v3.4.0
  * ============================================
  * Servidor completo com suporte a mídias, grupos
- * e SINCRONIZAÇÃO COMPLETA de histórico
+ * SINCRONIZAÇÃO COMPLETA de histórico com metadata
+ * Busca nomes de grupos durante sync de histórico
  * Para WhatsApp CRM - Lovable
  * ============================================
  */
@@ -577,11 +578,47 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
   socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
     console.log(`📜 [HISTORY SYNC] ${chats?.length || 0} chats, ${messages?.length || 0} messages, isLatest: ${isLatest}`);
     
-    // Send chats if available
+    // Cache for group metadata to avoid duplicate fetches
+    const groupMetadataCache = new Map();
+    
+    // Helper to get group metadata with caching
+    async function getGroupMetadata(jid) {
+      if (groupMetadataCache.has(jid)) {
+        return groupMetadataCache.get(jid);
+      }
+      try {
+        const metadata = await socket.groupMetadata(jid);
+        groupMetadataCache.set(jid, metadata);
+        return metadata;
+      } catch (e) {
+        console.log(`⚠️ Could not fetch metadata for ${jid}`);
+        groupMetadataCache.set(jid, null);
+        return null;
+      }
+    }
+    
+    // Send chats if available - with enriched group names
     if (chats && chats.length > 0) {
+      console.log(`📋 Processing ${chats.length} chats with group metadata...`);
+      
+      // Enrich chats with group names
+      const enrichedChats = [];
+      for (const chat of chats) {
+        const jid = chat.id || chat.jid;
+        if (isGroupJid(jid)) {
+          const metadata = await getGroupMetadata(jid);
+          if (metadata?.subject) {
+            chat.name = metadata.subject;
+            chat.groupSubject = metadata.subject;
+            console.log(`👥 Group enriched: ${metadata.subject}`);
+          }
+        }
+        enrichedChats.push(chat);
+      }
+      
       const batchSize = 50;
-      for (let i = 0; i < chats.length; i += batchSize) {
-        const batch = chats.slice(i, i + batchSize);
+      for (let i = 0; i < enrichedChats.length; i += batchSize) {
+        const batch = enrichedChats.slice(i, i + batchSize);
         await sendWebhook({
           event: 'chats.set',
           sessionId,
@@ -613,11 +650,19 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
           let senderPhone = '';
           let senderName = '';
           
-          if (isGroup && !msg.key?.fromMe) {
-            const participantJid = msg.key?.participant;
-            if (participantJid) {
-              senderPhone = extractPhoneFromJid(participantJid) || '';
-              senderName = msg.pushName || '';
+          // Fetch group metadata for group messages
+          if (isGroup) {
+            const metadata = await getGroupMetadata(remoteJid);
+            if (metadata?.subject) {
+              groupName = metadata.subject;
+            }
+            
+            if (!msg.key?.fromMe) {
+              const participantJid = msg.key?.participant;
+              if (participantJid) {
+                senderPhone = extractPhoneFromJid(participantJid) || '';
+                senderName = msg.pushName || '';
+              }
             }
           }
           
@@ -654,7 +699,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       }
     }
     
-    console.log(`✅ [HISTORY SYNC] Complete`);
+    console.log(`✅ [HISTORY SYNC] Complete (${groupMetadataCache.size} groups cached)`);
   });
 
   // Contacts sync
@@ -677,7 +722,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '3.3.0',
+    version: '3.4.0',
     sessions: sessions.size,
     mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
     timestamp: new Date().toISOString()

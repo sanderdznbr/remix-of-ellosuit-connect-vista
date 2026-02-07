@@ -303,6 +303,7 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   // Load messages from ALL conversations with the same contact_phone
+  // IMPORTANT: Preserves optimistic/temp messages during polling to prevent flicker
   const loadMessagesByPhone = async (contactPhone: string) => {
     // First get all conversation IDs for this phone
     const { data: convs } = await supabase
@@ -341,15 +342,42 @@ const WhatsAppCRM: React.FC = () => {
           });
         }
       });
-      const sorted = Array.from(uniqueMessages.values())
+      const serverMessages = Array.from(uniqueMessages.values())
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       
-      // Only update state if messages actually changed (prevent flicker)
+      // OPTIMISTIC UI: Preserve temp messages and merge with server data
       setMessages(prev => {
-        const prevIds = prev.map(m => `${m.id}-${m.status}`).join(',');
-        const newIds = sorted.map(m => `${m.id}-${m.status}`).join(',');
-        if (prevIds === newIds) return prev;
-        return sorted;
+        // Separate temp messages (optimistic) from real messages
+        const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+        
+        // Find which temp messages have been synced to server
+        const matchedTempIds = new Set<string>();
+        serverMessages.forEach(serverMsg => {
+          // Match by content + from_me + timestamp within 60 seconds
+          const matchingTemp = tempMessages.find(temp =>
+            temp.content === serverMsg.content &&
+            temp.from_me === serverMsg.from_me &&
+            !matchedTempIds.has(temp.id) &&
+            Math.abs(new Date(temp.created_at).getTime() - new Date(serverMsg.created_at).getTime()) < 60000
+          );
+          if (matchingTemp) {
+            matchedTempIds.add(matchingTemp.id);
+          }
+        });
+        
+        // Keep temp messages that haven't been matched to server yet
+        const unmatchedTemp = tempMessages.filter(t => !matchedTempIds.has(t.id));
+        
+        // Combine: server messages + unmatched temp messages
+        const combined = [...serverMessages, ...unmatchedTemp]
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        // Only update if something changed (prevent flicker)
+        const prevSignature = prev.map(m => `${m.id}-${m.status}`).join(',');
+        const newSignature = combined.map(m => `${m.id}-${m.status}`).join(',');
+        if (prevSignature === newSignature) return prev;
+        
+        return combined;
       });
     }
   };
@@ -983,6 +1011,11 @@ const WhatsAppCRM: React.FC = () => {
     return false;
   };
 
+  // Extract ALL connected phone numbers (normalized) for self-chat filtering
+  const connectedPhones = connectedSessions
+    .map(s => s.phone_number?.replace(/\D/g, ''))
+    .filter(Boolean) as string[];
+  
   // Filter conversations - exclude self-conversations and status broadcasts
   const filteredConversations = conversations.filter(conv => {
     // Filter out status broadcasts and invalid phone numbers
@@ -990,10 +1023,16 @@ const WhatsAppCRM: React.FC = () => {
       return false;
     }
     
-    // Filter out self-conversations (where contact_phone matches connected session phone)
-    const connectedPhone = connectedSessions[0]?.phone_number?.replace(/\D/g, '');
+    // Normalize contact phone for comparison
     const contactPhone = conv.contact_phone?.replace(/\D/g, '');
-    if (connectedPhone && contactPhone && connectedPhone === contactPhone) {
+    
+    // Filter out self-conversations (where contact_phone matches ANY connected session phone)
+    // Use endsWith to handle country code differences (e.g., 5511999999 vs 11999999)
+    if (contactPhone && connectedPhones.some(cp => 
+      cp === contactPhone || 
+      cp?.endsWith(contactPhone) || 
+      contactPhone?.endsWith(cp)
+    )) {
       return false; // Exclude self-chat
     }
     

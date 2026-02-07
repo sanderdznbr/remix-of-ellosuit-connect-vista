@@ -577,8 +577,25 @@ serve(async (req) => {
             }
           }
           
-          // Profile picture from enriched data
-          const profilePicture = msg.profilePicture || msg.senderProfilePic || null;
+          // ============== v4.1.0: Extract enhanced metadata ==============
+          // Server v4.1.0 sends contactMetadata with profile picture, status, group info
+          const contactMetadata = msg.contactMetadata || {};
+          
+          // Profile picture: prioritize contactMetadata (v4.1.0), then fallback to old fields
+          const profilePicture = contactMetadata.profilePicture || 
+                                 msg.profilePicture || 
+                                 msg.senderProfilePic || 
+                                 msg.groupProfilePic || 
+                                 null;
+          
+          // Contact status (bio) - v4.1.0 only
+          const contactStatus = contactMetadata.status || null;
+          
+          // Group description - v4.1.0 only
+          const groupDescription = contactMetadata.groupDescription || null;
+          
+          // Group participants - v4.1.0 only
+          const groupParticipants = contactMetadata.groupParticipants || null;
           
           // ============== IMPROVED: Contact/Group name resolution ==============
           // For groups: use groupName from server v3.5.0+
@@ -588,10 +605,13 @@ serve(async (req) => {
             // Groups: prioritize groupName, groupSubject from server
             contactName = msg.groupName || msg.groupSubject || msg.subject || 
                           msg.groupMetadata?.subject || phoneNumber;
-            console.log(`[GROUP] Resolved name: "${contactName}"`);
+            console.log(`[GROUP] Resolved name: "${contactName}", description: ${groupDescription ? 'yes' : 'no'}, participants: ${groupParticipants?.length || 0}`);
           } else if (!fromMe) {
             // Individual incoming: use sender's pushName
             contactName = msg.pushName || msg.senderName || phoneNumber;
+            if (contactStatus) {
+              console.log(`[CONTACT] ${contactName} status: "${contactStatus}"`);
+            }
           }
           
           // IMPROVED: Find conversation by company_id + contact_phone first (consolidates across sessions)
@@ -605,19 +625,27 @@ serve(async (req) => {
             .single();
           
           if (!conversation) {
+            // Build insert payload with v4.1.0 enhanced fields
+            const insertPayload: Record<string, unknown> = {
+              session_id: targetSessionId,
+              company_id: companyId,
+              contact_phone: phoneNumber,
+              contact_name: contactName,
+              profile_picture: profilePicture,
+              status: 'open',
+              last_message: content,
+              last_message_at: new Date().toISOString(),
+              unread_count: fromMe ? 0 : 1
+            };
+            
+            // v4.1.0: Add enhanced metadata fields
+            if (contactStatus) insertPayload.contact_status = contactStatus;
+            if (groupDescription) insertPayload.group_description = groupDescription;
+            if (groupParticipants) insertPayload.group_participants = groupParticipants;
+            
             const { data: newConv } = await supabase
               .from('whatsapp_conversations')
-              .insert({
-                session_id: targetSessionId,
-                company_id: companyId,
-                contact_phone: phoneNumber,
-                contact_name: contactName,
-                profile_picture: profilePicture,
-                status: 'open',
-                last_message: content,
-                last_message_at: new Date().toISOString(),
-                unread_count: fromMe ? 0 : 1
-              })
+              .insert(insertPayload)
               .select()
               .single();
             
@@ -651,6 +679,17 @@ serve(async (req) => {
             // NEVER overwrite existing picture with null/empty
             if (profilePicture && profilePicture.trim() && !conversation.profile_picture) {
               updateData.profile_picture = profilePicture;
+            }
+            
+            // v4.1.0: Update enhanced metadata fields if provided
+            if (contactStatus && !conversation.contact_status) {
+              updateData.contact_status = contactStatus;
+            }
+            if (groupDescription && (!conversation.group_description || conversation.group_description !== groupDescription)) {
+              updateData.group_description = groupDescription;
+            }
+            if (groupParticipants && groupParticipants.length > 0) {
+              updateData.group_participants = groupParticipants;
             }
             
             await supabase

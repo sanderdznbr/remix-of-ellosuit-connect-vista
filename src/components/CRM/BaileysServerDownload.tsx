@@ -31,27 +31,25 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   };
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v4.0.0 ==========
+    // ========== PACKAGE.JSON v4.1.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "4.0.0",
-  "description": "Servidor Baileys com reidratação de 1h - preserva nomes/fotos",
+  "version": "4.1.0",
+  "description": "Servidor Baileys com metadados completos - foto de grupos, descrição, participantes, status",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.75.1",
-    "@whiskeysockets/baileys": "^6.7.9",
+    "@whiskeysockets/baileys": "^6.7.17",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "mime-types": "^2.1.35",
     "pino": "^9.6.0",
     "qrcode": "^1.5.4"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   }
 }`;
 
@@ -71,29 +69,34 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v4.0.0 - Reidratação de 1 Hora
+    const readme = `# 🚀 Baileys Server v4.1.0 - Metadados Completos
 
-## ✨ Novidades v4.0.0
+## ✨ Novidades v4.1.0
+
+### 📸 Foto de Grupos
+- Busca \`profilePictureUrl()\` para grupos (\`@g.us\`)
+- Exibe foto de perfil do grupo no CRM
+
+### 📝 Descrição do Grupo
+- Busca \`groupMetadata().desc\`
+- Mostra descrição/bio do grupo
+
+### 👥 Lista de Participantes
+- Busca \`groupMetadata().participants\`
+- Retorna lista com roles: \`{ jid, isAdmin, isSuperAdmin }\`
+- Permite identificar admins do grupo
+
+### 💬 Status dos Contatos
+- Busca \`fetchStatus(jid)\` para contatos individuais
+- Mostra o status/bio de cada contato
 
 ### 🔄 Reidratação de 1 Hora
-- **Ao reconectar**: Busca mensagens da última 1 hora do banco
-- **Reenvia ao webhook**: Mensagens aparecem instantaneamente
-- **Preservação**: Nunca sobrescreve nomes/fotos existentes
+- Ao reconectar, busca mensagens da última 1h
+- Sincroniza automaticamente com o webhook
 
-### 🔐 Preservação de Contatos
-- **Nomes persistentes**: Contato salvo nunca perde o nome
-- **Fotos de perfil**: Mantém foto mesmo após reconexão
-- **Fallback**: Usa dados do banco quando WhatsApp não retorna
-
-### 🔧 Estabilidade
-- **Heartbeat 20s** - Conexão mais estável
-- **Reconexão inteligente** - Backoff exponencial
-- **Proteção anti-flood** - Limita downloads de mídia
-
-### 📸 Mídia
-- **Upload automático** - Supabase Storage
-- **Retry inteligente** - 3 tentativas com delay
-- **Todos os tipos** - Imagens, vídeos, áudios, documentos
+### 🔐 Preservação de Dados
+- Nomes e fotos nunca são sobrescritos por valores vazios
+- Banco de dados é a fonte da verdade
 
 ## Deploy no Railway
 
@@ -107,36 +110,38 @@ sessions/
 
 ## Comportamento
 
-### ✅ O que SERÁ sincronizado:
-- Mensagens da última 1 hora (ao reconectar)
-- Todos os contatos com nomes/fotos preservados
-- Mensagens novas em tempo real
-- Todas as mídias
+### ✅ O que será buscado:
+- Foto de perfil (contatos E grupos)
+- Descrição do grupo
+- Lista de participantes com roles
+- Status/bio dos contatos
+- Mensagens da última 1h (ao reconectar)
 
 ### ❌ O que NÃO será perdido:
 - Nomes de contatos salvos
 - Fotos de perfil existentes
 - Histórico no banco de dados
 
-## Migração da v3.x
+## Migração da v4.0.0
 
-1. Baixe o novo servidor v4.0.0
+1. Baixe o novo servidor v4.1.0
 2. No Railway: substitua arquivos
 3. NÃO delete a pasta sessions/ (mantém login)
 4. Reinicie o serviço
 `;
 
-    // ========== SERVIDOR v3.8.0 COMPLETO ==========
+    // ========== SERVIDOR v4.1.0 COMPLETO ==========
     const indexJs = `/**
  * ============================================
- * BAILEYS SERVER v3.8.0
+ * BAILEYS SERVER v4.1.0
  * ============================================
- * Servidor WhatsApp estável e completo
- * - CORREÇÃO: Endpoint /api/message/send funcional
- * - Heartbeat automático (25s)
- * - Reconexão com backoff exponencial
- * - Sincronização completa de contatos
- * - Upload de mídia com retry inteligente
+ * Servidor WhatsApp com metadados completos
+ * - Foto de perfil de GRUPOS
+ * - Descrição do grupo
+ * - Lista de participantes com roles
+ * - Status/bio dos contatos
+ * - Reidratação de 1h ao reconectar
+ * - Preservação de dados existentes
  * Para WhatsApp CRM - Lovable
  * ============================================
  */
@@ -426,7 +431,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret, rec
 }
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '3.8.0', features: { contactsSync: true, mediaUpload: !!supabase, heartbeat: true }, sessions: sessions.size, timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', version: '4.1.0', features: { contactsSync: true, mediaUpload: !!supabase, heartbeat: true, groupMetadata: true, contactStatus: true }, sessions: sessions.size, timestamp: new Date().toISOString() });
 });
 
 app.post('/api/instance/create', async (req, res) => {

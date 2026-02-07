@@ -2428,7 +2428,10 @@ export type Database = {
           contact_id: string | null
           contact_name: string | null
           contact_phone: string
+          contact_status: string | null
           created_at: string
+          group_description: string | null
+          group_participants: Json | null
           id: string
           integration_id: string | null
           is_archived: boolean | null
@@ -2453,7 +2456,10 @@ export type Database = {
           contact_id?: string | null
           contact_name?: string | null
           contact_phone: string
+          contact_status?: string | null
           created_at?: string
+          group_description?: string | null
+          group_participants?: Json | null
           id?: string
           integration_id?: string | null
           is_archived?: boolean | null
@@ -2478,7 +2484,10 @@ export type Database = {
           contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string
+          contact_status?: string | null
           created_at?: string
+          group_description?: string | null
+          group_participants?: Json | null
           id?: string
           integration_id?: string | null
           is_archived?: boolean | null

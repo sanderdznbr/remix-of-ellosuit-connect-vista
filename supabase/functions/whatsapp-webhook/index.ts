@@ -158,21 +158,57 @@ serve(async (req) => {
             // Profile picture - from enriched data or chat object
             const profilePicture = chat.profilePicture || chat.imgUrl || chat.picture || null;
             
-            // Get last message info - handle both number and {high, low} format
+            // Get last message info - handle multiple formats from Baileys
             const lastMsg = chat.conversationTimestamp || chat.lastMessage?.messageTimestamp;
             let lastMessageAt = new Date().toISOString();
-            try {
-              if (lastMsg) {
-                // Handle {high, low, unsigned} format from Baileys
-                const timestamp = typeof lastMsg === 'object' && lastMsg.low 
-                  ? lastMsg.low 
-                  : parseInt(lastMsg);
-                if (!isNaN(timestamp) && timestamp > 0) {
-                  lastMessageAt = new Date(timestamp * 1000).toISOString();
+            
+            // Robust timestamp parsing
+            const parseTimestamp = (ts: unknown): string | null => {
+              try {
+                if (!ts) return null;
+                
+                let timestamp: number;
+                
+                // Handle {high, low, unsigned} Long format from protobuf
+                if (typeof ts === 'object' && ts !== null) {
+                  const obj = ts as Record<string, unknown>;
+                  if ('low' in obj && typeof obj.low === 'number') {
+                    timestamp = obj.low;
+                  } else if ('toNumber' in obj && typeof obj.toNumber === 'function') {
+                    timestamp = (obj as { toNumber: () => number }).toNumber();
+                  } else {
+                    return null;
+                  }
+                } else if (typeof ts === 'string') {
+                  timestamp = parseInt(ts, 10);
+                } else if (typeof ts === 'number') {
+                  timestamp = ts;
+                } else {
+                  return null;
                 }
+                
+                // Validate timestamp is reasonable (after 2000, before 2100)
+                if (isNaN(timestamp) || timestamp <= 0) return null;
+                
+                // Check if timestamp is in milliseconds (> year 2100 in seconds)
+                const isMillis = timestamp > 4102444800;
+                const dateMs = isMillis ? timestamp : timestamp * 1000;
+                
+                // Validate date range
+                if (dateMs < 946684800000 || dateMs > 4102444800000) return null;
+                
+                const date = new Date(dateMs);
+                if (isNaN(date.getTime())) return null;
+                
+                return date.toISOString();
+              } catch {
+                return null;
               }
-            } catch (e) {
-              console.log('[CHAT] Timestamp parse error, using now');
+            };
+            
+            const parsedTime = parseTimestamp(lastMsg);
+            if (parsedTime) {
+              lastMessageAt = parsedTime;
             }
             
             // Extract last message content

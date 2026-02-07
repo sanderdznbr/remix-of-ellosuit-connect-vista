@@ -1,97 +1,12 @@
-import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users, History } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import JSZip from 'jszip';
-import { useToast } from '@/hooks/use-toast';
-
-interface BaileysServerDownloadProps {
-  webhookUrl?: string;
-}
-
-const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({ 
-  webhookUrl = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook' 
-}) => {
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-
-  const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.5.0 ==========
-    const packageJson = `{
-  "name": "baileys-server",
-  "version": "3.5.0",
-  "description": "Servidor Baileys com suporte completo a grupos, nomes de remetentes e sincronização",
-  "main": "index.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.75.1",
-    "@whiskeysockets/baileys": "^6.7.9",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "mime-types": "^2.1.35",
-    "pino": "^9.6.0",
-    "qrcode": "^1.5.4"
-  },
-  "engines": {
-    "node": ">=20"
-  }
-}`;
-
-    const nodeVersion = `20`;
-
-    const nixpacksToml = `[phases.setup]
-nixPkgs = ["nodejs_20"]
-
-[phases.install]
-cmds = ["npm install"]
-
-[start]
-cmd = "node index.js"`;
-
-    const gitignore = `node_modules/
-sessions/
-.env
-*.log`;
-
-    const readme = `# 🚀 Baileys Server v3.5.0 - Correção Completa de Grupos
-
-## ✅ Novidades v3.5.0
-
-### Principais Correções:
-- ✅ **NOMES DE GRUPOS CORRETOS** - Busca groupMetadata para TODOS os grupos
-- ✅ **REMETENTES EM GRUPOS** - Extrai sender_phone e sender_name corretamente
-- ✅ **CACHE DE METADADOS** - Performance otimizada com cache de 5 minutos
-- ✅ **HISTORY SYNC COMPLETO** - Sincroniza todas conversas com nomes corretos
-- ✅ **SUPORTE A MÍDIAS** - Imagens, vídeos, áudios, documentos e stickers
-
-## Deploy no Railway
-
-### 1. Suba para o GitHub
-- Substitua **TODOS** os arquivos (especialmente index.js!)
-- **IMPORTANTE:** Delete a pasta \`sessions/\` para forçar reconexão
-
-### 2. No Railway
-1. New Project → Deploy from GitHub
-2. Selecione seu repositório
-3. Em **Variables**, adicione:
-   \`SUPABASE_WEBHOOK_URL\` = \`${webhookUrl}\`
-   \`SUPABASE_URL\` = \`https://jwddiyuezqrpuakazvgg.supabase.co\`
-   \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\` (pegar no Dashboard Supabase > Settings > API)
-
-**NÃO** defina PORT - Railway define automaticamente!
-`;
-
-    // ========== SERVIDOR v3.3.0 COMPLETO ==========
-    const indexJs = `/**
+/**
  * ============================================
- * BAILEYS SERVER v3.3.0
+ * BAILEYS SERVER v3.5.0
  * ============================================
- * Servidor completo com suporte a mídias, grupos
- * e SINCRONIZAÇÃO COMPLETA de histórico
+ * CORREÇÃO COMPLETA para grupos, nomes e remetentes
+ * - Busca groupMetadata para TODOS os grupos
+ * - Extrai sender_phone corretamente do participant
+ * - Cache de metadados para performance
+ * - Sincronização completa de histórico
  * Para WhatsApp CRM - Lovable
  * ============================================
  */
@@ -112,6 +27,9 @@ app.use(express.json({ limit: '50mb' }));
 
 // Store sessions in memory
 const sessions = new Map();
+
+// Cache for group metadata (persists across messages)
+const groupMetadataCache = new Map();
 
 // Environment variables
 const WEBHOOK_URL = process.env.SUPABASE_WEBHOOK_URL || '';
@@ -143,7 +61,7 @@ function extractPhoneFromJid(jid) {
   if (parts.length < 1) return null;
   
   // Clean to digits only
-  const digits = parts[0].replace(/\\D/g, '');
+  const digits = parts[0].replace(/\D/g, '');
   
   // Validate minimum length
   if (digits.length < 8) return null;
@@ -162,7 +80,7 @@ function isGroupJid(jid) {
  * Format JID for sending messages
  */
 function formatJidForSend(phone, isGroup = false) {
-  let jid = phone.replace(/\\D/g, '');
+  let jid = phone.replace(/\D/g, '');
   
   if (isGroup || phone.includes('@g.us')) {
     // Group: use @g.us suffix
@@ -179,6 +97,35 @@ function formatJidForSend(phone, isGroup = false) {
   return jid;
 }
 
+/**
+ * Get group metadata with caching
+ */
+async function getGroupMetadata(socket, groupJid) {
+  // Check cache first
+  if (groupMetadataCache.has(groupJid)) {
+    const cached = groupMetadataCache.get(groupJid);
+    // Cache valid for 5 minutes
+    if (Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      return cached.data;
+    }
+  }
+  
+  try {
+    const metadata = await socket.groupMetadata(groupJid);
+    if (metadata) {
+      groupMetadataCache.set(groupJid, {
+        data: metadata,
+        timestamp: Date.now()
+      });
+      return metadata;
+    }
+  } catch (e) {
+    console.log(`⚠️ Could not fetch group metadata for ${groupJid}: ${e.message}`);
+  }
+  
+  return null;
+}
+
 // ============== SUPABASE STORAGE ==============
 
 async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
@@ -190,11 +137,11 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
   try {
     const timestamp = Date.now();
     const hash = crypto.randomBytes(8).toString('hex');
-    const fileName = \`\${sessionId}/\${mediaType}/\${timestamp}-\${hash}.\${extension}\`;
+    const fileName = `${sessionId}/${mediaType}/${timestamp}-${hash}.${extension}`;
 
     const mimeType = mime.lookup(extension) || 'application/octet-stream';
 
-    console.log(\`📤 Uploading media to Supabase: \${fileName} (\${mimeType})\`);
+    console.log(`📤 Uploading media to Supabase: ${fileName} (${mimeType})`);
 
     const { data, error } = await supabase.storage
       .from('whatsapp-media')
@@ -212,7 +159,7 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
       .from('whatsapp-media')
       .getPublicUrl(fileName);
 
-    console.log(\`✅ Media uploaded: \${urlData.publicUrl}\`);
+    console.log(`✅ Media uploaded: ${urlData.publicUrl}`);
     return { url: urlData.publicUrl, mimeType };
   } catch (error) {
     console.error('❌ Upload error:', error.message);
@@ -257,7 +204,7 @@ async function processMediaMessage(socket, msg, sessionId) {
 
     if (!mediaType || !mediaMessage) return null;
 
-    console.log(\`📥 Downloading \${mediaType} media...\`);
+    console.log(`📥 Downloading ${mediaType} media...`);
 
     // Download media with retry
     let buffer = null;
@@ -275,7 +222,7 @@ async function processMediaMessage(socket, msg, sessionId) {
           }
         );
       } catch (downloadError) {
-        console.log(\`⚠️ Download attempt failed, \${retries - 1} retries left...\`);
+        console.log(`⚠️ Download attempt failed, ${retries - 1} retries left...`);
         retries--;
         if (retries > 0) {
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -288,7 +235,7 @@ async function processMediaMessage(socket, msg, sessionId) {
       return { mediaType }; // Return type but no URL
     }
 
-    console.log(\`✅ Media downloaded: \${buffer.length} bytes\`);
+    console.log(`✅ Media downloaded: ${buffer.length} bytes`);
 
     // Upload to Supabase
     const uploadResult = await uploadMediaToSupabase(buffer, sessionId, mediaType, extension);
@@ -349,9 +296,9 @@ async function sendWebhook(payload) {
     });
     
     if (response.ok) {
-      console.log(\`📤 Webhook sent: \${payload.event}\`);
+      console.log(`📤 Webhook sent: ${payload.event}`);
     } else {
-      console.log(\`⚠️ Webhook response: \${response.status}\`);
+      console.log(`⚠️ Webhook response: ${response.status}`);
     }
   } catch (error) {
     console.error('❌ Webhook error:', error.message);
@@ -362,7 +309,7 @@ async function sendWebhook(payload) {
 
 async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
   if (sessions.has(sessionId)) {
-    console.log(\`ℹ️ Session \${instanceName} already exists\`);
+    console.log(`ℹ️ Session ${instanceName} already exists`);
     return sessions.get(sessionId);
   }
 
@@ -371,7 +318,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
 
-  console.log(\`📱 Creating session: \${instanceName} (Baileys v\${version.join('.')})\`);
+  console.log(`📱 Creating session: ${instanceName} (Baileys v${version.join('.')})`);
 
   const session = {
     sessionId,
@@ -415,7 +362,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 
     if (qr) {
       session.qrCode = await QRCode.toDataURL(qr);
-      console.log(\`📱 QR Code generated for \${instanceName}\`);
+      console.log(`📱 QR Code generated for ${instanceName}`);
 
       await sendWebhook({
         event: 'qr.update',
@@ -443,7 +390,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         }
       }
 
-      console.log(\`✅ \${instanceName} connected! Phone: \${session.phoneNumber}\`);
+      console.log(`✅ ${instanceName} connected! Phone: ${session.phoneNumber}`);
 
       await sendWebhook({
         event: 'connection.update',
@@ -465,7 +412,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason?.loggedOut;
 
-      console.log(\`❌ \${instanceName} disconnected. Code: \${statusCode}. Reconnect: \${shouldReconnect}\`);
+      console.log(`❌ ${instanceName} disconnected. Code: ${statusCode}. Reconnect: ${shouldReconnect}`);
 
       await sendWebhook({
         event: 'connection.update',
@@ -495,7 +442,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     // Skip only 'prepend' to avoid duplicates
     if (type === 'prepend') return;
     
-    console.log(\`📨 Processing \${messages.length} messages (type: \${type})\`);
+    console.log(`📨 Processing ${messages.length} messages (type: ${type})`);
 
     for (const msg of messages) {
       // Skip status broadcast
@@ -505,28 +452,29 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       const fromMe = msg.key.fromMe || false;
       const isGroup = isGroupJid(remoteJid);
 
-      // Extract sender info for groups
+      // ============== v3.5.0: IMPROVED GROUP HANDLING ==============
       let senderPhone = '';
       let senderName = '';
       let groupName = '';
       
       if (isGroup) {
-        // Fetch group metadata to get the group name
-        try {
-          const groupMetadata = await socket.groupMetadata(remoteJid);
-          groupName = groupMetadata?.subject || '';
-          console.log(\`👥 Group: \${groupName}\`);
-        } catch (e) {
-          console.log(\`⚠️ Could not fetch group metadata for \${remoteJid}\`);
+        // ALWAYS fetch group metadata to get the name
+        const groupMetadata = await getGroupMetadata(socket, remoteJid);
+        if (groupMetadata) {
+          groupName = groupMetadata.subject || '';
+          console.log(`👥 Group: "${groupName}" (${remoteJid})`);
+        } else {
+          console.log(`⚠️ No metadata for group ${remoteJid}`);
         }
         
+        // Extract sender info for incoming messages in groups
         if (!fromMe) {
-          // In groups, participant contains the actual sender's JID
           const participantJid = msg.key.participant;
           if (participantJid) {
+            // Extract phone from participant JID correctly
             senderPhone = extractPhoneFromJid(participantJid) || '';
             senderName = msg.pushName || '';
-            console.log(\`👤 Sender: \${senderName} (\${senderPhone})\`);
+            console.log(`👤 Sender: "${senderName}" (${senderPhone})`);
           }
         }
       } else if (!fromMe) {
@@ -542,7 +490,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       let mediaCaption = getMediaCaption(msg);
 
       if (type === 'notify' && hasMedia(msg)) {
-        console.log(\`📨 Media message from \${remoteJid}\`);
+        console.log(`📨 Media message from ${remoteJid}`);
         const mediaResult = await processMediaMessage(socket, msg, sessionId);
         if (mediaResult) {
           mediaUrl = mediaResult.mediaUrl || null;
@@ -562,7 +510,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
                           msg.message?.extendedTextMessage?.text || 
                           '';
         if (textContent) {
-          console.log(\`📨 Text message from \${remoteJid}: \${textContent.substring(0, 50)}...\`);
+          console.log(`📨 Text message from ${remoteJid}: ${textContent.substring(0, 50)}...`);
         }
       }
 
@@ -576,7 +524,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         }
       }
 
-      // Send webhook with all data
+      // Send webhook with all data including improved group fields
       await sendWebhook({
         event: 'messages.upsert',
         sessionId,
@@ -588,8 +536,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
             message: msg.message,
             messageTimestamp: msg.messageTimestamp,
             pushName: msg.pushName,
-            // Group info
-            groupName,
+            // ============== v3.5.0: Enhanced group fields ==============
+            groupName,           // Group subject/name
+            groupSubject: groupName, // Alias for compatibility
             isGroup,
             // Sender info (for groups)
             senderPhone,
@@ -622,13 +571,39 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 
   // ============== CHAT SYNC (Initial connection) ==============
   socket.ev.on('chats.set', async ({ chats }) => {
-    console.log(\`📋 [CHATS.SET] Syncing \${chats.length} chats...\`);
+    console.log(`📋 [CHATS.SET] Syncing ${chats.length} chats...`);
+    
+    // ============== v3.5.0: Enrich chats with group metadata ==============
+    const enrichedChats = [];
+    for (const chat of chats) {
+      const jid = chat.id;
+      const isGroup = isGroupJid(jid);
+      
+      let enrichedChat = { ...chat };
+      
+      if (isGroup) {
+        // Fetch group metadata to get the actual name
+        const metadata = await getGroupMetadata(socket, jid);
+        if (metadata) {
+          enrichedChat.groupSubject = metadata.subject;
+          enrichedChat.subject = metadata.subject;
+          enrichedChat.groupName = metadata.subject;
+          // Also set name field for compatibility
+          if (!enrichedChat.name || enrichedChat.name === jid.split('@')[0]) {
+            enrichedChat.name = metadata.subject;
+          }
+          console.log(`📋 Group "${metadata.subject}" (${jid})`);
+        }
+      }
+      
+      enrichedChats.push(enrichedChat);
+    }
     
     // Process in batches to avoid timeout
     const batchSize = 50;
-    for (let i = 0; i < chats.length; i += batchSize) {
-      const batch = chats.slice(i, i + batchSize);
-      console.log(\`📋 Sending batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(chats.length/batchSize)}\`);
+    for (let i = 0; i < enrichedChats.length; i += batchSize) {
+      const batch = enrichedChats.slice(i, i + batchSize);
+      console.log(`📋 Sending batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(enrichedChats.length/batchSize)}`);
       
       await sendWebhook({
         event: 'chats.set',
@@ -639,37 +614,81 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
           chats: batch,
           batchInfo: {
             current: Math.floor(i/batchSize) + 1,
-            total: Math.ceil(chats.length/batchSize),
-            totalChats: chats.length
+            total: Math.ceil(enrichedChats.length/batchSize),
+            totalChats: enrichedChats.length
           }
         }
       });
     }
     
-    console.log(\`✅ [CHATS.SET] Finished syncing \${chats.length} chats\`);
+    console.log(`✅ [CHATS.SET] Finished syncing ${enrichedChats.length} chats`);
   });
 
   // ============== CHAT UPSERT (New chats during session) ==============
   socket.ev.on('chats.upsert', async (chats) => {
-    console.log(\`📋 [CHATS.UPSERT] \${chats.length} new chats\`);
+    console.log(`📋 [CHATS.UPSERT] ${chats.length} new chats`);
+    
+    // Enrich with group metadata
+    const enrichedChats = [];
+    for (const chat of chats) {
+      const jid = chat.id;
+      const isGroup = isGroupJid(jid);
+      
+      let enrichedChat = { ...chat };
+      
+      if (isGroup) {
+        const metadata = await getGroupMetadata(socket, jid);
+        if (metadata) {
+          enrichedChat.groupSubject = metadata.subject;
+          enrichedChat.subject = metadata.subject;
+          enrichedChat.groupName = metadata.subject;
+          if (!enrichedChat.name) {
+            enrichedChat.name = metadata.subject;
+          }
+        }
+      }
+      
+      enrichedChats.push(enrichedChat);
+    }
+    
     await sendWebhook({
       event: 'chats.upsert',
       sessionId,
       instanceName,
       webhookSecret,
-      data: { chats }
+      data: { chats: enrichedChats }
     });
   });
 
   // ============== MESSAGE HISTORY SYNC ==============
   socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
-    console.log(\`📜 [HISTORY SYNC] \${chats?.length || 0} chats, \${messages?.length || 0} messages, isLatest: \${isLatest}\`);
+    console.log(`📜 [HISTORY SYNC] ${chats?.length || 0} chats, ${messages?.length || 0} messages, isLatest: ${isLatest}`);
     
-    // Send chats if available
+    // Send chats if available (with group metadata)
     if (chats && chats.length > 0) {
+      const enrichedChats = [];
+      for (const chat of chats) {
+        const jid = chat.id;
+        const isGroup = isGroupJid(jid);
+        
+        let enrichedChat = { ...chat };
+        
+        if (isGroup) {
+          const metadata = await getGroupMetadata(socket, jid);
+          if (metadata) {
+            enrichedChat.groupSubject = metadata.subject;
+            enrichedChat.subject = metadata.subject;
+            enrichedChat.groupName = metadata.subject;
+            enrichedChat.name = metadata.subject;
+          }
+        }
+        
+        enrichedChats.push(enrichedChat);
+      }
+      
       const batchSize = 50;
-      for (let i = 0; i < chats.length; i += batchSize) {
-        const batch = chats.slice(i, i + batchSize);
+      for (let i = 0; i < enrichedChats.length; i += batchSize) {
+        const batch = enrichedChats.slice(i, i + batchSize);
         await sendWebhook({
           event: 'chats.set',
           sessionId,
@@ -685,11 +704,11 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     
     // Send messages if available (in batches)
     if (messages && messages.length > 0) {
-      console.log(\`📜 Processing \${messages.length} history messages...\`);
+      console.log(`📜 Processing ${messages.length} history messages...`);
       const batchSize = 100;
       for (let i = 0; i < messages.length; i += batchSize) {
         const batch = messages.slice(i, i + batchSize);
-        console.log(\`📜 Sending message batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(messages.length/batchSize)}\`);
+        console.log(`📜 Sending message batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(messages.length/batchSize)}`);
         
         // Process each message in the batch
         for (const msg of batch) {
@@ -701,11 +720,19 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
           let senderPhone = '';
           let senderName = '';
           
-          if (isGroup && !msg.key?.fromMe) {
-            const participantJid = msg.key?.participant;
-            if (participantJid) {
-              senderPhone = extractPhoneFromJid(participantJid) || '';
-              senderName = msg.pushName || '';
+          // Get group name from cache/metadata
+          if (isGroup) {
+            const metadata = await getGroupMetadata(socket, remoteJid);
+            if (metadata) {
+              groupName = metadata.subject || '';
+            }
+            
+            if (!msg.key?.fromMe) {
+              const participantJid = msg.key?.participant;
+              if (participantJid) {
+                senderPhone = extractPhoneFromJid(participantJid) || '';
+                senderName = msg.pushName || '';
+              }
             }
           }
           
@@ -730,6 +757,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
                 messageTimestamp: msg.messageTimestamp,
                 pushName: msg.pushName,
                 groupName,
+                groupSubject: groupName,
                 isGroup,
                 senderPhone,
                 senderName,
@@ -742,7 +770,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       }
     }
     
-    console.log(\`✅ [HISTORY SYNC] Complete\`);
+    console.log(`✅ [HISTORY SYNC] Complete`);
   });
 
   // Contacts sync
@@ -765,9 +793,10 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '3.3.0',
+    version: '3.5.0',
     sessions: sessions.size,
     mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
+    groupMetadataCache: groupMetadataCache.size,
     timestamp: new Date().toISOString()
   });
 });
@@ -950,7 +979,7 @@ app.post('/api/message/send-media', async (req, res) => {
 // ============== START SERVER ==============
 
 async function startServer() {
-  console.log('🚀 Starting Baileys Server v3.3.0...');
+  console.log('🚀 Starting Baileys Server v3.5.0...');
   
   // Dynamic imports for ESM modules
   const baileysModule = await import('@whiskeysockets/baileys');
@@ -980,199 +1009,15 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('============================================');
-    console.log(\`🚀 Baileys Server v3.3.0 running on port \${PORT}\`);
+    console.log(`🚀 Baileys Server v3.5.0 running on port ${PORT}`);
     console.log('============================================');
-    console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Not configured'}\`);
-    console.log(\`📸 Media Support: \${supabase ? '✅ Enabled' : '❌ Disabled'}\`);
+    console.log(`📡 Webhook URL: ${WEBHOOK_URL || 'Not configured'}`);
+    console.log(`📸 Media Support: ${supabase ? '✅ Enabled' : '❌ Disabled'}`);
     console.log('📜 History Sync: ✅ Enabled');
+    console.log('👥 Group Metadata: ✅ Enhanced with cache');
     console.log('============================================');
     console.log('');
   });
 }
 
 startServer().catch(console.error);
-`;
-
-    const envExample = `# Webhook do Supabase
-SUPABASE_WEBHOOK_URL=${webhookUrl}
-
-# Para upload de mídias (obrigatório)
-SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
-
-# NÃO defina PORT no Railway!
-# PORT=3333
-`;
-
-    return {
-      'package.json': packageJson,
-      '.node-version': nodeVersion,
-      'nixpacks.toml': nixpacksToml,
-      '.gitignore': gitignore,
-      'README.md': readme,
-      'index.js': indexJs,
-      '.env.example': envExample
-    };
-  };
-
-  const downloadZip = async () => {
-    setDownloading(true);
-    
-    try {
-      const zip = new JSZip();
-      const files = generateServerFiles();
-      
-      for (const [filePath, content] of Object.entries(files)) {
-        zip.file(filePath, content);
-      }
-      
-      zip.folder('sessions');
-      
-      const blob = await zip.generateAsync({ type: 'blob' });
-      
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'baileys-server-v3.3.0.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: '✅ Download concluído!',
-        description: 'Servidor v3.3.0 - Com sincronização completa de histórico'
-      });
-      
-      setIsOpen(false);
-    } catch (error) {
-      console.error('Error downloading:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao criar arquivo ZIP',
-        variant: 'destructive'
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(true)}
-        className="gap-2"
-      >
-        <Download className="h-4 w-4" />
-        Baixar Servidor
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.4.0
-            </DialogTitle>
-            <DialogDescription>
-              Servidor WhatsApp com sincronização completa de histórico e metadata de grupos
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* What's New */}
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.4.0
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-primary" />
-                  <strong>Metadata de Grupos no History</strong> - Busca nomes automaticamente
-                </li>
-                <li className="flex items-center gap-2">
-                  <History className="h-3 w-3 text-primary" />
-                  <strong>Sync Completo</strong> - Sincroniza todas as conversas ao conectar
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  <strong>Cache de Metadados</strong> - Performance otimizada
-                </li>
-                <li className="flex items-center gap-2">
-                  <ImageIcon className="h-3 w-3 text-primary" />
-                  <strong>Mídias</strong> - Imagens, vídeos, áudios, documentos
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Upload automático para Supabase Storage
-                </li>
-              </ul>
-            </div>
-
-            {/* Files included */}
-            <div className="bg-muted/50 rounded-lg p-4">
-              <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <code>package.json</code> - Dependências (Baileys 6.7.9 + Supabase)</li>
-                <li>• <code>index.js</code> - Servidor completo com sync de histórico</li>
-                <li>• <code>.env.example</code> - Exemplo de variáveis de ambiente</li>
-                <li>• <code>README.md</code> - Instruções de deploy detalhadas</li>
-                <li>• <code>nixpacks.toml</code> - Configuração Railway</li>
-              </ul>
-            </div>
-
-            {/* Important Note */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <h4 className="font-medium text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Importante: Atualização Necessária
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                Se você já tem o servidor no Railway, <strong>substitua TODOS os arquivos</strong> (especialmente <code>index.js</code>). 
-                Delete também a pasta <code>sessions/</code> para forçar uma nova sincronização completa.
-              </p>
-            </div>
-
-            {/* Requirements */}
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-              <h4 className="font-medium text-yellow-600 dark:text-yellow-400 mb-2 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Variáveis Obrigatórias no Railway
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <code>SUPABASE_WEBHOOK_URL</code> - URL do webhook</li>
-                <li>• <code>SUPABASE_URL</code> - URL do projeto Supabase</li>
-                <li>• <code>SUPABASE_SERVICE_ROLE_KEY</code> - Chave de serviço (Settings &gt; API)</li>
-              </ul>
-            </div>
-
-            {/* Download button */}
-            <Button 
-              onClick={downloadZip} 
-              disabled={downloading}
-              className="w-full"
-              size="lg"
-            >
-              {downloading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Gerando ZIP...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.4.0.zip
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
-
-export default BaileysServerDownload;

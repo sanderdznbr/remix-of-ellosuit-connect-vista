@@ -206,8 +206,17 @@ serve(async (req) => {
             const phoneNumber = extractPhoneFromJid(jid, true);
             if (!phoneNumber) continue;
             
-            // Get contact name - try multiple sources
-            const contactName = chat.name || chat.notify || chat.pushName || chat.verifiedName || phoneNumber;
+            // ============== IMPROVED: Get contact/group name ==============
+            // For groups: prioritize groupSubject, subject, groupName
+            // For individuals: prioritize name, notify, pushName
+            let contactName: string;
+            if (isGroup) {
+              contactName = chat.groupSubject || chat.subject || chat.groupName || 
+                           chat.name || chat.metadata?.subject || phoneNumber;
+              console.log(`[CHAT GROUP] ${phoneNumber} => "${contactName}"`);
+            } else {
+              contactName = chat.name || chat.notify || chat.pushName || chat.verifiedName || phoneNumber;
+            }
             
             // Profile picture - from enriched data or chat object
             const profilePicture = chat.profilePicture || chat.imgUrl || chat.picture || null;
@@ -288,7 +297,7 @@ serve(async (req) => {
             // This consolidates conversations across multiple sessions
             const { data: existingConv } = await supabase
               .from('whatsapp_conversations')
-              .select('id, session_id')
+              .select('id, session_id, contact_name')
               .eq('company_id', companyId)
               .eq('contact_phone', phoneNumber)
               .order('last_message_at', { ascending: false })
@@ -297,16 +306,28 @@ serve(async (req) => {
             
             if (existingConv) {
               // Update existing conversation
+              // ALWAYS update name for groups if we have a valid name
+              const shouldUpdateName = isGroup 
+                ? (contactName && contactName !== phoneNumber)
+                : (contactName && contactName !== phoneNumber && !existingConv.contact_name);
+              
+              const updatePayload: Record<string, unknown> = {
+                status: chat.archive ? 'archived' : 'open',
+                last_message: lastMessageContent || chat.lastMessage?.conversation || '',
+                last_message_at: lastMessageAt,
+                unread_count: chat.unreadCount || 0
+              };
+              
+              if (shouldUpdateName) {
+                updatePayload.contact_name = contactName;
+              }
+              if (profilePicture) {
+                updatePayload.profile_picture = profilePicture;
+              }
+              
               await supabase
                 .from('whatsapp_conversations')
-                .update({
-                  contact_name: contactName,
-                  profile_picture: profilePicture || undefined,
-                  status: chat.archive ? 'archived' : 'open',
-                  last_message: lastMessageContent || chat.lastMessage?.conversation || '',
-                  last_message_at: lastMessageAt,
-                  unread_count: chat.unreadCount || 0
-                })
+                .update(updatePayload)
                 .eq('id', existingConv.id);
               processedCount++;
             } else {
@@ -359,12 +380,12 @@ serve(async (req) => {
           const isGroup = isGroupJid(remoteJid);
           
           // ============== GROUP MESSAGE: Extract actual sender ==============
-          // Server v3.1.0+ sends senderPhone and senderName directly
+          // Server v3.5.0+ sends senderPhone, senderName, and groupName directly
           // Fallback to extracting from messageKey.participant for older servers
           let senderPhone = '';
           let senderName = '';
           
-          // First try direct fields from server v3.1.0+
+          // First try direct fields from server v3.5.0+
           if (msg.senderPhone) {
             senderPhone = msg.senderPhone;
           }
@@ -389,7 +410,7 @@ serve(async (req) => {
           }
           
           if (isGroup && (senderName || senderPhone)) {
-            console.log(`[GROUP] Sender: ${senderName} (${senderPhone})`);
+            console.log(`[GROUP MSG] Sender: ${senderName} (${senderPhone})`);
           }
           
           // Extract and validate identifier (allows groups now)
@@ -405,7 +426,7 @@ serve(async (req) => {
           let mediaUrl = msg.mediaUrl || '';
           let mediaCaption = msg.mediaCaption || '';
           
-          // Handle media from server v3.0.0
+          // Handle media from server v3.0.0+
           if (msg.mediaType) {
             messageType = msg.mediaType;
             if (msg.mediaUrl) {
@@ -491,16 +512,19 @@ serve(async (req) => {
           }
           
           // SELF-MESSAGE FILTER: Skip messages where contact matches the session's own phone
-          const normalizedSessionPhone = sessionPhone.replace(/\D/g, '');
-          const normalizedContactPhone = phoneNumber.replace(/\D/g, '');
-          
-          if (normalizedSessionPhone && normalizedContactPhone && (
-            normalizedSessionPhone === normalizedContactPhone ||
-            normalizedSessionPhone.endsWith(normalizedContactPhone) ||
-            normalizedContactPhone.endsWith(normalizedSessionPhone)
-          )) {
-            console.log(`[SKIP] Self-message detected: session=${normalizedSessionPhone}, contact=${normalizedContactPhone}`);
-            continue;
+          // But DO NOT filter for groups - we want to see our own messages in groups
+          if (!isGroup) {
+            const normalizedSessionPhone = sessionPhone.replace(/\D/g, '');
+            const normalizedContactPhone = phoneNumber.replace(/\D/g, '');
+            
+            if (normalizedSessionPhone && normalizedContactPhone && (
+              normalizedSessionPhone === normalizedContactPhone ||
+              normalizedSessionPhone.endsWith(normalizedContactPhone) ||
+              normalizedContactPhone.endsWith(normalizedSessionPhone)
+            )) {
+              console.log(`[SKIP] Self-message detected: session=${normalizedSessionPhone}, contact=${normalizedContactPhone}`);
+              continue;
+            }
           }
           
           // ============== DEDUPLICATION CHECK ==============
@@ -521,14 +545,15 @@ serve(async (req) => {
           // Profile picture from enriched data
           const profilePicture = msg.profilePicture || msg.senderProfilePic || null;
           
-          // IMPORTANT: For groups, use group name - NOT sender's name
-          // For individual chats, use contact's pushName (only for incoming messages)
+          // ============== IMPROVED: Contact/Group name resolution ==============
+          // For groups: use groupName from server v3.5.0+
+          // For individuals: use pushName only for incoming messages
           let contactName = phoneNumber;
           if (isGroup) {
-            // Groups: use group name/subject from server v3.1.0+
+            // Groups: prioritize groupName, groupSubject from server
             contactName = msg.groupName || msg.groupSubject || msg.subject || 
                           msg.groupMetadata?.subject || phoneNumber;
-            console.log(`[GROUP] Name: ${contactName}`);
+            console.log(`[GROUP] Resolved name: "${contactName}"`);
           } else if (!fromMe) {
             // Individual incoming: use sender's pushName
             contactName = msg.pushName || msg.senderName || phoneNumber;
@@ -570,11 +595,16 @@ serve(async (req) => {
               unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,
             };
             
-            // Update contact name and picture if we have better data from INCOMING messages
-            // Only update name from incoming messages to avoid overwriting with session owner's name
-            if (!fromMe && contactName && contactName !== phoneNumber) {
+            // ============== IMPROVED: Update group names even for fromMe ==============
+            // For groups: ALWAYS update if we have a valid name (even from sent messages)
+            // For individuals: only update from incoming messages
+            if (isGroup && contactName && contactName !== phoneNumber) {
+              updateData.contact_name = contactName;
+              console.log(`[GROUP] Updating name to: "${contactName}"`);
+            } else if (!fromMe && contactName && contactName !== phoneNumber) {
               updateData.contact_name = contactName;
             }
+            
             if (profilePicture && !conversation.profile_picture) {
               updateData.profile_picture = profilePicture;
             }
@@ -698,254 +728,79 @@ serve(async (req) => {
                           
                           if (sessionData?.baileys_server_url) {
                             // First, save the AI message to database with ai marker
-                            // This ensures we can identify it as AI response in the UI
-                            const aiMsgTimestamp = new Date().toISOString();
-                            const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                            const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
                             
                             await supabase
                               .from('whatsapp_messages')
                               .insert({
-                                conversation_id: conversation?.id,
+                                conversation_id: conversation.id,
                                 session_id: targetSessionId,
                                 company_id: companyId,
+                                wa_message_id: aiMessageId,
                                 from_me: true,
                                 content: aiReply,
                                 message_type: 'text',
                                 status: 'sending',
-                                timestamp: aiMsgTimestamp,
-                                wa_message_id: aiMessageId,
                                 is_ai_response: true,
-                                sender_name: `🤖 ${agent.name}`,
-                                metadata: { ai_agent_id: agent.id, ai_agent_name: agent.name }
+                                sender_name: agent.name,
+                                timestamp: new Date().toISOString()
                               });
                             
-                            // Update conversation last message
-                            await supabase
-                              .from('whatsapp_conversations')
-                              .update({
-                                last_message: aiReply,
-                                last_message_at: aiMsgTimestamp
-                              })
-                              .eq('id', conversation?.id);
-                            
-                            // Send the AI response via the WhatsApp server
-                            const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                sessionId: targetSessionId,
-                                phone: phoneNumber,
-                                message: aiReply
-                              })
-                            });
-                            
-                            // IMPROVED: Always update to 'sent' if HTTP response is successful (200-299)
-                            // The Baileys server confirms receipt of the send request
-                            const responseStatus = sendResponse.status;
-                            if (responseStatus >= 200 && responseStatus < 300) {
-                              console.log(`✅ AI auto-reply sent successfully (HTTP ${responseStatus})`);
-                              // Update message status to sent immediately
-                              await supabase
-                                .from('whatsapp_messages')
-                                .update({ status: 'sent' })
-                                .eq('wa_message_id', aiMessageId);
-                            } else {
-                              const errorText = await sendResponse.text();
-                              console.error(`❌ Failed to send AI auto-reply (HTTP ${responseStatus}):`, errorText);
-                              // Mark as failed only on actual error
-                              await supabase
-                                .from('whatsapp_messages')
-                                .update({ status: 'failed' })
-                                .eq('wa_message_id', aiMessageId);
-                            }
-                          } else {
-                            console.log('⚠️ No Baileys server URL found for session');
-                          }
-                        }
-                      } else {
-                        console.error('❌ AI chat error:', await aiResponse.text());
-                      }
-                    } else {
-                      console.log('⚠️ AI agent not found or inactive:', convWithAgent.assigned_agent_id);
-                    }
-                  }
-                } catch (aiError) {
-                  console.error('❌ Error in AI auto-response:', aiError);
-                }
-              }
-              
-              // ==================== CHATBOT FLOW PROCESSING ====================
-              // Check if any active chatbot flows should be triggered
-              if (!fromMe && conversation) {
-                try {
-                  // Get active chatbot flows for this company
-                  const { data: activeFlows } = await supabase
-                    .from('chatbot_flows')
-                    .select('*')
-                    .eq('company_id', companyId)
-                    .eq('is_active', true);
-                  
-                  if (activeFlows && activeFlows.length > 0) {
-                    console.log(`🤖 Checking ${activeFlows.length} active chatbot flows`);
-                    
-                    for (const flow of activeFlows) {
-                      let triggerConfig = flow.trigger_config as any;
-                      const nodes = flow.nodes as any[];
-                      let shouldTrigger = false;
-                      
-                      // If trigger_config is empty, try to get config from trigger nodes
-                      if (!triggerConfig || Object.keys(triggerConfig).length === 0) {
-                        const triggerNodes = nodes.filter(n => n.type === 'trigger');
-                        if (triggerNodes.length > 0) {
-                          const triggerNode = triggerNodes[0];
-                          const nodeConfig = triggerNode.data?.config || {};
-                          
-                          // Build trigger config from node
-                          if (triggerNode.subType === 'whatsapp_channel') {
-                            triggerConfig = {
-                              type: 'whatsapp_channel',
-                              sessionId: nodeConfig.sessionId,
-                              triggerWhen: nodeConfig.triggerWhen || 'any_message'
-                            };
-                          } else if (triggerNode.subType === 'keyword') {
-                            triggerConfig = {
-                              type: 'keyword',
-                              value: Array.isArray(nodeConfig.keywords) ? nodeConfig.keywords.join(',') : nodeConfig.keywords
-                            };
-                          } else if (triggerNode.subType === 'conversation_start') {
-                            triggerConfig = { type: 'start' };
-                          }
-                          console.log(`🤖 Built trigger config from node: ${JSON.stringify(triggerConfig)}`);
-                        }
-                      }
-                      
-                      // Check trigger conditions
-                      if (triggerConfig?.type === 'keyword' && triggerConfig?.value) {
-                        const keywords = triggerConfig.value.toLowerCase().split(',').map((k: string) => k.trim());
-                        const messageLC = content.toLowerCase();
-                        shouldTrigger = keywords.some((kw: string) => messageLC.includes(kw));
-                        console.log(`🤖 Keyword check: keywords=${keywords.join(',')}, message includes? ${shouldTrigger}`);
-                      } else if (triggerConfig?.type === 'whatsapp_channel') {
-                        // Check if this is the configured session (or any session if not specified)
-                        const matchesSession = !triggerConfig.sessionId || triggerConfig.sessionId === targetSessionId;
-                        shouldTrigger = matchesSession;
-                        console.log(`🤖 WhatsApp channel check: configSession=${triggerConfig.sessionId}, currentSession=${targetSessionId}, matches? ${shouldTrigger}`);
-                      } else if (triggerConfig?.type === 'start') {
-                        // Check if this is a new conversation (no previous messages)
-                        const { count } = await supabase
-                          .from('whatsapp_messages')
-                          .select('*', { count: 'exact', head: true })
-                          .eq('conversation_id', conversation.id)
-                          .eq('from_me', false);
-                        shouldTrigger = (count || 0) <= 1;
-                        console.log(`🤖 Start check: message count=${count}, triggers? ${shouldTrigger}`);
-                      } else {
-                        console.log(`🤖 Unknown or no trigger type: ${triggerConfig?.type}`);
-                      }
-                      
-                      if (shouldTrigger) {
-                        console.log(`🤖 Triggering chatbot flow: ${flow.name}`);
-                        
-                        // Increment execution count
-                        await supabase
-                          .from('chatbot_flows')
-                          .update({ execution_count: (flow.execution_count || 0) + 1 })
-                          .eq('id', flow.id);
-                        
-                        // Get session server URL
-                        const { data: sessionData } = await supabase
-                          .from('whatsapp_sessions')
-                          .select('id, baileys_server_url')
-                          .eq('id', targetSessionId)
-                          .single();
-                        
-                        if (sessionData?.baileys_server_url) {
-                          // Process flow nodes (simplified - execute message nodes in order)
-                          const messageNodes = nodes.filter(n => n.type === 'message');
-                          console.log(`🤖 Found ${messageNodes.length} message nodes to process`);
-                          
-                          for (let i = 0; i < messageNodes.length; i++) {
-                            const node = messageNodes[i];
-                            const nodeContent = node.data?.content || node.data?.config?.content;
-                            
-                            if (nodeContent) {
-                              // Check for delay before this node
-                              const delayNodes = nodes.filter(n => n.type === 'delay');
-                              const delayBefore = delayNodes.find(d => d.nextNodeId === node.id);
-                              if (delayBefore && delayBefore.data?.delaySeconds) {
-                                await new Promise(resolve => setTimeout(resolve, delayBefore.data.delaySeconds * 1000));
-                              }
-                              
-                              // Save chatbot message to database
-                              const cbMsgTimestamp = new Date().toISOString();
-                              const cbMessageId = `cb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                              
-                              await supabase
-                                .from('whatsapp_messages')
-                                .insert({
-                                  conversation_id: conversation.id,
-                                  session_id: targetSessionId,
-                                  company_id: companyId,
-                                  from_me: true,
-                                  content: nodeContent,
-                                  message_type: 'text',
-                                  status: 'sending',
-                                  timestamp: cbMsgTimestamp,
-                                  wa_message_id: cbMessageId,
-                                  is_ai_response: true,
-                                  sender_name: `🤖 ${flow.name}`,
-                                  metadata: { chatbot_flow_id: flow.id, chatbot_flow_name: flow.name }
-                                });
-                              
-                              // Update conversation
-                              await supabase
-                                .from('whatsapp_conversations')
-                                .update({
-                                  last_message: nodeContent,
-                                  last_message_at: cbMsgTimestamp
-                                })
-                                .eq('id', conversation.id);
-                              
-                              // Send message via WhatsApp
+                            // Then send via WhatsApp
+                            try {
                               const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   sessionId: targetSessionId,
                                   phone: phoneNumber,
-                                  message: nodeContent
+                                  message: aiReply
                                 })
                               });
                               
                               if (sendResponse.ok) {
-                                console.log(`✅ Chatbot message sent: ${nodeContent.substring(0, 50)}...`);
+                                console.log('🤖 AI message sent successfully');
+                                
+                                // Update message status to sent
                                 await supabase
                                   .from('whatsapp_messages')
                                   .update({ status: 'sent' })
-                                  .eq('wa_message_id', cbMessageId);
+                                  .eq('wa_message_id', aiMessageId);
+                                
+                                // Update conversation last message
+                                await supabase
+                                  .from('whatsapp_conversations')
+                                  .update({
+                                    last_message: aiReply,
+                                    last_message_at: new Date().toISOString()
+                                  })
+                                  .eq('id', conversation.id);
                               } else {
-                                console.error('❌ Failed to send chatbot message');
+                                console.error('🤖 Failed to send AI message:', await sendResponse.text());
+                                
+                                // Update message status to failed
                                 await supabase
                                   .from('whatsapp_messages')
                                   .update({ status: 'failed' })
-                                  .eq('wa_message_id', cbMessageId);
+                                  .eq('wa_message_id', aiMessageId);
                               }
+                            } catch (sendError) {
+                              console.error('🤖 Error sending AI message:', sendError);
                             }
                           }
                         }
-                        
-                        // Only trigger one flow per message
-                        break;
+                      } else {
+                        console.error('🤖 AI chat error:', await aiResponse.text());
                       }
                     }
                   }
-                } catch (flowError) {
-                  console.error('❌ Error in chatbot flow processing:', flowError);
+                } catch (aiError) {
+                  console.error('🤖 AI auto-reply error:', aiError);
                 }
               }
             }
           } else {
-            // Insert without wa_message_id
+            // Insert without wa_message_id (for messages without IDs)
             const { error: msgError } = await supabase
               .from('whatsapp_messages')
               .insert(messageData);
@@ -960,168 +815,42 @@ serve(async (req) => {
         break;
       }
 
-      // ==================== HISTORY MESSAGES ====================
-      case 'history.messages': {
-        const messages = data?.messages || [];
-        console.log(`[HISTORY] Processing ${messages.length} history messages (batch ${data?.batch || 1})`);
+      // ==================== MESSAGE STATUS UPDATE ====================
+      case 'messages.update': {
+        const updates = data?.updates || [];
+        console.log(`[MSG UPDATE] Processing ${updates.length} updates`);
         
-        // Get session info
-        let targetSessionId = sessionId;
-        let companyId = '';
-        
-        if (!targetSessionId && instanceName) {
-          const { data: session } = await supabase
-            .from('whatsapp_sessions')
-            .select('id, company_id')
-            .eq('instance_name', instanceName)
-            .single();
+        for (const update of updates) {
+          const messageId = update.key?.id;
+          const status = update.update?.status;
           
-          if (session) {
-            targetSessionId = session.id;
-            companyId = session.company_id;
-          }
-        } else if (targetSessionId) {
-          const { data: session } = await supabase
-            .from('whatsapp_sessions')
-            .select('company_id')
-            .eq('id', targetSessionId)
-            .single();
-          
-          if (session) companyId = session.company_id;
-        }
-        
-        if (!targetSessionId || !companyId) {
-          console.log('Could not find session for history messages');
-          break;
-        }
-        
-        let processedCount = 0;
-        for (const msg of messages) {
-          try {
-            const jid = msg.jid || msg.key?.remoteJid;
-            if (!jid || jid === 'status@broadcast' || jid.includes('@g.us')) continue;
+          if (messageId && status !== undefined) {
+            // Map status numbers to strings
+            const statusMap: Record<number, string> = {
+              0: 'error',
+              1: 'pending',
+              2: 'sent',
+              3: 'delivered',
+              4: 'read',
+              5: 'played'
+            };
             
-            // Extract and validate phone number (filters LIDs)
-            const phoneNumber = extractPhoneFromJid(jid);
-            if (!phoneNumber) continue;
+            const statusStr = typeof status === 'number' ? statusMap[status] || 'unknown' : status;
             
-            const fromMe = msg.fromMe || msg.key?.fromMe || false;
-            const pushName = msg.pushName || null;
-            const profilePicture = msg.profilePicture || null;
+            console.log(`[MSG UPDATE] ${messageId} -> ${statusStr}`);
             
-            // Extract content
-            let content = '';
-            const messageContent = msg.message || {};
-            if (messageContent.conversation) {
-              content = messageContent.conversation;
-            } else if (messageContent.extendedTextMessage) {
-              content = messageContent.extendedTextMessage.text || '';
-            } else if (messageContent.imageMessage) {
-              content = messageContent.imageMessage.caption || '[Imagem]';
-            } else if (messageContent.videoMessage) {
-              content = messageContent.videoMessage.caption || '[Vídeo]';
-            } else if (messageContent.audioMessage) {
-              content = '[Áudio]';
-            } else if (messageContent.documentMessage) {
-              content = messageContent.documentMessage.fileName || '[Documento]';
-            }
-            
-            if (!content) continue;
-            
-            // Parse timestamp
-            let msgTimestamp = new Date().toISOString();
-            if (msg.messageTimestamp) {
-              try {
-                let ts: number;
-                if (typeof msg.messageTimestamp === 'object' && msg.messageTimestamp.low) {
-                  ts = msg.messageTimestamp.low;
-                } else {
-                  ts = parseInt(msg.messageTimestamp);
-                }
-                if (!isNaN(ts) && ts > 0) {
-                  const dateMs = ts > 4102444800 ? ts : ts * 1000;
-                  msgTimestamp = new Date(dateMs).toISOString();
-                }
-              } catch (e) {}
-            }
-            
-            // IMPROVED: Find or create conversation by company_id + contact_phone
-            let { data: conversation } = await supabase
-              .from('whatsapp_conversations')
-              .select('id')
-              .eq('company_id', companyId)
-              .eq('contact_phone', phoneNumber)
-              .limit(1)
-              .single();
-            
-            if (!conversation) {
-              // Create conversation
-              const contactName = !fromMe ? (pushName || phoneNumber) : phoneNumber;
-              const { data: newConv, error: convError } = await supabase
-                .from('whatsapp_conversations')
-                .insert({
-                  session_id: targetSessionId,
-                  company_id: companyId,
-                  contact_phone: phoneNumber,
-                  contact_name: contactName,
-                  profile_picture: profilePicture,
-                  status: 'open',
-                  last_message: content,
-                  last_message_at: msgTimestamp,
-                  unread_count: 0
-                })
-                .select('id')
-                .single();
-              
-              if (convError) {
-                console.error(`[HISTORY] Error creating conv for ${phoneNumber}:`, convError.message);
-                continue;
-              }
-              conversation = newConv;
-            }
-            
-            // Check if message already exists (by message ID if available)
-            const messageId = msg.id || msg.key?.id;
-            if (messageId) {
-              const { data: existing } = await supabase
-                .from('whatsapp_messages')
-                .select('id')
-                .eq('wa_message_id', messageId)
-                .single();
-              
-              if (existing) continue; // Skip duplicate
-            }
-            
-            // Insert message
-            const { error: msgError } = await supabase
+            await supabase
               .from('whatsapp_messages')
-              .insert({
-                conversation_id: conversation?.id,
-                session_id: targetSessionId,
-                company_id: companyId,
-                from_me: fromMe,
-                content: content,
-                message_type: 'text',
-                status: fromMe ? 'sent' : 'received',
-                timestamp: msgTimestamp,
-                wa_message_id: messageId || `hist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-              });
-            
-            if (!msgError) {
-              processedCount++;
-            }
-          } catch (e) {
-            console.error(`[HISTORY] Error processing message:`, e);
+              .update({ status: statusStr })
+              .eq('wa_message_id', messageId);
           }
         }
-        
-        console.log(`[HISTORY] Finished batch: ${processedCount}/${messages.length} processed`);
         break;
       }
 
-      // ==================== CONTACTS SYNC ====================
-      case 'contacts.upsert':
-      case 'contacts.set': {
+      // ==================== CONTACTS UPDATE ====================
+      case 'contacts.update':
+      case 'contacts.upsert': {
         const contacts = data?.contacts || [];
         console.log(`[CONTACTS] Processing ${contacts.length} contacts`);
         
@@ -1150,93 +879,56 @@ serve(async (req) => {
           if (session) companyId = session.company_id;
         }
         
-        if (!targetSessionId || !companyId) {
-          console.log('Could not find session for contacts');
-          break;
-        }
+        if (!companyId) break;
         
-        let processedCount = 0;
         for (const contact of contacts) {
           try {
             const jid = contact.id || contact.jid;
-            if (!jid || jid.includes('@g.us')) continue;
+            if (!jid) continue;
             
-            // Extract and validate phone number (filters LIDs)
-            const phoneNumber = extractPhoneFromJid(jid);
+            const phoneNumber = extractPhoneFromJid(jid, false);
             if (!phoneNumber) continue;
             
             const contactName = contact.name || contact.notify || contact.verifiedName || phoneNumber;
-            const profilePicture = contact.profilePicture || contact.imgUrl || null;
             
             // Upsert contact
-            const { error } = await supabase
+            await supabase
               .from('whatsapp_contacts')
               .upsert({
-                session_id: targetSessionId,
                 company_id: companyId,
-                phone_number: phoneNumber,
-                contact_name: contactName,
-                profile_picture: profilePicture,
-                jid: jid
+                phone: phoneNumber,
+                name: contactName,
+                profile_picture: contact.imgUrl || null,
+                is_business: contact.isBusiness || false,
+                status_text: contact.status || null
               }, {
-                onConflict: 'session_id,phone_number'
+                onConflict: 'company_id,phone'
               });
             
-            if (!error) {
-              processedCount++;
-            }
-          } catch (e) {
-            console.error(`[CONTACTS] Error syncing contact:`, e);
-          }
-        }
-        
-        console.log(`[CONTACTS] Finished: ${processedCount}/${contacts.length} processed`);
-        break;
-      }
-
-      // ==================== MESSAGE STATUS UPDATE ====================
-      case 'messages.update': {
-        const updates = data?.updates || [];
-        console.log(`[MSG UPDATE] Processing ${updates.length} updates`);
-        
-        for (const update of updates) {
-          const messageId = update.key?.id;
-          const newStatus = update.update?.status;
-          
-          if (messageId && newStatus !== undefined) {
-            // Map WhatsApp status codes to our status names
-            let statusName = 'sent';
-            switch (newStatus) {
-              case 0: statusName = 'error'; break;
-              case 1: statusName = 'pending'; break;
-              case 2: statusName = 'sent'; break;
-              case 3: statusName = 'delivered'; break;
-              case 4: statusName = 'read'; break;
-              case 5: statusName = 'played'; break;
-            }
-            
+            // Also update conversation name if exists
             await supabase
-              .from('whatsapp_messages')
-              .update({ status: statusName })
-              .eq('wa_message_id', messageId);
-            
-            console.log(`[MSG UPDATE] ${messageId} -> ${statusName}`);
+              .from('whatsapp_conversations')
+              .update({ contact_name: contactName })
+              .eq('company_id', companyId)
+              .eq('contact_phone', phoneNumber);
+              
+          } catch (e) {
+            console.error('Contact update error:', e);
           }
         }
         break;
       }
 
       default:
-        console.log(`[WhatsApp Webhook] Unhandled event: ${event}`);
+        console.log(`Unhandled event: ${event}`);
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
+    return new Response(JSON.stringify({ success: true, event }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
-
+    
   } catch (error) {
-    console.error('[WhatsApp Webhook] Error:', error);
+    console.error('Webhook error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

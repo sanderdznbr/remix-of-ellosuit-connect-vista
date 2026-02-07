@@ -1,107 +1,4 @@
-import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import JSZip from 'jszip';
-import { useToast } from '@/hooks/use-toast';
-
-interface BaileysServerDownloadProps {
-  webhookUrl?: string;
-  isOpenExternal?: boolean;
-  onClose?: () => void;
-}
-
-const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({ 
-  webhookUrl = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook',
-  isOpenExternal,
-  onClose
-}) => {
-  const { toast } = useToast();
-  const [isOpenInternal, setIsOpenInternal] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  
-  const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
-  const setIsOpen = (open: boolean) => {
-    if (isOpenExternal !== undefined && onClose && !open) {
-      onClose();
-    } else {
-      setIsOpenInternal(open);
-    }
-  };
-
-  const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v4.2.0 - SEM @supabase/supabase-js ==========
-    const packageJson = `{
-  "name": "baileys-server",
-  "version": "4.2.0",
-  "description": "Servidor Baileys estável - QR Code, mensagens e metadados (sem SDK Supabase)",
-  "main": "index.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.17",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "pino": "^9.6.0",
-    "qrcode": "^1.5.4"
-  },
-  "engines": {
-    "node": ">=18"
-  }
-}`;
-
-    const nodeVersion = `20`;
-
-    const nixpacksToml = `[phases.setup]
-nixPkgs = ["nodejs_20"]
-
-[phases.install]
-cmds = ["npm install"]
-
-[start]
-cmd = "node index.js"`;
-
-    const gitignore = `node_modules/
-sessions/
-.env
-*.log`;
-
-    const readme = `# 🚀 Baileys Server v4.2.0 - Estável
-
-## ✨ Correções v4.2.0
-
-- ✅ **Removida dependência @supabase/supabase-js** - usa fetch nativo
-- ✅ QR Code gerado corretamente
-- ✅ Metadados de grupos (foto, descrição, participantes)
-- ✅ Status/bio de contatos individuais
-- ✅ Sincronização de contatos via contacts.set
-- ✅ Reconexão automática com backoff exponencial
-
-## Deploy no Railway
-
-1. New Project → Deploy from GitHub
-2. Em **Variables**, adicione:
-   \`SUPABASE_WEBHOOK_URL\` = \`${webhookUrl}\`
-   \`SUPABASE_URL\` = \`https://jwddiyuezqrpuakazvgg.supabase.co\`
-   \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\`
-
-**NÃO** defina PORT - Railway define automaticamente!
-
-## Dependências
-
-- @whiskeysockets/baileys: ^6.7.17
-- express: ^4.21.2
-- cors: ^2.8.5
-- pino: ^9.6.0
-- qrcode: ^1.5.4
-
-**NÃO** inclui @supabase/supabase-js - todas as chamadas são via fetch.
-`;
-
-    // ========== SERVIDOR v4.2.0 - SEM SDK SUPABASE ==========
-    const indexJs = `/**
+/**
  * Baileys Server v4.2.0 - Estável e Simplificado
  * 
  * CORREÇÕES v4.2.0:
@@ -198,7 +95,7 @@ async function fetchContactMetadata(socket, jid) {
           isSuperAdmin: p.admin === 'superadmin'
         })) || [];
       } catch (e) {
-        console.log(\`Erro metadados grupo \${jid}:\`, e.message);
+        console.log(`Erro metadados grupo ${jid}:`, e.message);
       }
     } else {
       try {
@@ -209,7 +106,7 @@ async function fetchContactMetadata(socket, jid) {
       } catch (e) {}
     }
   } catch (e) {
-    console.error(\`Erro metadados \${jid}:\`, e.message);
+    console.error(`Erro metadados ${jid}:`, e.message);
   }
 
   return metadata;
@@ -242,7 +139,7 @@ async function createSession(config) {
   const { sessionId, instanceName, webhookUrl, webhookSecret } = config;
   
   if (sessions.has(sessionId)) {
-    console.log(\`Sessão \${instanceName} já existe\`);
+    console.log(`Sessão ${instanceName} já existe`);
     return sessions.get(sessionId);
   }
 
@@ -255,7 +152,7 @@ async function createSession(config) {
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
   
-  console.log(\`📱 Criando sessão: \${instanceName} (Baileys v\${version.join('.')})\`);
+  console.log(`📱 Criando sessão: ${instanceName} (Baileys v${version.join('.')})`);
 
   const session = {
     sessionId,
@@ -310,7 +207,7 @@ async function createSession(config) {
           data: { qrCode: qrDataUrl }
         }, webhookUrl, webhookSecret);
         
-        console.log(\`📱 QR Code gerado para \${instanceName}\`);
+        console.log(`📱 QR Code gerado para ${instanceName}`);
       } catch (qrError) {
         console.error('Erro ao gerar QR Code:', qrError.message);
       }
@@ -344,7 +241,7 @@ async function createSession(config) {
         }
       }, webhookUrl, webhookSecret);
       
-      console.log(\`✅ \${instanceName} conectado!\`);
+      console.log(`✅ ${instanceName} conectado!`);
     }
 
     if (connection === 'close') {
@@ -352,7 +249,7 @@ async function createSession(config) {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       
-      console.log(\`❌ \${instanceName} desconectado. Código: \${statusCode}\`);
+      console.log(`❌ ${instanceName} desconectado. Código: ${statusCode}`);
       
       await sendWebhook({
         event: 'connection.update',
@@ -369,7 +266,7 @@ async function createSession(config) {
       if (shouldReconnect && session.reconnectAttempts < session.maxReconnectAttempts) {
         session.reconnectAttempts++;
         const delay = Math.min(5000 * Math.pow(1.5, session.reconnectAttempts - 1), 60000);
-        console.log(\`🔄 Reconectando em \${delay/1000}s\`);
+        console.log(`🔄 Reconectando em ${delay/1000}s`);
         
         setTimeout(() => {
           sessions.delete(sessionId);
@@ -389,7 +286,7 @@ async function createSession(config) {
       if (msg.key.remoteJid === 'status@broadcast') continue;
       
       const jid = msg.key.remoteJid;
-      console.log(\`📨 Mensagem de \${jid}\`);
+      console.log(`📨 Mensagem de ${jid}`);
       
       // Buscar metadados
       const metadata = await fetchContactMetadata(socket, jid);
@@ -415,14 +312,14 @@ async function createSession(config) {
           
           if (buffer) {
             const ext = mediaType === 'audio' ? 'ogg' : mediaType === 'video' ? 'mp4' : 'jpg';
-            const fileName = \`\${sessionId}/\${Date.now()}_\${msg.key.id}.\${ext}\`;
+            const fileName = `${sessionId}/${Date.now()}_${msg.key.id}.${ext}`;
             
             const uploadResponse = await fetch(
-              \`\${SUPABASE_URL}/storage/v1/object/whatsapp-media/\${fileName}\`,
+              `${SUPABASE_URL}/storage/v1/object/whatsapp-media/${fileName}`,
               {
                 method: 'POST',
                 headers: {
-                  'Authorization': \`Bearer \${SUPABASE_SERVICE_ROLE_KEY}\`,
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
                   'Content-Type': 'application/octet-stream'
                 },
                 body: buffer
@@ -430,7 +327,7 @@ async function createSession(config) {
             );
 
             if (uploadResponse.ok) {
-              mediaUrl = \`\${SUPABASE_URL}/storage/v1/object/public/whatsapp-media/\${fileName}\`;
+              mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/whatsapp-media/${fileName}`;
             }
           }
         } catch (e) {
@@ -472,7 +369,7 @@ async function createSession(config) {
 
   // Contatos
   socket.ev.on('contacts.set', async ({ contacts }) => {
-    console.log(\`📇 \${contacts.length} contatos recebidos\`);
+    console.log(`📇 ${contacts.length} contatos recebidos`);
     await sendWebhook({
       event: 'contacts.set',
       sessionId,
@@ -720,202 +617,6 @@ app.post('/api/message/read', async (req, res) => {
 
 // Iniciar servidor
 server.listen(PORT, () => {
-  console.log(\`🚀 Baileys Server v4.2.0 rodando na porta \${PORT}\`);
-  console.log(\`📡 Webhook: \${SUPABASE_WEBHOOK_URL || 'não configurado'}\`);
+  console.log(`🚀 Baileys Server v4.2.0 rodando na porta ${PORT}`);
+  console.log(`📡 Webhook: ${SUPABASE_WEBHOOK_URL || 'não configurado'}`);
 });
-`;
-
-    const envExample = `# Webhook URL (OBRIGATÓRIO)
-SUPABASE_WEBHOOK_URL=${webhookUrl}
-
-# Para upload de mídia (OPCIONAL)
-SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
-
-# NÃO defina PORT no Railway!
-# PORT=3333
-`;
-
-    return {
-      'package.json': packageJson,
-      '.node-version': nodeVersion,
-      'nixpacks.toml': nixpacksToml,
-      '.gitignore': gitignore,
-      'README.md': readme,
-      'index.js': indexJs,
-      '.env.example': envExample
-    };
-  };
-
-  const downloadZip = async () => {
-    setDownloading(true);
-    
-    try {
-      const zip = new JSZip();
-      const files = generateServerFiles();
-      
-      for (const [filePath, content] of Object.entries(files)) {
-        zip.file(filePath, content);
-      }
-      
-      zip.folder('sessions');
-      
-      const blob = await zip.generateAsync({ type: 'blob' });
-      
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'baileys-server-v4.2.0.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: '✅ Download concluído!',
-        description: 'Servidor v4.2.0 - Sem dependência do SDK Supabase!'
-      });
-      
-      setIsOpen(false);
-    } catch (error) {
-      console.error('Error downloading:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao criar arquivo ZIP',
-        variant: 'destructive'
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const DialogContentComponent = () => (
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Server className="h-5 w-5 text-primary" />
-          Servidor Baileys v4.2.0 - Estável
-        </DialogTitle>
-        <DialogDescription>
-          Corrigido: sem @supabase/supabase-js, QR Code funcional
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-4">
-        {/* What's New */}
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-          <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Correções v4.2.0
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              <strong>Removido @supabase/supabase-js</strong> - usa fetch nativo
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              <strong>QR Code funcional</strong> - geração correta
-            </li>
-            <li className="flex items-center gap-2">
-              <Users className="h-3 w-3 text-primary" />
-              <strong>Metadados de grupos</strong> - foto, descrição, participantes
-            </li>
-            <li className="flex items-center gap-2">
-              <Users className="h-3 w-3 text-primary" />
-              <strong>Sincronização de contatos</strong> - contacts.set
-            </li>
-            <li className="flex items-center gap-2">
-              <Zap className="h-3 w-3 text-primary" />
-              <strong>Reconexão automática</strong> - backoff exponencial
-            </li>
-          </ul>
-        </div>
-
-        {/* Important Note */}
-        <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
-          <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Importante: Substituição Total
-          </h4>
-          <p className="text-sm text-muted-foreground">
-            <strong>Substitua TODOS os arquivos</strong> no Railway. 
-            Delete a pasta <code>sessions/</code> para uma nova conexão limpa.
-          </p>
-        </div>
-
-        {/* Files included */}
-        <div className="bg-muted/50 rounded-lg p-4">
-          <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• <code>package.json</code> - SEM @supabase/supabase-js</li>
-            <li>• <code>index.js</code> - Servidor v4.2.0 simplificado</li>
-            <li>• <code>.env.example</code> - Variáveis de ambiente</li>
-            <li>• <code>README.md</code> - Instruções de deploy</li>
-          </ul>
-        </div>
-
-        {/* Requirements */}
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-          <h4 className="font-medium text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Variáveis Obrigatórias no Railway
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• <code>SUPABASE_WEBHOOK_URL</code> - URL do webhook</li>
-            <li>• <code>SUPABASE_URL</code> - URL do projeto Supabase</li>
-            <li>• <code>SUPABASE_SERVICE_ROLE_KEY</code> - Chave de serviço</li>
-          </ul>
-        </div>
-
-        {/* Download button */}
-        <Button 
-          onClick={downloadZip} 
-          disabled={downloading}
-          className="w-full"
-          size="lg"
-        >
-          {downloading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Gerando ZIP...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-2" />
-              Baixar baileys-server-v4.2.0.zip
-            </>
-          )}
-        </Button>
-      </div>
-    </DialogContent>
-  );
-
-  if (isOpenExternal !== undefined) {
-    return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContentComponent />
-      </Dialog>
-    );
-  }
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(true)}
-        className="gap-2"
-      >
-        <Download className="h-4 w-4" />
-        Baixar Servidor
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContentComponent />
-      </Dialog>
-    </>
-  );
-};
-
-export default BaileysServerDownload;

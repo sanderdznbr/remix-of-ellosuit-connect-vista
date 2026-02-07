@@ -73,95 +73,7 @@ interface AIAgent {
   is_active: boolean;
 }
 
-// Demo conversations data
-const DEMO_CONVERSATIONS: WhatsAppConversationData[] = [
-  {
-    id: 'demo-1',
-    contact_name: 'Maria Silva',
-    contact_phone: '+55 11 99999-1234',
-    last_message: 'Olá, gostaria de saber sobre o produto X',
-    last_message_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    status: 'open',
-    unread_count: 2,
-    is_demo: true
-  },
-  {
-    id: 'demo-2',
-    contact_name: 'João Pereira',
-    contact_phone: '+55 21 98888-5678',
-    last_message: 'Obrigado pelo atendimento!',
-    last_message_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    status: 'closed',
-    unread_count: 0,
-    is_demo: true
-  },
-  {
-    id: 'demo-3',
-    contact_name: 'Ana Costa',
-    contact_phone: '+55 31 97777-9012',
-    last_message: 'Preciso de suporte urgente',
-    last_message_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    status: 'open',
-    unread_count: 5,
-    is_demo: true
-  },
-  {
-    id: 'demo-4',
-    contact_name: 'Pedro Santos',
-    contact_phone: '+55 41 96666-3456',
-    last_message: 'Qual o prazo de entrega?',
-    last_message_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    status: 'open',
-    unread_count: 1,
-    is_demo: true
-  },
-  {
-    id: 'demo-5',
-    contact_name: 'Empresa ABC',
-    contact_phone: '+55 51 95555-7890',
-    last_message: 'Podemos agendar uma reunião?',
-    last_message_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    status: 'open',
-    unread_count: 3,
-    is_demo: true
-  }
-];
-
-// Demo messages for each conversation
-const DEMO_MESSAGES: Record<string, WhatsAppMessage[]> = {
-  'demo-1': [
-    { id: 'm1-1', conversation_id: 'demo-1', content: 'Olá! Bom dia', from_me: false, status: 'read', created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
-    { id: 'm1-2', conversation_id: 'demo-1', content: 'Bom dia! Como posso ajudar?', from_me: true, status: 'read', created_at: new Date(Date.now() - 9 * 60 * 1000).toISOString() },
-    { id: 'm1-3', conversation_id: 'demo-1', content: 'Olá, gostaria de saber sobre o produto X', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
-    { id: 'm1-4', conversation_id: 'demo-1', content: 'Vocês têm em estoque?', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
-  ],
-  'demo-2': [
-    { id: 'm2-1', conversation_id: 'demo-2', content: 'Olá, preciso de ajuda com meu pedido', from_me: false, status: 'read', created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
-    { id: 'm2-2', conversation_id: 'demo-2', content: 'Claro! Qual o número do pedido?', from_me: true, status: 'read', created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
-    { id: 'm2-3', conversation_id: 'demo-2', content: 'Pedido #12345', from_me: false, status: 'read', created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
-    { id: 'm2-4', conversation_id: 'demo-2', content: 'Encontrei! Seu pedido está a caminho e chega amanhã.', from_me: true, status: 'read', created_at: new Date(Date.now() - 2.5 * 60 * 60 * 1000).toISOString() },
-    { id: 'm2-5', conversation_id: 'demo-2', content: 'Obrigado pelo atendimento!', from_me: false, status: 'read', created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-  ],
-  'demo-3': [
-    { id: 'm3-1', conversation_id: 'demo-3', content: 'Boa tarde!', from_me: false, status: 'read', created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString() },
-    { id: 'm3-2', conversation_id: 'demo-3', content: 'Boa tarde! Em que posso ajudar?', from_me: true, status: 'read', created_at: new Date(Date.now() - 28 * 60 * 1000).toISOString() },
-    { id: 'm3-3', conversation_id: 'demo-3', content: 'Meu sistema parou de funcionar', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() },
-    { id: 'm3-4', conversation_id: 'demo-3', content: 'Está dando erro toda hora', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 18 * 60 * 1000).toISOString() },
-    { id: 'm3-5', conversation_id: 'demo-3', content: 'Preciso de suporte urgente', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString() },
-  ],
-  'demo-4': [
-    { id: 'm4-1', conversation_id: 'demo-4', content: 'Oi, fiz uma compra ontem', from_me: false, status: 'read', created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-    { id: 'm4-2', conversation_id: 'demo-4', content: 'Olá! Qual o número do pedido?', from_me: true, status: 'read', created_at: new Date(Date.now() - 55 * 60 * 1000).toISOString() },
-    { id: 'm4-3', conversation_id: 'demo-4', content: '#54321', from_me: false, status: 'read', created_at: new Date(Date.now() - 50 * 60 * 1000).toISOString() },
-    { id: 'm4-4', conversation_id: 'demo-4', content: 'Qual o prazo de entrega?', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString() },
-  ],
-  'demo-5': [
-    { id: 'm5-1', conversation_id: 'demo-5', content: 'Olá, somos da Empresa ABC', from_me: false, status: 'read', created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
-    { id: 'm5-2', conversation_id: 'demo-5', content: 'Gostaríamos de conhecer seus serviços', from_me: false, status: 'read', created_at: new Date(Date.now() - 3.8 * 60 * 60 * 1000).toISOString() },
-    { id: 'm5-3', conversation_id: 'demo-5', content: 'Olá! Ficaremos felizes em apresentar. Qual seria o melhor horário?', from_me: true, status: 'read', created_at: new Date(Date.now() - 3.5 * 60 * 60 * 1000).toISOString() },
-    { id: 'm5-4', conversation_id: 'demo-5', content: 'Podemos agendar uma reunião?', from_me: false, status: 'delivered', created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
-  ]
-};
+// No demo data - real conversations only
 
 const WhatsAppCRM: React.FC = () => {
   const { user } = useAuth();
@@ -170,10 +82,11 @@ const WhatsAppCRM: React.FC = () => {
   
   // State
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
-  const [conversations, setConversations] = useState<WhatsAppConversationData[]>(DEMO_CONVERSATIONS);
+  const [conversations, setConversations] = useState<WhatsAppConversationData[]>([]);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingConversations, setSyncingConversations] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   
   // UI State
@@ -187,7 +100,6 @@ const WhatsAppCRM: React.FC = () => {
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [agentChatMessages, setAgentChatMessages] = useState<WhatsAppMessage[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [demoMessagesState, setDemoMessagesState] = useState<Record<string, WhatsAppMessage[]>>(DEMO_MESSAGES);
   const [agentChatHistory, setAgentChatHistory] = useState<Record<string, WhatsAppMessage[]>>({});
   
   // New CRM Features State
@@ -209,18 +121,9 @@ const WhatsAppCRM: React.FC = () => {
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
 
-  // Load persisted chat history from localStorage
+  // Load persisted agent chat history from localStorage
   useEffect(() => {
-    const savedDemoMessages = localStorage.getItem('whatsapp_demo_messages');
     const savedAgentHistory = localStorage.getItem('whatsapp_agent_history');
-    
-    if (savedDemoMessages) {
-      try {
-        setDemoMessagesState(JSON.parse(savedDemoMessages));
-      } catch (e) {
-        console.error('Error loading demo messages:', e);
-      }
-    }
     
     if (savedAgentHistory) {
       try {
@@ -230,13 +133,6 @@ const WhatsAppCRM: React.FC = () => {
       }
     }
   }, []);
-
-  // Save demo messages to localStorage
-  useEffect(() => {
-    if (Object.keys(demoMessagesState).length > 0) {
-      localStorage.setItem('whatsapp_demo_messages', JSON.stringify(demoMessagesState));
-    }
-  }, [demoMessagesState]);
 
   // Save agent chat history to localStorage
   useEffect(() => {
@@ -300,18 +196,12 @@ const WhatsAppCRM: React.FC = () => {
       .order('last_message_at', { ascending: false })
       .limit(100);
     
-    if (!error && data && data.length > 0) {
-      // Merge real conversations with demo data
-      setConversations([...data, ...DEMO_CONVERSATIONS]);
+    if (!error) {
+      setConversations(data || []);
     }
   };
 
   const loadMessages = async (conversationId: string) => {
-    // Check if it's a demo conversation
-    if (conversationId.startsWith('demo-')) {
-      setMessages(demoMessagesState[conversationId] || DEMO_MESSAGES[conversationId] || []);
-      return;
-    }
 
     const { data, error } = await supabase
       .from('whatsapp_messages')
@@ -510,10 +400,28 @@ const WhatsAppCRM: React.FC = () => {
     }
   }, [selectedConversation?.id]);
 
-  // Handle session success
-  const handleSessionSuccess = (session: WhatsAppSession) => {
-    loadSessions();
+  // Handle session success - sync conversations after connection
+  const handleSessionSuccess = async (session: WhatsAppSession) => {
+    await loadSessions();
     toast({ title: 'Sucesso', description: 'WhatsApp conectado!' });
+    
+    // Start syncing conversations
+    setSyncingConversations(true);
+    toast({ title: 'Sincronizando', description: 'Carregando conversas do WhatsApp...' });
+    
+    try {
+      await loadConversations();
+      toast({ title: 'Pronto', description: 'Conversas carregadas com sucesso!' });
+    } catch (error) {
+      console.error('Error syncing conversations:', error);
+      toast({ 
+        title: 'Aviso', 
+        description: 'Não foi possível carregar conversas. Tente novamente.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSyncingConversations(false);
+    }
   };
 
   // Send message to AI Agent
@@ -632,46 +540,13 @@ const WhatsAppCRM: React.FC = () => {
         
         toast({ title: 'Enviado', description: 'Mensagem enviada com sucesso' });
       } else {
-        // Demo mode - persist and simulate response
-        if (selectedConversation.is_demo) {
-          setDemoMessagesState(prev => ({
-            ...prev,
-            [selectedConversation.id]: updatedMessages.map(m => 
-              m.id === tempMessage.id ? { ...m, status: 'sent' } : m
-            )
-          }));
-          
-          // Simulate response
-          setTimeout(() => {
-            const responses = [
-              'Obrigado pela resposta!',
-              'Entendi, vou verificar.',
-              'Perfeito, aguardo retorno.',
-              'Ok, muito obrigado!',
-              'Ótimo, isso me ajuda bastante!'
-            ];
-            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-            
-            const responseMessage: WhatsAppMessage = {
-              id: (Date.now() + 1).toString(),
-              conversation_id: selectedConversation.id,
-              content: randomResponse,
-              from_me: false,
-              status: 'delivered',
-              created_at: new Date().toISOString()
-            };
-            setMessages(prev => {
-              const newMsgs = [...prev, responseMessage];
-              setDemoMessagesState(prevState => ({
-                ...prevState,
-                [selectedConversation.id]: newMsgs
-              }));
-              return newMsgs;
-            });
-          }, 1500);
-        }
-        
-        // Update temp message to sent
+        // No active session - show warning
+        toast({ 
+          title: 'Atenção', 
+          description: 'Conecte um WhatsApp para enviar mensagens', 
+          variant: 'destructive' 
+        });
+        // Update temp message to sent (local only)
         setMessages(prev => prev.map(m => 
           m.id === tempMessage.id ? { ...m, status: 'sent' } : m
         ));
@@ -809,17 +684,13 @@ const WhatsAppCRM: React.FC = () => {
           onSelectConversation={(conv) => {
             setPopupConversation(conv);
             // Load messages for popup
-            if (conv.id.startsWith('demo-')) {
-              setPopupMessages(demoMessagesState[conv.id] || DEMO_MESSAGES[conv.id] || []);
-            } else {
-              supabase
-                .from('whatsapp_messages')
-                .select('*')
-                .eq('conversation_id', conv.id)
-                .order('created_at', { ascending: true })
-                .limit(100)
-                .then(({ data }) => setPopupMessages(data || []));
-            }
+            supabase
+              .from('whatsapp_messages')
+              .select('*')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: true })
+              .limit(100)
+              .then(({ data }) => setPopupMessages(data || []));
             setShowConversationPopup(true);
           }}
           onSaveLead={openSaveLeadModal}
@@ -920,13 +791,45 @@ const WhatsAppCRM: React.FC = () => {
         
         {/* Conversations List */}
         <ScrollArea className="flex-1">
-          {filteredConversations.length === 0 ? (
+          {syncingConversations ? (
             <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-              <Search className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="font-medium mb-2">Nenhum resultado</h3>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="font-medium mb-2">Sincronizando conversas</h3>
               <p className="text-sm text-muted-foreground">
-                Tente outra busca ou filtro
+                Carregando suas conversas do WhatsApp...
               </p>
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center p-4">
+              {connectedSessions.length === 0 ? (
+                <>
+                  <QrCode className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Nenhum WhatsApp conectado</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Conecte seu WhatsApp para ver as conversas
+                  </p>
+                  <Button onClick={() => setShowQRModal(true)} className="bg-primary">
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Conectar WhatsApp
+                  </Button>
+                </>
+              ) : searchQuery ? (
+                <>
+                  <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Nenhum resultado</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Tente outra busca ou filtro
+                  </p>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-2">Nenhuma conversa ainda</h3>
+                  <p className="text-sm text-muted-foreground">
+                    As conversas aparecerão aqui quando você receber mensagens
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <div className="divide-y">
@@ -945,23 +848,16 @@ const WhatsAppCRM: React.FC = () => {
                 >
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={conversation.profile_picture} />
-                    <AvatarFallback className="bg-blue-100 text-blue-700">
+                    <AvatarFallback className="bg-primary/10 text-primary">
                       {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">
-                          {conversation.contact_name || conversation.contact_phone}
-                        </span>
-                        {conversation.is_demo && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            Demo
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="font-medium truncate">
+                        {conversation.contact_name || conversation.contact_phone}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {formatTime(conversation.last_message_at)}
                       </span>
@@ -971,7 +867,7 @@ const WhatsAppCRM: React.FC = () => {
                         {conversation.last_message || 'Nova conversa'}
                       </p>
                       {(conversation.unread_count || 0) > 0 && (
-                        <Badge className="bg-blue-600 text-white text-xs px-2 py-0.5 min-w-[20px] justify-center">
+                        <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5 min-w-[20px] justify-center">
                           {conversation.unread_count}
                         </Badge>
                       )}
@@ -1177,12 +1073,8 @@ const WhatsAppCRM: React.FC = () => {
                         created_at: new Date().toISOString()
                       };
                       
-                      if (selectedConversation?.is_demo) {
+                      if (selectedConversation) {
                         setMessages(prev => [...prev, audioMessage]);
-                        setDemoMessagesState(prevState => ({
-                          ...prevState,
-                          [selectedConversation.id]: [...(prevState[selectedConversation.id] || []), audioMessage]
-                        }));
                       } else if (selectedAgent) {
                         setAgentChatMessages(prev => [...prev, audioMessage]);
                       }
@@ -1326,10 +1218,6 @@ const WhatsAppCRM: React.FC = () => {
               created_at: new Date().toISOString()
             };
             setPopupMessages(prev => [...prev, newMsg]);
-            setDemoMessagesState(prev => ({
-              ...prev,
-              [popupConversation.id]: [...(prev[popupConversation.id] || []), newMsg]
-            }));
           }
         }}
         onManageLabels={() => {

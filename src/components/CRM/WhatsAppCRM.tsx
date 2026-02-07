@@ -201,8 +201,8 @@ const WhatsAppCRM: React.FC = () => {
     // Initial load
     refreshPopupMessages();
     
-    // Poll every 1 second for faster sync
-    const interval = setInterval(refreshPopupMessages, 1000);
+    // Poll every 500ms for instant sync
+    const interval = setInterval(refreshPopupMessages, 500);
     return () => clearInterval(interval);
   }, [showConversationPopup, popupConversation?.contact_phone, companyId]);
 
@@ -525,12 +525,12 @@ const WhatsAppCRM: React.FC = () => {
     
     loadData();
     
-    // Polling fallback for conversations - refresh every 1.5 seconds (faster sync)
+    // Polling fallback for conversations - refresh every 500ms (instant sync)
     const conversationsPoll = setInterval(() => {
       if (companyId) {
         loadConversations();
       }
-    }, 1500);
+    }, 500);
     
     return () => clearInterval(conversationsPoll);
   }, [companyId]);
@@ -660,10 +660,10 @@ const WhatsAppCRM: React.FC = () => {
       loadMessagesByPhone(selectedConversation.contact_phone);
       setSelectedAgent(null);
       
-      // Polling fallback - refresh messages every 1 second (instant sync)
+      // Polling fallback - refresh messages every 500ms (instant sync)
       const pollInterval = setInterval(() => {
         loadMessagesByPhone(selectedConversation.contact_phone);
-      }, 1000);
+      }, 500);
       
       return () => clearInterval(pollInterval);
     } else {

@@ -28,6 +28,7 @@ interface WhatsAppSession {
   profile_picture?: string;
   connected_at?: string;
   created_at: string;
+  baileys_server_url?: string;
 }
 
 interface ConversationLabel {
@@ -664,14 +665,71 @@ const WhatsAppCRM: React.FC = () => {
             <span className="hidden sm:inline">Etiquetas</span>
           </Button>
           <BaileysServerDownload />
-          <Button 
-            size="sm" 
-            onClick={() => setShowQRModal(true)} 
-            className="bg-primary hover:bg-primary/90"
-          >
-            <QrCode className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Conectar</span>
-          </Button>
+          {connectedSessions.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                >
+                  <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500 mr-2" />
+                  <span className="hidden sm:inline">Conectado</span>
+                  <Settings className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{connectedSessions[0]?.phone_number || 'WhatsApp'}</p>
+                  <p className="text-xs text-muted-foreground">{connectedSessions[0]?.instance_name}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowQRModal(true)}>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Conectar outro
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={async () => {
+                    const session = connectedSessions[0];
+                    if (!session) return;
+                    
+                    try {
+                      // Call server to disconnect
+                      const serverUrl = session.baileys_server_url;
+                      if (serverUrl) {
+                        await fetch(`${serverUrl}/disconnect/${session.instance_name}`, { method: 'POST' });
+                      }
+                      
+                      // Update database
+                      await supabase
+                        .from('whatsapp_sessions')
+                        .update({ status: 'disconnected' })
+                        .eq('id', session.id);
+                      
+                      await loadSessions();
+                      toast({ title: 'Desconectado', description: 'WhatsApp desconectado com sucesso' });
+                    } catch (e) {
+                      console.error('Error disconnecting:', e);
+                      toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
+                    }
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Desconectar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button 
+              size="sm" 
+              onClick={() => setShowQRModal(true)} 
+              className="bg-primary hover:bg-primary/90"
+            >
+              <QrCode className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Conectar</span>
+            </Button>
+          )}
         </div>
       </div>
 

@@ -219,11 +219,26 @@ async function createSession(sessionId, instanceName, webhookSecret) {
         instanceName,
         data: { connection: 'close', isConnected: false, statusCode }
       });
+      // NÃO deletar a sessão imediatamente para permitir re-conexão
       if (shouldReconnect) {
-        sessions.delete(sessionId);
-        setTimeout(() => createSession(sessionId, instanceName, webhookSecret), 5000);
+        console.log(\`[RECONNECT] Tentando reconectar \${instanceName} em 3s...\`);
+        setTimeout(async () => {
+          try {
+            // Recriar a conexão mantendo o mesmo sessionId
+            sessions.delete(sessionId);
+            await createSession(sessionId, instanceName, webhookSecret);
+          } catch (err) {
+            console.error(\`[RECONNECT] Erro ao reconectar \${instanceName}:\`, err.message);
+          }
+        }, 3000);
       } else {
+        console.log(\`[LOGOUT] \${instanceName} fez logout, removendo sessão\`);
         sessions.delete(sessionId);
+        // Limpar pasta da sessão
+        try {
+          const sessionPath = path.join(SESSIONS_DIR, sessionId);
+          fs.rmSync(sessionPath, { recursive: true, force: true });
+        } catch (e) {}
       }
     }
   });

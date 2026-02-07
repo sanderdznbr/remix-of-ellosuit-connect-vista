@@ -236,7 +236,7 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
         {step === 'qr' && (
           <div className="space-y-4">
             <div className="flex flex-col items-center py-4">
-              {qrCode ? (
+              {qrCode && qrCode.startsWith('data:image') ? (
                 <div className="relative">
                   <img 
                     src={qrCode} 
@@ -254,8 +254,12 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                   </Button>
                 </div>
               ) : (
-                <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="w-64 h-64 bg-muted rounded-lg flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground text-center px-4">
+                    Gerando QR Code...<br />
+                    <span className="text-xs">Isso pode levar alguns segundos</span>
+                  </p>
                 </div>
               )}
 

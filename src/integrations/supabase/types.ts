@@ -896,6 +896,36 @@ export type Database = {
           },
         ]
       }
+      email_send_limits: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          daily_limit: number
+          date: string
+          id: string
+          sent_count: number
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          daily_limit?: number
+          date?: string
+          id?: string
+          sent_count?: number
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          daily_limit?: number
+          date?: string
+          id?: string
+          sent_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           category: string
@@ -2653,6 +2683,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_meeting_rooms: { Args: never; Returns: undefined }
+      increment_email_count: {
+        Args: { p_company_id: string; p_user_id: string }
+        Returns: undefined
+      }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean

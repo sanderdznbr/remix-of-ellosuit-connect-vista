@@ -149,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const requestData: SendEmailRequest = await req.json();
+    const requestData: SendEmailRequest & { company_id?: string } = await req.json();
     const { 
       recipient_email, 
       recipient_name, 
@@ -160,10 +160,38 @@ const handler = async (req: Request): Promise<Response> => {
       provider = 'resend',
       from_email,
       from_name,
-      user_id
+      user_id,
+      company_id
     } = requestData;
 
     console.log(`📨 Sending email to ${recipient_email} via ${provider}`);
+
+    // Check daily limit if user_id and company_id are provided
+    if (user_id && company_id) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data: limitData } = await supabase
+        .from('email_send_limits')
+        .select('sent_count, daily_limit')
+        .eq('user_id', user_id)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (limitData && limitData.sent_count >= limitData.daily_limit) {
+        console.log('❌ Daily email limit reached:', limitData.sent_count, '/', limitData.daily_limit);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Limite diário de emails atingido',
+            sent_count: limitData.sent_count,
+            daily_limit: limitData.daily_limit
+          }),
+          {
+            status: 429,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          }
+        );
+      }
+    }
 
     // Generate tracking pixel ID
     const tracking_pixel_id = crypto.randomUUID();
@@ -263,6 +291,15 @@ const handler = async (req: Request): Promise<Response> => {
           provider: sendResult.provider
         }
       });
+
+    // Increment daily email count if user_id and company_id provided
+    if (user_id && company_id) {
+      await supabase.rpc('increment_email_count', { 
+        p_user_id: user_id, 
+        p_company_id: company_id 
+      });
+      console.log('📊 Email count incremented for user:', user_id);
+    }
 
     console.log(`✅ Email sent successfully via ${sendResult.provider}:`, emailData.id);
 

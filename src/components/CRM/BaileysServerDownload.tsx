@@ -711,10 +711,10 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.7.0 - Estável
+              Servidor Baileys v4.1.0 - Metadados Completos
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp completo - contatos, mídia e mensagens em tempo real
+              Foto de grupos, descrição, participantes, status de contatos + reidratação
             </DialogDescription>
           </DialogHeader>
 
@@ -723,28 +723,28 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.7.0
+                Novidades v4.1.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-primary" />
-                  <strong>Heartbeat automático</strong> - Conexão mais estável (25s)
+                  <ImageIcon className="h-3 w-3 text-primary" />
+                  <strong>Foto de grupos</strong> - Busca profilePictureUrl para @g.us
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-3 w-3 text-primary" />
-                  <strong>Sincronização de Contatos</strong> - Todos os contatos ao conectar
+                  <strong>Descrição do grupo</strong> - groupMetadata().desc
+                </li>
+                <li className="flex items-center gap-2">
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Participantes</strong> - Lista com roles (admin/member)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  <strong>Reconexão inteligente</strong> - Backoff exponencial
+                  <strong>Status dos contatos</strong> - Bio/status individual
                 </li>
                 <li className="flex items-center gap-2">
-                  <ImageIcon className="h-3 w-3 text-primary" />
-                  <strong>Mídia completa</strong> - Imagens, vídeos, áudios, documentos
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  <strong>Retry inteligente</strong> - 5 tentativas para download de mídia
+                  <Zap className="h-3 w-3 text-primary" />
+                  <strong>Reidratação 1h</strong> - Restaura mensagens ao reconectar
                 </li>
               </ul>
             </div>
@@ -765,8 +765,8 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-muted/50 rounded-lg p-4">
               <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <code>package.json</code> - Dependências (Baileys 6.7.9)</li>
-                <li>• <code>index.js</code> - Servidor v3.7.0 completo</li>
+                <li>• <code>package.json</code> - Dependências (Baileys 6.7.17)</li>
+                <li>• <code>index.js</code> - Servidor v4.1.0 completo</li>
                 <li>• <code>.env.example</code> - Variáveis de ambiente</li>
                 <li>• <code>README.md</code> - Instruções de deploy</li>
               </ul>
@@ -812,7 +812,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.8.0.zip
+                  Baixar baileys-server-v4.1.0.zip
                 </>
               )}
             </Button>

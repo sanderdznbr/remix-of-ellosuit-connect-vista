@@ -144,10 +144,13 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
     return group.items.some(item => isActive(item.path));
   };
 
+  // Check if we're on the CRM WhatsApp page
+  const isCRMWhatsApp = location.pathname === '/dashboard/crm-whatsapp';
+  
   const sidebarContent = (
     <div className="h-full flex" onMouseLeave={handleMouseLeave}>
       {/* Main icon strip */}
-      <div className="w-16 bg-primary flex flex-col h-full">
+      <div className={cn("w-16 flex flex-col h-full", isCRMWhatsApp ? "bg-[#FF4500]" : "bg-primary")}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-center border-b border-white/10">
           <Link to="/dashboard" onClick={handleLinkClick}>
@@ -175,7 +178,9 @@ export function UnifiedSidebar({ isMobile, isOpen = false, onOpenChange }: Unifi
                         className={cn(
                           "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 mb-1",
                           isHovered 
-                            ? "bg-white text-primary shadow-lg scale-105" 
+                            ? isCRMWhatsApp 
+                              ? "bg-white text-[#FF4500] shadow-lg scale-105"
+                              : "bg-white text-primary shadow-lg scale-105" 
                             : hasActive 
                               ? "bg-white/20 text-white" 
                               : "text-white/70 hover:bg-white/10 hover:text-white"

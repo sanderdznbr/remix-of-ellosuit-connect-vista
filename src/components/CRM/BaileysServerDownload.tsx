@@ -17,11 +17,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.7.0 ==========
+    // ========== PACKAGE.JSON v3.8.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.7.0",
-  "description": "Servidor Baileys estável - tempo real + contatos + mídia completa",
+  "version": "3.8.0",
+  "description": "Servidor Baileys estável - tempo real + contatos + mídia completa + endpoint corrigido",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -57,9 +57,14 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.7.0 - Estável e Completo
+    const readme = `# 🚀 Baileys Server v3.8.0 - Estável e Completo
 
-## ✨ Novidades v3.7.0
+## ✨ Novidades v3.8.0
+
+### 🔧 Correções
+- **CORREÇÃO**: Endpoint /api/message/send funcional
+- Logs detalhados no envio de mensagens
+- Validação melhorada de sessão
 
 ### 🔄 Estabilidade
 - **Heartbeat automático** - Ping a cada 25s mantém conexão
@@ -96,12 +101,13 @@ sessions/
 - Histórico de conversas antigas
 `;
 
-    // ========== SERVIDOR v3.7.0 COMPLETO ==========
+    // ========== SERVIDOR v3.8.0 COMPLETO ==========
     const indexJs = `/**
  * ============================================
- * BAILEYS SERVER v3.7.0
+ * BAILEYS SERVER v3.8.0
  * ============================================
  * Servidor WhatsApp estável e completo
+ * - CORREÇÃO: Endpoint /api/message/send funcional
  * - Heartbeat automático (25s)
  * - Reconexão com backoff exponencial
  * - Sincronização completa de contatos
@@ -395,7 +401,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret, rec
 }
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '3.7.0', features: { contactsSync: true, mediaUpload: !!supabase, heartbeat: true }, sessions: sessions.size, timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', version: '3.8.0', features: { contactsSync: true, mediaUpload: !!supabase, heartbeat: true }, sessions: sessions.size, timestamp: new Date().toISOString() });
 });
 
 app.post('/api/instance/create', async (req, res) => {
@@ -444,13 +450,17 @@ app.get('/api/contacts/:sessionId', (req, res) => {
 app.post('/api/message/send', async (req, res) => {
   try {
     const { sessionId, phone, message, isGroup } = req.body;
+    console.log(\`📤 Send request: session=\${sessionId}, phone=\${phone}, isGroup=\${isGroup}\`);
     const session = sessions.get(sessionId);
-    if (!session?.socket?.isConnected) return res.status(400).json({ error: 'Session not connected' });
+    if (!session) { console.error(\`❌ Session not found: \${sessionId}\`); return res.status(400).json({ error: 'Session not found' }); }
+    if (!session.socket) { console.error(\`❌ Socket not available\`); return res.status(400).json({ error: 'Socket not available' }); }
+    if (!session.isConnected) { console.error(\`❌ Session not connected\`); return res.status(400).json({ error: 'Session not connected' }); }
     const jid = formatJidForSend(phone, isGroup);
-    console.log(\`📤 Sending to \${jid}\`);
+    console.log(\`📤 Sending to \${jid}: "\${message.substring(0, 30)}..."\`);
     const result = await session.socket.sendMessage(jid, { text: message });
+    console.log(\`✅ Message sent: \${result?.key?.id}\`);
     res.json({ success: true, jid, messageId: result?.key?.id });
-  } catch (error) { res.status(500).json({ error: error.message }); }
+  } catch (error) { console.error(\`❌ Send error:\`, error); res.status(500).json({ error: error.message }); }
 });
 
 app.post('/api/message/media', async (req, res) => {
@@ -560,7 +570,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.7.0.zip';
+      a.download = 'baileys-server-v3.8.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -568,7 +578,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v3.7.0 - Estável com contatos e mídia completa!'
+        description: 'Servidor v3.8.0 - Estável com contatos, mídia e endpoint corrigido!'
       });
       
       setIsOpen(false);
@@ -663,8 +673,8 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             </div>
 
             {/* Important Note */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <h4 className="font-medium text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+              <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Importante: Atualização Necessária
               </h4>
@@ -702,7 +712,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.7.0.zip
+                  Baixar baileys-server-v3.8.0.zip
                 </>
               )}
             </Button>

@@ -931,7 +931,8 @@ serve(async (req) => {
         break;
       }
 
-      // ==================== CONTACTS UPDATE ====================
+      // ==================== CONTACTS SYNC ====================
+      case 'contacts.set':
       case 'contacts.update':
       case 'contacts.upsert': {
         const contacts = data?.contacts || [];

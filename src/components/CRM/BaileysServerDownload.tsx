@@ -600,7 +600,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v4.0.0.zip';
+      a.download = 'baileys-server-v4.1.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -608,7 +608,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v4.0.0 - Reidratação de 1h + preservação de contatos!'
+        description: 'Servidor v4.1.0 - Metadados completos de grupos e contatos!'
       });
       
       setIsOpen(false);
@@ -631,37 +631,41 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-[#FF4500]" />
-              Servidor Baileys v4.0.0 - Reidratação
+              <Server className="h-5 w-5 text-primary" />
+              Servidor Baileys v4.1.0 - Metadados Completos
             </DialogTitle>
             <DialogDescription>
-              Preserva nomes/fotos + restaura 1h de mensagens ao reconectar
+              Foto de grupos, descrição, participantes, status de contatos + reidratação
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* What's New */}
-            <div className="bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-lg p-4">
-              <h4 className="font-medium text-[#FF4500] mb-2 flex items-center gap-2">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+              <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v4.0.0
+                Novidades v4.1.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Reidratação de 1h</strong> - Restaura mensagens ao reconectar
+                  <ImageIcon className="h-3 w-3 text-primary" />
+                  <strong>Foto de grupos</strong> - Busca profilePictureUrl para @g.us
                 </li>
                 <li className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Preservação de dados</strong> - Nunca perde nomes/fotos
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Descrição do grupo</strong> - groupMetadata().desc
                 </li>
                 <li className="flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Heartbeat 20s</strong> - Conexão mais estável
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Participantes</strong> - Lista com roles (admin/member)
                 </li>
                 <li className="flex items-center gap-2">
-                  <ImageIcon className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Mídia completa</strong> - Imagens, vídeos, áudios
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  <strong>Status dos contatos</strong> - Bio/status individual
+                </li>
+                <li className="flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-primary" />
+                  <strong>Reidratação 1h</strong> - Restaura mensagens ao reconectar
                 </li>
               </ul>
             </div>
@@ -673,7 +677,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               <Button 
                 onClick={downloadZip} 
                 disabled={downloading}
-                className="bg-[#FF4500] hover:bg-[#FF4500]/90"
+                className="bg-primary hover:bg-primary/90"
               >
                 {downloading ? (
                   <>
@@ -683,7 +687,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar v4.0.0
+                    Baixar v4.1.0
                   </>
                 )}
               </Button>

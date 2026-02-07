@@ -394,10 +394,20 @@ const WhatsAppCRM: React.FC = () => {
   };
   
   // Helper: Get display name for conversation (handles groups without names)
-  const getDisplayName = (conv: WhatsAppConversationData): string => {
+  // Also checks messages for sender_name as fallback
+  const getDisplayName = (conv: WhatsAppConversationData, messagesForLookup?: WhatsAppMessage[]): string => {
     if (conv.contact_name && conv.contact_name !== conv.contact_phone) {
       return conv.contact_name;
     }
+    
+    // Fallback: look for sender_name in incoming messages
+    if (messagesForLookup && messagesForLookup.length > 0) {
+      const incomingWithName = messagesForLookup.find(m => !m.from_me && m.sender_name);
+      if (incomingWithName?.sender_name) {
+        return incomingWithName.sender_name;
+      }
+    }
+    
     // For groups without name, show formatted ID
     const digits = conv.contact_phone.replace(/\D/g, '');
     if (digits.length > 15) {
@@ -1714,7 +1724,7 @@ const WhatsAppCRM: React.FC = () => {
                     <>
                       <AvatarImage src={selectedConversation?.profile_picture} />
                       <AvatarFallback className="bg-blue-100 text-blue-700">
-                        {(selectedConversation?.contact_name || selectedConversation?.contact_phone || '').substring(0, 2).toUpperCase()}
+                        {(selectedConversation ? getDisplayName(selectedConversation, messages) : '').substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </>
                   )}
@@ -1722,7 +1732,7 @@ const WhatsAppCRM: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-medium">
-                      {selectedAgent ? selectedAgent.name : (selectedConversation?.contact_name || selectedConversation?.contact_phone)}
+                      {selectedAgent ? selectedAgent.name : (selectedConversation ? getDisplayName(selectedConversation, messages) : '')}
                     </h2>
                     {selectedAgent && (
                       <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs">

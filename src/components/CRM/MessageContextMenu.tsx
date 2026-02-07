@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { Copy, Trash2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MessageContextMenuProps {
@@ -11,6 +11,7 @@ interface MessageContextMenuProps {
   onClose: () => void;
   onCopy: (content: string) => void;
   onDelete: (messageId: string) => void;
+  onScheduleMeeting?: () => void;
 }
 
 const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
@@ -22,6 +23,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   onClose,
   onCopy,
   onDelete,
+  onScheduleMeeting,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +54,8 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   if (!isOpen) return null;
 
   const adjustedPosition = {
-    x: Math.min(position.x, window.innerWidth - 160),
-    y: Math.min(position.y, window.innerHeight - 150),
+    x: Math.min(position.x, window.innerWidth - 180),
+    y: Math.min(position.y, window.innerHeight - 180),
   };
 
   const MenuItem = ({ 
@@ -65,7 +67,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
     icon: React.ReactNode;
     label: string;
     onClick: () => void;
-    variant?: 'default' | 'destructive';
+    variant?: 'default' | 'destructive' | 'primary';
   }) => (
     <button
       onClick={() => {
@@ -74,7 +76,8 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
       }}
       className={cn(
         "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors",
-        variant === 'destructive' && "text-destructive hover:bg-destructive/10"
+        variant === 'destructive' && "text-destructive hover:bg-destructive/10",
+        variant === 'primary' && "text-[#FF4500] hover:bg-[#FF4500]/10"
       )}
     >
       {icon}
@@ -85,7 +88,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-card border rounded-lg shadow-lg py-1 min-w-[140px] overflow-hidden"
+      className="fixed z-50 bg-card border rounded-lg shadow-lg py-1 min-w-[160px] overflow-hidden"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -96,6 +99,15 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
         label="Copiar"
         onClick={() => onCopy(messageContent)}
       />
+
+      {onScheduleMeeting && (
+        <MenuItem
+          icon={<Calendar className="h-4 w-4" />}
+          label="Agendar Reunião"
+          onClick={onScheduleMeeting}
+          variant="primary"
+        />
+      )}
 
       {isFromMe && (
         <MenuItem

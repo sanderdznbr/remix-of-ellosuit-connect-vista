@@ -348,6 +348,151 @@ serve(async (req) => {
         });
       }
 
+      // ==================== REGENERATE QR CODE ====================
+      case 'regenerate_qr': {
+        if (!sessionId) {
+          return new Response(JSON.stringify({ error: 'sessionId é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: session } = await supabase
+          .from('whatsapp_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+
+        if (!session) {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        
+        if (!serverUrl) {
+          return new Response(JSON.stringify({ error: 'Servidor Baileys não configurado' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        console.log(`[REGENERATE] Force regenerating QR for session ${sessionId}`);
+
+        try {
+          // Step 1: Delete existing instance from Baileys server
+          console.log(`[REGENERATE] Deleting instance from server...`);
+          const deleteResponse = await fetch(`${serverUrl}/api/instance/${sessionId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          console.log(`[REGENERATE] Delete response: ${deleteResponse.status}`);
+          
+          // Wait a moment for cleanup
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Step 2: Recreate instance on Baileys server
+          console.log(`[REGENERATE] Creating new instance...`);
+          const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+          const createResponse = await fetch(`${serverUrl}/api/instance/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: session.id,
+              instanceName: session.instance_name,
+              webhookUrl: webhookUrl,
+              webhookSecret: session.webhook_secret || ''
+            })
+          });
+          
+          if (!createResponse.ok) {
+            const errorText = await createResponse.text();
+            console.error(`[REGENERATE] Create failed:`, errorText);
+            return new Response(JSON.stringify({ 
+              error: 'Falha ao recriar instância',
+              details: errorText 
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          console.log(`[REGENERATE] Instance recreated, waiting for QR...`);
+          
+          // Step 3: Wait and poll for QR code (up to 10 seconds)
+          let qrCode = null;
+          for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const qrResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (qrResponse.ok) {
+              const qrData = await qrResponse.json();
+              console.log(`[REGENERATE] QR poll ${i+1}:`, { hasQR: !!qrData.qrCode, isConnected: qrData.isConnected });
+              
+              if (qrData.qrCode) {
+                qrCode = qrData.qrCode;
+                
+                // Save to database
+                await supabase
+                  .from('whatsapp_sessions')
+                  .update({ qr_code: qrCode, status: 'waiting_qr' })
+                  .eq('id', sessionId);
+                
+                break;
+              }
+              
+              if (qrData.isConnected) {
+                return new Response(JSON.stringify({ 
+                  qrCode: null,
+                  status: 'connected',
+                  isConnected: true,
+                  phoneNumber: qrData.phoneNumber,
+                  pushName: qrData.pushName
+                }), {
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+              }
+            }
+          }
+          
+          if (qrCode) {
+            return new Response(JSON.stringify({ 
+              qrCode,
+              status: 'waiting_qr',
+              isConnected: false,
+              message: 'QR Code regenerado com sucesso'
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // QR not generated yet, return status
+          return new Response(JSON.stringify({ 
+            qrCode: null,
+            status: 'generating',
+            message: 'QR Code em geração, aguarde polling...'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+          
+        } catch (e) {
+          console.error('[REGENERATE] Error:', e);
+          return new Response(JSON.stringify({ 
+            error: 'Erro ao regenerar QR Code',
+            details: e.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       // ==================== SEND MESSAGE ====================
       case 'send_message': {
         if (!sessionId || !phone || !message) {

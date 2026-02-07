@@ -250,6 +250,45 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
     }
   };
 
+  // Força regeneração do QR Code deletando e recriando instância no servidor
+  const regenerateQRCode = async () => {
+    if (!sessionId) return;
+    
+    setLoading(true);
+    setQrCode(null);
+    setPollCount(0);
+    setElapsedTime(0);
+    startTimeRef.current = Date.now();
+    
+    try {
+      toast({ title: 'Regenerando QR Code...', description: 'Recriando sessão no servidor' });
+      
+      const { data, error } = await supabase.functions.invoke('whatsapp-api', {
+        body: { action: 'regenerate_qr', sessionId }
+      });
+
+      if (error) throw error;
+
+      console.log('[QR Modal] Regenerate response:', data);
+      
+      if (data?.qrCode && data.qrCode.startsWith('data:image')) {
+        setQrCode(data.qrCode);
+        toast({ title: 'QR Code gerado!', description: 'Escaneie com seu WhatsApp' });
+      } else {
+        toast({ title: 'Aguarde...', description: 'O QR Code será gerado em instantes' });
+      }
+    } catch (e: any) {
+      console.error('Error regenerating QR:', e);
+      toast({ 
+        title: 'Erro', 
+        description: e.message || 'Erro ao regenerar QR Code', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
@@ -344,6 +383,22 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                     <p className="text-xs text-amber-600 text-center px-4">
                       Tentativa {pollCount}... isso pode levar até 2 minutos
                     </p>
+                  )}
+                  {pollCount > 10 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={regenerateQRCode}
+                      disabled={loading}
+                      className="mt-2"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Gerar Novo QR Code
+                    </Button>
                   )}
                 </div>
               )}

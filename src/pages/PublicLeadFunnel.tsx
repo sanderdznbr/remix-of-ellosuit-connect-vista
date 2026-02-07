@@ -7,10 +7,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+interface StepField {
+  id: string;
+  type: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: string[];
+  max?: number;
+}
 
 interface FunnelStep {
   id: string;
@@ -45,19 +54,16 @@ const PublicLeadFunnel: React.FC = () => {
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate session ID
   useEffect(() => {
     setSessionId(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   }, []);
 
-  // Load funnel
   useEffect(() => {
     const loadFunnel = async () => {
       if (!slug) return;
 
       setLoading(true);
 
-      // First try to find the funnel by slug (active only)
       let { data: funnelData, error: funnelError } = await supabase
         .from('lead_funnels')
         .select('*')
@@ -65,7 +71,6 @@ const PublicLeadFunnel: React.FC = () => {
         .eq('is_active', true)
         .single();
 
-      // If not found as active, check if it exists but is inactive
       if (funnelError || !funnelData) {
         const { data: inactiveFunnel } = await supabase
           .from('lead_funnels')
@@ -84,7 +89,6 @@ const PublicLeadFunnel: React.FC = () => {
 
       setFunnel(funnelData);
 
-      // Load steps
       const { data: stepsData } = await supabase
         .from('lead_funnel_steps')
         .select('*')
@@ -108,13 +112,11 @@ const PublicLeadFunnel: React.FC = () => {
     loadFunnel();
   }, [slug]);
 
-  // Create or update submission
   useEffect(() => {
     const trackSubmission = async () => {
       if (!funnel || !sessionId || steps.length === 0) return;
 
       if (!submissionId) {
-        // Create new submission
         const { data } = await supabase
           .from('lead_submissions')
           .insert({
@@ -126,7 +128,8 @@ const PublicLeadFunnel: React.FC = () => {
             metadata: {
               userAgent: navigator.userAgent,
               referrer: document.referrer,
-              startedAt: new Date().toISOString()
+              startedAt: new Date().toISOString(),
+              device: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
             }
           })
           .select()
@@ -136,7 +139,6 @@ const PublicLeadFunnel: React.FC = () => {
           setSubmissionId(data.id);
         }
 
-        // Track view event
         await supabase.from('lead_step_events').insert({
           funnel_id: funnel.id,
           step_id: steps[0]?.id || null,
@@ -151,7 +153,15 @@ const PublicLeadFunnel: React.FC = () => {
 
   const currentStep = steps[currentStepIndex];
   const progress = steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+  const buttonColor = funnel?.settings?.buttonColor || '#8B5CF6';
+  const backgroundColor = funnel?.settings?.backgroundColor || '#FFFFFF';
+  const thankYouMessage = funnel?.settings?.thankYouMessage || 'Sua resposta foi enviada com sucesso.';
 
+  const setFieldAnswer = (fieldId: string, value: any) => {
+    setAnswers(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  // For legacy single-field steps
   const setAnswer = (value: any) => {
     if (!currentStep) return;
     setAnswers(prev => ({ ...prev, [currentStep.id]: value }));
@@ -159,28 +169,38 @@ const PublicLeadFunnel: React.FC = () => {
 
   const canProceed = () => {
     if (!currentStep) return false;
-    if (!currentStep.required) return true;
     
+    // Check if step has multiple fields
+    const fields = currentStep.content?.fields;
+    if (fields && fields.length > 0) {
+      return fields.every((field: StepField) => {
+        if (!field.required) return true;
+        const answer = answers[field.id];
+        if (answer === undefined || answer === null || answer === '') return false;
+        if (Array.isArray(answer) && answer.length === 0) return false;
+        return true;
+      });
+    }
+    
+    // Legacy single-field behavior
+    if (!currentStep.required) return true;
     const answer = answers[currentStep.id];
     if (answer === undefined || answer === null || answer === '') return false;
     if (Array.isArray(answer) && answer.length === 0) return false;
-    
     return true;
   };
 
   const goNext = async () => {
     if (!canProceed() || !funnel) return;
 
-    // Track step completion
     await supabase.from('lead_step_events').insert({
       funnel_id: funnel.id,
       step_id: currentStep.id,
       submission_id: submissionId,
       event_type: 'complete',
-      metadata: { stepIndex: currentStepIndex, answer: answers[currentStep.id] }
+      metadata: { stepIndex: currentStepIndex, answers }
     });
 
-    // Update submission
     if (submissionId) {
       await supabase
         .from('lead_submissions')
@@ -194,7 +214,6 @@ const PublicLeadFunnel: React.FC = () => {
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
       
-      // Track next step view
       await supabase.from('lead_step_events').insert({
         funnel_id: funnel.id,
         step_id: steps[currentStepIndex + 1]?.id || null,
@@ -203,7 +222,6 @@ const PublicLeadFunnel: React.FC = () => {
         metadata: { stepIndex: currentStepIndex + 1 }
       });
     } else {
-      // Complete submission
       setSubmitting(true);
       
       if (submissionId) {
@@ -228,10 +246,203 @@ const PublicLeadFunnel: React.FC = () => {
     }
   };
 
-  // Render step content
+  // Render a single field input
+  const renderFieldInput = (field: StepField, answerId: string) => {
+    const value = answers[answerId];
+
+    switch (field.type) {
+      case 'text':
+      case 'name':
+      case 'company':
+        return (
+          <Input
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || field.label}
+            className="text-base py-5"
+          />
+        );
+
+      case 'email':
+        return (
+          <Input
+            type="email"
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || 'seu@email.com'}
+            className="text-base py-5"
+          />
+        );
+
+      case 'phone':
+        return (
+          <Input
+            type="tel"
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || '(00) 00000-0000'}
+            className="text-base py-5"
+          />
+        );
+
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || 'Digite um número'}
+            className="text-base py-5"
+          />
+        );
+
+      case 'url':
+        return (
+          <Input
+            type="url"
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || 'https://exemplo.com'}
+            className="text-base py-5"
+          />
+        );
+
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            className="text-base py-5"
+          />
+        );
+
+      case 'address':
+      case 'textarea':
+        return (
+          <Textarea
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || field.label}
+            rows={field.type === 'address' ? 2 : 4}
+            className="text-base"
+          />
+        );
+
+      case 'single_choice':
+        return (
+          <RadioGroup
+            value={value || ''}
+            onValueChange={(v) => setFieldAnswer(answerId, v)}
+            className="space-y-2"
+          >
+            {(field.options || []).map((option, idx) => (
+              <label
+                key={idx}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                  value === option
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <RadioGroupItem value={option} />
+                <span>{option}</span>
+              </label>
+            ))}
+          </RadioGroup>
+        );
+
+      case 'multiple_choice':
+        return (
+          <div className="space-y-2">
+            {(field.options || []).map((option, idx) => {
+              const selected = Array.isArray(value) && value.includes(option);
+              return (
+                <label
+                  key={idx}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                    selected
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <Checkbox
+                    checked={selected}
+                    onCheckedChange={(checked) => {
+                      const current = Array.isArray(value) ? value : [];
+                      if (checked) {
+                        setFieldAnswer(answerId, [...current, option]);
+                      } else {
+                        setFieldAnswer(answerId, current.filter((a: string) => a !== option));
+                      }
+                    }}
+                  />
+                  <span>{option}</span>
+                </label>
+              );
+            })}
+          </div>
+        );
+
+      case 'rating':
+        const max = field.max || 5;
+        return (
+          <div className="flex items-center justify-center gap-1">
+            {Array.from({ length: max }, (_, i) => i + 1).map(num => (
+              <button
+                key={num}
+                onClick={() => setFieldAnswer(answerId, num)}
+                className={cn(
+                  "p-2 rounded-lg transition-all",
+                  value >= num
+                    ? "text-yellow-500"
+                    : "text-muted-foreground hover:text-yellow-400"
+                )}
+              >
+                <Star className={cn("h-7 w-7", value >= num && "fill-current")} />
+              </button>
+            ))}
+          </div>
+        );
+
+      default:
+        return (
+          <Input
+            value={value || ''}
+            onChange={(e) => setFieldAnswer(answerId, e.target.value)}
+            placeholder={field.placeholder || 'Digite sua resposta...'}
+            className="text-base py-5"
+          />
+        );
+    }
+  };
+
+  // Render step content (supports multiple fields per step)
   const renderStepContent = () => {
     if (!currentStep) return null;
 
+    const fields = currentStep.content?.fields as StepField[] | undefined;
+
+    // New multi-field mode
+    if (fields && fields.length > 0) {
+      return (
+        <div className="space-y-5">
+          {fields.map((field) => (
+            <div key={field.id} className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              {renderFieldInput(field, field.id)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Legacy single-field mode
     const answer = answers[currentStep.id];
 
     switch (currentStep.step_type) {
@@ -312,8 +523,8 @@ const PublicLeadFunnel: React.FC = () => {
             value={answer || ''}
             onChange={(e) => setAnswer(e.target.value)}
             placeholder={currentStep.step_type === 'address' ? 'Digite seu endereço completo...' : 'Digite sua resposta...'}
-            className="text-lg"
             rows={currentStep.step_type === 'address' ? 2 : 4}
+            className="text-lg"
           />
         );
 
@@ -400,6 +611,7 @@ const PublicLeadFunnel: React.FC = () => {
           <Button
             size="lg"
             className="w-full py-6 text-lg"
+            style={{ backgroundColor: buttonColor }}
             onClick={goNext}
           >
             {currentStep.content?.buttonText || 'Continuar'}
@@ -413,7 +625,7 @@ const PublicLeadFunnel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -421,8 +633,8 @@ const PublicLeadFunnel: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-        <Card className="max-w-md w-full">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor }}>
+        <Card className="max-w-md w-full shadow-lg">
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">{error}</p>
           </CardContent>
@@ -433,15 +645,18 @@ const PublicLeadFunnel: React.FC = () => {
 
   if (completed) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor }}>
+        <Card className="max-w-md w-full shadow-lg">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: `${buttonColor}20` }}
+            >
+              <CheckCircle className="h-8 w-8" style={{ color: buttonColor }} />
             </div>
             <h2 className="text-2xl font-bold mb-2">Obrigado!</h2>
             <p className="text-muted-foreground">
-              Sua resposta foi enviada com sucesso.
+              {thankYouMessage}
             </p>
           </CardContent>
         </Card>
@@ -450,7 +665,7 @@ const PublicLeadFunnel: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+    <div className="min-h-screen p-4" style={{ backgroundColor }}>
       <div className="max-w-xl mx-auto pt-8">
         {/* Progress */}
         <div className="mb-8">
@@ -492,6 +707,7 @@ const PublicLeadFunnel: React.FC = () => {
                 )}
                 <Button
                   className="flex-1 gap-2"
+                  style={{ backgroundColor: buttonColor }}
                   onClick={goNext}
                   disabled={!canProceed() || submitting}
                 >

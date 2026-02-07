@@ -377,7 +377,11 @@ serve(async (req) => {
           
           // Profile picture from enriched data
           const profilePicture = msg.profilePicture || null;
-          const contactName = msg.pushName || msg.senderName || phoneNumber;
+          // IMPORTANT: Only use pushName for contact name if this is an INCOMING message
+          // For outgoing messages (fromMe=true), pushName is the session owner's name, not the contact's
+          const contactName = !fromMe 
+            ? (msg.pushName || msg.senderName || phoneNumber) 
+            : phoneNumber;
           
           // Find or create conversation
           let { data: conversation } = await supabase
@@ -413,8 +417,9 @@ serve(async (req) => {
               unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,
             };
             
-            // Update contact name and picture if we have better data
-            if (contactName && contactName !== phoneNumber) {
+            // Update contact name and picture if we have better data from INCOMING messages
+            // Only update name from incoming messages to avoid overwriting with session owner's name
+            if (!fromMe && contactName && contactName !== phoneNumber) {
               updateData.contact_name = contactName;
             }
             if (profilePicture && !conversation.profile_picture) {

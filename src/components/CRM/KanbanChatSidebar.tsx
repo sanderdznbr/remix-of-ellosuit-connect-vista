@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import WhatsAppMediaMessage from './WhatsAppMediaMessage';
 
 interface WhatsAppConversationData {
   id: string;
@@ -301,9 +302,19 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
                         <span>{message.sender_name || 'IA'}</span>
                       </div>
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
+                    {message.message_type && message.message_type !== 'text' ? (
+                      <WhatsAppMediaMessage
+                        messageType={message.message_type}
+                        content={message.content}
+                        mediaUrl={message.media_url}
+                        mediaCaption={message.media_caption}
+                        fromMe={message.from_me}
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
+                    )}
                     <div className={cn(
                       "flex items-center justify-end gap-1 mt-1 text-[10px]",
                       message.from_me ? "opacity-70" : "text-muted-foreground"

@@ -982,6 +982,9 @@ const WhatsAppCRM: React.FC = () => {
 
   // Get connected sessions first (needed for filtering)
   const connectedSessions = sessions.filter(s => s.status === 'connected');
+  
+  // Check if there are disconnected sessions (for UI indicator)
+  const hasDisconnectedSessions = sessions.some(s => s.status === 'disconnected' && !connectedSessions.length);
 
   // Helper function to check if a phone number is a status broadcast or invalid
   const isStatusBroadcastOrInvalid = (phone: string | undefined): boolean => {
@@ -1194,6 +1197,17 @@ const WhatsAppCRM: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : hasDisconnectedSessions ? (
+            <Button 
+              size="sm" 
+              onClick={() => setShowQRModal(true)} 
+              variant="outline"
+              className="border-destructive text-destructive hover:bg-destructive/10"
+            >
+              <Circle className="h-3 w-3 fill-destructive text-destructive mr-2" />
+              <span className="hidden sm:inline">Desconectado</span>
+              <QrCode className="h-4 w-4 ml-1" />
+            </Button>
           ) : (
             <Button 
               size="sm" 

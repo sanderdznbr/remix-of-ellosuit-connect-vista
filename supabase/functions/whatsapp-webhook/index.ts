@@ -327,35 +327,51 @@ serve(async (req) => {
           // Extract phone number from JID (handle @lid format)
           let phoneNumber = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '');
           
-          // Get session info
+          // Get session info including phone number for self-message filtering
           let targetSessionId = sessionId;
           let companyId = '';
+          let sessionPhone = '';
           
           if (!targetSessionId && instanceName) {
             const { data: session } = await supabase
               .from('whatsapp_sessions')
-              .select('id, company_id')
+              .select('id, company_id, phone_number')
               .eq('instance_name', instanceName)
               .single();
             
             if (session) {
               targetSessionId = session.id;
               companyId = session.company_id;
+              sessionPhone = session.phone_number || '';
             }
           } else if (targetSessionId) {
             const { data: session } = await supabase
               .from('whatsapp_sessions')
-              .select('company_id')
+              .select('company_id, phone_number')
               .eq('id', targetSessionId)
               .single();
             
             if (session) {
               companyId = session.company_id;
+              sessionPhone = session.phone_number || '';
             }
           }
           
           if (!targetSessionId || !companyId) {
             console.log('Could not find session for message');
+            continue;
+          }
+          
+          // SELF-MESSAGE FILTER: Skip messages where contact matches the session's own phone
+          const normalizedSessionPhone = sessionPhone.replace(/\D/g, '');
+          const normalizedContactPhone = phoneNumber.replace(/\D/g, '');
+          
+          if (normalizedSessionPhone && normalizedContactPhone && (
+            normalizedSessionPhone === normalizedContactPhone ||
+            normalizedSessionPhone.endsWith(normalizedContactPhone) ||
+            normalizedContactPhone.endsWith(normalizedSessionPhone)
+          )) {
+            console.log(`[SKIP] Self-message detected: session=${normalizedSessionPhone}, contact=${normalizedContactPhone}`);
             continue;
           }
           

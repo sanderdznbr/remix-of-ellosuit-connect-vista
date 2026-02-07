@@ -16,6 +16,7 @@ import SaveLeadModal from './SaveLeadModal';
 import ConversationPopup from './ConversationPopup';
 import KanbanColumnConfig from './KanbanColumnConfig';
 import AudioRecorder from './AudioRecorder';
+import BaileysServerDownload from './BaileysServerDownload';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -1249,13 +1250,16 @@ const WhatsAppCRM: React.FC = () => {
               )}
             </p>
             {connectedSessions.length === 0 && (
-              <Button 
-                onClick={() => setShowQRModal(true)} 
-                className="mt-6 bg-blue-600 hover:bg-blue-700"
-              >
-                <QrCode className="h-4 w-4 mr-2" />
-                Conectar WhatsApp
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button 
+                  onClick={() => setShowQRModal(true)} 
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Conectar WhatsApp
+                </Button>
+                <BaileysServerDownload />
+              </div>
             )}
           </div>
         )}

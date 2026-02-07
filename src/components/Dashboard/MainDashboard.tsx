@@ -230,13 +230,12 @@ const MainDashboard = () => {
     const isPositive = change >= 0;
     
     return (
-      <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
-        isHighlighted ? 'ring-2 ring-offset-2' : ''
-      }`} style={isHighlighted ? { 
-        backgroundColor: color,
-        background: color,
-        borderColor: color 
-      } : {}}>
+      <Card 
+        className="relative overflow-hidden transition-all duration-300 hover:shadow-lg border-0"
+        style={isHighlighted ? { 
+          backgroundColor: color,
+        } : {}}
+      >
         <CardContent className="p-6">
           <div className="flex flex-col gap-2">
             <span className={`text-sm font-medium uppercase tracking-wide ${

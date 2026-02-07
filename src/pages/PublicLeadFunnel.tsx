@@ -11,6 +11,13 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
+interface ImageOption {
+  id: string;
+  imageUrl: string;
+  label: string;
+  nextStepId?: string;
+}
+
 interface StepField {
   id: string;
   type: string;
@@ -18,7 +25,10 @@ interface StepField {
   placeholder?: string;
   required?: boolean;
   options?: string[];
+  imageOptions?: ImageOption[];
   max?: number;
+  size?: 'sm' | 'md' | 'lg';
+  align?: 'left' | 'center' | 'right';
 }
 
 interface FunnelStep {
@@ -211,6 +221,41 @@ const PublicLeadFunnel: React.FC = () => {
         .eq('id', submissionId);
     }
 
+    // Check for conditional navigation from image_choice fields
+    const fields = currentStep?.content?.fields as StepField[] | undefined;
+    let targetStepId: string | null = null;
+    
+    if (fields) {
+      for (const field of fields) {
+        if (field.type === 'image_choice' && field.imageOptions) {
+          const selectedOptionId = answers[field.id];
+          const selectedOption = field.imageOptions.find(opt => opt.id === selectedOptionId);
+          if (selectedOption?.nextStepId) {
+            targetStepId = selectedOption.nextStepId;
+            break;
+          }
+        }
+      }
+    }
+
+    if (targetStepId) {
+      // Conditional navigation - find the target step index
+      const targetIndex = steps.findIndex(s => s.id === targetStepId);
+      if (targetIndex !== -1) {
+        setCurrentStepIndex(targetIndex);
+        
+        await supabase.from('lead_step_events').insert({
+          funnel_id: funnel.id,
+          step_id: steps[targetIndex]?.id || null,
+          submission_id: submissionId,
+          event_type: 'view',
+          metadata: { stepIndex: targetIndex, conditionalNavigation: true }
+        });
+        return;
+      }
+    }
+
+    // Default linear navigation
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
       
@@ -407,6 +452,77 @@ const PublicLeadFunnel: React.FC = () => {
           </div>
         );
 
+      case 'image_choice':
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            {(field.imageOptions || []).map((opt) => {
+              const isSelected = value === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    setFieldAnswer(answerId, opt.id);
+                    // Store the nextStepId for conditional navigation
+                    if (opt.nextStepId) {
+                      setFieldAnswer(`${answerId}_nextStep`, opt.nextStepId);
+                    }
+                  }}
+                  className={cn(
+                    "rounded-xl border-2 overflow-hidden transition-all",
+                    isSelected
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <div className="aspect-video bg-muted flex items-center justify-center overflow-hidden">
+                    {opt.imageUrl ? (
+                      <img 
+                        src={opt.imageUrl} 
+                        alt={opt.label} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-muted-foreground text-xs">Sem imagem</div>
+                    )}
+                  </div>
+                  <div className={cn(
+                    "p-2 text-center text-sm font-medium transition-colors",
+                    isSelected ? "bg-primary/10 text-primary" : "bg-card"
+                  )}>
+                    {opt.label}
+                  </div>
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        );
+
+      case 'heading':
+        return (
+          <h2 className={cn(
+            "font-bold",
+            field.size === 'lg' ? 'text-2xl' : field.size === 'sm' ? 'text-lg' : 'text-xl',
+            field.align === 'center' ? 'text-center' : field.align === 'right' ? 'text-right' : 'text-left'
+          )}>
+            {field.label}
+          </h2>
+        );
+
+      case 'paragraph':
+        return (
+          <p className={cn(
+            "text-muted-foreground",
+            field.align === 'center' ? 'text-center' : field.align === 'right' ? 'text-right' : 'text-left'
+          )}>
+            {field.label}
+          </p>
+        );
+
       default:
         return (
           <Input
@@ -429,15 +545,26 @@ const PublicLeadFunnel: React.FC = () => {
     if (fields && fields.length > 0) {
       return (
         <div className="space-y-5">
-          {fields.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              {renderFieldInput(field, field.id)}
-            </div>
-          ))}
+          {fields.map((field) => {
+            // Layout fields (heading, paragraph) don't need a label wrapper
+            if (field.type === 'heading' || field.type === 'paragraph') {
+              return (
+                <div key={field.id}>
+                  {renderFieldInput(field, field.id)}
+                </div>
+              );
+            }
+            
+            return (
+              <div key={field.id} className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                {renderFieldInput(field, field.id)}
+              </div>
+            );
+          })}
         </div>
       );
     }

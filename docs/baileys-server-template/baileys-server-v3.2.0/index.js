@@ -1,6 +1,6 @@
 /**
  * ============================================
- * BAILEYS SERVER v3.1.0
+ * BAILEYS SERVER v3.2.0
  * ============================================
  * Servidor completo com suporte a mídias e grupos
  * Para WhatsApp CRM - Lovable
@@ -413,14 +413,26 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       // Extract sender info for groups
       let senderPhone = '';
       let senderName = '';
+      let groupName = '';
       
-      if (isGroup && !fromMe) {
-        // In groups, participant contains the actual sender's JID
-        const participantJid = msg.key.participant;
-        if (participantJid) {
-          senderPhone = extractPhoneFromJid(participantJid) || '';
-          senderName = msg.pushName || '';
-          console.log(`👥 Group message from: ${senderName} (${senderPhone})`);
+      if (isGroup) {
+        // Fetch group metadata to get the group name
+        try {
+          const groupMetadata = await socket.groupMetadata(remoteJid);
+          groupName = groupMetadata?.subject || '';
+          console.log(`👥 Group: ${groupName}`);
+        } catch (e) {
+          console.log(`⚠️ Could not fetch group metadata for ${remoteJid}`);
+        }
+        
+        if (!fromMe) {
+          // In groups, participant contains the actual sender's JID
+          const participantJid = msg.key.participant;
+          if (participantJid) {
+            senderPhone = extractPhoneFromJid(participantJid) || '';
+            senderName = msg.pushName || '';
+            console.log(`👤 Sender: ${senderName} (${senderPhone})`);
+          }
         }
       } else if (!fromMe) {
         // Individual chat - sender is the contact
@@ -471,6 +483,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
             message: msg.message,
             messageTimestamp: msg.messageTimestamp,
             pushName: msg.pushName,
+            // Group info
+            groupName,
+            isGroup,
             // Sender info (for groups)
             senderPhone,
             senderName,

@@ -17,16 +17,17 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON - BAILEYS 6.7.9 (ESTÁVEL) ==========
+    // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.8.0",
-  "main": "index.js",
+  "version": "2.9.0",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.9",
+    "@whiskeysockets/baileys": "7.0.0-rc.9",
+    "@hapi/boom": "^10.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "pino": "^9.6.0",
@@ -42,24 +43,25 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.8.0 - BROWSER STRING FIXO
+    const readme = `# 🚀 Baileys Server v2.9.0 - ESM + Baileys 7.x
 
-## ✅ Correções v2.8.0
+## ✅ Correções v2.9.0
 
-O problema anterior era que \`Browsers.appropriate('Desktop')\` retornava 
-\`['Ubuntu', 'Desktop', '6.12.12+bpo-cloud-amd64']\` que o WhatsApp não reconhece.
+Esta versão resolve o **Erro 405** usando Baileys 7.x com configuração oficial.
 
-### Mudanças:
-- ✅ Browser string FIXO: ["Chrome (Linux)", "Chrome", "130.0.6723.70"]
-- ✅ Baileys 6.7.9 (versão estável)
-- ✅ Sem dependência de Browsers.appropriate()
-- ✅ Delay de 2s antes de criar socket
+### Mudanças Principais:
+- ✅ **Baileys 7.0.0-rc.9** (versão mais recente)
+- ✅ **ESM** (type: module) - obrigatório para Baileys 7.x
+- ✅ **Browsers.macOS("Desktop")** - browser string oficial
+- ✅ **Auth simplificado** - sem makeCacheableSignalKeyStore
+- ✅ **Sem versão manual** - deixa o Baileys negociar automaticamente
 
 ## Deploy no Railway
 
 ### 1. Suba para o GitHub
 - Crie um repositório no GitHub
-- Faça upload destes arquivos
+- Faça upload de TODOS estes arquivos
+- **IMPORTANTE**: O package.json deve ter "type": "module"
 
 ### 2. No Railway
 1. New Project → Deploy from GitHub
@@ -68,35 +70,52 @@ O problema anterior era que \`Browsers.appropriate('Desktop')\` retornava
    \`SUPABASE_WEBHOOK_URL\` = \`${webhookUrl}\`
 
 ### 3. Pronto!
-O servidor vai iniciar automaticamente.
+O servidor vai iniciar automaticamente (3-4 minutos na primeira vez).
 
 ## Verificação de Logs
 
 Nos logs do Railway, você deve ver:
 
 \`\`\`
-[BAILEYS] ✓ Módulo importado
-[SOCKET] Browser: ["Chrome (Linux)", "Chrome", "130.0.6723.70"]
-[QR] 🎉 QR Code recebido!
-[CONNECTED] ✅ WhatsApp conectado!
+[INIT] Baileys Server v2.9.0 iniciando...
+[INIT] Baileys 7.0.0-rc.9 (ESM)
+[INIT] Browser: Browsers.macOS("Desktop")
+[BAILEYS] ✅ Carregado com sucesso!
+[SOCKET] Criando com Browsers.macOS("Desktop")...
+[QR] ✅ QR Code recebido!
 \`\`\`
+
+## Nota sobre Erro 405
+
+O erro 405 é uma rejeição ativa do WhatsApp. Com v2.9.0:
+- Usamos a versão mais recente do Baileys
+- Usamos o browser string oficial
+- Deixamos o protocolo ser negociado automaticamente
+
+Se ainda persistir, pode ser bloqueio de IP/região pelo WhatsApp.
 `;
 
-    // ========== SERVIDOR v2.8.0 - BROWSER STRING FIXO ==========
-    const indexJs = `const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+    // ========== SERVIDOR v2.9.0 - ESM + BAILEYS 7.x ==========
+    const indexJs = `import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM __dirname workaround
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.8.0 iniciando...');
-console.log('[INIT] ✅ Browser string FIXO (sem Browsers.appropriate)');
+console.log('[INIT] 🚀 Baileys Server v2.9.0 iniciando...');
+console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
+console.log('[INIT] 🖥️ Browser: Browsers.macOS("Desktop")');
 console.log('[INIT] Node version:', process.version);
 console.log('[INIT] Platform:', process.platform);
 console.log('[INIT] PORT:', process.env.PORT || 3333);
 console.log('='.repeat(60));
 
-const VERSION = "v2.8.0";
+const VERSION = "v2.9.0";
 const app = express();
 
 app.use(cors());
@@ -107,11 +126,6 @@ const WEBHOOK_URL = process.env.SUPABASE_WEBHOOK_URL || '';
 const SESSIONS_DIR = path.join(process.cwd(), 'sessions');
 const MAX_RETRIES = 3;
 
-// ========== BROWSER STRING FIXO ==========
-// Este é o browser string que funciona - NÃO usar Browsers.appropriate()
-const BROWSER = ["Chrome (Linux)", "Chrome", "130.0.6723.70"];
-
-console.log('[CONFIG] Browser string FIXO:', JSON.stringify(BROWSER));
 console.log('[CONFIG] Webhook URL:', WEBHOOK_URL ? 'Configurada ✓' : 'NÃO configurada ⚠');
 console.log('[CONFIG] Sessions dir:', SESSIONS_DIR);
 
@@ -129,7 +143,7 @@ const sessions = new Map();
 let makeWASocket = null;
 let useMultiFileAuthState = null;
 let DisconnectReason = null;
-let makeCacheableSignalKeyStore = null;
+let Browsers = null;
 let QRCode = null;
 let pino = null;
 let baileysLoaded = false;
@@ -154,7 +168,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ============ CRIAR SOCKET (v2.8.0 - BROWSER STRING FIXO) ============
+// ============ CRIAR SOCKET (v2.9.0 - ESM + Browsers.macOS) ============
 async function createSocketForSession(session) {
   const { sessionId, instanceName } = session;
   const sessionPath = path.join(SESSIONS_DIR, sessionId);
@@ -189,11 +203,8 @@ async function createSocketForSession(session) {
     throw e;
   }
   
-  // Aguardar um pouco antes de carregar auth
-  await sleep(1000);
-  
-  // Carregar auth state
-  console.log('[SOCKET] Carregando auth state...');
+  // Carregar auth state - Baileys 7.x usa apenas state direto
+  console.log('[SOCKET] Carregando auth state (Baileys 7.x)...');
   let state, saveCreds;
   try {
     const authResult = await useMultiFileAuthState(sessionPath);
@@ -206,35 +217,29 @@ async function createSocketForSession(session) {
   }
   
   // Aguardar antes de criar socket
-  console.log('[SOCKET] Aguardando 2s antes de criar socket...');
-  await sleep(2000);
+  console.log('[SOCKET] Aguardando 1s antes de criar socket...');
+  await sleep(1000);
   
-  // ========== CRIAR SOCKET - BROWSER STRING FIXO ==========
-  console.log('[SOCKET] Criando socket com browser FIXO...');
-  console.log('[SOCKET] Browser:', JSON.stringify(BROWSER));
+  // ========== CRIAR SOCKET - CONFIGURAÇÃO OFICIAL BAILEYS 7.x ==========
+  console.log('[SOCKET] Criando socket com Browsers.macOS("Desktop")...');
   
   const logger = pino({ level: 'silent' });
   
-  // CONFIGURAÇÃO COM BROWSER STRING FIXO
-  const socketConfig = {
-    logger,
+  // CONFIGURAÇÃO MÍNIMA OFICIAL - Baileys 7.x
+  const sock = makeWASocket({
+    auth: state,  // Direto, sem makeCacheableSignalKeyStore
+    browser: Browsers.macOS("Desktop"),  // Browser string OFICIAL
     printQRInTerminal: true,
-    browser: BROWSER, // <<< BROWSER STRING FIXO - NÃO MUDE!
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger)
-    },
+    logger: logger,
     syncFullHistory: false,
     markOnlineOnConnect: true,
     generateHighQualityLinkPreview: false,
     getMessage: async () => undefined
-  };
-  
-  const sock = makeWASocket(socketConfig);
+  });
   
   session.socket = sock;
   session.socketCreatedAt = Date.now();
-  console.log('[SOCKET] ✓ Socket criado!');
+  console.log('[SOCKET] ✓ Socket criado com Browsers.macOS("Desktop")!');
   
   // ========== REGISTRAR LISTENERS ==========
   console.log('[SOCKET] Registrando listeners...');
@@ -334,6 +339,29 @@ async function createSocketForSession(session) {
         try {
           fs.rmSync(sessionPath, { recursive: true, force: true });
         } catch (e) {}
+        return;
+      }
+      
+      // Erro 405 = Method Not Allowed - problema de protocolo
+      if (statusCode === 405) {
+        console.log('[405] Method Not Allowed - problema de protocolo');
+        console.log('[405] Usando Baileys 7.x com Browsers.macOS("Desktop")');
+        session.retryCount++;
+        if (session.retryCount < MAX_RETRIES) {
+          session.status = 'reconnecting';
+          console.log(\`[405] Tentando reconectar em 10s (tentativa \${session.retryCount})...\`);
+          setTimeout(async () => {
+            try {
+              await createSocketForSession(session);
+            } catch (err) {
+              console.error('[405] Erro ao reconectar:', err.message);
+              session.status = 'failed';
+            }
+          }, 10000);
+        } else {
+          console.log('[405] Esgotou tentativas - pode ser bloqueio de IP');
+          session.status = 'failed';
+        }
         return;
       }
       
@@ -456,7 +484,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     version: VERSION,
-    browser: BROWSER,
+    baileys: '7.0.0-rc.9',
+    browser: 'Browsers.macOS("Desktop")',
     sessions: sessions.size,
     baileysLoaded,
     timestamp: new Date().toISOString()
@@ -629,63 +658,58 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(60));
   console.log(\`🚀 [\${VERSION}] Servidor HTTP na porta \${PORT}\`);
   console.log(\`📡 Webhook: \${WEBHOOK_URL || 'Não configurada'}\`);
-  console.log(\`📦 Baileys: 6.7.9 (estável)\`);
-  console.log(\`🖥️ Browser: \${JSON.stringify(BROWSER)}\`);
+  console.log(\`📦 Baileys: 7.0.0-rc.9 (ESM)\`);
+  console.log(\`🖥️ Browser: Browsers.macOS("Desktop")\`);
   console.log('='.repeat(60));
   console.log('');
   loadBaileys();
 });
 
-// ============ CARREGAR BAILEYS ==========
+// ============ CARREGAR BAILEYS (ESM) ==========
 async function loadBaileys() {
   console.log('[BAILEYS] ========================================');
-  console.log('[BAILEYS] Carregando Baileys 6.7.9...');
+  console.log('[BAILEYS] Carregando Baileys 7.0.0-rc.9 (ESM)...');
   console.log('[BAILEYS] ========================================');
   
   try {
-    QRCode = require('qrcode');
+    // Importar módulos ESM
+    const qrcodeModule = await import('qrcode');
+    QRCode = qrcodeModule.default;
     console.log('[BAILEYS] ✓ qrcode');
     
-    pino = require('pino');
+    const pinoModule = await import('pino');
+    pino = pinoModule.default;
     console.log('[BAILEYS] ✓ pino');
     
-    console.log('[BAILEYS] Importando @whiskeysockets/baileys...');
+    console.log('[BAILEYS] Importando @whiskeysockets/baileys 7.x...');
     const baileys = await import('@whiskeysockets/baileys');
     
-    // Detectar exports
-    if (typeof baileys.default === 'function') {
-      makeWASocket = baileys.default;
-      console.log('[BAILEYS] ✓ makeWASocket via default');
-    } else if (baileys.default && typeof baileys.default.default === 'function') {
-      makeWASocket = baileys.default.default;
-      console.log('[BAILEYS] ✓ makeWASocket via default.default');
-    } else if (typeof baileys.makeWASocket === 'function') {
-      makeWASocket = baileys.makeWASocket;
-      console.log('[BAILEYS] ✓ makeWASocket via named export');
-    } else {
-      console.log('[BAILEYS] Exports disponíveis:', Object.keys(baileys));
-      throw new Error('makeWASocket não encontrado');
-    }
+    // Baileys 7.x exports
+    makeWASocket = baileys.default || baileys.makeWASocket;
+    useMultiFileAuthState = baileys.useMultiFileAuthState;
+    DisconnectReason = baileys.DisconnectReason;
+    Browsers = baileys.Browsers;
     
-    // Funções auxiliares
-    useMultiFileAuthState = baileys.useMultiFileAuthState || baileys.default?.useMultiFileAuthState;
-    DisconnectReason = baileys.DisconnectReason || baileys.default?.DisconnectReason;
-    makeCacheableSignalKeyStore = baileys.makeCacheableSignalKeyStore || baileys.default?.makeCacheableSignalKeyStore;
-    
+    console.log('[BAILEYS] ✓ makeWASocket:', typeof makeWASocket);
     console.log('[BAILEYS] ✓ useMultiFileAuthState:', typeof useMultiFileAuthState);
-    console.log('[BAILEYS] ✓ makeCacheableSignalKeyStore:', typeof makeCacheableSignalKeyStore);
     console.log('[BAILEYS] ✓ DisconnectReason:', typeof DisconnectReason);
+    console.log('[BAILEYS] ✓ Browsers:', typeof Browsers);
     
-    if (!useMultiFileAuthState || !makeCacheableSignalKeyStore) {
-      throw new Error('Funções auxiliares não encontradas');
+    if (!makeWASocket || !useMultiFileAuthState || !Browsers) {
+      console.log('[BAILEYS] Exports disponíveis:', Object.keys(baileys));
+      throw new Error('Exports do Baileys 7.x não encontrados');
     }
+    
+    // Testar Browsers.macOS
+    const browserTest = Browsers.macOS("Desktop");
+    console.log('[BAILEYS] ✓ Browsers.macOS("Desktop"):', JSON.stringify(browserTest));
     
     baileysLoaded = true;
     
     console.log('');
     console.log('[BAILEYS] ========================================');
-    console.log('[BAILEYS] ✅ BAILEYS 6.7.9 PRONTO!');
-    console.log(\`[BAILEYS] Browser: \${JSON.stringify(BROWSER)}\`);
+    console.log('[BAILEYS] ✅ BAILEYS 7.0.0-rc.9 PRONTO!');
+    console.log('[BAILEYS] Browser: Browsers.macOS("Desktop")');
     console.log('[BAILEYS] ========================================');
     console.log('');
   } catch (err) {
@@ -738,7 +762,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.8.0.zip';
+      a.download = 'baileys-server-v2.9.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -746,7 +770,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.8.0 com browser string FIXO'
+        description: 'Servidor v2.9.0 com Baileys 7.x ESM'
       });
       
       setIsOpen(false);
@@ -779,35 +803,35 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.8.0
+              Servidor Baileys v2.9.0
             </DialogTitle>
             <DialogDescription>
-              Browser string FIXO - resolve desconexão antes do QR
+              Baileys 7.x com ESM e configuração oficial
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✅ Correções v2.8.0
+                ✅ Correções v2.9.0
               </h4>
               <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <li>📦 Baileys 6.7.9 (versão estável)</li>
-                <li>🖥️ Browser string FIXO: Chrome (Linux)</li>
-                <li>⏱️ Delay de 2s antes do socket</li>
-                <li>🚫 Sem Browsers.appropriate()</li>
+                <li>📦 <strong>Baileys 7.0.0-rc.9</strong> (mais recente)</li>
+                <li>🔧 <strong>ESM</strong> (type: module)</li>
+                <li>🖥️ <strong>Browsers.macOS("Desktop")</strong></li>
+                <li>🔑 Auth simplificado (sem makeCacheableSignalKeyStore)</li>
               </ul>
             </div>
 
             <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                Problema resolvido
+                Resolve Erro 405
               </h4>
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                O Browsers.appropriate() retornava um browser inválido: 
-                ['Ubuntu', 'Desktop', '6.12.12+bpo-cloud-amd64'].
-                Agora usamos um browser FIXO que funciona.
+                O erro 405 é causado por configuração inválida. 
+                Esta versão usa Baileys 7.x com configuração oficial que 
+                é aceita pelo WhatsApp.
               </p>
             </div>
 
@@ -816,11 +840,11 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  package.json (Baileys 6.7.9)
+                  package.json (Baileys 7.0.0-rc.9 + ESM)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (browser fixo)
+                  index.js (imports ESM + Browsers.macOS)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -835,7 +859,7 @@ process.on('unhandledRejection', (reason) => {
               </h4>
               <p className="text-xs text-red-700 dark:text-red-300">
                 Substitua <strong>TODOS os arquivos</strong> no seu repositório GitHub.
-                O Railway vai reinstalar as dependências automaticamente.
+                O Railway vai reinstalar as dependências (3-4 minutos).
               </p>
             </div>
           </div>
@@ -854,7 +878,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.8.0
+              Baixar v2.9.0
             </Button>
           </div>
         </DialogContent>

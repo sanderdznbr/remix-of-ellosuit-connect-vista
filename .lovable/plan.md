@@ -1,174 +1,243 @@
 
 
-# Plano: Corrigir QR Code - Baileys v2.6.0 (Downgrade para 6.5.0)
+# Plano: Corrigir Erro 405 - Baileys v2.9.0
 
-## Problema Identificado
+## Diagnóstico Final
 
-O Baileys versão ^6.7.9 tem **bugs conhecidos** que causam desconexão imediata antes do QR ser gerado:
+O erro 405 ocorre porque o WhatsApp está **rejeitando ativamente** conexões do Baileys com certas configurações. Baseado na documentação oficial e issues do GitHub:
 
-```text
-Logs do Problema:
-[SOCKET] Etapa 5: ✓ Socket criado!
-[SOCKET] Etapa 6: ✓ connection.update
-[CONNECTION] Update: {"hasQr":false,"connection":"close"}
-[DISCONNECTED] socketAge: 261ms   <-- Desconecta em 260ms!
-```
+### Causas Identificadas:
+1. **Browser string fixo inválido** - O formato `["Chrome (Linux)", "Chrome", "130.0.6723.70"]` não é aceito
+2. **Versão 6.7.9** - Pode ter incompatibilidades
+3. **makeCacheableSignalKeyStore** - Pode causar problemas de inicialização
 
-**Evidências:**
-- Issue #2050: QR missing em 6.7.21
-- Issue #2040: Desconexão automática em 6.7.20
-- Issue #1914: Socket não gera QR
-- Projeto SuhailTechInfo/web-qr funciona com **6.5.0**
+### Solução Proposta: v2.9.0
 
-## Solucao: Server v2.6.0
+| Item | Problema | Solução |
+|------|----------|---------|
+| Baileys | 6.7.9 | **7.0.0-rc.9** (mais recente e estável) |
+| Browser | Fixo manual | **Browsers.macOS("Desktop")** |
+| Version | Não especificada | **Deixar padrão** (recomendação oficial) |
+| Auth Keys | makeCacheableSignalKeyStore | **Apenas state direto** |
 
-### Mudancas Principais
+## Mudanças Principais
 
-| Item | Antes | Depois |
-|------|-------|--------|
-| Versão Baileys | ^6.7.9 (bugada) | 6.5.0 (estável) |
-| Configuração | 15+ opções | 4 opções mínimas |
-| Listeners | Complexos | Simples e diretos |
-| Retry | Muitas tentativas | 3 tentativas simples |
-
-### Codigo do package.json
+### 1. Usar Baileys 7.0.0-rc.9
 
 ```json
 {
-  "name": "baileys-server",
-  "version": "2.6.0",
   "dependencies": {
-    "@whiskeysockets/baileys": "6.5.0",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "pino": "^8.1.0",
-    "qrcode": "^1.5.4"
-  }
+    "@whiskeysockets/baileys": "7.0.0-rc.9"
+  },
+  "type": "module"
 }
 ```
 
-### Codigo Simplificado do Socket
+### 2. Usar Browser String Oficial
 
 ```javascript
-// Configuração MÍNIMA que funciona
+import { Browsers } from '@whiskeysockets/baileys';
+
 const sock = makeWASocket({
-  printQRInTerminal: true,
   auth: state,
+  browser: Browsers.macOS("Desktop"),
+  printQRInTerminal: true,
   logger: pino({ level: 'silent' })
-});
-
-// Registrar listeners IMEDIATAMENTE
-sock.ev.on('creds.update', saveCreds);
-
-sock.ev.on('connection.update', async (update) => {
-  const { connection, lastDisconnect, qr } = update;
-  
-  // QR code disponível
-  if (qr) {
-    session.qrCode = await QRCode.toDataURL(qr);
-    console.log('[QR] ✅ QR Code gerado!');
-  }
-  
-  // Conectado
-  if (connection === 'open') {
-    session.isConnected = true;
-    console.log('[CONNECTED] ✅ WhatsApp conectado!');
-  }
-  
-  // Desconectado
-  if (connection === 'close') {
-    const shouldReconnect = 
-      lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-    if (shouldReconnect) {
-      // Reconectar...
-    }
-  }
 });
 ```
 
-### Por que 6.5.0 Funciona
+### 3. Simplificar Auth State
 
-1. **Estabilidade testada** - Usado em produção por muitos projetos
-2. **Menos código de conexão** - Menos chance de bugs internos
-3. **Eventos mais confiáveis** - O evento `qr` dispara corretamente
+```javascript
+// Baileys 7.x usa auth diferente
+const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+
+const sock = makeWASocket({
+  auth: state, // Direto, sem makeCacheableSignalKeyStore
+  browser: Browsers.macOS("Desktop"),
+  printQRInTerminal: true,
+  logger: pino({ level: 'silent' })
+});
+```
+
+### 4. Estrutura ESM (Baileys 7.x requer)
+
+O Baileys 7.x é somente ESM (não suporta CommonJS). O servidor precisa usar `"type": "module"` e imports ESM.
 
 ## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/CRM/BaileysServerDownload.tsx` | Servidor v2.6.0 com Baileys 6.5.0 |
+| `src/components/CRM/BaileysServerDownload.tsx` | Servidor v2.9.0 completo com Baileys 7.x |
 
-## Resultado Esperado
+## Código do Servidor v2.9.0
 
-Após v2.6.0:
-
-```
-[BAILEYS] ✓ Módulo importado (6.5.0)
-[SOCKET] Criando socket...
-[CONNECTION] qr recebido ✅
-[QR] ✅ QR Code gerado!
-```
-
-## Instruções para o Usuario
-
-1. Baixar novo servidor (v2.6.0)
-2. **Substituir TODOS os arquivos** no repositório
-3. Railway vai reinstalar o Baileys 6.5.0 automaticamente
-4. Aguardar deploy completo (~2-3 minutos)
-5. Testar conexão
-
-## Detalhes Tecnicos
-
-### Diferenças de Configuração
-
-Antes (v2.5.0 - não funciona):
-```javascript
-const socketConfig = {
-  version,
-  logger,
-  printQRInTerminal: true,
-  auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(...) },
-  browser: Browsers.ubuntu('Chrome'),
-  connectTimeoutMs: 180000,
-  defaultQueryTimeoutMs: 60000,
-  syncFullHistory: false,
-  markOnlineOnConnect: false,
-  generateHighQualityLinkPreview: false,
-  getMessage: async () => undefined
-};
-```
-
-Depois (v2.6.0 - funciona):
-```javascript
-const sock = makeWASocket({
-  printQRInTerminal: true,
-  auth: state,
-  logger: pino({ level: 'silent' })
-});
-```
-
-### Remoção de Complexidade
-
-- Sem `makeCacheableSignalKeyStore` (Baileys 6.5.0 não precisa)
-- Sem `fetchLatestBaileysVersion` (usar versão padrão)
-- Sem `Browsers` customizado (usar padrão)
-- Sem múltiplos timeouts
-- Sem `getMessage` handler
-
-### Estrutura de Retry Simplificada
-
-```javascript
-if (connection === 'close') {
-  const statusCode = lastDisconnect?.error?.output?.statusCode;
-  
-  if (statusCode === DisconnectReason.loggedOut) {
-    // Usuário fez logout - não reconectar
-    sessions.delete(sessionId);
-  } else if (session.retryCount < 3) {
-    // Tentar reconectar
-    session.retryCount++;
-    setTimeout(() => createSocket(session), 5000);
+### package.json
+```json
+{
+  "name": "baileys-server",
+  "version": "2.9.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc.9",
+    "@hapi/boom": "^10.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
 ```
+
+### index.js (ESM)
+```javascript
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM __dirname workaround
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+console.log('='.repeat(60));
+console.log('[INIT] Baileys Server v2.9.0 iniciando...');
+console.log('[INIT] Baileys 7.0.0-rc.9 (ESM)');
+console.log('[INIT] Browser: Browsers.macOS("Desktop")');
+console.log('='.repeat(60));
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Importar Baileys dinamicamente
+let makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers;
+let QRCode, pino;
+let baileysLoaded = false;
+
+async function loadBaileys() {
+  try {
+    const baileys = await import('@whiskeysockets/baileys');
+    makeWASocket = baileys.default;
+    useMultiFileAuthState = baileys.useMultiFileAuthState;
+    DisconnectReason = baileys.DisconnectReason;
+    Browsers = baileys.Browsers;
+    
+    QRCode = (await import('qrcode')).default;
+    pino = (await import('pino')).default;
+    
+    baileysLoaded = true;
+    console.log('[BAILEYS] ✅ Carregado com sucesso!');
+  } catch (err) {
+    console.error('[BAILEYS] ❌ Erro:', err.message);
+  }
+}
+
+// Criar socket com configuração mínima oficial
+async function createSocketForSession(session) {
+  const sessionPath = path.join(process.cwd(), 'sessions', session.sessionId);
+  
+  // Garantir diretório
+  if (!fs.existsSync(sessionPath)) {
+    fs.mkdirSync(sessionPath, { recursive: true });
+  }
+  
+  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+  
+  console.log('[SOCKET] Criando com Browsers.macOS("Desktop")...');
+  
+  // Configuração MÍNIMA oficial
+  const sock = makeWASocket({
+    auth: state,
+    browser: Browsers.macOS("Desktop"),
+    printQRInTerminal: true,
+    logger: pino({ level: 'silent' })
+  });
+  
+  session.socket = sock;
+  
+  // Listeners
+  sock.ev.on('creds.update', saveCreds);
+  
+  sock.ev.on('connection.update', async (update) => {
+    const { qr, connection, lastDisconnect } = update;
+    
+    if (qr) {
+      console.log('[QR] ✅ QR Code recebido!');
+      session.qrCode = await QRCode.toDataURL(qr);
+      session.status = 'waiting_qr';
+    }
+    
+    if (connection === 'open') {
+      console.log('[CONNECTED] ✅ WhatsApp conectado!');
+      session.isConnected = true;
+      session.status = 'connected';
+      // Pegar info do usuário
+      if (sock.user) {
+        session.phoneNumber = sock.user.id.split(':')[0];
+        session.pushName = sock.user.name;
+      }
+    }
+    
+    if (connection === 'close') {
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      console.log('[DISCONNECTED] Código:', statusCode);
+      session.isConnected = false;
+      
+      // Retry se não for logout
+      if (statusCode !== DisconnectReason?.loggedOut && session.retryCount < 3) {
+        session.retryCount++;
+        setTimeout(() => createSocketForSession(session), 5000);
+      }
+    }
+  });
+  
+  return session;
+}
+
+// Rotas...
+```
+
+## Por que Deve Funcionar
+
+1. **Baileys 7.0.0-rc.9** - Versão mais recente com correções
+2. **Browsers.macOS("Desktop")** - Browser string OFICIAL do Baileys
+3. **Sem versão manual** - Deixa o Baileys usar a versão compatível
+4. **ESM** - Formato correto para Baileys 7.x
+5. **Auth simples** - Sem makeCacheableSignalKeyStore que pode causar problemas
+
+## Resultado Esperado
+
+Nos logs do Railway após v2.9.0:
+```text
+[INIT] Baileys Server v2.9.0 iniciando...
+[BAILEYS] ✅ Carregado com sucesso!
+[SOCKET] Criando com Browsers.macOS("Desktop")...
+[QR] ✅ QR Code recebido!
+```
+
+## Instruções para o Usuário
+
+1. Baixar novo servidor v2.9.0
+2. **IMPORTANTE**: Substituir TODOS os arquivos (especialmente package.json)
+3. O Railway vai reinstalar as dependências automaticamente
+4. Aguardar deploy completo (~3-4 minutos por ser nova versão)
+5. Testar conexão
+
+## Nota Importante
+
+Se mesmo com v2.9.0 o erro 405 persistir, o problema pode ser do lado do WhatsApp (bloqueio de IP/região). Nesse caso, as opções seriam:
+
+1. Usar proxy/VPN no servidor
+2. Tentar em um servidor de outra região
+3. Aguardar atualizações do Baileys
+
+O erro 405 é um problema ativo na comunidade Baileys e não há garantia de 100% de funcionamento.
 

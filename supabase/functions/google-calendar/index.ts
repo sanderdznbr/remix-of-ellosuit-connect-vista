@@ -438,7 +438,7 @@ serve(async (req) => {
           throw new Error('Code or user_id missing');
         }
 
-        // Exchange code for tokens - using www.ellosuit.online as redirect_uri
+        // Exchange code for tokens - using www.ellosuit.online/dashboard/email as redirect_uri
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: {
@@ -449,7 +449,7 @@ serve(async (req) => {
             client_secret: googleClientSecret,
             code,
             grant_type: 'authorization_code',
-            redirect_uri: 'https://www.ellosuit.online/dashboard'
+            redirect_uri: 'https://www.ellosuit.online/dashboard/email'
           })
         });
 

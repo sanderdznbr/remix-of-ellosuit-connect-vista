@@ -635,9 +635,31 @@ serve(async (req) => {
           
           if (!content) continue;
           
-          const timestamp = msg.messageTimestamp 
-            ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString()
-            : new Date().toISOString();
+          // Robust timestamp parsing for history messages
+          let timestamp = new Date().toISOString();
+          try {
+            const ts = msg.messageTimestamp;
+            if (ts) {
+              let tsNum: number;
+              if (typeof ts === 'object' && ts !== null && 'low' in ts) {
+                tsNum = (ts as { low: number }).low;
+              } else if (typeof ts === 'string') {
+                tsNum = parseInt(ts, 10);
+              } else if (typeof ts === 'number') {
+                tsNum = ts;
+              } else {
+                tsNum = 0;
+              }
+              
+              if (!isNaN(tsNum) && tsNum > 0) {
+                const isMillis = tsNum > 4102444800;
+                const dateMs = isMillis ? tsNum : tsNum * 1000;
+                if (dateMs > 946684800000 && dateMs < 4102444800000) {
+                  timestamp = new Date(dateMs).toISOString();
+                }
+              }
+            }
+          } catch { /* use default */ }
           
           if (!conversationMap.has(phoneNumber)) {
             conversationMap.set(phoneNumber, {

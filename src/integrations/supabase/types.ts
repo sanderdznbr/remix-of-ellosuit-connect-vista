@@ -2172,7 +2172,7 @@ export type Database = {
           contact_phone: string
           created_at: string
           id: string
-          integration_id: string
+          integration_id: string | null
           is_archived: boolean | null
           is_pinned: boolean | null
           labels: string[] | null
@@ -2196,7 +2196,7 @@ export type Database = {
           contact_phone: string
           created_at?: string
           id?: string
-          integration_id: string
+          integration_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
           labels?: string[] | null
@@ -2220,7 +2220,7 @@ export type Database = {
           contact_phone?: string
           created_at?: string
           id?: string
-          integration_id?: string
+          integration_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
           labels?: string[] | null
@@ -2324,9 +2324,9 @@ export type Database = {
           reaction: string | null
           read_at: string | null
           recipient_name: string | null
-          recipient_phone: string
+          recipient_phone: string | null
           sender_name: string | null
-          sender_phone: string
+          sender_phone: string | null
           session_id: string
           status: string
           timestamp: string
@@ -2351,9 +2351,9 @@ export type Database = {
           reaction?: string | null
           read_at?: string | null
           recipient_name?: string | null
-          recipient_phone: string
+          recipient_phone?: string | null
           sender_name?: string | null
-          sender_phone: string
+          sender_phone?: string | null
           session_id: string
           status?: string
           timestamp?: string
@@ -2378,9 +2378,9 @@ export type Database = {
           reaction?: string | null
           read_at?: string | null
           recipient_name?: string | null
-          recipient_phone?: string
+          recipient_phone?: string | null
           sender_name?: string | null
-          sender_phone?: string
+          sender_phone?: string | null
           session_id?: string
           status?: string
           timestamp?: string

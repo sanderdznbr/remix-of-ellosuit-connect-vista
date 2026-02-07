@@ -760,23 +760,37 @@ const WhatsAppCRM: React.FC = () => {
                     const session = connectedSessions[0];
                     if (!session) return;
                     
+                    // OPTIMISTIC UPDATE - Update UI immediately
+                    const previousSessions = [...sessions];
+                    setSessions(prev => prev.map(s => 
+                      s.id === session.id ? { ...s, status: 'disconnecting' } : s
+                    ));
+                    toast({ title: 'Desconectando...', description: 'Aguarde...' });
+                    
                     try {
-                      // Call server to disconnect
-                      const serverUrl = session.baileys_server_url;
-                      if (serverUrl) {
-                        await fetch(`${serverUrl}/disconnect/${session.instance_name}`, { method: 'POST' });
-                      }
-                      
-                      // Update database
+                      // Update database first (more reliable)
                       await supabase
                         .from('whatsapp_sessions')
                         .update({ status: 'disconnected' })
                         .eq('id', session.id);
                       
-                      await loadSessions();
+                      // Update UI to disconnected
+                      setSessions(prev => prev.map(s => 
+                        s.id === session.id ? { ...s, status: 'disconnected' } : s
+                      ));
+                      
+                      // Call server to disconnect (fire and forget - don't wait)
+                      const serverUrl = session.baileys_server_url;
+                      if (serverUrl) {
+                        fetch(`${serverUrl}/disconnect/${session.instance_name}`, { method: 'POST' })
+                          .catch(e => console.warn('Server disconnect call failed:', e));
+                      }
+                      
                       toast({ title: 'Desconectado', description: 'WhatsApp desconectado com sucesso' });
                     } catch (e) {
                       console.error('Error disconnecting:', e);
+                      // ROLLBACK on error
+                      setSessions(previousSessions);
                       toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
                     }
                   }}

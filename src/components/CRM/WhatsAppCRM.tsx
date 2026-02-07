@@ -829,6 +829,9 @@ const WhatsAppCRM: React.FC = () => {
     setShowMobileChat(true);
   };
 
+  // Get connected sessions first (needed for filtering)
+  const connectedSessions = sessions.filter(s => s.status === 'connected');
+
   // Filter conversations - exclude self-conversations (messaging yourself)
   const filteredConversations = conversations.filter(conv => {
     // Filter out self-conversations (where contact_phone matches connected session phone)
@@ -849,8 +852,6 @@ const WhatsAppCRM: React.FC = () => {
     
     return matchesSearch && matchesTab;
   });
-
-  const connectedSessions = sessions.filter(s => s.status === 'connected');
 
   // Format time
   const formatTime = (date: string) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import JSZip from 'jszip';
@@ -17,10 +17,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON - v3.0.0 (CommonJS) + MEDIA SUPPORT ==========
+    // ========== PACKAGE.JSON v3.1.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.0.0",
+  "version": "3.1.0",
+  "description": "Servidor Baileys com suporte a mídia para WhatsApp CRM",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -31,7 +32,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     "@whiskeysockets/baileys": "^6.7.9",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "mime-types": "^1.0.0",
+    "mime-types": "^2.1.35",
     "pino": "^9.6.0",
     "qrcode": "^1.5.4"
   },
@@ -56,17 +57,16 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.0.0 - Suporte Completo a Mídias
+    const readme = `# 🚀 Baileys Server v3.1.0 - Suporte a Mídias e Grupos
 
-## ✅ Novidades v3.0.0
+## ✅ Novidades v3.1.0
 
-Esta versão adiciona suporte completo a **mídias** (imagens, áudios, vídeos, documentos).
-
-### Mudanças v3.0.0:
+### Mudanças v3.1.0:
+- ✅ **Suporte Completo a Grupos** - Identifica quem enviou cada mensagem
 - ✅ **Suporte a Mídias** - Imagens, vídeos, áudios, documentos e stickers
 - ✅ **Upload para Supabase Storage** - Mídias são salvas no bucket whatsapp-media
-- ✅ **CommonJS** - Melhor compatibilidade com Railway
-- ✅ **Baileys 6.7.9** - Versão estável com suporte a mídias
+- ✅ **Retry em Downloads** - 3 tentativas para download de mídias
+- ✅ **Melhor Identificação de Contatos** - Nome e telefone do remetente em grupos
 
 ### Tipos de Mídia Suportados:
 | Tipo | Extensão | Descrição |
@@ -101,14 +101,70 @@ Aguarde deploy completo (~3-4 minutos).
 Após conectar, você verá:
 
 \`\`\`
-🚀 Baileys Server v3.0.0 running on port XXXX
-📡 Webhook URL: https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook
-📸 Media Support: Enabled
+============================================
+🚀 Baileys Server v3.1.0 running on port XXXX
+============================================
+📡 Webhook URL: https://...
+📸 Media Support: ✅ Enabled
+============================================
+\`\`\`
+
+## Endpoints da API
+
+### Health Check
+\`GET /api/health\`
+
+### Criar Instância
+\`POST /api/instance/create\`
+\`\`\`json
+{
+  "sessionId": "uuid",
+  "instanceName": "minha-instancia",
+  "webhookSecret": "opcional"
+}
+\`\`\`
+
+### Obter QR Code
+\`GET /api/instance/:sessionId/qr\`
+
+### Status da Conexão
+\`GET /api/instance/:sessionId/status\`
+
+### Enviar Mensagem de Texto
+\`POST /api/message/send-text\`
+\`\`\`json
+{
+  "sessionId": "uuid",
+  "phone": "5511999999999",
+  "message": "Olá!"
+}
+\`\`\`
+
+### Enviar Mídia
+\`POST /api/message/send-media\`
+\`\`\`json
+{
+  "sessionId": "uuid",
+  "phone": "5511999999999",
+  "mediaUrl": "https://...",
+  "mediaType": "image|video|audio|ptt|document",
+  "caption": "Legenda opcional",
+  "fileName": "documento.pdf"
+}
 \`\`\`
 `;
 
-    // ========== SERVIDOR v3.0.0 - SUPORTE COMPLETO A MÍDIAS ==========
-    const indexJs = `const express = require('express');
+    // ========== SERVIDOR v3.1.0 COMPLETO ==========
+    const indexJs = `/**
+ * ============================================
+ * BAILEYS SERVER v3.1.0
+ * ============================================
+ * Servidor completo com suporte a mídias e grupos
+ * Para WhatsApp CRM - Lovable
+ * ============================================
+ */
+
+const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -120,7 +176,7 @@ let QRCode, pino, mime, supabase;
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Store sessions in memory
 const sessions = new Map();
@@ -134,6 +190,61 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SESSIONS_DIR = path.join(__dirname, 'sessions');
 if (!fs.existsSync(SESSIONS_DIR)) {
   fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+}
+
+// ============== HELPERS ==============
+
+/**
+ * Extract phone number from JID
+ * Handles: @s.whatsapp.net, @g.us (groups), @lid (linked devices)
+ */
+function extractPhoneFromJid(jid) {
+  if (!jid) return null;
+  
+  // Skip LIDs (Linked IDs) - they're not real phone numbers
+  if (jid.includes('@lid')) {
+    return null;
+  }
+  
+  // Extract the number part before @ symbol
+  const parts = jid.split('@');
+  if (parts.length < 1) return null;
+  
+  // Clean to digits only
+  const digits = parts[0].replace(/\\D/g, '');
+  
+  // Validate minimum length
+  if (digits.length < 8) return null;
+  
+  return digits;
+}
+
+/**
+ * Check if JID is a group
+ */
+function isGroupJid(jid) {
+  return jid?.includes('@g.us') || false;
+}
+
+/**
+ * Format JID for sending messages
+ */
+function formatJidForSend(phone, isGroup = false) {
+  let jid = phone.replace(/\\D/g, '');
+  
+  if (isGroup || phone.includes('@g.us')) {
+    // Group: use @g.us suffix
+    if (!jid.includes('@')) {
+      jid = jid + '@g.us';
+    }
+  } else {
+    // Individual: use @s.whatsapp.net suffix
+    if (!jid.includes('@')) {
+      jid = jid + '@s.whatsapp.net';
+    }
+  }
+  
+  return jid;
 }
 
 // ============== SUPABASE STORAGE ==============
@@ -151,7 +262,7 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
 
     const mimeType = mime.lookup(extension) || 'application/octet-stream';
 
-    console.log(\`📤 Uploading media to Supabase: \${fileName}\`);
+    console.log(\`📤 Uploading media to Supabase: \${fileName} (\${mimeType})\`);
 
     const { data, error } = await supabase.storage
       .from('whatsapp-media')
@@ -161,7 +272,7 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
       });
 
     if (error) {
-      console.error('Supabase upload error:', error);
+      console.error('❌ Supabase upload error:', error.message);
       return null;
     }
 
@@ -172,7 +283,7 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
     console.log(\`✅ Media uploaded: \${urlData.publicUrl}\`);
     return { url: urlData.publicUrl, mimeType };
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error.message);
     return null;
   }
 }
@@ -203,7 +314,9 @@ async function processMediaMessage(socket, msg, sessionId) {
     } else if (message.documentMessage) {
       mediaType = 'document';
       mediaMessage = message.documentMessage;
-      extension = mediaMessage.fileName?.split('.').pop() || 'pdf';
+      // Get extension from filename or default to pdf
+      const fileName = mediaMessage.fileName || '';
+      extension = fileName.split('.').pop() || 'pdf';
     } else if (message.stickerMessage) {
       mediaType = 'sticker';
       mediaMessage = message.stickerMessage;
@@ -214,20 +327,36 @@ async function processMediaMessage(socket, msg, sessionId) {
 
     console.log(\`📥 Downloading \${mediaType} media...\`);
 
-    const buffer = await downloadMediaMessage(
-      msg,
-      'buffer',
-      {},
-      {
-        logger: console,
-        reuploadRequest: socket.updateMediaMessage
+    // Download media with retry
+    let buffer = null;
+    let retries = 3;
+    
+    while (retries > 0 && !buffer) {
+      try {
+        buffer = await downloadMediaMessage(
+          msg,
+          'buffer',
+          {},
+          {
+            logger: console,
+            reuploadRequest: socket.updateMediaMessage
+          }
+        );
+      } catch (downloadError) {
+        console.log(\`⚠️ Download attempt failed, \${retries - 1} retries left...\`);
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    );
+    }
 
     if (!buffer) {
-      console.error('Failed to download media buffer');
-      return null;
+      console.error('❌ Failed to download media after all retries');
+      return { mediaType }; // Return type but no URL
     }
+
+    console.log(\`✅ Media downloaded: \${buffer.length} bytes\`);
 
     // Upload to Supabase
     const uploadResult = await uploadMediaToSupabase(buffer, sessionId, mediaType, extension);
@@ -242,7 +371,7 @@ async function processMediaMessage(socket, msg, sessionId) {
 
     return { mediaType };
   } catch (error) {
-    console.error('Error processing media:', error);
+    console.error('❌ Error processing media:', error.message);
     return null;
   }
 }
@@ -280,10 +409,18 @@ async function sendWebhook(payload) {
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-webhook-secret': payload.webhookSecret || ''
+      },
       body: JSON.stringify(payload)
     });
-    console.log(\`📤 Webhook sent: \${payload.event} - Status: \${response.status}\`);
+    
+    if (response.ok) {
+      console.log(\`📤 Webhook sent: \${payload.event}\`);
+    } else {
+      console.log(\`⚠️ Webhook response: \${response.status}\`);
+    }
   } catch (error) {
     console.error('❌ Webhook error:', error.message);
   }
@@ -293,7 +430,7 @@ async function sendWebhook(payload) {
 
 async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
   if (sessions.has(sessionId)) {
-    console.log(\`Session \${instanceName} already exists\`);
+    console.log(\`ℹ️ Session \${instanceName} already exists\`);
     return sessions.get(sessionId);
   }
 
@@ -328,7 +465,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger)
     },
-    browser: Browsers.macOS('Desktop')
+    browser: Browsers.macOS('Desktop'),
+    connectTimeoutMs: 60000,
+    qrTimeout: 60000
   });
 
   session.socket = socket;
@@ -348,6 +487,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         event: 'qr.update',
         sessionId,
         instanceName,
+        webhookSecret,
         data: { qrCode: session.qrCode }
       });
     }
@@ -375,6 +515,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         event: 'connection.update',
         sessionId,
         instanceName,
+        webhookSecret,
         data: {
           connection: 'open',
           isConnected: true,
@@ -396,6 +537,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         event: 'connection.update',
         sessionId,
         instanceName,
+        webhookSecret,
         data: { connection: 'close', isConnected: false, statusCode }
       });
 
@@ -418,16 +560,39 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     if (type !== 'notify') return;
 
     for (const msg of messages) {
+      // Skip status broadcast
       if (msg.key.remoteJid === 'status@broadcast') continue;
 
+      const remoteJid = msg.key.remoteJid;
+      const fromMe = msg.key.fromMe || false;
+      const isGroup = isGroupJid(remoteJid);
+
+      // Extract sender info for groups
+      let senderPhone = '';
+      let senderName = '';
+      
+      if (isGroup && !fromMe) {
+        // In groups, participant contains the actual sender's JID
+        const participantJid = msg.key.participant;
+        if (participantJid) {
+          senderPhone = extractPhoneFromJid(participantJid) || '';
+          senderName = msg.pushName || '';
+          console.log(\`👥 Group message from: \${senderName} (\${senderPhone})\`);
+        }
+      } else if (!fromMe) {
+        // Individual chat - sender is the contact
+        senderPhone = extractPhoneFromJid(remoteJid) || '';
+        senderName = msg.pushName || '';
+      }
+
+      // Process media
       let mediaUrl = null;
       let mediaMimeType = null;
       let mediaType = null;
       let mediaCaption = getMediaCaption(msg);
 
-      // Process media if present
       if (hasMedia(msg)) {
-        console.log(\`📨 Media message from \${msg.key.remoteJid}\`);
+        console.log(\`📨 Media message from \${remoteJid}\`);
         const mediaResult = await processMediaMessage(socket, msg, sessionId);
         if (mediaResult) {
           mediaUrl = mediaResult.mediaUrl || null;
@@ -438,27 +603,34 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         const textContent = msg.message?.conversation || 
                           msg.message?.extendedTextMessage?.text || 
                           '';
-        console.log(\`📨 Text message from \${msg.key.remoteJid}: \${textContent.substring(0, 50)}...\`);
+        console.log(\`📨 Text message from \${remoteJid}: \${textContent.substring(0, 50)}...\`);
       }
 
-      // Get sender profile picture
+      // Get sender profile picture (only for non-group individual messages)
       let senderProfilePic = null;
-      try {
-        senderProfilePic = await socket.profilePictureUrl(msg.key.remoteJid, 'image');
-      } catch (e) {
-        // Profile picture not available
+      if (!isGroup) {
+        try {
+          senderProfilePic = await socket.profilePictureUrl(remoteJid, 'image');
+        } catch (e) {
+          // Profile picture not available
+        }
       }
 
+      // Send webhook with all data
       await sendWebhook({
         event: 'messages.upsert',
         sessionId,
         instanceName,
+        webhookSecret,
         data: {
           messages: [{
             key: msg.key,
             message: msg.message,
             messageTimestamp: msg.messageTimestamp,
             pushName: msg.pushName,
+            // Sender info (for groups)
+            senderPhone,
+            senderName,
             // Media fields
             mediaUrl,
             mediaMimeType,
@@ -478,7 +650,31 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       event: 'messages.update',
       sessionId,
       instanceName,
+      webhookSecret,
       data: { updates }
+    });
+  });
+
+  // Chats sync (on connect)
+  socket.ev.on('chats.set', async ({ chats }) => {
+    console.log(\`📋 Syncing \${chats.length} chats...\`);
+    await sendWebhook({
+      event: 'chats.set',
+      sessionId,
+      instanceName,
+      webhookSecret,
+      data: { chats }
+    });
+  });
+
+  // Contacts sync
+  socket.ev.on('contacts.update', async (contacts) => {
+    await sendWebhook({
+      event: 'contacts.update',
+      sessionId,
+      instanceName,
+      webhookSecret,
+      data: { contacts }
     });
   });
 
@@ -491,7 +687,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '3.0.0',
+    version: '3.1.0',
     sessions: sessions.size,
     mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
     timestamp: new Date().toISOString()
@@ -516,7 +712,7 @@ app.post('/api/instance/create', async (req, res) => {
       isConnected: session.isConnected
     });
   } catch (error) {
-    console.error('Create instance error:', error);
+    console.error('❌ Create instance error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -605,17 +801,19 @@ app.post('/api/message/send-text', async (req, res) => {
       return res.status(400).json({ error: 'Session not connected' });
     }
 
-    // Format phone number
-    let jid = phone.replace(/\\D/g, '');
-    if (!jid.includes('@')) {
-      jid = jid + '@s.whatsapp.net';
-    }
+    // Detect if it's a group
+    const isGroup = phone.includes('@g.us') || phone.length > 15;
+    const jid = formatJidForSend(phone, isGroup);
 
-    await session.socket.sendMessage(jid, { text: message });
+    const result = await session.socket.sendMessage(jid, { text: message });
 
-    res.json({ success: true, to: jid });
+    res.json({ 
+      success: true, 
+      to: jid,
+      messageId: result?.key?.id 
+    });
   } catch (error) {
-    console.error('Send message error:', error);
+    console.error('❌ Send message error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -623,17 +821,15 @@ app.post('/api/message/send-text', async (req, res) => {
 // Send media message
 app.post('/api/message/send-media', async (req, res) => {
   try {
-    const { sessionId, phone, mediaUrl, mediaType, caption } = req.body;
+    const { sessionId, phone, mediaUrl, mediaType, caption, fileName } = req.body;
 
     const session = sessions.get(sessionId);
     if (!session || !session.socket || !session.isConnected) {
       return res.status(400).json({ error: 'Session not connected' });
     }
 
-    let jid = phone.replace(/\\D/g, '');
-    if (!jid.includes('@')) {
-      jid = jid + '@s.whatsapp.net';
-    }
+    const isGroup = phone.includes('@g.us') || phone.length > 15;
+    const jid = formatJidForSend(phone, isGroup);
 
     let content;
     switch (mediaType) {
@@ -644,20 +840,31 @@ app.post('/api/message/send-media', async (req, res) => {
         content = { video: { url: mediaUrl }, caption };
         break;
       case 'audio':
-        content = { audio: { url: mediaUrl }, mimetype: 'audio/mp4' };
+        content = { audio: { url: mediaUrl }, mimetype: 'audio/mp4', ptt: false };
+        break;
+      case 'ptt':
+        content = { audio: { url: mediaUrl }, mimetype: 'audio/ogg; codecs=opus', ptt: true };
         break;
       case 'document':
-        content = { document: { url: mediaUrl }, mimetype: 'application/pdf', fileName: caption || 'document.pdf' };
+        content = { 
+          document: { url: mediaUrl }, 
+          mimetype: mime.lookup(fileName || 'file.pdf') || 'application/octet-stream', 
+          fileName: fileName || caption || 'document.pdf' 
+        };
         break;
       default:
-        return res.status(400).json({ error: 'Invalid media type' });
+        return res.status(400).json({ error: 'Invalid media type. Use: image, video, audio, ptt, document' });
     }
 
-    await session.socket.sendMessage(jid, content);
+    const result = await session.socket.sendMessage(jid, content);
 
-    res.json({ success: true, to: jid });
+    res.json({ 
+      success: true, 
+      to: jid,
+      messageId: result?.key?.id
+    });
   } catch (error) {
-    console.error('Send media error:', error);
+    console.error('❌ Send media error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -665,6 +872,8 @@ app.post('/api/message/send-media', async (req, res) => {
 // ============== START SERVER ==============
 
 async function startServer() {
+  console.log('🚀 Starting Baileys Server v3.1.0...');
+  
   // Dynamic imports for ESM modules
   const baileysModule = await import('@whiskeysockets/baileys');
   makeWASocket = baileysModule.default;
@@ -686,13 +895,19 @@ async function startServer() {
     console.log('✅ Supabase Storage configured for media uploads');
   } else {
     console.log('⚠️ Supabase not configured - media will not be uploaded');
+    console.log('   Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable media support');
   }
 
   const PORT = process.env.PORT || 3333;
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(\`🚀 Baileys Server v3.0.0 running on port \${PORT}\`);
+    console.log('');
+    console.log('============================================');
+    console.log(\`🚀 Baileys Server v3.1.0 running on port \${PORT}\`);
+    console.log('============================================');
     console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Not configured'}\`);
-    console.log(\`📸 Media Support: \${supabase ? 'Enabled' : 'Disabled'}\`);
+    console.log(\`📸 Media Support: \${supabase ? '✅ Enabled' : '❌ Disabled'}\`);
+    console.log('============================================');
+    console.log('');
   });
 }
 
@@ -700,11 +915,13 @@ startServer().catch(console.error);
 `;
 
     const envExample = `# Webhook do Supabase (Edge Function)
-SUPABASE_WEBHOOK_URL=https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook
+SUPABASE_WEBHOOK_URL=${webhookUrl}
 
 # Supabase Storage (para upload de mídias)
 SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
+
+# NÃO defina PORT - Railway define automaticamente
 `;
 
     return {
@@ -736,7 +953,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.0.0.zip';
+      a.download = 'baileys-server-v3.1.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -744,7 +961,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v3.0.0 - Com suporte a mídias'
+        description: 'Servidor v3.1.0 - Com suporte a mídias e grupos'
       });
       
       setIsOpen(false);
@@ -773,14 +990,14 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.0.0
+              Servidor Baileys v3.1.0
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp com suporte completo a mídias para deploy no Railway
+              Servidor WhatsApp com suporte completo a mídias e grupos para deploy no Railway
             </DialogDescription>
           </DialogHeader>
 
@@ -788,13 +1005,17 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             {/* What's New */}
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                Novidades v3.0.0
+                <CheckCircle2 className="h-4 w-4" />
+                Novidades v3.1.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Suporte completo a mídias (imagens, vídeos, áudios, documentos)
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Suporte a Grupos</strong> - Identifica quem enviou cada mensagem
+                </li>
+                <li className="flex items-center gap-2">
+                  <ImageIcon className="h-3 w-3 text-primary" />
+                  <strong>Mídias</strong> - Imagens, vídeos, áudios, documentos
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
@@ -802,11 +1023,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Player de áudio estilo WhatsApp
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Download de mídias integrado
+                  Retry automático em downloads de mídia (3 tentativas)
                 </li>
               </ul>
             </div>
@@ -816,9 +1033,9 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <code>package.json</code> - Dependências (Baileys 6.7.9 + Supabase)</li>
-                <li>• <code>index.js</code> - Servidor completo com suporte a mídias</li>
+                <li>• <code>index.js</code> - Servidor completo com suporte a mídias e grupos</li>
                 <li>• <code>.env.example</code> - Exemplo de variáveis de ambiente</li>
-                <li>• <code>README.md</code> - Instruções de deploy</li>
+                <li>• <code>README.md</code> - Instruções de deploy detalhadas</li>
                 <li>• <code>nixpacks.toml</code> - Configuração Railway</li>
               </ul>
             </div>
@@ -851,7 +1068,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.0.0.zip
+                  Baixar baileys-server-v3.1.0.zip
                 </>
               )}
             </Button>

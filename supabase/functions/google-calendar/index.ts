@@ -429,6 +429,109 @@ serve(async (req) => {
         });
       }
 
+      // Handle Gmail OAuth code exchange
+      if (body.action === 'exchange_code_gmail') {
+        const { code, user_id } = body;
+        console.log('🔄 Processing Gmail OAuth code exchange for user:', user_id);
+
+        if (!code || !user_id) {
+          throw new Error('Code or user_id missing');
+        }
+
+        // Exchange code for tokens - using www.ellosuit.online as redirect_uri
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            code,
+            grant_type: 'authorization_code',
+            redirect_uri: 'https://www.ellosuit.online/dashboard'
+          })
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+          console.error('❌ Gmail token exchange error:', tokenData);
+          throw new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`);
+        }
+
+        console.log('✅ Gmail tokens obtained successfully');
+
+        // Get user email from Google
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`
+          }
+        });
+
+        const userInfo = await userInfoResponse.json();
+        
+        if (!userInfoResponse.ok) {
+          console.error('❌ Failed to get user info:', userInfo);
+          throw new Error('Failed to get user email from Google');
+        }
+
+        console.log('✅ Got user email:', userInfo.email);
+
+        // Get user's company_id
+        const { data: companyUser, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user_id)
+          .single();
+
+        if (companyError || !companyUser) {
+          console.error('❌ Error getting user company:', companyError);
+          throw new Error('User company not found');
+        }
+
+        // Calculate expiration timestamp
+        const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+
+        // Delete any existing Gmail account for this user
+        await supabase
+          .from('user_email_accounts')
+          .delete()
+          .eq('user_id', user_id)
+          .eq('provider', 'gmail');
+
+        // Save to user_email_accounts table
+        const { error: insertError } = await supabase
+          .from('user_email_accounts')
+          .insert({
+            user_id: user_id,
+            company_id: companyUser.company_id,
+            provider: 'gmail',
+            provider_email: userInfo.email,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: expiresAt,
+          });
+
+        if (insertError) {
+          console.error('❌ Error saving Gmail account:', insertError);
+          throw new Error(`Failed to save Gmail account: ${insertError.message}`);
+        }
+
+        console.log('✅ Gmail account saved successfully for:', userInfo.email);
+
+        return new Response(JSON.stringify({
+          success: true,
+          email: userInfo.email,
+          message: 'Gmail connected successfully'
+        }), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+
       // Handle token renewal
       if (body.action === 'renew_token') {
         const { refreshToken, userId } = body;

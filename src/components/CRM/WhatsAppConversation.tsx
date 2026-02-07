@@ -76,7 +76,7 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
 
     loadMessages();
 
-    // Subscribe to new messages with deduplication
+    // Subscribe to new messages with proper deduplication
     const channel = supabase
       .channel(`messages-${conversation.id}`)
       .on('postgres_changes', {
@@ -87,14 +87,46 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
       }, (payload) => {
         const newMsg = payload.new as any;
         setMessages(prev => {
-          // Deduplicate: check if message already exists by id or content+timestamp
-          const exists = prev.some(m => 
-            m.id === newMsg.id || 
-            (m.content === newMsg.content && m.from_me === newMsg.from_me && 
-             Math.abs(new Date(m.timestamp).getTime() - new Date(newMsg.timestamp).getTime()) < 5000)
-          );
-          if (exists) return prev;
+          // Check if this exact message ID already exists
+          if (prev.some(m => m.id === newMsg.id)) {
+            return prev;
+          }
           
+          // For sent messages (from_me), replace temp message with same content
+          if (newMsg.from_me) {
+            const tempIndex = prev.findIndex(m => 
+              m.id.startsWith('temp-') && 
+              m.content === (newMsg.content || '') &&
+              m.from_me === true
+            );
+            
+            if (tempIndex !== -1) {
+              // Replace temp message with real one
+              const updated = [...prev];
+              updated[tempIndex] = {
+                id: newMsg.id,
+                from_me: newMsg.from_me,
+                content: newMsg.content || '',
+                timestamp: newMsg.timestamp,
+                status: newMsg.status,
+                message_type: newMsg.message_type || 'text',
+                media_url: newMsg.media_url || '',
+                media_caption: newMsg.media_caption || ''
+              };
+              return updated;
+            }
+          }
+          
+          // Check for duplicate content from same direction within recent messages
+          const recentDuplicate = prev.slice(-10).some(m => 
+            m.content === (newMsg.content || '') && 
+            m.from_me === newMsg.from_me
+          );
+          if (recentDuplicate) {
+            return prev;
+          }
+          
+          // Add new message
           return [...prev, {
             id: newMsg.id,
             from_me: newMsg.from_me,

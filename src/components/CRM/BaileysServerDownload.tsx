@@ -7,14 +7,28 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BaileysServerDownloadProps {
   webhookUrl?: string;
+  isOpenExternal?: boolean;
+  onClose?: () => void;
 }
 
 const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({ 
-  webhookUrl = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook' 
+  webhookUrl = 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-webhook',
+  isOpenExternal,
+  onClose
 }) => {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  
+  // Use external control if provided, otherwise use internal state
+  const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
+  const setIsOpen = (open: boolean) => {
+    if (isOpenExternal !== undefined && onClose && !open) {
+      onClose();
+    } else {
+      setIsOpenInternal(open);
+    }
+  };
 
   const generateServerFiles = () => {
     // ========== PACKAGE.JSON v3.8.0 ==========
@@ -593,6 +607,80 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       setDownloading(false);
     }
   };
+
+  // If externally controlled, don't render the button
+  if (isOpenExternal !== undefined) {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5 text-[#FF4500]" />
+              Servidor Baileys v3.8.0 - Estável
+            </DialogTitle>
+            <DialogDescription>
+              Servidor WhatsApp completo - contatos, mídia e mensagens em tempo real
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* What's New */}
+            <div className="bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-lg p-4">
+              <h4 className="font-medium text-[#FF4500] mb-2 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Novidades v3.8.0
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li className="flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Endpoint corrigido</strong> - /api/message/send funcional
+                </li>
+                <li className="flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Heartbeat automático</strong> - Conexão mais estável (25s)
+                </li>
+                <li className="flex items-center gap-2">
+                  <Users className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Sincronização de Contatos</strong> - Todos os contatos ao conectar
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Reconexão inteligente</strong> - Backoff exponencial
+                </li>
+                <li className="flex items-center gap-2">
+                  <ImageIcon className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Mídia completa</strong> - Imagens, vídeos, áudios, documentos
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsOpen(false)}>
+                Fechar
+              </Button>
+              <Button 
+                onClick={downloadZip} 
+                disabled={downloading}
+                className="bg-[#FF4500] hover:bg-[#FF4500]/90"
+              >
+                {downloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar v3.8.0
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>

@@ -1,10 +1,17 @@
-# 🚀 Baileys Server v3.3.0 - Sync Completo
+# 🚀 Baileys Server v3.4.0 - Metadata de Grupos Completo
 
 Servidor Baileys completo com suporte a **mídias**, **grupos** e **sincronização completa de histórico**.
 
-## ✅ Novidades v3.3.0
+## ✅ Novidades v3.4.0
 
-### Principais Mudanças:
+### Melhorias:
+- ✅ **Metadata de Grupos no History Sync** - Busca nomes dos grupos automaticamente durante sincronização de histórico
+- ✅ **Cache de Metadados** - Performance otimizada (não busca metadata duplicado)
+- ✅ **Melhor identificação de remetentes** - Em mensagens de grupo durante sync de histórico
+
+## ✅ Funcionalidades v3.3.0
+
+### Principais:
 - ✅ **SYNC COMPLETO DE HISTÓRICO** - Sincroniza todas as conversas ao conectar
 - ✅ **Handler messaging-history.set** - Recebe mensagens históricas
 - ✅ **Handler chats.set** - Recebe lista de chats inicial
@@ -62,7 +69,7 @@ npm start
 Você deve ver:
 ```
 ============================================
-🚀 Baileys Server v3.3.0 running on port XXXX
+🚀 Baileys Server v3.4.0 running on port XXXX
 ============================================
 📡 Webhook URL: https://...
 📸 Media Support: ✅ Enabled
@@ -100,13 +107,15 @@ Copie a URL do Railway (ex: `https://baileys-server-xxx.up.railway.app`) e atual
 
 ### ✅ Sincronização Completa de Histórico
 - `chats.set` - Lista inicial de conversas ao conectar
-- `messaging-history.set` - Mensagens históricas
+- `messaging-history.set` - Mensagens históricas com metadata de grupos
 - Processamento em batches para evitar timeout
+- Cache de metadados de grupos para performance
 
 ### ✅ Suporte Completo a Grupos
 - Nome do remetente extraído automaticamente
 - Telefone do remetente para mensagens de grupo
 - Busca metadados do grupo para nome correto
+- **v3.4.0: Metadata também para histórico**
 
 ### ✅ Suporte a Mídias
 | Tipo | Extensão | Upload automático |
@@ -156,9 +165,14 @@ mediaType: 'image' | 'video' | 'audio' | 'ptt' | 'document'
 
 ## ❓ Troubleshooting
 
+### Grupos mostram ID numérico ao invés de nome
+1. Atualize para v3.4.0 (busca metadata durante history sync)
+2. Delete a pasta `sessions/` no Railway
+3. Reconecte o WhatsApp
+
 ### Conversas não sincronizam ao conectar
 1. Verifique os logs: deve mostrar `[CHATS.SET]` e `[HISTORY SYNC]`
-2. Se não aparecer, atualize para v3.3.0
+2. Se não aparecer, atualize para v3.4.0
 3. Delete a pasta `sessions/` no Railway e reconecte
 
 ### Mídias não aparecem no CRM
@@ -167,7 +181,7 @@ mediaType: 'image' | 'video' | 'audio' | 'ptt' | 'document'
 3. Confirme que o bucket `whatsapp-media` existe e é público no Supabase
 
 ### Grupos mostram remetente vazio
-- A v3.3.0 corrige a extração de participantes
+- A v3.4.0 inclui metadata completo nos grupos
 - Verifique os logs: deve mostrar `👥 Group:` e `👤 Sender:`
 
 ### QR Code não aparece

@@ -17,10 +17,10 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.3.0 ==========
+    // ========== PACKAGE.JSON v3.4.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Servidor Baileys com suporte a mídia, grupos e sincronização completa",
   "main": "index.js",
   "type": "commonjs",
@@ -57,29 +57,17 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.3.0 - Sync Completo
+    const readme = `# 🚀 Baileys Server v3.4.0 - Metadata de Grupos
 
-## ✅ Novidades v3.3.0
+## ✅ Novidades v3.4.0
 
 ### Principais Mudanças:
+- ✅ **METADATA DE GRUPOS NO HISTORY SYNC** - Busca nomes dos grupos automaticamente
 - ✅ **SYNC COMPLETO DE HISTÓRICO** - Sincroniza todas as conversas ao conectar
-- ✅ **Handler messaging-history.set** - Recebe mensagens históricas
-- ✅ **Handler chats.set** - Recebe lista de chats inicial
-- ✅ **Processamento em batches** - Evita timeout com muitos dados
+- ✅ **Cache de Metadados** - Performance otimizada
 - ✅ **Nome do Grupo Correto** - Busca metadados do grupo para exibir nome real
 - ✅ **Identificação de Remetentes** - Mostra quem enviou cada mensagem nos grupos
 - ✅ **Suporte a Mídias** - Imagens, vídeos, áudios, documentos e stickers
-- ✅ **Upload para Supabase Storage** - Mídias são salvas no bucket whatsapp-media
-
-### Tipos de Mídia Suportados:
-| Tipo | Extensão | Descrição |
-|------|----------|-----------|
-| image | jpg | Fotos e imagens |
-| video | mp4 | Vídeos |
-| ptt | ogg | Mensagens de voz |
-| audio | mp3 | Arquivos de áudio |
-| document | pdf, doc, etc | Documentos |
-| sticker | webp | Figurinhas |
 
 ## Deploy no Railway
 
@@ -96,73 +84,6 @@ sessions/
    \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\` (pegar no Dashboard Supabase > Settings > API)
 
 **NÃO** defina PORT - Railway define automaticamente!
-
-### 3. Pronto!
-Aguarde deploy completo (~3-4 minutos).
-
-## Verificação de Logs
-
-Após conectar, você verá:
-
-\`\`\`
-============================================
-🚀 Baileys Server v3.3.0 running on port XXXX
-============================================
-📡 Webhook URL: https://...
-📸 Media Support: ✅ Enabled
-📜 History Sync: ✅ Enabled
-============================================
-\`\`\`
-
-E ao conectar um WhatsApp:
-\`\`\`
-📋 [CHATS.SET] Syncing X chats...
-📜 [HISTORY SYNC] X chats, Y messages
-\`\`\`
-
-## Endpoints da API
-
-### Health Check
-\`GET /api/health\`
-
-### Criar Instância
-\`POST /api/instance/create\`
-\`\`\`json
-{
-  "sessionId": "uuid",
-  "instanceName": "minha-instancia",
-  "webhookSecret": "opcional"
-}
-\`\`\`
-
-### Obter QR Code
-\`GET /api/instance/:sessionId/qr\`
-
-### Status da Conexão
-\`GET /api/instance/:sessionId/status\`
-
-### Enviar Mensagem de Texto
-\`POST /api/message/send-text\`
-\`\`\`json
-{
-  "sessionId": "uuid",
-  "phone": "5511999999999",
-  "message": "Olá!"
-}
-\`\`\`
-
-### Enviar Mídia
-\`POST /api/message/send-media\`
-\`\`\`json
-{
-  "sessionId": "uuid",
-  "phone": "5511999999999",
-  "mediaUrl": "https://...",
-  "mediaType": "image|video|audio|ptt|document",
-  "caption": "Legenda opcional",
-  "fileName": "documento.pdf"
-}
-\`\`\`
 `;
 
     // ========== SERVIDOR v3.3.0 COMPLETO ==========
@@ -1154,10 +1075,10 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.3.0
+              Servidor Baileys v3.4.0
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp com sincronização completa de histórico para deploy no Railway
+              Servidor WhatsApp com sincronização completa de histórico e metadata de grupos
             </DialogDescription>
           </DialogHeader>
 
@@ -1166,20 +1087,20 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.3.0
+                Novidades v3.4.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
+                <li className="flex items-center gap-2">
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Metadata de Grupos no History</strong> - Busca nomes automaticamente
+                </li>
                 <li className="flex items-center gap-2">
                   <History className="h-3 w-3 text-primary" />
                   <strong>Sync Completo</strong> - Sincroniza todas as conversas ao conectar
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  <strong>messaging-history.set</strong> - Recebe histórico completo
-                </li>
-                <li className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-primary" />
-                  <strong>Grupos Corretos</strong> - Nome do grupo e remetentes
+                  <strong>Cache de Metadados</strong> - Performance otimizada
                 </li>
                 <li className="flex items-center gap-2">
                   <ImageIcon className="h-3 w-3 text-primary" />
@@ -1244,7 +1165,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.3.0.zip
+                  Baixar baileys-server-v3.4.0.zip
                 </>
               )}
             </Button>

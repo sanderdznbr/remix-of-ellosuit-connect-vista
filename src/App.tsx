@@ -23,6 +23,7 @@ import SharedContent from './pages/SharedContent';
 import RecoverMeeting from './pages/RecoverMeeting';
 import LinkRedirect from './pages/LinkRedirect';
 import PublicVideoPlayer from './pages/PublicVideoPlayer';
+import PublicLeadFunnel from './pages/PublicLeadFunnel';
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/shared/:shareId" element={<SharedContent />} />
             <Route path="/l/:code" element={<LinkRedirect />} />
             <Route path="/video/:videoId" element={<PublicVideoPlayer />} />
+            <Route path="/f/:slug" element={<PublicLeadFunnel />} />
             <Route path="/team" element={<Team />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

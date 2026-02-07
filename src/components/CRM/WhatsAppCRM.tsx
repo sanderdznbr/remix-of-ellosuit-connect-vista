@@ -1227,6 +1227,7 @@ const WhatsAppCRM: React.FC = () => {
           conversations={filteredConversations}
           labels={labels}
           columns={kanbanColumns}
+          companyId={companyId}
           onSelectConversation={async (conv) => {
             setPopupConversation(conv);
             

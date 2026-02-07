@@ -45,6 +45,10 @@ import UserProfilePage from '@/components/Dashboard/UserProfilePage';
 import SubscriptionPage from '@/components/Dashboard/SubscriptionPage';
 import HelpCenter from '@/components/Dashboard/HelpCenter';
 
+// Lead Capture
+import LeadFunnelsManager from '@/components/LeadCapture/LeadFunnelsManager';
+import LeadFunnelBuilder from '@/components/LeadCapture/LeadFunnelBuilder';
+
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
 
@@ -95,6 +99,8 @@ const MobileResponsiveDashboard = () => {
         <Route path="/reunioes" element={<MeetingRooms />} />
         <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />
         <Route path="/fluxos" element={<FluxosBoard />} />
+        <Route path="/leads" element={<LeadFunnelsManager />} />
+        <Route path="/leads/builder" element={<LeadFunnelBuilder />} />
         
         {/* Gestão - Unified pages */}
         <Route path="/cadastros" element={<UnifiedDatabase />} />

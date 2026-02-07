@@ -1226,6 +1226,163 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_funnel_steps: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          description: string | null
+          funnel_id: string
+          id: string
+          position: number
+          required: boolean | null
+          step_type: string
+          title: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          funnel_id: string
+          id?: string
+          position: number
+          required?: boolean | null
+          step_type: string
+          title?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          funnel_id?: string
+          id?: string
+          position?: number
+          required?: boolean | null
+          step_type?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_funnel_steps_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "lead_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_funnels: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          settings: Json | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          settings?: Json | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          settings?: Json | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lead_step_events: {
+        Row: {
+          event_type: string
+          funnel_id: string
+          id: string
+          metadata: Json | null
+          step_id: string | null
+          submission_id: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          event_type: string
+          funnel_id: string
+          id?: string
+          metadata?: Json | null
+          step_id?: string | null
+          submission_id?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          event_type?: string
+          funnel_id?: string
+          id?: string
+          metadata?: Json | null
+          step_id?: string | null
+          submission_id?: string | null
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
+      lead_submissions: {
+        Row: {
+          answers: Json | null
+          completed_at: string | null
+          current_step: number | null
+          funnel_id: string
+          id: string
+          metadata: Json | null
+          session_id: string
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          answers?: Json | null
+          completed_at?: string | null
+          current_step?: number | null
+          funnel_id: string
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          answers?: Json | null
+          completed_at?: string | null
+          current_step?: number | null
+          funnel_id?: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_submissions_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "lead_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_clicks: {
         Row: {
           browser: string | null

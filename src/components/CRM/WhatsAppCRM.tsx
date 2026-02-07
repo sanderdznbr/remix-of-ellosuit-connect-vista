@@ -225,25 +225,43 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  const loadMessages = async (conversationId: string) => {
+  // Load messages from ALL conversations with the same contact_phone
+  const loadMessagesByPhone = async (contactPhone: string) => {
+    // First get all conversation IDs for this phone
+    const { data: convs } = await supabase
+      .from('whatsapp_conversations')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('contact_phone', contactPhone);
+    
+    if (!convs || convs.length === 0) return;
+    
+    const conversationIds = convs.map(c => c.id);
+    
+    // Get all messages from all these conversations
     const { data, error } = await supabase
       .from('whatsapp_messages')
       .select('*')
-      .eq('conversation_id', conversationId)
+      .in('conversation_id', conversationIds)
       .order('timestamp', { ascending: true })
-      .limit(100);
+      .limit(200);
     
     if (!error && data) {
-      // Map data and deduplicate by id
+      // Deduplicate by wa_message_id (same message can be in multiple conversations)
       const uniqueMessages = new Map<string, WhatsAppMessage>();
       data.forEach(m => {
-        uniqueMessages.set(m.id, {
-          ...m,
-          created_at: m.timestamp || m.created_at,
-          wa_message_id: m.wa_message_id
-        });
+        const key = m.wa_message_id || m.id;
+        if (!uniqueMessages.has(key) || new Date(m.timestamp) > new Date(uniqueMessages.get(key)!.created_at)) {
+          uniqueMessages.set(key, {
+            ...m,
+            created_at: m.timestamp || m.created_at,
+            wa_message_id: m.wa_message_id
+          });
+        }
       });
-      setMessages(Array.from(uniqueMessages.values()));
+      const sorted = Array.from(uniqueMessages.values())
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      setMessages(sorted);
     }
   };
 
@@ -364,12 +382,12 @@ const WhatsAppCRM: React.FC = () => {
     
     loadData();
     
-    // Polling fallback for conversations - refresh every 5 seconds
+    // Polling fallback for conversations - refresh every 2 seconds for faster updates
     const conversationsPoll = setInterval(() => {
       if (companyId) {
         loadConversations();
       }
-    }, 5000);
+    }, 2000);
     
     return () => clearInterval(conversationsPoll);
   }, [companyId]);
@@ -388,33 +406,38 @@ const WhatsAppCRM: React.FC = () => {
         schema: 'public',
         table: 'whatsapp_messages',
         filter: `company_id=eq.${companyId}`
-      }, (payload) => {
+      }, async (payload) => {
         const newMessage = payload.new as any;
         console.log('📨 Realtime message event:', payload.eventType, newMessage?.content?.substring(0, 30));
         
-        // If this message is for the selected conversation, update immediately
-        if (selectedConversation && newMessage?.conversation_id === selectedConversation.id) {
-          if (payload.eventType === 'INSERT') {
-            setMessages(prev => {
-              // Avoid duplicates by checking both id and wa_message_id
-              if (prev.some(m => m.id === newMessage.id || 
-                (m.wa_message_id && m.wa_message_id === newMessage.wa_message_id))) {
-                return prev;
-              }
-              return [...prev, {
-                id: newMessage.id,
-                conversation_id: newMessage.conversation_id,
-                content: newMessage.content,
-                from_me: newMessage.from_me,
-                status: newMessage.status,
-                created_at: newMessage.timestamp || newMessage.created_at,
-                wa_message_id: newMessage.wa_message_id
-              }];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setMessages(prev => prev.map(m => 
-              m.id === newMessage.id ? { ...m, ...newMessage, created_at: newMessage.timestamp || newMessage.created_at } : m
-            ));
+        // Immediately reload messages if we have a selected conversation
+        if (selectedConversation && newMessage?.conversation_id) {
+          // Check if this message belongs to any conversation with the same contact_phone
+          const { data: conv } = await supabase
+            .from('whatsapp_conversations')
+            .select('contact_phone')
+            .eq('id', newMessage.conversation_id)
+            .single();
+          
+          if (conv && conv.contact_phone === selectedConversation.contact_phone) {
+            // Immediately add message to UI for instant feedback
+            if (payload.eventType === 'INSERT') {
+              setMessages(prev => {
+                if (prev.some(m => m.id === newMessage.id || 
+                  (m.wa_message_id && m.wa_message_id === newMessage.wa_message_id))) {
+                  return prev;
+                }
+                return [...prev, {
+                  id: newMessage.id,
+                  conversation_id: newMessage.conversation_id,
+                  content: newMessage.content,
+                  from_me: newMessage.from_me,
+                  status: newMessage.status,
+                  created_at: newMessage.timestamp || newMessage.created_at,
+                  wa_message_id: newMessage.wa_message_id
+                }];
+              });
+            }
           }
         }
         
@@ -491,19 +514,19 @@ const WhatsAppCRM: React.FC = () => {
   // Load messages when conversation changes + polling fallback for realtime reliability
   useEffect(() => {
     if (selectedConversation) {
-      loadMessages(selectedConversation.id);
+      loadMessagesByPhone(selectedConversation.contact_phone);
       setSelectedAgent(null);
       
-      // Polling fallback - refresh messages every 3 seconds while conversation is open
+      // Polling fallback - refresh messages every 1.5 seconds for faster updates
       const pollInterval = setInterval(() => {
-        loadMessages(selectedConversation.id);
-      }, 3000);
+        loadMessagesByPhone(selectedConversation.contact_phone);
+      }, 1500);
       
       return () => clearInterval(pollInterval);
     } else {
       setMessages([]);
     }
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.contact_phone]);
 
   // Handle session success - sync conversations after connection
   const handleSessionSuccess = async (session: WhatsAppSession) => {
@@ -642,7 +665,7 @@ const WhatsAppCRM: React.FC = () => {
         if (error) throw error;
         
         // Immediately refetch messages from DB to ensure persistence
-        await loadMessages(selectedConversation.id);
+        await loadMessagesByPhone(selectedConversation.contact_phone);
         
         // Also reload conversations to update last message
         await loadConversations();

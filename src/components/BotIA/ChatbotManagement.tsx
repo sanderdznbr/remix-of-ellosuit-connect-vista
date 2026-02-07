@@ -270,30 +270,36 @@ const ChatbotManagement: React.FC = () => {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Meus Chatbots</h1>
-          <p className="text-muted-foreground">Gerencie seus chatbots automatizados</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl" style={{ backgroundColor: '#E3480010' }}>
+            <GitBranch className="h-6 w-6" style={{ color: '#E34800' }} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">ChatBot Builder</h1>
+            <p className="text-muted-foreground text-sm">Crie e gerencie fluxos automatizados</p>
+          </div>
         </div>
         <Button 
           onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          className="gap-2"
+          style={{ backgroundColor: '#E34800' }}
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4" />
           Novo Chatbot
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <GitBranch className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg" style={{ backgroundColor: '#E3480020' }}>
+                <GitBranch className="h-5 w-5" style={{ color: '#E34800' }} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{flows.length}</p>
-                <p className="text-xs text-blue-600/70">Total de Chatbots</p>
+                <p className="text-2xl font-bold" style={{ color: '#E34800' }}>{flows.length}</p>
+                <p className="text-xs text-orange-600/70">Total de Chatbots</p>
               </div>
             </div>
           </CardContent>

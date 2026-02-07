@@ -1454,12 +1454,20 @@ const WhatsAppCRM: React.FC = () => {
                     )}
                     onContextMenu={(e) => handleConversationContextMenu(e, conversation)}
                   >
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={conversation.profile_picture} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={conversation.profile_picture} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* AI Agent indicator */}
+                      {conversation.assigned_agent_id && conversation.ai_auto_reply_enabled && (
+                        <div className="absolute -bottom-1 -right-1 p-1 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full shadow-lg">
+                          <Bot className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
@@ -1467,6 +1475,13 @@ const WhatsAppCRM: React.FC = () => {
                           <span className="font-medium truncate">
                             {conversation.contact_name || conversation.contact_phone}
                           </span>
+                          {/* AI Badge */}
+                          {conversation.assigned_agent_id && conversation.ai_auto_reply_enabled && (
+                            <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 text-[10px] px-1.5 py-0 gap-1">
+                              <Sparkles className="h-2.5 w-2.5" />
+                              IA
+                            </Badge>
+                          )}
                           {/* Labels next to name */}
                           {conversation.labels && conversation.labels.length > 0 && (
                             <div className="flex items-center gap-1 flex-shrink-0">

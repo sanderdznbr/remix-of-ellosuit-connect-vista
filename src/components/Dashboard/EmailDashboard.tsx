@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, History, Users, FileText, BarChart3, Send, Inbox, Clock, TrendingUp, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, History, Users, FileText, BarChart3, Send, Inbox, Clock, TrendingUp, Settings, CheckCircle2, AlertCircle, Palette, ExternalLink } from 'lucide-react';
 import EmailComposer from './EmailComposer';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
@@ -11,6 +12,7 @@ import { useGmail } from '@/hooks/useGmail';
 import { Button } from '@/components/ui/button';
 
 const EmailDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('compose');
   const { isConnected, emailAccount } = useGmail();
 
@@ -120,13 +122,15 @@ const EmailDashboard = () => {
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Campanhas</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="templates" 
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-primary font-medium"
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent text-muted-foreground font-medium hover:text-primary"
+                onClick={() => navigate('/dashboard/email-templates')}
               >
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Templates</span>
-              </TabsTrigger>
+                <Palette className="h-4 w-4" />
+                <span className="hidden sm:inline">Ver Templates</span>
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </Button>
             </TabsList>
           </CardHeader>
 
@@ -145,10 +149,6 @@ const EmailDashboard = () => {
 
             <TabsContent value="campaigns" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <CampaignMail />
-            </TabsContent>
-
-            <TabsContent value="templates" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <EmailTemplates />
             </TabsContent>
           </CardContent>
         </Tabs>

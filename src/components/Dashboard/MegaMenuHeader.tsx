@@ -60,8 +60,9 @@ const menuGroups: MenuGroup[] = [
         ]
       },
       {
-        title: "Inteligência",
+        title: "Criadores",
         items: [
+          { id: "email-builder", label: "Templates de Email", description: "Editor visual de emails", icon: FileText, path: "/dashboard/email-templates" },
           { id: "agentes", label: "Agentes de IA", description: "Chatbots inteligentes", icon: Bot, path: "/dashboard/bot-ia" },
           { id: "clientes", label: "Banco de Clientes", description: "Base de contatos", icon: Users, path: "/dashboard/cadastros" },
         ]

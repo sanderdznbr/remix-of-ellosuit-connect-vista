@@ -642,7 +642,7 @@ serve(async (req) => {
 
       // ==================== SEND MEDIA ====================
       case 'send_media': {
-        const { mediaUrl, mediaType, caption } = body;
+        const { mediaUrl, mediaType, caption, fileName } = body;
         
         if (!sessionId || !phone || !mediaUrl) {
           return new Response(JSON.stringify({ error: 'sessionId, phone e mediaUrl são obrigatórios' }), {
@@ -666,40 +666,92 @@ serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         const cleanPhone = phone.replace(/\D/g, '');
-        const jid = `${cleanPhone}@s.whatsapp.net`;
 
-        if (serverUrl && session.status === 'connected') {
-          try {
-            const sendResponse = await fetch(`${serverUrl}/api/message/send-media`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-webhook-secret': session.webhook_secret || ''
-              },
-              body: JSON.stringify({
-                instanceName: session.instance_name,
-                jid: jid,
-                mediaUrl: mediaUrl,
-                mediaType: mediaType || 'image',
-                caption: caption
-              })
-            });
-
-            if (sendResponse.ok) {
-              const sendData = await sendResponse.json();
-              return new Response(JSON.stringify({ success: true, messageId: sendData.messageId }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              });
-            }
-          } catch (e) {
-            console.error('Error sending media:', e);
-          }
+        // Check if server is configured and session is connected
+        if (!serverUrl) {
+          return new Response(JSON.stringify({ error: 'Servidor Baileys não configurado' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
-        return new Response(JSON.stringify({ error: 'Servidor Baileys não conectado' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        if (session.status !== 'connected') {
+          return new Response(JSON.stringify({ 
+            error: 'WhatsApp desconectado', 
+            details: 'Reconecte escaneando o QR Code' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        try {
+          console.log(`[SEND MEDIA] Sending ${mediaType} to ${cleanPhone} via ${serverUrl}`);
+          
+          // Use the correct endpoint and parameters matching the Baileys server
+          const sendResponse = await fetch(`${serverUrl}/api/message/send-media`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              sessionId: sessionId,
+              phone: cleanPhone,
+              mediaUrl: mediaUrl,
+              mediaType: mediaType || 'image',
+              caption: caption || '',
+              fileName: fileName || ''
+            })
+          });
+
+          if (sendResponse.ok) {
+            const sendData = await sendResponse.json();
+            console.log(`[SEND MEDIA] Success:`, sendData);
+            
+            return new Response(JSON.stringify({ 
+              success: true, 
+              messageId: sendData.messageId || sendData.key?.id 
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            const errorText = await sendResponse.text();
+            console.error('[SEND MEDIA] Server error:', errorText);
+            
+            // Try to parse error
+            let errorMessage = 'Falha ao enviar mídia';
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.error) {
+                errorMessage = errorJson.error;
+                
+                // Update session status if disconnected
+                if (errorJson.error.includes('not connected') || errorJson.error.includes('disconnected')) {
+                  await supabase
+                    .from('whatsapp_sessions')
+                    .update({ status: 'disconnected', connected_at: null })
+                    .eq('id', sessionId);
+                }
+              }
+            } catch {
+              // Not JSON
+            }
+            
+            return new Response(JSON.stringify({ error: errorMessage, details: errorText }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (e: any) {
+          console.error('[SEND MEDIA] Exception:', e);
+          return new Response(JSON.stringify({ 
+            error: 'Erro de conexão', 
+            details: e.message || 'Não foi possível conectar ao servidor' 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       // ==================== GET CONVERSATIONS ====================

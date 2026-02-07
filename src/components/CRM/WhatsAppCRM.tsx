@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import WhatsAppContacts from './WhatsAppContacts';
 import SwipeableConversationItem from './SwipeableConversationItem';
 import ConversationContextMenu from './ConversationContextMenu';
 import MessageContextMenu from './MessageContextMenu';
+import AudioRecorderButton from './AudioRecorderButton';
+import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -251,6 +253,10 @@ const WhatsAppCRM: React.FC = () => {
   // Media upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [recordingAudio, setRecordingAudio] = useState(false);
+  
+  // Schedule meeting modal state
+  const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
   
   // Context menu states
   const [conversationContextMenu, setConversationContextMenu] = useState<{
@@ -1278,6 +1284,108 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
+  // Handle audio recording complete
+  const handleAudioRecordingComplete = async (audioBlob: Blob) => {
+    if (!selectedConversation) return;
+    
+    const connectedSession = sessions.find(s => 
+      s.id === selectedConversation.session_id && s.status === 'connected'
+    ) || sessions.find(s => s.status === 'connected');
+    
+    if (!connectedSession && !selectedConversation.is_demo) {
+      toast({ 
+        title: 'WhatsApp Desconectado', 
+        description: 'Você precisa conectar seu WhatsApp para enviar áudio.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setUploadingMedia(true);
+    
+    try {
+      // Create file from blob
+      const fileName = `audio-${Date.now()}.webm`;
+      const file = new File([audioBlob], fileName, { type: audioBlob.type });
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(`outgoing/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        throw new Error('Erro ao fazer upload do áudio');
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(uploadData.path);
+      
+      const mediaUrl = urlData.publicUrl;
+      
+      // Create optimistic message
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage: WhatsAppMessage = {
+        id: tempId,
+        conversation_id: selectedConversation.id,
+        content: '🎤 Mensagem de voz',
+        from_me: true,
+        status: 'sending',
+        created_at: new Date().toISOString(),
+        message_type: 'audio',
+        media_url: mediaUrl
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+      
+      // Send via API
+      if (connectedSession && !selectedConversation.is_demo) {
+        const { error } = await supabase.functions.invoke('whatsapp-api', {
+          body: {
+            action: 'send_media',
+            sessionId: connectedSession.id,
+            phone: selectedConversation.contact_phone,
+            mediaUrl: mediaUrl,
+            mediaType: 'audio',
+            fileName: fileName,
+            caption: ''
+          }
+        });
+        
+        if (error) throw error;
+        
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
+        ));
+        
+        toast({ title: 'Áudio enviado!' });
+      } else {
+        // Demo mode
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
+        ));
+      }
+    } catch (e: any) {
+      console.error('Error sending audio:', e);
+      toast({ 
+        title: 'Erro', 
+        description: e.message || 'Erro ao enviar áudio', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  // Handle meeting scheduled - insert link into message
+  const handleMeetingScheduled = (meetingLink: string, scheduledTime: string) => {
+    setNewMessage(`📅 Reunião agendada para ${scheduledTime}\n\n🔗 Link: ${meetingLink}`);
+  };
+
   const selectAgent = (agent: AIAgent) => {
     setSelectedAgent(agent);
     setSelectedConversation(null);
@@ -2287,15 +2395,6 @@ const WhatsAppCRM: React.FC = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
                       if (fileInputRef.current) {
-                        fileInputRef.current.accept = 'audio/*';
-                        fileInputRef.current.click();
-                      }
-                    }}>
-                      <Mic className="h-4 w-4 mr-2" />
-                      Áudio
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      if (fileInputRef.current) {
                         fileInputRef.current.accept = '.pdf,.doc,.docx,.xls,.xlsx';
                         fileInputRef.current.click();
                       }
@@ -2305,6 +2404,12 @@ const WhatsAppCRM: React.FC = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                
+                {/* Audio Recorder Button */}
+                <AudioRecorderButton
+                  onRecordingComplete={handleAudioRecordingComplete}
+                  disabled={uploadingMedia || !selectedConversation}
+                />
                 
                 <Input
                   placeholder={selectedAgent ? `Mensagem para ${selectedAgent.name}...` : "Digite uma mensagem..."}
@@ -2523,6 +2628,16 @@ const WhatsAppCRM: React.FC = () => {
         onClose={() => setMessageContextMenu(prev => ({ ...prev, isOpen: false }))}
         onCopy={(content) => handleCopyToClipboard(content)}
         onDelete={(messageId) => handleDeleteMessage(messageId)}
+        onScheduleMeeting={() => setShowScheduleMeetingModal(true)}
+      />
+
+      {/* Schedule Meeting Modal */}
+      <ScheduleMeetingModal
+        isOpen={showScheduleMeetingModal}
+        onClose={() => setShowScheduleMeetingModal(false)}
+        contactName={selectedConversation?.contact_name}
+        contactPhone={selectedConversation?.contact_phone}
+        onMeetingScheduled={handleMeetingScheduled}
       />
     </div>
   );

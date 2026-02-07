@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Eye, Plus, Trash2, GripVertical,
   Type, Mail, Phone, CircleDot, CheckSquare, Star, MousePointer,
   Loader2, Settings, ChevronLeft, ChevronRight, Smartphone, Monitor,
-  ExternalLink
+  ExternalLink, Calendar, Hash, MapPin, Link, FileText, User, Building
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,9 +46,16 @@ const STEP_TYPES = [
   { type: 'text', label: 'Texto', icon: Type, description: 'Campo de texto livre' },
   { type: 'email', label: 'Email', icon: Mail, description: 'Input de email com validação' },
   { type: 'phone', label: 'Telefone', icon: Phone, description: 'Input de telefone' },
+  { type: 'name', label: 'Nome', icon: User, description: 'Nome completo' },
+  { type: 'company', label: 'Empresa', icon: Building, description: 'Nome da empresa' },
+  { type: 'number', label: 'Número', icon: Hash, description: 'Campo numérico' },
+  { type: 'url', label: 'URL/Website', icon: Link, description: 'Link de website' },
+  { type: 'date', label: 'Data', icon: Calendar, description: 'Seletor de data' },
+  { type: 'address', label: 'Endereço', icon: MapPin, description: 'Campo de endereço' },
+  { type: 'textarea', label: 'Texto Longo', icon: FileText, description: 'Área de texto multilinha' },
   { type: 'single_choice', label: 'Escolha Única', icon: CircleDot, description: 'Selecionar uma opção' },
   { type: 'multiple_choice', label: 'Múltipla Escolha', icon: CheckSquare, description: 'Selecionar várias opções' },
-  { type: 'rating', label: 'Avaliação', icon: Star, description: 'Escala de 1-10 ou estrelas' },
+  { type: 'rating', label: 'Avaliação', icon: Star, description: 'Escala de estrelas' },
   { type: 'cta', label: 'Botão CTA', icon: MousePointer, description: 'Botão de ação final' },
 ];
 
@@ -166,6 +173,34 @@ const LivePreview: React.FC<{
 
           {step.step_type === 'phone' && (
             <Input type="tel" placeholder="(00) 00000-0000" className="bg-background" />
+          )}
+
+          {step.step_type === 'name' && (
+            <Input placeholder="Nome completo" className="bg-background" />
+          )}
+
+          {step.step_type === 'company' && (
+            <Input placeholder="Nome da empresa" className="bg-background" />
+          )}
+
+          {step.step_type === 'number' && (
+            <Input type="number" placeholder="Digite um número" className="bg-background" />
+          )}
+
+          {step.step_type === 'url' && (
+            <Input type="url" placeholder="https://exemplo.com" className="bg-background" />
+          )}
+
+          {step.step_type === 'date' && (
+            <Input type="date" className="bg-background" />
+          )}
+
+          {step.step_type === 'address' && (
+            <Textarea placeholder="Digite seu endereço completo..." className="bg-background" rows={2} />
+          )}
+
+          {step.step_type === 'textarea' && (
+            <Textarea placeholder="Digite sua resposta..." className="bg-background" rows={4} />
           )}
 
           {step.step_type === 'single_choice' && (

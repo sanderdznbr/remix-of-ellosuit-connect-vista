@@ -24,6 +24,7 @@ import RecoverMeeting from './pages/RecoverMeeting';
 import LinkRedirect from './pages/LinkRedirect';
 import PublicVideoPlayer from './pages/PublicVideoPlayer';
 import PublicLeadFunnel from './pages/PublicLeadFunnel';
+import LeadFunnelAnalytics from './pages/LeadFunnelAnalytics';
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/l/:code" element={<LinkRedirect />} />
             <Route path="/video/:videoId" element={<PublicVideoPlayer />} />
             <Route path="/f/:slug" element={<PublicLeadFunnel />} />
+            <Route path="/dashboard/leads/analytics/:funnelId" element={<LeadFunnelAnalytics />} />
             <Route path="/team" element={<Team />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

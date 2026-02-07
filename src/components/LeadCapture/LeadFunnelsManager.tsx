@@ -37,7 +37,14 @@ const LeadFunnelsManager: React.FC = () => {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newFunnel, setNewFunnel] = useState({ name: '', description: '' });
+  const [newFunnel, setNewFunnel] = useState({ 
+    name: '', 
+    description: '',
+    thankYouTitle: 'Obrigado!',
+    thankYouMessage: 'Sua resposta foi enviada com sucesso.',
+    buttonColor: '#FF4500',
+    backgroundColor: '#FFFFFF'
+  });
   const [stats, setStats] = useState({ total: 0, active: 0, submissions: 0, conversions: 0 });
 
   // Get company ID
@@ -149,8 +156,14 @@ const LeadFunnelsManager: React.FC = () => {
 
     setFunnels(prev => [data, ...prev]);
     setShowCreateModal(false);
-    setNewFunnel({ name: '', description: '' });
-    toast({ title: 'Sucesso!', description: 'Funil criado. Clique em "Editar" para configurar.' });
+    setNewFunnel({ 
+      name: '', 
+      description: '',
+      thankYouTitle: 'Obrigado!',
+      thankYouMessage: 'Sua resposta foi enviada com sucesso.',
+      buttonColor: '#FF4500',
+      backgroundColor: '#FFFFFF'
+    });
     
     navigate(`/dashboard/leads/builder?id=${data.id}`);
   };
@@ -425,7 +438,7 @@ const LeadFunnelsManager: React.FC = () => {
 
       {/* Create Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Criar Novo Funil</DialogTitle>
             <DialogDescription>
@@ -433,7 +446,7 @@ const LeadFunnelsManager: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Funil *</Label>
               <Input
@@ -453,6 +466,72 @@ const LeadFunnelsManager: React.FC = () => {
                 onChange={(e) => setNewFunnel(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
               />
+            </div>
+
+            {/* Customization Section */}
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-3">Personalização</h4>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="thankYouTitle">Título de Agradecimento</Label>
+                  <Input
+                    id="thankYouTitle"
+                    placeholder="Obrigado!"
+                    value={newFunnel.thankYouTitle}
+                    onChange={(e) => setNewFunnel(prev => ({ ...prev, thankYouTitle: e.target.value }))}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="thankYouMessage">Mensagem de Agradecimento</Label>
+                  <Textarea
+                    id="thankYouMessage"
+                    placeholder="Sua resposta foi enviada com sucesso."
+                    value={newFunnel.thankYouMessage}
+                    onChange={(e) => setNewFunnel(prev => ({ ...prev, thankYouMessage: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="buttonColor">Cor dos Botões</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        id="buttonColor"
+                        value={newFunnel.buttonColor}
+                        onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))}
+                        className="w-10 h-10 rounded-lg border cursor-pointer"
+                      />
+                      <Input
+                        value={newFunnel.buttonColor}
+                        onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="backgroundColor">Cor de Fundo</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        id="backgroundColor"
+                        value={newFunnel.backgroundColor}
+                        onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                        className="w-10 h-10 rounded-lg border cursor-pointer"
+                      />
+                      <Input
+                        value={newFunnel.backgroundColor}
+                        onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           

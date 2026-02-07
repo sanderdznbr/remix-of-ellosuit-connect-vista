@@ -477,7 +477,7 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   // Load messages from ALL conversations with the same contact_phone
-  // IMPORTANT: Preserves optimistic/temp messages during polling to prevent flicker
+  // IMPORTANT: Robust deduplication to prevent jumbled messages after reconnection
   const loadMessagesByPhone = async (contactPhone: string) => {
     // First get all conversation IDs for this phone
     const { data: convs } = await supabase
@@ -499,11 +499,19 @@ const WhatsAppCRM: React.FC = () => {
       .limit(200);
     
     if (!error && data) {
-      // Deduplicate by wa_message_id (same message can be in multiple conversations)
+      // ROBUST DEDUPLICATION: Use wa_message_id as primary key, with content+timestamp as fallback
       const uniqueMessages = new Map<string, WhatsAppMessage>();
+      
       data.forEach(m => {
-        const key = m.wa_message_id || m.id;
-        if (!uniqueMessages.has(key) || new Date(m.timestamp) > new Date(uniqueMessages.get(key)!.created_at)) {
+        // Primary key: wa_message_id (unique from WhatsApp)
+        // Secondary key: content + from_me + timestamp (for messages without wa_message_id)
+        const primaryKey = m.wa_message_id;
+        const timestamp = new Date(m.timestamp || m.created_at).getTime();
+        const fallbackKey = `${m.content?.substring(0, 50)}_${m.from_me}_${Math.floor(timestamp / 1000)}`;
+        const key = primaryKey || fallbackKey;
+        
+        // Only add if not already exists - first occurrence wins (earliest insert)
+        if (!uniqueMessages.has(key)) {
           uniqueMessages.set(key, {
             ...m,
             created_at: m.timestamp || m.created_at,
@@ -516,8 +524,18 @@ const WhatsAppCRM: React.FC = () => {
           });
         }
       });
+      
+      // Sort by timestamp ascending for correct chronological order
       const serverMessages = Array.from(uniqueMessages.values())
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        .sort((a, b) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          // If timestamps are equal, use id as tiebreaker for stable sorting
+          if (timeA === timeB) {
+            return a.id.localeCompare(b.id);
+          }
+          return timeA - timeB;
+        });
       
       // OPTIMISTIC UI: Preserve temp messages and merge with server data
       setMessages(prev => {
@@ -542,9 +560,16 @@ const WhatsAppCRM: React.FC = () => {
         // Keep temp messages that haven't been matched to server yet
         const unmatchedTemp = tempMessages.filter(t => !matchedTempIds.has(t.id));
         
-        // Combine: server messages + unmatched temp messages
+        // Combine: server messages + unmatched temp messages, then sort
         const combined = [...serverMessages, ...unmatchedTemp]
-          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          .sort((a, b) => {
+            const timeA = new Date(a.created_at).getTime();
+            const timeB = new Date(b.created_at).getTime();
+            if (timeA === timeB) {
+              return a.id.localeCompare(b.id);
+            }
+            return timeA - timeB;
+          });
         
         // Only update if something changed (prevent flicker)
         const prevSignature = prev.map(m => `${m.id}-${m.status}`).join(',');

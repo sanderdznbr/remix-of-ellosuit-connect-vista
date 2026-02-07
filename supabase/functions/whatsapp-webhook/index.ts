@@ -456,6 +456,92 @@ serve(async (req) => {
               console.error(`Message upsert error:`, msgError.message);
             } else {
               console.log(`Message saved: ${content.substring(0, 50)}...`);
+              
+              // ==================== AI AUTO-RESPONSE ====================
+              // Check if conversation has an AI agent assigned and auto-reply is enabled
+              if (!fromMe && conversation) {
+                try {
+                  // Fetch conversation with agent info
+                  const { data: convWithAgent } = await supabase
+                    .from('whatsapp_conversations')
+                    .select('id, assigned_agent_id, ai_auto_reply_enabled')
+                    .eq('id', conversation.id)
+                    .single();
+                  
+                  if (convWithAgent?.assigned_agent_id && convWithAgent?.ai_auto_reply_enabled) {
+                    console.log('🤖 AI Auto-reply triggered for conversation:', conversation.id);
+                    
+                    // Fetch the AI agent's configuration
+                    const { data: agent } = await supabase
+                      .from('ai_agents')
+                      .select('id, name, personality, instructions, is_active')
+                      .eq('id', convWithAgent.assigned_agent_id)
+                      .eq('is_active', true)
+                      .single();
+                    
+                    if (agent) {
+                      console.log('🤖 Using AI agent:', agent.name);
+                      
+                      // Call the ai-chat edge function
+                      const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                        },
+                        body: JSON.stringify({
+                          message: content,
+                          personality: agent.personality,
+                          instructions: agent.instructions
+                        })
+                      });
+                      
+                      if (aiResponse.ok) {
+                        const aiData = await aiResponse.json();
+                        const aiReply = aiData.response || aiData.message;
+                        
+                        if (aiReply) {
+                          console.log('🤖 AI Response:', aiReply.substring(0, 100) + '...');
+                          
+                          // Get session info to send message
+                          const { data: sessionData } = await supabase
+                            .from('whatsapp_sessions')
+                            .select('id, baileys_server_url')
+                            .eq('id', targetSessionId)
+                            .single();
+                          
+                          if (sessionData?.baileys_server_url) {
+                            // Send the AI response via the WhatsApp server
+                            const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                sessionId: targetSessionId,
+                                phone: phoneNumber,
+                                message: aiReply
+                              })
+                            });
+                            
+                            if (sendResponse.ok) {
+                              console.log('✅ AI auto-reply sent successfully');
+                            } else {
+                              console.error('❌ Failed to send AI auto-reply:', await sendResponse.text());
+                            }
+                          } else {
+                            console.log('⚠️ No Baileys server URL found for session');
+                          }
+                        }
+                      } else {
+                        console.error('❌ AI chat error:', await aiResponse.text());
+                      }
+                    } else {
+                      console.log('⚠️ AI agent not found or inactive:', convWithAgent.assigned_agent_id);
+                    }
+                  }
+                } catch (aiError) {
+                  console.error('❌ Error in AI auto-response:', aiError);
+                }
+              }
             }
           } else {
             // No message ID - just insert
@@ -467,6 +553,71 @@ serve(async (req) => {
               console.error(`Message insert error:`, msgError.message);
             } else {
               console.log(`Message inserted: ${content.substring(0, 50)}...`);
+              
+              // ==================== AI AUTO-RESPONSE (for messages without wa_message_id) ====================
+              if (!fromMe && conversation) {
+                try {
+                  const { data: convWithAgent } = await supabase
+                    .from('whatsapp_conversations')
+                    .select('id, assigned_agent_id, ai_auto_reply_enabled')
+                    .eq('id', conversation.id)
+                    .single();
+                  
+                  if (convWithAgent?.assigned_agent_id && convWithAgent?.ai_auto_reply_enabled) {
+                    console.log('🤖 AI Auto-reply triggered (insert path)');
+                    
+                    const { data: agent } = await supabase
+                      .from('ai_agents')
+                      .select('id, name, personality, instructions, is_active')
+                      .eq('id', convWithAgent.assigned_agent_id)
+                      .eq('is_active', true)
+                      .single();
+                    
+                    if (agent) {
+                      const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                        },
+                        body: JSON.stringify({
+                          message: content,
+                          personality: agent.personality,
+                          instructions: agent.instructions
+                        })
+                      });
+                      
+                      if (aiResponse.ok) {
+                        const aiData = await aiResponse.json();
+                        const aiReply = aiData.response || aiData.message;
+                        
+                        if (aiReply) {
+                          const { data: sessionData } = await supabase
+                            .from('whatsapp_sessions')
+                            .select('id, baileys_server_url')
+                            .eq('id', targetSessionId)
+                            .single();
+                          
+                          if (sessionData?.baileys_server_url) {
+                            await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                sessionId: targetSessionId,
+                                phone: phoneNumber,
+                                message: aiReply
+                              })
+                            });
+                            console.log('✅ AI auto-reply sent (insert path)');
+                          }
+                        }
+                      }
+                    }
+                  }
+                } catch (aiError) {
+                  console.error('❌ Error in AI auto-response (insert):', aiError);
+                }
+              }
             }
           }
         }

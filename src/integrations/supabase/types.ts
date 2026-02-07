@@ -2163,6 +2163,7 @@ export type Database = {
       }
       whatsapp_conversations: {
         Row: {
+          ai_auto_reply_enabled: boolean | null
           assigned_agent_id: string | null
           assigned_to: string | null
           assigned_user_id: string | null
@@ -2187,6 +2188,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_auto_reply_enabled?: boolean | null
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null
@@ -2211,6 +2213,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_auto_reply_enabled?: boolean | null
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null

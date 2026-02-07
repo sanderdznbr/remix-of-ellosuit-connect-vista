@@ -1,329 +1,252 @@
 
-# Plano: Melhorias WhatsApp CRM + Nova Funcao ChatBot Visual
+# Plano: Correção Completa do ChatBot Builder
 
-## Visao Geral
+## Problemas Identificados
 
-Este plano aborda 4 areas principais:
-1. Sincronizacao instantanea de mensagens (remover delay restante)
-2. Corrigir notificacoes persistentes (resetar unread_count ao ler)
-3. Swipe to Delete nas conversas
-4. Novo modulo ChatBot profissional estilo Umbler Talk
+1. **Conectores não funcionam**: Sistema atual usa "click-to-connect" confuso
+2. **Nodes se movem sozinhos**: framer-motion `drag` está conflitando com clicks
+3. **Configurações genéricas**: Gatilhos como "Canal WhatsApp" não têm opções específicas
+4. **Falta feedback visual**: Não há linha durante conexão
 
 ---
 
-## 1. Sincronizacao Instantanea de Mensagens
+## 1. Corrigir Sistema de Drag (Movimento de Nodes)
 
-**Problema Identificado**: Embora exista UI otimista implementada (linhas 790-865), ainda ha delay porque apos enviar a mensagem o codigo chama `loadMessagesByPhone` e `loadConversations` que podem sobrescrever a mensagem otimista.
+**Problema**: O atributo `drag` do framer-motion captura qualquer interação e causa micro-movimentos.
 
-**Solucao**:
-- Remover chamada imediata de `loadMessagesByPhone` apos envio
-- Confiar na UI otimista + polling de 500ms existente
-- Melhorar deduplicacao para evitar mensagens duplicadas (temp + real)
+**Solução**: Trocar para drag manual controlado com estado e eventos de mouse.
 
-**Arquivo**: `src/components/CRM/WhatsAppCRM.tsx`
+**Arquivo**: `src/components/ChatBot/ChatBotCanvas.tsx`
 
-**Mudancas**:
+**Mudanças**:
+- Remover `motion.div` com `drag` e `dragMomentum`
+- Implementar `onMouseDown/onMouseMove/onMouseUp` manual apenas no handle de arraste
+- Usar estado `draggingNode` para controlar qual node está sendo arrastado
+- Só permitir arraste ao clicar no GripVertical
+
 ```text
-// Remover linha 847-848 que forca refresh imediato
-// loadMessagesByPhone(selectedConversation.contact_phone);
-// loadConversations();
+// Lógica atual (problemática)
+<motion.div drag dragMomentum={false} ...>
 
-// Adicionar deduplicacao inteligente por content+timestamp
-setMessages(prev => {
-  const filtered = prev.filter(m => 
-    !m.id.startsWith('temp-') || 
-    !realMessages.some(rm => rm.content === m.content)
-  );
-  return [...filtered, ...newMessages];
-});
+// Nova lógica (controlada)
+<div style={{...}} ...>
+  <GripVertical onMouseDown={(e) => startDrag(nodeId, e)} />
 ```
 
 ---
 
-## 2. Corrigir Notificacoes Persistentes
+## 2. Corrigir Sistema de Conexões (Edges)
 
-**Problema Identificado**: Nao existe codigo que reseta `unread_count` quando uma conversa e selecionada/lida.
+**Problema**: Sistema click-to-connect é confuso e não mostra feedback visual.
 
-**Solucao**: Adicionar funcao `markConversationAsRead` que:
-1. Atualiza `unread_count = 0` no Supabase
-2. Atualiza estado local imediatamente
+**Solução**: Implementar drag-to-connect com linha visual durante arraste.
 
-**Arquivo**: `src/components/CRM/WhatsAppCRM.tsx`
+**Mudanças**:
+- Adicionar estado `connectingLine` para linha temporária
+- Quando arrastar do ponto de saída (direita), mostrar linha seguindo cursor
+- Quando soltar sobre ponto de entrada (esquerda), criar edge
+- Feedback visual com cor diferente durante conexão
 
-**Nova Funcao**:
+```text
+Estado durante conexão:
++--------+
+| Node A |------- - - - - - cursor
++--------+         (linha tracejada)
+
+Após conexão:
++--------+        +--------+
+| Node A |------->| Node B |
++--------+        +--------+
+```
+
+---
+
+## 3. Configurações Específicas por Tipo de Bloco
+
+### 3.1 Canal WhatsApp (`whatsapp_channel`)
+
+**Problema**: Não permite selecionar qual número/sessão usar.
+
+**Solução**: Carregar sessões WhatsApp conectadas e mostrar dropdown.
+
+**Arquivo**: `src/components/ChatBot/ChatBotPropertiesPanel.tsx`
+
+**Nova configuração**:
 ```typescript
-const markConversationAsRead = async (conv: WhatsAppConversationData) => {
-  if (!conv || (conv.unread_count || 0) === 0) return;
-  
-  // Atualizar estado local imediatamente
-  setConversations(prev => prev.map(c => 
-    c.id === conv.id ? { ...c, unread_count: 0 } : c
-  ));
-  
-  // Atualizar banco de dados
-  await supabase
-    .from('whatsapp_conversations')
-    .update({ unread_count: 0 })
-    .eq('id', conv.id);
+// Buscar sessões
+const { data: sessions } = await supabase
+  .from('whatsapp_sessions')
+  .select('id, instance_name, phone_number, status')
+  .eq('company_id', companyId)
+  .eq('status', 'connected');
+
+// UI
+<Select value={config.sessionId} onValueChange={...}>
+  {sessions.map(s => (
+    <SelectItem value={s.id}>
+      {s.phone_number} - {s.instance_name}
+    </SelectItem>
+  ))}
+</Select>
+```
+
+### 3.2 Canal Email (`email_channel`)
+
+**Campos**:
+- Conta de email conectada
+- Filtro de assunto (opcional)
+- Filtro de remetente (opcional)
+
+### 3.3 Início de Conversa (`conversation_start`)
+
+**Campos**:
+- Tipo de início (primeiro contato, reabertura após X dias)
+- Canal (WhatsApp, Email, Todos)
+
+### 3.4 Se/Senão (`if_else`)
+
+**Campos**:
+- Tipo de condição (resposta do usuário, valor de variável, horário)
+- Operador (contém, igual, maior, menor)
+- Valor esperado
+
+---
+
+## 4. Melhorar Exibição dos Nodes
+
+**Problema**: Nodes mostram informação genérica como "Gatilho: whatsapp channel".
+
+**Solução**: Mostrar informação específica da configuração.
+
+**Exemplos**:
+
+| Tipo | Exibição Atual | Nova Exibição |
+|------|---------------|---------------|
+| WhatsApp | "Gatilho: whatsapp channel" | "+55 11 99999-9999" |
+| Texto | "Clique para configurar" | "Olá! Como posso..." (truncado) |
+| Delay | "Aguardar 5s" | "⏱️ Aguardar 5 segundos" |
+| Tag | "Clique para configurar" | "🏷️ Atribuir: lead_quente" |
+
+---
+
+## 5. Pontos de Conexão com Handles Múltiplos
+
+**Problema**: Condições precisam de múltiplas saídas (Sim/Não).
+
+**Solução**: Para nodes do tipo `condition`, adicionar dois pontos de saída.
+
+```text
++------------------+
+|    Se/Senão      |
+|   idade > 18     |
++------------------+
+   ●              ○ Sim ------>
+  (in)            ○ Não ------>
+```
+
+---
+
+## Estrutura Final dos Arquivos
+
+### ChatBotCanvas.tsx (Revisado)
+```typescript
+// Estados de controle
+const [draggingNode, setDraggingNode] = useState<string | null>(null);
+const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+const [connectingLine, setConnectingLine] = useState<{
+  sourceId: string;
+  sourceX: number;
+  sourceY: number;
+  currentX: number;
+  currentY: number;
+} | null>(null);
+
+// Handlers de drag manual
+const handleNodeMouseDown = (e, nodeId, nodePos) => {
+  if (e.target.closest('.drag-handle')) {
+    setDraggingNode(nodeId);
+    setDragOffset({ x: e.clientX - nodePos.x, y: e.clientY - nodePos.y });
+  }
+};
+
+// Handler de conexão
+const handleConnectorMouseDown = (e, nodeId) => {
+  const rect = e.target.getBoundingClientRect();
+  setConnectingLine({
+    sourceId: nodeId,
+    sourceX: rect.left,
+    sourceY: rect.top,
+    currentX: e.clientX,
+    currentY: e.clientY
+  });
 };
 ```
 
-**Integrar com selecao de conversa** (chamar ao clicar em uma conversa):
+### ChatBotPropertiesPanel.tsx (Revisado)
 ```typescript
-const selectConversation = (conv: WhatsAppConversationData) => {
-  setSelectedConversation(conv);
-  markConversationAsRead(conv); // <-- Adicionar
-  setShowMobileChat(true);
-};
+// Hook para carregar dados dinâmicos
+const [whatsappSessions, setWhatsappSessions] = useState([]);
+const [loading, setLoading] = useState(false);
+
+useEffect(() => {
+  if (node.subType === 'whatsapp_channel') {
+    loadWhatsAppSessions();
+  }
+}, [node.subType]);
+
+// Renderização condicional com dados reais
+{node.subType === 'whatsapp_channel' && (
+  <div className="space-y-4">
+    <Label>Selecione o Canal WhatsApp</Label>
+    <Select value={node.data.config?.sessionId} ...>
+      {whatsappSessions.map(session => (
+        <SelectItem value={session.id}>
+          <div className="flex items-center gap-2">
+            <Avatar><AvatarImage src={session.profile_picture} /></Avatar>
+            <div>
+              <p>{session.phone_number}</p>
+              <p className="text-xs text-gray-500">{session.instance_name}</p>
+            </div>
+          </div>
+        </SelectItem>
+      ))}
+    </Select>
+    
+    <Label>Quando Iniciar?</Label>
+    <Select value={node.data.config?.triggerWhen || 'any_message'}>
+      <SelectItem value="any_message">Qualquer mensagem</SelectItem>
+      <SelectItem value="new_conversation">Nova conversa</SelectItem>
+      <SelectItem value="reopened">Conversa reaberta</SelectItem>
+    </Select>
+  </div>
+)}
 ```
 
 ---
 
-## 3. Swipe to Delete em Conversas
+## Ordem de Implementação
 
-**Solucao**: Criar componente `SwipeableConversationItem` que usa gestos de toque para revelar botao de delete.
-
-**Novo Arquivo**: `src/components/CRM/SwipeableConversationItem.tsx`
-
-**Funcionalidade**:
-- Arrastar para esquerda revela botao vermelho "Excluir"
-- Arrastar mais de 150px executa delete automaticamente
-- Feedback visual durante swipe (fundo vermelho aparecendo)
-- Usa `framer-motion` para animacoes suaves
-
-**Estrutura**:
-```text
-+------------------------------------------+
-|  [Avatar] Nome do Contato      12:30 PM  |  <-- Item normal
-+------------------------------------------+
-         |
-         | SWIPE LEFT
-         v
-+-----------------------------+------------+
-|  [Avatar] Nome do Conta... |   EXCLUIR  |  <-- Revelar botao
-+-----------------------------+------------+
-         |
-         | SWIPE 150px+
-         v
-      DELETE AUTOMATICO
-```
-
-**Integrar em WhatsAppCRM.tsx**:
-```typescript
-// Substituir div da conversa por SwipeableConversationItem
-<SwipeableConversationItem
-  conversation={conversation}
-  onDelete={() => handleDeleteConversation(conversation)}
-  onSelect={() => selectConversation(conversation)}
->
-  {/* Conteudo atual da conversa */}
-</SwipeableConversationItem>
-```
+| Prioridade | Tarefa | Arquivos |
+|------------|--------|----------|
+| 1 | Corrigir sistema de drag (parar movimento) | ChatBotCanvas.tsx |
+| 2 | Implementar drag-to-connect visual | ChatBotCanvas.tsx |
+| 3 | Config WhatsApp Channel (select sessões) | ChatBotPropertiesPanel.tsx |
+| 4 | Config demais gatilhos | ChatBotPropertiesPanel.tsx |
+| 5 | Melhorar exibição nos nodes | ChatBotCanvas.tsx |
+| 6 | Handles múltiplos para condições | ChatBotCanvas.tsx |
 
 ---
 
-## 4. Novo Modulo ChatBot Visual (Estilo Umbler Talk)
+## Resumo de Mudanças
 
-### 4.1 Arquitetura
+**Arquivos a modificar**:
+- `src/components/ChatBot/ChatBotCanvas.tsx` - Sistema de drag e conexões
+- `src/components/ChatBot/ChatBotPropertiesPanel.tsx` - Configurações específicas
+- `src/components/ChatBot/ChatBotSidebar.tsx` - Descrições mais claras
 
-**Novo Arquivo**: `src/components/ChatBot/ChatBotBuilder.tsx`
-
-**Layout Principal**:
-```text
-+------------------------------------------------------------------+
-|  HEADER: ChatBot Builder                    [Salvar] [Executar]  |
-+------------------------------------------------------------------+
-|          |                                                        |
-| SIDEBAR  |                    CANVAS                              |
-|          |                                                        |
-| [Blocos] |   +--------+        +--------+        +--------+      |
-|          |   | Gatilho|------->|Mensagem|------->|  Acao  |      |
-| Gatilhos |   +--------+        +--------+        +--------+      |
-| Mensagens|         |                                   |          |
-| Condicoes|         v                                   v          |
-| Acoes    |   +---------+                        +---------+       |
-| Delays   |   |Condicao |                        |  Delay  |       |
-| Integr.  |   +---------+                        +---------+       |
-|          |                                                        |
-+------------------------------------------------------------------+
-```
-
-### 4.2 Categorias de Blocos (Sidebar)
-
-**Gatilhos (Triggers)**:
-- Canal WhatsApp (numero conectado)
-- Canal Email
-- Palavra-chave recebida
-- Inicio de conversa
-- Inatividade do usuario
-- Horario especifico
-- Webhook externo
-
-**Mensagens**:
-- Texto simples
-- Mensagem com botoes
-- Lista de opcoes
-- Mensagem com imagem
-- Mensagem com arquivo
-
-**Condicoes**:
-- Se/Senao (If/Else)
-- Verificar variavel
-- Verificar horario
-- Verificar tag do contato
-
-**Acoes**:
-- Atribuir tag
-- Transferir para humano
-- Salvar em CRM
-- Enviar email
-- Chamar API externa
-- Definir variavel
-
-**Delays**:
-- Aguardar X segundos
-- Aguardar resposta
-- Aguardar horario comercial
-
-### 4.3 Canvas Interativo
-
-**Tecnologia**: React Flow ou implementacao customizada com drag-and-drop
-
-**Funcionalidades**:
-- Drag-and-drop de blocos da sidebar para canvas
-- Conectar blocos arrastando linhas entre eles
-- Zoom in/out e pan
-- Mini-mapa de navegacao
-- Selecao multipla
-- Copy/paste de blocos
-- Undo/redo
-
-### 4.4 Painel de Propriedades
-
-Ao clicar em um bloco, abre painel lateral direito com configuracoes:
-- Nome do bloco
-- Configuracoes especificas do tipo
-- Conexoes de entrada/saida
-- Variaveis disponiveis
-
-### 4.5 Dashboard de Estatisticas
-
-**Metricas por Fluxo**:
-- Total de execucoes
-- Taxa de conclusao
-- Tempo medio de execucao
-- Pontos de abandono
-- Conversoes por objetivo
-
-### 4.6 Integracao com Header
-
-**Adicionar ao OmniHub e MegaMenu**:
-```typescript
-// OmniHub.tsx - novo modulo
-{
-  id: "chatbot",
-  title: "ChatBot Builder",
-  description: "Construa fluxos de atendimento automatizados",
-  icon: GitBranch,
-  path: "/dashboard/chatbot",
-}
-
-// MegaMenuHeader.tsx - adicionar item
-{ 
-  id: "chatbot", 
-  label: "ChatBot Builder", 
-  description: "Fluxos automatizados", 
-  icon: GitBranch, 
-  path: "/dashboard/chatbot" 
-}
-```
-
-### 4.7 Estrutura de Arquivos
-
-```text
-src/components/ChatBot/
-├── ChatBotBuilder.tsx       # Componente principal
-├── ChatBotCanvas.tsx        # Area de canvas drag-drop
-├── ChatBotSidebar.tsx       # Sidebar com blocos
-├── ChatBotPropertiesPanel.tsx # Painel de configuracao
-├── ChatBotStats.tsx         # Dashboard de estatisticas
-├── nodes/
-│   ├── TriggerNode.tsx      # No de gatilho
-│   ├── MessageNode.tsx      # No de mensagem
-│   ├── ConditionNode.tsx    # No de condicao
-│   ├── ActionNode.tsx       # No de acao
-│   └── DelayNode.tsx        # No de delay
-├── types/
-│   └── index.ts             # Tipos TypeScript
-└── hooks/
-    └── useChatBotFlow.ts    # Hook para gerenciar fluxos
-```
-
-### 4.8 Tabelas do Banco de Dados
-
-**Nova tabela `chatbot_flows`**:
-```sql
-CREATE TABLE chatbot_flows (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES companies(id),
-  name TEXT NOT NULL,
-  description TEXT,
-  nodes JSONB NOT NULL DEFAULT '[]',
-  edges JSONB NOT NULL DEFAULT '[]',
-  trigger_config JSONB,
-  is_active BOOLEAN DEFAULT false,
-  execution_count INTEGER DEFAULT 0,
-  created_by UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**Nova tabela `chatbot_executions`** (para estatisticas):
-```sql
-CREATE TABLE chatbot_executions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  flow_id UUID NOT NULL REFERENCES chatbot_flows(id),
-  conversation_id UUID,
-  contact_phone TEXT,
-  started_at TIMESTAMPTZ DEFAULT now(),
-  completed_at TIMESTAMPTZ,
-  status TEXT DEFAULT 'running',
-  current_node_id TEXT,
-  variables JSONB DEFAULT '{}',
-  execution_path JSONB DEFAULT '[]'
-);
-```
-
----
-
-## Ordem de Implementacao
-
-| Prioridade | Tarefa | Complexidade | Tempo Est. |
-|------------|--------|--------------|------------|
-| 1 | Corrigir notificacoes (unread_count) | Baixa | 10 min |
-| 2 | Otimizar UI otimista (remover refresh) | Baixa | 10 min |
-| 3 | Implementar Swipe to Delete | Media | 30 min |
-| 4 | Estrutura base ChatBot Builder | Alta | 1h |
-| 5 | Canvas interativo com nodes | Alta | 1h |
-| 6 | Integrar com header/navegacao | Baixa | 15 min |
-| 7 | Migracoes banco de dados | Media | 20 min |
-
----
-
-## Resumo de Arquivos a Criar/Modificar
-
-**Criar**:
-- `src/components/CRM/SwipeableConversationItem.tsx`
-- `src/components/ChatBot/ChatBotBuilder.tsx`
-- `src/components/ChatBot/ChatBotCanvas.tsx`
-- `src/components/ChatBot/ChatBotSidebar.tsx`
-- `src/components/ChatBot/ChatBotPropertiesPanel.tsx`
-- `src/components/ChatBot/nodes/*.tsx`
-- `supabase/migrations/..._add_chatbot_tables.sql`
-
-**Modificar**:
-- `src/components/CRM/WhatsAppCRM.tsx` (instant sync, notifications, swipe)
-- `src/components/Dashboard/OmniHub.tsx` (add chatbot module)
-- `src/components/Dashboard/MegaMenuHeader.tsx` (add chatbot link)
-- `src/components/Mobile/MobileResponsiveDashboard.tsx` (add route)
+**Resultado esperado**:
+- Nodes só movem quando arrastados pelo handle
+- Conexões feitas por drag com feedback visual
+- Canal WhatsApp permite selecionar sessão conectada
+- Informações úteis exibidas diretamente nos nodes
+- Interface profissional similar ao Umbler Talk

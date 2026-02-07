@@ -63,6 +63,7 @@ interface WhatsAppMessage {
   status: string;
   created_at: string;
   sender_name?: string;
+  wa_message_id?: string;
 }
 
 interface AIAgent {
@@ -190,7 +191,12 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   const loadConversations = async () => {
-    if (!companyId) return;
+    if (!companyId) {
+      console.log('⚠️ loadConversations: No companyId yet');
+      return;
+    }
+    
+    console.log('📥 Loading conversations for company:', companyId);
     
     const { data, error } = await supabase
       .from('whatsapp_conversations')
@@ -199,7 +205,10 @@ const WhatsAppCRM: React.FC = () => {
       .order('last_message_at', { ascending: false })
       .limit(100);
     
-    if (!error) {
+    if (error) {
+      console.error('❌ Error loading conversations:', error);
+    } else {
+      console.log('✅ Loaded conversations:', data?.length || 0);
       setConversations(data || []);
     }
   };
@@ -212,13 +221,17 @@ const WhatsAppCRM: React.FC = () => {
       .order('timestamp', { ascending: true })
       .limit(100);
     
-    if (!error) {
-      // Map timestamp to created_at for compatibility
-      const mapped = (data || []).map(m => ({
-        ...m,
-        created_at: m.timestamp || m.created_at
-      }));
-      setMessages(mapped);
+    if (!error && data) {
+      // Map data and deduplicate by id
+      const uniqueMessages = new Map<string, WhatsAppMessage>();
+      data.forEach(m => {
+        uniqueMessages.set(m.id, {
+          ...m,
+          created_at: m.timestamp || m.created_at,
+          wa_message_id: m.wa_message_id
+        });
+      });
+      setMessages(Array.from(uniqueMessages.values()));
     }
   };
 
@@ -338,6 +351,15 @@ const WhatsAppCRM: React.FC = () => {
     };
     
     loadData();
+    
+    // Polling fallback for conversations - refresh every 5 seconds
+    const conversationsPoll = setInterval(() => {
+      if (companyId) {
+        loadConversations();
+      }
+    }, 5000);
+    
+    return () => clearInterval(conversationsPoll);
   }, [companyId]);
 
   // Real-time subscription for messages, conversations, contacts, sessions
@@ -346,35 +368,45 @@ const WhatsAppCRM: React.FC = () => {
 
     console.log('📡 Setting up realtime subscriptions for company:', companyId);
 
-    // Subscribe to new messages
+    // Subscribe to new messages - listen to INSERT and UPDATE
     const messagesChannel = supabase
       .channel('whatsapp-messages-rt')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'whatsapp_messages',
         filter: `company_id=eq.${companyId}`
       }, (payload) => {
         const newMessage = payload.new as any;
-        console.log('📨 New WhatsApp message:', newMessage.content?.substring(0, 50));
+        console.log('📨 Realtime message event:', payload.eventType, newMessage?.content?.substring(0, 30));
         
-        // If this message is for the selected conversation, add it
-        if (selectedConversation && newMessage.conversation_id === selectedConversation.id) {
-          setMessages(prev => {
-            // Avoid duplicates
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, {
-              id: newMessage.id,
-              conversation_id: newMessage.conversation_id,
-              content: newMessage.content,
-              from_me: newMessage.from_me,
-              status: newMessage.status,
-              created_at: newMessage.timestamp || newMessage.created_at
-            }];
-          });
+        // If this message is for the selected conversation, update immediately
+        if (selectedConversation && newMessage?.conversation_id === selectedConversation.id) {
+          if (payload.eventType === 'INSERT') {
+            setMessages(prev => {
+              // Avoid duplicates by checking both id and wa_message_id
+              if (prev.some(m => m.id === newMessage.id || 
+                (m.wa_message_id && m.wa_message_id === newMessage.wa_message_id))) {
+                return prev;
+              }
+              return [...prev, {
+                id: newMessage.id,
+                conversation_id: newMessage.conversation_id,
+                content: newMessage.content,
+                from_me: newMessage.from_me,
+                status: newMessage.status,
+                created_at: newMessage.timestamp || newMessage.created_at,
+                wa_message_id: newMessage.wa_message_id
+              }];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setMessages(prev => prev.map(m => 
+              m.id === newMessage.id ? { ...m, ...newMessage, created_at: newMessage.timestamp || newMessage.created_at } : m
+            ));
+          }
         }
         
-        // Reload conversations to update last message
+        // Update conversations list immediately
         loadConversations();
       })
       .subscribe();
@@ -444,11 +476,18 @@ const WhatsAppCRM: React.FC = () => {
     };
   }, [companyId, selectedConversation?.id]);
 
-  // Load messages when conversation changes
+  // Load messages when conversation changes + polling fallback for realtime reliability
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
       setSelectedAgent(null);
+      
+      // Polling fallback - refresh messages every 3 seconds while conversation is open
+      const pollInterval = setInterval(() => {
+        loadMessages(selectedConversation.id);
+      }, 3000);
+      
+      return () => clearInterval(pollInterval);
     } else {
       setMessages([]);
     }
@@ -590,12 +629,11 @@ const WhatsAppCRM: React.FC = () => {
         
         if (error) throw error;
         
-        // Update message status to sent
-        setMessages(prev => prev.map(m => 
-          m.id === tempMessage.id ? { ...m, status: 'sent' } : m
-        ));
+        // Immediately refetch messages from DB to ensure persistence
+        await loadMessages(selectedConversation.id);
         
-        toast({ title: 'Enviado', description: 'Mensagem enviada com sucesso' });
+        // Also reload conversations to update last message
+        await loadConversations();
       } else {
         // No active session - show warning
         toast({ 

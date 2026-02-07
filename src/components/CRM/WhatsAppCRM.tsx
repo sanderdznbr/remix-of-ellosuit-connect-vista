@@ -1155,24 +1155,22 @@ const WhatsAppCRM: React.FC = () => {
                     const session = connectedSessions[0];
                     if (!session) return;
                     
-                    // OPTIMISTIC UPDATE - Update UI immediately
-                    const previousSessions = [...sessions];
+                    // OPTIMISTIC UPDATE - Update UI immediately to 'disconnected'
+                    // This ensures instant UI feedback
                     setSessions(prev => prev.map(s => 
-                      s.id === session.id ? { ...s, status: 'disconnecting' } : s
+                      s.id === session.id ? { ...s, status: 'disconnected' } : s
                     ));
-                    toast({ title: 'Desconectando...', description: 'Aguarde...' });
                     
                     try {
-                      // Update database first (more reliable)
+                      // Update database
                       await supabase
                         .from('whatsapp_sessions')
                         .update({ status: 'disconnected' })
                         .eq('id', session.id);
                       
-                      // Update UI to disconnected
-                      setSessions(prev => prev.map(s => 
-                        s.id === session.id ? { ...s, status: 'disconnected' } : s
-                      ));
+                      // CRITICAL: Force refetch to override any realtime updates
+                      // This ensures UI stays in sync with the database
+                      await loadSessions();
                       
                       // Call server to disconnect (fire and forget - don't wait)
                       const serverUrl = session.baileys_server_url;
@@ -1184,8 +1182,8 @@ const WhatsAppCRM: React.FC = () => {
                       toast({ title: 'Desconectado', description: 'WhatsApp desconectado com sucesso' });
                     } catch (e) {
                       console.error('Error disconnecting:', e);
-                      // ROLLBACK on error
-                      setSessions(previousSessions);
+                      // Refetch to get correct state on error
+                      await loadSessions();
                       toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
                     }
                   }}

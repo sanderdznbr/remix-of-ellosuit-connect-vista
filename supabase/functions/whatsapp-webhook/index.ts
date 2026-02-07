@@ -140,6 +140,7 @@ serve(async (req) => {
           break;
         }
         
+        let processedCount = 0;
         for (const chat of chats) {
           try {
             const jid = chat.id || chat.jid;
@@ -151,36 +152,57 @@ serve(async (req) => {
             // Skip groups for now
             if (jid.includes('@g.us')) continue;
             
+            // Get contact name - try multiple sources
+            const contactName = chat.name || chat.notify || chat.pushName || chat.verifiedName || phoneNumber;
+            
+            // Profile picture - from enriched data or chat object
+            const profilePicture = chat.profilePicture || chat.imgUrl || chat.picture || null;
+            
             // Get last message info
             const lastMsg = chat.conversationTimestamp || chat.lastMessage?.messageTimestamp;
             const lastMessageAt = lastMsg 
               ? new Date(parseInt(lastMsg) * 1000).toISOString()
               : new Date().toISOString();
             
+            // Extract last message content
+            let lastMessageContent = '';
+            if (chat.lastMessage) {
+              const msgContent = chat.lastMessage.message || chat.lastMessage;
+              lastMessageContent = msgContent.conversation || 
+                                   msgContent.extendedTextMessage?.text ||
+                                   msgContent.imageMessage?.caption ||
+                                   msgContent.videoMessage?.caption ||
+                                   '';
+            }
+            
             // Upsert conversation
-            await supabase
+            const { error } = await supabase
               .from('whatsapp_conversations')
               .upsert({
                 session_id: targetSessionId,
                 company_id: companyId,
                 contact_phone: phoneNumber,
-                contact_name: chat.name || chat.notify || chat.pushName || phoneNumber,
-                profile_picture: chat.imgUrl || chat.profilePicture,
+                contact_name: contactName,
+                profile_picture: profilePicture,
                 status: chat.archive ? 'archived' : 'open',
-                last_message: chat.lastMessage?.conversation || chat.lastMessage?.message?.conversation || '',
+                last_message: lastMessageContent || chat.lastMessage?.conversation || '',
                 last_message_at: lastMessageAt,
                 unread_count: chat.unreadCount || 0
               }, {
                 onConflict: 'session_id,contact_phone'
               });
             
-            console.log(`[CHAT] Synced: ${chat.name || phoneNumber}`);
+            if (!error) {
+              processedCount++;
+            } else {
+              console.error(`[CHAT] Error syncing ${contactName}:`, error.message);
+            }
           } catch (e) {
             console.error(`[CHAT] Error syncing chat:`, e);
           }
         }
         
-        console.log(`[CHATS] Finished processing ${chats.length} chats`);
+        console.log(`[CHATS] Finished: ${processedCount}/${chats.length} processed`);
         break;
       }
 
@@ -282,6 +304,10 @@ serve(async (req) => {
             continue;
           }
           
+          // Profile picture from enriched data
+          const profilePicture = msg.profilePicture || null;
+          const contactName = msg.pushName || msg.senderName || phoneNumber;
+          
           // Find or create conversation
           let { data: conversation } = await supabase
             .from('whatsapp_conversations')
@@ -297,8 +323,8 @@ serve(async (req) => {
                 session_id: targetSessionId,
                 company_id: companyId,
                 contact_phone: phoneNumber,
-                contact_name: msg.pushName || msg.senderName,
-                profile_picture: msg.profilePicture,
+                contact_name: contactName,
+                profile_picture: profilePicture,
                 status: 'open',
                 last_message: content,
                 last_message_at: new Date().toISOString(),
@@ -309,16 +335,24 @@ serve(async (req) => {
             
             conversation = newConv;
           } else {
-            // Update conversation
+            // Update conversation with latest info
+            const updateData: Record<string, unknown> = {
+              last_message: content,
+              last_message_at: new Date().toISOString(),
+              unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,
+            };
+            
+            // Update contact name and picture if we have better data
+            if (contactName && contactName !== phoneNumber) {
+              updateData.contact_name = contactName;
+            }
+            if (profilePicture && !conversation.profile_picture) {
+              updateData.profile_picture = profilePicture;
+            }
+            
             await supabase
               .from('whatsapp_conversations')
-              .update({
-                last_message: content,
-                last_message_at: new Date().toISOString(),
-                unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,
-                contact_name: msg.pushName || msg.senderName || conversation.contact_name,
-                profile_picture: msg.profilePicture || conversation.profile_picture
-              })
+              .update(updateData)
               .eq('id', conversation.id);
           }
           
@@ -395,42 +429,82 @@ serve(async (req) => {
 
       // ==================== CONTACTS UPDATE ====================
       case 'contacts.upsert':
-      case 'contacts.update': {
+      case 'contacts.update':
+      case 'contacts.set': {
         const contacts = data?.contacts || (data ? [data] : []);
+        console.log(`[CONTACTS] Processing ${contacts.length} contacts`);
         
+        // Get company_id from session
+        let companyId = '';
+        let targetSessionId = sessionId;
+        
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id')
+            .eq('instance_name', instanceName)
+            .single();
+          
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id')
+            .eq('id', targetSessionId)
+            .single();
+          
+          if (session) companyId = session.company_id;
+        }
+        
+        if (!companyId || !targetSessionId) {
+          console.log('Could not find session for contacts');
+          break;
+        }
+        
+        let processedCount = 0;
         for (const contact of contacts) {
           const waId = contact.id || contact.jid;
-          if (!waId) continue;
+          if (!waId || waId.includes('@g.us')) continue;
           
-          const phoneNumber = waId.replace('@s.whatsapp.net', '');
+          const phoneNumber = waId.replace('@s.whatsapp.net', '').replace('@lid', '');
+          const pushName = contact.name || contact.notify || contact.pushName || contact.verifiedName;
+          const profilePicture = contact.profilePicture || contact.imgUrl || contact.picture;
           
-          // Get company_id from session
-          let companyId = '';
-          if (sessionId) {
-            const { data: session } = await supabase
-              .from('whatsapp_sessions')
-              .select('company_id')
-              .eq('id', sessionId)
-              .single();
-            
-            if (session) companyId = session.company_id;
-          }
-          
-          if (!companyId) continue;
-          
-          await supabase
+          const { error } = await supabase
             .from('whatsapp_contacts')
             .upsert({
               company_id: companyId,
-              session_id: sessionId,
+              session_id: targetSessionId,
               wa_id: waId,
               phone_number: phoneNumber,
-              push_name: contact.name || contact.notify || contact.pushName,
-              profile_picture: contact.imgUrl || contact.profilePicture
+              push_name: pushName,
+              profile_picture: profilePicture
             }, {
               onConflict: 'company_id,wa_id'
             });
+          
+          if (!error) {
+            processedCount++;
+            
+            // Also update conversation profile picture if exists
+            if (profilePicture || pushName) {
+              const updateData: Record<string, unknown> = {};
+              if (profilePicture) updateData.profile_picture = profilePicture;
+              if (pushName) updateData.contact_name = pushName;
+              
+              await supabase
+                .from('whatsapp_conversations')
+                .update(updateData)
+                .eq('session_id', targetSessionId)
+                .eq('contact_phone', phoneNumber);
+            }
+          }
         }
+        
+        console.log(`[CONTACTS] Finished: ${processedCount}/${contacts.length} processed`);
         break;
       }
 

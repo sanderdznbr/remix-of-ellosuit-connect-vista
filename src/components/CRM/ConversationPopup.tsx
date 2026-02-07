@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2 } from 'lucide-react';
+import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2, Image as ImageIcon, Archive, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,9 @@ interface WhatsAppMessage {
   from_me: boolean;
   status: string;
   created_at: string;
+  message_type?: string;
+  media_url?: string;
+  media_caption?: string;
 }
 
 interface ConversationPopupProps {
@@ -182,7 +185,37 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
                         : 'bg-white dark:bg-card text-foreground'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    {/* Render image if message is an image */}
+                    {message.message_type === 'image' && message.media_url ? (
+                      <div className="mb-2">
+                        <img 
+                          src={message.media_url} 
+                          alt="Imagem" 
+                          className="rounded-lg max-w-full max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(message.media_url, '_blank')}
+                        />
+                        {message.media_caption && (
+                          <p className="text-sm whitespace-pre-wrap mt-2">{message.media_caption}</p>
+                        )}
+                      </div>
+                    ) : message.message_type === 'image' ? (
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm italic text-muted-foreground">
+                          {message.content || '[Imagem]'}
+                        </span>
+                      </div>
+                    ) : message.message_type === 'video' ? (
+                      <p className="text-sm">🎥 {message.content || '[Vídeo]'}</p>
+                    ) : message.message_type === 'audio' || message.message_type === 'ptt' ? (
+                      <p className="text-sm">🎵 {message.content || '[Áudio]'}</p>
+                    ) : message.message_type === 'document' ? (
+                      <p className="text-sm">📄 {message.content || '[Documento]'}</p>
+                    ) : message.message_type === 'sticker' ? (
+                      <p className="text-sm">🎨 [Sticker]</p>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    )}
                     <div className="flex items-center gap-1 justify-end mt-1">
                       <span className="text-[10px] text-muted-foreground">
                         {formatTime(message.created_at)}

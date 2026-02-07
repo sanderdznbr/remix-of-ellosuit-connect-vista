@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic, Contact } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic, Contact, Archive, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +64,9 @@ interface WhatsAppMessage {
   created_at: string;
   sender_name?: string;
   wa_message_id?: string;
+  message_type?: string;
+  media_url?: string;
+  media_caption?: string;
 }
 
 interface AIAgent {
@@ -174,7 +177,13 @@ const WhatsAppCRM: React.FC = () => {
         (data || []).forEach(m => {
           const key = m.wa_message_id || m.id;
           if (!uniqueMessages.has(key)) {
-            uniqueMessages.set(key, { ...m, created_at: m.timestamp || m.created_at });
+            uniqueMessages.set(key, { 
+              ...m, 
+              created_at: m.timestamp || m.created_at,
+              message_type: m.message_type,
+              media_url: m.media_url,
+              media_caption: m.media_caption
+            });
           }
         });
         
@@ -189,7 +198,11 @@ const WhatsAppCRM: React.FC = () => {
       }
     };
     
-    const interval = setInterval(refreshPopupMessages, 2000);
+    // Initial load
+    refreshPopupMessages();
+    
+    // Poll every 1 second for faster sync
+    const interval = setInterval(refreshPopupMessages, 1000);
     return () => clearInterval(interval);
   }, [showConversationPopup, popupConversation?.contact_phone, companyId]);
 
@@ -299,7 +312,10 @@ const WhatsAppCRM: React.FC = () => {
           uniqueMessages.set(key, {
             ...m,
             created_at: m.timestamp || m.created_at,
-            wa_message_id: m.wa_message_id
+            wa_message_id: m.wa_message_id,
+            message_type: m.message_type,
+            media_url: m.media_url,
+            media_caption: m.media_caption
           });
         }
       });
@@ -417,6 +433,82 @@ const WhatsAppCRM: React.FC = () => {
     setShowSaveLeadModal(true);
   };
 
+  // Archive/Unarchive conversation
+  const handleArchiveConversation = async (conv: WhatsAppConversationData) => {
+    const newStatus = conv.status === 'archived' ? 'open' : 'archived';
+    
+    const { error } = await supabase
+      .from('whatsapp_conversations')
+      .update({ status: newStatus })
+      .eq('id', conv.id);
+    
+    if (!error) {
+      setConversations(prev => prev.map(c => 
+        c.id === conv.id ? { ...c, status: newStatus } : c
+      ));
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation({ ...conv, status: newStatus });
+      }
+      toast({ 
+        title: newStatus === 'archived' ? 'Arquivada' : 'Desarquivada', 
+        description: `Conversa ${newStatus === 'archived' ? 'arquivada' : 'desarquivada'} com sucesso!` 
+      });
+    } else {
+      toast({ title: 'Erro', description: 'Erro ao arquivar conversa', variant: 'destructive' });
+    }
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = async (conv: WhatsAppConversationData) => {
+    if (!confirm('Tem certeza que deseja excluir esta conversa? Todas as mensagens serão perdidas.')) {
+      return;
+    }
+    
+    // Delete messages first
+    await supabase
+      .from('whatsapp_messages')
+      .delete()
+      .eq('conversation_id', conv.id);
+    
+    // Then delete conversation
+    const { error } = await supabase
+      .from('whatsapp_conversations')
+      .delete()
+      .eq('id', conv.id);
+    
+    if (!error) {
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation(null);
+        setShowMobileChat(false);
+      }
+      toast({ title: 'Excluída', description: 'Conversa excluída com sucesso!' });
+    } else {
+      toast({ title: 'Erro', description: 'Erro ao excluir conversa', variant: 'destructive' });
+    }
+  };
+
+  // Assign AI agent to conversation
+  const handleAssignAgent = async (conv: WhatsAppConversationData, agentId: string | null) => {
+    const { error } = await supabase
+      .from('whatsapp_conversations')
+      .update({ assigned_agent_id: agentId })
+      .eq('id', conv.id);
+    
+    if (!error) {
+      setConversations(prev => prev.map(c => 
+        c.id === conv.id ? { ...c, assigned_agent_id: agentId || undefined } : c
+      ));
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation({ ...conv, assigned_agent_id: agentId || undefined });
+      }
+      toast({ 
+        title: agentId ? 'Agente Atribuído' : 'Agente Removido', 
+        description: agentId ? 'Agente IA atribuído à conversa!' : 'Agente IA removido da conversa'
+      });
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!companyId) return;
@@ -433,12 +525,12 @@ const WhatsAppCRM: React.FC = () => {
     
     loadData();
     
-    // Polling fallback for conversations - refresh every 3 seconds (smart updates prevent flicker)
+    // Polling fallback for conversations - refresh every 1.5 seconds (faster sync)
     const conversationsPoll = setInterval(() => {
       if (companyId) {
         loadConversations();
       }
-    }, 3000);
+    }, 1500);
     
     return () => clearInterval(conversationsPoll);
   }, [companyId]);
@@ -568,10 +660,10 @@ const WhatsAppCRM: React.FC = () => {
       loadMessagesByPhone(selectedConversation.contact_phone);
       setSelectedAgent(null);
       
-      // Polling fallback - refresh messages every 2.5 seconds (smart updates prevent flicker)
+      // Polling fallback - refresh messages every 1 second (instant sync)
       const pollInterval = setInterval(() => {
         loadMessagesByPhone(selectedConversation.contact_phone);
-      }, 2500);
+      }, 1000);
       
       return () => clearInterval(pollInterval);
     } else {
@@ -737,8 +829,15 @@ const WhatsAppCRM: React.FC = () => {
     setShowMobileChat(true);
   };
 
-  // Filter conversations
+  // Filter conversations - exclude self-conversations (messaging yourself)
   const filteredConversations = conversations.filter(conv => {
+    // Filter out self-conversations (where contact_phone matches connected session phone)
+    const connectedPhone = connectedSessions[0]?.phone_number?.replace(/\D/g, '');
+    const contactPhone = conv.contact_phone?.replace(/\D/g, '');
+    if (connectedPhone && contactPhone && connectedPhone === contactPhone) {
+      return false; // Exclude self-chat
+    }
+    
     const matchesSearch = searchQuery === '' || 
       conv.contact_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conv.contact_phone.includes(searchQuery);
@@ -1245,7 +1344,7 @@ const WhatsAppCRM: React.FC = () => {
               <div className="flex items-center gap-2">
                 {selectedConversation && (
                   <Badge variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}>
-                    {selectedConversation.status === 'open' ? 'Aberta' : 'Fechada'}
+                    {selectedConversation.status === 'open' ? 'Aberta' : selectedConversation.status === 'archived' ? 'Arquivada' : 'Fechada'}
                   </Badge>
                 )}
                 <DropdownMenu>
@@ -1259,11 +1358,51 @@ const WhatsAppCRM: React.FC = () => {
                       <Users className="h-4 w-4 mr-2" />
                       Ver perfil
                     </DropdownMenuItem>
-                    {!selectedAgent && (
-                      <DropdownMenuItem>
-                        <Bot className="h-4 w-4 mr-2" />
-                        Atribuir agente IA
-                      </DropdownMenuItem>
+                    {!selectedAgent && selectedConversation && (
+                      <>
+                        <DropdownMenuSeparator />
+                        {aiAgents.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Atribuir Agente IA
+                            </div>
+                            {aiAgents.map(agent => (
+                              <DropdownMenuItem 
+                                key={agent.id}
+                                onClick={() => handleAssignAgent(selectedConversation, agent.id)}
+                                className={selectedConversation.assigned_agent_id === agent.id ? "bg-blue-50 dark:bg-blue-950" : ""}
+                              >
+                                <Bot className="h-4 w-4 mr-2 text-blue-500" />
+                                {agent.name}
+                                {selectedConversation.assigned_agent_id === agent.id && (
+                                  <Check className="h-4 w-4 ml-auto text-blue-500" />
+                                )}
+                              </DropdownMenuItem>
+                            ))}
+                            {selectedConversation.assigned_agent_id && (
+                              <DropdownMenuItem onClick={() => handleAssignAgent(selectedConversation, null)}>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remover Agente
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => handleArchiveConversation(selectedConversation)}
+                          className="text-amber-600"
+                        >
+                          <Archive className="h-4 w-4 mr-2" />
+                          {selectedConversation.status === 'archived' ? 'Desarquivar' : 'Arquivar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteConversation(selectedConversation)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir conversa
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1321,12 +1460,69 @@ const WhatsAppCRM: React.FC = () => {
                               </span>
                             </div>
                           )}
-                          <p className={cn(
-                            "text-sm whitespace-pre-wrap",
-                            message.from_me ? "text-white" : "text-foreground"
-                          )}>
-                            {message.content}
-                          </p>
+                          
+                          {/* Render image if message is an image */}
+                          {message.message_type === 'image' && message.media_url ? (
+                            <div className="mb-2">
+                              <img 
+                                src={message.media_url} 
+                                alt="Imagem" 
+                                className="rounded-lg max-w-full max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(message.media_url, '_blank')}
+                                onError={(e) => {
+                                  // Fallback if image fails to load
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                              {message.media_caption && (
+                                <p className={cn(
+                                  "text-sm whitespace-pre-wrap mt-2",
+                                  message.from_me ? "text-white" : "text-foreground"
+                                )}>
+                                  {message.media_caption}
+                                </p>
+                              )}
+                            </div>
+                          ) : message.message_type === 'image' ? (
+                            <div className="flex items-center gap-2 mb-1">
+                              <ImageIcon className={cn("h-4 w-4", message.from_me ? "text-white/70" : "text-muted-foreground")} />
+                              <span className={cn("text-sm italic", message.from_me ? "text-white/90" : "text-muted-foreground")}>
+                                {message.content || '[Imagem]'}
+                              </span>
+                            </div>
+                          ) : message.message_type === 'video' ? (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn("text-sm", message.from_me ? "text-white" : "text-foreground")}>
+                                🎥 {message.content || '[Vídeo]'}
+                              </span>
+                            </div>
+                          ) : message.message_type === 'audio' || message.message_type === 'ptt' ? (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn("text-sm", message.from_me ? "text-white" : "text-foreground")}>
+                                🎵 {message.content || '[Áudio]'}
+                              </span>
+                            </div>
+                          ) : message.message_type === 'document' ? (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn("text-sm", message.from_me ? "text-white" : "text-foreground")}>
+                                📄 {message.content || '[Documento]'}
+                              </span>
+                            </div>
+                          ) : message.message_type === 'sticker' ? (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn("text-sm", message.from_me ? "text-white" : "text-foreground")}>
+                                🎨 [Sticker]
+                              </span>
+                            </div>
+                          ) : (
+                            <p className={cn(
+                              "text-sm whitespace-pre-wrap",
+                              message.from_me ? "text-white" : "text-foreground"
+                            )}>
+                              {message.content}
+                            </p>
+                          )}
+                          
                           <div className={cn(
                             "flex items-center justify-end gap-1 mt-1",
                             message.from_me ? "text-white/70" : "text-muted-foreground"

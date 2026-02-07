@@ -1228,7 +1228,7 @@ const WhatsAppCRM: React.FC = () => {
     return (
       <div className="h-[calc(100vh-64px)] bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF4500] mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando CRM WhatsApp...</p>
         </div>
       </div>
@@ -1375,7 +1375,7 @@ const WhatsAppCRM: React.FC = () => {
             <Button 
               size="sm" 
               onClick={() => setShowQRModal(true)} 
-              className="bg-primary hover:bg-primary/90"
+              className="bg-[#FF4500] hover:bg-[#FF4500]/90"
             >
               <QrCode className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Conectar</span>
@@ -1496,7 +1496,7 @@ const WhatsAppCRM: React.FC = () => {
                     onClick={() => setActiveTab(tab as any)}
                     className={cn(
                       "flex-1 text-xs",
-                      activeTab === tab && "bg-primary hover:bg-primary/90"
+                      activeTab === tab && "bg-[#FF4500] hover:bg-[#FF4500]/90"
                     )}
                   >
                     {tab === 'all' ? 'Todas' : tab === 'unread' ? 'Não lidas' : tab === 'open' ? 'Abertas' : 'Fechadas'}
@@ -1509,10 +1509,10 @@ const WhatsAppCRM: React.FC = () => {
             {/* AI Agents Section */}
         {aiAgents.length > 0 && (
           <div className="border-b">
-            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+            <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Agentes IA</span>
+                <Sparkles className="h-4 w-4 text-[#FF4500]" />
+                <span className="text-sm font-medium text-[#FF4500] dark:text-orange-300">Agentes IA</span>
               </div>
               <div className="space-y-1">
                 {aiAgents.map(agent => (
@@ -1522,20 +1522,20 @@ const WhatsAppCRM: React.FC = () => {
                     className={cn(
                       "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
                       selectedAgent?.id === agent.id 
-                        ? "bg-blue-100 dark:bg-blue-900/30" 
-                        : "hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        ? "bg-orange-100 dark:bg-orange-900/30" 
+                        : "hover:bg-orange-50 dark:hover:bg-orange-900/20"
                     )}
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={agent.avatar_url || undefined} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-orange-600 text-white">
                         <Bot className="h-5 w-5" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm truncate">{agent.name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-[#FF4500] dark:bg-orange-900 dark:text-orange-300">
                           IA
                         </Badge>
                       </div>
@@ -1554,7 +1554,7 @@ const WhatsAppCRM: React.FC = () => {
         <ScrollArea className="flex-1">
           {syncingConversations ? (
             <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF4500] mx-auto mb-4"></div>
               <h3 className="font-medium mb-2">Sincronizando conversas</h3>
               <p className="text-sm text-muted-foreground">
                 Carregando suas conversas do WhatsApp...
@@ -1569,7 +1569,7 @@ const WhatsAppCRM: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Conecte seu WhatsApp para ver as conversas
                   </p>
-                  <Button onClick={() => setShowQRModal(true)} className="bg-primary">
+                  <Button onClick={() => setShowQRModal(true)} className="bg-[#FF4500] hover:bg-[#FF4500]/90">
                     <QrCode className="h-4 w-4 mr-2" />
                     Conectar WhatsApp
                   </Button>
@@ -1615,7 +1615,7 @@ const WhatsAppCRM: React.FC = () => {
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={conversation.profile_picture} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
+                        <AvatarFallback className="bg-[#FF4500]/10 text-[#FF4500]">
                           {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -1638,7 +1638,7 @@ const WhatsAppCRM: React.FC = () => {
                           </span>
                           {/* AI Badge */}
                           {conversation.assigned_agent_id && conversation.ai_auto_reply_enabled && (
-                            <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 text-[10px] px-1.5 py-0 gap-1">
+                            <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900/30 dark:text-orange-300 text-[10px] px-1.5 py-0 gap-1">
                               <Sparkles className="h-2.5 w-2.5" />
                               IA
                             </Badge>
@@ -1680,7 +1680,7 @@ const WhatsAppCRM: React.FC = () => {
                           {conversation.last_message || 'Nova conversa'}
                         </p>
                         {(conversation.unread_count || 0) > 0 && (
-                          <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5 min-w-[20px] justify-center">
+                          <Badge className="bg-[#FF4500] text-white text-xs px-2 py-0.5 min-w-[20px] justify-center">
                             {conversation.unread_count}
                           </Badge>
                         )}
@@ -1716,14 +1716,14 @@ const WhatsAppCRM: React.FC = () => {
                   {selectedAgent ? (
                     <>
                       <AvatarImage src={selectedAgent.avatar_url || undefined} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-orange-600 text-white">
                         <Bot className="h-5 w-5" />
                       </AvatarFallback>
                     </>
                   ) : (
                     <>
                       <AvatarImage src={selectedConversation?.profile_picture} />
-                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                      <AvatarFallback className="bg-orange-100 text-[#FF4500]">
                         {(selectedConversation ? getDisplayName(selectedConversation, messages) : '').substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </>
@@ -1735,7 +1735,7 @@ const WhatsAppCRM: React.FC = () => {
                       {selectedAgent ? selectedAgent.name : (selectedConversation ? getDisplayName(selectedConversation, messages) : '')}
                     </h2>
                     {selectedAgent && (
-                      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs">
+                      <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900 dark:text-orange-300 text-xs">
                         Agente IA
                       </Badge>
                     )}
@@ -1775,12 +1775,12 @@ const WhatsAppCRM: React.FC = () => {
                               <DropdownMenuItem 
                                 key={agent.id}
                                 onClick={() => handleAssignAgent(selectedConversation, agent.id, true)}
-                                className={selectedConversation.assigned_agent_id === agent.id ? "bg-blue-50 dark:bg-blue-950" : ""}
+                                className={selectedConversation.assigned_agent_id === agent.id ? "bg-orange-50 dark:bg-orange-950" : ""}
                               >
-                                <Bot className="h-4 w-4 mr-2 text-blue-500" />
+                                <Bot className="h-4 w-4 mr-2 text-[#FF4500]" />
                                 {agent.name}
                                 {selectedConversation.assigned_agent_id === agent.id && (
-                                  <Check className="h-4 w-4 ml-auto text-blue-500" />
+                                  <Check className="h-4 w-4 ml-auto text-[#FF4500]" />
                                 )}
                               </DropdownMenuItem>
                             ))}
@@ -1857,14 +1857,14 @@ const WhatsAppCRM: React.FC = () => {
             </div>
             
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4 bg-gradient-to-b from-blue-50/50 to-indigo-50/50 dark:from-blue-950/10 dark:to-indigo-950/10">
+            <ScrollArea className="flex-1 p-4 bg-gradient-to-b from-orange-50/50 to-red-50/50 dark:from-orange-950/10 dark:to-red-950/10">
               <div className="space-y-2 max-w-3xl mx-auto">
                 {currentMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full py-20">
                     <div className="text-center">
                       {selectedAgent ? (
                         <>
-                          <Bot className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+                          <Bot className="h-12 w-12 text-[#FF4500] mx-auto mb-4" />
                           <p className="text-muted-foreground">
                             Inicie uma conversa com <strong>{selectedAgent.name}</strong>
                           </p>
@@ -1895,14 +1895,14 @@ const WhatsAppCRM: React.FC = () => {
                             "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative",
                             message.from_me
                               ? message.is_ai_response 
-                                ? "bg-gradient-to-br from-violet-500 to-purple-600 rounded-br-sm" 
+                                ? "bg-gradient-to-br from-[#FF4500] to-orange-600 rounded-br-sm" 
                                 : message.status === 'sending'
-                                  ? "bg-primary/70 rounded-br-sm"
+                                  ? "bg-[#FF4500]/70 rounded-br-sm"
                                   : message.status === 'failed'
                                     ? "bg-destructive rounded-br-sm"
-                                    : "bg-primary rounded-br-sm"
+                                    : "bg-[#FF4500] rounded-br-sm"
                               : selectedAgent
-                                ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-foreground rounded-bl-sm border border-blue-100 dark:border-blue-800"
+                                ? "bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/30 dark:to-red-900/30 text-foreground rounded-bl-sm border border-orange-100 dark:border-orange-800"
                                 : "bg-card text-foreground rounded-bl-sm border"
                           )}
                         >
@@ -1918,8 +1918,8 @@ const WhatsAppCRM: React.FC = () => {
                           
                           {!message.from_me && selectedAgent && (
                             <div className="flex items-center gap-1 mb-1">
-                              <Bot className="h-3 w-3 text-blue-500" />
-                              <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                              <Bot className="h-3 w-3 text-[#FF4500]" />
+                              <span className="text-[10px] font-medium text-[#FF4500] dark:text-orange-400">
                                 {selectedAgent.name}
                               </span>
                             </div>
@@ -1928,7 +1928,7 @@ const WhatsAppCRM: React.FC = () => {
                           {/* Group message: show sender name */}
                           {!message.from_me && !selectedAgent && message.sender_name && (
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <span className="text-xs font-semibold text-primary">
+                              <span className="text-xs font-semibold text-[#FF4500]">
                                 {message.sender_name}
                               </span>
                             </div>
@@ -1975,8 +1975,8 @@ const WhatsAppCRM: React.FC = () => {
                                 className={cn(
                                   "absolute top-2 right-2 p-2 rounded-full shadow-lg transition-all hover:scale-110",
                                   message.from_me 
-                                    ? "bg-white/80 hover:bg-white text-blue-600" 
-                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    ? "bg-white/80 hover:bg-white text-[#FF4500]" 
+                                    : "bg-[#FF4500] hover:bg-[#FF4500]/90 text-white"
                                 )}
                                 title="Baixar imagem"
                               >
@@ -2063,13 +2063,13 @@ const WhatsAppCRM: React.FC = () => {
                     ))}
                     {isAiTyping && (
                       <div className="flex justify-start">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg px-4 py-3 rounded-bl-none border border-blue-100 dark:border-blue-800">
+                        <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/30 dark:to-red-900/30 rounded-lg px-4 py-3 rounded-bl-none border border-orange-100 dark:border-orange-800">
                           <div className="flex items-center gap-2">
-                            <Bot className="h-4 w-4 text-blue-500 animate-pulse" />
+                            <Bot className="h-4 w-4 text-[#FF4500] animate-pulse" />
                             <div className="flex gap-1">
-                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                              <span className="w-2 h-2 bg-[#FF4500] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                              <span className="w-2 h-2 bg-[#FF4500] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                              <span className="w-2 h-2 bg-[#FF4500] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                             </div>
                           </div>
                         </div>
@@ -2094,7 +2094,7 @@ const WhatsAppCRM: React.FC = () => {
                 <Button 
                   onClick={sendMessage} 
                   disabled={sendingMessage || !newMessage.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#FF4500] hover:bg-[#FF4500]/90"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -2122,7 +2122,7 @@ const WhatsAppCRM: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <Button 
                   onClick={() => setShowQRModal(true)} 
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#FF4500] hover:bg-[#FF4500]/90"
                 >
                   <QrCode className="h-4 w-4 mr-2" />
                   Conectar WhatsApp

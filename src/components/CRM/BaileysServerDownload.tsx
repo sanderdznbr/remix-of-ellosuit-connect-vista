@@ -17,10 +17,10 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) ==========
+    // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -34,34 +34,47 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     "qrcode": "^1.5.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }`;
+
+    // Força Railway a usar Node 20
+    const nodeVersion = `20`;
+
+    // Configuração do Nixpacks para Railway
+    const nixpacksToml = `[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[start]
+cmd = "node index.js"`;
 
     const gitignore = `node_modules/
 sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.0 - ESM + Baileys 7.x
+    const readme = `# 🚀 Baileys Server v2.9.1 - ESM + Baileys 7.x + Node 20
 
-## ✅ Correções v2.9.0
+## ✅ Correções v2.9.1
 
 Esta versão resolve o **Erro 405** usando Baileys 7.x com configuração oficial.
 
 ### Mudanças Principais:
+- ✅ **Node.js 20** (obrigatório para Baileys 7.x)
 - ✅ **Baileys 7.0.0-rc.9** (versão mais recente)
 - ✅ **ESM** (type: module) - obrigatório para Baileys 7.x
 - ✅ **Browsers.macOS("Desktop")** - browser string oficial
-- ✅ **Auth simplificado** - sem makeCacheableSignalKeyStore
-- ✅ **Sem versão manual** - deixa o Baileys negociar automaticamente
+- ✅ **nixpacks.toml** - força Railway a usar Node 20
+- ✅ **.node-version** - especifica Node 20
 
 ## Deploy no Railway
 
 ### 1. Suba para o GitHub
 - Crie um repositório no GitHub
-- Faça upload de TODOS estes arquivos
-- **IMPORTANTE**: O package.json deve ter "type": "module"
+- Faça upload de **TODOS** estes arquivos (incluindo .node-version e nixpacks.toml)
 
 ### 2. No Railway
 1. New Project → Deploy from GitHub
@@ -70,32 +83,30 @@ Esta versão resolve o **Erro 405** usando Baileys 7.x com configuração oficia
    \`SUPABASE_WEBHOOK_URL\` = \`${webhookUrl}\`
 
 ### 3. Pronto!
-O servidor vai iniciar automaticamente (3-4 minutos na primeira vez).
+O Railway vai usar Node.js 20 automaticamente (3-4 minutos).
 
 ## Verificação de Logs
 
 Nos logs do Railway, você deve ver:
 
 \`\`\`
-[INIT] Baileys Server v2.9.0 iniciando...
+[INIT] Baileys Server v2.9.1 iniciando...
 [INIT] Baileys 7.0.0-rc.9 (ESM)
-[INIT] Browser: Browsers.macOS("Desktop")
+[INIT] Node version: v20.x.x  <-- IMPORTANTE!
 [BAILEYS] ✅ Carregado com sucesso!
-[SOCKET] Criando com Browsers.macOS("Desktop")...
 [QR] ✅ QR Code recebido!
 \`\`\`
 
-## Nota sobre Erro 405
+## Arquivos Importantes
 
-O erro 405 é uma rejeição ativa do WhatsApp. Com v2.9.0:
-- Usamos a versão mais recente do Baileys
-- Usamos o browser string oficial
-- Deixamos o protocolo ser negociado automaticamente
+- **nixpacks.toml** - Configura Railway para usar Node 20
+- **.node-version** - Especifica a versão do Node
+- **package.json** - engines: ">=20"
 
-Se ainda persistir, pode ser bloqueio de IP/região pelo WhatsApp.
+Se o deploy falhar com erro de Node 18, verifique se o nixpacks.toml foi incluído.
 `;
 
-    // ========== SERVIDOR v2.9.0 - ESM + BAILEYS 7.x ==========
+    // ========== SERVIDOR v2.9.1 - ESM + BAILEYS 7.x + NODE 20 ==========
     const indexJs = `import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -107,7 +118,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.0 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.1 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
 console.log('[INIT] 🖥️ Browser: Browsers.macOS("Desktop")');
 console.log('[INIT] Node version:', process.version);
@@ -739,6 +750,8 @@ process.on('unhandledRejection', (reason) => {
     return {
       'package.json': packageJson,
       '.gitignore': gitignore,
+      '.node-version': nodeVersion,
+      'nixpacks.toml': nixpacksToml,
       'README.md': readme,
       'index.js': indexJs
     };
@@ -762,7 +775,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.9.0.zip';
+      a.download = 'baileys-server-v2.9.1.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -770,7 +783,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.9.0 com Baileys 7.x ESM'
+        description: 'Servidor v2.9.1 com Node 20 + Baileys 7.x'
       });
       
       setIsOpen(false);
@@ -803,23 +816,23 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.9.0
+              Servidor Baileys v2.9.1
             </DialogTitle>
             <DialogDescription>
-              Baileys 7.x com ESM e configuração oficial
+              Node 20 + Baileys 7.x com ESM
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✅ Correções v2.9.0
+                ✅ Correções v2.9.1
               </h4>
               <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <li>📦 <strong>Baileys 7.0.0-rc.9</strong> (mais recente)</li>
-                <li>🔧 <strong>ESM</strong> (type: module)</li>
+                <li>🟢 <strong>Node.js 20</strong> (obrigatório)</li>
+                <li>📦 <strong>Baileys 7.0.0-rc.9</strong></li>
+                <li>🔧 <strong>nixpacks.toml</strong> (força Node 20)</li>
                 <li>🖥️ <strong>Browsers.macOS("Desktop")</strong></li>
-                <li>🔑 Auth simplificado (sem makeCacheableSignalKeyStore)</li>
               </ul>
             </div>
 
@@ -840,15 +853,19 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  nixpacks.toml (força Node 20 no Railway)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  .node-version (especifica Node 20)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
                   package.json (Baileys 7.0.0-rc.9 + ESM)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (imports ESM + Browsers.macOS)
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  README.md (instruções)
+                  index.js (imports ESM)
                 </li>
               </ul>
             </div>
@@ -878,7 +895,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.9.0
+              Baixar v2.9.1
             </Button>
           </div>
         </DialogContent>

@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.2",
+  "version": "2.9.3",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -56,28 +56,31 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.2 - Fix QR Rápido
+    const readme = `# 🚀 Baileys Server v2.9.3 - Fix Erro 515 Após QR Scan
 
-## ✅ Correções v2.9.2
+## ✅ Correções v2.9.3
 
-Esta versão corrige o problema do **QR Code regenerando muito rápido**.
+Esta versão corrige o erro **"Não foi possível conectar o dispositivo"** após escanear o QR.
 
-### Mudanças v2.9.2:
-- ✅ **QR Lock** - Impede regeneração enquanto usuário escaneia (60s)
-- ✅ **Retry delay aumentado** - 15s entre tentativas
-- ✅ **Sem printQRInTerminal** - Remove warning deprecated
-- ✅ **retryRequestDelayMs** - Delay de 2s entre requests
-- ✅ **connectTimeoutMs** - Timeout de 60s para conexão
+### Mudanças v2.9.3:
+- ✅ **Reconexão IMEDIATA no 515** - 1s ao invés de 15s (CRÍTICO!)
+- ✅ **Preserva credenciais no 515** - Não limpa auth após pareamento
+- ✅ **Status específico** - \`reconnecting_after_pair\` para debug
+
+### Por que funciona:
+O erro 515 é **ESPERADO** após escanear o QR - é o WhatsApp pedindo reconexão.
+A v2.9.2 esperava 15s e limpava auth, causando timeout no celular.
+A v2.9.3 reconecta em 1s, permitindo conexão bem-sucedida.
 
 ### Versões Anteriores:
+- ✅ **QR Lock 60s** - Impede regeneração enquanto escaneia
 - ✅ **Node.js 20** (obrigatório para Baileys 7.x)
 - ✅ **Baileys 7.0.0-rc.9** (versão mais recente)
-- ✅ **Browsers.macOS("Desktop")** - browser string oficial
 
 ## Deploy no Railway
 
 ### 1. Suba para o GitHub
-- Substitua **TODOS** os arquivos
+- Substitua **TODOS** os arquivos (especialmente index.js!)
 
 ### 2. No Railway
 1. New Project → Deploy from GitHub
@@ -90,18 +93,19 @@ Aguarde deploy completo (~3-4 minutos).
 
 ## Verificação de Logs
 
-Nos logs do Railway, você deve ver:
+Após escanear o QR, você verá:
 
 \`\`\`
-[INIT] Baileys Server v2.9.2 iniciando...
 [QR] 🎉 QR Code recebido!
-[QR] 🔒 QR Lock ativo por 60s
+... (usuário escaneia)
+[515] ⚡ Stream Error - Reconexão IMEDIATA
+[515] Isso é NORMAL após escanear o QR
+[515] Iniciando reconexão...
+[CONNECTED] ✅ WhatsApp conectado!
 \`\`\`
-
-Se o QR regenerar antes de 60s, há outro problema.
 `;
 
-    // ========== SERVIDOR v2.9.2 - FIX QR REGENERANDO RÁPIDO ==========
+    // ========== SERVIDOR v2.9.3 - FIX ERRO 515 APÓS QR SCAN ==========
     const indexJs = `import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -113,13 +117,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.2 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.3 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
-console.log('[INIT] 🔧 Fix: QR regenerando rápido');
+console.log('[INIT] 🔧 Fix: Erro 515 após QR scan');
 console.log('[INIT] Node version:', process.version);
 console.log('='.repeat(60));
 
-const VERSION = "v2.9.2";
+const VERSION = "v2.9.3";
 const app = express();
 
 app.use(cors());
@@ -388,21 +392,37 @@ async function createSocketForSession(session) {
         return;
       }
       
-      // Erro 515 = Stream error - pode ser QR expirado
+      // ===== ERRO 515 - COMPORTAMENTO ESPERADO APÓS QR SCAN =====
+      // WhatsApp envia 515 para forçar reconexão após pareamento bem-sucedido
+      // A reconexão deve ser IMEDIATA (1s) pois as credenciais já foram salvas
       if (statusCode === 515) {
-        console.log('[515] Stream error - QR pode ter expirado');
-        // Gerar novo QR sem incrementar retry
-        session.qrCode = null;
-        session.qrGeneratedAt = null;
-        session.status = 'reconnecting';
-        console.log(\`[515] Reconectando em \${RETRY_DELAY_MS/1000}s...\`);
+        console.log('');
+        console.log('[515] ⚡ Stream Error - Reconexão IMEDIATA');
+        console.log('[515] Isso é NORMAL após escanear o QR');
+        console.log('[515] Credenciais foram salvas, reconectando...');
+        console.log('');
+        
+        // IMPORTANTE: NÃO limpar auth, NÃO incrementar retry
+        // As credenciais já foram salvas pelo pareamento
+        session.status = 'reconnecting_after_pair';
+        
+        // Fechar socket atual
+        if (session.socket) {
+          try { session.socket.end(); } catch (e) {}
+          session.socket = null;
+        }
+        
+        // Reconectar IMEDIATAMENTE (1s apenas para limpar socket)
         setTimeout(async () => {
           try {
+            console.log('[515] Iniciando reconexão...');
             await createSocketForSession(session);
           } catch (err) {
-            console.error('[515] Erro ao reconectar:', err.message);
+            console.error('[515] Erro na reconexão:', err.message);
+            session.status = 'failed';
           }
-        }, RETRY_DELAY_MS);
+        }, 1000);  // 1s - reconexão imediata!
+        
         return;
       }
       
@@ -822,7 +842,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.9.2.zip';
+      a.download = 'baileys-server-v2.9.3.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -830,7 +850,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.9.2 - Fix QR rápido'
+        description: 'Servidor v2.9.3 - Fix erro 515'
       });
       
       setIsOpen(false);
@@ -863,34 +883,34 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.9.2
+              Servidor Baileys v2.9.3
             </DialogTitle>
             <DialogDescription>
-              Fix: QR Code regenerando muito rápido
+              Fix: Erro 515 após escanear QR Code
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✅ Correções v2.9.2
+                ✅ Correções v2.9.3
               </h4>
               <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                <li>⚡ <strong>Reconexão imediata no 515</strong> - 1s ao invés de 15s</li>
+                <li>🔐 <strong>Preserva credenciais</strong> - Não limpa auth após pareamento</li>
                 <li>🔒 <strong>QR Lock 60s</strong> - Impede regeneração enquanto escaneia</li>
-                <li>⏱️ <strong>Retry delay 15s</strong> - Mais tempo entre tentativas</li>
-                <li>🔧 <strong>connectTimeoutMs 60s</strong> - Timeout maior</li>
                 <li>🖥️ <strong>Browsers.macOS("Desktop")</strong></li>
               </ul>
             </div>
 
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-blue-800 dark:text-blue-200 mb-2">
-                🔒 Como funciona o QR Lock
+                ⚡ Por que funciona
               </h4>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                Quando o QR é gerado, o servidor <strong>não reconecta por 60 segundos</strong>, 
-                dando tempo para você escanear. Se a conexão falhar durante esse tempo, 
-                o servidor aguarda ao invés de gerar novo QR imediatamente.
+                O erro 515 é <strong>ESPERADO</strong> após escanear o QR - é o WhatsApp 
+                pedindo reconexão. A v2.9.3 reconecta em <strong>1 segundo</strong>, 
+                permitindo que a conexão seja estabelecida antes do timeout do celular.
               </p>
             </div>
 
@@ -899,7 +919,7 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (v2.9.2 com QR Lock)
+                  index.js (v2.9.3 - fix erro 515)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -942,7 +962,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.9.2
+              Baixar v2.9.3
             </Button>
           </div>
         </DialogContent>

@@ -1,87 +1,239 @@
 
-# Plan: Fix Gmail Email Sending Errors
+# Plano: Renovação Completa do Email Marketing
 
-## Problem Summary
-Two issues are preventing emails from being sent:
-1. Gmail API is disabled in Google Cloud Console (causes "Erro ao enviar")
-2. Frontend code references wrong database column name
+## Visão Geral
 
----
-
-## Part 1: Enable Gmail API (User Action Required)
-
-This is the PRIMARY fix. The email sending fails because the Gmail API is not enabled.
-
-**Steps for you to complete:**
-
-1. Go to: https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=23104272196
-2. Click "ENABLE" to activate the Gmail API
-3. Wait 2-3 minutes for propagation
+Transformar o sistema de Email Marketing em uma experiência moderna e interativa com fluxo step-by-step, construtor visual drag-and-drop, integração com IA e limite de envios diários.
 
 ---
 
-## Part 2: Code Fixes
+## Parte 1: Reorganização da Interface Principal
 
-### File 1: `src/components/Dashboard/EmailComposer.tsx`
+### Mudanças no Layout
 
-Fix references to use the correct database column name (`email` instead of `provider_email`):
+**Antes:** Tab "Conexão" ocupando espaço completo
+**Depois:** Status de conexão discreto no header
 
-**Change 1 - Line 36:**
-```typescript
-// Before
-setFromEmail(emailAccount.provider_email);
-
-// After  
-setFromEmail(emailAccount.email);
+```text
++--------------------------------------------------+
+|  Email Marketing           [Gmail Conectado ▾]   |
+|  Envie campanhas...                              |
++--------------------------------------------------+
+|  [📧 Compor] [📊 Campanhas] [🎨 Design] [📈 Métricas] |
++--------------------------------------------------+
 ```
 
-**Change 2 - Line 167:**
-```typescript
-// Before
-<span className="text-sm">Enviando como: <strong>{emailAccount?.provider_email}</strong></span>
+**Componente afetado:** `CleanEmailMarketing.tsx`
+- Remover tab "Conexão"
+- Adicionar dropdown discreto no header para gerenciar conexão
+- Badge de status + botão de desconectar em popover
 
-// After
-<span className="text-sm">Enviando como: <strong>{emailAccount?.email}</strong></span>
+---
+
+## Parte 2: Novo Fluxo Step-by-Step para Compor Email
+
+### Etapas do Wizard
+
+```text
+Step 1: Destinatários     Step 2: Assunto           Step 3: Conteúdo          Step 4: Revisar
+     [●]────────────────────[○]────────────────────[○]────────────────────[○]
 ```
 
-### File 2: `src/hooks/useGmail.tsx`
+**Etapa 1 - Destinatários:**
+- Input para digitar emails manualmente (um por um ou separados por vírgula)
+- Botão "Importar Lista" (CSV/TXT)
+- Opção "Selecionar da Agenda" (buscar clientes do banco)
+- Contador de destinatários selecionados
 
-Add better error handling for the OAuth callback to distinguish between API errors and connection issues:
+**Etapa 2 - Assunto:**
+- Input para digitar o assunto
+- Botão "Melhorar com IA" que chama a OpenAI para sugerir versões
+- Preview de como aparecerá na caixa de entrada
 
-**Improvement - processOAuthCallback function:**
-- Add more detailed logging
-- Show clearer error messages if the Gmail API is not enabled
+**Etapa 3 - Conteúdo:**
+- Duas opções:
+  - "Escolher Template" - abre seletor de templates salvos
+  - "Criar do Zero" - redireciona ao Designer Visual
+- Editor de texto rico para ajustes finais
 
----
+**Etapa 4 - Revisão:**
+- Preview completo do email
+- Resumo: X destinatários, assunto, remetente
+- Botão "Enviar" ou "Agendar"
 
-## Technical Details
-
-### Database Schema Verification
-The `user_email_accounts` table has these columns:
-- `email` (correct column)
-- `provider`
-- `access_token`
-- `refresh_token`
-- `expires_at`
-- `status`
-
-There is NO `provider_email` column - this was causing undefined values.
-
-### Current Connection Status
-Your Gmail account is connected:
-- Email: sandergamesbr@gmail.com
-- Status: active
-- Token expires: 2026-02-07 05:23:14
-
-The connection works fine - the issue is only when trying to SEND emails (Gmail API disabled).
+**Novo arquivo:** `src/components/Dashboard/EmailComposerWizard.tsx`
 
 ---
 
-## Summary
+## Parte 3: Construtor Visual de Email Marketing (Drag-and-Drop)
 
-| Issue | Type | Fix |
-|-------|------|-----|
-| Gmail API disabled | Config | Enable in Google Cloud Console |
-| Wrong column name | Code | Change `provider_email` to `email` |
+### Componentes a Criar/Melhorar
 
-After these fixes, email sending should work correctly.
+O sistema atual já tem base em `src/components/EmailDesigner/`, mas precisa de melhorias significativas:
+
+**Novos Elementos no Palette:**
+- Header (logo + título)
+- Parágrafo
+- Lista (bullet points)
+- Coluna dupla (2 colunas)
+- Imagem com legenda
+- Social Icons (Facebook, Instagram, LinkedIn, WhatsApp)
+- Footer (endereço + unsubscribe)
+- Vídeo placeholder
+- Countdown timer
+
+**Melhorias no Canvas:**
+- Reordenação via drag-and-drop (usando @dnd-kit/sortable)
+- Duplicar elemento
+- Copiar/Colar estilos
+- Undo/Redo
+- Zoom in/out
+
+**Melhorias no Properties Panel:**
+- Presets de cores da marca
+- Upload de imagem direto
+- Link para URL no botão
+- Responsividade (visualizar mobile/desktop)
+
+**Novos Arquivos:**
+- `src/components/EmailDesigner/ImprovedDesignCanvas.tsx`
+- `src/components/EmailDesigner/EnhancedElementsPalette.tsx`
+- `src/components/EmailDesigner/ResponsivePreview.tsx`
+- `src/components/EmailDesigner/TemplateGallery.tsx`
+
+**Geração de HTML:**
+- Melhorar função `generateHTML()` para criar código responsivo
+- Inline CSS para compatibilidade com clientes de email
+- Adicionar meta tags para preview
+
+---
+
+## Parte 4: Limite de 500 Emails Diários
+
+### Implementação
+
+**Banco de Dados:**
+Nova tabela `email_send_limits`:
+```sql
+CREATE TABLE email_send_limits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  company_id UUID NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  sent_count INTEGER NOT NULL DEFAULT 0,
+  daily_limit INTEGER NOT NULL DEFAULT 500,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, date)
+);
+```
+
+**Edge Function (send-email/index.ts):**
+Adicionar verificação antes de enviar:
+```typescript
+// Check daily limit
+const today = new Date().toISOString().split('T')[0];
+const { data: limitData } = await supabase
+  .from('email_send_limits')
+  .select('sent_count, daily_limit')
+  .eq('user_id', user_id)
+  .eq('date', today)
+  .single();
+
+if (limitData && limitData.sent_count >= limitData.daily_limit) {
+  throw new Error('Limite diário de 500 emails atingido');
+}
+
+// Increment counter after sending
+await supabase.rpc('increment_email_count', { p_user_id: user_id });
+```
+
+**Frontend:**
+- Barra de progresso mostrando "X/500 emails enviados hoje"
+- Alerta quando próximo do limite (80%)
+- Bloqueio visual quando atingido
+
+---
+
+## Parte 5: Integração com IA
+
+### Recursos
+
+**Melhorar Assunto:**
+- Usa OpenAI para gerar 3 variações do assunto
+- Mostra taxa de abertura estimada (simulada)
+- Permite escolher ou editar
+
+**Melhorar Texto:**
+- Botão no editor para melhorar gramática/tom
+- Sugestões de CTA (Call to Action)
+
+**Edge Function:** Usar `ai-chat/index.ts` existente ou criar `ai-email-helper/index.ts`
+
+---
+
+## Estrutura de Arquivos
+
+```text
+src/components/Dashboard/
+├── CleanEmailMarketing.tsx      (MODIFICAR - layout principal)
+├── EmailComposerWizard.tsx      (NOVO - wizard step-by-step)
+├── EmailLimitIndicator.tsx      (NOVO - indicador de limite)
+├── EmailConnectionPopover.tsx   (NOVO - conexão discreta)
+
+src/components/EmailDesigner/
+├── EmailDesigner.tsx            (MODIFICAR - melhorias gerais)
+├── DesignCanvas.tsx             (MODIFICAR - reordenação)
+├── ElementsPalette.tsx          (MODIFICAR - novos elementos)
+├── PropertiesPanel.tsx          (MODIFICAR - mais opções)
+├── ResponsivePreview.tsx        (NOVO - preview mobile/desktop)
+├── TemplateGallery.tsx          (NOVO - galeria de templates prontos)
+├── AISubjectHelper.tsx          (NOVO - melhorar assunto com IA)
+
+supabase/functions/send-email/
+├── index.ts                     (MODIFICAR - adicionar limite)
+
+Database:
+├── email_send_limits            (NOVA TABELA)
+```
+
+---
+
+## Fluxo de Usuário Final
+
+```text
+1. Usuário acessa /dashboard/email
+2. Vê header com "Gmail Conectado" discreto
+3. Clica em "Compor Email"
+4. Wizard Step 1: Adiciona destinatários
+5. Wizard Step 2: Escreve assunto, clica "Melhorar com IA"
+6. Wizard Step 3: Escolhe template ou cria no Designer
+7. Wizard Step 4: Revisa e envia
+8. Sistema verifica limite (500/dia)
+9. Email enviado, contador incrementado
+```
+
+---
+
+## Resumo das Alterações
+
+| Item | Tipo | Prioridade |
+|------|------|------------|
+| Conexão discreta no header | Modificar | Alta |
+| Wizard step-by-step | Novo | Alta |
+| Limite 500 emails/dia | Novo | Alta |
+| Designer visual melhorado | Modificar | Média |
+| Integração IA (assunto) | Novo | Média |
+| Novos elementos no palette | Novo | Média |
+| Preview responsivo | Novo | Baixa |
+| Galeria de templates prontos | Novo | Baixa |
+
+---
+
+## Tecnologias Utilizadas
+
+- **React** + **TypeScript** para componentes
+- **@dnd-kit** para drag-and-drop (já instalado)
+- **Supabase** para banco de dados e edge functions
+- **OpenAI** para melhorias com IA (secret já configurado)
+- **Tailwind CSS** para estilização
+- **Framer Motion** para animações do wizard

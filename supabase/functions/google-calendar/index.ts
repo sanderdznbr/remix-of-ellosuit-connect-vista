@@ -500,17 +500,19 @@ serve(async (req) => {
           .eq('user_id', user_id)
           .eq('provider', 'gmail');
 
-        // Save to user_email_accounts table
+        // Save to user_email_accounts table (using correct column names)
         const { error: insertError } = await supabase
           .from('user_email_accounts')
           .insert({
             user_id: user_id,
             company_id: companyUser.company_id,
             provider: 'gmail',
-            provider_email: userInfo.email,
+            email: userInfo.email,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token,
             expires_at: expiresAt,
+            connected_at: new Date().toISOString(),
+            status: 'active'
           });
 
         if (insertError) {

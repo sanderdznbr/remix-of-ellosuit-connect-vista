@@ -233,6 +233,7 @@ const MainDashboard = () => {
       <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
         isHighlighted ? 'ring-2 ring-offset-2' : ''
       }`} style={isHighlighted ? { 
+        backgroundColor: color,
         background: color,
         borderColor: color 
       } : {}}>
@@ -510,7 +511,7 @@ const MainDashboard = () => {
                     tick={{ fill: '#9CA3AF', fontSize: 12 }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="leads" name="Leads" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leads" name="Leads" fill="#3000E3" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="emails" name="Emails" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="tracking" name="Tracking" fill="#10B981" radius={[4, 4, 0, 0]} />
                 </BarChart>

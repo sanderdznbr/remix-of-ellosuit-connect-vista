@@ -968,7 +968,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.1.0.zip';
+      a.download = 'baileys-server-v3.2.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1009,7 +1009,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.1.0
+              Servidor Baileys v3.2.0
             </DialogTitle>
             <DialogDescription>
               Servidor WhatsApp com suporte completo a mídias e grupos para deploy no Railway
@@ -1021,12 +1021,16 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.1.0
+                Novidades v3.2.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <Users className="h-3 w-3 text-primary" />
-                  <strong>Suporte a Grupos</strong> - Identifica quem enviou cada mensagem
+                  <strong>Nome do Grupo Correto</strong> - Busca metadados do grupo
+                </li>
+                <li className="flex items-center gap-2">
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Remetentes em Grupos</strong> - Mostra quem enviou cada mensagem
                 </li>
                 <li className="flex items-center gap-2">
                   <ImageIcon className="h-3 w-3 text-primary" />
@@ -1035,10 +1039,6 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
                   Upload automático para Supabase Storage
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Retry automático em downloads de mídia (3 tentativas)
                 </li>
               </ul>
             </div>
@@ -1083,7 +1083,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.1.0.zip
+                  Baixar baileys-server-v3.2.0.zip
                 </>
               )}
             </Button>

@@ -788,6 +788,7 @@ const WhatsAppCRM: React.FC = () => {
             <Tag className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Etiquetas</span>
           </Button>
+          <BaileysServerDownload />
           <Button 
             size="sm" 
             onClick={() => setShowQRModal(true)} 

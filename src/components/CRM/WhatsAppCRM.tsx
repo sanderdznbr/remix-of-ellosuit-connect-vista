@@ -429,6 +429,76 @@ const WhatsAppCRM: React.FC = () => {
     loadData();
   }, [companyId]);
 
+  // Real-time subscription for new messages
+  useEffect(() => {
+    if (!companyId) return;
+
+    // Subscribe to new messages
+    const messagesChannel = supabase
+      .channel('whatsapp-messages')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whatsapp_messages',
+        filter: `company_id=eq.${companyId}`
+      }, (payload) => {
+        const newMessage = payload.new as any;
+        console.log('📨 New WhatsApp message:', newMessage);
+        
+        // If this message is for the selected conversation, add it
+        if (selectedConversation && newMessage.conversation_id === selectedConversation.id) {
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMessage.id)) return prev;
+            return [...prev, {
+              id: newMessage.id,
+              conversation_id: newMessage.conversation_id,
+              content: newMessage.content,
+              from_me: newMessage.from_me,
+              status: newMessage.status,
+              created_at: newMessage.timestamp || newMessage.created_at
+            }];
+          });
+        }
+        
+        // Reload conversations to update last message
+        loadConversations();
+      })
+      .subscribe();
+
+    // Subscribe to conversation updates
+    const conversationsChannel = supabase
+      .channel('whatsapp-conversations')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'whatsapp_conversations',
+        filter: `company_id=eq.${companyId}`
+      }, () => {
+        loadConversations();
+      })
+      .subscribe();
+
+    // Subscribe to session updates
+    const sessionsChannel = supabase
+      .channel('whatsapp-sessions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'whatsapp_sessions',
+        filter: `company_id=eq.${companyId}`
+      }, () => {
+        loadSessions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(conversationsChannel);
+      supabase.removeChannel(sessionsChannel);
+    };
+  }, [companyId, selectedConversation?.id]);
+
   // Load messages when conversation changes
   useEffect(() => {
     if (selectedConversation) {
@@ -513,68 +583,102 @@ const WhatsAppCRM: React.FC = () => {
     if (!newMessage.trim() || !selectedConversation) return;
     
     setSendingMessage(true);
+    const messageContent = newMessage;
+    setNewMessage('');
+    
     try {
       const tempMessage: WhatsAppMessage = {
         id: Date.now().toString(),
         conversation_id: selectedConversation.id,
-        content: newMessage,
+        content: messageContent,
         from_me: true,
-        status: 'sent',
+        status: 'sending',
         created_at: new Date().toISOString()
       };
       
       const updatedMessages = [...messages, tempMessage];
       setMessages(updatedMessages);
-      setNewMessage('');
-      
-      // Persist demo conversation messages
-      if (selectedConversation.is_demo) {
-        setDemoMessagesState(prev => ({
-          ...prev,
-          [selectedConversation.id]: updatedMessages
-        }));
-      }
       
       // Update last message in conversation
       setConversations(prev => prev.map(c => 
         c.id === selectedConversation.id 
-          ? { ...c, last_message: newMessage, last_message_at: new Date().toISOString() }
+          ? { ...c, last_message: messageContent, last_message_at: new Date().toISOString() }
           : c
       ));
       
-      // Simulate response for demo conversations
-      if (selectedConversation.is_demo) {
-        setTimeout(() => {
-          const responses = [
-            'Obrigado pela resposta!',
-            'Entendi, vou verificar.',
-            'Perfeito, aguardo retorno.',
-            'Ok, muito obrigado!',
-            'Ótimo, isso me ajuda bastante!'
-          ];
-          const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      // Check if this is a real conversation with a connected session
+      const connectedSession = sessions.find(s => 
+        s.id === selectedConversation.session_id && s.status === 'connected'
+      );
+      
+      if (connectedSession && !selectedConversation.is_demo) {
+        // Send via real WhatsApp API
+        const { data, error } = await supabase.functions.invoke('whatsapp-api', {
+          body: {
+            action: 'send_message',
+            sessionId: connectedSession.id,
+            phone: selectedConversation.contact_phone,
+            message: messageContent
+          }
+        });
+        
+        if (error) throw error;
+        
+        // Update message status to sent
+        setMessages(prev => prev.map(m => 
+          m.id === tempMessage.id ? { ...m, status: 'sent' } : m
+        ));
+        
+        toast({ title: 'Enviado', description: 'Mensagem enviada com sucesso' });
+      } else {
+        // Demo mode - persist and simulate response
+        if (selectedConversation.is_demo) {
+          setDemoMessagesState(prev => ({
+            ...prev,
+            [selectedConversation.id]: updatedMessages.map(m => 
+              m.id === tempMessage.id ? { ...m, status: 'sent' } : m
+            )
+          }));
           
-          const responseMessage: WhatsAppMessage = {
-            id: (Date.now() + 1).toString(),
-            conversation_id: selectedConversation.id,
-            content: randomResponse,
-            from_me: false,
-            status: 'delivered',
-            created_at: new Date().toISOString()
-          };
-          setMessages(prev => {
-            const newMsgs = [...prev, responseMessage];
-            // Persist the response too
-            setDemoMessagesState(prevState => ({
-              ...prevState,
-              [selectedConversation.id]: newMsgs
-            }));
-            return newMsgs;
-          });
-        }, 1500);
+          // Simulate response
+          setTimeout(() => {
+            const responses = [
+              'Obrigado pela resposta!',
+              'Entendi, vou verificar.',
+              'Perfeito, aguardo retorno.',
+              'Ok, muito obrigado!',
+              'Ótimo, isso me ajuda bastante!'
+            ];
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            
+            const responseMessage: WhatsAppMessage = {
+              id: (Date.now() + 1).toString(),
+              conversation_id: selectedConversation.id,
+              content: randomResponse,
+              from_me: false,
+              status: 'delivered',
+              created_at: new Date().toISOString()
+            };
+            setMessages(prev => {
+              const newMsgs = [...prev, responseMessage];
+              setDemoMessagesState(prevState => ({
+                ...prevState,
+                [selectedConversation.id]: newMsgs
+              }));
+              return newMsgs;
+            });
+          }, 1500);
+        }
+        
+        // Update temp message to sent
+        setMessages(prev => prev.map(m => 
+          m.id === tempMessage.id ? { ...m, status: 'sent' } : m
+        ));
       }
-    } catch (e) {
-      toast({ title: 'Erro', description: 'Erro ao enviar mensagem', variant: 'destructive' });
+    } catch (e: any) {
+      console.error('Error sending message:', e);
+      toast({ title: 'Erro', description: e.message || 'Erro ao enviar mensagem', variant: 'destructive' });
+      setNewMessage(messageContent); // Restore message on error
     } finally {
       setSendingMessage(false);
     }

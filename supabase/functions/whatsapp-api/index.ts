@@ -6,11 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Evolution API endpoint (configurable via settings)
-const DEFAULT_EVOLUTION_URL = "https://api.evolution.lovable.app";
-
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -18,25 +14,29 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    const { action, sessionId, instanceName, companyId, userId, phone, message, evolutionUrl, evolutionApiKey } = await req.json();
+    const body = await req.json();
+    const { action, sessionId, instanceName, companyId, userId, phone, message, baileysServerUrl } = body;
     
-    const EVOLUTION_URL = evolutionUrl || DEFAULT_EVOLUTION_URL;
-    const EVOLUTION_API_KEY = evolutionApiKey || Deno.env.get('EVOLUTION_API_KEY') || '';
-
-    console.log(`[WhatsApp API] Action: ${action}, Instance: ${instanceName}`);
+    // Get Baileys server URL from request, session, or env
+    let BAILEYS_URL = baileysServerUrl || Deno.env.get('BAILEYS_SERVER_URL') || '';
+    
+    console.log(`[WhatsApp API] Action: ${action}, Instance: ${instanceName || sessionId}`);
 
     switch (action) {
+      // ==================== CREATE INSTANCE ====================
       case 'create_instance': {
-        // Create new WhatsApp instance
         if (!instanceName || !companyId || !userId) {
-          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+          return new Response(JSON.stringify({ error: 'instanceName, companyId e userId são obrigatórios' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
+
+        // Generate webhook secret for this session
+        const webhookSecret = crypto.randomUUID();
+        const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
         // Create session in database
         const { data: session, error: sessionError } = await supabase
@@ -46,59 +46,74 @@ serve(async (req) => {
             user_id: userId,
             instance_name: instanceName,
             status: 'connecting',
-            settings: { evolution_url: EVOLUTION_URL }
+            webhook_secret: webhookSecret,
+            baileys_server_url: baileysServerUrl || BAILEYS_URL,
+            settings: { 
+              webhook_url: webhookUrl,
+              created_from: 'lovable'
+            }
           })
           .select()
           .single();
 
         if (sessionError) {
           console.error('Error creating session:', sessionError);
-          return new Response(JSON.stringify({ error: 'Failed to create session' }), {
+          return new Response(JSON.stringify({ error: 'Falha ao criar sessão', details: sessionError.message }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        // If Evolution API is configured, create instance there
-        if (EVOLUTION_API_KEY) {
+        // If Baileys server is configured, create instance there
+        if (BAILEYS_URL || baileysServerUrl) {
+          const serverUrl = baileysServerUrl || BAILEYS_URL;
           try {
-            const evolutionResponse = await fetch(`${EVOLUTION_URL}/instance/create`, {
+            const baileysResponse = await fetch(`${serverUrl}/api/instance/create`, {
               method: 'POST',
-              headers: {
-                'apikey': EVOLUTION_API_KEY,
-                'Content-Type': 'application/json'
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                sessionId: session.id,
                 instanceName: instanceName,
-                qrcode: true,
-                integration: "WHATSAPP-BAILEYS"
+                webhookUrl: webhookUrl,
+                webhookSecret: webhookSecret
               })
             });
 
-            if (evolutionResponse.ok) {
-              const evolutionData = await evolutionResponse.json();
-              await supabase
-                .from('whatsapp_sessions')
-                .update({ 
-                  instance_id: evolutionData.instance?.instanceId,
-                  qr_code: evolutionData.qrcode?.base64
-                })
-                .eq('id', session.id);
+            if (baileysResponse.ok) {
+              const baileysData = await baileysResponse.json();
+              console.log('Baileys instance created:', baileysData);
+              
+              // Update session with QR code if available
+              if (baileysData.qrCode) {
+                await supabase
+                  .from('whatsapp_sessions')
+                  .update({ qr_code: baileysData.qrCode })
+                  .eq('id', session.id);
+              }
+            } else {
+              const errorText = await baileysResponse.text();
+              console.error('Baileys server error:', errorText);
             }
           } catch (e) {
-            console.log('Evolution API not available, using demo mode');
+            console.error('Error connecting to Baileys server:', e);
           }
         }
 
-        return new Response(JSON.stringify({ success: true, session }), {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          session,
+          webhookUrl,
+          webhookSecret,
+          message: BAILEYS_URL ? 'Conectando ao servidor Baileys...' : 'Sessão criada. Configure o servidor Baileys externo.'
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
+      // ==================== GET QR CODE ====================
       case 'get_qr_code': {
-        // Get QR code for session
         if (!sessionId) {
-          return new Response(JSON.stringify({ error: 'Session ID required' }), {
+          return new Response(JSON.stringify({ error: 'sessionId é obrigatório' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -111,57 +126,60 @@ serve(async (req) => {
           .single();
 
         if (!session) {
-          return new Response(JSON.stringify({ error: 'Session not found' }), {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        // If Evolution API is configured, get fresh QR code
-        if (EVOLUTION_API_KEY && session.instance_name) {
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        
+        // Try to get fresh QR from Baileys server
+        if (serverUrl) {
           try {
-            const qrResponse = await fetch(`${EVOLUTION_URL}/instance/connect/${session.instance_name}`, {
+            const qrResponse = await fetch(`${serverUrl}/api/instance/${session.instance_name}/qr`, {
               method: 'GET',
-              headers: { 'apikey': EVOLUTION_API_KEY }
+              headers: { 'x-webhook-secret': session.webhook_secret || '' }
             });
 
             if (qrResponse.ok) {
               const qrData = await qrResponse.json();
-              if (qrData.qrcode?.base64) {
+              if (qrData.qrCode) {
                 await supabase
                   .from('whatsapp_sessions')
-                  .update({ qr_code: qrData.qrcode.base64 })
+                  .update({ qr_code: qrData.qrCode })
                   .eq('id', sessionId);
                 
                 return new Response(JSON.stringify({ 
-                  qrCode: qrData.qrcode.base64,
-                  status: session.status
+                  qrCode: qrData.qrCode,
+                  status: session.status,
+                  isConnected: qrData.isConnected || false
                 }), {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
               }
             }
           } catch (e) {
-            console.log('Error fetching QR from Evolution:', e);
+            console.log('Error fetching QR from Baileys:', e);
           }
         }
 
-        // Return demo QR code for testing
-        const demoQrCode = generateDemoQrCode();
-        
+        // Return cached QR code or demo
+        const demoQr = generateDemoQrCode();
         return new Response(JSON.stringify({ 
-          qrCode: session.qr_code || demoQrCode,
+          qrCode: session.qr_code || demoQr,
           status: session.status,
-          isDemo: !EVOLUTION_API_KEY
+          isDemo: !serverUrl,
+          message: serverUrl ? 'Aguardando QR do servidor...' : 'Configure o servidor Baileys para conectar'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
+      // ==================== CHECK STATUS ====================
       case 'check_status': {
-        // Check connection status
         if (!sessionId) {
-          return new Response(JSON.stringify({ error: 'Session ID required' }), {
+          return new Response(JSON.stringify({ error: 'sessionId é obrigatório' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -174,59 +192,67 @@ serve(async (req) => {
           .single();
 
         if (!session) {
-          return new Response(JSON.stringify({ error: 'Session not found' }), {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        // If Evolution API is configured, check status
-        if (EVOLUTION_API_KEY && session.instance_name) {
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+
+        // Check status from Baileys server
+        if (serverUrl) {
           try {
-            const statusResponse = await fetch(`${EVOLUTION_URL}/instance/connectionState/${session.instance_name}`, {
-              headers: { 'apikey': EVOLUTION_API_KEY }
+            const statusResponse = await fetch(`${serverUrl}/api/instance/${session.instance_name}/status`, {
+              headers: { 'x-webhook-secret': session.webhook_secret || '' }
             });
 
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
-              const isConnected = statusData.state === 'open';
+              const isConnected = statusData.status === 'connected' || statusData.isConnected;
               
               if (isConnected && session.status !== 'connected') {
-                // Update session with connection info
                 await supabase
                   .from('whatsapp_sessions')
                   .update({
                     status: 'connected',
                     connected_at: new Date().toISOString(),
-                    last_seen_at: new Date().toISOString()
+                    last_seen_at: new Date().toISOString(),
+                    phone_number: statusData.phoneNumber,
+                    push_name: statusData.pushName,
+                    profile_picture: statusData.profilePicture
                   })
                   .eq('id', sessionId);
               }
               
               return new Response(JSON.stringify({ 
                 status: isConnected ? 'connected' : session.status,
-                instance: statusData
+                phoneNumber: statusData.phoneNumber,
+                pushName: statusData.pushName,
+                profilePicture: statusData.profilePicture
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
             }
           } catch (e) {
-            console.log('Error checking Evolution status:', e);
+            console.log('Error checking Baileys status:', e);
           }
         }
 
         return new Response(JSON.stringify({ 
           status: session.status,
-          isDemo: !EVOLUTION_API_KEY
+          isDemo: !serverUrl,
+          phoneNumber: session.phone_number,
+          pushName: session.push_name
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
+      // ==================== SEND MESSAGE ====================
       case 'send_message': {
-        // Send WhatsApp message
         if (!sessionId || !phone || !message) {
-          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+          return new Response(JSON.stringify({ error: 'sessionId, phone e message são obrigatórios' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -238,25 +264,53 @@ serve(async (req) => {
           .eq('id', sessionId)
           .single();
 
-        if (!session || session.status !== 'connected') {
-          return new Response(JSON.stringify({ error: 'Session not connected' }), {
-            status: 400,
+        if (!session) {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
+            status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
-        // Send via Evolution API if configured
-        if (EVOLUTION_API_KEY && session.instance_name) {
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const cleanPhone = phone.replace(/\D/g, '');
+        const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+
+        // Find or create conversation
+        let { data: conversation } = await supabase
+          .from('whatsapp_conversations')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('contact_phone', phone)
+          .single();
+
+        if (!conversation) {
+          const { data: newConv } = await supabase
+            .from('whatsapp_conversations')
+            .insert({
+              session_id: sessionId,
+              company_id: session.company_id,
+              contact_phone: phone,
+              status: 'open',
+              last_message_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          conversation = newConv;
+        }
+
+        // Send via Baileys if connected
+        if (serverUrl && session.status === 'connected') {
           try {
-            const sendResponse = await fetch(`${EVOLUTION_URL}/message/sendText/${session.instance_name}`, {
+            const sendResponse = await fetch(`${serverUrl}/api/message/send`, {
               method: 'POST',
               headers: {
-                'apikey': EVOLUTION_API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-webhook-secret': session.webhook_secret || ''
               },
               body: JSON.stringify({
-                number: phone.replace(/\D/g, ''),
-                text: message
+                instanceName: session.instance_name,
+                jid: jid,
+                message: { text: message }
               })
             });
 
@@ -267,49 +321,82 @@ serve(async (req) => {
               await supabase
                 .from('whatsapp_messages')
                 .insert({
+                  conversation_id: conversation?.id,
                   session_id: sessionId,
                   company_id: session.company_id,
-                  message_id: sendData.key?.id,
+                  wa_message_id: sendData.messageId || sendData.key?.id,
                   from_me: true,
-                  sender_phone: session.phone_number || 'me',
-                  recipient_phone: phone,
                   content: message,
                   message_type: 'text',
-                  status: 'sent'
+                  status: 'sent',
+                  timestamp: new Date().toISOString()
                 });
 
-              return new Response(JSON.stringify({ success: true, data: sendData }), {
+              // Update conversation
+              await supabase
+                .from('whatsapp_conversations')
+                .update({
+                  last_message: message,
+                  last_message_at: new Date().toISOString()
+                })
+                .eq('id', conversation?.id);
+
+              return new Response(JSON.stringify({ 
+                success: true, 
+                messageId: sendData.messageId || sendData.key?.id 
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            } else {
+              const errorText = await sendResponse.text();
+              console.error('Baileys send error:', errorText);
+              return new Response(JSON.stringify({ error: 'Falha ao enviar mensagem', details: errorText }), {
+                status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
             }
           } catch (e) {
-            console.error('Error sending via Evolution:', e);
+            console.error('Error sending via Baileys:', e);
           }
         }
 
-        // Demo mode - just save to database
+        // Demo mode - save locally
         await supabase
           .from('whatsapp_messages')
           .insert({
+            conversation_id: conversation?.id,
             session_id: sessionId,
             company_id: session.company_id,
             from_me: true,
-            sender_phone: session.phone_number || 'me',
-            recipient_phone: phone,
             content: message,
             message_type: 'text',
-            status: 'sent'
+            status: 'sent',
+            timestamp: new Date().toISOString()
           });
 
-        return new Response(JSON.stringify({ success: true, isDemo: true }), {
+        await supabase
+          .from('whatsapp_conversations')
+          .update({
+            last_message: message,
+            last_message_at: new Date().toISOString()
+          })
+          .eq('id', conversation?.id);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          isDemo: !serverUrl || session.status !== 'connected',
+          message: 'Mensagem salva localmente (modo demo)'
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      case 'disconnect': {
-        // Disconnect WhatsApp session
-        if (!sessionId) {
-          return new Response(JSON.stringify({ error: 'Session ID required' }), {
+      // ==================== SEND MEDIA ====================
+      case 'send_media': {
+        const { mediaUrl, mediaType, caption } = body;
+        
+        if (!sessionId || !phone || !mediaUrl) {
+          return new Response(JSON.stringify({ error: 'sessionId, phone e mediaUrl são obrigatórios' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -321,14 +408,135 @@ serve(async (req) => {
           .eq('id', sessionId)
           .single();
 
-        if (session && EVOLUTION_API_KEY && session.instance_name) {
+        if (!session) {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const cleanPhone = phone.replace(/\D/g, '');
+        const jid = `${cleanPhone}@s.whatsapp.net`;
+
+        if (serverUrl && session.status === 'connected') {
           try {
-            await fetch(`${EVOLUTION_URL}/instance/logout/${session.instance_name}`, {
-              method: 'DELETE',
-              headers: { 'apikey': EVOLUTION_API_KEY }
+            const sendResponse = await fetch(`${serverUrl}/api/message/send-media`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-webhook-secret': session.webhook_secret || ''
+              },
+              body: JSON.stringify({
+                instanceName: session.instance_name,
+                jid: jid,
+                mediaUrl: mediaUrl,
+                mediaType: mediaType || 'image',
+                caption: caption
+              })
             });
+
+            if (sendResponse.ok) {
+              const sendData = await sendResponse.json();
+              return new Response(JSON.stringify({ success: true, messageId: sendData.messageId }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
           } catch (e) {
-            console.log('Error disconnecting Evolution:', e);
+            console.error('Error sending media:', e);
+          }
+        }
+
+        return new Response(JSON.stringify({ error: 'Servidor Baileys não conectado' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==================== GET CONVERSATIONS ====================
+      case 'get_conversations': {
+        if (!companyId) {
+          return new Response(JSON.stringify({ error: 'companyId é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: conversations, error } = await supabase
+          .from('whatsapp_conversations')
+          .select(`
+            *,
+            whatsapp_messages!inner (
+              id,
+              content,
+              from_me,
+              status,
+              timestamp
+            )
+          `)
+          .eq('company_id', companyId)
+          .order('last_message_at', { ascending: false })
+          .limit(100);
+
+        if (error) {
+          console.error('Error fetching conversations:', error);
+        }
+
+        return new Response(JSON.stringify({ conversations: conversations || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==================== GET MESSAGES ====================
+      case 'get_messages': {
+        const { conversationId, limit = 50 } = body;
+        
+        if (!conversationId) {
+          return new Response(JSON.stringify({ error: 'conversationId é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: messages } = await supabase
+          .from('whatsapp_messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('timestamp', { ascending: true })
+          .limit(limit);
+
+        return new Response(JSON.stringify({ messages: messages || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==================== DISCONNECT ====================
+      case 'disconnect': {
+        if (!sessionId) {
+          return new Response(JSON.stringify({ error: 'sessionId é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: session } = await supabase
+          .from('whatsapp_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+
+        if (session) {
+          const serverUrl = session.baileys_server_url || BAILEYS_URL;
+          
+          if (serverUrl) {
+            try {
+              await fetch(`${serverUrl}/api/instance/${session.instance_name}/logout`, {
+                method: 'POST',
+                headers: { 'x-webhook-secret': session.webhook_secret || '' }
+              });
+            } catch (e) {
+              console.log('Error disconnecting from Baileys:', e);
+            }
           }
         }
 
@@ -342,10 +550,10 @@ serve(async (req) => {
         });
       }
 
+      // ==================== DELETE SESSION ====================
       case 'delete_session': {
-        // Delete WhatsApp session
         if (!sessionId) {
-          return new Response(JSON.stringify({ error: 'Session ID required' }), {
+          return new Response(JSON.stringify({ error: 'sessionId é obrigatório' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -357,29 +565,69 @@ serve(async (req) => {
           .eq('id', sessionId)
           .single();
 
-        if (session && EVOLUTION_API_KEY && session.instance_name) {
-          try {
-            await fetch(`${EVOLUTION_URL}/instance/delete/${session.instance_name}`, {
-              method: 'DELETE',
-              headers: { 'apikey': EVOLUTION_API_KEY }
-            });
-          } catch (e) {
-            console.log('Error deleting Evolution instance:', e);
+        if (session) {
+          const serverUrl = session.baileys_server_url || BAILEYS_URL;
+          
+          if (serverUrl) {
+            try {
+              await fetch(`${serverUrl}/api/instance/${session.instance_name}/delete`, {
+                method: 'DELETE',
+                headers: { 'x-webhook-secret': session.webhook_secret || '' }
+              });
+            } catch (e) {
+              console.log('Error deleting from Baileys:', e);
+            }
           }
         }
 
-        await supabase
-          .from('whatsapp_sessions')
-          .delete()
-          .eq('id', sessionId);
+        // Delete related data
+        await supabase.from('whatsapp_messages').delete().eq('session_id', sessionId);
+        await supabase.from('whatsapp_conversations').delete().eq('session_id', sessionId);
+        await supabase.from('whatsapp_sessions').delete().eq('id', sessionId);
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
+      // ==================== CONFIGURE SERVER ====================
+      case 'configure_server': {
+        if (!sessionId || !baileysServerUrl) {
+          return new Response(JSON.stringify({ error: 'sessionId e baileysServerUrl são obrigatórios' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Test connection to Baileys server
+        try {
+          const testResponse = await fetch(`${baileysServerUrl}/api/health`);
+          if (!testResponse.ok) {
+            return new Response(JSON.stringify({ error: 'Servidor Baileys não respondeu corretamente' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (e) {
+          return new Response(JSON.stringify({ error: 'Não foi possível conectar ao servidor Baileys' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Update session with server URL
+        await supabase
+          .from('whatsapp_sessions')
+          .update({ baileys_server_url: baileysServerUrl })
+          .eq('id', sessionId);
+
+        return new Response(JSON.stringify({ success: true, message: 'Servidor configurado com sucesso' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       default:
-        return new Response(JSON.stringify({ error: 'Unknown action' }), {
+        return new Response(JSON.stringify({ error: `Ação desconhecida: ${action}` }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -387,7 +635,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('WhatsApp API Error:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Internal server error' 
+      error: error instanceof Error ? error.message : 'Erro interno do servidor' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -395,8 +643,7 @@ serve(async (req) => {
   }
 });
 
-// Generate a demo QR code for testing
+// Generate demo QR code
 function generateDemoQrCode(): string {
-  // This is a placeholder QR code data URL
-  return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmZmZmZmYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMzMzIj5RUiBDb2RlIERlbW88L3RleHQ+PHJlY3QgeD0iNDAiIHk9IjQwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSI1MCIgeT0iNTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjEzMCIgeT0iNTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjUwIiB5PSIxMzAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzMzMyIvPjxyZWN0IHg9IjkwIiB5PSI5MCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjMzMzIi8+PC9zdmc+";
+  return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSI0MCIgeT0iNDAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgZmlsbD0iIzI1RDM2NiIvPjxyZWN0IHg9IjEyMCIgeT0iNDAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgZmlsbD0iIzI1RDM2NiIvPjxyZWN0IHg9IjQwIiB5PSIxMjAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgZmlsbD0iIzI1RDM2NiIvPjxyZWN0IHg9IjgwIiB5PSI4MCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMjVEMzY2Ii8+PHRleHQgeD0iMTAwIiB5PSIxODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiI+RXNjYW5laWUgY29tIFdoYXRzQXBwPC90ZXh0Pjwvc3ZnPg==";
 }

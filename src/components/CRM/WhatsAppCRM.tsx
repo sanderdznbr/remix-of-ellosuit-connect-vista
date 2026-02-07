@@ -1748,7 +1748,10 @@ const WhatsAppCRM: React.FC = () => {
               
               <div className="flex items-center gap-2">
                 {selectedConversation && (
-                  <Badge variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}>
+                  <Badge 
+                    className={selectedConversation.status === 'open' ? 'bg-[#FF4500] hover:bg-[#FF4500]/90 text-white' : ''}
+                    variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}
+                  >
                     {selectedConversation.status === 'open' ? 'Aberta' : selectedConversation.status === 'archived' ? 'Arquivada' : 'Fechada'}
                   </Badge>
                 )}

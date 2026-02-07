@@ -306,10 +306,13 @@ serve(async (req) => {
             
             if (existingConv) {
               // Update existing conversation
-              // ALWAYS update name for groups if we have a valid name
-              const shouldUpdateName = isGroup 
-                ? (contactName && contactName !== phoneNumber)
-                : (contactName && contactName !== phoneNumber && !existingConv.contact_name);
+              // ============== PRESERVE DATA: Never overwrite with empty values ==============
+              // Only update name if:
+              // 1. We have a valid new name (not empty, not just the phone number)
+              // 2. AND either the existing name is empty OR it's a group (groups can have name changes)
+              const hasValidNewName = contactName && contactName.trim() && contactName !== phoneNumber;
+              const existingNameEmpty = !existingConv.contact_name || existingConv.contact_name === phoneNumber;
+              const shouldUpdateName = hasValidNewName && (isGroup || existingNameEmpty);
               
               const updatePayload: Record<string, unknown> = {
                 status: chat.archive ? 'archived' : 'open',
@@ -318,10 +321,15 @@ serve(async (req) => {
                 unread_count: chat.unreadCount || 0
               };
               
+              // Only update contact_name if we have a valid new name
               if (shouldUpdateName) {
                 updatePayload.contact_name = contactName;
+                console.log(`[CHAT] Updating name: "${existingConv.contact_name}" -> "${contactName}"`);
               }
-              if (profilePicture) {
+              
+              // Only update profile_picture if we have a valid new one AND existing is empty
+              // NEVER overwrite existing picture with null/empty
+              if (profilePicture && profilePicture.trim() && !existingConv.profile_picture) {
                 updatePayload.profile_picture = profilePicture;
               }
               
@@ -622,17 +630,26 @@ serve(async (req) => {
               unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,
             };
             
-            // ============== IMPROVED: Update group names even for fromMe ==============
-            // For groups: ALWAYS update if we have a valid name (even from sent messages)
-            // For individuals: only update from incoming messages
-            if (isGroup && contactName && contactName !== phoneNumber) {
+            // ============== PRESERVE DATA: Never overwrite with empty values ==============
+            // Only update name if:
+            // 1. We have a valid new name (not empty, not just phone number)
+            // 2. AND either existing is empty OR it's a group (groups can have name changes)
+            const hasValidNewName = contactName && contactName.trim() && contactName !== phoneNumber;
+            const existingNameEmpty = !conversation.contact_name || conversation.contact_name === phoneNumber;
+            
+            if (isGroup && hasValidNewName) {
+              // For groups: update if we have a valid name
               updateData.contact_name = contactName;
               console.log(`[GROUP] Updating name to: "${contactName}"`);
-            } else if (!fromMe && contactName && contactName !== phoneNumber) {
+            } else if (!fromMe && hasValidNewName && existingNameEmpty) {
+              // For individuals: only update if incoming AND existing is empty
               updateData.contact_name = contactName;
             }
+            // If incoming name is empty/null, DO NOT update - preserve existing
             
-            if (profilePicture && !conversation.profile_picture) {
+            // Only update profile_picture if we have valid new one AND existing is empty
+            // NEVER overwrite existing picture with null/empty
+            if (profilePicture && profilePicture.trim() && !conversation.profile_picture) {
               updateData.profile_picture = profilePicture;
             }
             
@@ -916,28 +933,62 @@ serve(async (req) => {
             const phoneNumber = extractPhoneFromJid(jid, false);
             if (!phoneNumber) continue;
             
-            const contactName = contact.name || contact.notify || contact.verifiedName || phoneNumber;
+            const contactName = contact.name || contact.notify || contact.verifiedName || '';
+            const profilePicture = contact.imgUrl || null;
             
-            // Upsert contact
+            // ============== PRESERVE DATA: Check existing before upserting ==============
+            const { data: existingContact } = await supabase
+              .from('whatsapp_contacts')
+              .select('name, profile_picture')
+              .eq('company_id', companyId)
+              .eq('phone', phoneNumber)
+              .single();
+            
+            // Build upsert data - preserve existing values if new ones are empty
+            const upsertData: Record<string, unknown> = {
+              company_id: companyId,
+              phone: phoneNumber,
+              is_business: contact.isBusiness || false,
+              status_text: contact.status || null
+            };
+            
+            // Only set name if: new name is valid, OR no existing contact
+            if (contactName && contactName.trim() && contactName !== phoneNumber) {
+              upsertData.name = contactName;
+            } else if (existingContact?.name) {
+              upsertData.name = existingContact.name; // Preserve existing
+            } else {
+              upsertData.name = phoneNumber; // Fallback
+            }
+            
+            // Only set profile_picture if: new one is valid, OR preserve existing
+            if (profilePicture && profilePicture.trim()) {
+              upsertData.profile_picture = profilePicture;
+            } else if (existingContact?.profile_picture) {
+              upsertData.profile_picture = existingContact.profile_picture; // Preserve existing
+            }
+            
             await supabase
               .from('whatsapp_contacts')
-              .upsert({
-                company_id: companyId,
-                phone: phoneNumber,
-                name: contactName,
-                profile_picture: contact.imgUrl || null,
-                is_business: contact.isBusiness || false,
-                status_text: contact.status || null
-              }, {
-                onConflict: 'company_id,phone'
-              });
+              .upsert(upsertData, { onConflict: 'company_id,phone' });
             
-            // Also update conversation name if exists
-            await supabase
-              .from('whatsapp_conversations')
-              .update({ contact_name: contactName })
-              .eq('company_id', companyId)
-              .eq('contact_phone', phoneNumber);
+            // Also update conversation name if exists AND we have a valid name AND conv name is empty
+            if (contactName && contactName.trim() && contactName !== phoneNumber) {
+              // Only update if conversation name is empty or equals phone number
+              const { data: conv } = await supabase
+                .from('whatsapp_conversations')
+                .select('id, contact_name')
+                .eq('company_id', companyId)
+                .eq('contact_phone', phoneNumber)
+                .single();
+              
+              if (conv && (!conv.contact_name || conv.contact_name === phoneNumber)) {
+                await supabase
+                  .from('whatsapp_conversations')
+                  .update({ contact_name: contactName })
+                  .eq('id', conv.id);
+              }
+            }
               
           } catch (e) {
             console.error('Contact update error:', e);

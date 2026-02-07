@@ -104,6 +104,86 @@ serve(async (req) => {
         break;
       }
 
+      // ==================== CHATS SYNC ====================
+      case 'chats.upsert':
+      case 'chats.set': {
+        const chats = data?.chats || [];
+        console.log(`[CHATS] Processing ${chats.length} chats`);
+        
+        // Get session info
+        let targetSessionId = sessionId;
+        let companyId = '';
+        
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id')
+            .eq('instance_name', instanceName)
+            .single();
+          
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id')
+            .eq('id', targetSessionId)
+            .single();
+          
+          if (session) companyId = session.company_id;
+        }
+        
+        if (!targetSessionId || !companyId) {
+          console.log('Could not find session for chats');
+          break;
+        }
+        
+        for (const chat of chats) {
+          try {
+            const jid = chat.id || chat.jid;
+            if (!jid || jid === 'status@broadcast') continue;
+            
+            // Extract phone number from JID (handle @lid and @s.whatsapp.net)
+            let phoneNumber = jid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '');
+            
+            // Skip groups for now
+            if (jid.includes('@g.us')) continue;
+            
+            // Get last message info
+            const lastMsg = chat.conversationTimestamp || chat.lastMessage?.messageTimestamp;
+            const lastMessageAt = lastMsg 
+              ? new Date(parseInt(lastMsg) * 1000).toISOString()
+              : new Date().toISOString();
+            
+            // Upsert conversation
+            await supabase
+              .from('whatsapp_conversations')
+              .upsert({
+                session_id: targetSessionId,
+                company_id: companyId,
+                contact_phone: phoneNumber,
+                contact_name: chat.name || chat.notify || chat.pushName || phoneNumber,
+                profile_picture: chat.imgUrl || chat.profilePicture,
+                status: chat.archive ? 'archived' : 'open',
+                last_message: chat.lastMessage?.conversation || chat.lastMessage?.message?.conversation || '',
+                last_message_at: lastMessageAt,
+                unread_count: chat.unreadCount || 0
+              }, {
+                onConflict: 'session_id,contact_phone'
+              });
+            
+            console.log(`[CHAT] Synced: ${chat.name || phoneNumber}`);
+          } catch (e) {
+            console.error(`[CHAT] Error syncing chat:`, e);
+          }
+        }
+        
+        console.log(`[CHATS] Finished processing ${chats.length} chats`);
+        break;
+      }
+
       // ==================== NEW MESSAGE ====================
       case 'messages.upsert':
       case 'message':
@@ -112,9 +192,16 @@ serve(async (req) => {
         
         for (const msg of messages) {
           const messageKey = msg.key || {};
-          const remoteJid = messageKey.remoteJid || msg.from || msg.remoteJid;
+          // Use remoteJidAlt if available (contains real phone number)
+          let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
           const fromMe = messageKey.fromMe || msg.fromMe || false;
           const messageId = messageKey.id || msg.id;
+          
+          // Skip protocol messages (sync notifications)
+          if (msg.message?.protocolMessage) {
+            console.log('Skipping protocol message');
+            continue;
+          }
           
           // Extract message content
           let content = '';
@@ -160,8 +247,8 @@ serve(async (req) => {
             continue;
           }
           
-          // Extract phone number from JID
-          const phoneNumber = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+          // Extract phone number from JID (handle @lid format)
+          let phoneNumber = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '');
           
           // Get session info
           let targetSessionId = sessionId;
@@ -235,10 +322,10 @@ serve(async (req) => {
               .eq('id', conversation.id);
           }
           
-          // Save message
+          // Save message (upsert to avoid duplicates)
           await supabase
             .from('whatsapp_messages')
-            .insert({
+            .upsert({
               conversation_id: conversation?.id,
               session_id: targetSessionId,
               company_id: companyId,
@@ -252,6 +339,8 @@ serve(async (req) => {
               timestamp: msg.messageTimestamp 
                 ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString()
                 : new Date().toISOString()
+            }, {
+              onConflict: 'wa_message_id'
             });
           
           console.log(`Message saved: ${content.substring(0, 50)}...`);

@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.4",
+  "version": "2.9.5",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -56,26 +56,23 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.4 - Fix QR Lock Bloqueando 515
+    const readme = `# 🚀 Baileys Server v2.9.5 - Sincronização de Histórico
 
-## ✅ Correções v2.9.4
+## ✅ Correções v2.9.5
 
-Esta versão corrige o bug onde o **QR Lock bloqueava a reconexão após pareamento**.
+Esta versão adiciona **sincronização completa de histórico** de conversas e contatos.
 
-### Mudanças v2.9.4:
-- ✅ **515 tem PRIORIDADE sobre QR Lock** - Handler 515 vem ANTES do check QR Lock
-- ✅ **Limpa QR Lock no 515** - Quando pareamento detectado, remove o lock
-- ✅ **Reconexão em 1s** - Imediata após detectar pareamento
+### Mudanças v2.9.5:
+- ✅ **Sync de histórico completo** - syncFullHistory: true
+- ✅ **Handler chats.upsert** - Sincroniza lista de chats
+- ✅ **Handler chats.set** - Recebe histórico completo  
+- ✅ **Handler contacts.upsert** - Sincroniza contatos
+- ✅ **Suporte ao formato @lid** - Novo formato do WhatsApp
 
-### Por que funciona:
-O bug na v2.9.3: QR Lock check vinha ANTES do handler 515.
-Como o QR foi gerado há menos de 60s quando escaneia, o código fazia return e NUNCA chegava ao handler 515.
-Na v2.9.4: Handler 515 vem PRIMEIRO e limpa o QR Lock.
-
-### Histórico:
-- v2.9.2: QR Lock 60s (impede regeneração)
-- v2.9.3: Reconexão 515 em 1s (mas bloqueada pelo QR Lock)
-- **v2.9.4: 515 tem prioridade sobre QR Lock** ✅
+### Histórico de versões:
+- v2.9.4: Fix QR Lock bloqueando 515
+- v2.9.3: Reconexão imediata no 515
+- v2.9.2: QR Lock 60s
 
 ## Deploy no Railway
 
@@ -93,21 +90,16 @@ Aguarde deploy completo (~3-4 minutos).
 
 ## Verificação de Logs
 
-Após escanear o QR, você verá:
+Após conectar, você verá:
 
 \`\`\`
-[QR] 🎉 QR Code recebido!
-[QR] 🔒 QR Lock ativo por 60s
-... (usuário escaneia)
-[DISCONNECTED] Código: 515
-[515] ⚡ PAREAMENTO DETECTADO - Reconexão IMEDIATA
-[515] Isso é NORMAL! WhatsApp pede restart após QR scan
-[515] 🔄 Iniciando reconexão com credenciais salvas...
 [CONNECTED] ✅ WhatsApp conectado!
+[CHATS] 📥 50 chats sincronizados!
+[CONTACTS] 📥 100 contatos sincronizados!
 \`\`\`
 `;
 
-    // ========== SERVIDOR v2.9.4 - FIX QR LOCK BLOQUEANDO 515 ==========
+    // ========== SERVIDOR v2.9.5 - SINCRONIZAÇÃO DE HISTÓRICO ==========
     const indexJs = `import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -119,13 +111,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.4 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.5 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
-console.log('[INIT] 🔧 Fix: QR Lock bloqueando reconexão 515');
+console.log('[INIT] 🔧 Sincronização de histórico completa');
 console.log('[INIT] Node version:', process.version);
 console.log('='.repeat(60));
 
-const VERSION = "v2.9.4";
+const VERSION = "v2.9.5";
 const app = express();
 
 app.use(cors());
@@ -258,21 +250,20 @@ async function createSocketForSession(session) {
   
   const logger = pino({ level: 'silent' });
   
-  // CONFIGURAÇÃO v2.9.2 - Com delays para evitar QR rápido
+  // CONFIGURAÇÃO v2.9.4 - Com sincronização de histórico
   const sock = makeWASocket({
     auth: state,
     browser: Browsers.macOS("Desktop"),
     logger: logger,
-    // Configurações para evitar QR regenerando rápido
-    syncFullHistory: false,
-    markOnlineOnConnect: false,
+    // Habilitar sincronização de histórico
+    syncFullHistory: true,           // IMPORTANTE: Sincronizar histórico completo
+    markOnlineOnConnect: true,       // Marcar online para receber histórico
     generateHighQualityLinkPreview: false,
-    retryRequestDelayMs: 2000,       // 2s entre requests
-    connectTimeoutMs: 60000,          // 60s timeout de conexão
-    defaultQueryTimeoutMs: 60000,     // 60s timeout de queries
-    keepAliveIntervalMs: 30000,       // 30s keepalive
+    retryRequestDelayMs: 2000,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
+    keepAliveIntervalMs: 30000,
     getMessage: async () => undefined
-    // NÃO usar printQRInTerminal (deprecated em 7.x)
   });
   
   session.socket = sock;
@@ -482,20 +473,25 @@ async function createSocketForSession(session) {
   });
   console.log('[SOCKET] ✓ connection.update registrado');
   
-  // MENSAGENS
+  // MENSAGENS (novas e histórico)
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
+    // Processar tanto 'notify' (novas) quanto 'append' (histórico)
+    console.log(\`[MESSAGES] Tipo: \${type}, Quantidade: \${messages.length}\`);
     
     for (const msg of messages) {
       if (msg.key.remoteJid === 'status@broadcast') continue;
       
-      console.log(\`[MESSAGE] De: \${msg.key.remoteJid}\`);
+      // Ignorar mensagens de protocolo (sync notifications)
+      if (msg.message?.protocolMessage) continue;
+      
+      console.log(\`[MESSAGE] De: \${msg.key.remoteJid} | FromMe: \${msg.key.fromMe}\`);
       
       await sendWebhook({
         event: 'messages.upsert',
         sessionId,
         instanceName,
         data: {
+          type,
           messages: [{
             key: msg.key,
             message: msg.message,
@@ -507,6 +503,58 @@ async function createSocketForSession(session) {
     }
   });
   console.log('[SOCKET] ✓ messages.upsert registrado');
+  
+  // CHATS SINCRONIZADOS
+  sock.ev.on('chats.upsert', async (chats) => {
+    console.log(\`[CHATS] 📥 \${chats.length} chats sincronizados!\`);
+    
+    await sendWebhook({
+      event: 'chats.upsert',
+      sessionId,
+      instanceName,
+      data: { chats }
+    });
+  });
+  console.log('[SOCKET] ✓ chats.upsert registrado');
+  
+  // CHATS SET (histórico completo)
+  sock.ev.on('chats.set', async ({ chats, isLatest }) => {
+    console.log(\`[CHATS SET] 📥 \${chats.length} chats (isLatest: \${isLatest})\`);
+    
+    await sendWebhook({
+      event: 'chats.set',
+      sessionId,
+      instanceName,
+      data: { chats, isLatest }
+    });
+  });
+  console.log('[SOCKET] ✓ chats.set registrado');
+  
+  // CONTATOS SINCRONIZADOS
+  sock.ev.on('contacts.upsert', async (contacts) => {
+    console.log(\`[CONTACTS] 📥 \${contacts.length} contatos sincronizados!\`);
+    
+    await sendWebhook({
+      event: 'contacts.upsert',
+      sessionId,
+      instanceName,
+      data: { contacts }
+    });
+  });
+  console.log('[SOCKET] ✓ contacts.upsert registrado');
+  
+  // CONTATOS SET (lista completa)
+  sock.ev.on('contacts.set', async ({ contacts }) => {
+    console.log(\`[CONTACTS SET] 📥 \${contacts.length} contatos\`);
+    
+    await sendWebhook({
+      event: 'contacts.set',
+      sessionId,
+      instanceName,
+      data: { contacts }
+    });
+  });
+  console.log('[SOCKET] ✓ contacts.set registrado');
   
   console.log('[SOCKET] ========================================');
   console.log('[SOCKET] ✅ Socket pronto, aguardando QR...');
@@ -851,7 +899,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.9.4.zip';
+      a.download = 'baileys-server-v2.9.5.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -859,7 +907,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.9.4 - Fix QR Lock bloqueando 515'
+        description: 'Servidor v2.9.5 - Sync de histórico completo'
       });
       
       setIsOpen(false);
@@ -892,22 +940,22 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.9.4
+              Servidor Baileys v2.9.5
             </DialogTitle>
             <DialogDescription>
-              Fix: QR Lock bloqueando reconexão após pareamento
+              Sincronização completa de histórico de conversas
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✅ Correções v2.9.4
+                ✅ Novidades v2.9.5
               </h4>
               <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <li>🔥 <strong>515 tem PRIORIDADE</strong> - Verificado ANTES do QR Lock</li>
-                <li>🔓 <strong>Limpa QR Lock no 515</strong> - Remove bloqueio após pareamento</li>
-                <li>⚡ <strong>Reconexão imediata</strong> - 1s após detectar pareamento</li>
+                <li>📥 <strong>Sync de histórico</strong> - Sincroniza conversas existentes</li>
+                <li>👥 <strong>Sync de contatos</strong> - Lista completa de contatos</li>
+                <li>🔄 <strong>Handler chats.upsert</strong> - Recebe lista de chats</li>
                 <li>🖥️ <strong>Browsers.macOS("Desktop")</strong></li>
               </ul>
             </div>
@@ -917,9 +965,9 @@ process.on('unhandledRejection', (reason) => {
                 ⚡ Por que funciona
               </h4>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                Na v2.9.3, o <strong>QR Lock</strong> bloqueava a reconexão do 515 porque 
-                o check vinha primeiro. Na v2.9.4, o <strong>515 é verificado ANTES</strong> 
-                e limpa o lock, permitindo reconexão imediata.
+                O Baileys não sincroniza histórico por padrão. Esta versão habilita 
+                <strong> syncFullHistory: true</strong> e processa os eventos 
+                <strong> chats.upsert</strong> e <strong>contacts.upsert</strong>.
               </p>
             </div>
 
@@ -928,7 +976,7 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (v2.9.4 - fix QR Lock)
+                  index.js (v2.9.5 - sync histórico)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -971,7 +1019,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.9.4
+              Baixar v2.9.5
             </Button>
           </div>
         </DialogContent>

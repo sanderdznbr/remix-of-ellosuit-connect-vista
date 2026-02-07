@@ -271,18 +271,17 @@ const ChatbotManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl" style={{ backgroundColor: '#E3480010' }}>
-            <GitBranch className="h-6 w-6" style={{ color: '#E34800' }} />
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <GitBranch className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">ChatBot Builder</h1>
+            <h1 className="text-2xl font-bold text-foreground">Chatbots</h1>
             <p className="text-muted-foreground text-sm">Crie e gerencie fluxos automatizados</p>
           </div>
         </div>
         <Button 
           onClick={() => setShowCreateModal(true)}
           className="gap-2"
-          style={{ backgroundColor: '#E34800' }}
         >
           <Plus className="h-4 w-4" />
           Novo Chatbot
@@ -291,63 +290,63 @@ const ChatbotManagement: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#E3480020' }}>
-                <GitBranch className="h-5 w-5" style={{ color: '#E34800' }} />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <GitBranch className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold" style={{ color: '#E34800' }}>{flows.length}</p>
-                <p className="text-xs text-orange-600/70">Total de Chatbots</p>
+                <p className="text-2xl font-bold text-primary">{flows.length}</p>
+                <p className="text-xs text-muted-foreground">Total de Chatbots</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 border-green-200 dark:border-green-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-500/5 to-green-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
+              <div className="p-2 bg-green-500/10 rounded-lg">
                 <Play className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                <p className="text-2xl font-bold text-green-600">
                   {flows.filter(f => f.is_active).length}
                 </p>
-                <p className="text-xs text-green-600/70">Ativos</p>
+                <p className="text-xs text-muted-foreground">Ativos</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/5 to-amber-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-lg">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
                 <Pause className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                <p className="text-2xl font-bold text-amber-600">
                   {flows.filter(f => !f.is_active).length}
                 </p>
-                <p className="text-xs text-amber-600/70">Pausados</p>
+                <p className="text-xs text-muted-foreground">Pausados</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/5 to-violet-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-violet-500/10 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                <p className="text-2xl font-bold text-violet-600">
                   {flows.reduce((sum, f) => sum + (f.execution_count || 0), 0)}
                 </p>
-                <p className="text-xs text-purple-600/70">Execuções Totais</p>
+                <p className="text-xs text-muted-foreground">Execuções Totais</p>
               </div>
             </div>
           </CardContent>
@@ -367,9 +366,11 @@ const ChatbotManagement: React.FC = () => {
 
       {/* Chatbots Grid */}
       {filteredFlows.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-0 shadow-sm bg-muted/30">
           <CardContent className="p-12 text-center">
-            <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-4">
+              <GitBranch className="h-10 w-10 text-primary" />
+            </div>
             <h3 className="text-lg font-semibold mb-2">Nenhum chatbot encontrado</h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery ? 'Tente uma busca diferente' : 'Crie seu primeiro chatbot para começar'}
@@ -387,9 +388,9 @@ const ChatbotManagement: React.FC = () => {
           {filteredFlows.map(flow => (
             <Card 
               key={flow.id} 
-              className={`transition-all hover:shadow-lg ${
+              className={`transition-all hover:shadow-lg border-0 shadow-sm ${
                 flow.is_active 
-                  ? 'border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20' 
+                  ? 'ring-1 ring-primary/20 bg-gradient-to-br from-primary/5 to-transparent' 
                   : ''
               }`}
             >
@@ -399,10 +400,10 @@ const ChatbotManagement: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className={`p-2.5 rounded-xl ${
                       flow.is_active 
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        ? 'bg-primary' 
+                        : 'bg-muted'
                     }`}>
-                      <GitBranch className="h-5 w-5 text-white" />
+                      <GitBranch className={`h-5 w-5 ${flow.is_active ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">{flow.name}</h3>

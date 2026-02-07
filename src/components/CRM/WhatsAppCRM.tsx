@@ -1089,11 +1089,6 @@ const WhatsAppCRM: React.FC = () => {
       {/* Top Header - Always visible */}
       <div className="p-4 border-b bg-card flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            <h1 className="font-bold text-lg">CRM WhatsApp</h1>
-          </div>
-          
           {/* View Toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
             <Button

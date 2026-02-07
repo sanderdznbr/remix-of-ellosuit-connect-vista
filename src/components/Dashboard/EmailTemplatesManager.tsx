@@ -71,8 +71,8 @@ const EmailTemplatesManager: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl" style={{ backgroundColor: '#E3480010' }}>
-            <Palette className="h-6 w-6" style={{ color: '#E34800' }} />
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <Palette className="h-6 w-6 text-primary" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Templates de Email</h1>
@@ -82,7 +82,6 @@ const EmailTemplatesManager: React.FC = () => {
         <Button 
           onClick={() => navigate('/dashboard/email-builder')}
           className="gap-2"
-          style={{ backgroundColor: '#E34800' }}
         >
           <Plus className="h-4 w-4" />
           Criar Design
@@ -91,61 +90,61 @@ const EmailTemplatesManager: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#E3480020' }}>
-                <LayoutTemplate className="h-5 w-5" style={{ color: '#E34800' }} />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <LayoutTemplate className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold" style={{ color: '#E34800' }}>{designs.length}</p>
-                <p className="text-xs text-orange-600/70">Designs Visuais</p>
+                <p className="text-2xl font-bold text-primary">{designs.length}</p>
+                <p className="text-xs text-muted-foreground">Designs Visuais</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/5 to-blue-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
                 <FileText className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{templates.length}</p>
-                <p className="text-xs text-blue-600/70">Templates HTML</p>
+                <p className="text-2xl font-bold text-blue-600">{templates.length}</p>
+                <p className="text-xs text-muted-foreground">Templates HTML</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 border-green-200 dark:border-green-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-500/5 to-green-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
+              <div className="p-2 bg-green-500/10 rounded-lg">
                 <Sparkles className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                <p className="text-2xl font-bold text-green-600">
                   {designs.filter(d => d.is_published).length}
                 </p>
-                <p className="text-xs text-green-600/70">Publicados</p>
+                <p className="text-xs text-muted-foreground">Publicados</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/5 to-violet-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <Clock className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-violet-500/10 rounded-lg">
+                <Clock className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                <p className="text-2xl font-bold text-violet-600">
                   {designs.length + templates.length}
                 </p>
-                <p className="text-xs text-purple-600/70">Total</p>
+                <p className="text-xs text-muted-foreground">Total</p>
               </div>
             </div>
           </CardContent>
@@ -191,9 +190,11 @@ const EmailTemplatesManager: React.FC = () => {
       {/* Content */}
       {activeTab === 'designs' ? (
         filteredDesigns.length === 0 ? (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-0 shadow-sm bg-muted/30">
             <CardContent className="p-12 text-center">
-              <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-4">
+                <Palette className="h-10 w-10 text-primary" />
+              </div>
               <h3 className="text-lg font-semibold mb-2">Nenhum design encontrado</h3>
               <p className="text-muted-foreground mb-4">
                 Crie templates visualmente com nosso editor drag-and-drop
@@ -207,7 +208,7 @@ const EmailTemplatesManager: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredDesigns.map(design => (
-              <Card key={design.id} className="group hover:shadow-lg transition-all">
+              <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm">
                 <CardContent className="p-0">
                   {/* Preview Area */}
                   <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-t-lg flex items-center justify-center relative overflow-hidden">
@@ -287,9 +288,11 @@ const EmailTemplatesManager: React.FC = () => {
         )
       ) : (
         filteredTemplates.length === 0 ? (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-0 shadow-sm bg-muted/30">
             <CardContent className="p-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="p-4 rounded-full bg-blue-500/10 w-fit mx-auto mb-4">
+                <FileText className="h-10 w-10 text-blue-600" />
+              </div>
               <h3 className="text-lg font-semibold mb-2">Nenhum template encontrado</h3>
               <p className="text-muted-foreground mb-4">
                 Templates HTML são criados na aba de Email Marketing
@@ -303,7 +306,7 @@ const EmailTemplatesManager: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTemplates.map(template => (
-              <Card key={template.id} className="hover:shadow-lg transition-all">
+              <Card key={template.id} className="hover:shadow-lg transition-all border-0 shadow-sm">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">

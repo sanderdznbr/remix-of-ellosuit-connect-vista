@@ -728,62 +728,13 @@ const WhatsAppCRM: React.FC = () => {
           
           if (conv && conv.contact_phone === selectedConversation.contact_phone) {
             // Immediately add message to UI for instant feedback
-            if (payload.eventType === 'INSERT') {
-              setMessages(prev => {
-                // Check 1: Exact ID match - already exists
-                if (prev.some(m => m.id === newMessage.id)) {
-                  return prev;
-                }
-                
-                // Check 2: wa_message_id match - already exists
-                if (newMessage.wa_message_id && prev.some(m => m.wa_message_id === newMessage.wa_message_id)) {
-                  return prev;
-                }
-                
-                // Check 3: For sent messages (from_me), look for temp message to REPLACE
-                if (newMessage.from_me) {
-                  const tempIndex = prev.findIndex(m => 
-                    m.id.startsWith('temp-') && 
-                    m.content === (newMessage.content || '') &&
-                    m.from_me === true
-                  );
-                  
-                  if (tempIndex !== -1) {
-                    // REPLACE temp message with real database message
-                    const updated = [...prev];
-                    updated[tempIndex] = {
-                      id: newMessage.id,
-                      conversation_id: newMessage.conversation_id,
-                      content: newMessage.content,
-                      from_me: newMessage.from_me,
-                      status: newMessage.status,
-                      created_at: newMessage.timestamp || newMessage.created_at,
-                      wa_message_id: newMessage.wa_message_id
-                    };
-                    return updated;
-                  }
-                }
-                
-                // Check 4: Duplicate content check (last 10 messages from same direction)
-                const recentDuplicate = prev.slice(-10).some(m => 
-                  m.content === (newMessage.content || '') && 
-                  m.from_me === newMessage.from_me
-                );
-                if (recentDuplicate) {
-                  return prev;
-                }
-                
-                // No duplicates found - add new message
-                return [...prev, {
-                  id: newMessage.id,
-                  conversation_id: newMessage.conversation_id,
-                  content: newMessage.content,
-                  from_me: newMessage.from_me,
-                  status: newMessage.status,
-                  created_at: newMessage.timestamp || newMessage.created_at,
-                  wa_message_id: newMessage.wa_message_id
-                }];
-              });
+            // Don't add messages directly from realtime - let polling handle it
+            // This prevents race conditions between realtime and polling
+            // The polling runs every 500ms and has proper deduplication logic
+            
+            // For received messages (not from_me), trigger immediate poll for faster response
+            if (payload.eventType === 'INSERT' && !newMessage.from_me) {
+              loadMessagesByPhone(selectedConversation.contact_phone);
             }
           }
         }

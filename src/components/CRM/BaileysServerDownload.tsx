@@ -31,11 +31,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   };
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.8.0 ==========
+    // ========== PACKAGE.JSON v4.0.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.8.0",
-  "description": "Servidor Baileys estável - tempo real + contatos + mídia completa + endpoint corrigido",
+  "version": "4.0.0",
+  "description": "Servidor Baileys com reidratação de 1h - preserva nomes/fotos",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -71,27 +71,28 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.8.0 - Estável e Completo
+    const readme = `# 🚀 Baileys Server v4.0.0 - Reidratação de 1 Hora
 
-## ✨ Novidades v3.8.0
+## ✨ Novidades v4.0.0
 
-### 🔧 Correções
-- **CORREÇÃO**: Endpoint /api/message/send funcional
-- Logs detalhados no envio de mensagens
-- Validação melhorada de sessão
+### 🔄 Reidratação de 1 Hora
+- **Ao reconectar**: Busca mensagens da última 1 hora do banco
+- **Reenvia ao webhook**: Mensagens aparecem instantaneamente
+- **Preservação**: Nunca sobrescreve nomes/fotos existentes
 
-### 🔄 Estabilidade
-- **Heartbeat automático** - Ping a cada 25s mantém conexão
+### 🔐 Preservação de Contatos
+- **Nomes persistentes**: Contato salvo nunca perde o nome
+- **Fotos de perfil**: Mantém foto mesmo após reconexão
+- **Fallback**: Usa dados do banco quando WhatsApp não retorna
+
+### 🔧 Estabilidade
+- **Heartbeat 20s** - Conexão mais estável
 - **Reconexão inteligente** - Backoff exponencial
-- **Timeout configurável** - 90s para conexão inicial
-
-### 👥 Contatos
-- **Sincronização completa** - Todos os contatos ao conectar
-- **Fotos de perfil** - Busca automática com cache
+- **Proteção anti-flood** - Limita downloads de mídia
 
 ### 📸 Mídia
 - **Upload automático** - Supabase Storage
-- **Retry inteligente** - 5 tentativas
+- **Retry inteligente** - 3 tentativas com delay
 - **Todos os tipos** - Imagens, vídeos, áudios, documentos
 
 ## Deploy no Railway
@@ -107,12 +108,22 @@ sessions/
 ## Comportamento
 
 ### ✅ O que SERÁ sincronizado:
-- Todos os contatos ao conectar
-- Mensagens novas após conexão
-- Todas as mídias (imagens, áudios, vídeos)
+- Mensagens da última 1 hora (ao reconectar)
+- Todos os contatos com nomes/fotos preservados
+- Mensagens novas em tempo real
+- Todas as mídias
 
-### ❌ O que NÃO será sincronizado:
-- Histórico de conversas antigas
+### ❌ O que NÃO será perdido:
+- Nomes de contatos salvos
+- Fotos de perfil existentes
+- Histórico no banco de dados
+
+## Migração da v3.x
+
+1. Baixe o novo servidor v4.0.0
+2. No Railway: substitua arquivos
+3. NÃO delete a pasta sessions/ (mantém login)
+4. Reinicie o serviço
 `;
 
     // ========== SERVIDOR v3.8.0 COMPLETO ==========
@@ -584,7 +595,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.8.0.zip';
+      a.download = 'baileys-server-v4.0.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -592,7 +603,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v3.8.0 - Estável com contatos, mídia e endpoint corrigido!'
+        description: 'Servidor v4.0.0 - Reidratação de 1h + preservação de contatos!'
       });
       
       setIsOpen(false);
@@ -616,10 +627,10 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-[#FF4500]" />
-              Servidor Baileys v3.8.0 - Estável
+              Servidor Baileys v4.0.0 - Reidratação
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp completo - contatos, mídia e mensagens em tempo real
+              Preserva nomes/fotos + restaura 1h de mensagens ao reconectar
             </DialogDescription>
           </DialogHeader>
 
@@ -628,28 +639,24 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-[#FF4500]/10 border border-[#FF4500]/20 rounded-lg p-4">
               <h4 className="font-medium text-[#FF4500] mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.8.0
+                Novidades v4.0.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <Zap className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Endpoint corrigido</strong> - /api/message/send funcional
-                </li>
-                <li className="flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Heartbeat automático</strong> - Conexão mais estável (25s)
+                  <strong>Reidratação de 1h</strong> - Restaura mensagens ao reconectar
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Sincronização de Contatos</strong> - Todos os contatos ao conectar
+                  <strong>Preservação de dados</strong> - Nunca perde nomes/fotos
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Reconexão inteligente</strong> - Backoff exponencial
+                  <Zap className="h-3 w-3 text-[#FF4500]" />
+                  <strong>Heartbeat 20s</strong> - Conexão mais estável
                 </li>
                 <li className="flex items-center gap-2">
                   <ImageIcon className="h-3 w-3 text-[#FF4500]" />
-                  <strong>Mídia completa</strong> - Imagens, vídeos, áudios, documentos
+                  <strong>Mídia completa</strong> - Imagens, vídeos, áudios
                 </li>
               </ul>
             </div>
@@ -671,7 +678,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar v3.8.0
+                    Baixar v4.0.0
                   </>
                 )}
               </Button>

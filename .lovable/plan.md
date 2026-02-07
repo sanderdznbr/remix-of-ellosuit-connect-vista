@@ -1,252 +1,178 @@
 
-# Plano: Correção Completa do ChatBot Builder
+# Plano: Correcao de Mensagens Duplicadas e UI Instantanea no WhatsApp CRM
 
 ## Problemas Identificados
 
-1. **Conectores não funcionam**: Sistema atual usa "click-to-connect" confuso
-2. **Nodes se movem sozinhos**: framer-motion `drag` está conflitando com clicks
-3. **Configurações genéricas**: Gatilhos como "Canal WhatsApp" não têm opções específicas
-4. **Falta feedback visual**: Não há linha durante conexão
+### 1. Mensagens Duplicadas Para Si Mesmo
+O webhook cria conversas para TODAS as mensagens, incluindo as enviadas pelo proprio numero conectado. Nao ha verificacao no backend para filtrar self-messages.
 
----
+### 2. Delay na Exibicao de Mensagens
+O polling de 500ms em `loadMessagesByPhone` substitui TODAS as mensagens pelo resultado do banco de dados. Quando uma mensagem otimista e adicionada com ID `temp-...`, ela e removida no proximo ciclo porque nao existe no banco ainda.
 
-## 1. Corrigir Sistema de Drag (Movimento de Nodes)
-
-**Problema**: O atributo `drag` do framer-motion captura qualquer interação e causa micro-movimentos.
-
-**Solução**: Trocar para drag manual controlado com estado e eventos de mouse.
-
-**Arquivo**: `src/components/ChatBot/ChatBotCanvas.tsx`
-
-**Mudanças**:
-- Remover `motion.div` com `drag` e `dragMomentum`
-- Implementar `onMouseDown/onMouseMove/onMouseUp` manual apenas no handle de arraste
-- Usar estado `draggingNode` para controlar qual node está sendo arrastado
-- Só permitir arraste ao clicar no GripVertical
-
+**Fluxo atual problemático:**
 ```text
-// Lógica atual (problemática)
-<motion.div drag dragMomentum={false} ...>
-
-// Nova lógica (controlada)
-<div style={{...}} ...>
-  <GripVertical onMouseDown={(e) => startDrag(nodeId, e)} />
+1. Usuario digita "Oi" e aperta Enter
+2. Mensagem otimista {id: "temp-123", content: "Oi", status: "sending"} adicionada
+3. 500ms depois, polling chama loadMessagesByPhone()
+4. Banco retorna [] (mensagem ainda nao chegou)
+5. setMessages([]) - MENSAGEM OTIMISTA PERDIDA!
+6. 500ms depois, banco retorna a mensagem real
+7. Usuario vê a mensagem aparecer com delay
 ```
 
 ---
 
-## 2. Corrigir Sistema de Conexões (Edges)
+## Solucao 1: Corrigir Filtragem de Self-Messages no Frontend
 
-**Problema**: Sistema click-to-connect é confuso e não mostra feedback visual.
+**Arquivo**: `src/components/CRM/WhatsAppCRM.tsx`
 
-**Solução**: Implementar drag-to-connect com linha visual durante arraste.
+O filtro atual (linha 993-998) depende apenas de `connectedSessions[0]?.phone_number`, mas precisa verificar TODOS os numeros conectados e normalizar os formatos.
 
-**Mudanças**:
-- Adicionar estado `connectingLine` para linha temporária
-- Quando arrastar do ponto de saída (direita), mostrar linha seguindo cursor
-- Quando soltar sobre ponto de entrada (esquerda), criar edge
-- Feedback visual com cor diferente durante conexão
-
-```text
-Estado durante conexão:
-+--------+
-| Node A |------- - - - - - cursor
-+--------+         (linha tracejada)
-
-Após conexão:
-+--------+        +--------+
-| Node A |------->| Node B |
-+--------+        +--------+
-```
-
----
-
-## 3. Configurações Específicas por Tipo de Bloco
-
-### 3.1 Canal WhatsApp (`whatsapp_channel`)
-
-**Problema**: Não permite selecionar qual número/sessão usar.
-
-**Solução**: Carregar sessões WhatsApp conectadas e mostrar dropdown.
-
-**Arquivo**: `src/components/ChatBot/ChatBotPropertiesPanel.tsx`
-
-**Nova configuração**:
+**Mudanca**:
 ```typescript
-// Buscar sessões
-const { data: sessions } = await supabase
-  .from('whatsapp_sessions')
-  .select('id, instance_name, phone_number, status')
-  .eq('company_id', companyId)
-  .eq('status', 'connected');
+// Extrair todos os numeros conectados (normalizados)
+const connectedPhones = connectedSessions
+  .map(s => s.phone_number?.replace(/\D/g, ''))
+  .filter(Boolean);
 
-// UI
-<Select value={config.sessionId} onValueChange={...}>
-  {sessions.map(s => (
-    <SelectItem value={s.id}>
-      {s.phone_number} - {s.instance_name}
-    </SelectItem>
-  ))}
-</Select>
-```
-
-### 3.2 Canal Email (`email_channel`)
-
-**Campos**:
-- Conta de email conectada
-- Filtro de assunto (opcional)
-- Filtro de remetente (opcional)
-
-### 3.3 Início de Conversa (`conversation_start`)
-
-**Campos**:
-- Tipo de início (primeiro contato, reabertura após X dias)
-- Canal (WhatsApp, Email, Todos)
-
-### 3.4 Se/Senão (`if_else`)
-
-**Campos**:
-- Tipo de condição (resposta do usuário, valor de variável, horário)
-- Operador (contém, igual, maior, menor)
-- Valor esperado
-
----
-
-## 4. Melhorar Exibição dos Nodes
-
-**Problema**: Nodes mostram informação genérica como "Gatilho: whatsapp channel".
-
-**Solução**: Mostrar informação específica da configuração.
-
-**Exemplos**:
-
-| Tipo | Exibição Atual | Nova Exibição |
-|------|---------------|---------------|
-| WhatsApp | "Gatilho: whatsapp channel" | "+55 11 99999-9999" |
-| Texto | "Clique para configurar" | "Olá! Como posso..." (truncado) |
-| Delay | "Aguardar 5s" | "⏱️ Aguardar 5 segundos" |
-| Tag | "Clique para configurar" | "🏷️ Atribuir: lead_quente" |
-
----
-
-## 5. Pontos de Conexão com Handles Múltiplos
-
-**Problema**: Condições precisam de múltiplas saídas (Sim/Não).
-
-**Solução**: Para nodes do tipo `condition`, adicionar dois pontos de saída.
-
-```text
-+------------------+
-|    Se/Senão      |
-|   idade > 18     |
-+------------------+
-   ●              ○ Sim ------>
-  (in)            ○ Não ------>
+// No filtro de conversas:
+const contactPhone = conv.contact_phone?.replace(/\D/g, '');
+if (connectedPhones.some(cp => cp === contactPhone || 
+    cp?.endsWith(contactPhone) || contactPhone?.endsWith(cp))) {
+  return false; // Excluir self-chat
+}
 ```
 
 ---
 
-## Estrutura Final dos Arquivos
+## Solucao 2: Preservar Mensagens Otimistas Durante Polling
 
-### ChatBotCanvas.tsx (Revisado)
+**Arquivo**: `src/components/CRM/WhatsAppCRM.tsx`
+
+Modificar `loadMessagesByPhone` para:
+1. Manter mensagens com ID `temp-...` no estado
+2. Substituir mensagens temp apenas quando encontrar correspondencia real
+3. Usar conteudo + timestamp aproximado para fazer match
+
+**Nova logica de merge**:
 ```typescript
-// Estados de controle
-const [draggingNode, setDraggingNode] = useState<string | null>(null);
-const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-const [connectingLine, setConnectingLine] = useState<{
-  sourceId: string;
-  sourceX: number;
-  sourceY: number;
-  currentX: number;
-  currentY: number;
-} | null>(null);
-
-// Handlers de drag manual
-const handleNodeMouseDown = (e, nodeId, nodePos) => {
-  if (e.target.closest('.drag-handle')) {
-    setDraggingNode(nodeId);
-    setDragOffset({ x: e.clientX - nodePos.x, y: e.clientY - nodePos.y });
-  }
-};
-
-// Handler de conexão
-const handleConnectorMouseDown = (e, nodeId) => {
-  const rect = e.target.getBoundingClientRect();
-  setConnectingLine({
-    sourceId: nodeId,
-    sourceX: rect.left,
-    sourceY: rect.top,
-    currentX: e.clientX,
-    currentY: e.clientY
-  });
-};
-```
-
-### ChatBotPropertiesPanel.tsx (Revisado)
-```typescript
-// Hook para carregar dados dinâmicos
-const [whatsappSessions, setWhatsappSessions] = useState([]);
-const [loading, setLoading] = useState(false);
-
-useEffect(() => {
-  if (node.subType === 'whatsapp_channel') {
-    loadWhatsAppSessions();
-  }
-}, [node.subType]);
-
-// Renderização condicional com dados reais
-{node.subType === 'whatsapp_channel' && (
-  <div className="space-y-4">
-    <Label>Selecione o Canal WhatsApp</Label>
-    <Select value={node.data.config?.sessionId} ...>
-      {whatsappSessions.map(session => (
-        <SelectItem value={session.id}>
-          <div className="flex items-center gap-2">
-            <Avatar><AvatarImage src={session.profile_picture} /></Avatar>
-            <div>
-              <p>{session.phone_number}</p>
-              <p className="text-xs text-gray-500">{session.instance_name}</p>
-            </div>
-          </div>
-        </SelectItem>
-      ))}
-    </Select>
+setMessages(prev => {
+  // Separar mensagens temporarias das reais
+  const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+  
+  // Para cada mensagem temp, verificar se existe correspondencia no banco
+  const matchedTempIds = new Set<string>();
+  const serverMessages = sorted.map(serverMsg => {
+    // Procurar mensagem temp correspondente (mesmo conteudo, timestamp proximo)
+    const matchingTemp = tempMessages.find(temp => 
+      temp.content === serverMsg.content && 
+      temp.from_me === serverMsg.from_me &&
+      !matchedTempIds.has(temp.id) &&
+      Math.abs(new Date(temp.created_at).getTime() - new Date(serverMsg.created_at).getTime()) < 60000
+    );
     
-    <Label>Quando Iniciar?</Label>
-    <Select value={node.data.config?.triggerWhen || 'any_message'}>
-      <SelectItem value="any_message">Qualquer mensagem</SelectItem>
-      <SelectItem value="new_conversation">Nova conversa</SelectItem>
-      <SelectItem value="reopened">Conversa reaberta</SelectItem>
-    </Select>
-  </div>
-)}
+    if (matchingTemp) {
+      matchedTempIds.add(matchingTemp.id);
+    }
+    return serverMsg;
+  });
+  
+  // Manter mensagens temp que ainda nao tem correspondencia no servidor
+  const unmatchedTemp = tempMessages.filter(t => !matchedTempIds.has(t.id));
+  
+  // Combinar: mensagens do servidor + mensagens temp nao correspondidas
+  const combined = [...serverMessages, ...unmatchedTemp]
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  
+  // Evitar re-render se nada mudou
+  const prevSignature = prev.map(m => `${m.id}-${m.status}`).join(',');
+  const newSignature = combined.map(m => `${m.id}-${m.status}`).join(',');
+  if (prevSignature === newSignature) return prev;
+  
+  return combined;
+});
 ```
 
 ---
 
-## Ordem de Implementação
+## Solucao 3: Filtrar Self-Messages no Webhook (Backend)
 
-| Prioridade | Tarefa | Arquivos |
-|------------|--------|----------|
-| 1 | Corrigir sistema de drag (parar movimento) | ChatBotCanvas.tsx |
-| 2 | Implementar drag-to-connect visual | ChatBotCanvas.tsx |
-| 3 | Config WhatsApp Channel (select sessões) | ChatBotPropertiesPanel.tsx |
-| 4 | Config demais gatilhos | ChatBotPropertiesPanel.tsx |
-| 5 | Melhorar exibição nos nodes | ChatBotCanvas.tsx |
-| 6 | Handles múltiplos para condições | ChatBotCanvas.tsx |
+**Arquivo**: `supabase/functions/whatsapp-webhook/index.ts`
+
+Adicionar verificacao no processamento de mensagens para ignorar mensagens onde o `phoneNumber` e igual ao numero da sessao conectada.
+
+**Mudanca no case 'messages.upsert'**:
+```typescript
+// Apos obter session info, obter numero da sessao
+const { data: sessionInfo } = await supabase
+  .from('whatsapp_sessions')
+  .select('phone_number, company_id')
+  .eq('id', targetSessionId)
+  .single();
+
+const sessionPhone = sessionInfo?.phone_number?.replace(/\D/g, '');
+const contactPhone = phoneNumber?.replace(/\D/g, '');
+
+// Ignorar mensagens para si mesmo
+if (sessionPhone && contactPhone && 
+    (sessionPhone === contactPhone || 
+     sessionPhone.endsWith(contactPhone) || 
+     contactPhone.endsWith(sessionPhone))) {
+  console.log('Skipping self-message');
+  continue;
+}
+```
 
 ---
 
-## Resumo de Mudanças
+## Solucao 4: Adicionar Debounce no Input para Performance
 
-**Arquivos a modificar**:
-- `src/components/ChatBot/ChatBotCanvas.tsx` - Sistema de drag e conexões
-- `src/components/ChatBot/ChatBotPropertiesPanel.tsx` - Configurações específicas
-- `src/components/ChatBot/ChatBotSidebar.tsx` - Descrições mais claras
+**Arquivo**: `src/components/CRM/WhatsAppCRM.tsx`
 
-**Resultado esperado**:
-- Nodes só movem quando arrastados pelo handle
-- Conexões feitas por drag com feedback visual
-- Canal WhatsApp permite selecionar sessão conectada
-- Informações úteis exibidas diretamente nos nodes
-- Interface profissional similar ao Umbler Talk
+Garantir que o input do usuario nao cause delay. O input atual ja usa estado controlado que e responsivo.
+
+---
+
+## Resumo de Arquivos a Modificar
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/CRM/WhatsAppCRM.tsx` | Logica de merge para preservar msgs temp + filtro de self-chat |
+| `supabase/functions/whatsapp-webhook/index.ts` | Filtrar self-messages no backend |
+
+---
+
+## Fluxo Corrigido
+
+```text
+1. Usuario digita "Oi" e aperta Enter
+2. Mensagem otimista {id: "temp-123", content: "Oi", status: "sending"} adicionada INSTANTANEAMENTE
+3. Chamada API enviada em background
+4. 500ms depois, polling chama loadMessagesByPhone()
+5. Banco retorna [] (mensagem ainda nao chegou)
+6. Merge preserva temp-123 pois nao ha correspondencia
+7. Usuario continua vendo a mensagem (sem piscar)
+8. Proximo polling: banco retorna mensagem real
+9. Merge detecta correspondencia e substitui temp-123 pela real
+10. Status muda de "sending" para "sent" - transicao suave
+```
+
+---
+
+## Secao Tecnica
+
+### Normalizacao de Numeros de Telefone
+Os numeros de telefone podem vir em diferentes formatos:
+- `5511999999999`
+- `+55 11 99999-9999`
+- `11999999999`
+
+A normalizacao usando `.replace(/\D/g, '')` remove todos os caracteres nao-numericos.
+
+Para comparacao, usamos `endsWith` porque alguns numeros podem ter ou nao o codigo do pais.
+
+### Deduplicacao por wa_message_id
+Mensagens reais do WhatsApp tem um `wa_message_id` unico. Mensagens otimistas tem ID `temp-...`. A logica de merge usa o conteudo e timestamp para fazer correspondencia entre temp e real.
+
+### Janela de Tempo para Match
+Usamos 60 segundos como janela para considerar uma mensagem temp como correspondente a uma real. Isso e suficiente para cobrir latencia de rede.

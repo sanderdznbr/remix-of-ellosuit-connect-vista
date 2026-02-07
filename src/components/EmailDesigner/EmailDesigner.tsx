@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, Eye, ArrowLeft } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Palette } from 'lucide-react';
 import { DesignCanvas } from './DesignCanvas';
 import { ElementsPalette } from './ElementsPalette';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
+import { HexColorPicker } from 'react-colorful';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface EmailDesignerProps {
   onBack: () => void;
@@ -44,6 +46,14 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
   const [selectedElement, setSelectedElement] = useState<DesignElement | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Global styles
+  const [emailBackgroundColor, setEmailBackgroundColor] = useState(
+    existingDesign?.design_data?.globalStyles?.backgroundColor || '#1a1a1a'
+  );
+  const [contentBackgroundColor, setContentBackgroundColor] = useState(
+    existingDesign?.design_data?.globalStyles?.contentBackgroundColor || '#ffffff'
+  );
   
   const { createDesign, updateDesign } = useEmailDesigns();
 
@@ -143,7 +153,13 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
     const designData = {
       name: designName,
       description: designDescription,
-      design_data: { elements },
+      design_data: { 
+        elements,
+        globalStyles: {
+          backgroundColor: emailBackgroundColor,
+          contentBackgroundColor: contentBackgroundColor
+        }
+      },
       is_published: false
     };
 
@@ -163,8 +179,8 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${designName}</title>
       </head>
-      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: ${emailBackgroundColor};">
+        <div style="max-width: 600px; margin: 0 auto; background-color: ${contentBackgroundColor}; padding: 20px; border-radius: 8px;">
     `;
 
     elements.forEach(element => {
@@ -199,6 +215,27 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
 
     return html;
   };
+
+  // Color picker helper
+  const ColorPickerButton = ({ label, value, onChange }: { label: string; value: string; onChange: (color: string) => void }) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <div className="w-4 h-4 rounded border" style={{ backgroundColor: value }} />
+          <span className="text-xs">{label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <HexColorPicker color={value} onChange={onChange} />
+        <Input 
+          value={value} 
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-2 text-xs"
+          placeholder="#000000"
+        />
+      </PopoverContent>
+    </Popover>
+  );
 
   if (showPreview) {
     return (
@@ -244,6 +281,20 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Global Background Colors */}
+            <div className="flex items-center gap-2 mr-4 px-3 py-1 bg-muted rounded-lg">
+              <Palette className="h-4 w-4 text-muted-foreground" />
+              <ColorPickerButton 
+                label="Fundo Email" 
+                value={emailBackgroundColor} 
+                onChange={setEmailBackgroundColor}
+              />
+              <ColorPickerButton 
+                label="Fundo Conteúdo" 
+                value={contentBackgroundColor} 
+                onChange={setContentBackgroundColor}
+              />
+            </div>
             <Button variant="outline" onClick={() => setShowPreview(true)}>
               <Eye className="h-4 w-4 mr-2" />
               Preview

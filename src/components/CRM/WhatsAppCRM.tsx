@@ -265,9 +265,8 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Helper: Check if phone number is valid (filter LIDs only)
-  // NOTE: Groups have long IDs (18+ digits) - only show if they have a proper name
-  // Conversations where contact_name equals contact_phone (and is 16+ digits) are likely invalid
+  // Helper: Check if conversation is valid
+  // v3.5.0: Show ALL conversations including groups without names (display formatted ID)
   const isValidConversation = (conv: WhatsAppConversationData): boolean => {
     if (!conv.contact_phone) return false;
     const digits = conv.contact_phone.replace(/\D/g, '');
@@ -275,17 +274,27 @@ const WhatsAppCRM: React.FC = () => {
     // Too short is invalid
     if (digits.length < 8) return false;
     
-    // If it's a long numeric ID (likely group), check if it has a proper name
-    if (digits.length >= 16) {
-      // If name equals phone number (no name resolved), hide it
-      const nameDigits = conv.contact_name?.replace(/\D/g, '') || '';
-      if (nameDigits === digits || !conv.contact_name || conv.contact_name === conv.contact_phone) {
-        console.log(`[FILTER] Hiding unresolved group: ${conv.contact_phone}`);
-        return false;
-      }
-    }
-    
+    // v3.5.0: Show ALL conversations - groups will be displayed with formatted ID if no name
     return true;
+  };
+  
+  // Helper: Get display name for conversation (handles groups without names)
+  const getDisplayName = (conv: WhatsAppConversationData): string => {
+    if (conv.contact_name && conv.contact_name !== conv.contact_phone) {
+      return conv.contact_name;
+    }
+    // For groups without name, show formatted ID
+    const digits = conv.contact_phone.replace(/\D/g, '');
+    if (digits.length > 15) {
+      return `Grupo ${digits.substring(0, 8)}...`;
+    }
+    return conv.contact_phone;
+  };
+  
+  // Helper: Check if conversation is a group
+  const isGroupConversation = (conv: WhatsAppConversationData): boolean => {
+    const digits = conv.contact_phone.replace(/\D/g, '');
+    return digits.length > 15;
   };
 
   // Legacy helper for backwards compatibility
@@ -1482,8 +1491,11 @@ const WhatsAppCRM: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {isGroupConversation(conversation) && (
+                            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          )}
                           <span className="font-medium truncate">
-                            {conversation.contact_name || conversation.contact_phone}
+                            {getDisplayName(conversation)}
                           </span>
                           {/* AI Badge */}
                           {conversation.assigned_agent_id && conversation.ai_auto_reply_enabled && (

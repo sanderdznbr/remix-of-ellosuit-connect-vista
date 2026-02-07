@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -246,6 +246,11 @@ const WhatsAppCRM: React.FC = () => {
   const [showConversationPopup, setShowConversationPopup] = useState(false);
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
+  const [showServerDownload, setShowServerDownload] = useState(false);
+  
+  // Media upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   
   // Context menu states
   const [conversationContextMenu, setConversationContextMenu] = useState<{
@@ -1139,7 +1144,115 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Select AI Agent
+  // Handle file upload for media messages
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedConversation) return;
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    // Check if connected before sending
+    const connectedSession = sessions.find(s => 
+      s.id === selectedConversation.session_id && s.status === 'connected'
+    ) || sessions.find(s => s.status === 'connected');
+    
+    if (!connectedSession && !selectedConversation.is_demo) {
+      toast({ 
+        title: 'WhatsApp Desconectado', 
+        description: 'Você precisa conectar seu WhatsApp para enviar mídia.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setUploadingMedia(true);
+    
+    try {
+      // Determine media type
+      let mediaType = 'document';
+      if (file.type.startsWith('image/')) mediaType = 'image';
+      else if (file.type.startsWith('video/')) mediaType = 'video';
+      else if (file.type.startsWith('audio/')) mediaType = 'audio';
+      
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(`outgoing/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        throw new Error('Erro ao fazer upload do arquivo');
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(uploadData.path);
+      
+      const mediaUrl = urlData.publicUrl;
+      
+      // Create optimistic message
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage: WhatsAppMessage = {
+        id: tempId,
+        conversation_id: selectedConversation.id,
+        content: file.name,
+        from_me: true,
+        status: 'sending',
+        created_at: new Date().toISOString(),
+        message_type: mediaType,
+        media_url: mediaUrl
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+      
+      // Send via API
+      if (connectedSession && !selectedConversation.is_demo) {
+        const { error } = await supabase.functions.invoke('whatsapp-api', {
+          body: {
+            action: 'send_media',
+            sessionId: connectedSession.id,
+            phone: selectedConversation.contact_phone,
+            mediaUrl: mediaUrl,
+            mediaType: mediaType,
+            fileName: file.name,
+            caption: ''
+          }
+        });
+        
+        if (error) throw error;
+        
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
+        ));
+        
+        toast({ title: 'Mídia enviada!' });
+      } else {
+        // Demo mode
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, status: 'sent' } : m
+        ));
+      }
+    } catch (e: any) {
+      console.error('Error uploading media:', e);
+      toast({ 
+        title: 'Erro', 
+        description: e.message || 'Erro ao enviar mídia', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const selectAgent = (agent: AIAgent) => {
     setSelectedAgent(agent);
     setSelectedConversation(null);
@@ -1279,31 +1392,39 @@ const WhatsAppCRM: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        {/* Right side controls - Clean style like Lista/Kanban/Contatos */}
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => {
               setSelectedConversationForLabels(null);
               setShowLabelsManager(true);
             }}
-            className="h-8"
+            className="h-7 px-2"
           >
             <Tag className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Etiquetas</span>
+            <span className="hidden sm:inline text-xs">Etiquetas</span>
           </Button>
-          <BaileysServerDownload />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowServerDownload(true)}
+            className="h-7 px-2"
+          >
+            <Server className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline text-xs">Servidor</span>
+          </Button>
           {connectedSessions.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
+                  variant="ghost"
                   size="sm" 
-                  variant="outline"
-                  className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                  className="h-7 px-2"
                 >
-                  <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500 mr-2" />
-                  <span className="hidden sm:inline">Conectado</span>
-                  <Settings className="h-4 w-4 ml-1" />
+                  <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500 mr-1.5" />
+                  <span className="hidden sm:inline text-xs">Conexão</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -1362,26 +1483,34 @@ const WhatsAppCRM: React.FC = () => {
             </DropdownMenu>
           ) : hasDisconnectedSessions ? (
             <Button 
+              variant="ghost"
               size="sm" 
               onClick={() => setShowQRModal(true)} 
-              variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive/10"
+              className="h-7 px-2"
             >
-              <Circle className="h-3 w-3 fill-destructive text-destructive mr-2" />
-              <span className="hidden sm:inline">Desconectado</span>
-              <QrCode className="h-4 w-4 ml-1" />
+              <Circle className="h-2.5 w-2.5 fill-destructive text-destructive mr-1.5" />
+              <span className="hidden sm:inline text-xs">Conexão</span>
             </Button>
           ) : (
             <Button 
+              variant="ghost"
               size="sm" 
               onClick={() => setShowQRModal(true)} 
-              className="bg-[#FF4500] hover:bg-[#FF4500]/90"
+              className="h-7 px-2"
             >
-              <QrCode className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Conectar</span>
+              <Circle className="h-2.5 w-2.5 fill-muted-foreground text-muted-foreground mr-1.5" />
+              <span className="hidden sm:inline text-xs">Conexão</span>
             </Button>
           )}
         </div>
+
+        {/* BaileysServerDownload Dialog */}
+        {showServerDownload && (
+          <BaileysServerDownload 
+            isOpenExternal={showServerDownload} 
+            onClose={() => setShowServerDownload(false)} 
+          />
+        )}
       </div>
 
       {/* Main Content */}
@@ -2086,13 +2215,78 @@ const WhatsAppCRM: React.FC = () => {
             
             {/* Input Area */}
             <div className="p-4 border-t bg-card">
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+                onChange={handleFileUpload}
+              />
+              
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
+                {/* Media upload dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-10 w-10 flex-shrink-0"
+                      disabled={uploadingMedia || !selectedConversation}
+                    >
+                      {uploadingMedia ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Paperclip className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = 'image/*';
+                        fileInputRef.current.click();
+                      }
+                    }}>
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Imagem
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = 'video/*';
+                        fileInputRef.current.click();
+                      }
+                    }}>
+                      <Play className="h-4 w-4 mr-2" />
+                      Vídeo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = 'audio/*';
+                        fileInputRef.current.click();
+                      }
+                    }}>
+                      <Mic className="h-4 w-4 mr-2" />
+                      Áudio
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = '.pdf,.doc,.docx,.xls,.xlsx';
+                        fileInputRef.current.click();
+                      }
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Documento
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
                 <Input
                   placeholder={selectedAgent ? `Mensagem para ${selectedAgent.name}...` : "Digite uma mensagem..."}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                  className="flex-1"
+                  className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input"
                 />
                 <Button 
                   onClick={sendMessage} 

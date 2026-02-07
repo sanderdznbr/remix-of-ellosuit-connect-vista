@@ -56,7 +56,8 @@ const DEFAULT_MENU_GROUPS = [
     color: '#8B5CF6',
     hubPath: '/dashboard/bot-ia',
     items: [
-      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' }
+      { id: 'agentes-ia', path: '/dashboard/bot-ia', icon: 'Bot', label: 'Agentes de IA' },
+      { id: 'chatbots', path: '/dashboard/chatbot', icon: 'Zap', label: 'Chatbots' }
     ]
   },
   {

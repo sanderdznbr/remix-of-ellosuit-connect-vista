@@ -599,6 +599,148 @@ serve(async (req) => {
                   console.error('❌ Error in AI auto-response:', aiError);
                 }
               }
+              
+              // ==================== CHATBOT FLOW PROCESSING ====================
+              // Check if any active chatbot flows should be triggered
+              if (!fromMe && conversation) {
+                try {
+                  // Get active chatbot flows for this company
+                  const { data: activeFlows } = await supabase
+                    .from('chatbot_flows')
+                    .select('*')
+                    .eq('company_id', companyId)
+                    .eq('is_active', true);
+                  
+                  if (activeFlows && activeFlows.length > 0) {
+                    console.log(`🤖 Checking ${activeFlows.length} active chatbot flows`);
+                    
+                    for (const flow of activeFlows) {
+                      const triggerConfig = flow.trigger_config as any;
+                      const nodes = flow.nodes as any[];
+                      let shouldTrigger = false;
+                      
+                      // Check trigger conditions
+                      if (triggerConfig?.type === 'keyword' && triggerConfig?.value) {
+                        const keywords = triggerConfig.value.toLowerCase().split(',').map((k: string) => k.trim());
+                        const messageLC = content.toLowerCase();
+                        shouldTrigger = keywords.some((kw: string) => messageLC.includes(kw));
+                      } else if (triggerConfig?.type === 'whatsapp_channel') {
+                        // Check if this is the configured session
+                        shouldTrigger = !triggerConfig.sessionId || triggerConfig.sessionId === targetSessionId;
+                      } else if (triggerConfig?.type === 'start') {
+                        // Check if this is a new conversation (no previous messages)
+                        const { count } = await supabase
+                          .from('whatsapp_messages')
+                          .select('*', { count: 'exact', head: true })
+                          .eq('conversation_id', conversation.id)
+                          .eq('from_me', false);
+                        shouldTrigger = (count || 0) <= 1;
+                      }
+                      
+                      if (shouldTrigger) {
+                        console.log(`🤖 Triggering chatbot flow: ${flow.name}`);
+                        
+                        // Increment execution count
+                        await supabase
+                          .from('chatbot_flows')
+                          .update({ execution_count: (flow.execution_count || 0) + 1 })
+                          .eq('id', flow.id);
+                        
+                        // Get session server URL
+                        const { data: sessionData } = await supabase
+                          .from('whatsapp_sessions')
+                          .select('id, baileys_server_url')
+                          .eq('id', targetSessionId)
+                          .single();
+                        
+                        if (sessionData?.baileys_server_url) {
+                          // Process flow nodes (simplified - execute message nodes in order)
+                          const messageNodes = nodes.filter(n => n.type === 'message');
+                          
+                          for (let i = 0; i < messageNodes.length; i++) {
+                            const node = messageNodes[i];
+                            const nodeContent = node.data?.content || node.data?.config?.content;
+                            
+                            if (nodeContent) {
+                              // Check for delay before this node
+                              const delayNodes = nodes.filter(n => n.type === 'delay');
+                              const delayBefore = delayNodes.find(d => d.nextNodeId === node.id);
+                              if (delayBefore && delayBefore.data?.delaySeconds) {
+                                await new Promise(resolve => setTimeout(resolve, delayBefore.data.delaySeconds * 1000));
+                              }
+                              
+                              // Save chatbot message to database
+                              const cbMsgTimestamp = new Date().toISOString();
+                              const cbMessageId = `cb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                              
+                              await supabase
+                                .from('whatsapp_messages')
+                                .insert({
+                                  conversation_id: conversation.id,
+                                  session_id: targetSessionId,
+                                  company_id: companyId,
+                                  from_me: true,
+                                  content: nodeContent,
+                                  message_type: 'text',
+                                  status: 'sending',
+                                  timestamp: cbMsgTimestamp,
+                                  wa_message_id: cbMessageId,
+                                  is_ai_response: true,
+                                  sender_name: `🤖 ${flow.name}`,
+                                  metadata: { chatbot_flow_id: flow.id, chatbot_flow_name: flow.name }
+                                });
+                              
+                              // Update conversation
+                              await supabase
+                                .from('whatsapp_conversations')
+                                .update({
+                                  last_message: nodeContent,
+                                  last_message_at: cbMsgTimestamp
+                                })
+                                .eq('id', conversation.id);
+                              
+                              // Send message via WhatsApp
+                              const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  sessionId: targetSessionId,
+                                  phone: phoneNumber,
+                                  message: nodeContent
+                                })
+                              });
+                              
+                              if (sendResponse.ok) {
+                                console.log(`✅ Chatbot message sent: ${nodeContent.substring(0, 50)}...`);
+                                await supabase
+                                  .from('whatsapp_messages')
+                                  .update({ status: 'sent' })
+                                  .eq('wa_message_id', cbMessageId);
+                              } else {
+                                console.error('❌ Failed to send chatbot message');
+                                await supabase
+                                  .from('whatsapp_messages')
+                                  .update({ status: 'failed' })
+                                  .eq('wa_message_id', cbMessageId);
+                              }
+                              
+                              // Small delay between messages
+                              if (i < messageNodes.length - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                              }
+                            }
+                          }
+                        }
+                        
+                        // Only trigger first matching flow
+                        break;
+                      }
+                    }
+                  }
+                } catch (cbError) {
+                  console.error('❌ Error in chatbot flow processing:', cbError);
+                }
+              }
             }
           } else {
             // No message ID - just insert

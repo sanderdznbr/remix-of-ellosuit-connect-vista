@@ -21,6 +21,7 @@ import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboar
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
 import ChatBotBuilder from '@/components/ChatBot/ChatBotBuilder';
+import ChatbotManagement from '@/components/BotIA/ChatbotManagement';
 
 // New unified pages
 import UnifiedDatabase from '@/components/Dashboard/UnifiedDatabase';
@@ -75,7 +76,8 @@ const MobileResponsiveDashboard = () => {
         
         {/* Inteligência Artificial */}
         <Route path="/bot-ia" element={<BotIADashboard />} />
-        <Route path="/chatbot" element={<ChatBotBuilder />} />
+        <Route path="/chatbot" element={<ChatbotManagement />} />
+        <Route path="/chatbot-builder" element={<ChatBotBuilder />} />
         
         {/* Comunicação */}
         <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />

@@ -1463,10 +1463,39 @@ const WhatsAppCRM: React.FC = () => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium truncate">
-                          {conversation.contact_name || conversation.contact_phone}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="font-medium truncate">
+                            {conversation.contact_name || conversation.contact_phone}
+                          </span>
+                          {/* Labels next to name */}
+                          {conversation.labels && conversation.labels.length > 0 && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {conversation.labels.slice(0, 2).map(labelId => {
+                                const label = labels.find(l => l.id === labelId);
+                                if (!label) return null;
+                                return (
+                                  <span
+                                    key={labelId}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                    style={{
+                                      backgroundColor: `${label.color}20`,
+                                      color: label.color,
+                                      border: `1px solid ${label.color}40`
+                                    }}
+                                  >
+                                    {label.name}
+                                  </span>
+                                );
+                              })}
+                              {conversation.labels.length > 2 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{conversation.labels.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                           {formatTime(conversation.last_message_at)}
                         </span>
                       </div>

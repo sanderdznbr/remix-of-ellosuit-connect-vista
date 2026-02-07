@@ -1,36 +1,51 @@
 
-# ✅ Plano Concluído: Servidor v3.0.0 e Correção de Duplicação
+# Plano: Corrigir Duplicação de Mensagens no Frontend (Definitivo)
 
-## Status: IMPLEMENTADO
+## Diagnóstico
 
----
+A duplicação ocorre porque existem **3 fontes** que podem adicionar mensagens ao state:
 
-## Alterações Realizadas
+1. **Otimização local** (linha 948): Adiciona `temp-xxx` imediatamente
+2. **Realtime subscription** (linhas 731-746): Adiciona quando recebe INSERT do banco
+3. **Polling 500ms** (linha 828): Recarrega mensagens periodicamente
 
-### 1. BaileysServerDownload.tsx → v3.0.0
-- ✅ Versão atualizada para `3.0.0`
-- ✅ Mudou de `"type": "module"` para `"type": "commonjs"`
-- ✅ Adicionou dependências: `@supabase/supabase-js`, `mime-types`
-- ✅ Código do servidor com suporte completo a mídias
-- ✅ Upload automático para Supabase Storage
-- ✅ Novo arquivo `.env.example` incluído
+O problema está na **realtime subscription** que não verifica se já existe uma mensagem otimista (temp) com o mesmo conteúdo antes de adicionar.
 
-### 2. whatsapp-webhook/index.ts → Filtro de LIDs
-- ✅ Função `isValidPhoneNumber()` - filtra números > 15 dígitos
-- ✅ Função `extractPhoneFromJid()` - ignora @lid
-- ✅ Deduplicação por `wa_message_id` antes de inserir
-- ✅ Busca conversa por `company_id + contact_phone` (não só session_id)
-- ✅ Suporte a `mediaUrl` do servidor v3.0.0
+## Solução
 
-### 3. WhatsAppCRM.tsx → Filtro no Frontend
-- ✅ Função `isValidPhoneNumber()` para filtrar LIDs
-- ✅ Conversas com números inválidos são ignoradas na lista
-- ✅ Deduplicação mantida por `contact_phone`
+### Etapa 1: Corrigir Realtime no WhatsAppCRM.tsx
 
----
+Modificar a lógica de INSERT (linhas 731-746) para:
+1. Verificar se existe mensagem temp com mesmo conteúdo
+2. Se existir: **substituir** o temp pelo real (não adicionar)
+3. Se não existir: verificar por conteúdo duplicado recente antes de adicionar
 
-## Resultado
+```text
+Antes:
+- Verifica apenas ID exato e wa_message_id
+- Se não encontra, adiciona (causando duplicação)
 
-1. **Download v3.0.0**: Modal agora mostra versão 3.0.0 com suporte a mídia
-2. **Sem duplicação**: Mensagens não aparecerão em conversas de números LID
-3. **Números limpos**: LIDs (> 15 dígitos ou @lid) são filtrados automaticamente
+Depois:
+- Verifica ID exato e wa_message_id
+- Verifica se existe temp-xxx com mesmo conteúdo → SUBSTITUI
+- Verifica se existe duplicata recente por conteúdo → IGNORA
+- Só adiciona se realmente for nova
+```
+
+### Etapa 2: Melhorar loadMessagesByPhone
+
+A função já tem lógica de merge, mas pode melhorar:
+1. Usar um Map para tracking de mensagens pendentes
+2. Garantir que temp messages são removidas quando o servidor confirma
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/CRM/WhatsAppCRM.tsx` | Corrigir dedup no realtime INSERT |
+
+## Resultado Esperado
+
+- Mensagem enviada aparece **uma única vez**
+- Transição suave de `temp-xxx` para `uuid-real`
+- Zero duplicação visual

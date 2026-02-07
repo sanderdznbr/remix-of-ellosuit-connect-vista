@@ -91,11 +91,17 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
         .limit(200);
       
       if (!error && data) {
-        // Deduplicate by wa_message_id
+        // Deduplicate by wa_message_id or content+timestamp
         const uniqueMessages = new Map<string, WhatsAppMessage>();
         data.forEach(m => {
           const key = m.wa_message_id || m.id;
-          if (!uniqueMessages.has(key)) {
+          // Also check for duplicate content within 5 seconds
+          const isDuplicate = Array.from(uniqueMessages.values()).some(existing =>
+            existing.content === m.content &&
+            existing.from_me === m.from_me &&
+            Math.abs(new Date(existing.created_at).getTime() - new Date(m.timestamp || m.created_at).getTime()) < 5000
+          );
+          if (!uniqueMessages.has(key) && !isDuplicate) {
             uniqueMessages.set(key, {
               ...m,
               created_at: m.timestamp || m.created_at

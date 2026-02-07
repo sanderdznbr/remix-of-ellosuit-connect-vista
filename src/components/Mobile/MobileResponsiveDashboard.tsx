@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 // Import components
 import Home from '@/components/Dashboard/Home';
 import MyCalendar from '@/components/Dashboard/MyCalendar';
-import ImprovedEmailMarketing from '@/components/Dashboard/ImprovedEmailMarketing';
+import CleanEmailMarketing from '@/components/Dashboard/CleanEmailMarketing';
 import SentEmailTracker from '@/components/Dashboard/SentEmailTracker';
 import Analytics from '@/components/Dashboard/Analytics';
 import GroupedSidebarEditor from '@/components/Dashboard/GroupedSidebarEditor';
@@ -76,7 +76,7 @@ const MobileResponsiveDashboard = () => {
         
         {/* Comunicação */}
         <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
-        <Route path="/email/*" element={<ImprovedEmailMarketing />} />
+        <Route path="/email/*" element={<CleanEmailMarketing />} />
         <Route path="/email-tracker" element={<SentEmailTracker />} />
         
         {/* Produtividade */}

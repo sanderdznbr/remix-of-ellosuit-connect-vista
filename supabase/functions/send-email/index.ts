@@ -17,6 +17,7 @@ interface SendEmailRequest {
   provider?: 'resend' | 'gmail';
   from_email?: string;
   from_name?: string;
+  user_id?: string;
 }
 
 const sendWithResend = async (emailData: SendEmailRequest) => {
@@ -27,7 +28,6 @@ const sendWithResend = async (emailData: SendEmailRequest) => {
 
   const resend = new Resend(resendApiKey);
   
-  // Use custom domain if provided, otherwise use default
   const fromAddress = emailData.from_email || "noreply@yourdomain.com";
   const fromName = emailData.from_name || "Sistema de Email";
   
@@ -51,8 +51,52 @@ const sendWithResend = async (emailData: SendEmailRequest) => {
   };
 };
 
+const refreshGmailToken = async (supabase: any, accountId: string, refreshToken: string) => {
+  console.log('🔄 Refreshing Gmail token...');
+  
+  const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
+  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('Google credentials not configured');
+  }
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('❌ Token refresh failed:', error);
+    throw new Error('Failed to refresh Gmail token');
+  }
+
+  const tokens = await response.json();
+  const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();
+
+  // Update token in database
+  await supabase
+    .from('user_email_accounts')
+    .update({
+      access_token: tokens.access_token,
+      expires_at: expiresAt
+    })
+    .eq('id', accountId);
+
+  console.log('✅ Token refreshed successfully');
+  return tokens.access_token;
+};
+
 const sendWithGmail = async (emailData: SendEmailRequest, accessToken: string) => {
-  // Construct the email message in RFC 2822 format
+  console.log('📧 Sending email via Gmail API...');
+  
   const messageParts = [
     `To: ${emailData.recipient_email}`,
     `From: ${emailData.from_email}`,
@@ -75,18 +119,18 @@ const sendWithGmail = async (emailData: SendEmailRequest, accessToken: string) =
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      raw: encodedMessage
-    })
+    body: JSON.stringify({ raw: encodedMessage })
   });
 
   if (!response.ok) {
     const error = await response.json();
-    console.error('Gmail API error:', error);
+    console.error('❌ Gmail API error:', error);
     throw new Error(`Erro ao enviar email via Gmail: ${error.error?.message || 'Erro desconhecido'}`);
   }
 
   const result = await response.json();
+  console.log('✅ Email sent via Gmail:', result.id);
+  
   return {
     provider: 'gmail',
     external_id: result.id,
@@ -105,6 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const requestData: SendEmailRequest = await req.json();
     const { 
       recipient_email, 
       recipient_name, 
@@ -114,10 +159,11 @@ const handler = async (req: Request): Promise<Response> => {
       campaign_id,
       provider = 'resend',
       from_email,
-      from_name
-    }: SendEmailRequest = await req.json();
+      from_name,
+      user_id
+    } = requestData;
 
-    console.log(`Sending email to ${recipient_email} via ${provider}`);
+    console.log(`📨 Sending email to ${recipient_email} via ${provider}`);
 
     // Generate tracking pixel ID
     const tracking_pixel_id = crypto.randomUUID();
@@ -127,22 +173,53 @@ const handler = async (req: Request): Promise<Response> => {
     const htmlWithPixel = content_html + `<img src="${pixelUrl}" width="1" height="1" style="display:none;" />`;
 
     let sendResult;
+    let finalFromEmail = from_email;
+    let finalFromName = from_name;
 
     // Send email based on provider
-    if (provider === 'gmail') {
-      // For Gmail, we need to get the user's access token
-      // In a real implementation, you'd get this from the user's stored tokens
-      const accessToken = req.headers.get('x-gmail-token');
-      if (!accessToken) {
-        throw new Error('Token de acesso do Gmail não fornecido');
-      }
+    if (provider === 'gmail' && user_id) {
+      console.log('🔍 Looking for Gmail account for user:', user_id);
       
+      // Fetch user's Gmail account from database
+      const { data: emailAccount, error: accountError } = await supabase
+        .from('user_email_accounts')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('provider', 'gmail')
+        .single();
+
+      if (accountError || !emailAccount) {
+        console.error('❌ Gmail account not found:', accountError);
+        throw new Error('Conta Gmail não encontrada. Conecte seu Gmail primeiro.');
+      }
+
+      console.log('✅ Gmail account found:', emailAccount.provider_email);
+
+      // Check if token is expired
+      let accessToken = emailAccount.access_token;
+      const now = new Date();
+      const expiresAt = new Date(emailAccount.expires_at);
+      
+      if (now >= expiresAt) {
+        console.log('⚠️ Token expired, refreshing...');
+        accessToken = await refreshGmailToken(supabase, emailAccount.id, emailAccount.refresh_token);
+      }
+
+      // Use the Gmail account email as sender
+      finalFromEmail = emailAccount.provider_email;
+      finalFromName = from_name || emailAccount.provider_email.split('@')[0];
+
       sendResult = await sendWithGmail({
-        ...{ recipient_email, recipient_name, subject, content_html: htmlWithPixel, content_text, campaign_id, from_email, from_name }
+        ...requestData,
+        content_html: htmlWithPixel,
+        from_email: finalFromEmail,
+        from_name: finalFromName
       }, accessToken);
     } else {
+      // Use Resend
       sendResult = await sendWithResend({
-        recipient_email, recipient_name, subject, content_html: htmlWithPixel, content_text, campaign_id, from_email, from_name
+        ...requestData,
+        content_html: htmlWithPixel
       });
     }
 
@@ -160,7 +237,9 @@ const handler = async (req: Request): Promise<Response> => {
         status: sendResult.status,
         metadata: {
           provider: sendResult.provider,
-          external_id: sendResult.external_id
+          external_id: sendResult.external_id,
+          from_email: finalFromEmail,
+          from_name: finalFromName
         }
       })
       .select()
@@ -183,7 +262,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
       });
 
-    console.log(`Email sent successfully via ${sendResult.provider}:`, emailData.id);
+    console.log(`✅ Email sent successfully via ${sendResult.provider}:`, emailData.id);
 
     return new Response(
       JSON.stringify({ 
@@ -200,7 +279,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error('Error in send-email function:', error);
+    console.error('❌ Error in send-email function:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

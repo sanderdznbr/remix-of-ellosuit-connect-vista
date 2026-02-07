@@ -203,13 +203,25 @@ const WhatsAppCRM: React.FC = () => {
       .select('*')
       .eq('company_id', companyId)
       .order('last_message_at', { ascending: false })
-      .limit(100);
+      .limit(200);
     
     if (error) {
       console.error('❌ Error loading conversations:', error);
     } else {
-      console.log('✅ Loaded conversations:', data?.length || 0);
-      setConversations(data || []);
+      // Deduplicate by contact_phone - keep only the most recent conversation per contact
+      const uniqueByPhone = new Map<string, typeof data[0]>();
+      (data || []).forEach(conv => {
+        const phone = conv.contact_phone;
+        if (!uniqueByPhone.has(phone) || 
+            new Date(conv.last_message_at) > new Date(uniqueByPhone.get(phone)!.last_message_at)) {
+          uniqueByPhone.set(phone, conv);
+        }
+      });
+      const deduplicated = Array.from(uniqueByPhone.values())
+        .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+      
+      console.log('✅ Loaded conversations:', data?.length, '→ deduplicated:', deduplicated.length);
+      setConversations(deduplicated);
     }
   };
 

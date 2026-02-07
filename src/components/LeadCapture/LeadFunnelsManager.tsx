@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Target, BarChart3, Users, Eye, 
-  Settings, Trash2, Play, Pause, Loader2, Copy, ExternalLink
+  Settings, Trash2, Play, Pause, Loader2, Copy, ExternalLink,
+  LayoutGrid, List, TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface LeadFunnel {
   id: string;
@@ -27,15 +29,21 @@ interface LeadFunnel {
   updated_at: string;
 }
 
+interface FunnelStats {
+  [key: string]: { views: number; completions: number };
+}
+
 const LeadFunnelsManager: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   
   const [funnels, setFunnels] = useState<LeadFunnel[]>([]);
+  const [funnelStats, setFunnelStats] = useState<FunnelStats>({});
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFunnel, setNewFunnel] = useState({ 
     name: '', 
@@ -88,26 +96,37 @@ const LeadFunnelsManager: React.FC = () => {
       if (!error && data) {
         setFunnels(data);
         
-        // Calculate stats
+        // Calculate stats per funnel
+        const statsMap: FunnelStats = {};
+        for (const funnel of data) {
+          const { count: viewCount } = await supabase
+            .from('lead_submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('funnel_id', funnel.id);
+          
+          const { count: completionCount } = await supabase
+            .from('lead_submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('funnel_id', funnel.id)
+            .eq('status', 'completed');
+          
+          statsMap[funnel.id] = {
+            views: viewCount || 0,
+            completions: completionCount || 0
+          };
+        }
+        setFunnelStats(statsMap);
+        
+        // Calculate overall stats
         const active = data.filter(f => f.is_active).length;
-        
-        // Get submission stats
-        const { count: submissionCount } = await supabase
-          .from('lead_submissions')
-          .select('*', { count: 'exact', head: true })
-          .in('funnel_id', data.map(f => f.id));
-        
-        const { count: conversionCount } = await supabase
-          .from('lead_submissions')
-          .select('*', { count: 'exact', head: true })
-          .in('funnel_id', data.map(f => f.id))
-          .eq('status', 'completed');
+        const totalViews = Object.values(statsMap).reduce((sum, s) => sum + s.views, 0);
+        const totalConversions = Object.values(statsMap).reduce((sum, s) => sum + s.completions, 0);
         
         setStats({
           total: data.length,
           active,
-          submissions: submissionCount || 0,
-          conversions: conversionCount || 0
+          submissions: totalViews,
+          conversions: totalConversions
         });
       }
       
@@ -144,7 +163,12 @@ const LeadFunnelsManager: React.FC = () => {
         company_id: companyId,
         created_by: user.id,
         is_active: false,
-        settings: {}
+        settings: {
+          buttonColor: newFunnel.buttonColor,
+          backgroundColor: newFunnel.backgroundColor,
+          thankYouTitle: newFunnel.thankYouTitle,
+          thankYouMessage: newFunnel.thankYouMessage
+        }
       })
       .select()
       .single();
@@ -203,7 +227,8 @@ const LeadFunnelsManager: React.FC = () => {
     }
   };
 
-  const copyFunnelLink = (slug: string) => {
+  const copyFunnelLink = (slug: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     const url = `${window.location.origin}/f/${slug}`;
     navigator.clipboard.writeText(url);
     toast({ title: 'Link copiado!', description: 'O link foi copiado para a área de transferência.' });
@@ -213,14 +238,6 @@ const LeadFunnelsManager: React.FC = () => {
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   if (loading) {
     return (
@@ -233,7 +250,7 @@ const LeadFunnelsManager: React.FC = () => {
   return (
     <div className="min-h-screen bg-background p-6 page-content">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary/10 rounded-xl">
@@ -246,86 +263,108 @@ const LeadFunnelsManager: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowCreateModal(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Funil
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/dashboard/track/leads')}
+              className="gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Gerenciar
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Funil
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats - Compact */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <Card className="border-0 shadow-sm bg-card">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Target className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">{stats.total}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Funis</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-0 shadow-sm bg-card">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Play className="h-4 w-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-600">{stats.active}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Ativos</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-0 shadow-sm bg-card">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-blue-600">{stats.submissions}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Acessos</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-0 shadow-sm bg-card">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-violet-500/10">
+              <TrendingUp className="h-4 w-4 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-violet-600">
+                {stats.submissions > 0 ? Math.round((stats.conversions / stats.submissions) * 100) : 0}%
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Conversão</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and View Toggle */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar funis..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center border rounded-lg p-1 bg-muted/50">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card className="border-0 shadow-sm bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10">
-                <Target className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total de Funis</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-green-500/10">
-                <Play className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                <p className="text-xs text-muted-foreground">Ativos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{stats.submissions}</p>
-                <p className="text-xs text-muted-foreground">Submissões</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-violet-500/10">
-                <BarChart3 className="h-5 w-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-violet-600">
-                  {stats.submissions > 0 ? Math.round((stats.conversions / stats.submissions) * 100) : 0}%
-                </p>
-                <p className="text-xs text-muted-foreground">Taxa Conversão</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar funis..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-
-      {/* Funnels Grid */}
+      {/* Funnels List */}
       {filteredFunnels.length === 0 ? (
         <Card className="border-dashed border-0 shadow-sm bg-muted/30">
           <CardContent className="p-12 text-center">
@@ -344,95 +383,205 @@ const LeadFunnelsManager: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFunnels.map(funnel => (
-            <Card 
-              key={funnel.id} 
-              className={`transition-all hover:shadow-lg border-0 shadow-sm ${
-                funnel.is_active 
-                  ? 'ring-1 ring-primary/20 bg-gradient-to-br from-primary/5 to-transparent' 
-                  : ''
-              }`}
-            >
-              <CardContent className="p-5">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl ${
-                      funnel.is_active ? 'bg-primary' : 'bg-muted'
-                    }`}>
-                      <Target className={`h-5 w-5 ${funnel.is_active ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+      ) : viewMode === 'list' ? (
+        <div className="space-y-2">
+          {filteredFunnels.map(funnel => {
+            const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
+            const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
+            
+            return (
+              <Card 
+                key={funnel.id} 
+                className={cn(
+                  "transition-all hover:shadow-md border-0 shadow-sm cursor-pointer",
+                  funnel.is_active && "ring-1 ring-primary/20"
+                )}
+                onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    {/* Thumbnail Preview */}
+                    <div className={cn(
+                      "w-16 h-16 rounded-xl flex items-center justify-center shrink-0",
+                      funnel.is_active 
+                        ? "bg-gradient-to-br from-primary/20 to-primary/5" 
+                        : "bg-muted"
+                    )}>
+                      <Target className={cn(
+                        "h-6 w-6",
+                        funnel.is_active ? "text-primary" : "text-muted-foreground"
+                      )} />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{funnel.name}</h3>
-                      <Badge variant={funnel.is_active ? 'default' : 'secondary'} className="text-xs mt-1">
-                        {funnel.is_active ? 'Ativo' : 'Pausado'}
-                      </Badge>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-foreground truncate">{funnel.name}</h3>
+                        <Badge 
+                          variant={funnel.is_active ? 'default' : 'secondary'} 
+                          className="text-[10px] shrink-0"
+                        >
+                          {funnel.is_active ? 'Ativo' : 'Pausado'}
+                        </Badge>
+                      </div>
+                      
+                      {/* Link - Clean */}
+                      <div 
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="font-mono truncate">/f/{funnel.slug}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5"
+                          onClick={(e) => copyFunnelLink(funnel.slug, e)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/f/${funnel.slug}`, '_blank');
+                          }}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* Mini Stats */}
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Eye className="h-3 w-3" />
+                          {fStats.views} acessos
+                        </span>
+                        <span className="flex items-center gap-1 text-green-600">
+                          <Users className="h-3 w-3" />
+                          {fStats.completions} conversões
+                        </span>
+                        <span className="flex items-center gap-1 text-primary">
+                          <TrendingUp className="h-3 w-3" />
+                          {convRate}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Switch
+                        checked={funnel.is_active}
+                        onCheckedChange={() => handleToggleFunnel(funnel.id, funnel.is_active)}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/dashboard/leads/analytics/${funnel.id}`)}
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => handleDeleteFunnel(funnel.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <Switch
-                    checked={funnel.is_active}
-                    onCheckedChange={() => handleToggleFunnel(funnel.id, funnel.is_active)}
-                  />
-                </div>
-
-                {/* Description */}
-                {funnel.description && (
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {funnel.description}
-                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredFunnels.map(funnel => {
+            const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
+            const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
+            
+            return (
+              <Card 
+                key={funnel.id} 
+                className={cn(
+                  "transition-all hover:shadow-lg border-0 shadow-sm cursor-pointer overflow-hidden",
+                  funnel.is_active && "ring-1 ring-primary/20"
                 )}
-
-                {/* Slug/Link */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 p-2 bg-muted/50 rounded-lg">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="truncate">/f/{funnel.slug}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 ml-auto"
-                    onClick={() => copyFunnelLink(funnel.slug)}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
+                onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
+              >
+                {/* Preview Header */}
+                <div className={cn(
+                  "h-24 flex items-center justify-center",
+                  funnel.is_active 
+                    ? "bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" 
+                    : "bg-muted"
+                )}>
+                  <Target className={cn(
+                    "h-10 w-10",
+                    funnel.is_active ? "text-primary" : "text-muted-foreground"
+                  )} />
                 </div>
+                
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-foreground truncate">{funnel.name}</h3>
+                      <p className="text-xs text-muted-foreground font-mono truncate">/f/{funnel.slug}</p>
+                    </div>
+                    <Badge 
+                      variant={funnel.is_active ? 'default' : 'secondary'} 
+                      className="text-[10px] shrink-0 ml-2"
+                    >
+                      {funnel.is_active ? 'Ativo' : 'Pausado'}
+                    </Badge>
+                  </div>
 
-                {/* Date */}
-                <p className="text-xs text-muted-foreground mb-4">
-                  Criado em {formatDate(funnel.created_at)}
-                </p>
+                  {/* Stats Row */}
+                  <div className="flex items-center gap-3 text-xs mb-4">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Eye className="h-3 w-3" />
+                      {fStats.views}
+                    </span>
+                    <span className="flex items-center gap-1 text-green-600">
+                      <Users className="h-3 w-3" />
+                      {fStats.completions}
+                    </span>
+                    <span className="flex items-center gap-1 text-primary font-medium">
+                      {convRate}%
+                    </span>
+                  </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/leads/analytics/${funnel.id}`)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => handleDeleteFunnel(funnel.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Actions */}
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={funnel.is_active}
+                      onCheckedChange={() => handleToggleFunnel(funnel.id, funnel.is_active)}
+                    />
+                    <div className="flex-1" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => copyFunnelLink(funnel.slug, e)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => handleDeleteFunnel(funnel.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -464,7 +613,7 @@ const LeadFunnelsManager: React.FC = () => {
                 placeholder="Descreva o objetivo do funil..."
                 value={newFunnel.description}
                 onChange={(e) => setNewFunnel(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
+                rows={2}
               />
             </div>
 
@@ -473,27 +622,6 @@ const LeadFunnelsManager: React.FC = () => {
               <h4 className="text-sm font-medium mb-3">Personalização</h4>
               
               <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="thankYouTitle">Título de Agradecimento</Label>
-                  <Input
-                    id="thankYouTitle"
-                    placeholder="Obrigado!"
-                    value={newFunnel.thankYouTitle}
-                    onChange={(e) => setNewFunnel(prev => ({ ...prev, thankYouTitle: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="thankYouMessage">Mensagem de Agradecimento</Label>
-                  <Textarea
-                    id="thankYouMessage"
-                    placeholder="Sua resposta foi enviada com sucesso."
-                    value={newFunnel.thankYouMessage}
-                    onChange={(e) => setNewFunnel(prev => ({ ...prev, thankYouMessage: e.target.value }))}
-                    rows={2}
-                  />
-                </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="buttonColor">Cor dos Botões</Label>

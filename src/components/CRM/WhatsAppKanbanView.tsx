@@ -89,22 +89,28 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
     conversation.labels?.includes(l.id)
   );
 
+  // Prevent drag when clicking interactive elements
+  const handleInteractiveClick = (e: React.MouseEvent | React.PointerEvent, callback: () => void) => {
+    e.stopPropagation();
+    e.preventDefault();
+    callback();
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={cn(
-        "bg-card rounded-xl border shadow-sm p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:border-primary/30",
+        "bg-card rounded-xl border shadow-sm p-3 transition-all hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-50 rotate-2 scale-105"
       )}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(conversation);
-      }}
     >
-      <div className="flex items-start gap-3">
+      {/* Drag handle area */}
+      <div 
+        {...listeners}
+        className="flex items-start gap-3 cursor-grab active:cursor-grabbing"
+      >
         <Avatar className="h-10 w-10 flex-shrink-0">
           <AvatarImage src={conversation.profile_picture} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -153,31 +159,37 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
               <Clock className="h-3 w-3" />
               <span className="text-[10px]">{formatTime(conversation.last_message_at)}</span>
             </div>
-            
-            <div className="flex items-center gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onManageLabels(conversation);
-                }}
-                className="p-1 rounded hover:bg-muted transition-colors"
-                title="Gerenciar etiquetas"
-              >
-                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSaveLead(conversation);
-                }}
-                className="p-1 rounded hover:bg-muted transition-colors"
-                title="Salvar como lead"
-              >
-                <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
           </div>
         </div>
+      </div>
+
+      {/* Interactive buttons - outside drag listeners */}
+      <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t">
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => handleInteractiveClick(e, () => onSelect(conversation))}
+          className="p-1.5 rounded hover:bg-muted transition-colors text-xs flex items-center gap-1"
+          title="Abrir chat"
+        >
+          <MessageSquare className="h-3.5 w-3.5 text-primary" />
+          <span className="text-muted-foreground">Chat</span>
+        </button>
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => handleInteractiveClick(e, () => onManageLabels(conversation))}
+          className="p-1.5 rounded hover:bg-muted transition-colors"
+          title="Gerenciar etiquetas"
+        >
+          <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => handleInteractiveClick(e, () => onSaveLead(conversation))}
+          className="p-1.5 rounded hover:bg-muted transition-colors"
+          title="Salvar como lead"
+        >
+          <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
       </div>
     </div>
   );

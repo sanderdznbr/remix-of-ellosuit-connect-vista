@@ -713,33 +713,13 @@ const WhatsAppCRM: React.FC = () => {
         schema: 'public',
         table: 'whatsapp_messages',
         filter: `company_id=eq.${companyId}`
-      }, async (payload) => {
+      }, (payload) => {
         const newMessage = payload.new as any;
         console.log('📨 Realtime message event:', payload.eventType, newMessage?.content?.substring(0, 30));
         
-        // Immediately reload messages if we have a selected conversation
-        if (selectedConversation && newMessage?.conversation_id) {
-          // Check if this message belongs to any conversation with the same contact_phone
-          const { data: conv } = await supabase
-            .from('whatsapp_conversations')
-            .select('contact_phone')
-            .eq('id', newMessage.conversation_id)
-            .single();
-          
-          if (conv && conv.contact_phone === selectedConversation.contact_phone) {
-            // Immediately add message to UI for instant feedback
-            // Don't add messages directly from realtime - let polling handle it
-            // This prevents race conditions between realtime and polling
-            // The polling runs every 500ms and has proper deduplication logic
-            
-            // For received messages (not from_me), trigger immediate poll for faster response
-            if (payload.eventType === 'INSERT' && !newMessage.from_me) {
-              loadMessagesByPhone(selectedConversation.contact_phone);
-            }
-          }
-        }
-        
-        // Update conversations list immediately
+        // SIMPLIFIED: Only update conversations list from realtime
+        // Messages are handled by polling (500ms) with proper deduplication
+        // This prevents race conditions and duplications
         loadConversations();
       })
       .subscribe();

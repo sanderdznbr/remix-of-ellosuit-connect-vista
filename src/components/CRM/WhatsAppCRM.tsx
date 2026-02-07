@@ -265,12 +265,14 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
-  // Helper: Check if phone number is valid (filter LIDs)
+  // Helper: Check if phone number is valid (filter LIDs only)
+  // NOTE: We no longer filter by length since groups have long IDs (18+ digits)
+  // The webhook already handles filtering - if it's in the database, display it
   const isValidPhoneNumber = (phone: string): boolean => {
     if (!phone) return false;
     const digits = phone.replace(/\D/g, '');
-    // Filter out invalid numbers: too short (< 8) or too long (> 15 = likely LID)
-    return digits.length >= 8 && digits.length <= 15;
+    // Only filter out extremely invalid: empty or too short (< 8 digits)
+    return digits.length >= 8;
   };
 
   const loadConversations = async () => {

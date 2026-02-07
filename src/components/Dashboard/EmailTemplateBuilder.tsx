@@ -507,9 +507,9 @@ const EmailTemplateBuilder: React.FC = () => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 0; font-family: ${globalStyles.fontFamily}; background-color: #f5f5f5; }
-    .email-wrapper { background-color: #f5f5f5; padding: 20px 0; }
-    .email-container { max-width: ${globalStyles.maxWidth}; margin: 0 auto; padding: ${globalStyles.padding}; background-color: ${globalStyles.backgroundColor}; }
+    body { margin: 0; padding: 0; font-family: ${globalStyles.fontFamily}; background-color: ${globalStyles.backgroundColor}; }
+    .email-wrapper { background-color: ${globalStyles.backgroundColor}; padding: 20px 0; }
+    .email-container { max-width: ${globalStyles.maxWidth}; margin: 0 auto; padding: ${globalStyles.padding}; background-color: ${globalStyles.contentBackgroundColor || '#ffffff'}; }
     img { max-width: 100%; height: auto; }
     a { text-decoration: none; }
   </style>
@@ -1298,7 +1298,7 @@ const EmailTemplateBuilder: React.FC = () => {
             <TabsContent value="global" className="flex-1 p-4 mt-0 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cor de Fundo do Email</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cor de Fundo Externo</Label>
                   <div className="flex gap-2 mt-1.5">
                     <Input 
                       type="color"
@@ -1312,6 +1312,23 @@ const EmailTemplateBuilder: React.FC = () => {
                       className="flex-1"
                     />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cor de Fundo do Email</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <Input 
+                      type="color"
+                      value={globalStyles.contentBackgroundColor}
+                      onChange={e => setGlobalStyles({ ...globalStyles, contentBackgroundColor: e.target.value })}
+                      className="w-12 h-10 p-1 cursor-pointer"
+                    />
+                    <Input 
+                      value={globalStyles.contentBackgroundColor}
+                      onChange={e => setGlobalStyles({ ...globalStyles, contentBackgroundColor: e.target.value })}
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Fundo branco recomendado para melhor legibilidade</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground uppercase tracking-wide">Largura Máxima</Label>
@@ -1369,7 +1386,8 @@ const EmailTemplateBuilder: React.FC = () => {
 
         {/* Canvas */}
         <div 
-          className={`flex-1 bg-muted/30 p-8 overflow-y-auto transition-colors ${isDraggingFile ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+          className={`flex-1 p-8 overflow-y-auto transition-colors ${isDraggingFile ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+          style={{ backgroundColor: '#f0f0f0' }}
           onDrop={handleFileDrop}
           onDragOver={handleFileDragOver}
           onDragLeave={handleFileDragLeave}
@@ -1388,14 +1406,14 @@ const EmailTemplateBuilder: React.FC = () => {
             className={`mx-auto shadow-xl rounded-lg transition-all overflow-hidden ${
               previewMode === 'mobile' ? 'max-w-[375px]' : 'max-w-[600px]'
             }`}
-            style={{ backgroundColor: globalStyles.backgroundColor }}
+            style={{ backgroundColor: globalStyles.contentBackgroundColor || '#ffffff' }}
           >
-            <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily }}>
+            <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily, backgroundColor: globalStyles.contentBackgroundColor || '#ffffff' }}>
               {elements.length === 0 ? (
-                <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                  <Palette className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Comece a construir seu email</p>
-                  <p className="text-sm mb-4">Adicione elementos ou arraste uma imagem</p>
+                <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+                  <Palette className="h-12 w-12 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium text-gray-600">Comece a construir seu email</p>
+                  <p className="text-sm mb-4 text-gray-400">Adicione elementos ou arraste uma imagem</p>
                   <Button variant="outline" onClick={() => addElement('header')}>
                     <Plus className="h-4 w-4 mr-2" />
                     Adicionar Título

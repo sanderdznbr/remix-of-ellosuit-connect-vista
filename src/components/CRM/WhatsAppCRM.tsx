@@ -191,12 +191,7 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   const loadConversations = async () => {
-    if (!companyId) {
-      console.log('⚠️ loadConversations: No companyId yet');
-      return;
-    }
-    
-    console.log('📥 Loading conversations for company:', companyId);
+    if (!companyId) return;
     
     const { data, error } = await supabase
       .from('whatsapp_conversations')
@@ -207,22 +202,28 @@ const WhatsAppCRM: React.FC = () => {
     
     if (error) {
       console.error('❌ Error loading conversations:', error);
-    } else {
-      // Deduplicate by contact_phone - keep only the most recent conversation per contact
-      const uniqueByPhone = new Map<string, typeof data[0]>();
-      (data || []).forEach(conv => {
-        const phone = conv.contact_phone;
-        if (!uniqueByPhone.has(phone) || 
-            new Date(conv.last_message_at) > new Date(uniqueByPhone.get(phone)!.last_message_at)) {
-          uniqueByPhone.set(phone, conv);
-        }
-      });
-      const deduplicated = Array.from(uniqueByPhone.values())
-        .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
-      
-      console.log('✅ Loaded conversations:', data?.length, '→ deduplicated:', deduplicated.length);
-      setConversations(deduplicated);
+      return;
     }
+    
+    // Deduplicate by contact_phone - keep only the most recent conversation per contact
+    const uniqueByPhone = new Map<string, typeof data[0]>();
+    (data || []).forEach(conv => {
+      const phone = conv.contact_phone;
+      if (!uniqueByPhone.has(phone) || 
+          new Date(conv.last_message_at) > new Date(uniqueByPhone.get(phone)!.last_message_at)) {
+        uniqueByPhone.set(phone, conv);
+      }
+    });
+    const deduplicated = Array.from(uniqueByPhone.values())
+      .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+    
+    // Only update state if data actually changed (prevent flicker)
+    setConversations(prev => {
+      const prevIds = prev.map(c => `${c.id}-${c.last_message_at}-${c.unread_count}`).join(',');
+      const newIds = deduplicated.map(c => `${c.id}-${c.last_message_at}-${c.unread_count}`).join(',');
+      if (prevIds === newIds) return prev;
+      return deduplicated;
+    });
   };
 
   // Load messages from ALL conversations with the same contact_phone
@@ -261,7 +262,14 @@ const WhatsAppCRM: React.FC = () => {
       });
       const sorted = Array.from(uniqueMessages.values())
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      setMessages(sorted);
+      
+      // Only update state if messages actually changed (prevent flicker)
+      setMessages(prev => {
+        const prevIds = prev.map(m => `${m.id}-${m.status}`).join(',');
+        const newIds = sorted.map(m => `${m.id}-${m.status}`).join(',');
+        if (prevIds === newIds) return prev;
+        return sorted;
+      });
     }
   };
 
@@ -382,12 +390,12 @@ const WhatsAppCRM: React.FC = () => {
     
     loadData();
     
-    // Polling fallback for conversations - refresh every 2 seconds for faster updates
+    // Polling fallback for conversations - refresh every 3 seconds (smart updates prevent flicker)
     const conversationsPoll = setInterval(() => {
       if (companyId) {
         loadConversations();
       }
-    }, 2000);
+    }, 3000);
     
     return () => clearInterval(conversationsPoll);
   }, [companyId]);
@@ -517,10 +525,10 @@ const WhatsAppCRM: React.FC = () => {
       loadMessagesByPhone(selectedConversation.contact_phone);
       setSelectedAgent(null);
       
-      // Polling fallback - refresh messages every 1.5 seconds for faster updates
+      // Polling fallback - refresh messages every 2.5 seconds (smart updates prevent flicker)
       const pollInterval = setInterval(() => {
         loadMessagesByPhone(selectedConversation.contact_phone);
-      }, 1500);
+      }, 2500);
       
       return () => clearInterval(pollInterval);
     } else {

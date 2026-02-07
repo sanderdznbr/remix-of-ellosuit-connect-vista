@@ -48,6 +48,8 @@ import HelpCenter from '@/components/Dashboard/HelpCenter';
 // Lead Capture
 import LeadFunnelsManager from '@/components/LeadCapture/LeadFunnelsManager';
 import LeadFunnelBuilder from '@/components/LeadCapture/LeadFunnelBuilder';
+import LeadFunnelAnalytics from '@/pages/LeadFunnelAnalytics';
+import LeadTrackingDashboard from '@/pages/LeadTrackingDashboard';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
@@ -101,11 +103,13 @@ const MobileResponsiveDashboard = () => {
         <Route path="/fluxos" element={<FluxosBoard />} />
         <Route path="/leads" element={<LeadFunnelsManager />} />
         <Route path="/leads/builder" element={<LeadFunnelBuilder />} />
+        <Route path="/leads/analytics/:funnelId" element={<LeadFunnelAnalytics />} />
         
         {/* Gestão - Unified pages */}
         <Route path="/cadastros" element={<UnifiedDatabase />} />
         <Route path="/drive" element={<DriveManager />} />
         <Route path="/rastreamento" element={<UnifiedTracking />} />
+        <Route path="/track/leads" element={<LeadTrackingDashboard />} />
         
         {/* Legacy routes - redirect to unified pages */}
         <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />

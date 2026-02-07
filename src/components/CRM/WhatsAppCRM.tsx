@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic, Contact } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import ConversationPopup from './ConversationPopup';
 import KanbanColumnConfig from './KanbanColumnConfig';
 import AudioRecorder from './AudioRecorder';
 import BaileysServerDownload from './BaileysServerDownload';
+import WhatsAppContacts from './WhatsAppContacts';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -104,12 +105,13 @@ const WhatsAppCRM: React.FC = () => {
   const [agentChatHistory, setAgentChatHistory] = useState<Record<string, WhatsAppMessage[]>>({});
   
   // New CRM Features State
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'contacts'>('list');
   const [labels, setLabels] = useState<ConversationLabel[]>([]);
   const [showLabelsManager, setShowLabelsManager] = useState(false);
   const [showSaveLeadModal, setShowSaveLeadModal] = useState(false);
   const [selectedConversationForLabels, setSelectedConversationForLabels] = useState<WhatsAppConversationData | null>(null);
   const [selectedConversationForLead, setSelectedConversationForLead] = useState<WhatsAppConversationData | null>(null);
+  const [contactsCount, setContactsCount] = useState(0);
   
   // Kanban specific state
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>(() => {
@@ -240,6 +242,18 @@ const WhatsAppCRM: React.FC = () => {
     setLabels(data || []);
   };
 
+  // Load contacts count
+  const loadContactsCount = async () => {
+    if (!companyId) return;
+    
+    const { count } = await supabase
+      .from('whatsapp_contacts')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId);
+    
+    setContactsCount(count || 0);
+  };
+
   // Create label
   const handleCreateLabel = async (name: string, color: string) => {
     if (!companyId || !user?.id) return;
@@ -313,7 +327,8 @@ const WhatsAppCRM: React.FC = () => {
         loadSessions(),
         loadConversations(),
         loadAiAgents(),
-        loadLabels()
+        loadLabels(),
+        loadContactsCount()
       ]);
       setLoading(false);
     };
@@ -406,18 +421,21 @@ const WhatsAppCRM: React.FC = () => {
     await loadSessions();
     toast({ title: 'Sucesso', description: 'WhatsApp conectado!' });
     
-    // Start syncing conversations
+    // Start syncing conversations and contacts
     setSyncingConversations(true);
-    toast({ title: 'Sincronizando', description: 'Carregando conversas do WhatsApp...' });
+    toast({ title: 'Sincronizando', description: 'Carregando dados do WhatsApp...' });
     
     try {
-      await loadConversations();
-      toast({ title: 'Pronto', description: 'Conversas carregadas com sucesso!' });
+      await Promise.all([
+        loadConversations(),
+        loadContactsCount()
+      ]);
+      toast({ title: 'Pronto', description: 'Dados carregados com sucesso!' });
     } catch (error) {
-      console.error('Error syncing conversations:', error);
+      console.error('Error syncing data:', error);
       toast({ 
         title: 'Aviso', 
-        description: 'Não foi possível carregar conversas. Tente novamente.',
+        description: 'Alguns dados podem não ter sido carregados.',
         variant: 'destructive'
       });
     } finally {
@@ -648,6 +666,20 @@ const WhatsAppCRM: React.FC = () => {
               <LayoutGrid className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline text-xs">Kanban</span>
             </Button>
+            <Button
+              variant={viewMode === 'contacts' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('contacts')}
+              className="h-7 px-2 relative"
+            >
+              <Users className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Contatos</span>
+              {contactsCount > 0 && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 min-w-5 p-0 text-[10px] flex items-center justify-center">
+                  {contactsCount > 999 ? '999+' : contactsCount}
+                </Badge>
+              )}
+            </Button>
           </div>
         </div>
         
@@ -756,6 +788,41 @@ const WhatsAppCRM: React.FC = () => {
           onUpdateStage={handleUpdateStage}
           onConfigureColumns={() => setShowColumnConfig(true)}
         />
+      ) : viewMode === 'contacts' ? (
+        <div className="flex-1 overflow-hidden">
+          <WhatsAppContacts
+            companyId={companyId || ''}
+            sessionId={connectedSessions[0]?.id}
+            onStartConversation={(contact) => {
+              // Create a temporary conversation for this contact
+              const tempConv: WhatsAppConversationData = {
+                id: `temp-${contact.id}`,
+                contact_phone: contact.phone_number,
+                contact_name: contact.push_name || contact.business_name,
+                profile_picture: contact.profile_picture,
+                last_message_at: new Date().toISOString(),
+                status: 'open',
+                session_id: contact.session_id
+              };
+              setSelectedConversation(tempConv);
+              setViewMode('list');
+              setShowMobileChat(true);
+              toast({ title: 'Iniciar conversa', description: `Enviando mensagem para ${contact.push_name || contact.phone_number}` });
+            }}
+            onSaveAsLead={(contact) => {
+              // Open save lead modal with contact info
+              setSelectedConversationForLead({
+                id: `temp-${contact.id}`,
+                contact_phone: contact.phone_number,
+                contact_name: contact.push_name || contact.business_name,
+                profile_picture: contact.profile_picture,
+                last_message_at: new Date().toISOString(),
+                status: 'open'
+              });
+              setShowSaveLeadModal(true);
+            }}
+          />
+        </div>
       ) : (
         <div className="flex-1 flex overflow-hidden">
           {/* Conversations List - Left Panel */}

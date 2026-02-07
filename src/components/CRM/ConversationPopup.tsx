@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2, Image as ImageIcon, Archive, Trash2, Download, Users } from 'lucide-react';
+import { Send, X, Phone, Tag, UserPlus, Bot, MoreVertical, Loader2, Image as ImageIcon, Archive, Trash2, Download, Users, Copy } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import MessageContextMenu from './MessageContextMenu';
 
 interface ConversationLabel {
   id: string;
@@ -51,6 +52,7 @@ interface ConversationPopupProps {
   onSendMessage: (message: string) => void;
   onManageLabels: () => void;
   onSaveLead: () => void;
+  onDeleteMessage?: (messageId: string) => void;
   sendingMessage?: boolean;
 }
 
@@ -85,11 +87,21 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
   onSendMessage,
   onManageLabels,
   onSaveLead,
+  onDeleteMessage,
   sendingMessage = false,
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Message context menu state
+  const [messageContextMenu, setMessageContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    messageId: string;
+    messageContent: string;
+    isFromMe: boolean;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, messageId: '', messageContent: '', isFromMe: false });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -108,6 +120,27 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
     setInputMessage('');
   };
 
+  const handleMessageContextMenu = (e: React.MouseEvent, message: WhatsAppMessage) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMessageContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      messageId: message.id,
+      messageContent: message.content,
+      isFromMe: message.from_me,
+    });
+  };
+
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copiado!', description: 'Texto copiado para a área de transferência' });
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível copiar', variant: 'destructive' });
+    }
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -116,6 +149,7 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
   };
 
   const conversationLabels = labels.filter(l => conversation.labels?.includes(l.id));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,13 +237,19 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
                 <div
                   key={message.id}
                   className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}`}
+                  onContextMenu={(e) => handleMessageContextMenu(e, message)}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
+                    className={cn(
+                      "max-w-[70%] rounded-lg px-3 py-2 shadow-sm",
                       message.from_me
-                        ? 'bg-[#dcf8c6] dark:bg-primary/20 text-foreground'
-                        : 'bg-white dark:bg-card text-foreground'
-                    }`}
+                        ? message.status === 'sending'
+                          ? 'bg-primary/60 text-primary-foreground'
+                          : message.status === 'failed'
+                            ? 'bg-destructive text-destructive-foreground'
+                            : 'bg-primary/80 text-primary-foreground'
+                        : 'bg-card text-foreground'
+                    )}
                   >
                     {/* Render image if message is an image */}
                     {message.message_type === 'image' && message.media_url ? (
@@ -306,6 +346,23 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
           )}
         </div>
       </DialogContent>
+      
+      {/* Message Context Menu */}
+      <MessageContextMenu
+        isOpen={messageContextMenu.isOpen}
+        position={messageContextMenu.position}
+        messageId={messageContextMenu.messageId}
+        messageContent={messageContextMenu.messageContent}
+        isFromMe={messageContextMenu.isFromMe}
+        onClose={() => setMessageContextMenu(prev => ({ ...prev, isOpen: false }))}
+        onCopy={(content) => handleCopyToClipboard(content)}
+        onDelete={(messageId) => {
+          if (onDeleteMessage) {
+            onDeleteMessage(messageId);
+          }
+          setMessageContextMenu(prev => ({ ...prev, isOpen: false }));
+        }}
+      />
     </Dialog>
   );
 };

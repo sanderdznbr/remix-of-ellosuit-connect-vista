@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic, Contact, Archive, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic, Contact, Archive, Image as ImageIcon, Loader2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,8 @@ import AudioRecorder from './AudioRecorder';
 import BaileysServerDownload from './BaileysServerDownload';
 import WhatsAppContacts from './WhatsAppContacts';
 import SwipeableConversationItem from './SwipeableConversationItem';
+import ConversationContextMenu from './ConversationContextMenu';
+import MessageContextMenu from './MessageContextMenu';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -130,6 +132,21 @@ const WhatsAppCRM: React.FC = () => {
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  
+  // Context menu states
+  const [conversationContextMenu, setConversationContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    conversation: WhatsAppConversationData | null;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, conversation: null });
+  
+  const [messageContextMenu, setMessageContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    messageId: string;
+    messageContent: string;
+    isFromMe: boolean;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, messageId: '', messageContent: '', isFromMe: false });
 
   // Load persisted agent chat history from localStorage
   useEffect(() => {
@@ -531,6 +548,65 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
+  // Delete a single message
+  const handleDeleteMessage = async (messageId: string) => {
+    // If it's a temp/optimistic message, just remove from state
+    if (messageId.startsWith('temp-')) {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setPopupMessages(prev => prev.filter(m => m.id !== messageId));
+      toast({ title: 'Mensagem excluída' });
+      return;
+    }
+    
+    // Delete from database
+    const { error } = await supabase
+      .from('whatsapp_messages')
+      .delete()
+      .eq('id', messageId);
+    
+    if (!error) {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setPopupMessages(prev => prev.filter(m => m.id !== messageId));
+      toast({ title: 'Mensagem excluída' });
+    } else {
+      toast({ title: 'Erro', description: 'Erro ao excluir mensagem', variant: 'destructive' });
+    }
+  };
+
+  // Copy text to clipboard
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copiado!', description: 'Texto copiado para a área de transferência' });
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível copiar', variant: 'destructive' });
+    }
+  };
+
+  // Handle right-click on conversation
+  const handleConversationContextMenu = (e: React.MouseEvent, conv: WhatsAppConversationData) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConversationContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      conversation: conv,
+    });
+  };
+
+  // Handle right-click on message
+  const handleMessageContextMenu = (e: React.MouseEvent, message: WhatsAppMessage) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMessageContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      messageId: message.id,
+      messageContent: message.content,
+      isFromMe: message.from_me,
+    });
+  };
+
   // Assign AI agent to conversation with auto-reply toggle
   const handleAssignAgent = async (conv: WhatsAppConversationData, agentId: string | null, enableAutoReply: boolean = true) => {
     const { error } = await supabase
@@ -855,14 +931,14 @@ const WhatsAppCRM: React.FC = () => {
         
         if (error) throw error;
         
-        // Update optimistic message status to sent
+        // Update optimistic message status to sent (instant - no reload needed)
+        // The 500ms polling will sync any server-side updates automatically
         setMessages(prev => prev.map(m => 
           m.id === tempId ? { ...m, status: 'sent' } : m
         ));
         
-        // Background refresh to sync with server (removes duplicate when real message arrives)
-        loadMessagesByPhone(selectedConversation.contact_phone);
-        loadConversations();
+        // Note: Don't call loadMessagesByPhone here to avoid flicker
+        // Polling will handle sync
       } else {
         // Demo mode - just mark as sent
         setMessages(prev => prev.map(m => 
@@ -1334,9 +1410,10 @@ const WhatsAppCRM: React.FC = () => {
                 >
                   <div
                     className={cn(
-                      "flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors",
+                      "flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer",
                       selectedConversation?.id === conversation.id && "bg-muted"
                     )}
+                    onContextMenu={(e) => handleConversationContextMenu(e, conversation)}
                   >
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={conversation.profile_picture} />
@@ -1564,17 +1641,22 @@ const WhatsAppCRM: React.FC = () => {
                       <div
                         key={message.id}
                         className={cn(
-                          "flex",
+                          "flex group",
                           message.from_me ? 'justify-end' : 'justify-start'
                         )}
+                        onContextMenu={(e) => handleMessageContextMenu(e, message)}
                       >
                         <div
                           className={cn(
-                            "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm",
+                            "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative",
                             message.from_me
                               ? message.is_ai_response 
                                 ? "bg-gradient-to-br from-violet-500 to-purple-600 rounded-br-sm" 
-                                : "bg-blue-600 rounded-br-sm"
+                                : message.status === 'sending'
+                                  ? "bg-primary/70 rounded-br-sm"
+                                  : message.status === 'failed'
+                                    ? "bg-destructive rounded-br-sm"
+                                    : "bg-primary rounded-br-sm"
                               : selectedAgent
                                 ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-foreground rounded-bl-sm border border-blue-100 dark:border-blue-800"
                                 : "bg-card text-foreground rounded-bl-sm border"
@@ -1915,6 +1997,18 @@ const WhatsAppCRM: React.FC = () => {
           ) || sessions.find(s => s.status === 'connected');
           
           if (connectedSession) {
+            // OPTIMISTIC: Add message immediately for instant feedback
+            const tempId = `temp-${Date.now()}`;
+            const optimisticMsg: WhatsAppMessage = {
+              id: tempId,
+              conversation_id: popupConversation.id,
+              content: message,
+              from_me: true,
+              status: 'sending',
+              created_at: new Date().toISOString()
+            };
+            setPopupMessages(prev => [...prev, optimisticMsg]);
+            
             setSendingMessage(true);
             try {
               const { error } = await supabase.functions.invoke('whatsapp-api', {
@@ -1928,34 +2022,15 @@ const WhatsAppCRM: React.FC = () => {
               
               if (error) throw error;
               
-              // Reload messages after sending
-              const { data: convs } = await supabase
-                .from('whatsapp_conversations')
-                .select('id')
-                .eq('company_id', companyId)
-                .eq('contact_phone', popupConversation.contact_phone);
-              
-              if (convs && convs.length > 0) {
-                const conversationIds = convs.map(c => c.id);
-                const { data } = await supabase
-                  .from('whatsapp_messages')
-                  .select('*')
-                  .in('conversation_id', conversationIds)
-                  .order('timestamp', { ascending: true })
-                  .limit(200);
-                
-                const uniqueMessages = new Map<string, WhatsAppMessage>();
-                (data || []).forEach(m => {
-                  const key = m.wa_message_id || m.id;
-                  if (!uniqueMessages.has(key)) {
-                    uniqueMessages.set(key, { ...m, created_at: m.timestamp || m.created_at });
-                  }
-                });
-                setPopupMessages(Array.from(uniqueMessages.values()));
-              }
-              
-              await loadConversations();
+              // Update optimistic message to sent (instant - polling will sync)
+              setPopupMessages(prev => prev.map(m => 
+                m.id === tempId ? { ...m, status: 'sent' } : m
+              ));
             } catch (e: any) {
+              // Mark as failed
+              setPopupMessages(prev => prev.map(m => 
+                m.id === tempId ? { ...m, status: 'failed' } : m
+              ));
               toast({ title: 'Erro', description: e.message, variant: 'destructive' });
             } finally {
               setSendingMessage(false);
@@ -1974,6 +2049,7 @@ const WhatsAppCRM: React.FC = () => {
             openSaveLeadModal(popupConversation);
           }
         }}
+        onDeleteMessage={handleDeleteMessage}
         sendingMessage={sendingMessage}
       />
 
@@ -1986,6 +2062,34 @@ const WhatsAppCRM: React.FC = () => {
           setKanbanColumns(newColumns);
           localStorage.setItem('whatsapp_kanban_columns', JSON.stringify(newColumns));
         }}
+      />
+
+      {/* Conversation Context Menu */}
+      <ConversationContextMenu
+        isOpen={conversationContextMenu.isOpen}
+        position={conversationContextMenu.position}
+        conversation={conversationContextMenu.conversation}
+        labels={labels}
+        aiAgents={aiAgents}
+        onClose={() => setConversationContextMenu(prev => ({ ...prev, isOpen: false }))}
+        onManageLabels={(conv) => openLabelsManager(conv as WhatsAppConversationData)}
+        onSaveLead={(conv) => openSaveLeadModal(conv as WhatsAppConversationData)}
+        onArchive={(conv) => handleArchiveConversation(conv as WhatsAppConversationData)}
+        onDelete={(conv) => handleDeleteConversation(conv as WhatsAppConversationData)}
+        onAssignAgent={(conv, agentId) => handleAssignAgent(conv as WhatsAppConversationData, agentId)}
+        onCopyPhone={(phone) => handleCopyToClipboard(phone)}
+      />
+
+      {/* Message Context Menu */}
+      <MessageContextMenu
+        isOpen={messageContextMenu.isOpen}
+        position={messageContextMenu.position}
+        messageId={messageContextMenu.messageId}
+        messageContent={messageContextMenu.messageContent}
+        isFromMe={messageContextMenu.isFromMe}
+        onClose={() => setMessageContextMenu(prev => ({ ...prev, isOpen: false }))}
+        onCopy={(content) => handleCopyToClipboard(content)}
+        onDelete={(messageId) => handleDeleteMessage(messageId)}
       />
     </div>
   );

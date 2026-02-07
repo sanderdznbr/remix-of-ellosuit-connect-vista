@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,9 @@ interface WhatsAppQRModalProps {
   onSuccess: (session: any) => void;
 }
 
+const QR_TIMEOUT_MS = 120000; // 2 minutos
+const POLL_INTERVAL_MS = 3000; // 3 segundos (mais lento para evitar sobrecarga)
+
 const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
   isOpen,
   onClose,
@@ -21,17 +24,22 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
   onSuccess
 }) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<'loading' | 'qr' | 'connected'>('loading');
+  const [step, setStep] = useState<'loading' | 'qr' | 'connected' | 'timeout'>('loading');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('disconnected');
   const [loading, setLoading] = useState(false);
   const [phoneInfo, setPhoneInfo] = useState<{ phoneNumber?: string; pushName?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   // Auto-create instance when modal opens
   useEffect(() => {
     if (isOpen && !sessionId) {
+      startTimeRef.current = Date.now();
       createInstance();
     }
   }, [isOpen]);
@@ -45,17 +53,57 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
       setStatus('disconnected');
       setPhoneInfo(null);
       setError(null);
+      setPollCount(0);
+      setElapsedTime(0);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
   }, [isOpen]);
 
+  // Timer for elapsed time
+  useEffect(() => {
+    if (step === 'qr' && !qrCode) {
+      const interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [step, qrCode]);
+
+  // Timeout handler
+  useEffect(() => {
+    if (step === 'qr') {
+      timeoutRef.current = setTimeout(() => {
+        if (!qrCode && step === 'qr') {
+          setStep('timeout');
+          toast({
+            title: 'Tempo esgotado',
+            description: 'Não foi possível gerar o QR Code. Tente novamente.',
+            variant: 'destructive'
+          });
+        }
+      }, QR_TIMEOUT_MS);
+      
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }
+  }, [step, qrCode]);
+
   // Poll for QR and status
   useEffect(() => {
-    if (step !== 'qr' || !sessionId) return;
+    if ((step !== 'qr' && step !== 'loading') || !sessionId) return;
 
     let isMounted = true;
 
     const pollQRAndStatus = async () => {
       if (!isMounted) return;
+      
+      setPollCount(prev => prev + 1);
       
       try {
         // Check status
@@ -94,9 +142,12 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
 
         if (!qrError && qrData && isMounted) {
           console.log('[QR Modal] QR Data:', { hasQR: !!qrData.qrCode, status: qrData.status });
-          if (qrData.qrCode) {
+          
+          if (qrData.qrCode && qrData.qrCode.startsWith('data:image')) {
             setQrCode(qrData.qrCode);
+            setStep('qr');
           }
+          
           if (qrData.isConnected) {
             setPhoneInfo({
               phoneNumber: qrData.phoneNumber,
@@ -111,7 +162,7 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
     };
 
     pollQRAndStatus();
-    const interval = setInterval(pollQRAndStatus, 2000);
+    const interval = setInterval(pollQRAndStatus, POLL_INTERVAL_MS);
     
     return () => {
       isMounted = false;
@@ -218,6 +269,7 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
           <div className="flex flex-col items-center justify-center py-12">
             {error ? (
               <div className="text-center">
+                <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
                 <p className="text-destructive mb-4">{error}</p>
                 <Button onClick={createInstance} disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -230,6 +282,34 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                 <p className="text-sm text-muted-foreground">Conectando ao servidor...</p>
               </>
             )}
+          </div>
+        )}
+
+        {step === 'timeout' && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Tempo Esgotado</h3>
+            <p className="text-sm text-muted-foreground mb-4 text-center px-4">
+              Não foi possível gerar o QR Code em 2 minutos.<br />
+              Verifique se o servidor Baileys está funcionando.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={() => {
+                setStep('loading');
+                setSessionId(null);
+                setQrCode(null);
+                setPollCount(0);
+                setElapsedTime(0);
+                startTimeRef.current = Date.now();
+                createInstance();
+              }}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar Novamente
+              </Button>
+            </div>
           </div>
         )}
 
@@ -258,8 +338,13 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                   <Loader2 className="h-10 w-10 animate-spin text-primary" />
                   <p className="text-sm text-muted-foreground text-center px-4">
                     Gerando QR Code...<br />
-                    <span className="text-xs">Isso pode levar alguns segundos</span>
+                    <span className="text-xs">Aguardando servidor ({elapsedTime}s)</span>
                   </p>
+                  {pollCount > 5 && (
+                    <p className="text-xs text-amber-600 text-center px-4">
+                      Tentativa {pollCount}... isso pode levar até 2 minutos
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -279,10 +364,17 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                 </div>
               )}
 
-              {status === 'waiting_qr' && (
+              {status === 'initializing' && (
                 <div className="flex items-center gap-2 mt-4 text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Inicializando sessão no servidor...</span>
+                </div>
+              )}
+
+              {status === 'waiting_qr' && qrCode && (
+                <div className="flex items-center gap-2 mt-4 text-green-600">
                   <QrCode className="h-4 w-4" />
-                  <span className="text-sm">QR Code pronto para escanear</span>
+                  <span className="text-sm">QR Code pronto para escanear!</span>
                 </div>
               )}
             </div>

@@ -134,7 +134,10 @@ serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         
-        console.log(`[QR] Fetching QR for session ${sessionId}, server: ${serverUrl}`);
+        // v2.2.0: Rate-limiting - calcular idade da sessão
+        const sessionAge = Date.now() - new Date(session.created_at).getTime();
+        
+        console.log(`[QR] Fetching QR for session ${sessionId}, server: ${serverUrl}, age: ${Math.round(sessionAge/1000)}s`);
         
         // Try to get fresh QR from Baileys server
         if (serverUrl) {
@@ -183,17 +186,29 @@ serve(async (req) => {
                 return new Response(JSON.stringify({ 
                   qrCode: qrData.qrCode,
                   status: 'waiting_qr',
-                  isConnected: false,
-                  isDemo: false
+                  isConnected: false
                 }), {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
               }
             }
             
-            // If 404, recreate instance on Baileys server
+            // If 404, check session age before recreating
             if (qrResponse.status === 404) {
-              console.log(`[QR] Session not found on server, recreating...`);
+              // v2.2.0: NÃO recriar se a sessão é muito recente (< 30s)
+              if (sessionAge < 30000) {
+                console.log(`[QR] Session is recent (${Math.round(sessionAge/1000)}s), waiting for server to initialize...`);
+                return new Response(JSON.stringify({ 
+                  qrCode: null,
+                  status: 'initializing',
+                  message: 'Aguardando servidor inicializar sessão...',
+                  sessionAge: Math.round(sessionAge/1000)
+                }), {
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+              }
+              
+              console.log(`[QR] Session not found on server (age: ${Math.round(sessionAge/1000)}s), recreating...`);
               
               const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
               const createResponse = await fetch(`${serverUrl}/api/instance/create`, {
@@ -210,7 +225,7 @@ serve(async (req) => {
               if (createResponse.ok) {
                 console.log(`[QR] Instance recreated, waiting for QR...`);
                 // Wait a moment for QR to generate
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 // Try to get QR again
                 const retryResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
@@ -229,8 +244,7 @@ serve(async (req) => {
                     return new Response(JSON.stringify({ 
                       qrCode: retryData.qrCode,
                       status: 'waiting_qr',
-                      isConnected: false,
-                      isDemo: false
+                      isConnected: false
                     }), {
                       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                     });
@@ -247,7 +261,6 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           qrCode: null,
           status: 'generating',
-          isDemo: !serverUrl,
           message: serverUrl ? 'Gerando QR Code, aguarde...' : 'Configure o servidor Baileys para conectar'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

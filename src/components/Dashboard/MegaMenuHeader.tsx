@@ -6,6 +6,7 @@ import {
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
+import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -381,12 +382,12 @@ export function MegaMenuHeader() {
                         borderLeft: `4px solid ${currentGroup.color}`
                       }}
                     >
-                      <h3 
-                        className="font-bold text-lg mb-1"
-                        style={{ color: currentGroup.color }}
-                      >
-                        Ellosuit {currentGroup.label}
-                      </h3>
+                      <div className="mb-2">
+                        <EllosuitOmniLogo 
+                          className="h-6 w-auto" 
+                          variant={currentGroup.id as 'omni' | 'flow' | 'track' | 'gestao' | 'insights'}
+                        />
+                      </div>
                       <p className="text-sm text-gray-600">
                         Visão geral e KPIs
                       </p>

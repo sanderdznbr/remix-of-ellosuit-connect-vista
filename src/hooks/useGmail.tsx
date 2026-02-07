@@ -125,6 +125,13 @@ export const useGmail = () => {
     try {
       console.log('🔗 Iniciando conexão com Gmail...');
       
+      // Detectar se estamos em um domínio customizado (não lovable.app/lovableproject.com)
+      const isCustomDomain = 
+        !window.location.hostname.includes('lovable.app') && 
+        !window.location.hostname.includes('lovableproject.com');
+      
+      console.log('🌐 Domínio customizado:', isCustomDomain, window.location.hostname);
+      
       // Obter Client ID da edge function
       const clientId = googleClientId || await getGoogleClientId();
       
@@ -132,7 +139,7 @@ export const useGmail = () => {
         throw new Error('Não foi possível obter o Google Client ID');
       }
 
-      // Redirect to Google OAuth with Gmail scopes
+      // Scopes necessários para Gmail
       const scopes = [
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
@@ -140,14 +147,19 @@ export const useGmail = () => {
         'https://www.googleapis.com/auth/userinfo.profile'
       ].join(' ');
 
-      const redirectUri = `https://www.ellosuit.online/dashboard/email`;
+      // Usar o domínio atual para redirect
+      const redirectUri = isCustomDomain 
+        ? `https://www.ellosuit.online/dashboard/email`
+        : `${window.location.origin}/dashboard/email`;
       
       console.log('📝 Configuração OAuth Gmail:', {
         clientId: clientId,
         redirectUri: redirectUri,
-        scopes: scopes
+        scopes: scopes,
+        isCustomDomain: isCustomDomain
       });
       
+      // Construir URL OAuth manualmente para evitar bloqueio do auth-bridge
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -158,8 +170,10 @@ export const useGmail = () => {
         `state=gmail_auth`;
 
       console.log('🔗 URL de autorização Gmail:', authUrl);
+      
+      // Redirecionar diretamente (bypass auth-bridge)
       window.location.href = authUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Erro ao conectar Gmail:', error);
       toast({
         title: "Erro",

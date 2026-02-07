@@ -13,11 +13,11 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 };
 
 const nodeColors: Record<string, string> = {
-  trigger: '#E34800',
-  message: '#007DE3',
-  condition: '#8B5CF6',
-  action: '#00E371',
-  delay: '#EC4899',
+  trigger: '#3600FF',
+  message: '#3600FF',
+  condition: '#3600FF',
+  action: '#3600FF',
+  delay: '#3600FF',
 };
 
 interface ChatBotCanvasProps {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Eye, Edit, Copy, Trash2, Palette, 
-  FileText, Mail, Loader2, MoreVertical, Filter,
+  Mail, Loader2, MoreVertical,
   LayoutTemplate, Sparkles, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,26 +16,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
-import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 const EmailTemplatesManager: React.FC = () => {
   const navigate = useNavigate();
-  const { designs, loading: designsLoading, deleteDesign } = useEmailDesigns();
-  const { templates, loading: templatesLoading, deleteTemplate } = useEmailTemplates();
+  const { designs, loading, deleteDesign } = useEmailDesigns();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'designs' | 'templates'>('designs');
-  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
-
-  const loading = designsLoading || templatesLoading;
 
   const filteredDesigns = designs.filter(d => 
     d.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredTemplates = templates.filter(t => 
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDate = (dateStr: string) => {
@@ -52,16 +41,10 @@ const EmailTemplatesManager: React.FC = () => {
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este template?')) {
-      await deleteTemplate(id);
-    }
-  };
-
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#3600FF]" />
       </div>
     );
   }
@@ -71,17 +54,17 @@ const EmailTemplatesManager: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10">
-            <Palette className="h-6 w-6 text-primary" />
+          <div className="p-2.5 rounded-xl bg-[#3600FF]/10">
+            <Palette className="h-6 w-6 text-[#3600FF]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Templates de Email</h1>
-            <p className="text-muted-foreground text-sm">Gerencie seus designs e templates de email</p>
+            <h1 className="text-2xl font-bold text-foreground">Designs de Email</h1>
+            <p className="text-muted-foreground text-sm">Gerencie seus designs visuais de email</p>
           </div>
         </div>
         <Button 
           onClick={() => navigate('/dashboard/email-builder')}
-          className="gap-2"
+          className="gap-2 bg-[#3600FF] hover:bg-[#3600FF]/90"
         >
           <Plus className="h-4 w-4" />
           Criar Design
@@ -90,29 +73,15 @@ const EmailTemplatesManager: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#3600FF]/5 to-[#3600FF]/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <LayoutTemplate className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-[#3600FF]/10">
+                <LayoutTemplate className="h-5 w-5 text-[#3600FF]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">{designs.length}</p>
-                <p className="text-xs text-muted-foreground">Designs Visuais</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/5 to-blue-500/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{templates.length}</p>
-                <p className="text-xs text-muted-foreground">Templates HTML</p>
+                <p className="text-2xl font-bold text-[#3600FF]">{designs.length}</p>
+                <p className="text-xs text-muted-foreground">Total de Designs</p>
               </div>
             </div>
           </CardContent>
@@ -134,52 +103,53 @@ const EmailTemplatesManager: React.FC = () => {
           </CardContent>
         </Card>
         
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/5 to-amber-500/10">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600">
+                  {designs.filter(d => !d.is_published).length}
+                </p>
+                <p className="text-xs text-muted-foreground">Rascunhos</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/5 to-violet-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-violet-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-violet-600" />
+                <Mail className="h-5 w-5 text-violet-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-violet-600">
-                  {designs.length + templates.length}
+                  {designs.length > 0 ? designs.length : '0'}
                 </p>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">Prontos p/ Uso</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search & Tabs */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          <Button
-            variant={activeTab === 'designs' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('designs')}
-            className="gap-2"
-          >
-            <LayoutTemplate className="h-4 w-4" />
-            Designs Visuais
-            <Badge variant="secondary" className="ml-1">{designs.length}</Badge>
-          </Button>
-          <Button
-            variant={activeTab === 'templates' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('templates')}
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Templates HTML
-            <Badge variant="secondary" className="ml-1">{templates.length}</Badge>
-          </Button>
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-[#3600FF]/10">
+            <LayoutTemplate className="h-4 w-4 text-[#3600FF]" />
+          </div>
+          <span className="font-medium text-foreground">Designs Visuais</span>
+          <Badge className="bg-[#3600FF]/10 text-[#3600FF] border-0">{designs.length}</Badge>
         </div>
         
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar..."
+            placeholder="Buscar designs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -188,137 +158,61 @@ const EmailTemplatesManager: React.FC = () => {
       </div>
 
       {/* Content */}
-      {activeTab === 'designs' ? (
-        filteredDesigns.length === 0 ? (
-          <Card className="border-dashed border-0 shadow-sm bg-muted/30">
-            <CardContent className="p-12 text-center">
-              <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-4">
-                <Palette className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Nenhum design encontrado</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie templates visualmente com nosso editor drag-and-drop
-              </p>
-              <Button onClick={() => navigate('/dashboard/email-builder')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Design
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredDesigns.map(design => (
-              <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm">
-                <CardContent className="p-0">
-                  {/* Preview Area */}
-                  <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-t-lg flex items-center justify-center relative overflow-hidden">
-                    {design.thumbnail_url ? (
-                      <img 
-                        src={design.thumbnail_url} 
-                        alt={design.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Mail className="h-12 w-12 text-muted-foreground/30" />
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <Button 
-                        size="sm" 
-                        variant="secondary"
-                        onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Info */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold truncate">{design.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(design.created_at)}
-                        </p>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Duplicar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeleteDesign(design.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    {design.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {design.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-3">
-                      {design.is_published ? (
-                        <Badge className="bg-green-100 text-green-700 text-xs">Publicado</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Rascunho</Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )
+      {filteredDesigns.length === 0 ? (
+        <Card className="border-dashed border-2 border-[#3600FF]/20 shadow-sm bg-[#3600FF]/5">
+          <CardContent className="p-12 text-center">
+            <div className="p-4 rounded-full bg-[#3600FF]/10 w-fit mx-auto mb-4">
+              <Palette className="h-10 w-10 text-[#3600FF]" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Nenhum design encontrado</h3>
+            <p className="text-muted-foreground mb-4">
+              Crie templates visualmente com nosso editor drag-and-drop
+            </p>
+            <Button 
+              onClick={() => navigate('/dashboard/email-builder')}
+              className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Design
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        filteredTemplates.length === 0 ? (
-          <Card className="border-dashed border-0 shadow-sm bg-muted/30">
-            <CardContent className="p-12 text-center">
-              <div className="p-4 rounded-full bg-blue-500/10 w-fit mx-auto mb-4">
-                <FileText className="h-10 w-10 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Nenhum template encontrado</h3>
-              <p className="text-muted-foreground mb-4">
-                Templates HTML são criados na aba de Email Marketing
-              </p>
-              <Button onClick={() => navigate('/dashboard/email')}>
-                <Mail className="h-4 w-4 mr-2" />
-                Ir para Email
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map(template => (
-              <Card key={template.id} className="hover:shadow-lg transition-all border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold truncate">{template.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(template.created_at)}
-                        </p>
-                      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredDesigns.map(design => (
+            <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm hover:border-[#3600FF]/20">
+              <CardContent className="p-0">
+                {/* Preview Area */}
+                <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-t-lg flex items-center justify-center relative overflow-hidden">
+                  {design.thumbnail_url ? (
+                    <img 
+                      src={design.thumbnail_url} 
+                      alt={design.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Mail className="h-12 w-12 text-muted-foreground/30" />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <Button 
+                      size="sm" 
+                      className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+                      onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Info */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold truncate">{design.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(design.created_at)}
+                      </p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -327,14 +221,18 @@ const EmailTemplatesManager: React.FC = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setPreviewTemplate(template)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Visualizar
+                        <DropdownMenuItem onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicar
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-destructive"
-                          onClick={() => handleDeleteTemplate(template.id)}
+                          onClick={() => handleDeleteDesign(design.id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Excluir
@@ -342,37 +240,24 @@ const EmailTemplatesManager: React.FC = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {template.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {template.description}
+                  {design.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {design.description}
                     </p>
                   )}
-                  <Badge variant="secondary" className="text-xs">
-                    {template.category}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )
+                  <div className="flex items-center gap-2 mt-3">
+                    {design.is_published ? (
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 text-xs">Publicado</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Rascunho</Badge>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
-
-      {/* Preview Modal */}
-      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>{previewTemplate?.name}</DialogTitle>
-            <DialogDescription>Preview do template HTML</DialogDescription>
-          </DialogHeader>
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <iframe
-              srcDoc={previewTemplate?.html_content}
-              className="w-full h-[500px]"
-              title="Email Preview"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

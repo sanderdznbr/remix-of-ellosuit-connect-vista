@@ -11,7 +11,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'triggers',
     label: 'Gatilhos',
-    color: '#E34800',
+    color: '#3600FF',
     blocks: [
       { 
         type: 'trigger', 
@@ -66,7 +66,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'messages',
     label: 'Mensagens',
-    color: '#007DE3',
+    color: '#3600FF',
     blocks: [
       { 
         type: 'message', 
@@ -113,7 +113,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'conditions',
     label: 'Condições',
-    color: '#8B5CF6',
+    color: '#3600FF',
     blocks: [
       { 
         type: 'condition', 
@@ -152,7 +152,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'actions',
     label: 'Ações',
-    color: '#00E371',
+    color: '#3600FF',
     blocks: [
       { 
         type: 'action', 
@@ -207,7 +207,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'delays',
     label: 'Delays / Esperas',
-    color: '#EC4899',
+    color: '#3600FF',
     blocks: [
       { 
         type: 'delay', 
@@ -260,7 +260,7 @@ const ChatBotSidebar: React.FC<ChatBotSidebarProps> = ({ onDragStart }) => {
             <div key={category.id}>
               <div 
                 className="flex items-center gap-2 mb-2 px-2"
-                style={{ color: category.color }}
+                style={{ color: '#3600FF' }}
               >
                 <Zap className="h-3.5 w-3.5" />
                 <span className="text-xs font-semibold uppercase tracking-wider">
@@ -280,13 +280,12 @@ const ChatBotSidebar: React.FC<ChatBotSidebarProps> = ({ onDragStart }) => {
                         e.dataTransfer.effectAllowed = 'copy';
                         onDragStart(block);
                       }}
-                      className="flex items-start gap-3 p-2.5 rounded-lg cursor-grab active:cursor-grabbing border border-transparent hover:border-border hover:bg-muted/50 transition-all group"
+                      className="flex items-start gap-3 p-2.5 rounded-lg cursor-grab active:cursor-grabbing border border-transparent hover:border-[#3600FF]/20 hover:bg-[#3600FF]/5 transition-all group"
                     >
                       <div 
-                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ backgroundColor: `${category.color}15` }}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-white border border-[#3600FF]/20 shadow-sm"
                       >
-                        <Icon className="h-4 w-4" style={{ color: category.color }} />
+                        <Icon className="h-4 w-4" style={{ color: '#3600FF' }} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="text-sm font-medium text-foreground block">
@@ -306,7 +305,7 @@ const ChatBotSidebar: React.FC<ChatBotSidebarProps> = ({ onDragStart }) => {
       </ScrollArea>
       
       {/* Help footer */}
-      <div className="p-3 border-t bg-muted/30">
+      <div className="p-3 border-t bg-[#3600FF]/5">
         <p className="text-[10px] text-muted-foreground text-center">
           💡 Dica: Comece com um gatilho, adicione mensagens, e conecte os blocos arrastando os círculos
         </p>

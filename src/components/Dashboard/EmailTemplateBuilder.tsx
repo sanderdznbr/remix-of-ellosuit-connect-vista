@@ -337,7 +337,7 @@ const EmailTemplateBuilder: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   
-  // Global styles
+  // Global styles - default to white backgrounds
   const [globalStyles, setGlobalStyles] = useState({
     backgroundColor: '#ffffff',
     contentBackgroundColor: '#ffffff',

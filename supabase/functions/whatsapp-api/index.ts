@@ -133,16 +133,18 @@ serve(async (req) => {
         }
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
+        const instanceKey = encodeURIComponent(session.instance_name);
         
         // v2.2.0: Rate-limiting - calcular idade da sessão
         const sessionAge = Date.now() - new Date(session.created_at).getTime();
         
-        console.log(`[QR] Fetching QR for session ${sessionId}, server: ${serverUrl}, age: ${Math.round(sessionAge/1000)}s`);
+        console.log(`[QR] Fetching QR for session ${sessionId} (instance: ${session.instance_name}), server: ${normalizedServerUrl}, age: ${Math.round(sessionAge/1000)}s`);
         
         // Try to get fresh QR from Baileys server
-        if (serverUrl) {
+        if (normalizedServerUrl) {
           try {
-            const qrResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
+            const qrResponse = await fetch(`${normalizedServerUrl}/api/instance/${instanceKey}/qr`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
             });
@@ -210,17 +212,17 @@ serve(async (req) => {
               
               console.log(`[QR] Session not found on server (age: ${Math.round(sessionAge/1000)}s), recreating...`);
               
-              const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
-              const createResponse = await fetch(`${serverUrl}/api/instance/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sessionId: session.id,
-                  instanceName: session.instance_name,
-                  webhookUrl: webhookUrl,
-                  webhookSecret: session.webhook_secret || ''
-                })
-              });
+               const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+               const createResponse = await fetch(`${normalizedServerUrl}/api/instance/create`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({
+                   sessionId: session.id,
+                   instanceName: session.instance_name,
+                   webhookUrl: webhookUrl,
+                   webhookSecret: session.webhook_secret || ''
+                 })
+               });
               
               if (createResponse.ok) {
                 console.log(`[QR] Instance recreated, waiting for QR...`);
@@ -228,7 +230,7 @@ serve(async (req) => {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 // Try to get QR again
-                const retryResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
+                const retryResponse = await fetch(`${normalizedServerUrl}/api/instance/${instanceKey}/qr`, {
                   method: 'GET',
                   headers: { 'Content-Type': 'application/json' }
                 });
@@ -296,8 +298,10 @@ serve(async (req) => {
         // Check status from Baileys server
         if (serverUrl) {
           try {
-            // Use session.id (sessionId) not instance_name
-            const statusResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/status`, {
+            // IMPORTANT: o servidor Baileys usa a rota /api/instance/:name/* (onde :name = instanceName)
+            const instanceKey = encodeURIComponent(session.instance_name);
+            const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
+            const statusResponse = await fetch(`${normalizedServerUrl}/api/instance/${instanceKey}/status`, {
               headers: { 'Content-Type': 'application/json' }
             });
 
@@ -384,10 +388,12 @@ serve(async (req) => {
         try {
           // v2.3.0: Usar novo endpoint /regenerate-qr do servidor
           console.log(`[REGENERATE] Calling server regenerate endpoint...`);
-          const regenerateResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/regenerate-qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
+           const instanceKey = encodeURIComponent(session.instance_name);
+           const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
+           const regenerateResponse = await fetch(`${normalizedServerUrl}/api/instance/${instanceKey}/regenerate-qr`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' }
+           });
           
           if (regenerateResponse.status === 404) {
             // Sessão não existe no servidor, criar nova
@@ -412,10 +418,10 @@ serve(async (req) => {
           for (let i = 0; i < 8; i++) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            const qrResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            });
+             const qrResponse = await fetch(`${normalizedServerUrl}/api/instance/${instanceKey}/qr`, {
+               method: 'GET',
+               headers: { 'Content-Type': 'application/json' }
+             });
             
             if (qrResponse.ok) {
               const qrData = await qrResponse.json();

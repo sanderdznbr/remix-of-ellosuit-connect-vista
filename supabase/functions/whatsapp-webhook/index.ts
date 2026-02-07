@@ -477,12 +477,16 @@ serve(async (req) => {
               // Check if conversation has an AI agent assigned and auto-reply is enabled
               if (!fromMe && conversation) {
                 try {
+                  console.log(`🤖 Checking AI auto-reply for conversation: ${conversation.id}`);
+                  
                   // Fetch conversation with agent info
-                  const { data: convWithAgent } = await supabase
+                  const { data: convWithAgent, error: convError } = await supabase
                     .from('whatsapp_conversations')
                     .select('id, assigned_agent_id, ai_auto_reply_enabled')
                     .eq('id', conversation.id)
                     .single();
+                  
+                  console.log(`🤖 Conv data: agent_id=${convWithAgent?.assigned_agent_id}, auto_reply=${convWithAgent?.ai_auto_reply_enabled}`);
                   
                   if (convWithAgent?.assigned_agent_id && convWithAgent?.ai_auto_reply_enabled) {
                     console.log('🤖 AI Auto-reply triggered for conversation:', conversation.id);
@@ -615,18 +619,47 @@ serve(async (req) => {
                     console.log(`🤖 Checking ${activeFlows.length} active chatbot flows`);
                     
                     for (const flow of activeFlows) {
-                      const triggerConfig = flow.trigger_config as any;
+                      let triggerConfig = flow.trigger_config as any;
                       const nodes = flow.nodes as any[];
                       let shouldTrigger = false;
+                      
+                      // If trigger_config is empty, try to get config from trigger nodes
+                      if (!triggerConfig || Object.keys(triggerConfig).length === 0) {
+                        const triggerNodes = nodes.filter(n => n.type === 'trigger');
+                        if (triggerNodes.length > 0) {
+                          const triggerNode = triggerNodes[0];
+                          const nodeConfig = triggerNode.data?.config || {};
+                          
+                          // Build trigger config from node
+                          if (triggerNode.subType === 'whatsapp_channel') {
+                            triggerConfig = {
+                              type: 'whatsapp_channel',
+                              sessionId: nodeConfig.sessionId,
+                              triggerWhen: nodeConfig.triggerWhen || 'any_message'
+                            };
+                          } else if (triggerNode.subType === 'keyword') {
+                            triggerConfig = {
+                              type: 'keyword',
+                              value: Array.isArray(nodeConfig.keywords) ? nodeConfig.keywords.join(',') : nodeConfig.keywords
+                            };
+                          } else if (triggerNode.subType === 'conversation_start') {
+                            triggerConfig = { type: 'start' };
+                          }
+                          console.log(`🤖 Built trigger config from node: ${JSON.stringify(triggerConfig)}`);
+                        }
+                      }
                       
                       // Check trigger conditions
                       if (triggerConfig?.type === 'keyword' && triggerConfig?.value) {
                         const keywords = triggerConfig.value.toLowerCase().split(',').map((k: string) => k.trim());
                         const messageLC = content.toLowerCase();
                         shouldTrigger = keywords.some((kw: string) => messageLC.includes(kw));
+                        console.log(`🤖 Keyword check: keywords=${keywords.join(',')}, message includes? ${shouldTrigger}`);
                       } else if (triggerConfig?.type === 'whatsapp_channel') {
-                        // Check if this is the configured session
-                        shouldTrigger = !triggerConfig.sessionId || triggerConfig.sessionId === targetSessionId;
+                        // Check if this is the configured session (or any session if not specified)
+                        const matchesSession = !triggerConfig.sessionId || triggerConfig.sessionId === targetSessionId;
+                        shouldTrigger = matchesSession;
+                        console.log(`🤖 WhatsApp channel check: configSession=${triggerConfig.sessionId}, currentSession=${targetSessionId}, matches? ${shouldTrigger}`);
                       } else if (triggerConfig?.type === 'start') {
                         // Check if this is a new conversation (no previous messages)
                         const { count } = await supabase
@@ -635,6 +668,9 @@ serve(async (req) => {
                           .eq('conversation_id', conversation.id)
                           .eq('from_me', false);
                         shouldTrigger = (count || 0) <= 1;
+                        console.log(`🤖 Start check: message count=${count}, triggers? ${shouldTrigger}`);
+                      } else {
+                        console.log(`🤖 Unknown or no trigger type: ${triggerConfig?.type}`);
                       }
                       
                       if (shouldTrigger) {
@@ -656,6 +692,7 @@ serve(async (req) => {
                         if (sessionData?.baileys_server_url) {
                           // Process flow nodes (simplified - execute message nodes in order)
                           const messageNodes = nodes.filter(n => n.type === 'message');
+                          console.log(`🤖 Found ${messageNodes.length} message nodes to process`);
                           
                           for (let i = 0; i < messageNodes.length; i++) {
                             const node = messageNodes[i];
@@ -730,6 +767,8 @@ serve(async (req) => {
                               }
                             }
                           }
+                        } else {
+                          console.log('⚠️ No baileys_server_url found for session');
                         }
                         
                         // Only trigger first matching flow

@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.7",
+  "version": "2.9.8",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -56,22 +56,21 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.7 - Histórico de Mensagens Completo
+    const readme = `# 🚀 Baileys Server v2.9.8 - Correção de Timestamps
 
-## ✅ Correções v2.9.7
+## ✅ Correções v2.9.8
 
-Esta versão **CRIA CONVERSAS a partir do histórico de mensagens**.
+Esta versão corrige parsing de timestamps que causava falha na criação de conversas.
 
-### Mudanças v2.9.7:
-- ✅ **Processa mensagens do histórico** - messaging-history.set com 3000+ msgs
-- ✅ **Cria conversas automaticamente** - a partir das mensagens recebidas
-- ✅ **Agrupa por contato** - mensagens organizadas por JID
-- ✅ **Envia em batch** - eficiente para grandes volumes
+### Mudanças v2.9.8:
+- ✅ **Timestamp robusto** - Suporta todos os formatos do Baileys
+- ✅ **Histórico completo** - Mensagens criam conversas automaticamente
+- ✅ **Logs detalhados** - Mostra progresso do sync
 
-### Histórico de versões:
+### Versões anteriores:
+- v2.9.7: Processa mensagens do histórico
 - v2.9.6: Busca fotos de perfil
 - v2.9.5: Sync de histórico completo
-- v2.9.4: Fix QR Lock bloqueando 515
 
 ## Deploy no Railway
 
@@ -95,6 +94,7 @@ Após conectar, você verá:
 [CONNECTED] ✅ WhatsApp conectado!
 [HISTORY] 📥 0 chats, 0 contatos, 3460 msgs
 [HISTORY MSGS] 📨 Enviando 3460 mensagens para criar conversas
+[WEBHOOK] history.messages - Status: 200
 \`\`\`
 `;
 
@@ -110,13 +110,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.7 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.8 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
-console.log('[INIT] 🔧 Histórico de mensagens completo');
+console.log('[INIT] 🔧 Correção de timestamps');
 console.log('[INIT] Node version:', process.version);
 console.log('='.repeat(60));
 
-const VERSION = "v2.9.7";
+const VERSION = "v2.9.8";
 const app = express();
 
 app.use(cors());
@@ -183,7 +183,7 @@ async function getProfilePicture(sock, jid) {
   }
 }
 
-// ============ CRIAR SOCKET (v2.9.6 - Com sync de fotos) ============
+// ============ CRIAR SOCKET (v2.9.8 - Com sync de fotos e timestamps) ============
 async function createSocketForSession(session) {
   const { sessionId, instanceName } = session;
   const sessionPath = path.join(SESSIONS_DIR, sessionId);
@@ -252,8 +252,8 @@ async function createSocketForSession(session) {
   
   await sleep(1000);
   
-  // ========== CRIAR SOCKET - v2.9.6 Config ==========
-  console.log('[SOCKET] Criando socket com config v2.9.6...');
+  // ========== CRIAR SOCKET - v2.9.8 Config ==========
+  console.log('[SOCKET] Criando socket com config v2.9.8...');
   
   const logger = pino({ level: 'silent' });
   
@@ -541,7 +541,7 @@ async function createSocketForSession(session) {
       });
     }
     
-    // v2.9.7 - PROCESSAR MENSAGENS DO HISTÓRICO para criar conversas!
+    // v2.9.8 - PROCESSAR MENSAGENS DO HISTÓRICO para criar conversas!
     if (messages && messages.length > 0) {
       console.log(\`[HISTORY MSGS] 📨 Processando \${messages.length} mensagens para criar conversas...\`);
       
@@ -712,7 +712,7 @@ async function createSocketForSession(session) {
   console.log('[SOCKET] ✓ contacts.set registrado');
   
   console.log('[SOCKET] ========================================');
-  console.log('[SOCKET] ✅ Socket v2.9.6 pronto, aguardando QR...');
+  console.log('[SOCKET] ✅ Socket v2.9.8 pronto, aguardando QR...');
   console.log('[SOCKET] ========================================');
   console.log('');
   

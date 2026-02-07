@@ -87,6 +87,7 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "tasks", label: "Tarefas", description: "Listas e lembretes", icon: CheckSquare, path: "/dashboard/tasks" },
           { id: "fluxos", label: "Fluxos", description: "Kanban e automações", icon: Zap, path: "/dashboard/fluxos" },
+          { id: "leads", label: "Captura de Leads", description: "Funis interativos", icon: Users, path: "/dashboard/leads" },
         ]
       },
       {

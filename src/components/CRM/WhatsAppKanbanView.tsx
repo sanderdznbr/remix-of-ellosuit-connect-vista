@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DndContext, DragEndEvent, closestCorners, DragOverlay, DragStartEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Clock, Tag, UserPlus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import KanbanChatSidebar from './KanbanChatSidebar';
 
 interface ConversationLabel {
   id: string;
@@ -208,6 +209,7 @@ interface WhatsAppKanbanViewProps {
   conversations: WhatsAppConversationData[];
   labels: ConversationLabel[];
   columns: KanbanColumn[];
+  companyId: string | null;
   onSelectConversation: (conv: WhatsAppConversationData) => void;
   onSaveLead: (conv: WhatsAppConversationData) => void;
   onManageLabels: (conv: WhatsAppConversationData) => void;
@@ -219,13 +221,21 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
   conversations,
   labels,
   columns,
+  companyId,
   onSelectConversation,
   onSaveLead,
   onManageLabels,
   onUpdateStage,
   onConfigureColumns,
 }) => {
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
+  const [selectedChatConversation, setSelectedChatConversation] = useState<WhatsAppConversationData | null>(null);
+
+  const handleCardClick = (conv: WhatsAppConversationData) => {
+    setSelectedChatConversation(conv);
+    setChatSidebarOpen(true);
+  };
 
   const getConversationsByStage = (stage: string) => {
     return conversations.filter(c => (c.pipeline_stage || 'novo') === stage);
@@ -326,7 +336,7 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
                             key={conversation.id}
                             conversation={conversation}
                             labels={labels}
-                            onSelect={onSelectConversation}
+                            onSelect={handleCardClick}
                             onSaveLead={onSaveLead}
                             onManageLabels={onManageLabels}
                           />
@@ -362,6 +372,14 @@ const WhatsAppKanbanView: React.FC<WhatsAppKanbanViewProps> = ({
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Chat Sidebar */}
+      <KanbanChatSidebar
+        isOpen={chatSidebarOpen}
+        onClose={() => setChatSidebarOpen(false)}
+        conversation={selectedChatConversation}
+        companyId={companyId}
+      />
     </DndContext>
   );
 };

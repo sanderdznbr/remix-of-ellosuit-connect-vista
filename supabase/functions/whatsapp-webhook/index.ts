@@ -573,16 +573,20 @@ serve(async (req) => {
                               })
                             });
                             
-                            if (sendResponse.ok) {
-                              console.log('✅ AI auto-reply sent successfully');
-                              // Update message status to sent
+                            // IMPROVED: Always update to 'sent' if HTTP response is successful (200-299)
+                            // The Baileys server confirms receipt of the send request
+                            const responseStatus = sendResponse.status;
+                            if (responseStatus >= 200 && responseStatus < 300) {
+                              console.log(`✅ AI auto-reply sent successfully (HTTP ${responseStatus})`);
+                              // Update message status to sent immediately
                               await supabase
                                 .from('whatsapp_messages')
                                 .update({ status: 'sent' })
                                 .eq('wa_message_id', aiMessageId);
                             } else {
-                              console.error('❌ Failed to send AI auto-reply:', await sendResponse.text());
-                              // Mark as failed
+                              const errorText = await sendResponse.text();
+                              console.error(`❌ Failed to send AI auto-reply (HTTP ${responseStatus}):`, errorText);
+                              // Mark as failed only on actual error
                               await supabase
                                 .from('whatsapp_messages')
                                 .update({ status: 'failed' })
@@ -858,7 +862,7 @@ serve(async (req) => {
                                 metadata: { ai_agent_id: agent.id, ai_agent_name: agent.name }
                               });
                             
-                            await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                            const sendRes = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
@@ -867,7 +871,11 @@ serve(async (req) => {
                                 message: aiReply
                               })
                             });
-                            console.log('✅ AI auto-reply sent (insert path)');
+                            if (sendRes.status >= 200 && sendRes.status < 300) {
+                              console.log('✅ AI auto-reply sent (insert path)');
+                            } else {
+                              console.error('❌ AI auto-reply failed (insert path)');
+                            }
                           }
                         }
                       }

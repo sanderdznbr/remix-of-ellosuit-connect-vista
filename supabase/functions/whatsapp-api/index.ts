@@ -134,33 +134,65 @@ serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         
+        console.log(`[QR] Fetching QR for session ${sessionId}, server: ${serverUrl}`);
+        
         // Try to get fresh QR from Baileys server
         if (serverUrl) {
           try {
-            const qrResponse = await fetch(`${serverUrl}/api/instance/${session.instance_name}/qr`, {
+            // Use session.id (sessionId) not instance_name for the API call
+            const qrResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
               method: 'GET',
-              headers: { 'x-webhook-secret': session.webhook_secret || '' }
+              headers: { 'Content-Type': 'application/json' }
             });
+
+            console.log(`[QR] Server response status: ${qrResponse.status}`);
 
             if (qrResponse.ok) {
               const qrData = await qrResponse.json();
-              if (qrData.qrCode) {
+              console.log(`[QR] Got data:`, { hasQR: !!qrData.qrCode, isConnected: qrData.isConnected });
+              
+              if (qrData.isConnected) {
+                // Session is already connected
                 await supabase
                   .from('whatsapp_sessions')
-                  .update({ qr_code: qrData.qrCode })
+                  .update({ 
+                    status: 'connected',
+                    phone_number: qrData.phoneNumber,
+                    push_name: qrData.pushName,
+                    connected_at: new Date().toISOString()
+                  })
+                  .eq('id', sessionId);
+                
+                return new Response(JSON.stringify({ 
+                  qrCode: null,
+                  status: 'connected',
+                  isConnected: true,
+                  phoneNumber: qrData.phoneNumber,
+                  pushName: qrData.pushName
+                }), {
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+              }
+              
+              if (qrData.qrCode) {
+                // Save QR to database for caching
+                await supabase
+                  .from('whatsapp_sessions')
+                  .update({ qr_code: qrData.qrCode, status: 'waiting_qr' })
                   .eq('id', sessionId);
                 
                 return new Response(JSON.stringify({ 
                   qrCode: qrData.qrCode,
-                  status: session.status,
-                  isConnected: qrData.isConnected || false
+                  status: 'waiting_qr',
+                  isConnected: false,
+                  isDemo: false
                 }), {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                 });
               }
             }
           } catch (e) {
-            console.log('Error fetching QR from Baileys:', e);
+            console.error('[QR] Error fetching QR from Baileys:', e);
           }
         }
 
@@ -168,7 +200,7 @@ serve(async (req) => {
         const demoQr = generateDemoQrCode();
         return new Response(JSON.stringify({ 
           qrCode: session.qr_code || demoQr,
-          status: session.status,
+          status: session.status || 'connecting',
           isDemo: !serverUrl,
           message: serverUrl ? 'Aguardando QR do servidor...' : 'Configure o servidor Baileys para conectar'
         }), {
@@ -200,15 +232,22 @@ serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
 
+        console.log(`[STATUS] Checking status for session ${sessionId}, server: ${serverUrl}`);
+
         // Check status from Baileys server
         if (serverUrl) {
           try {
-            const statusResponse = await fetch(`${serverUrl}/api/instance/${session.instance_name}/status`, {
-              headers: { 'x-webhook-secret': session.webhook_secret || '' }
+            // Use session.id (sessionId) not instance_name
+            const statusResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/status`, {
+              headers: { 'Content-Type': 'application/json' }
             });
+
+            console.log(`[STATUS] Server response: ${statusResponse.status}`);
 
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
+              console.log(`[STATUS] Data:`, statusData);
+              
               const isConnected = statusData.status === 'connected' || statusData.isConnected;
               
               if (isConnected && session.status !== 'connected') {
@@ -226,16 +265,17 @@ serve(async (req) => {
               }
               
               return new Response(JSON.stringify({ 
-                status: isConnected ? 'connected' : session.status,
+                status: isConnected ? 'connected' : (statusData.status || session.status),
                 phoneNumber: statusData.phoneNumber,
                 pushName: statusData.pushName,
-                profilePicture: statusData.profilePicture
+                profilePicture: statusData.profilePicture,
+                isConnected
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
             }
           } catch (e) {
-            console.log('Error checking Baileys status:', e);
+            console.error('[STATUS] Error checking Baileys status:', e);
           }
         }
 
@@ -301,16 +341,18 @@ serve(async (req) => {
         // Send via Baileys if connected
         if (serverUrl && session.status === 'connected') {
           try {
-            const sendResponse = await fetch(`${serverUrl}/api/message/send`, {
+            console.log(`[SEND] Sending to ${jid} via ${serverUrl}`);
+            
+            // Use the correct endpoint: /api/message/send-text
+            const sendResponse = await fetch(`${serverUrl}/api/message/send-text`, {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
-                'x-webhook-secret': session.webhook_secret || ''
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                instanceName: session.instance_name,
-                jid: jid,
-                message: { text: message }
+                sessionId: sessionId,
+                phone: cleanPhone,
+                message: message
               })
             });
 

@@ -140,7 +140,7 @@ export const useGmail = () => {
         'https://www.googleapis.com/auth/userinfo.profile'
       ].join(' ');
 
-      const redirectUri = `https://www.ellosuit.online/dashboard`;
+      const redirectUri = `https://www.ellosuit.online/dashboard/email`;
       
       console.log('📝 Configuração OAuth Gmail:', {
         clientId: clientId,
@@ -218,8 +218,8 @@ export const useGmail = () => {
         if (data?.success) {
           console.log('✅ OAuth Gmail processado com sucesso');
           
-          // Limpar URL primeiro e redirecionar para o calendário
-          window.history.replaceState({}, document.title, '/dashboard');
+          // Limpar URL e redirecionar para página de email
+          window.history.replaceState({}, document.title, '/dashboard/email');
           
           // Aguardar um pouco para garantir que a conta foi salva
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -245,7 +245,7 @@ export const useGmail = () => {
         });
         
         // Limpar URL após erro
-        window.history.replaceState({}, document.title, '/dashboard');
+        window.history.replaceState({}, document.title, '/dashboard/email');
       } finally {
         setLoading(false);
       }

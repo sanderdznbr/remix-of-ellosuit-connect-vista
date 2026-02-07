@@ -265,6 +265,14 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
+  // Helper: Check if phone number is valid (filter LIDs)
+  const isValidPhoneNumber = (phone: string): boolean => {
+    if (!phone) return false;
+    const digits = phone.replace(/\D/g, '');
+    // Filter out invalid numbers: too short (< 8) or too long (> 15 = likely LID)
+    return digits.length >= 8 && digits.length <= 15;
+  };
+
   const loadConversations = async () => {
     if (!companyId) return;
     
@@ -280,10 +288,17 @@ const WhatsAppCRM: React.FC = () => {
       return;
     }
     
-    // Deduplicate by contact_phone - keep only the most recent conversation per contact
+    // Filter out invalid phone numbers (LIDs) and deduplicate by contact_phone
     const uniqueByPhone = new Map<string, typeof data[0]>();
     (data || []).forEach(conv => {
       const phone = conv.contact_phone;
+      
+      // Skip invalid phone numbers (likely LIDs)
+      if (!isValidPhoneNumber(phone)) {
+        console.log(`[LID FILTER] Skipping conversation with invalid phone: ${phone}`);
+        return;
+      }
+      
       if (!uniqueByPhone.has(phone) || 
           new Date(conv.last_message_at) > new Date(uniqueByPhone.get(phone)!.last_message_at)) {
         uniqueByPhone.set(phone, conv);

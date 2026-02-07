@@ -33,7 +33,7 @@ const EmailComposer = () => {
   // Auto-fill sender when Gmail is connected
   useEffect(() => {
     if (isConnected && emailAccount) {
-      setFromEmail(emailAccount.provider_email);
+      setFromEmail(emailAccount.email);
     }
   }, [isConnected, emailAccount]);
 
@@ -164,7 +164,7 @@ const EmailComposer = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle2 className="h-4 w-4" />
-              <span className="text-sm">Enviando como: <strong>{emailAccount?.provider_email}</strong></span>
+              <span className="text-sm">Enviando como: <strong>{emailAccount?.email}</strong></span>
             </div>
           </CardContent>
         </Card>

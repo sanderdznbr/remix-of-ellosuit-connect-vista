@@ -34,6 +34,15 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
   const [testingServer, setTestingServer] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
   const [phoneInfo, setPhoneInfo] = useState<{ phoneNumber?: string; pushName?: string } | null>(null);
+  const [pollingQR, setPollingQR] = useState(false);
+
+  // Load saved server URL from localStorage
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('baileys_server_url');
+    if (savedUrl) {
+      setBaileysServerUrl(savedUrl);
+    }
+  }, []);
 
   // Clean up on close
   useEffect(() => {
@@ -45,28 +54,37 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
       setStatus('disconnected');
       setServerStatus('unknown');
       setPhoneInfo(null);
+      setPollingQR(false);
     }
   }, [isOpen]);
 
-  // Poll for status when showing QR
+  // Poll for QR and status when showing QR
   useEffect(() => {
     if (step !== 'qr' || !sessionId) return;
 
-    const checkStatus = async () => {
+    let isMounted = true;
+    setPollingQR(true);
+
+    const pollQRAndStatus = async () => {
+      if (!isMounted) return;
+      
       try {
-        const { data, error } = await supabase.functions.invoke('whatsapp-api', {
+        // First check status
+        const { data: statusData, error: statusError } = await supabase.functions.invoke('whatsapp-api', {
           body: { action: 'check_status', sessionId }
         });
 
-        if (!error && data) {
-          setStatus(data.status);
+        if (!statusError && statusData) {
+          console.log('[QR Modal] Status:', statusData);
+          setStatus(statusData.status);
           
-          if (data.status === 'connected') {
+          if (statusData.status === 'connected' || statusData.isConnected) {
             setPhoneInfo({
-              phoneNumber: data.phoneNumber,
-              pushName: data.pushName
+              phoneNumber: statusData.phoneNumber,
+              pushName: statusData.pushName
             });
             setStep('connected');
+            setPollingQR(false);
             
             // Get session details
             const { data: sessionData } = await supabase
@@ -78,15 +96,43 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
             if (sessionData) {
               onSuccess(sessionData);
             }
+            return;
+          }
+        }
+        
+        // Then get QR code if not connected
+        const { data: qrData, error: qrError } = await supabase.functions.invoke('whatsapp-api', {
+          body: { action: 'get_qr_code', sessionId }
+        });
+
+        if (!qrError && qrData && isMounted) {
+          console.log('[QR Modal] QR Data:', { hasQR: !!qrData.qrCode, isDemo: qrData.isDemo });
+          if (qrData.qrCode) {
+            setQrCode(qrData.qrCode);
+          }
+          if (qrData.isConnected) {
+            setPhoneInfo({
+              phoneNumber: qrData.phoneNumber,
+              pushName: qrData.pushName
+            });
+            setStep('connected');
+            setPollingQR(false);
           }
         }
       } catch (e) {
-        console.error('Status check error:', e);
+        console.error('Polling error:', e);
       }
     };
 
-    const interval = setInterval(checkStatus, 3000);
-    return () => clearInterval(interval);
+    // Poll immediately and then every 2 seconds
+    pollQRAndStatus();
+    const interval = setInterval(pollQRAndStatus, 2000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      setPollingQR(false);
+    };
   }, [step, sessionId, onSuccess]);
 
   // Test Baileys server connection
@@ -116,9 +162,11 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
         const data = await response.json();
         setServerStatus('online');
         setBaileysServerUrl(url);
+        // Save URL to localStorage for future use
+        localStorage.setItem('baileys_server_url', url);
         toast({ 
           title: '✅ Servidor Online', 
-          description: `${data.sessions || 0} sessões ativas` 
+          description: `Baileys ${data.version || ''} - ${data.sessions || 0} sessões ativas` 
         });
       } else {
         setServerStatus('offline');

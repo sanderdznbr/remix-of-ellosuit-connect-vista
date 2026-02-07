@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Mail, 
   Users, 
@@ -22,7 +23,13 @@ import {
   Palette,
   CheckCircle2,
   AlertCircle,
-  Settings2
+  Settings2,
+  Inbox,
+  Clock,
+  ArrowRight,
+  PartyPopper,
+  MailCheck,
+  ExternalLink
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,7 +37,7 @@ import { useGmail } from '@/hooks/useGmail';
 import { supabase } from '@/integrations/supabase/client';
 import AISubjectHelper from './AISubjectHelper';
 import EmailConnectionPopover from './EmailConnectionPopover';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const STEPS = [
   { id: 1, title: 'Destinatários', description: 'Para quem você quer enviar?', icon: Users },
@@ -39,8 +46,20 @@ const STEPS = [
   { id: 4, title: 'Revisar', description: 'Confira antes de enviar', icon: Eye },
 ];
 
+interface SentEmail {
+  id: string;
+  subject: string;
+  recipient_email: string;
+  sent_at: string;
+  status: string;
+  tracking_pixel_id: string;
+  opened?: boolean;
+  opened_at?: string;
+}
+
 const CleanEmailMarketing: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [recipients, setRecipients] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState('');
@@ -54,10 +73,30 @@ const CleanEmailMarketing: React.FC = () => {
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [dailyLimit, setDailyLimit] = useState({ sent: 0, limit: 500 });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [sentEmailsCount, setSentEmailsCount] = useState(0);
+  const [showSentEmails, setShowSentEmails] = useState(false);
+  const [sentEmails, setSentEmails] = useState<SentEmail[]>([]);
+  const [loadingSentEmails, setLoadingSentEmails] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
   const { isConnected, loading, emailAccount, connectGmail, disconnectGmail } = useGmail();
+
+  // Handle return from builder with template
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.selectedTemplate) {
+      setSelectedTemplate(state.selectedTemplate);
+      setContent(state.selectedTemplate.html_content);
+      setContentMode('template');
+      if (state.returnToStep) {
+        setCurrentStep(state.returnToStep);
+      }
+      // Clear the state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Fetch company ID
   useEffect(() => {
@@ -132,6 +171,51 @@ const CleanEmailMarketing: React.FC = () => {
     
     fetchClients();
   }, [companyId]);
+
+  // Fetch sent emails
+  const fetchSentEmails = async () => {
+    if (!user) return;
+    setLoadingSentEmails(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('emails')
+        .select(`
+          id,
+          subject,
+          recipient_email,
+          sent_at,
+          status,
+          tracking_pixel_id,
+          email_events (
+            event_type,
+            timestamp
+          )
+        `)
+        .order('sent_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const emailsWithTracking = data?.map(email => ({
+        ...email,
+        opened: (email.email_events as any[])?.some((e: any) => e.event_type === 'opened'),
+        opened_at: (email.email_events as any[])?.find((e: any) => e.event_type === 'opened')?.timestamp
+      })) || [];
+
+      setSentEmails(emailsWithTracking);
+    } catch (error) {
+      console.error('Error fetching sent emails:', error);
+    } finally {
+      setLoadingSentEmails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showSentEmails) {
+      fetchSentEmails();
+    }
+  }, [showSentEmails, user]);
 
   const addEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
@@ -251,10 +335,8 @@ const CleanEmailMarketing: React.FC = () => {
       }
 
       if (successCount > 0) {
-        toast({
-          title: "🎉 Emails enviados!",
-          description: `${successCount} de ${recipients.length} email(s) enviados com sucesso`
-        });
+        setSentEmailsCount(successCount);
+        setShowSuccessModal(true);
         
         // Reset
         setCurrentStep(1);
@@ -297,6 +379,100 @@ const CleanEmailMarketing: React.FC = () => {
       setCurrentStep(prev => prev - 1);
     }
   };
+
+  // Navigate to builder with state
+  const goToBuilder = () => {
+    navigate('/dashboard/email/builder', { 
+      state: { fromWizard: true } 
+    });
+  };
+
+  // Sent emails view
+  if (showSentEmails) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => setShowSentEmails(false)}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-lg font-bold text-foreground">Emails Enviados</h1>
+                  <p className="text-xs text-muted-foreground">Histórico de envios e rastreamento</p>
+                </div>
+              </div>
+              <Button variant="outline" onClick={fetchSentEmails} disabled={loadingSentEmails}>
+                {loadingSentEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {loadingSentEmails ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : sentEmails.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center">
+                <Inbox className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-lg font-medium text-muted-foreground">Nenhum email enviado</p>
+                <p className="text-sm text-muted-foreground mb-4">Envie seu primeiro email para ver o histórico aqui</p>
+                <Button onClick={() => setShowSentEmails(false)}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar Email
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {sentEmails.map(email => (
+                <Card key={email.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-foreground truncate">{email.subject}</p>
+                        {email.opened ? (
+                            <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30">
+                              <Eye className="h-3 w-3 mr-1" />
+                              Aberto
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Não aberto
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Para: <span className="font-medium">{email.recipient_email}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Enviado em {new Date(email.sent_at).toLocaleString('pt-BR')}
+                          {email.opened && email.opened_at && (
+                            <> • Aberto em {new Date(email.opened_at).toLocaleString('pt-BR')}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={email.status === 'sent' ? 'default' : 'secondary'}>
+                          {email.status === 'sent' ? 'Enviado' : email.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Step 1: Recipients
   const renderStep1 = () => (
@@ -476,7 +652,7 @@ const CleanEmailMarketing: React.FC = () => {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-2">Como você quer criar o email?</h2>
-        <p className="text-muted-foreground">Escolha um template ou escreva do zero</p>
+        <p className="text-muted-foreground">Escolha um template ou crie do zero</p>
       </div>
 
       {!contentMode ? (
@@ -503,7 +679,7 @@ const CleanEmailMarketing: React.FC = () => {
           
           <Card 
             className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all group"
-            onClick={() => setContentMode('scratch')}
+            onClick={goToBuilder}
           >
             <CardContent className="p-8 text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
@@ -511,24 +687,28 @@ const CleanEmailMarketing: React.FC = () => {
               </div>
               <h4 className="font-bold text-lg mb-2">Criar do Zero</h4>
               <p className="text-muted-foreground">
-                Escreva seu próprio conteúdo
+                Use o construtor visual drag-and-drop
               </p>
+              <Badge variant="secondary" className="mt-3">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Visual Builder
+              </Badge>
             </CardContent>
           </Card>
         </div>
       ) : contentMode === 'template' ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setContentMode(null)}>
+            <Button variant="ghost" onClick={() => { setContentMode(null); setSelectedTemplate(null); setContent(''); }}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Voltar às opções
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/dashboard/email/builder')}
+              onClick={goToBuilder}
               className="gap-2"
             >
-              <Settings2 className="h-4 w-4" />
+              <Palette className="h-4 w-4" />
               Criar novo template
             </Button>
           </div>
@@ -572,7 +752,7 @@ const CleanEmailMarketing: React.FC = () => {
                 <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-lg font-medium text-muted-foreground mb-2">Nenhum template salvo</p>
                 <p className="text-sm text-muted-foreground mb-4">Crie seu primeiro template no construtor visual</p>
-                <Button onClick={() => navigate('/dashboard/email/builder')}>
+                <Button onClick={goToBuilder}>
                   <Palette className="h-4 w-4 mr-2" />
                   Criar Template
                 </Button>
@@ -580,29 +760,7 @@ const CleanEmailMarketing: React.FC = () => {
             </Card>
           )}
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setContentMode(null)}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Voltar às opções
-            </Button>
-          </div>
-          
-          <Textarea
-            placeholder="Escreva o conteúdo do seu email aqui...
-
-Você pode usar HTML para formatação:
-<b>texto em negrito</b>
-<i>texto em itálico</i>
-<a href='link'>link clicável</a>"
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            rows={12}
-            className="resize-none text-base"
-          />
-        </div>
-      )}
+      ) : null}
     </div>
   );
 
@@ -664,12 +822,58 @@ Você pode usar HTML para formatação:
             />
           </CardContent>
         </Card>
+
+        {/* Tracking info */}
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Eye className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Rastreamento de Abertura</p>
+                <p className="text-xs text-muted-foreground">Um pixel invisível será incluído para rastrear quando o email for aberto</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md text-center">
+          <div className="py-6">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <PartyPopper className="h-10 w-10 text-green-600 dark:text-green-400" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">
+                Emails Enviados! 🎉
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground mt-2">
+              {sentEmailsCount} email(s) foram enviados com sucesso.
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Você pode acompanhar as aberturas na página de emails enviados.
+            </p>
+            <div className="flex gap-3 mt-6 justify-center">
+              <Button variant="outline" onClick={() => setShowSuccessModal(false)}>
+                Enviar outro
+              </Button>
+              <Button onClick={() => { setShowSuccessModal(false); setShowSentEmails(true); }}>
+                <MailCheck className="h-4 w-4 mr-2" />
+                Ver enviados
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4">
@@ -684,13 +888,24 @@ Você pode usar HTML para formatação:
               </div>
             </div>
             
-            <EmailConnectionPopover
-              isConnected={isConnected}
-              loading={loading}
-              emailAccount={emailAccount}
-              onConnect={connectGmail}
-              onDisconnect={disconnectGmail}
-            />
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSentEmails(true)}
+                className="gap-2"
+              >
+                <Inbox className="h-4 w-4" />
+                Enviados
+              </Button>
+              <EmailConnectionPopover
+                isConnected={isConnected}
+                loading={loading}
+                emailAccount={emailAccount}
+                onConnect={connectGmail}
+                onDisconnect={disconnectGmail}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -708,7 +923,7 @@ Você pode usar HTML para formatação:
                     currentStep === step.id
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
                       : step.id < currentStep
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/50'
+                        ? 'bg-green-500/20 text-green-600 dark:text-green-400 cursor-pointer hover:bg-green-500/30'
                         : 'bg-muted text-muted-foreground'
                   }`}
                 >

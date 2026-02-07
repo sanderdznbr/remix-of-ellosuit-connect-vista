@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -56,26 +56,26 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.3 - Fix Erro 515 Após QR Scan
+    const readme = `# 🚀 Baileys Server v2.9.4 - Fix QR Lock Bloqueando 515
 
-## ✅ Correções v2.9.3
+## ✅ Correções v2.9.4
 
-Esta versão corrige o erro **"Não foi possível conectar o dispositivo"** após escanear o QR.
+Esta versão corrige o bug onde o **QR Lock bloqueava a reconexão após pareamento**.
 
-### Mudanças v2.9.3:
-- ✅ **Reconexão IMEDIATA no 515** - 1s ao invés de 15s (CRÍTICO!)
-- ✅ **Preserva credenciais no 515** - Não limpa auth após pareamento
-- ✅ **Status específico** - \`reconnecting_after_pair\` para debug
+### Mudanças v2.9.4:
+- ✅ **515 tem PRIORIDADE sobre QR Lock** - Handler 515 vem ANTES do check QR Lock
+- ✅ **Limpa QR Lock no 515** - Quando pareamento detectado, remove o lock
+- ✅ **Reconexão em 1s** - Imediata após detectar pareamento
 
 ### Por que funciona:
-O erro 515 é **ESPERADO** após escanear o QR - é o WhatsApp pedindo reconexão.
-A v2.9.2 esperava 15s e limpava auth, causando timeout no celular.
-A v2.9.3 reconecta em 1s, permitindo conexão bem-sucedida.
+O bug na v2.9.3: QR Lock check vinha ANTES do handler 515.
+Como o QR foi gerado há menos de 60s quando escaneia, o código fazia return e NUNCA chegava ao handler 515.
+Na v2.9.4: Handler 515 vem PRIMEIRO e limpa o QR Lock.
 
-### Versões Anteriores:
-- ✅ **QR Lock 60s** - Impede regeneração enquanto escaneia
-- ✅ **Node.js 20** (obrigatório para Baileys 7.x)
-- ✅ **Baileys 7.0.0-rc.9** (versão mais recente)
+### Histórico:
+- v2.9.2: QR Lock 60s (impede regeneração)
+- v2.9.3: Reconexão 515 em 1s (mas bloqueada pelo QR Lock)
+- **v2.9.4: 515 tem prioridade sobre QR Lock** ✅
 
 ## Deploy no Railway
 
@@ -97,15 +97,17 @@ Após escanear o QR, você verá:
 
 \`\`\`
 [QR] 🎉 QR Code recebido!
+[QR] 🔒 QR Lock ativo por 60s
 ... (usuário escaneia)
-[515] ⚡ Stream Error - Reconexão IMEDIATA
-[515] Isso é NORMAL após escanear o QR
-[515] Iniciando reconexão...
+[DISCONNECTED] Código: 515
+[515] ⚡ PAREAMENTO DETECTADO - Reconexão IMEDIATA
+[515] Isso é NORMAL! WhatsApp pede restart após QR scan
+[515] 🔄 Iniciando reconexão com credenciais salvas...
 [CONNECTED] ✅ WhatsApp conectado!
 \`\`\`
 `;
 
-    // ========== SERVIDOR v2.9.3 - FIX ERRO 515 APÓS QR SCAN ==========
+    // ========== SERVIDOR v2.9.4 - FIX QR LOCK BLOQUEANDO 515 ==========
     const indexJs = `import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -117,13 +119,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.3 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.4 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
-console.log('[INIT] 🔧 Fix: Erro 515 após QR scan');
+console.log('[INIT] 🔧 Fix: QR Lock bloqueando reconexão 515');
 console.log('[INIT] Node version:', process.version);
 console.log('='.repeat(60));
 
-const VERSION = "v2.9.3";
+const VERSION = "v2.9.4";
 const app = express();
 
 app.use(cors());
@@ -251,8 +253,8 @@ async function createSocketForSession(session) {
   // Aguardar antes de criar socket
   await sleep(1000);
   
-  // ========== CRIAR SOCKET - v2.9.2 Config ==========
-  console.log('[SOCKET] Criando socket com config v2.9.2...');
+  // ========== CRIAR SOCKET - v2.9.4 Config ==========
+  console.log('[SOCKET] Criando socket com config v2.9.4...');
   
   const logger = pino({ level: 'silent' });
   
@@ -370,20 +372,9 @@ async function createSocketForSession(session) {
         data: { connection: 'close', isConnected: false, statusCode }
       });
       
-      // ===== CHECK QR LOCK ANTES DE RECONECTAR =====
-      if (session.qrGeneratedAt) {
-        const timeSinceQR = Date.now() - session.qrGeneratedAt;
-        if (timeSinceQR < QR_LOCK_TIME_MS) {
-          const remaining = Math.ceil((QR_LOCK_TIME_MS - timeSinceQR) / 1000);
-          console.log(\`[QR LOCK] ⏳ QR ativo, NÃO reconectando (aguarde \${remaining}s)\`);
-          console.log('[QR LOCK] Usuário pode estar escaneando o QR');
-          return;  // NÃO reconectar
-        }
-      }
-      
-      // Logout = não reconectar
+      // ===== 1. CHECK LOGOUT (401) - PRIORIDADE MÁXIMA =====
       if (statusCode === DisconnectReason?.loggedOut) {
-        console.log('[LOGOUT] Usuário fez logout');
+        console.log('[LOGOUT] Usuário fez logout, removendo sessão');
         session.status = 'logged_out';
         sessions.delete(sessionId);
         try {
@@ -392,19 +383,26 @@ async function createSocketForSession(session) {
         return;
       }
       
-      // ===== ERRO 515 - COMPORTAMENTO ESPERADO APÓS QR SCAN =====
-      // WhatsApp envia 515 para forçar reconexão após pareamento bem-sucedido
-      // A reconexão deve ser IMEDIATA (1s) pois as credenciais já foram salvas
-      if (statusCode === 515) {
+      // ===== 2. CHECK 515 - PRIORIDADE SOBRE QR LOCK! =====
+      // O erro 515 (restartRequired) é ESPERADO após escanear o QR
+      // WhatsApp pede reconexão após pareamento bem-sucedido
+      // DEVE vir ANTES do QR Lock check para não ser bloqueado!
+      if (statusCode === 515 || statusCode === DisconnectReason?.restartRequired) {
         console.log('');
-        console.log('[515] ⚡ Stream Error - Reconexão IMEDIATA');
-        console.log('[515] Isso é NORMAL após escanear o QR');
-        console.log('[515] Credenciais foram salvas, reconectando...');
+        console.log('[515] ═══════════════════════════════════════════════════');
+        console.log('[515] ⚡ PAREAMENTO DETECTADO - Reconexão IMEDIATA');
+        console.log('[515] Isso é NORMAL! WhatsApp pede restart após QR scan');
+        console.log('[515] Credenciais JÁ FORAM SALVAS pelo pareamento');
+        console.log('[515] ═══════════════════════════════════════════════════');
         console.log('');
         
-        // IMPORTANTE: NÃO limpar auth, NÃO incrementar retry
-        // As credenciais já foram salvas pelo pareamento
+        // IMPORTANTE: Limpar QR Lock pois pareamento foi bem-sucedido
+        session.qrGeneratedAt = null;
+        session.qrCode = null;
         session.status = 'reconnecting_after_pair';
+        
+        // NÃO incrementar retry - isso não é um erro real
+        // NÃO limpar auth - credenciais já foram salvas
         
         // Fechar socket atual
         if (session.socket) {
@@ -412,21 +410,34 @@ async function createSocketForSession(session) {
           session.socket = null;
         }
         
-        // Reconectar IMEDIATAMENTE (1s apenas para limpar socket)
+        // Reconectar IMEDIATAMENTE (1s para dar tempo de limpar socket)
         setTimeout(async () => {
           try {
-            console.log('[515] Iniciando reconexão...');
+            console.log('[515] 🔄 Iniciando reconexão com credenciais salvas...');
             await createSocketForSession(session);
           } catch (err) {
-            console.error('[515] Erro na reconexão:', err.message);
+            console.error('[515] ❌ Erro na reconexão:', err.message);
             session.status = 'failed';
           }
-        }, 1000);  // 1s - reconexão imediata!
+        }, 1000);
         
         return;
       }
       
-      // Erro 405/408 = Timeout/Method Not Allowed
+      // ===== 3. CHECK QR LOCK - Apenas para outros erros =====
+      // Este check impede reconexões enquanto usuário escaneia
+      // MAS não deve bloquear o 515 (já tratado acima)
+      if (session.qrGeneratedAt) {
+        const timeSinceQR = Date.now() - session.qrGeneratedAt;
+        if (timeSinceQR < QR_LOCK_TIME_MS) {
+          const remaining = Math.ceil((QR_LOCK_TIME_MS - timeSinceQR) / 1000);
+          console.log(\`[QR LOCK] ⏳ QR ativo, NÃO reconectando (aguarde \${remaining}s)\`);
+          console.log('[QR LOCK] Usuário pode estar escaneando o QR');
+          return;
+        }
+      }
+      
+      // ===== 4. ERROS 405/408 - Protocolo =====
       if (statusCode === 405 || statusCode === 408) {
         console.log(\`[\${statusCode}] Erro de protocolo\`);
         session.retryCount++;
@@ -450,13 +461,11 @@ async function createSocketForSession(session) {
         return;
       }
       
-      // Outros erros - reconectar com delay maior
+      // ===== 5. OUTROS ERROS =====
       if (session.retryCount < MAX_RETRIES) {
         session.retryCount++;
         session.status = 'reconnecting';
-        
         console.log(\`[RETRY] Tentativa \${session.retryCount}/\${MAX_RETRIES} em \${RETRY_DELAY_MS/1000}s...\`);
-        
         setTimeout(async () => {
           try {
             await createSocketForSession(session);

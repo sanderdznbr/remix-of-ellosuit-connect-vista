@@ -213,7 +213,7 @@ export function MegaMenuHeader() {
       <div className="h-16 px-6 flex items-center justify-between">
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-3">
-          <ElloLogo className="h-8 w-auto" />
+          <ElloLogo className="h-8 w-auto" color="#3000E3" />
         </Link>
 
         {/* Main Navigation */}

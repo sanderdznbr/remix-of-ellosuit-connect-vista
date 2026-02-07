@@ -1,236 +1,76 @@
 
-# Plano de Implementação Completo
+# Plano: Atualizar Servidor v3.0.0 e Corrigir Bug de Duplicação de Mensagens
 
-Este plano aborda 5 melhorias principais: correção do status de mensagens da IA, chat no modo Kanban, redesign de páginas, e criação do Lead Capture Builder (estilo inlead.digital).
+## Resumo do Problema
 
----
+### 1. Versão do Download (v2.9.6 → v3.0.0)
+O modal de download do servidor Baileys está mostrando versão 2.9.6/2.9.8 quando deveria ser v3.0.0 com suporte completo a mídias.
 
-## 1. Correção do Status de Mensagens da IA no CRM WhatsApp
+### 2. Bug de Duplicação de Mensagens
+Identificado que:
+- Existem **2 sessões conectadas** para o mesmo número de WhatsApp
+- Quando você envia uma mensagem para "Erica Duarte", ela aparece duplicada em outro contato (`14959756996822`)
+- O número `14959756996822` é um **LID (Linked ID)** do WhatsApp que não está sendo filtrado
 
-### Problema Identificado
-A mensagem da IA é enviada com sucesso para o WhatsApp (confirmado no print), porém no sistema aparece como "não enviada". O problema está na lógica de atualização do status após o envio.
-
-### Causa Raiz
-No webhook `whatsapp-webhook/index.ts`, a mensagem é inserida com `status: 'sending'`, e depois atualizada para `status: 'sent'` após confirmação. Porém, se o endpoint `/api/message/send-text` retornar sucesso mas sem confirmação real, o status permanece como `sending`.
-
-### Solução Técnica
-1. **Melhorar a verificação de envio no webhook**: Verificar o retorno do Baileys server de forma mais robusta
-2. **Atualizar o status mesmo em caso de resposta parcial**: Se o Baileys confirmar que recebeu a solicitação, marcar como `sent`
-3. **Adicionar fallback de atualização**: Se a resposta HTTP for 200, considerar sucesso
-
-### Arquivos a Modificar
-- `supabase/functions/whatsapp-webhook/index.ts`
+**Causa raiz**: O webhook processa mensagens `fromMe=true` vindas do servidor e pode criar conversas duplicadas entre sessões diferentes.
 
 ---
 
-## 2. Chat Sidebar no Modo Kanban
+## Etapa 1: Atualizar BaileysServerDownload.tsx para v3.0.0
 
-### Descrição
-Adicionar capacidade de abrir um chat completo diretamente do modo Kanban, sem precisar trocar para o modo Lista.
-
-### Implementação
-1. **Criar componente KanbanChatSidebar**: Um Sheet (drawer lateral) que exibe o chat completo
-2. **Integrar ao WhatsAppKanbanView**: Ao clicar no card, abrir o sidebar ao invés de trocar de view
-3. **Reutilizar componentes existentes**: Usar a mesma lógica de mensagens do `WhatsAppCRM`
-
-### Arquivos a Criar/Modificar
-- **Criar**: `src/components/CRM/KanbanChatSidebar.tsx`
-- **Modificar**: `src/components/CRM/WhatsAppKanbanView.tsx`
-- **Modificar**: `src/components/CRM/WhatsAppCRM.tsx`
-
-### Fluxo de Interação
-```text
-Kanban Card → Clique → Abre Sheet lateral direito → Chat completo com input
-                        (conversa + mensagens + envio)
-```
+### Alterações:
+1. Atualizar `version` de `2.9.8` para `3.0.0`
+2. Mudar `"type": "module"` para `"type": "commonjs"` (conforme documentação v3.0.0)
+3. Adicionar dependências para mídia: `@supabase/supabase-js`, `mime-types`
+4. Substituir código do `index.js` pelo servidor v3.0.0 com suporte completo a mídia
+5. Atualizar textos e novidades no modal
 
 ---
 
-## 3. Redesign das Páginas (Estilo /email)
+## Etapa 2: Corrigir Bug de Duplicação no Webhook
 
-### Páginas a Redesenhar
-O design do `/email` serve como referência: limpo, com header + stats + tabs.
-
-| Página | Componente | Melhorias |
-|--------|-----------|-----------|
-| `/email-template` | EmailTemplatesManager | Header com ícone, stats cards, grid de templates |
-| `/bot-ia` | BotIADashboard | Header padrão, estatísticas, grid de agentes |
-| `/chatbot` | ChatbotManagement | Header padrão, estatísticas, cards de fluxos |
-| `/cadastros` | UnifiedCadastros | Header com ícone, tabs estilizados, stats |
-
-### Padrão Visual a Aplicar
-- Header: Ícone com background primary/10 + título + descrição
-- Stats: 4 cards em grid (2x2 mobile, 4x1 desktop)
-- Conteúdo principal: Card com tabs integrados
-- Cores: Usar cores primárias do sistema (azul `#3600FF`)
-
-### Arquivos a Modificar
-- `src/components/Dashboard/EmailTemplatesManager.tsx`
-- `src/components/BotIA/BotIADashboard.tsx`
-- `src/components/BotIA/ChatbotManagement.tsx`
-- `src/components/Dashboard/UnifiedCadastros.tsx`
-
----
-
-## 4. Lead Capture Builder (Estilo inlead.digital) - NOVA FEATURE
-
-### Visão Geral
-Criar um sistema completo de funis de captura de leads interativos, similar ao inlead.digital, permitindo criar formulários step-by-step com:
-- Múltiplos tipos de elementos (texto, escolha única, múltipla escolha, botões, etc.)
-- Analytics de cada etapa (visualizações, abandonos, conversões)
-- URL pública para compartilhamento
-
-### 4.1 Estrutura de Banco de Dados (Novas Tabelas)
-
-```sql
--- Tabela principal dos funis
-CREATE TABLE lead_funnels (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL,
-  created_by UUID NOT NULL,
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  description TEXT,
-  is_active BOOLEAN DEFAULT false,
-  settings JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Etapas do funil
-CREATE TABLE lead_funnel_steps (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  funnel_id UUID NOT NULL REFERENCES lead_funnels(id) ON DELETE CASCADE,
-  position INTEGER NOT NULL,
-  step_type TEXT NOT NULL, -- 'text', 'single_choice', 'multiple_choice', 'email', 'phone', 'cta'
-  title TEXT,
-  description TEXT,
-  content JSONB DEFAULT '{}', -- Opções, placeholder, validações
-  required BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Submissões/Leads capturados
-CREATE TABLE lead_submissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  funnel_id UUID NOT NULL REFERENCES lead_funnels(id),
-  session_id TEXT NOT NULL,
-  status TEXT DEFAULT 'in_progress', -- 'in_progress', 'completed', 'abandoned'
-  current_step INTEGER DEFAULT 1,
-  answers JSONB DEFAULT '{}',
-  metadata JSONB DEFAULT '{}', -- IP, user agent, referrer
-  started_at TIMESTAMPTZ DEFAULT now(),
-  completed_at TIMESTAMPTZ
-);
-
--- Eventos de tracking por etapa
-CREATE TABLE lead_step_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  funnel_id UUID NOT NULL,
-  step_id UUID NOT NULL,
-  submission_id UUID,
-  event_type TEXT NOT NULL, -- 'view', 'start', 'complete', 'skip', 'abandon'
-  timestamp TIMESTAMPTZ DEFAULT now(),
-  metadata JSONB DEFAULT '{}'
-);
-```
-
-### 4.2 Componentes a Criar
-
-| Componente | Descrição |
-|------------|-----------|
-| `LeadFunnelsManager.tsx` | Dashboard principal - lista todos os funis |
-| `LeadFunnelBuilder.tsx` | Constructor visual drag-and-drop |
-| `LeadFunnelPreview.tsx` | Preview em tempo real |
-| `LeadFunnelAnalytics.tsx` | Dashboard de métricas |
-| `PublicLeadFunnel.tsx` | Página pública para responder o funil |
-| `LeadFunnelElements.tsx` | Componentes dos elementos (texto, escolhas, etc.) |
-
-### 4.3 Tipos de Elementos do Builder
-
-| Elemento | Descrição | Ícone |
-|----------|-----------|-------|
-| **Texto** | Campo de texto livre (nome, etc.) | Type |
-| **Email** | Input de email com validação | Mail |
-| **Telefone** | Input de telefone com máscara | Phone |
-| **Escolha Única** | Radio buttons ou cards | CircleDot |
-| **Múltipla Escolha** | Checkboxes | CheckSquare |
-| **Escala** | Rating 1-10 ou estrelas | Star |
-| **Botão/CTA** | Botão de ação final | MousePointer |
-| **Separador** | Texto ou imagem entre steps | Minus |
-
-### 4.4 Fluxo do Usuário
+### 2.1 Filtrar Números LID Inválidos
+Adicionar validação para ignorar números com formato LID que não são telefones reais:
 
 ```text
-1. Dashboard /leads → Ver todos os funis criados
-2. Clicar "Novo Funil" → Abrir Builder
-3. No Builder:
-   - Arrastar elementos da paleta para o canvas
-   - Configurar cada elemento (título, opções, validações)
-   - Preview em tempo real no lado direito
-   - Salvar e ativar
-4. Compartilhar link público: /f/{slug}
-5. Ver Analytics: conversões, abandonos por etapa, tempo médio
+Validações a adicionar:
+- Se o número tem mais de 15 dígitos → ignorar
+- Se contém formato @lid → extrair número real ou ignorar
+- Se já existe mensagem com mesmo wa_message_id → não duplicar
 ```
 
-### 4.5 Rotas
+### 2.2 Evitar Duplicação de Mensagens Enviadas
+Quando `fromMe=true`:
+1. Verificar se a mensagem já foi salva pela `whatsapp-api` (pelo `wa_message_id`)
+2. Se já existe, apenas atualizar status (não criar nova)
+3. Usar `company_id` para encontrar conversa existente (não depender só de `session_id`)
 
-| Rota | Componente | Descrição |
-|------|-----------|-----------|
-| `/dashboard/leads` | LeadFunnelsManager | Lista de funis |
-| `/dashboard/leads/builder` | LeadFunnelBuilder | Criador/editor |
-| `/dashboard/leads/analytics/:id` | LeadFunnelAnalytics | Métricas |
-| `/f/:slug` | PublicLeadFunnel | Página pública (sem auth) |
-
-### 4.6 Analytics Disponíveis
-
-- **Visualizações totais**: Quantos acessaram o funil
-- **Taxa de início**: % que iniciou vs visualizou
-- **Taxa de conversão**: % que completou
-- **Abandono por etapa**: Gráfico mostrando onde as pessoas param
-- **Tempo médio**: Quanto tempo para completar
-- **Leads capturados**: Lista com todos os dados
+### 2.3 Consolidar Conversas por Company
+Ao processar mensagens, buscar conversa existente por `company_id + contact_phone` primeiro, antes de criar nova por `session_id`.
 
 ---
 
-## 5. Integração com Menu e Navegação
+## Etapa 3: Melhorar Filtro no Frontend
 
-### Mega Menu Header
-Adicionar "Leads" no menu "Flow" do header:
-- Ícone: Target ou Users
-- Link: `/dashboard/leads`
-
-### Sidebar
-Adicionar item "Captura de Leads" na seção "Flow Hub"
+### No WhatsAppCRM.tsx:
+1. Filtrar números que parecem ser LIDs (> 15 dígitos)
+2. Garantir que a deduplicação por `contact_phone` funcione corretamente
+3. Usar apenas a sessão da conversa selecionada ao enviar mensagens
 
 ---
 
-## Detalhes Técnicos Adicionais
+## Arquivos a Modificar
 
-### Edge Functions Necessárias
-1. **lead-funnel-events**: Para tracking de eventos sem auth
-2. **lead-submission**: Para salvar respostas
-
-### RLS Policies
-- Funis e steps: Apenas usuários da empresa podem ver/editar
-- Submissions: Apenas usuários da empresa podem ver
-- Eventos de tracking: Insert público (para tracking anônimo)
-
-### Hooks a Criar
-- `useLeadFunnels.tsx`: CRUD de funis
-- `useLeadAnalytics.tsx`: Métricas e estatísticas
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/CRM/BaileysServerDownload.tsx` | Atualizar para v3.0.0 com suporte a mídia |
+| `supabase/functions/whatsapp-webhook/index.ts` | Filtrar LIDs e evitar duplicação |
+| `src/components/CRM/WhatsAppCRM.tsx` | Melhorar filtro de conversas no frontend |
 
 ---
 
-## Resumo das Alterações
+## Resultado Esperado
 
-| Categoria | Arquivos | Tipo |
-|-----------|---------|------|
-| Bug Fix - AI Status | 1 arquivo | Modificação |
-| Kanban Chat | 3 arquivos | 1 novo, 2 modificações |
-| Redesign páginas | 4 arquivos | Modificação |
-| Lead Capture | ~12 arquivos | Novos |
-| Database | 4 tabelas | Novas migrations |
-| Navegação | 2 arquivos | Modificação |
-
-**Total estimado**: ~22 arquivos novos/modificados
+1. **Download v3.0.0**: Modal mostrará versão 3.0.0 com suporte a mídia
+2. **Sem duplicação**: Mensagens enviadas não aparecerão em conversas de outros contatos
+3. **Números limpos**: LIDs inválidos serão filtrados automaticamente

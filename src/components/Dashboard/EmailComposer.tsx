@@ -24,7 +24,6 @@ const EmailComposer = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendType, setSendType] = useState<'single' | 'bulk'>('single');
-  const [provider, setProvider] = useState<'gmail' | 'resend'>('gmail');
   
   const { toast } = useToast();
   const { templates } = useEmailTemplates();
@@ -35,7 +34,6 @@ const EmailComposer = () => {
   useEffect(() => {
     if (isConnected && emailAccount) {
       setFromEmail(emailAccount.provider_email);
-      setProvider('gmail');
     }
   }, [isConnected, emailAccount]);
 
@@ -69,19 +67,10 @@ const EmailComposer = () => {
       return;
     }
 
-    if (provider === 'gmail' && !isConnected) {
+    if (!isConnected) {
       toast({
         title: "Gmail não conectado",
         description: "Conecte seu Gmail na aba Conexão para enviar emails",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (provider === 'resend' && !fromEmail) {
-      toast({
-        title: "Email do remetente",
-        description: "Informe o email do remetente para usar o Resend",
         variant: "destructive"
       });
       return;
@@ -102,7 +91,7 @@ const EmailComposer = () => {
             content_text: textContent,
             from_email: fromEmail,
             from_name: fromName,
-            provider: provider,
+            provider: 'gmail',
             user_id: user?.id
           }
         });
@@ -160,55 +149,26 @@ const EmailComposer = () => {
 
   return (
     <div className="space-y-6">
-      {/* Provider Selection */}
-      <Card className="bg-gray-50 border-gray-200">
-        <CardContent className="p-4">
-          <Label className="mb-3 block">Provedor de envio</Label>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setProvider('gmail')}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${
-                provider === 'gmail' 
-                  ? 'bg-white border-[#3000E3] text-[#3000E3] shadow-sm' 
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              <Mail className="h-4 w-4" />
-              <span className="font-medium">Gmail</span>
-              {isConnected && provider === 'gmail' && (
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setProvider('resend')}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${
-                provider === 'resend' 
-                  ? 'bg-white border-[#3000E3] text-[#3000E3] shadow-sm' 
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              <Send className="h-4 w-4" />
-              <span className="font-medium">Resend</span>
-            </button>
-          </div>
-          
-          {provider === 'gmail' && !isConnected && (
-            <div className="mt-3 flex items-center gap-2 text-amber-600 text-sm">
+      {/* Gmail Connection Status */}
+      {!isConnected ? (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-amber-600">
               <AlertCircle className="h-4 w-4" />
-              <span>Conecte seu Gmail na aba "Conexão" para enviar</span>
+              <span className="text-sm">Conecte seu Gmail na aba "Conexão" para enviar emails</span>
             </div>
-          )}
-          
-          {provider === 'gmail' && isConnected && (
-            <div className="mt-3 flex items-center gap-2 text-green-600 text-sm">
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-green-600">
               <CheckCircle2 className="h-4 w-4" />
-              <span>Enviando como: {emailAccount?.provider_email}</span>
+              <span className="text-sm">Enviando como: <strong>{emailAccount?.provider_email}</strong></span>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -218,43 +178,6 @@ const EmailComposer = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Sender Config - Only show for Resend */}
-          {provider === 'resend' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fromEmail">Email do remetente*</Label>
-                <Input
-                  id="fromEmail"
-                  type="email"
-                  placeholder="seu@dominio.com"
-                  value={fromEmail}
-                  onChange={(e) => setFromEmail(e.target.value)}
-                />
-                <p className="text-xs text-gray-500 mt-1">Use um email do domínio verificado no Resend</p>
-              </div>
-              <div>
-                <Label htmlFor="fromName">Nome do remetente</Label>
-                <Input
-                  id="fromName"
-                  placeholder="Seu Nome"
-                  value={fromName}
-                  onChange={(e) => setFromName(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Gmail sender info */}
-          {provider === 'gmail' && isConnected && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-blue-800">
-                  Remetente: <strong>{emailAccount?.provider_email}</strong>
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* Template Selector */}
           <div>
@@ -388,7 +311,7 @@ const EmailComposer = () => {
           {/* Send Button */}
           <Button 
             onClick={handleSendEmail} 
-            disabled={isSending || (provider === 'gmail' && !isConnected)}
+            disabled={isSending || !isConnected}
             className="w-full bg-[#3000E3] hover:bg-[#2500B3]"
           >
             <Send className="h-4 w-4 mr-2" />

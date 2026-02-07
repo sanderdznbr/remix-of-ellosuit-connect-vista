@@ -381,7 +381,7 @@ const MainDashboard = () => {
             change={kpis.clientsChange}
             badge={`${Math.abs(kpis.clientsChange).toFixed(0)}%`}
             isHighlighted={true}
-            color="#0EA5E9"
+            color="#3000E3"
           />
           <KPICard 
             label="Emails Enviados"
@@ -414,7 +414,7 @@ const MainDashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900">Visão Geral do Período</h3>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#0EA5E9]" />
+                  <div className="w-3 h-3 rounded-full bg-[#3000E3]" />
                   <span className="text-sm text-gray-600">Leads</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -431,8 +431,8 @@ const MainDashboard = () => {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3000E3" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3000E3" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorEmails" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
@@ -461,7 +461,7 @@ const MainDashboard = () => {
                   type="monotone" 
                   dataKey="leads" 
                   name="Leads"
-                  stroke="#0EA5E9" 
+                  stroke="#3000E3" 
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#colorLeads)" 

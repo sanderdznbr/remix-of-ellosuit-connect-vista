@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -258,6 +258,9 @@ const WhatsAppCRM: React.FC = () => {
   // Schedule meeting modal state
   const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
   
+  // Sync data state
+  const [syncingData, setSyncingData] = useState(false);
+
   // Context menu states
   const [conversationContextMenu, setConversationContextMenu] = useState<{
     isOpen: boolean;
@@ -724,6 +727,63 @@ const WhatsAppCRM: React.FC = () => {
   const openSaveLeadModal = (conv: WhatsAppConversationData) => {
     setSelectedConversationForLead(conv);
     setShowSaveLeadModal(true);
+  };
+
+  // Refresh/Sync all data from Baileys server
+  const handleRefreshData = async () => {
+    if (syncingData) return;
+    
+    const session = sessions.find(s => s.status === 'connected' && s.baileys_server_url);
+    if (!session?.baileys_server_url) {
+      toast({ 
+        title: 'Sem conexão', 
+        description: 'Nenhuma sessão conectada para sincronizar',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setSyncingData(true);
+    
+    try {
+      // 1. Request server to resync contacts and photos
+      const syncResponse = await fetch(`${session.baileys_server_url}/api/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id })
+      });
+      
+      if (!syncResponse.ok) {
+        console.warn('Sync endpoint not available, trying manual refresh');
+      }
+      
+      // 2. Reload all local data
+      await Promise.all([
+        loadSessions(),
+        loadConversations(),
+        loadLabels(),
+        loadContactsCount()
+      ]);
+      
+      // 3. If conversation selected, reload messages
+      if (selectedConversation) {
+        await loadMessagesByPhone(selectedConversation.contact_phone);
+      }
+      
+      toast({ 
+        title: 'Dados atualizados!', 
+        description: 'Fotos, mensagens e contatos sincronizados' 
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({ 
+        title: 'Erro ao atualizar', 
+        description: 'Tente novamente em alguns segundos',
+        variant: 'destructive'
+      });
+    } finally {
+      setSyncingData(false);
+    }
   };
 
   // Archive/Unarchive conversation
@@ -1538,6 +1598,16 @@ const WhatsAppCRM: React.FC = () => {
           >
             <Tag className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline text-xs">Etiquetas</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefreshData}
+            disabled={syncingData}
+            className="h-7 px-2"
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-1", syncingData && "animate-spin")} />
+            <span className="hidden sm:inline text-xs">{syncingData ? 'Atualizando...' : 'Atualizar'}</span>
           </Button>
           <Button
             variant="ghost"

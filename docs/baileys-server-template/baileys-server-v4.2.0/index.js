@@ -757,6 +757,75 @@ app.post('/api/message/read', async (req, res) => {
   }
 });
 
+// Sincronizar dados manualmente (fotos, contatos, mensagens recentes)
+app.post('/api/sync', async (req, res) => {
+  try {
+    const { sessionId, instanceName } = req.body;
+    
+    let session;
+    if (sessionId) {
+      session = sessions.get(sessionId);
+    } else if (instanceName) {
+      session = Array.from(sessions.values()).find(s => s.instanceName === instanceName);
+    }
+    
+    if (!session || !session.socket || !session.isConnected) {
+      return res.status(404).json({ error: 'Sessão não conectada' });
+    }
+    
+    console.log('🔄 Iniciando sincronização manual...');
+    
+    const synced = { contacts: 0, groups: 0, messages: 0 };
+    
+    // 1. Sincronizar contatos e fotos
+    try {
+      const store = session.socket.store || {};
+      const chats = store.chats?.all() || [];
+      
+      for (const chat of chats.slice(0, 100)) {
+        const jid = chat.id;
+        if (!jid || jid === 'status@broadcast') continue;
+        
+        try {
+          const metadata = await fetchContactMetadata(session.socket, jid);
+          const isGroup = jid.endsWith('@g.us');
+          const phone = jid.split('@')[0];
+          
+          // Enviar para webhook
+          await sendToWebhook('sync.contact', {
+            sessionId: session.sessionId,
+            instanceName: session.instanceName,
+            jid,
+            phone,
+            isGroup,
+            name: metadata.groupSubject || chat.name || null,
+            profilePicture: metadata.profilePicture,
+            groupDescription: metadata.groupDescription,
+            groupParticipants: metadata.groupParticipants
+          });
+          
+          synced.contacts++;
+          if (isGroup) synced.groups++;
+          
+          // Pequena pausa para não sobrecarregar
+          await new Promise(r => setTimeout(r, 100));
+        } catch (e) {
+          console.log(`Erro sync ${jid}:`, e.message);
+        }
+      }
+    } catch (e) {
+      console.log('Erro ao sincronizar contatos:', e.message);
+    }
+    
+    console.log(`✅ Sync concluído: ${synced.contacts} contatos, ${synced.groups} grupos`);
+    res.json({ success: true, synced });
+    
+  } catch (error) {
+    console.error('Erro na sincronização:', error);
+    res.status(500).json({ error: 'Falha na sincronização' });
+  }
+});
+
 // Iniciar servidor
 server.listen(PORT, () => {
   console.log(`🚀 Baileys Server v4.2.0 rodando na porta ${PORT}`);

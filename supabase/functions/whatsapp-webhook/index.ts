@@ -1093,6 +1093,99 @@ serve(async (req) => {
         break;
       }
 
+      // ==================== SYNC CONTACT (Manual Refresh) ====================
+      case 'sync.contact': {
+        const { jid, phone, isGroup, name, profilePicture, groupDescription, groupParticipants } = data || {};
+        
+        console.log(`[SYNC.CONTACT] Processing: ${jid}, name: ${name}, hasPic: ${!!profilePicture}`);
+        
+        // Get session info
+        let targetSessionId = sessionId;
+        let companyId = '';
+        
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id')
+            .eq('instance_name', instanceName)
+            .single();
+          
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id')
+            .eq('id', targetSessionId)
+            .single();
+          
+          if (session) companyId = session.company_id;
+        }
+        
+        if (!companyId || !phone) {
+          console.log('[SYNC.CONTACT] Missing companyId or phone');
+          break;
+        }
+        
+        // Update conversation with new photo and name
+        const updateData: Record<string, unknown> = {};
+        
+        if (profilePicture) {
+          updateData.profile_picture = profilePicture;
+        }
+        if (name && name !== phone) {
+          updateData.contact_name = name;
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          const { error } = await supabase
+            .from('whatsapp_conversations')
+            .update(updateData)
+            .eq('company_id', companyId)
+            .eq('contact_phone', phone);
+          
+          if (error) {
+            console.error('[SYNC.CONTACT] Update error:', error);
+          } else {
+            console.log(`[SYNC.CONTACT] Updated ${phone}:`, updateData);
+          }
+        }
+        
+        // Also update whatsapp_contacts table
+        const { data: existingContact } = await supabase
+          .from('whatsapp_contacts')
+          .select('id, push_name, profile_picture')
+          .eq('company_id', companyId)
+          .eq('wa_id', jid)
+          .maybeSingle();
+        
+        const contactUpsert: Record<string, unknown> = {
+          company_id: companyId,
+          wa_id: jid,
+          phone_number: phone
+        };
+        
+        if (name && name !== phone) {
+          contactUpsert.push_name = name;
+        } else if (existingContact?.push_name) {
+          contactUpsert.push_name = existingContact.push_name;
+        }
+        
+        if (profilePicture) {
+          contactUpsert.profile_picture = profilePicture;
+        } else if (existingContact?.profile_picture) {
+          contactUpsert.profile_picture = existingContact.profile_picture;
+        }
+        
+        await supabase
+          .from('whatsapp_contacts')
+          .upsert(contactUpsert, { onConflict: 'company_id,wa_id' });
+        
+        break;
+      }
+
       default:
         console.log(`Unhandled event: ${event}`);
     }

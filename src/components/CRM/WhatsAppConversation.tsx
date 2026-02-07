@@ -18,6 +18,8 @@ interface Message {
   message_type?: string;
   media_url?: string;
   media_caption?: string;
+  sender_name?: string;
+  sender_phone?: string;
 }
 
 interface Conversation {
@@ -68,7 +70,9 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
           status: m.status,
           message_type: m.message_type || 'text',
           media_url: m.media_url || '',
-          media_caption: m.media_caption || ''
+          media_caption: m.media_caption || '',
+          sender_name: m.sender_name || '',
+          sender_phone: m.sender_phone || ''
         })) || []);
       }
       setLoading(false);
@@ -100,7 +104,7 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
               m.from_me === true
             );
             
-            if (tempIndex !== -1) {
+              if (tempIndex !== -1) {
               // Replace temp message with real one
               const updated = [...prev];
               updated[tempIndex] = {
@@ -111,7 +115,9 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
                 status: newMsg.status,
                 message_type: newMsg.message_type || 'text',
                 media_url: newMsg.media_url || '',
-                media_caption: newMsg.media_caption || ''
+                media_caption: newMsg.media_caption || '',
+                sender_name: newMsg.sender_name || '',
+                sender_phone: newMsg.sender_phone || ''
               };
               return updated;
             }
@@ -135,7 +141,9 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
             status: newMsg.status,
             message_type: newMsg.message_type || 'text',
             media_url: newMsg.media_url || '',
-            media_caption: newMsg.media_caption || ''
+            media_caption: newMsg.media_caption || '',
+            sender_name: newMsg.sender_name || '',
+            sender_phone: newMsg.sender_phone || ''
           }];
         });
       })
@@ -263,42 +271,61 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
           </div>
         ) : (
           <div className="space-y-2">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}`}
-              >
+            {messages.map((message, index) => {
+              // Check if this is a group conversation (contact_phone ends with digits typical of groups - 18+ digits)
+              const isGroupConversation = conversation.contact_phone?.replace(/\D/g, '').length >= 18;
+              // Show sender name for incoming messages in groups
+              const showSenderName = isGroupConversation && !message.from_me && message.sender_name;
+              // Check if previous message is from same sender (to avoid repetition)
+              const prevMsg = messages[index - 1];
+              const sameSenderAsPrev = prevMsg && 
+                prevMsg.sender_name === message.sender_name && 
+                !message.from_me && 
+                !prevMsg.from_me;
+              
+              return (
                 <div
-                  className={`max-w-[70%] rounded-lg px-3 py-2 ${
-                    message.from_me
-                      ? 'bg-[#dcf8c6] text-gray-900'
-                      : 'bg-white text-gray-900'
-                  }`}
+                  key={message.id}
+                  className={`flex ${message.from_me ? 'justify-end' : 'justify-start'}`}
                 >
-                  {message.message_type && message.message_type !== 'text' ? (
-                    <WhatsAppMediaMessage
-                      messageType={message.message_type}
-                      content={message.content}
-                      mediaUrl={message.media_url}
-                      mediaCaption={message.media_caption}
-                      fromMe={message.from_me}
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  )}
-                  <div className={`flex items-center gap-1 justify-end mt-1`}>
-                    <span className="text-[10px] text-gray-500">
-                      {formatTime(message.timestamp)}
-                    </span>
-                    {message.from_me && (
-                      <span className="text-[10px] text-blue-500">
-                        {message.status === 'read' ? '✓✓' : message.status === 'delivered' ? '✓✓' : '✓'}
-                      </span>
+                  <div
+                    className={`max-w-[70%] rounded-lg px-3 py-2 ${
+                      message.from_me
+                        ? 'bg-[#dcf8c6] text-gray-900'
+                        : 'bg-white text-gray-900'
+                    }`}
+                  >
+                    {/* Show sender name in groups */}
+                    {showSenderName && !sameSenderAsPrev && (
+                      <p className="text-xs font-semibold text-primary mb-1">
+                        {message.sender_name}
+                      </p>
                     )}
+                    {message.message_type && message.message_type !== 'text' ? (
+                      <WhatsAppMediaMessage
+                        messageType={message.message_type}
+                        content={message.content}
+                        mediaUrl={message.media_url}
+                        mediaCaption={message.media_caption}
+                        fromMe={message.from_me}
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    <div className={`flex items-center gap-1 justify-end mt-1`}>
+                      <span className="text-[10px] text-gray-500">
+                        {formatTime(message.timestamp)}
+                      </span>
+                      {message.from_me && (
+                        <span className="text-[10px] text-blue-500">
+                          {message.status === 'read' ? '✓✓' : message.status === 'delivered' ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </ScrollArea>

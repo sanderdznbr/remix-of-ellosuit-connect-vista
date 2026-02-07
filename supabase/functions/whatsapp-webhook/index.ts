@@ -358,6 +358,25 @@ serve(async (req) => {
           
           const isGroup = isGroupJid(remoteJid);
           
+          // ============== GROUP MESSAGE: Extract actual sender ==============
+          // In group messages, messageKey.participant contains the sender's JID
+          let senderPhone = '';
+          let senderName = '';
+          
+          if (isGroup && !fromMe) {
+            // For incoming group messages, extract the actual sender
+            const participantJid = messageKey.participant || msg.participant;
+            if (participantJid) {
+              senderPhone = extractPhoneFromJid(participantJid, false) || '';
+              // pushName contains the sender's WhatsApp name
+              senderName = msg.pushName || msg.senderName || senderPhone;
+              console.log(`[GROUP] Sender: ${senderName} (${senderPhone})`);
+            }
+          } else if (!isGroup && !fromMe) {
+            // For individual chats, sender is the contact
+            senderName = msg.pushName || msg.senderName || '';
+          }
+          
           // Extract and validate identifier (allows groups now)
           const phoneNumber = extractPhoneFromJid(remoteJid, true);
           if (!phoneNumber) {
@@ -389,6 +408,10 @@ serve(async (req) => {
             messageType = 'image';
             mediaCaption = messageContent.imageMessage.caption || '';
             content = mediaCaption || '[Imagem]';
+            // Log if no mediaUrl provided for debugging
+            if (!mediaUrl) {
+              console.log('[MEDIA] Image message without mediaUrl - server needs to upload to storage');
+            }
           } else if (messageContent.videoMessage) {
             messageType = 'video';
             mediaCaption = messageContent.videoMessage.caption || '';
@@ -556,7 +579,7 @@ serve(async (req) => {
           }
           
           // Build message data
-          const messageData = {
+          const messageData: Record<string, unknown> = {
             conversation_id: conversation?.id,
             session_id: targetSessionId,
             company_id: companyId,
@@ -568,6 +591,14 @@ serve(async (req) => {
             status: fromMe ? 'sent' : 'received',
             timestamp: msgTimestamp
           };
+          
+          // Add sender info for group messages (non-fromMe only)
+          if (senderPhone) {
+            messageData.sender_phone = senderPhone;
+          }
+          if (senderName) {
+            messageData.sender_name = senderName;
+          }
           
           // Use upsert only if we have a valid message ID, otherwise insert
           if (messageId && messageId.trim()) {

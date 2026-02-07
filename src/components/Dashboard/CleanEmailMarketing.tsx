@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { 
   Mail, 
   Users, 
@@ -29,7 +30,11 @@ import {
   ArrowRight,
   PartyPopper,
   MailCheck,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  LayoutTemplate,
+  History,
+  Settings
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +43,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AISubjectHelper from './AISubjectHelper';
 import EmailConnectionPopover from './EmailConnectionPopover';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const STEPS = [
   { id: 1, title: 'Destinatários', description: 'Para quem você quer enviar?', icon: Users },
@@ -483,14 +489,30 @@ const CleanEmailMarketing: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        <Input
-          placeholder="Digite emails separados por vírgula ou Enter..."
-          value={emailInput}
-          onChange={e => setEmailInput(e.target.value)}
-          onKeyDown={handleEmailInput}
-          onPaste={handlePasteEmails}
-          className="h-12 text-base"
-        />
+        {/* Input with + button */}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Digite um email e clique em + ou pressione Enter..."
+            value={emailInput}
+            onChange={e => setEmailInput(e.target.value)}
+            onKeyDown={handleEmailInput}
+            onPaste={handlePasteEmails}
+            className="h-12 text-base flex-1"
+          />
+          <Button
+            variant="default"
+            size="icon"
+            className="h-12 w-12 shrink-0"
+            onClick={() => {
+              if (addEmail(emailInput)) {
+                setEmailInput('');
+              }
+            }}
+            disabled={!emailInput.trim()}
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
         
         <div className="flex gap-3">
           <Button
@@ -884,67 +906,96 @@ const CleanEmailMarketing: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">Enviar Email</h1>
-                <p className="text-xs text-muted-foreground">{dailyLimit.sent}/{dailyLimit.limit} enviados hoje</p>
+                {/* Clickable progress bar */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-2 mt-1 group cursor-pointer">
+                      <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${(dailyLimit.sent / dailyLimit.limit) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                        {dailyLimit.sent}/{dailyLimit.limit}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Limite diário</span>
+                        <Badge variant="outline">{dailyLimit.limit} emails</Badge>
+                      </div>
+                      <Progress value={(dailyLimit.sent / dailyLimit.limit) * 100} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {dailyLimit.limit - dailyLimit.sent} emails restantes hoje
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowSentEmails(true)}
-                className="gap-2"
-              >
-                <Inbox className="h-4 w-4" />
-                Enviados
-              </Button>
-              <EmailConnectionPopover
-                isConnected={isConnected}
-                loading={loading}
-                emailAccount={emailAccount}
-                onConnect={connectGmail}
-                onDisconnect={disconnectGmail}
-              />
+              {/* Connection gear icon */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Settings className="h-5 w-5" />
+                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${
+                      isConnected ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-4" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isConnected ? 'bg-green-500/10' : 'bg-red-500/10'
+                      }`}>
+                        <Mail className={`h-5 w-5 ${isConnected ? 'text-green-600' : 'text-red-500'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {isConnected ? 'Conectado' : 'Desconectado'}
+                        </p>
+                        {isConnected && emailAccount?.email && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {emailAccount.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {isConnected ? (
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={disconnectGmail}
+                        disabled={loading}
+                      >
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Desconectar Gmail
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full" 
+                        onClick={connectGmail}
+                        disabled={loading}
+                      >
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Conectar Gmail
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <div className="border-b bg-card/30">
-        <div className="max-w-5xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-center gap-2">
-            {STEPS.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <button
-                  onClick={() => step.id <= currentStep && setCurrentStep(step.id)}
-                  disabled={step.id > currentStep}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all ${
-                    currentStep === step.id
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                      : step.id < currentStep
-                        ? 'bg-green-500/20 text-green-600 dark:text-green-400 cursor-pointer hover:bg-green-500/30'
-                        : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {step.id < currentStep ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <step.icon className="h-4 w-4" />
-                  )}
-                  <span className="text-sm font-medium hidden sm:inline">{step.title}</span>
-                  <span className="text-sm font-medium sm:hidden">{step.id}</span>
-                </button>
-                {index < STEPS.length - 1 && (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground hidden sm:block" />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+      {/* Content - NO STEP INDICATOR */}
       <div className="max-w-5xl mx-auto px-6 py-10">
         <AnimatePresence mode="wait">
           <motion.div
@@ -965,16 +1016,20 @@ const CleanEmailMarketing: React.FC = () => {
       {/* Footer Navigation */}
       <div className="border-t bg-card/50 backdrop-blur-sm sticky bottom-0">
         <div className="max-w-5xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="gap-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Voltar
-            </Button>
+          {/* Navigation buttons */}
+          <div className="flex items-center justify-between mb-4">
+            {currentStep > 1 ? (
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+            ) : (
+              <div /> /* Empty div to maintain layout */
+            )}
 
             {currentStep < 4 ? (
               <Button
@@ -1006,6 +1061,42 @@ const CleanEmailMarketing: React.FC = () => {
                 )}
               </Button>
             )}
+          </div>
+          
+          {/* 4 Quick Action Buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              className="h-auto py-3 flex-col gap-1"
+              onClick={goToBuilder}
+            >
+              <Palette className="h-4 w-4" />
+              <span className="text-xs">Construir Templates</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-3 flex-col gap-1"
+              onClick={() => setContentMode('template')}
+            >
+              <LayoutTemplate className="h-4 w-4" />
+              <span className="text-xs">Ver Templates</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-3 flex-col gap-1"
+              onClick={() => setShowSentEmails(true)}
+            >
+              <History className="h-4 w-4" />
+              <span className="text-xs">Emails Enviados</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-3 flex-col gap-1"
+              onClick={() => navigate('/dashboard/settings')}
+            >
+              <Settings2 className="h-4 w-4" />
+              <span className="text-xs">Configurações</span>
+            </Button>
           </div>
         </div>
       </div>

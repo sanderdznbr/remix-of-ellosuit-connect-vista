@@ -297,7 +297,7 @@ serve(async (req) => {
             // This consolidates conversations across multiple sessions
             const { data: existingConv } = await supabase
               .from('whatsapp_conversations')
-              .select('id, session_id, contact_name')
+              .select('id, session_id, contact_name, profile_picture')
               .eq('company_id', companyId)
               .eq('contact_phone', phoneNumber)
               .order('last_message_at', { ascending: false })

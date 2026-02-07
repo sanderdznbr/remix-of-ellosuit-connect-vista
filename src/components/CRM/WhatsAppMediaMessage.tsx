@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Image, Music, FileText, Play, Pause, Download, MapPin, User, Sticker, Video, Mic } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Image, Music, FileText, Play, Pause, Download, MapPin, User, 
+  Sticker, Video, Mic, X, ZoomIn 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MediaMessageProps {
@@ -19,151 +21,353 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
   fromMe
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setAudioProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      setAudioDuration(audio.duration);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setAudioProgress(0);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [mediaUrl]);
 
   const toggleAudio = () => {
-    if (audioRef) {
+    if (audioRef.current) {
       if (isPlaying) {
-        audioRef.pause();
+        audioRef.current.pause();
       } else {
-        audioRef.play();
+        audioRef.current.play();
       }
       setIsPlaying(!isPlaying);
     }
   };
 
-  // Get icon and color based on message type
-  const getMediaInfo = () => {
-    switch (messageType) {
-      case 'image':
-        return { 
-          icon: Image, 
-          label: 'Imagem', 
-          color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400' 
-        };
-      case 'video':
-        return { 
-          icon: Video, 
-          label: 'Vídeo', 
-          color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400' 
-        };
-      case 'audio':
-      case 'ptt':
-        return { 
-          icon: messageType === 'ptt' ? Mic : Music, 
-          label: messageType === 'ptt' ? 'Áudio' : 'Música', 
-          color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400' 
-        };
-      case 'document':
-        return { 
-          icon: FileText, 
-          label: 'Documento', 
-          color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400' 
-        };
-      case 'sticker':
-        return { 
-          icon: Sticker, 
-          label: 'Sticker', 
-          color: 'text-pink-600 bg-pink-100 dark:bg-pink-900/30 dark:text-pink-400' 
-        };
-      case 'location':
-        return { 
-          icon: MapPin, 
-          label: 'Localização', 
-          color: 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400' 
-        };
-      case 'contact':
-        return { 
-          icon: User, 
-          label: 'Contato', 
-          color: 'text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400' 
-        };
-      default:
-        return { 
-          icon: FileText, 
-          label: 'Mídia', 
-          color: 'text-gray-600 bg-gray-100 dark:bg-gray-900/30 dark:text-gray-400' 
-        };
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !audioDuration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    audioRef.current.currentTime = percentage * audioDuration;
+    setAudioProgress(percentage * 100);
+  };
+
+  const handleDownload = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      window.open(url, '_blank');
     }
   };
 
-  const { icon: Icon, label, color } = getMediaInfo();
+  // Get icon and label based on message type
+  const getMediaInfo = () => {
+    switch (messageType) {
+      case 'image':
+        return { icon: Image, label: 'Foto' };
+      case 'video':
+        return { icon: Video, label: 'Vídeo' };
+      case 'audio':
+      case 'ptt':
+        return { icon: messageType === 'ptt' ? Mic : Music, label: 'Áudio' };
+      case 'document':
+        return { icon: FileText, label: 'Documento' };
+      case 'sticker':
+        return { icon: Sticker, label: 'Figurinha' };
+      case 'location':
+        return { icon: MapPin, label: 'Localização' };
+      case 'contact':
+        return { icon: User, label: 'Contato' };
+      default:
+        return { icon: FileText, label: 'Arquivo' };
+    }
+  };
 
-  // If we have a media URL for images, try to display it
+  const { icon: Icon, label } = getMediaInfo();
+
+  // === IMAGE ===
   if (messageType === 'image' && mediaUrl && !imageError) {
     return (
-      <div className="space-y-1">
-        <div className="relative rounded-lg overflow-hidden max-w-[200px]">
-          <img
-            src={mediaUrl}
-            alt="Imagem"
-            className="w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-            onError={() => setImageError(true)}
-            onClick={() => window.open(mediaUrl, '_blank')}
-          />
-          <a
-            href={mediaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-2 right-2 p-1.5 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
-          >
-            <Download className="h-3.5 w-3.5 text-white" />
-          </a>
+      <>
+        <div className="space-y-1">
+          <div className="relative rounded-lg overflow-hidden max-w-[240px] group">
+            <img
+              src={mediaUrl}
+              alt="Imagem"
+              className="w-full h-auto rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+              onError={() => setImageError(true)}
+              onClick={() => setShowFullscreen(true)}
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <ZoomIn className="h-8 w-8 text-white drop-shadow-lg" />
+            </div>
+            <button
+              onClick={() => handleDownload(mediaUrl, 'imagem.jpg')}
+              className="absolute bottom-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
+            >
+              <Download className="h-4 w-4 text-white" />
+            </button>
+          </div>
+          {mediaCaption && (
+            <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
+          )}
         </div>
-        {mediaCaption && (
-          <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
+
+        {/* Fullscreen Modal */}
+        {showFullscreen && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setShowFullscreen(false)}
+          >
+            <button
+              onClick={() => setShowFullscreen(false)}
+              className="absolute top-4 right-4 p-2 text-white/80 hover:text-white transition-colors"
+            >
+              <X className="h-8 w-8" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(mediaUrl, 'imagem.jpg');
+              }}
+              className="absolute top-4 left-4 p-2 text-white/80 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <Download className="h-6 w-6" />
+              <span className="text-sm">Baixar</span>
+            </button>
+            <img
+              src={mediaUrl}
+              alt="Imagem em tela cheia"
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         )}
-      </div>
+      </>
     );
   }
 
-  // If we have a media URL for audio/ptt
+  // === AUDIO / PTT (WhatsApp Style) ===
   if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
+    const isPTT = messageType === 'ptt';
+    
     return (
       <div className="space-y-1">
-        <div className="flex items-center gap-3 min-w-[180px]">
+        <div className={cn(
+          "flex items-center gap-3 p-2 rounded-2xl min-w-[220px] max-w-[280px]",
+          fromMe 
+            ? "bg-[#005c4b]/20" 
+            : "bg-white/10 dark:bg-white/5"
+        )}>
+          {/* Play/Pause Button */}
           <button
             onClick={toggleAudio}
             className={cn(
-              "flex-shrink-0 p-2.5 rounded-full transition-colors",
-              color
+              "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all",
+              isPTT 
+                ? "bg-[#25D366] hover:bg-[#22c55e]" 
+                : "bg-[#00a884] hover:bg-[#008f72]"
             )}
           >
             {isPlaying ? (
-              <Pause className="h-4 w-4" />
+              <Pause className="h-5 w-5 text-white" fill="white" />
             ) : (
-              <Play className="h-4 w-4" />
+              <Play className="h-5 w-5 text-white ml-0.5" fill="white" />
             )}
           </button>
-          <div className="flex-1">
-            <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
-              <div className="h-full w-0 bg-current transition-all" />
+
+          {/* Waveform / Progress */}
+          <div className="flex-1 flex flex-col gap-1">
+            <div 
+              className="h-[24px] flex items-center gap-[2px] cursor-pointer relative"
+              onClick={handleProgressClick}
+            >
+              {/* Simulated Waveform Bars */}
+              {Array.from({ length: 30 }).map((_, i) => {
+                const heights = [12, 8, 16, 10, 20, 14, 8, 18, 12, 6, 14, 20, 10, 16, 8, 12, 18, 6, 14, 10, 20, 8, 16, 12, 6, 18, 14, 10, 8, 12];
+                const isActive = (i / 30) * 100 <= audioProgress;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "w-[3px] rounded-full transition-colors",
+                      isActive 
+                        ? (fromMe ? "bg-[#25D366]" : "bg-[#25D366]")
+                        : "bg-gray-400/40"
+                    )}
+                    style={{ height: `${heights[i % heights.length]}px` }}
+                  />
+                );
+              })}
+            </div>
+            
+            {/* Duration */}
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {audioDuration > 0 
+                  ? formatDuration(isPlaying ? (audioProgress / 100) * audioDuration : audioDuration)
+                  : '0:00'
+                }
+              </span>
+              {isPTT && (
+                <Mic className="h-3 w-3 text-[#25D366]" />
+              )}
             </div>
           </div>
+
+          {/* Microphone Icon for PTT */}
+          {isPTT && (
+            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+            </div>
+          )}
+
           <audio
-            ref={(ref) => setAudioRef(ref)}
+            ref={audioRef}
             src={mediaUrl}
-            onEnded={() => setIsPlaying(false)}
+            preload="metadata"
             className="hidden"
           />
         </div>
         {mediaCaption && (
+          <p className="text-sm whitespace-pre-wrap mt-1">{mediaCaption}</p>
+        )}
+      </div>
+    );
+  }
+
+  // === VIDEO ===
+  if (messageType === 'video' && mediaUrl) {
+    return (
+      <div className="space-y-1">
+        <div className="relative rounded-lg overflow-hidden max-w-[240px] bg-black">
+          <video
+            src={mediaUrl}
+            controls
+            className="w-full h-auto rounded-lg"
+            preload="metadata"
+          />
+          <button
+            onClick={() => handleDownload(mediaUrl, 'video.mp4')}
+            className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
+          >
+            <Download className="h-4 w-4 text-white" />
+          </button>
+        </div>
+        {mediaCaption && (
           <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
         )}
       </div>
     );
   }
 
-  // Placeholder for media without URL (most common case)
+  // === DOCUMENT ===
+  if (messageType === 'document' && mediaUrl) {
+    const fileName = mediaCaption || content || 'Documento';
+    return (
+      <div 
+        className={cn(
+          "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors min-w-[200px] max-w-[280px]",
+          fromMe 
+            ? "bg-[#005c4b]/30 hover:bg-[#005c4b]/40" 
+            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+        )}
+        onClick={() => handleDownload(mediaUrl, fileName)}
+      >
+        <div className="w-10 h-12 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
+          <FileText className="h-5 w-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{fileName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">PDF • Toque para baixar</p>
+        </div>
+        <Download className="h-5 w-5 text-gray-500 flex-shrink-0" />
+      </div>
+    );
+  }
+
+  // === STICKER ===
+  if (messageType === 'sticker' && mediaUrl) {
+    return (
+      <div className="max-w-[150px]">
+        <img
+          src={mediaUrl}
+          alt="Sticker"
+          className="w-full h-auto"
+          onError={() => setImageError(true)}
+        />
+      </div>
+    );
+  }
+
+  // === PLACEHOLDER (No URL) ===
   return (
     <div className="space-y-1">
       <div className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-lg",
-        color
+        "flex items-center gap-3 px-4 py-3 rounded-lg",
+        fromMe 
+          ? "bg-[#005c4b]/30" 
+          : "bg-gray-100 dark:bg-gray-800"
       )}>
-        <Icon className="h-4 w-4" />
-        <span className="text-xs font-medium">{label}</span>
+        <div className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          messageType === 'image' && "bg-emerald-500",
+          messageType === 'video' && "bg-purple-500",
+          (messageType === 'audio' || messageType === 'ptt') && "bg-[#25D366]",
+          messageType === 'document' && "bg-red-500",
+          messageType === 'sticker' && "bg-pink-500",
+          messageType === 'location' && "bg-red-500",
+          messageType === 'contact' && "bg-cyan-500",
+          !['image', 'video', 'audio', 'ptt', 'document', 'sticker', 'location', 'contact'].includes(messageType) && "bg-gray-500"
+        )}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Mídia não disponível
+          </p>
+        </div>
       </div>
       {mediaCaption && (
         <p className="text-sm whitespace-pre-wrap mt-1">{mediaCaption}</p>

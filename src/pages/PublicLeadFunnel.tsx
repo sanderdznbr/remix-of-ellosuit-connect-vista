@@ -57,15 +57,27 @@ const PublicLeadFunnel: React.FC = () => {
 
       setLoading(true);
 
-      const { data: funnelData, error: funnelError } = await supabase
+      // First try to find the funnel by slug (active only)
+      let { data: funnelData, error: funnelError } = await supabase
         .from('lead_funnels')
         .select('*')
         .eq('slug', slug)
         .eq('is_active', true)
         .single();
 
+      // If not found as active, check if it exists but is inactive
       if (funnelError || !funnelData) {
-        setError('Funil não encontrado ou não está ativo.');
+        const { data: inactiveFunnel } = await supabase
+          .from('lead_funnels')
+          .select('id, is_active')
+          .eq('slug', slug)
+          .single();
+        
+        if (inactiveFunnel && !inactiveFunnel.is_active) {
+          setError('Este funil está pausado. Entre em contato com o administrador.');
+        } else {
+          setError('Funil não encontrado. Verifique o link e tente novamente.');
+        }
         setLoading(false);
         return;
       }
@@ -224,11 +236,17 @@ const PublicLeadFunnel: React.FC = () => {
 
     switch (currentStep.step_type) {
       case 'text':
+      case 'name':
+      case 'company':
         return (
           <Input
             value={answer || ''}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Digite sua resposta..."
+            placeholder={
+              currentStep.step_type === 'name' ? 'Nome completo' :
+              currentStep.step_type === 'company' ? 'Nome da empresa' :
+              'Digite sua resposta...'
+            }
             className="text-lg py-6"
           />
         );
@@ -252,6 +270,50 @@ const PublicLeadFunnel: React.FC = () => {
             onChange={(e) => setAnswer(e.target.value)}
             placeholder="(00) 00000-0000"
             className="text-lg py-6"
+          />
+        );
+
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={answer || ''}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Digite um número"
+            className="text-lg py-6"
+          />
+        );
+
+      case 'url':
+        return (
+          <Input
+            type="url"
+            value={answer || ''}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="https://exemplo.com"
+            className="text-lg py-6"
+          />
+        );
+
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={answer || ''}
+            onChange={(e) => setAnswer(e.target.value)}
+            className="text-lg py-6"
+          />
+        );
+
+      case 'address':
+      case 'textarea':
+        return (
+          <Textarea
+            value={answer || ''}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder={currentStep.step_type === 'address' ? 'Digite seu endereço completo...' : 'Digite sua resposta...'}
+            className="text-lg"
+            rows={currentStep.step_type === 'address' ? 2 : 4}
           />
         );
 

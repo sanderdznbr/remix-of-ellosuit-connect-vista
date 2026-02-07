@@ -368,7 +368,34 @@ serve(async (req) => {
           const messageKey = msg.key || {};
           // Use remoteJidAlt if available (contains real phone number)
           let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
-          const fromMe = messageKey.fromMe || msg.fromMe || false;
+          
+          // ============== IMPROVED: Determine fromMe more reliably ==============
+          // Check if the message sender matches the connected session's phone number
+          // This fixes issues where Baileys sometimes returns fromMe: false for sent messages
+          let fromMe = messageKey.fromMe || msg.fromMe || false;
+          
+          // Get session phone to compare
+          if (!fromMe && targetSessionId) {
+            const { data: sessionData } = await supabase
+              .from('whatsapp_sessions')
+              .select('phone_number')
+              .eq('id', targetSessionId)
+              .single();
+            
+            if (sessionData?.phone_number) {
+              // Check if the sender phone matches our session phone
+              const senderJid = messageKey.participant || messageKey.remoteJid || '';
+              const senderPhone = senderJid.replace(/@.*$/, '').replace(/\D/g, '');
+              const sessionPhone = sessionData.phone_number.replace(/\D/g, '');
+              
+              // If sender is our own number, mark as fromMe
+              if (senderPhone && sessionPhone && senderPhone.includes(sessionPhone.slice(-8))) {
+                console.log(`[MESSAGE] Correcting fromMe for sender ${senderPhone} matching session ${sessionPhone}`);
+                fromMe = true;
+              }
+            }
+          }
+          
           const messageId = messageKey.id || msg.id;
           
           // Skip protocol messages (sync notifications)

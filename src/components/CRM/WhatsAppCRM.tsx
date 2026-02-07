@@ -730,10 +730,50 @@ const WhatsAppCRM: React.FC = () => {
             // Immediately add message to UI for instant feedback
             if (payload.eventType === 'INSERT') {
               setMessages(prev => {
-                if (prev.some(m => m.id === newMessage.id || 
-                  (m.wa_message_id && m.wa_message_id === newMessage.wa_message_id))) {
+                // Check 1: Exact ID match - already exists
+                if (prev.some(m => m.id === newMessage.id)) {
                   return prev;
                 }
+                
+                // Check 2: wa_message_id match - already exists
+                if (newMessage.wa_message_id && prev.some(m => m.wa_message_id === newMessage.wa_message_id)) {
+                  return prev;
+                }
+                
+                // Check 3: For sent messages (from_me), look for temp message to REPLACE
+                if (newMessage.from_me) {
+                  const tempIndex = prev.findIndex(m => 
+                    m.id.startsWith('temp-') && 
+                    m.content === (newMessage.content || '') &&
+                    m.from_me === true
+                  );
+                  
+                  if (tempIndex !== -1) {
+                    // REPLACE temp message with real database message
+                    const updated = [...prev];
+                    updated[tempIndex] = {
+                      id: newMessage.id,
+                      conversation_id: newMessage.conversation_id,
+                      content: newMessage.content,
+                      from_me: newMessage.from_me,
+                      status: newMessage.status,
+                      created_at: newMessage.timestamp || newMessage.created_at,
+                      wa_message_id: newMessage.wa_message_id
+                    };
+                    return updated;
+                  }
+                }
+                
+                // Check 4: Duplicate content check (last 10 messages from same direction)
+                const recentDuplicate = prev.slice(-10).some(m => 
+                  m.content === (newMessage.content || '') && 
+                  m.from_me === newMessage.from_me
+                );
+                if (recentDuplicate) {
+                  return prev;
+                }
+                
+                // No duplicates found - add new message
                 return [...prev, {
                   id: newMessage.id,
                   conversation_id: newMessage.conversation_id,

@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
     // ========== PACKAGE.JSON - BAILEYS 7.0.0-rc.9 (ESM) + NODE 20 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.9.6",
+  "version": "2.9.7",
   "type": "module",
   "scripts": {
     "start": "node index.js"
@@ -56,23 +56,22 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.9.6 - Sync Completo com Fotos
+    const readme = `# 🚀 Baileys Server v2.9.7 - Histórico de Mensagens Completo
 
-## ✅ Correções v2.9.6
+## ✅ Correções v2.9.7
 
-Esta versão adiciona **sincronização de fotos de perfil** e **conversas recentes**.
+Esta versão **CRIA CONVERSAS a partir do histórico de mensagens**.
 
-### Mudanças v2.9.6:
-- ✅ **Busca foto de perfil** - profilePictureUrl para cada contato
-- ✅ **Conversas com fotos** - Envia foto junto com chat
-- ✅ **Histórico de mensagens** - messages.set + messaging-history.set
-- ✅ **Nome do contato** - pushName/notify corretos
-- ✅ **Endpoint /sync-profile-pics** - Força busca de fotos
+### Mudanças v2.9.7:
+- ✅ **Processa mensagens do histórico** - messaging-history.set com 3000+ msgs
+- ✅ **Cria conversas automaticamente** - a partir das mensagens recebidas
+- ✅ **Agrupa por contato** - mensagens organizadas por JID
+- ✅ **Envia em batch** - eficiente para grandes volumes
 
 ### Histórico de versões:
+- v2.9.6: Busca fotos de perfil
 - v2.9.5: Sync de histórico completo
 - v2.9.4: Fix QR Lock bloqueando 515
-- v2.9.3: Reconexão imediata no 515
 
 ## Deploy no Railway
 
@@ -94,12 +93,12 @@ Após conectar, você verá:
 
 \`\`\`
 [CONNECTED] ✅ WhatsApp conectado!
-[CHATS] 📥 50 chats sincronizados!
-[PROFILE PIC] 📸 Buscando fotos de perfil...
+[HISTORY] 📥 0 chats, 0 contatos, 3460 msgs
+[HISTORY MSGS] 📨 Enviando 3460 mensagens para criar conversas
 \`\`\`
 `;
 
-    // ========== SERVIDOR v2.9.6 - SYNC COMPLETO COM FOTOS ==========
+    // ========== SERVIDOR v2.9.7 - HISTÓRICO DE MENSAGENS COMPLETO ==========
     const indexJs = `import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -111,13 +110,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.9.6 iniciando...');
+console.log('[INIT] 🚀 Baileys Server v2.9.7 iniciando...');
 console.log('[INIT] 📦 Baileys 7.0.0-rc.9 (ESM)');
-console.log('[INIT] 🔧 Sincronização completa com fotos de perfil');
+console.log('[INIT] 🔧 Histórico de mensagens completo');
 console.log('[INIT] Node version:', process.version);
 console.log('='.repeat(60));
 
-const VERSION = "v2.9.6";
+const VERSION = "v2.9.7";
 const app = express();
 
 app.use(cors());
@@ -540,6 +539,58 @@ async function createSocketForSession(session) {
         instanceName,
         data: { contacts: enrichedContacts }
       });
+    }
+    
+    // v2.9.7 - PROCESSAR MENSAGENS DO HISTÓRICO para criar conversas!
+    if (messages && messages.length > 0) {
+      console.log(\`[HISTORY MSGS] 📨 Processando \${messages.length} mensagens para criar conversas...\`);
+      
+      // Enriquecer mensagens com foto de perfil (limitado a 100 para não demorar)
+      const enrichedMessages = [];
+      const processedJids = new Set();
+      const jidProfilePics = new Map();
+      
+      for (const msg of messages) {
+        const jid = msg.key?.remoteJid || msg.remoteJid;
+        if (!jid || jid === 'status@broadcast' || jid.includes('@g.us')) continue;
+        
+        // Buscar foto de perfil uma vez por JID
+        if (!processedJids.has(jid)) {
+          processedJids.add(jid);
+          try {
+            const pic = await getProfilePicture(sock, jid);
+            if (pic) jidProfilePics.set(jid, pic);
+          } catch (e) {}
+        }
+        
+        enrichedMessages.push({
+          jid,
+          id: msg.key?.id,
+          fromMe: msg.key?.fromMe || false,
+          message: msg.message,
+          messageTimestamp: msg.messageTimestamp,
+          pushName: msg.pushName,
+          profilePicture: jidProfilePics.get(jid) || null
+        });
+      }
+      
+      console.log(\`[HISTORY MSGS] 📸 Fotos de \${jidProfilePics.size} contatos únicos\`);
+      console.log(\`[HISTORY MSGS] 📨 Enviando \${enrichedMessages.length} mensagens para webhook...\`);
+      
+      // Enviar em batches de 500 para não sobrecarregar
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < enrichedMessages.length; i += BATCH_SIZE) {
+        const batch = enrichedMessages.slice(i, i + BATCH_SIZE);
+        await sendWebhook({
+          event: 'history.messages',
+          sessionId,
+          instanceName,
+          data: { messages: batch, total: enrichedMessages.length, batch: Math.floor(i / BATCH_SIZE) + 1 }
+        });
+        console.log(\`[HISTORY MSGS] ✓ Batch \${Math.floor(i / BATCH_SIZE) + 1} enviado (\${batch.length} msgs)\`);
+      }
+      
+      console.log(\`[HISTORY MSGS] ✅ Todas as mensagens enviadas!\`);
     }
   });
   console.log('[SOCKET] ✓ messaging-history.set registrado');

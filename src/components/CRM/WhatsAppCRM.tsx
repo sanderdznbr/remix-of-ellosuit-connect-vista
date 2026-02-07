@@ -336,13 +336,15 @@ const WhatsAppCRM: React.FC = () => {
     loadData();
   }, [companyId]);
 
-  // Real-time subscription for new messages
+  // Real-time subscription for messages, conversations, contacts, sessions
   useEffect(() => {
     if (!companyId) return;
 
+    console.log('📡 Setting up realtime subscriptions for company:', companyId);
+
     // Subscribe to new messages
     const messagesChannel = supabase
-      .channel('whatsapp-messages')
+      .channel('whatsapp-messages-rt')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -350,7 +352,7 @@ const WhatsAppCRM: React.FC = () => {
         filter: `company_id=eq.${companyId}`
       }, (payload) => {
         const newMessage = payload.new as any;
-        console.log('📨 New WhatsApp message:', newMessage);
+        console.log('📨 New WhatsApp message:', newMessage.content?.substring(0, 50));
         
         // If this message is for the selected conversation, add it
         if (selectedConversation && newMessage.conversation_id === selectedConversation.id) {
@@ -373,22 +375,39 @@ const WhatsAppCRM: React.FC = () => {
       })
       .subscribe();
 
-    // Subscribe to conversation updates
+    // Subscribe to conversation updates (INSERT and UPDATE)
     const conversationsChannel = supabase
-      .channel('whatsapp-conversations')
+      .channel('whatsapp-conversations-rt')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'whatsapp_conversations',
         filter: `company_id=eq.${companyId}`
-      }, () => {
-        loadConversations();
+      }, (payload) => {
+        const newConv = payload.new as any;
+        console.log('📥 New conversation:', newConv.contact_name || newConv.contact_phone);
+        setConversations(prev => {
+          // Avoid duplicates
+          if (prev.some(c => c.id === newConv.id)) return prev;
+          return [newConv, ...prev];
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'whatsapp_conversations',
+        filter: `company_id=eq.${companyId}`
+      }, (payload) => {
+        const updated = payload.new as any;
+        setConversations(prev => 
+          prev.map(c => c.id === updated.id ? { ...c, ...updated } : c)
+        );
       })
       .subscribe();
 
     // Subscribe to session updates
     const sessionsChannel = supabase
-      .channel('whatsapp-sessions')
+      .channel('whatsapp-sessions-rt')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -399,10 +418,25 @@ const WhatsAppCRM: React.FC = () => {
       })
       .subscribe();
 
+    // Subscribe to contacts (for count update)
+    const contactsChannel = supabase
+      .channel('whatsapp-contacts-rt')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whatsapp_contacts',
+        filter: `company_id=eq.${companyId}`
+      }, () => {
+        // Update contacts count
+        loadContactsCount();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(sessionsChannel);
+      supabase.removeChannel(contactsChannel);
     };
   }, [companyId, selectedConversation?.id]);
 

@@ -697,6 +697,52 @@ serve(async (req) => {
               .update(updateData)
               .eq('id', conversation.id);
           }
+
+          // ==================== CONTACT BACKFILL (from messages) ====================
+          // Garante que a aba Contatos não fique zerada mesmo quando o Baileys não emite contacts.set
+          if (!isGroup && remoteJid) {
+            try {
+              const waId = remoteJid;
+              const validPushName = contactName && contactName.trim() && contactName !== phoneNumber ? contactName.trim() : null;
+
+              const { data: existingContact } = await supabase
+                .from('whatsapp_contacts')
+                .select('push_name, profile_picture')
+                .eq('company_id', companyId)
+                .eq('wa_id', waId)
+                .maybeSingle();
+
+              const contactUpsert: Record<string, unknown> = {
+                company_id: companyId,
+                session_id: targetSessionId,
+                wa_id: waId,
+                phone_number: phoneNumber,
+                is_business: false,
+              };
+
+              if (validPushName) {
+                contactUpsert.push_name = validPushName;
+              } else if (existingContact?.push_name) {
+                contactUpsert.push_name = existingContact.push_name;
+              }
+
+              if (profilePicture && profilePicture.trim()) {
+                contactUpsert.profile_picture = profilePicture;
+              } else if (existingContact?.profile_picture) {
+                contactUpsert.profile_picture = existingContact.profile_picture;
+              }
+
+              const { error: contactErr } = await supabase
+                .from('whatsapp_contacts')
+                .upsert(contactUpsert, { onConflict: 'company_id,wa_id' });
+
+              if (contactErr) {
+                console.error('[CONTACTS] Backfill upsert error:', contactErr.message);
+              }
+            } catch (e) {
+              console.error('[CONTACTS] Backfill error:', e);
+            }
+          }
           
           // Parse timestamp safely
           let msgTimestamp = new Date().toISOString();
@@ -937,18 +983,18 @@ serve(async (req) => {
       case 'contacts.upsert': {
         const contacts = data?.contacts || [];
         console.log(`[CONTACTS] Processing ${contacts.length} contacts`);
-        
+
         // Get session info
         let targetSessionId = sessionId;
         let companyId = '';
-        
+
         if (!targetSessionId && instanceName) {
           const { data: session } = await supabase
             .from('whatsapp_sessions')
             .select('id, company_id')
             .eq('instance_name', instanceName)
             .single();
-          
+
           if (session) {
             targetSessionId = session.id;
             companyId = session.company_id;
@@ -959,81 +1005,99 @@ serve(async (req) => {
             .select('company_id')
             .eq('id', targetSessionId)
             .single();
-          
+
           if (session) companyId = session.company_id;
         }
-        
+
         if (!companyId) break;
-        
+
+        let upserted = 0;
         for (const contact of contacts) {
           try {
             const jid = contact.id || contact.jid;
             if (!jid) continue;
-            
+
+            // Ignore groups here; whatsapp_contacts é só para pessoas/negócios
+            if (isGroupJid(jid)) continue;
+
             const phoneNumber = extractPhoneFromJid(jid, false);
             if (!phoneNumber) continue;
-            
-            const contactName = contact.name || contact.notify || contact.verifiedName || '';
-            const profilePicture = contact.imgUrl || null;
-            
-            // ============== PRESERVE DATA: Check existing before upserting ==============
+
+            const pushName = (contact.name || contact.notify || contact.verifiedName || '').trim();
+            const profilePicture = (contact.imgUrl || contact.profilePicture || null) as string | null;
+
+            // Preserve existing values (never overwrite with empty)
             const { data: existingContact } = await supabase
               .from('whatsapp_contacts')
-              .select('name, profile_picture')
+              .select('push_name, profile_picture, business_name, is_business')
               .eq('company_id', companyId)
-              .eq('phone', phoneNumber)
-              .single();
-            
-            // Build upsert data - preserve existing values if new ones are empty
+              .eq('wa_id', jid)
+              .maybeSingle();
+
             const upsertData: Record<string, unknown> = {
               company_id: companyId,
-              phone: phoneNumber,
-              is_business: contact.isBusiness || false,
-              status_text: contact.status || null
+              session_id: targetSessionId,
+              wa_id: jid,
+              phone_number: phoneNumber,
+              is_business: contact.isBusiness ?? existingContact?.is_business ?? false,
             };
-            
-            // Only set name if: new name is valid, OR no existing contact
-            if (contactName && contactName.trim() && contactName !== phoneNumber) {
-              upsertData.name = contactName;
-            } else if (existingContact?.name) {
-              upsertData.name = existingContact.name; // Preserve existing
+
+            // push_name
+            if (pushName && pushName !== phoneNumber) {
+              upsertData.push_name = pushName;
+            } else if (existingContact?.push_name) {
+              upsertData.push_name = existingContact.push_name;
             } else {
-              upsertData.name = phoneNumber; // Fallback
+              upsertData.push_name = null;
             }
-            
-            // Only set profile_picture if: new one is valid, OR preserve existing
+
+            // profile_picture
             if (profilePicture && profilePicture.trim()) {
               upsertData.profile_picture = profilePicture;
             } else if (existingContact?.profile_picture) {
-              upsertData.profile_picture = existingContact.profile_picture; // Preserve existing
+              upsertData.profile_picture = existingContact.profile_picture;
             }
-            
-            await supabase
+
+            // business_name (quando disponível)
+            const businessName = (contact.businessName || contact.business_name || '').trim();
+            if (businessName) {
+              upsertData.business_name = businessName;
+            } else if (existingContact?.business_name) {
+              upsertData.business_name = existingContact.business_name;
+            }
+
+            const { error: upsertError } = await supabase
               .from('whatsapp_contacts')
-              .upsert(upsertData, { onConflict: 'company_id,phone' });
-            
+              .upsert(upsertData, { onConflict: 'company_id,wa_id' });
+
+            if (upsertError) {
+              console.error('[CONTACTS] Upsert error:', upsertError);
+              continue;
+            }
+            upserted++;
+
             // Also update conversation name if exists AND we have a valid name AND conv name is empty
-            if (contactName && contactName.trim() && contactName !== phoneNumber) {
-              // Only update if conversation name is empty or equals phone number
+            if (pushName && pushName !== phoneNumber) {
               const { data: conv } = await supabase
                 .from('whatsapp_conversations')
                 .select('id, contact_name')
                 .eq('company_id', companyId)
                 .eq('contact_phone', phoneNumber)
-                .single();
-              
+                .maybeSingle();
+
               if (conv && (!conv.contact_name || conv.contact_name === phoneNumber)) {
                 await supabase
                   .from('whatsapp_conversations')
-                  .update({ contact_name: contactName })
+                  .update({ contact_name: pushName })
                   .eq('id', conv.id);
               }
             }
-              
           } catch (e) {
-            console.error('Contact update error:', e);
+            console.error('[CONTACTS] Contact processing error:', e);
           }
         }
+
+        console.log(`[CONTACTS] Upserted ${upserted}/${contacts.length}`);
         break;
       }
 

@@ -183,10 +183,20 @@ async function fetchContactMetadata(socket, jid) {
   const isGroup = jid.endsWith('@g.us');
 
   try {
-    // Foto de perfil
+    // Foto de perfil (pessoa/grupo) — tenta preview primeiro e cai para image
     try {
-      metadata.profilePicture = await socket.profilePictureUrl(jid, 'image');
-    } catch (e) {}
+      const preview = await socket.profilePictureUrl(jid, 'preview').catch(() => null);
+      const full = preview ? null : await socket.profilePictureUrl(jid, 'image').catch(() => null);
+      metadata.profilePicture = preview || full;
+
+      if (!metadata.profilePicture) {
+        // Log leve para debug (sem quebrar sync)
+        console.log('Sem foto de perfil para ' + jid);
+      }
+    } catch (e) {
+      console.log('Erro ao buscar foto de perfil ' + jid + ':', (e && e.message) ? e.message : e);
+    }
+
 
     if (isGroup) {
       try {

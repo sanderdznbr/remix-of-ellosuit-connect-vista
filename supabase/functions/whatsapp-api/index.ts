@@ -382,48 +382,34 @@ serve(async (req) => {
         console.log(`[REGENERATE] Force regenerating QR for session ${sessionId}`);
 
         try {
-          // Step 1: Delete existing instance from Baileys server
-          console.log(`[REGENERATE] Deleting instance from server...`);
-          const deleteResponse = await fetch(`${serverUrl}/api/instance/${sessionId}`, {
-            method: 'DELETE',
+          // v2.3.0: Usar novo endpoint /regenerate-qr do servidor
+          console.log(`[REGENERATE] Calling server regenerate endpoint...`);
+          const regenerateResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/regenerate-qr`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           });
-          console.log(`[REGENERATE] Delete response: ${deleteResponse.status}`);
           
-          // Wait a moment for cleanup
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Step 2: Recreate instance on Baileys server
-          console.log(`[REGENERATE] Creating new instance...`);
-          const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
-          const createResponse = await fetch(`${serverUrl}/api/instance/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sessionId: session.id,
-              instanceName: session.instance_name,
-              webhookUrl: webhookUrl,
-              webhookSecret: session.webhook_secret || ''
-            })
-          });
-          
-          if (!createResponse.ok) {
-            const errorText = await createResponse.text();
-            console.error(`[REGENERATE] Create failed:`, errorText);
-            return new Response(JSON.stringify({ 
-              error: 'Falha ao recriar instância',
-              details: errorText 
-            }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          if (regenerateResponse.status === 404) {
+            // Sessão não existe no servidor, criar nova
+            console.log(`[REGENERATE] Session not found, creating new...`);
+            const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+            await fetch(`${serverUrl}/api/instance/create`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: session.id,
+                instanceName: session.instance_name,
+                webhookUrl: webhookUrl,
+                webhookSecret: session.webhook_secret || ''
+              })
             });
           }
           
-          console.log(`[REGENERATE] Instance recreated, waiting for QR...`);
+          console.log(`[REGENERATE] Waiting for QR to generate...`);
           
-          // Step 3: Wait and poll for QR code (up to 10 seconds)
+          // Poll for QR code (up to 15 seconds with more retries)
           let qrCode = null;
-          for (let i = 0; i < 5; i++) {
+          for (let i = 0; i < 8; i++) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             const qrResponse = await fetch(`${serverUrl}/api/instance/${sessionId}/qr`, {
@@ -433,7 +419,7 @@ serve(async (req) => {
             
             if (qrResponse.ok) {
               const qrData = await qrResponse.json();
-              console.log(`[REGENERATE] QR poll ${i+1}:`, { hasQR: !!qrData.qrCode, isConnected: qrData.isConnected });
+              console.log(`[REGENERATE] QR poll ${i+1}/8:`, { hasQR: !!qrData.qrCode, isConnected: qrData.isConnected, qrRetryCount: qrData.qrRetryCount });
               
               if (qrData.qrCode) {
                 qrCode = qrData.qrCode;
@@ -476,7 +462,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ 
             qrCode: null,
             status: 'generating',
-            message: 'QR Code em geração, aguarde polling...'
+            message: 'QR Code em geração, servidor tentando automaticamente...'
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });

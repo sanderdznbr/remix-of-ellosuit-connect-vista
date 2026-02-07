@@ -158,15 +158,34 @@ serve(async (req) => {
             // Profile picture - from enriched data or chat object
             const profilePicture = chat.profilePicture || chat.imgUrl || chat.picture || null;
             
-            // Get last message info
+            // Get last message info - handle both number and {high, low} format
             const lastMsg = chat.conversationTimestamp || chat.lastMessage?.messageTimestamp;
-            const lastMessageAt = lastMsg 
-              ? new Date(parseInt(lastMsg) * 1000).toISOString()
-              : new Date().toISOString();
+            let lastMessageAt = new Date().toISOString();
+            try {
+              if (lastMsg) {
+                // Handle {high, low, unsigned} format from Baileys
+                const timestamp = typeof lastMsg === 'object' && lastMsg.low 
+                  ? lastMsg.low 
+                  : parseInt(lastMsg);
+                if (!isNaN(timestamp) && timestamp > 0) {
+                  lastMessageAt = new Date(timestamp * 1000).toISOString();
+                }
+              }
+            } catch (e) {
+              console.log('[CHAT] Timestamp parse error, using now');
+            }
             
             // Extract last message content
             let lastMessageContent = '';
-            if (chat.lastMessage) {
+            if (chat.messages && chat.messages.length > 0) {
+              // Get last message from messages array
+              const lastMsgObj = chat.messages[chat.messages.length - 1];
+              const msgData = lastMsgObj?.message?.message || lastMsgObj?.message || {};
+              lastMessageContent = msgData.conversation || 
+                                   msgData.extendedTextMessage?.text ||
+                                   msgData.imageMessage?.caption ||
+                                   '[Mídia]';
+            } else if (chat.lastMessage) {
               const msgContent = chat.lastMessage.message || chat.lastMessage;
               lastMessageContent = msgContent.conversation || 
                                    msgContent.extendedTextMessage?.text ||
@@ -505,6 +524,180 @@ serve(async (req) => {
         }
         
         console.log(`[CONTACTS] Finished: ${processedCount}/${contacts.length} processed`);
+        break;
+      }
+
+      // ==================== HISTORY MESSAGES (cria conversas a partir de msgs) ====================
+      case 'history.messages': {
+        const messages = data?.messages || [];
+        console.log(`[HISTORY MSGS] Processing ${messages.length} history messages`);
+        
+        // Get session info
+        let targetSessionId = sessionId;
+        let companyId = '';
+        
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id')
+            .eq('instance_name', instanceName)
+            .single();
+          
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id')
+            .eq('id', targetSessionId)
+            .single();
+          
+          if (session) companyId = session.company_id;
+        }
+        
+        if (!targetSessionId || !companyId) {
+          console.log('Could not find session for history messages');
+          break;
+        }
+        
+        // Group messages by JID to create conversations
+        const conversationMap = new Map<string, { 
+          phoneNumber: string; 
+          contactName: string; 
+          profilePicture: string | null;
+          lastMessage: string;
+          lastMessageAt: string;
+          messages: any[];
+        }>();
+        
+        for (const msg of messages) {
+          const jid = msg.jid || msg.remoteJid;
+          if (!jid || jid === 'status@broadcast' || jid.includes('@g.us')) continue;
+          
+          const phoneNumber = jid.replace('@s.whatsapp.net', '').replace('@lid', '');
+          const contactName = msg.pushName || msg.contactName || phoneNumber;
+          const profilePicture = msg.profilePicture || null;
+          
+          // Extract message content
+          let content = '';
+          const messageContent = msg.message || msg;
+          if (messageContent.conversation) {
+            content = messageContent.conversation;
+          } else if (messageContent.extendedTextMessage) {
+            content = messageContent.extendedTextMessage.text || '';
+          } else if (messageContent.imageMessage) {
+            content = messageContent.imageMessage.caption || '[Imagem]';
+          } else if (messageContent.videoMessage) {
+            content = messageContent.videoMessage.caption || '[Vídeo]';
+          } else if (messageContent.audioMessage) {
+            content = '[Áudio]';
+          } else if (messageContent.documentMessage) {
+            content = messageContent.documentMessage.fileName || '[Documento]';
+          }
+          
+          if (!content) continue;
+          
+          const timestamp = msg.messageTimestamp 
+            ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString()
+            : new Date().toISOString();
+          
+          if (!conversationMap.has(phoneNumber)) {
+            conversationMap.set(phoneNumber, {
+              phoneNumber,
+              contactName,
+              profilePicture,
+              lastMessage: content,
+              lastMessageAt: timestamp,
+              messages: []
+            });
+          }
+          
+          const conv = conversationMap.get(phoneNumber)!;
+          conv.messages.push({
+            ...msg,
+            content,
+            timestamp
+          });
+          
+          // Update last message if newer
+          if (new Date(timestamp) > new Date(conv.lastMessageAt)) {
+            conv.lastMessage = content;
+            conv.lastMessageAt = timestamp;
+          }
+          
+          // Update name/picture if we have better data
+          if (contactName && contactName !== phoneNumber) {
+            conv.contactName = contactName;
+          }
+          if (profilePicture) {
+            conv.profilePicture = profilePicture;
+          }
+        }
+        
+        console.log(`[HISTORY MSGS] Found ${conversationMap.size} unique conversations`);
+        
+        // Create conversations and messages
+        let processedConvs = 0;
+        let processedMsgs = 0;
+        
+        for (const [phoneNumber, convData] of conversationMap) {
+          try {
+            // Upsert conversation
+            const { data: conversation, error: convError } = await supabase
+              .from('whatsapp_conversations')
+              .upsert({
+                session_id: targetSessionId,
+                company_id: companyId,
+                contact_phone: phoneNumber,
+                contact_name: convData.contactName,
+                profile_picture: convData.profilePicture,
+                status: 'open',
+                last_message: convData.lastMessage,
+                last_message_at: convData.lastMessageAt,
+                unread_count: 0
+              }, {
+                onConflict: 'session_id,contact_phone'
+              })
+              .select()
+              .single();
+            
+            if (convError) {
+              console.error(`[HISTORY] Error creating conv for ${phoneNumber}:`, convError.message);
+              continue;
+            }
+            
+            processedConvs++;
+            
+            // Insert messages for this conversation
+            if (conversation) {
+              for (const msg of convData.messages) {
+                const { error: msgError } = await supabase
+                  .from('whatsapp_messages')
+                  .upsert({
+                    conversation_id: conversation.id,
+                    session_id: targetSessionId,
+                    company_id: companyId,
+                    wa_message_id: msg.id || `hist_${Date.now()}_${Math.random()}`,
+                    from_me: msg.fromMe || false,
+                    content: msg.content,
+                    message_type: 'text',
+                    status: msg.fromMe ? 'sent' : 'received',
+                    timestamp: msg.timestamp
+                  }, {
+                    onConflict: 'wa_message_id'
+                  });
+                
+                if (!msgError) processedMsgs++;
+              }
+            }
+          } catch (e) {
+            console.error(`[HISTORY] Error processing ${phoneNumber}:`, e);
+          }
+        }
+        
+        console.log(`[HISTORY MSGS] Created ${processedConvs} conversations, ${processedMsgs} messages`);
         break;
       }
 

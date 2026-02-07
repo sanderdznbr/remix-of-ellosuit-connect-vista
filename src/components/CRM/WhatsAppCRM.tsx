@@ -205,16 +205,20 @@ const WhatsAppCRM: React.FC = () => {
   };
 
   const loadMessages = async (conversationId: string) => {
-
     const { data, error } = await supabase
       .from('whatsapp_messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
+      .order('timestamp', { ascending: true })
       .limit(100);
     
     if (!error) {
-      setMessages(data || []);
+      // Map timestamp to created_at for compatibility
+      const mapped = (data || []).map(m => ({
+        ...m,
+        created_at: m.timestamp || m.created_at
+      }));
+      setMessages(mapped);
     }
   };
 

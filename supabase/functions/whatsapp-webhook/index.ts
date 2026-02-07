@@ -411,28 +411,64 @@ serve(async (req) => {
               .eq('id', conversation.id);
           }
           
-          // Save message (upsert to avoid duplicates)
-          await supabase
-            .from('whatsapp_messages')
-            .upsert({
-              conversation_id: conversation?.id,
-              session_id: targetSessionId,
-              company_id: companyId,
-              wa_message_id: messageId,
-              from_me: fromMe,
-              content: content,
-              message_type: messageType,
-              media_url: mediaUrl,
-              media_caption: mediaCaption,
-              status: fromMe ? 'sent' : 'received',
-              timestamp: msg.messageTimestamp 
-                ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString()
-                : new Date().toISOString()
-            }, {
-              onConflict: 'wa_message_id'
-            });
+          // Parse timestamp safely
+          let msgTimestamp = new Date().toISOString();
+          if (msg.messageTimestamp) {
+            try {
+              const ts = typeof msg.messageTimestamp === 'object' && msg.messageTimestamp.low
+                ? msg.messageTimestamp.low
+                : parseInt(msg.messageTimestamp);
+              if (!isNaN(ts) && ts > 0) {
+                const dateMs = ts > 4102444800 ? ts : ts * 1000;
+                msgTimestamp = new Date(dateMs).toISOString();
+              }
+            } catch (e) {
+              console.log('Timestamp parse error, using now');
+            }
+          }
           
-          console.log(`Message saved: ${content.substring(0, 50)}...`);
+          // Build message data
+          const messageData = {
+            conversation_id: conversation?.id,
+            session_id: targetSessionId,
+            company_id: companyId,
+            from_me: fromMe,
+            content: content,
+            message_type: messageType,
+            media_url: mediaUrl,
+            media_caption: mediaCaption,
+            status: fromMe ? 'sent' : 'received',
+            timestamp: msgTimestamp
+          };
+          
+          // Use upsert only if we have a valid message ID, otherwise insert
+          if (messageId && messageId.trim()) {
+            const { error: msgError } = await supabase
+              .from('whatsapp_messages')
+              .upsert({
+                ...messageData,
+                wa_message_id: messageId
+              }, {
+                onConflict: 'wa_message_id'
+              });
+            
+            if (msgError) {
+              console.error(`Message upsert error:`, msgError.message);
+            } else {
+              console.log(`Message saved: ${content.substring(0, 50)}...`);
+            }
+          } else {
+            // No message ID - just insert
+            const { error: msgError } = await supabase
+              .from('whatsapp_messages')
+              .insert(messageData);
+            
+            if (msgError) {
+              console.error(`Message insert error:`, msgError.message);
+            } else {
+              console.log(`Message inserted: ${content.substring(0, 50)}...`);
+            }
+          }
         }
         break;
       }

@@ -367,57 +367,6 @@ const MainDashboard = () => {
               <RefreshCw className="h-4 w-4" />
             </Button>
             
-            {/* Notifications Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-gray-100 relative">
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Notificações</span>
-                  <Badge variant="secondary" className="text-xs">3 novas</Badge>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <ScrollArea className="h-64">
-                  <div className="space-y-1 p-1">
-                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                        <span className="font-medium text-sm">Novo cliente cadastrado</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pl-4">Maria Silva foi adicionada à sua base</p>
-                      <span className="text-[10px] text-muted-foreground pl-4">Há 5 minutos</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                        <span className="font-medium text-sm">Email aberto</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pl-4">João Pereira abriu seu email de proposta</p>
-                      <span className="text-[10px] text-muted-foreground pl-4">Há 15 minutos</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                        <span className="font-medium text-sm">Reunião agendada</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pl-4">Nova reunião com Empresa ABC às 14h</p>
-                      <span className="text-[10px] text-muted-foreground pl-4">Há 1 hora</span>
-                    </DropdownMenuItem>
-                  </div>
-                </ScrollArea>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center text-primary cursor-pointer" onClick={() => navigate('/dashboard/settings')}>
-                  Ver todas as notificações
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
             <Button variant="ghost" size="icon" className="hover:bg-gray-100" onClick={() => navigate('/dashboard/ajuda')}>
               <HelpCircle className="h-4 w-4" />
             </Button>

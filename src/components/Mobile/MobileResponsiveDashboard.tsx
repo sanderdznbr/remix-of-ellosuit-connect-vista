@@ -39,6 +39,7 @@ import SecuritySettings from '@/components/Dashboard/SecuritySettings';
 // User profile and subscription pages
 import UserProfilePage from '@/components/Dashboard/UserProfilePage';
 import SubscriptionPage from '@/components/Dashboard/SubscriptionPage';
+import HelpCenter from '@/components/Dashboard/HelpCenter';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
@@ -111,6 +112,7 @@ const MobileResponsiveDashboard = () => {
         <Route path="/seguranca" element={<SecuritySettings />} />
         <Route path="/suporte" element={<SupportDashboard />} />
         <Route path="/reportar-problema" element={<ReportProblemForm />} />
+        <Route path="/ajuda" element={<HelpCenter />} />
         
         {/* User Profile & Subscription */}
         <Route path="/perfil" element={<UserProfilePage />} />

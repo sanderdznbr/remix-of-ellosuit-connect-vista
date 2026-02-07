@@ -247,10 +247,58 @@ export function MegaMenuHeader() {
 
         {/* Right Side */}
         <div className="flex items-center gap-3">
-          {/* Notifications */}
-          <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <Bell className="h-5 w-5 text-gray-500" />
-          </button>
+          {/* Notifications Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
+                <Bell className="h-5 w-5 text-gray-500" />
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                  3
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="px-3 py-2 border-b">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Notificações</p>
+                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">3 novas</span>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span className="font-medium text-sm">Novo cliente cadastrado</span>
+                  </div>
+                  <p className="text-xs text-gray-500 pl-4">Maria Silva foi adicionada à sua base</p>
+                  <span className="text-[10px] text-gray-400 pl-4">Há 5 minutos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span className="font-medium text-sm">Email aberto</span>
+                  </div>
+                  <p className="text-xs text-gray-500 pl-4">João Pereira abriu seu email de proposta</p>
+                  <span className="text-[10px] text-gray-400 pl-4">Há 15 minutos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                    <span className="font-medium text-sm">Reunião agendada</span>
+                  </div>
+                  <p className="text-xs text-gray-500 pl-4">Nova reunião com Empresa ABC às 14h</p>
+                  <span className="text-[10px] text-gray-400 pl-4">Há 1 hora</span>
+                </DropdownMenuItem>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="justify-center text-blue-600 cursor-pointer font-medium"
+                onClick={() => navigate('/dashboard/notificacoes')}
+              >
+                Ver todas as notificações
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Settings Dropdown */}
           <div

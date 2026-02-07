@@ -193,7 +193,9 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error('Conta Gmail não encontrada. Conecte seu Gmail primeiro.');
       }
 
-      console.log('✅ Gmail account found:', emailAccount.provider_email);
+      // Get email from correct column name
+      const gmailEmail = emailAccount.email || emailAccount.provider_email;
+      console.log('✅ Gmail account found:', gmailEmail);
 
       // Check if token is expired
       let accessToken = emailAccount.access_token;
@@ -206,8 +208,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Use the Gmail account email as sender
-      finalFromEmail = emailAccount.provider_email;
-      finalFromName = from_name || emailAccount.provider_email.split('@')[0];
+      finalFromEmail = gmailEmail;
+      finalFromName = from_name || (gmailEmail ? gmailEmail.split('@')[0] : 'User');
 
       sendResult = await sendWithGmail({
         ...requestData,

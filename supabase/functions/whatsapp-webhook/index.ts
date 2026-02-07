@@ -371,39 +371,62 @@ serve(async (req) => {
       case 'message':
       case 'message.received': {
         const messages = data?.messages || (data ? [data] : []);
-        
+
+        // Resolve session context ONCE (fixes ReferenceError + improves perf)
+        let targetSessionId = sessionId as string | undefined;
+        let companyId = '';
+        let sessionPhone = '';
+
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id, phone_number')
+            .eq('instance_name', instanceName)
+            .single();
+
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+            sessionPhone = session.phone_number || '';
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id, phone_number')
+            .eq('id', targetSessionId)
+            .single();
+
+          if (session) {
+            companyId = session.company_id;
+            sessionPhone = session.phone_number || '';
+          }
+        }
+
+        if (!targetSessionId || !companyId) {
+          console.log('Could not find session for message batch');
+          break;
+        }
+
         for (const msg of messages) {
           const messageKey = msg.key || {};
           // Use remoteJidAlt if available (contains real phone number)
           let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
-          
+
           // ============== IMPROVED: Determine fromMe more reliably ==============
-          // Check if the message sender matches the connected session's phone number
-          // This fixes issues where Baileys sometimes returns fromMe: false for sent messages
+          // Compare sender with session phone to fix cases where Baileys misflags fromMe
           let fromMe = messageKey.fromMe || msg.fromMe || false;
-          
-          // Get session phone to compare
-          if (!fromMe && targetSessionId) {
-            const { data: sessionData } = await supabase
-              .from('whatsapp_sessions')
-              .select('phone_number')
-              .eq('id', targetSessionId)
-              .single();
-            
-            if (sessionData?.phone_number) {
-              // Check if the sender phone matches our session phone
-              const senderJid = messageKey.participant || messageKey.remoteJid || '';
-              const senderPhone = senderJid.replace(/@.*$/, '').replace(/\D/g, '');
-              const sessionPhone = sessionData.phone_number.replace(/\D/g, '');
-              
-              // If sender is our own number, mark as fromMe
-              if (senderPhone && sessionPhone && senderPhone.includes(sessionPhone.slice(-8))) {
-                console.log(`[MESSAGE] Correcting fromMe for sender ${senderPhone} matching session ${sessionPhone}`);
-                fromMe = true;
-              }
+
+          if (!fromMe && sessionPhone) {
+            const senderJid = messageKey.participant || messageKey.remoteJid || '';
+            const senderPhoneRaw = senderJid.replace(/@.*$/, '').replace(/\D/g, '');
+            const sessionPhoneRaw = sessionPhone.replace(/\D/g, '');
+
+            if (senderPhoneRaw && sessionPhoneRaw && senderPhoneRaw.includes(sessionPhoneRaw.slice(-8))) {
+              console.log(`[MESSAGE] Correcting fromMe for sender ${senderPhoneRaw} matching session ${sessionPhoneRaw}`);
+              fromMe = true;
             }
           }
-          
+
           const messageId = messageKey.id || msg.id;
           
           // Skip protocol messages (sync notifications)
@@ -511,40 +534,9 @@ serve(async (req) => {
             continue;
           }
           
-          // Get session info including phone number for self-message filtering
-          let targetSessionId = sessionId;
-          let companyId = '';
-          let sessionPhone = '';
-          
-          if (!targetSessionId && instanceName) {
-            const { data: session } = await supabase
-              .from('whatsapp_sessions')
-              .select('id, company_id, phone_number')
-              .eq('instance_name', instanceName)
-              .single();
-            
-            if (session) {
-              targetSessionId = session.id;
-              companyId = session.company_id;
-              sessionPhone = session.phone_number || '';
-            }
-          } else if (targetSessionId) {
-            const { data: session } = await supabase
-              .from('whatsapp_sessions')
-              .select('company_id, phone_number')
-              .eq('id', targetSessionId)
-              .single();
-            
-            if (session) {
-              companyId = session.company_id;
-              sessionPhone = session.phone_number || '';
-            }
-          }
-          
-          if (!targetSessionId || !companyId) {
-            console.log('Could not find session for message');
-            continue;
-          }
+          // Session context (targetSessionId/companyId/sessionPhone) resolved once per request above
+          // (kept here intentionally blank)
+
           
           // SELF-MESSAGE FILTER: Skip messages where contact matches the session's own phone
           // But DO NOT filter for groups - we want to see our own messages in groups

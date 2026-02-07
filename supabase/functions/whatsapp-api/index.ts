@@ -533,8 +533,8 @@ serve(async (req) => {
           try {
             console.log(`[SEND] Sending to ${jid} via ${serverUrl}`);
             
-            // Use the correct endpoint: /api/message/send-text
-            const sendResponse = await fetch(`${serverUrl}/api/message/send-text`, {
+            // Use the correct endpoint: /api/message/send (v3.7.0)
+            const sendResponse = await fetch(`${serverUrl}/api/message/send`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

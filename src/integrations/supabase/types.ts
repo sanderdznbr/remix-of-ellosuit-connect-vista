@@ -2316,6 +2316,7 @@ export type Database = {
           delivered_at: string | null
           from_me: boolean
           id: string
+          is_ai_response: boolean | null
           is_forwarded: boolean | null
           media_caption: string | null
           media_type: string | null
@@ -2343,6 +2344,7 @@ export type Database = {
           delivered_at?: string | null
           from_me?: boolean
           id?: string
+          is_ai_response?: boolean | null
           is_forwarded?: boolean | null
           media_caption?: string | null
           media_type?: string | null
@@ -2370,6 +2372,7 @@ export type Database = {
           delivered_at?: string | null
           from_me?: boolean
           id?: string
+          is_ai_response?: boolean | null
           is_forwarded?: boolean | null
           media_caption?: string | null
           media_type?: string | null

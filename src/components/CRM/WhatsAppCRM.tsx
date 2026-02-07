@@ -68,6 +68,7 @@ interface WhatsAppMessage {
   message_type?: string;
   media_url?: string;
   media_caption?: string;
+  is_ai_response?: boolean;
 }
 
 interface AIAgent {
@@ -316,7 +317,9 @@ const WhatsAppCRM: React.FC = () => {
             wa_message_id: m.wa_message_id,
             message_type: m.message_type,
             media_url: m.media_url,
-            media_caption: m.media_caption
+            media_caption: m.media_caption,
+            is_ai_response: m.is_ai_response,
+            sender_name: m.sender_name
           });
         }
       });
@@ -874,13 +877,36 @@ const WhatsAppCRM: React.FC = () => {
   // Get connected sessions first (needed for filtering)
   const connectedSessions = sessions.filter(s => s.status === 'connected');
 
-  // Filter conversations - exclude self-conversations (messaging yourself)
+  // Helper function to check if a phone number is a status broadcast or invalid
+  const isStatusBroadcastOrInvalid = (phone: string | undefined): boolean => {
+    if (!phone) return true;
+    const cleaned = phone.replace(/\D/g, '');
+    // Status broadcasts typically have unusual formats
+    // They often start with specific patterns or have lengths that don't match real phone numbers
+    if (cleaned.length > 15) return true; // Too long to be a real phone
+    if (cleaned.startsWith('status')) return true;
+    // WhatsApp status IDs often have a specific pattern
+    if (phone.includes('@broadcast') || phone.includes('@s.whatsapp.net') && cleaned.length > 13) return true;
+    return false;
+  };
+
+  // Filter conversations - exclude self-conversations and status broadcasts
   const filteredConversations = conversations.filter(conv => {
+    // Filter out status broadcasts and invalid phone numbers
+    if (isStatusBroadcastOrInvalid(conv.contact_phone)) {
+      return false;
+    }
+    
     // Filter out self-conversations (where contact_phone matches connected session phone)
     const connectedPhone = connectedSessions[0]?.phone_number?.replace(/\D/g, '');
     const contactPhone = conv.contact_phone?.replace(/\D/g, '');
     if (connectedPhone && contactPhone && connectedPhone === contactPhone) {
       return false; // Exclude self-chat
+    }
+    
+    // Also filter out phone numbers that are suspiciously long (likely status IDs)
+    if (contactPhone && contactPhone.length > 15) {
+      return false;
     }
     
     const matchesSearch = searchQuery === '' || 
@@ -1524,12 +1550,24 @@ const WhatsAppCRM: React.FC = () => {
                           className={cn(
                             "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm",
                             message.from_me
-                              ? "bg-blue-600 rounded-br-sm"
+                              ? message.is_ai_response 
+                                ? "bg-gradient-to-br from-violet-500 to-purple-600 rounded-br-sm" 
+                                : "bg-blue-600 rounded-br-sm"
                               : selectedAgent
                                 ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-foreground rounded-bl-sm border border-blue-100 dark:border-blue-800"
                                 : "bg-card text-foreground rounded-bl-sm border"
                           )}
                         >
+                          {/* AI Response indicator for sent messages */}
+                          {message.from_me && message.is_ai_response && (
+                            <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-white/20">
+                              <Bot className="h-3.5 w-3.5 text-white" />
+                              <span className="text-[10px] font-semibold text-white/90 uppercase tracking-wide">
+                                {message.sender_name?.replace('🤖 ', '') || 'Resposta Automática IA'}
+                              </span>
+                            </div>
+                          )}
+                          
                           {!message.from_me && selectedAgent && (
                             <div className="flex items-center gap-1 mb-1">
                               <Bot className="h-3 w-3 text-blue-500" />
@@ -1541,7 +1579,7 @@ const WhatsAppCRM: React.FC = () => {
                           
                           {/* Render image if message is an image */}
                           {message.message_type === 'image' && message.media_url ? (
-                            <div className="mb-2 relative group">
+                            <div className="mb-2 relative">
                               <img 
                                 src={message.media_url} 
                                 alt="Imagem" 
@@ -1552,10 +1590,11 @@ const WhatsAppCRM: React.FC = () => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
-                              {/* Download button */}
+                              {/* Download button - always visible */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  toast({ title: 'Baixando...', description: 'Aguarde o download da imagem' });
                                   // Fetch and download as blob for cross-origin images
                                   fetch(message.media_url!)
                                     .then(res => res.blob())
@@ -1564,18 +1603,25 @@ const WhatsAppCRM: React.FC = () => {
                                       const a = document.createElement('a');
                                       a.href = url;
                                       a.download = `whatsapp-image-${message.id}.jpg`;
+                                      document.body.appendChild(a);
                                       a.click();
+                                      document.body.removeChild(a);
                                       URL.revokeObjectURL(url);
+                                      toast({ title: 'Sucesso!', description: 'Imagem baixada com sucesso' });
                                     })
                                     .catch(() => {
                                       // Fallback: open in new tab
                                       window.open(message.media_url, '_blank');
+                                      toast({ title: 'Abrindo em nova aba', description: 'O download direto não foi possível' });
                                     });
                                 }}
                                 className={cn(
-                                  "absolute top-2 right-2 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
-                                  message.from_me ? "bg-white/20 hover:bg-white/30 text-white" : "bg-black/20 hover:bg-black/30 text-white"
+                                  "absolute top-2 right-2 p-2 rounded-full shadow-lg transition-all hover:scale-110",
+                                  message.from_me 
+                                    ? "bg-white/80 hover:bg-white text-blue-600" 
+                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
                                 )}
+                                title="Baixar imagem"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

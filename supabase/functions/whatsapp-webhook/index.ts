@@ -511,6 +511,37 @@ serve(async (req) => {
                             .single();
                           
                           if (sessionData?.baileys_server_url) {
+                            // First, save the AI message to database with ai marker
+                            // This ensures we can identify it as AI response in the UI
+                            const aiMsgTimestamp = new Date().toISOString();
+                            const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                            
+                            await supabase
+                              .from('whatsapp_messages')
+                              .insert({
+                                conversation_id: conversation?.id,
+                                session_id: targetSessionId,
+                                company_id: companyId,
+                                from_me: true,
+                                content: aiReply,
+                                message_type: 'text',
+                                status: 'sending',
+                                timestamp: aiMsgTimestamp,
+                                wa_message_id: aiMessageId,
+                                is_ai_response: true,
+                                sender_name: `🤖 ${agent.name}`,
+                                metadata: { ai_agent_id: agent.id, ai_agent_name: agent.name }
+                              });
+                            
+                            // Update conversation last message
+                            await supabase
+                              .from('whatsapp_conversations')
+                              .update({
+                                last_message: aiReply,
+                                last_message_at: aiMsgTimestamp
+                              })
+                              .eq('id', conversation?.id);
+                            
                             // Send the AI response via the WhatsApp server
                             const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
                               method: 'POST',
@@ -524,8 +555,18 @@ serve(async (req) => {
                             
                             if (sendResponse.ok) {
                               console.log('✅ AI auto-reply sent successfully');
+                              // Update message status to sent
+                              await supabase
+                                .from('whatsapp_messages')
+                                .update({ status: 'sent' })
+                                .eq('wa_message_id', aiMessageId);
                             } else {
                               console.error('❌ Failed to send AI auto-reply:', await sendResponse.text());
+                              // Mark as failed
+                              await supabase
+                                .from('whatsapp_messages')
+                                .update({ status: 'failed' })
+                                .eq('wa_message_id', aiMessageId);
                             }
                           } else {
                             console.log('⚠️ No Baileys server URL found for session');
@@ -599,6 +640,27 @@ serve(async (req) => {
                             .single();
                           
                           if (sessionData?.baileys_server_url) {
+                            // Save AI message to database with marker
+                            const aiMsgTimestamp = new Date().toISOString();
+                            const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                            
+                            await supabase
+                              .from('whatsapp_messages')
+                              .insert({
+                                conversation_id: conversation?.id,
+                                session_id: targetSessionId,
+                                company_id: companyId,
+                                from_me: true,
+                                content: aiReply,
+                                message_type: 'text',
+                                status: 'sent',
+                                timestamp: aiMsgTimestamp,
+                                wa_message_id: aiMessageId,
+                                is_ai_response: true,
+                                sender_name: `🤖 ${agent.name}`,
+                                metadata: { ai_agent_id: agent.id, ai_agent_name: agent.name }
+                              });
+                            
                             await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },

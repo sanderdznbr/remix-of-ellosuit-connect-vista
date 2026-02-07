@@ -91,24 +91,36 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
         .limit(200);
       
       if (!error && data) {
-        // Deduplicate by wa_message_id or content+timestamp
+        // ROBUST DEDUPLICATION: Use wa_message_id as primary key, with content+timestamp as fallback
         const uniqueMessages = new Map<string, WhatsAppMessage>();
+        
         data.forEach(m => {
-          const key = m.wa_message_id || m.id;
-          // Also check for duplicate content within 5 seconds
-          const isDuplicate = Array.from(uniqueMessages.values()).some(existing =>
-            existing.content === m.content &&
-            existing.from_me === m.from_me &&
-            Math.abs(new Date(existing.created_at).getTime() - new Date(m.timestamp || m.created_at).getTime()) < 5000
-          );
-          if (!uniqueMessages.has(key) && !isDuplicate) {
+          // Primary key: wa_message_id (unique from WhatsApp)
+          const timestamp = new Date(m.timestamp || m.created_at).getTime();
+          const fallbackKey = `${m.content?.substring(0, 50)}_${m.from_me}_${Math.floor(timestamp / 1000)}`;
+          const key = m.wa_message_id || fallbackKey;
+          
+          // Only add if not already exists - first occurrence wins
+          if (!uniqueMessages.has(key)) {
             uniqueMessages.set(key, {
               ...m,
               created_at: m.timestamp || m.created_at
             });
           }
         });
-        setMessages(Array.from(uniqueMessages.values()));
+        
+        // Sort by timestamp ascending with stable sorting
+        const sorted = Array.from(uniqueMessages.values())
+          .sort((a, b) => {
+            const timeA = new Date(a.created_at).getTime();
+            const timeB = new Date(b.created_at).getTime();
+            if (timeA === timeB) {
+              return a.id.localeCompare(b.id);
+            }
+            return timeA - timeB;
+          });
+        
+        setMessages(sorted);
       }
       setLoading(false);
     };

@@ -176,6 +176,7 @@ async function fetchContactMetadata(socket, jid) {
   const metadata = {
     profilePicture: null,
     status: null,
+    groupSubject: null,
     groupDescription: null,
     groupParticipants: null
   };
@@ -201,6 +202,7 @@ async function fetchContactMetadata(socket, jid) {
     if (isGroup) {
       try {
         const groupMeta = await socket.groupMetadata(jid);
+        metadata.groupSubject = groupMeta.subject || null;
         metadata.groupDescription = groupMeta.desc || null;
         metadata.groupParticipants = groupMeta.participants?.map(p => ({
           jid: p.id,
@@ -388,6 +390,149 @@ async function createSession(config) {
       } else if (statusCode === DisconnectReason.loggedOut) {
         sessions.delete(sessionId);
       }
+    }
+  });
+
+  // Sync inicial: chats, contatos e histórico (última 1h)
+  socket.ev.on('messaging-history.set', async ({ chats = [], contacts = [], messages = [], isLatest }) => {
+    try {
+      console.log('📥 History set: chats=' + chats.length + ' contacts=' + contacts.length + ' messages=' + messages.length + ' latest=' + isLatest);
+
+      // 1) Contatos
+      if (contacts && contacts.length > 0) {
+        await sendWebhook({
+          event: 'contacts.set',
+          sessionId,
+          instanceName,
+          data: { contacts }
+        }, webhookUrl, webhookSecret);
+      }
+
+      // 2) Chats (enriquecer com foto/metadata de grupo)
+      const MAX_CHAT_ENRICH = 120;
+      const enrichedChats = [];
+      for (const chat of (chats || []).slice(0, MAX_CHAT_ENRICH)) {
+        try {
+          const jid = chat?.id || chat?.jid;
+          if (!jid || jid === 'status@broadcast') continue;
+
+          const meta = await fetchContactMetadata(socket, jid);
+          const isGroup = jid.endsWith('@g.us');
+
+          const enriched = {
+            ...chat,
+            id: jid,
+            jid,
+            profilePicture: meta.profilePicture || chat.profilePicture || chat.imgUrl || null,
+          };
+
+          if (isGroup) {
+            enriched.groupSubject = meta.groupSubject || chat.groupSubject || chat.subject || chat.name || null;
+            enriched.metadata = {
+              ...(chat.metadata || {}),
+              subject: meta.groupSubject || chat.groupSubject || chat.subject || chat.name || null,
+              desc: meta.groupDescription || null,
+              participants: meta.groupParticipants || null,
+            };
+          }
+
+          enrichedChats.push(enriched);
+        } catch (e) {
+          console.log('Erro ao enriquecer chat:', e?.message || e);
+        }
+      }
+
+      if (enrichedChats.length > 0) {
+        await sendWebhook({
+          event: 'chats.set',
+          sessionId,
+          instanceName,
+          data: { chats: enrichedChats }
+        }, webhookUrl, webhookSecret);
+      }
+
+      // 3) Histórico de mensagens (última 1 hora)
+      const ONE_HOUR_MS = 60 * 60 * 1000;
+      const cutoff = Date.now() - ONE_HOUR_MS;
+
+      const toMs = (ts) => {
+        try {
+          if (!ts) return null;
+          if (typeof ts === 'number') return ts > 4102444800 ? ts : ts * 1000;
+          if (typeof ts === 'string') {
+            const n = parseInt(ts, 10);
+            if (!isNaN(n)) return n > 4102444800 ? n : n * 1000;
+          }
+          if (typeof ts === 'object' && ts !== null) {
+            if (typeof ts.low === 'number') return ts.low * 1000;
+            if (typeof ts.toNumber === 'function') return ts.toNumber() * 1000;
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      };
+
+      const metadataCache = new Map();
+      const groupNameCache = new Map();
+      for (const c of enrichedChats) {
+        if (c?.id && c?.groupSubject) groupNameCache.set(c.id, c.groupSubject);
+      }
+
+      const recent = (messages || []).filter((m) => {
+        const ms = toMs(m?.messageTimestamp);
+        return ms && ms >= cutoff;
+      });
+
+      const BATCH = 10;
+      for (let i = 0; i < recent.length; i += BATCH) {
+        const slice = recent.slice(i, i + BATCH);
+
+        const mapped = [];
+        for (const m of slice) {
+          const jid = m?.key?.remoteJid;
+          if (!jid || jid === 'status@broadcast') continue;
+
+          let meta = metadataCache.get(jid);
+          if (!meta) {
+            meta = await fetchContactMetadata(socket, jid);
+            metadataCache.set(jid, meta);
+          }
+
+          const isGroup = jid.endsWith('@g.us');
+          const participant = m?.key?.participant;
+
+          const senderPhone = isGroup && participant ? participant.split('@')[0].replace(/\D/g, '') : undefined;
+          const senderName = isGroup ? (m?.pushName || null) : undefined;
+          const groupName = isGroup ? (groupNameCache.get(jid) || meta.groupSubject || null) : undefined;
+
+          mapped.push({
+            key: m.key,
+            message: m.message,
+            messageTimestamp: m.messageTimestamp,
+            pushName: m.pushName,
+            senderPhone,
+            senderName,
+            groupName,
+            mediaUrl: null,
+            mediaType: null,
+            contactMetadata: meta,
+          });
+        }
+
+        if (mapped.length > 0) {
+          await sendWebhook({
+            event: 'messages.upsert',
+            sessionId,
+            instanceName,
+            data: { messages: mapped }
+          }, webhookUrl, webhookSecret);
+        }
+      }
+
+      console.log('✅ Sync inicial concluído: chats=' + enrichedChats.length + ' msgs_1h=' + recent.length);
+    } catch (e) {
+      console.log('❌ Erro no sync inicial:', e?.message || e);
     }
   });
 

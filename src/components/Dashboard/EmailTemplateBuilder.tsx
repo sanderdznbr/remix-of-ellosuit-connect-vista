@@ -340,6 +340,7 @@ const EmailTemplateBuilder: React.FC = () => {
   // Global styles
   const [globalStyles, setGlobalStyles] = useState({
     backgroundColor: '#ffffff',
+    contentBackgroundColor: '#ffffff',
     fontFamily: 'Arial, sans-serif',
     maxWidth: '600px',
     padding: '20px'
@@ -450,7 +451,7 @@ const EmailTemplateBuilder: React.FC = () => {
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
     
     for (const file of imageFiles) {
-      const url = await uploadFile(file, 'email-assets');
+    const url = await uploadFile(file, 'logos');
       if (url) {
         const newElement = createDefaultElement('image');
         newElement.content.src = url;
@@ -486,7 +487,7 @@ const EmailTemplateBuilder: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !selectedElement) return;
     
-    const url = await uploadFile(file, 'email-assets');
+    const url = await uploadFile(file, 'logos');
     if (url) {
       const element = elements.find(el => el.id === selectedElement);
       if (element?.type === 'image') {

@@ -688,8 +688,8 @@ serve(async (req) => {
         try {
           console.log(`[SEND MEDIA] Sending ${mediaType} to ${cleanPhone} via ${serverUrl}`);
           
-          // Use the correct endpoint and parameters matching the Baileys server
-          const sendResponse = await fetch(`${serverUrl}/api/message/send-media`, {
+          // Use the correct endpoint matching Baileys server v3.8.0: /api/message/media
+          const sendResponse = await fetch(`${serverUrl}/api/message/media`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

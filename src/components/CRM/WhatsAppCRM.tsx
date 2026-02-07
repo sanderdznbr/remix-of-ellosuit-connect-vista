@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Paperclip, Smile, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import ConversationLabelsManager from './ConversationLabelsManager';
 import SaveLeadModal from './SaveLeadModal';
 import ConversationPopup from './ConversationPopup';
 import KanbanColumnConfig from './KanbanColumnConfig';
+import AudioRecorder from './AudioRecorder';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -205,6 +206,7 @@ const WhatsAppCRM: React.FC = () => {
   const [showConversationPopup, setShowConversationPopup] = useState(false);
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
 
   // Load persisted chat history from localStorage
   useEffect(() => {
@@ -1055,28 +1057,74 @@ const WhatsAppCRM: React.FC = () => {
             
             {/* Input Area */}
             <div className="p-4 border-t bg-card">
-              <div className="flex items-center gap-2 max-w-3xl mx-auto">
-                <Button variant="ghost" size="icon">
-                  <Smile className="h-5 w-5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Paperclip className="h-5 w-5 text-muted-foreground" />
-                </Button>
-                <Input
-                  placeholder={selectedAgent ? `Mensagem para ${selectedAgent.name}...` : "Digite uma mensagem..."}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={sendMessage} 
-                  disabled={!newMessage.trim() || sendingMessage}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              {showAudioRecorder ? (
+                <div className="max-w-3xl mx-auto">
+                  <AudioRecorder
+                    onSend={(audioBlob, duration) => {
+                      // For demo, just show a message that audio was sent
+                      const audioMessage: WhatsAppMessage = {
+                        id: Date.now().toString(),
+                        conversation_id: selectedConversation?.id || selectedAgent?.id || '',
+                        content: `🎤 Áudio (${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')})`,
+                        from_me: true,
+                        status: 'sent',
+                        created_at: new Date().toISOString()
+                      };
+                      
+                      if (selectedConversation?.is_demo) {
+                        setMessages(prev => [...prev, audioMessage]);
+                        setDemoMessagesState(prevState => ({
+                          ...prevState,
+                          [selectedConversation.id]: [...(prevState[selectedConversation.id] || []), audioMessage]
+                        }));
+                      } else if (selectedAgent) {
+                        setAgentChatMessages(prev => [...prev, audioMessage]);
+                      }
+                      
+                      setShowAudioRecorder(false);
+                      toast({
+                        title: 'Áudio enviado',
+                        description: `Duração: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
+                      });
+                    }}
+                    onCancel={() => setShowAudioRecorder(false)}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 max-w-3xl mx-auto">
+                  <Button variant="ghost" size="icon">
+                    <Smile className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon">
+                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                  <Input
+                    placeholder={selectedAgent ? `Mensagem para ${selectedAgent.name}...` : "Digite uma mensagem..."}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                    className="flex-1"
+                  />
+                  {!newMessage.trim() ? (
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowAudioRecorder(true)}
+                      className="text-green-600 hover:bg-green-50 hover:text-green-700"
+                    >
+                      <Mic className="h-5 w-5" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={sendMessage} 
+                      disabled={sendingMessage}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </>
         ) : (

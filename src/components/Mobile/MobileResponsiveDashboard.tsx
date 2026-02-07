@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 // Import components
 import Home from '@/components/Dashboard/Home';
 import MyCalendar from '@/components/Dashboard/MyCalendar';
-import EmailDashboard from '@/components/Dashboard/EmailDashboard';
+import ImprovedEmailMarketing from '@/components/Dashboard/ImprovedEmailMarketing';
 import SentEmailTracker from '@/components/Dashboard/SentEmailTracker';
 import Analytics from '@/components/Dashboard/Analytics';
 import GroupedSidebarEditor from '@/components/Dashboard/GroupedSidebarEditor';
@@ -21,7 +21,7 @@ import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
 
 // New unified pages
-import UnifiedCadastros from '@/components/Dashboard/UnifiedCadastros';
+import UnifiedDatabase from '@/components/Dashboard/UnifiedDatabase';
 import UnifiedTracking from '@/components/Dashboard/UnifiedTracking';
 
 // Hub pages
@@ -75,7 +75,7 @@ const MobileResponsiveDashboard = () => {
         
         {/* Comunicação */}
         <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
-        <Route path="/email/*" element={<EmailDashboard />} />
+        <Route path="/email/*" element={<ImprovedEmailMarketing />} />
         <Route path="/email-tracker" element={<SentEmailTracker />} />
         
         {/* Produtividade */}
@@ -87,7 +87,7 @@ const MobileResponsiveDashboard = () => {
         <Route path="/fluxos" element={<FluxosBoard />} />
         
         {/* Gestão - Unified pages */}
-        <Route path="/cadastros" element={<UnifiedCadastros />} />
+        <Route path="/cadastros" element={<UnifiedDatabase />} />
         <Route path="/drive" element={<DriveManager />} />
         <Route path="/rastreamento" element={<UnifiedTracking />} />
         

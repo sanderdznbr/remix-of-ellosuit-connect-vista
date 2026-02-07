@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Calendar, TrendingUp, TrendingDown, Users, Mail, 
   FileText, Video, Bot, Eye, MousePointer, Radio,
-  ChevronDown, Settings, HelpCircle, RefreshCw
+  ChevronDown, RefreshCw, Bell, HelpCircle, MessageSquare
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +20,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface KPIData {
   clients: number;
@@ -362,10 +366,59 @@ const MainDashboard = () => {
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-gray-100">
+            
+            {/* Notifications Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hover:bg-gray-100 relative">
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
+                    3
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Notificações</span>
+                  <Badge variant="secondary" className="text-xs">3 novas</Badge>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <ScrollArea className="h-64">
+                  <div className="space-y-1 p-1">
+                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <span className="font-medium text-sm">Novo cliente cadastrado</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-4">Maria Silva foi adicionada à sua base</p>
+                      <span className="text-[10px] text-muted-foreground pl-4">Há 5 minutos</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <span className="font-medium text-sm">Email aberto</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-4">João Pereira abriu seu email de proposta</p>
+                      <span className="text-[10px] text-muted-foreground pl-4">Há 15 minutos</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                        <span className="font-medium text-sm">Reunião agendada</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-4">Nova reunião com Empresa ABC às 14h</p>
+                      <span className="text-[10px] text-muted-foreground pl-4">Há 1 hora</span>
+                    </DropdownMenuItem>
+                  </div>
+                </ScrollArea>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="justify-center text-primary cursor-pointer" onClick={() => navigate('/dashboard/settings')}>
+                  Ver todas as notificações
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button variant="ghost" size="icon" className="hover:bg-gray-100" onClick={() => navigate('/dashboard/ajuda')}>
               <HelpCircle className="h-4 w-4" />
             </Button>
           </div>
@@ -523,43 +576,47 @@ const MainDashboard = () => {
               <div className="space-y-3">
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start gap-3 h-12"
+                  className="w-full justify-start gap-3 h-12 hover:border-[#E34800]/50 hover:bg-[#E34800]/5 transition-all"
                   onClick={() => navigate('/dashboard/omni')}
                 >
-                  <div className="p-1.5 rounded-lg bg-[#E34800]/10">
-                    <Mail className="h-4 w-4 text-[#E34800]" />
+                  <div className="p-1.5 rounded-lg bg-[#E34800]">
+                    <MessageSquare className="h-4 w-4 text-white" />
                   </div>
-                  Central de Comunicação
+                  <span className="font-medium">Omni</span>
+                  <span className="text-muted-foreground text-sm ml-auto">Comunicação</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start gap-3 h-12"
+                  className="w-full justify-start gap-3 h-12 hover:border-[#007DE3]/50 hover:bg-[#007DE3]/5 transition-all"
                   onClick={() => navigate('/dashboard/flows')}
                 >
-                  <div className="p-1.5 rounded-lg bg-[#007DE3]/10">
-                    <Calendar className="h-4 w-4 text-[#007DE3]" />
+                  <div className="p-1.5 rounded-lg bg-[#007DE3]">
+                    <Calendar className="h-4 w-4 text-white" />
                   </div>
-                  Produtividade
+                  <span className="font-medium">Flow</span>
+                  <span className="text-muted-foreground text-sm ml-auto">Produtividade</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start gap-3 h-12"
+                  className="w-full justify-start gap-3 h-12 hover:border-[#00E371]/50 hover:bg-[#00E371]/5 transition-all"
                   onClick={() => navigate('/dashboard/track')}
                 >
-                  <div className="p-1.5 rounded-lg bg-[#00E371]/10">
-                    <Radio className="h-4 w-4 text-[#00E371]" />
+                  <div className="p-1.5 rounded-lg bg-[#00E371]">
+                    <Radio className="h-4 w-4 text-white" />
                   </div>
-                  Rastreamento
+                  <span className="font-medium">Track</span>
+                  <span className="text-muted-foreground text-sm ml-auto">Rastreamento</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start gap-3 h-12"
+                  className="w-full justify-start gap-3 h-12 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all"
                   onClick={() => navigate('/dashboard/cadastros')}
                 >
-                  <div className="p-1.5 rounded-lg bg-gray-100">
-                    <Users className="h-4 w-4 text-gray-600" />
+                  <div className="p-1.5 rounded-lg bg-purple-600">
+                    <Users className="h-4 w-4 text-white" />
                   </div>
-                  Gestão de Clientes
+                  <span className="font-medium">Gestão</span>
+                  <span className="text-muted-foreground text-sm ml-auto">Clientes</span>
                 </Button>
               </div>
             </CardContent>

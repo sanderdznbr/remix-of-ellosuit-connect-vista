@@ -2111,19 +2111,74 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_contacts: {
+        Row: {
+          business_name: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_business: boolean | null
+          phone_number: string
+          profile_picture: string | null
+          push_name: string | null
+          session_id: string | null
+          updated_at: string
+          wa_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_business?: boolean | null
+          phone_number: string
+          profile_picture?: string | null
+          push_name?: string | null
+          session_id?: string | null
+          updated_at?: string
+          wa_id: string
+        }
+        Update: {
+          business_name?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_business?: boolean | null
+          phone_number?: string
+          profile_picture?: string | null
+          push_name?: string | null
+          session_id?: string | null
+          updated_at?: string
+          wa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversations: {
         Row: {
           assigned_agent_id: string | null
           assigned_to: string | null
+          assigned_user_id: string | null
           company_id: string
+          contact_id: string | null
           contact_name: string | null
           contact_phone: string
           created_at: string
           id: string
           integration_id: string
+          is_archived: boolean | null
+          is_pinned: boolean | null
           labels: string[] | null
           last_message: string | null
           last_message_at: string | null
+          notes: string | null
           pipeline_stage: string | null
           profile_picture: string | null
           session_id: string | null
@@ -2134,15 +2189,20 @@ export type Database = {
         Insert: {
           assigned_agent_id?: string | null
           assigned_to?: string | null
+          assigned_user_id?: string | null
           company_id: string
+          contact_id?: string | null
           contact_name?: string | null
           contact_phone: string
           created_at?: string
           id?: string
           integration_id: string
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
           labels?: string[] | null
           last_message?: string | null
           last_message_at?: string | null
+          notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
           session_id?: string | null
@@ -2153,15 +2213,20 @@ export type Database = {
         Update: {
           assigned_agent_id?: string | null
           assigned_to?: string | null
+          assigned_user_id?: string | null
           company_id?: string
+          contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string
           created_at?: string
           id?: string
           integration_id?: string
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
           labels?: string[] | null
           last_message?: string | null
           last_message_at?: string | null
+          notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
           session_id?: string | null
@@ -2175,6 +2240,13 @@ export type Database = {
             columns: ["assigned_agent_id"]
             isOneToOne: false
             referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -2238,13 +2310,19 @@ export type Database = {
           content: string | null
           conversation_id: string | null
           created_at: string
+          delivered_at: string | null
           from_me: boolean
           id: string
+          is_forwarded: boolean | null
+          media_caption: string | null
           media_type: string | null
           media_url: string | null
           message_id: string | null
           message_type: string
           metadata: Json | null
+          quoted_message_id: string | null
+          reaction: string | null
+          read_at: string | null
           recipient_name: string | null
           recipient_phone: string
           sender_name: string | null
@@ -2252,19 +2330,26 @@ export type Database = {
           session_id: string
           status: string
           timestamp: string
+          wa_message_id: string | null
         }
         Insert: {
           company_id: string
           content?: string | null
           conversation_id?: string | null
           created_at?: string
+          delivered_at?: string | null
           from_me?: boolean
           id?: string
+          is_forwarded?: boolean | null
+          media_caption?: string | null
           media_type?: string | null
           media_url?: string | null
           message_id?: string | null
           message_type?: string
           metadata?: Json | null
+          quoted_message_id?: string | null
+          reaction?: string | null
+          read_at?: string | null
           recipient_name?: string | null
           recipient_phone: string
           sender_name?: string | null
@@ -2272,19 +2357,26 @@ export type Database = {
           session_id: string
           status?: string
           timestamp?: string
+          wa_message_id?: string | null
         }
         Update: {
           company_id?: string
           content?: string | null
           conversation_id?: string | null
           created_at?: string
+          delivered_at?: string | null
           from_me?: boolean
           id?: string
+          is_forwarded?: boolean | null
+          media_caption?: string | null
           media_type?: string | null
           media_url?: string | null
           message_id?: string | null
           message_type?: string
           metadata?: Json | null
+          quoted_message_id?: string | null
+          reaction?: string | null
+          read_at?: string | null
           recipient_name?: string | null
           recipient_phone?: string
           sender_name?: string | null
@@ -2292,6 +2384,7 @@ export type Database = {
           session_id?: string
           status?: string
           timestamp?: string
+          wa_message_id?: string | null
         }
         Relationships: [
           {
@@ -2319,6 +2412,7 @@ export type Database = {
       }
       whatsapp_sessions: {
         Row: {
+          baileys_server_url: string | null
           company_id: string
           connected_at: string | null
           created_at: string
@@ -2329,13 +2423,17 @@ export type Database = {
           phone_name: string | null
           phone_number: string | null
           profile_picture: string | null
+          push_name: string | null
           qr_code: string | null
+          session_data: Json | null
           settings: Json | null
           status: string
           updated_at: string
           user_id: string
+          webhook_secret: string | null
         }
         Insert: {
+          baileys_server_url?: string | null
           company_id: string
           connected_at?: string | null
           created_at?: string
@@ -2346,13 +2444,17 @@ export type Database = {
           phone_name?: string | null
           phone_number?: string | null
           profile_picture?: string | null
+          push_name?: string | null
           qr_code?: string | null
+          session_data?: Json | null
           settings?: Json | null
           status?: string
           updated_at?: string
           user_id: string
+          webhook_secret?: string | null
         }
         Update: {
+          baileys_server_url?: string | null
           company_id?: string
           connected_at?: string | null
           created_at?: string
@@ -2363,11 +2465,14 @@ export type Database = {
           phone_name?: string | null
           phone_number?: string | null
           profile_picture?: string | null
+          push_name?: string | null
           qr_code?: string | null
+          session_data?: Json | null
           settings?: Json | null
           status?: string
           updated_at?: string
           user_id?: string
+          webhook_secret?: string | null
         }
         Relationships: [
           {
@@ -2375,6 +2480,44 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_webhook_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
             referencedColumns: ["id"]
           },
         ]

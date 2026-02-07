@@ -2,3 +2,9 @@ project_id = "jwddiyuezqrpuakazvgg"
 
 [functions.realtime-transcription]
 verify_jwt = false
+
+[functions.whatsapp-api]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false

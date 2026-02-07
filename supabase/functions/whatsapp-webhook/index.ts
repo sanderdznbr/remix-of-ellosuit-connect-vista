@@ -520,11 +520,19 @@ serve(async (req) => {
           
           // Profile picture from enriched data
           const profilePicture = msg.profilePicture || msg.senderProfilePic || null;
-          // IMPORTANT: Only use pushName for contact name if this is an INCOMING message
-          // For outgoing messages (fromMe=true), pushName is the session owner's name, not the contact's
-          const contactName = !fromMe 
-            ? (msg.pushName || msg.senderName || phoneNumber) 
-            : phoneNumber;
+          
+          // IMPORTANT: For groups, use group name - NOT sender's name
+          // For individual chats, use contact's pushName (only for incoming messages)
+          let contactName = phoneNumber;
+          if (isGroup) {
+            // Groups: use group name/subject from server v3.1.0+
+            contactName = msg.groupName || msg.groupSubject || msg.subject || 
+                          msg.groupMetadata?.subject || phoneNumber;
+            console.log(`[GROUP] Name: ${contactName}`);
+          } else if (!fromMe) {
+            // Individual incoming: use sender's pushName
+            contactName = msg.pushName || msg.senderName || phoneNumber;
+          }
           
           // IMPROVED: Find conversation by company_id + contact_phone first (consolidates across sessions)
           let { data: conversation } = await supabase

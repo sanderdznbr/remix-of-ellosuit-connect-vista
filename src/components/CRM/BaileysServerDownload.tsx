@@ -17,11 +17,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.1.0 ==========
+    // ========== PACKAGE.JSON v3.2.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.1.0",
-  "description": "Servidor Baileys com suporte a mídia para WhatsApp CRM",
+  "version": "3.2.0",
+  "description": "Servidor Baileys com suporte a mídia e grupos para WhatsApp CRM",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -57,16 +57,16 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.1.0 - Suporte a Mídias e Grupos
+    const readme = `# 🚀 Baileys Server v3.2.0 - Grupos e Mídias
 
-## ✅ Novidades v3.1.0
+## ✅ Novidades v3.2.0
 
-### Mudanças v3.1.0:
-- ✅ **Suporte Completo a Grupos** - Identifica quem enviou cada mensagem
+### Mudanças v3.2.0:
+- ✅ **Nome do Grupo Correto** - Busca metadados do grupo para exibir nome real
+- ✅ **Identificação de Remetentes** - Mostra quem enviou cada mensagem nos grupos
 - ✅ **Suporte a Mídias** - Imagens, vídeos, áudios, documentos e stickers
 - ✅ **Upload para Supabase Storage** - Mídias são salvas no bucket whatsapp-media
 - ✅ **Retry em Downloads** - 3 tentativas para download de mídias
-- ✅ **Melhor Identificação de Contatos** - Nome e telefone do remetente em grupos
 
 ### Tipos de Mídia Suportados:
 | Tipo | Extensão | Descrição |
@@ -570,14 +570,26 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
       // Extract sender info for groups
       let senderPhone = '';
       let senderName = '';
+      let groupName = '';
       
-      if (isGroup && !fromMe) {
-        // In groups, participant contains the actual sender's JID
-        const participantJid = msg.key.participant;
-        if (participantJid) {
-          senderPhone = extractPhoneFromJid(participantJid) || '';
-          senderName = msg.pushName || '';
-          console.log(\`👥 Group message from: \${senderName} (\${senderPhone})\`);
+      if (isGroup) {
+        // Fetch group metadata to get the group name
+        try {
+          const groupMetadata = await socket.groupMetadata(remoteJid);
+          groupName = groupMetadata?.subject || '';
+          console.log(\`👥 Group: \${groupName}\`);
+        } catch (e) {
+          console.log(\`⚠️ Could not fetch group metadata for \${remoteJid}\`);
+        }
+        
+        if (!fromMe) {
+          // In groups, participant contains the actual sender's JID
+          const participantJid = msg.key.participant;
+          if (participantJid) {
+            senderPhone = extractPhoneFromJid(participantJid) || '';
+            senderName = msg.pushName || '';
+            console.log(\`👤 Sender: \${senderName} (\${senderPhone})\`);
+          }
         }
       } else if (!fromMe) {
         // Individual chat - sender is the contact
@@ -628,6 +640,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
             message: msg.message,
             messageTimestamp: msg.messageTimestamp,
             pushName: msg.pushName,
+            // Group info
+            groupName,
+            isGroup,
             // Sender info (for groups)
             senderPhone,
             senderName,
@@ -687,7 +702,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '3.1.0',
+    version: '3.2.0',
     sessions: sessions.size,
     mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
     timestamp: new Date().toISOString()

@@ -150,6 +150,49 @@ const WhatsAppCRM: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, agentChatMessages]);
 
+  // Polling for popup messages when popup is open
+  useEffect(() => {
+    if (!showConversationPopup || !popupConversation || !companyId) return;
+    
+    const refreshPopupMessages = async () => {
+      const { data: convs } = await supabase
+        .from('whatsapp_conversations')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('contact_phone', popupConversation.contact_phone);
+      
+      if (convs && convs.length > 0) {
+        const conversationIds = convs.map(c => c.id);
+        const { data } = await supabase
+          .from('whatsapp_messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .order('timestamp', { ascending: true })
+          .limit(200);
+        
+        const uniqueMessages = new Map<string, WhatsAppMessage>();
+        (data || []).forEach(m => {
+          const key = m.wa_message_id || m.id;
+          if (!uniqueMessages.has(key)) {
+            uniqueMessages.set(key, { ...m, created_at: m.timestamp || m.created_at });
+          }
+        });
+        
+        // Only update if changed
+        const newMsgs = Array.from(uniqueMessages.values());
+        setPopupMessages(prev => {
+          const prevIds = prev.map(m => m.id).join(',');
+          const newIds = newMsgs.map(m => m.id).join(',');
+          if (prevIds === newIds) return prev;
+          return newMsgs;
+        });
+      }
+    };
+    
+    const interval = setInterval(refreshPopupMessages, 2000);
+    return () => clearInterval(interval);
+  }, [showConversationPopup, popupConversation?.contact_phone, companyId]);
+
   // Get company ID
   useEffect(() => {
     const getCompanyId = async () => {
@@ -635,33 +678,14 @@ const WhatsAppCRM: React.FC = () => {
     setNewMessage('');
     
     try {
-      const tempMessage: WhatsAppMessage = {
-        id: Date.now().toString(),
-        conversation_id: selectedConversation.id,
-        content: messageContent,
-        from_me: true,
-        status: 'sending',
-        created_at: new Date().toISOString()
-      };
-      
-      const updatedMessages = [...messages, tempMessage];
-      setMessages(updatedMessages);
-      
-      // Update last message in conversation
-      setConversations(prev => prev.map(c => 
-        c.id === selectedConversation.id 
-          ? { ...c, last_message: messageContent, last_message_at: new Date().toISOString() }
-          : c
-      ));
-      
       // Check if this is a real conversation with a connected session
       const connectedSession = sessions.find(s => 
         s.id === selectedConversation.session_id && s.status === 'connected'
       );
       
       if (connectedSession && !selectedConversation.is_demo) {
-        // Send via real WhatsApp API
-        const { data, error } = await supabase.functions.invoke('whatsapp-api', {
+        // Send via real WhatsApp API - DON'T add temp message, it will come from DB
+        const { error } = await supabase.functions.invoke('whatsapp-api', {
           body: {
             action: 'send_message',
             sessionId: connectedSession.id,
@@ -672,21 +696,26 @@ const WhatsAppCRM: React.FC = () => {
         
         if (error) throw error;
         
-        // Immediately refetch messages from DB to ensure persistence
+        // Immediately refetch messages from DB
         await loadMessagesByPhone(selectedConversation.contact_phone);
-        
-        // Also reload conversations to update last message
         await loadConversations();
       } else {
-        // No active session - show warning
-        toast({ 
-          title: 'Atenção', 
-          description: 'Conecte um WhatsApp para enviar mensagens', 
-          variant: 'destructive' 
-        });
-        // Update temp message to sent (local only)
-        setMessages(prev => prev.map(m => 
-          m.id === tempMessage.id ? { ...m, status: 'sent' } : m
+        // Demo mode or no session - add temp message locally only
+        const tempMessage: WhatsAppMessage = {
+          id: `temp-${Date.now()}`,
+          conversation_id: selectedConversation.id,
+          content: messageContent,
+          from_me: true,
+          status: 'sent',
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, tempMessage]);
+        
+        // Update conversation in list
+        setConversations(prev => prev.map(c => 
+          c.contact_phone === selectedConversation.contact_phone 
+            ? { ...c, last_message: messageContent, last_message_at: new Date().toISOString() }
+            : c
         ));
       }
     } catch (e: any) {
@@ -904,16 +933,39 @@ const WhatsAppCRM: React.FC = () => {
           conversations={filteredConversations}
           labels={labels}
           columns={kanbanColumns}
-          onSelectConversation={(conv) => {
+          onSelectConversation={async (conv) => {
             setPopupConversation(conv);
-            // Load messages for popup
-            supabase
-              .from('whatsapp_messages')
-              .select('*')
-              .eq('conversation_id', conv.id)
-              .order('created_at', { ascending: true })
-              .limit(100)
-              .then(({ data }) => setPopupMessages(data || []));
+            
+            // Load messages from ALL conversations with same phone
+            const { data: convs } = await supabase
+              .from('whatsapp_conversations')
+              .select('id')
+              .eq('company_id', companyId)
+              .eq('contact_phone', conv.contact_phone);
+            
+            if (convs && convs.length > 0) {
+              const conversationIds = convs.map(c => c.id);
+              const { data } = await supabase
+                .from('whatsapp_messages')
+                .select('*')
+                .in('conversation_id', conversationIds)
+                .order('timestamp', { ascending: true })
+                .limit(200);
+              
+              // Deduplicate by wa_message_id
+              const uniqueMessages = new Map<string, WhatsAppMessage>();
+              (data || []).forEach(m => {
+                const key = m.wa_message_id || m.id;
+                if (!uniqueMessages.has(key)) {
+                  uniqueMessages.set(key, {
+                    ...m,
+                    created_at: m.timestamp || m.created_at
+                  });
+                }
+              });
+              setPopupMessages(Array.from(uniqueMessages.values()));
+            }
+            
             setShowConversationPopup(true);
           }}
           onSaveLead={openSaveLeadModal}
@@ -1460,13 +1512,18 @@ const WhatsAppCRM: React.FC = () => {
       {/* Conversation Popup (for Kanban view) */}
       <ConversationPopup
         open={showConversationPopup}
-        onOpenChange={setShowConversationPopup}
+        onOpenChange={(open) => {
+          setShowConversationPopup(open);
+          if (!open) setPopupConversation(null);
+        }}
         conversation={popupConversation}
         messages={popupMessages}
         labels={labels}
-        onSendMessage={(message) => {
-          // Demo handling
-          if (popupConversation?.is_demo || popupConversation?.id.startsWith('demo-')) {
+        onSendMessage={async (message) => {
+          if (!popupConversation) return;
+          
+          // Check if demo
+          if (popupConversation.is_demo || popupConversation.id.startsWith('demo-')) {
             const newMsg: WhatsAppMessage = {
               id: `demo-msg-${Date.now()}`,
               conversation_id: popupConversation.id,
@@ -1476,6 +1533,62 @@ const WhatsAppCRM: React.FC = () => {
               created_at: new Date().toISOString()
             };
             setPopupMessages(prev => [...prev, newMsg]);
+            return;
+          }
+          
+          // Real message - find connected session
+          const connectedSession = sessions.find(s => 
+            s.id === popupConversation.session_id && s.status === 'connected'
+          ) || sessions.find(s => s.status === 'connected');
+          
+          if (connectedSession) {
+            setSendingMessage(true);
+            try {
+              const { error } = await supabase.functions.invoke('whatsapp-api', {
+                body: {
+                  action: 'send_message',
+                  sessionId: connectedSession.id,
+                  phone: popupConversation.contact_phone,
+                  message
+                }
+              });
+              
+              if (error) throw error;
+              
+              // Reload messages after sending
+              const { data: convs } = await supabase
+                .from('whatsapp_conversations')
+                .select('id')
+                .eq('company_id', companyId)
+                .eq('contact_phone', popupConversation.contact_phone);
+              
+              if (convs && convs.length > 0) {
+                const conversationIds = convs.map(c => c.id);
+                const { data } = await supabase
+                  .from('whatsapp_messages')
+                  .select('*')
+                  .in('conversation_id', conversationIds)
+                  .order('timestamp', { ascending: true })
+                  .limit(200);
+                
+                const uniqueMessages = new Map<string, WhatsAppMessage>();
+                (data || []).forEach(m => {
+                  const key = m.wa_message_id || m.id;
+                  if (!uniqueMessages.has(key)) {
+                    uniqueMessages.set(key, { ...m, created_at: m.timestamp || m.created_at });
+                  }
+                });
+                setPopupMessages(Array.from(uniqueMessages.values()));
+              }
+              
+              await loadConversations();
+            } catch (e: any) {
+              toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+            } finally {
+              setSendingMessage(false);
+            }
+          } else {
+            toast({ title: 'Atenção', description: 'Conecte um WhatsApp para enviar mensagens', variant: 'destructive' });
           }
         }}
         onManageLabels={() => {

@@ -17,19 +17,19 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON - BAILEYS 6.5.0 FIXO ==========
+    // ========== PACKAGE.JSON - BAILEYS ^6.7.21 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.5.0",
+    "@whiskeysockets/baileys": "^6.7.21",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "pino": "^8.1.0",
+    "pino": "^9.6.0",
     "qrcode": "^1.5.4"
   },
   "engines": {
@@ -42,17 +42,17 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v2.6.0 - VERSÃO ESTÁVEL
+    const readme = `# 🚀 Baileys Server v2.7.0 - CONEXÃO CORRIGIDA
 
-## ⚠️ IMPORTANTE: Usa Baileys 6.5.0 (não 6.7.x)
+## ✅ Correções v2.7.0
 
-A versão 6.7.x do Baileys tem bugs conhecidos que causam desconexão 
-antes de gerar QR Code. Esta versão usa 6.5.0 que é estável.
+Esta versão corrige o erro 515 "Restart Required" que ocorria após escanear o QR Code.
 
-## Issues conhecidos no 6.7.x:
-- #2050: QR missing em 6.7.21
-- #2040: Desconexão automática em 6.7.20
-- #1914: Socket não gera QR
+### Mudanças:
+- ✅ Baileys ^6.7.21 (versão mais recente)
+- ✅ Browsers.appropriate("Desktop") - identificação correta
+- ✅ makeCacheableSignalKeyStore - gerenciamento de chaves
+- ✅ fetchLatestBaileysVersion - versão do protocolo
 
 ## Deploy no Railway
 
@@ -75,36 +75,36 @@ Nos logs do Railway, você deve ver:
 
 \`\`\`
 [BAILEYS] ✓ Módulo importado
-[BAILEYS] ✓ Versão 6.5.0 detectada
-[SESSION] Criando socket...
-[QR] ✅ QR Code gerado!
+[BAILEYS] ✓ Versão WA: x.x.xxxx
+[QR] 🎉 QR Code recebido!
+[CONNECTED] ✅ WhatsApp conectado!
 \`\`\`
 
-## Diferença para v2.5.0
+## Erro 515 "Restart Required"
 
-| Item | v2.5.0 | v2.6.0 |
-|------|--------|--------|
-| Baileys | ^6.7.9 (bugada) | 6.5.0 (estável) |
-| Configuração | 15+ opções | 4 opções |
-| makeCacheableSignalKeyStore | Sim | Não |
-| fetchLatestBaileysVersion | Sim | Não |
+Este erro ocorria porque:
+1. Faltava identificação de browser adequada
+2. Faltava makeCacheableSignalKeyStore
+3. Versão do protocolo incorreta
+
+A v2.7.0 corrige todos esses problemas.
 `;
 
-    // ========== SERVIDOR v2.6.0 - CONFIGURAÇÃO MÍNIMA ==========
+    // ========== SERVIDOR v2.7.0 - CONFIGURAÇÃO COMPLETA ==========
     const indexJs = `const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
 console.log('='.repeat(60));
-console.log('[INIT] 🚀 Baileys Server v2.6.0 iniciando...');
-console.log('[INIT] ⚠️  Usando Baileys 6.5.0 (versão estável)');
+console.log('[INIT] 🚀 Baileys Server v2.7.0 iniciando...');
+console.log('[INIT] ✅ Correção do erro 515 após scan do QR');
 console.log('[INIT] Node version:', process.version);
 console.log('[INIT] Platform:', process.platform);
 console.log('[INIT] PORT:', process.env.PORT || 3333);
 console.log('='.repeat(60));
 
-const VERSION = "v2.6.0";
+const VERSION = "v2.7.0";
 const app = express();
 
 app.use(cors());
@@ -132,6 +132,9 @@ const sessions = new Map();
 let makeWASocket = null;
 let useMultiFileAuthState = null;
 let DisconnectReason = null;
+let makeCacheableSignalKeyStore = null;
+let fetchLatestBaileysVersion = null;
+let Browsers = null;
 let QRCode = null;
 let pino = null;
 let baileysLoaded = false;
@@ -156,7 +159,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ============ CRIAR SOCKET (v2.6.0 - SIMPLIFICADO) ============
+// ============ CRIAR SOCKET (v2.7.0 - CONFIGURAÇÃO COMPLETA) ============
 async function createSocketForSession(session) {
   const { sessionId, instanceName } = session;
   const sessionPath = path.join(SESSIONS_DIR, sessionId);
@@ -204,17 +207,42 @@ async function createSocketForSession(session) {
     throw e;
   }
   
-  // ========== CRIAR SOCKET - CONFIGURAÇÃO MÍNIMA ==========
-  console.log('[SOCKET] Criando socket com config MÍNIMA...');
+  // Buscar versão do WhatsApp
+  console.log('[SOCKET] Buscando versão do WA...');
+  let version;
+  try {
+    const versionResult = await fetchLatestBaileysVersion();
+    version = versionResult.version;
+    console.log(\`[SOCKET] ✓ Versão WA: \${version.join('.')}\`);
+  } catch (e) {
+    console.log('[SOCKET] ⚠ Erro ao buscar versão, usando fallback');
+    version = [2, 3000, 1015901307];
+  }
+  
+  // ========== CRIAR SOCKET - CONFIGURAÇÃO COMPLETA ==========
+  console.log('[SOCKET] Criando socket com config COMPLETA...');
   
   const logger = pino({ level: 'silent' });
   
-  // APENAS 3 OPÇÕES - Isso é o que funciona no 6.5.0
-  const sock = makeWASocket({
+  // CONFIGURAÇÃO CORRETA para evitar erro 515
+  const socketConfig = {
+    version,
+    logger,
     printQRInTerminal: true,
-    auth: state,
-    logger: logger
-  });
+    browser: Browsers.appropriate('Desktop'),
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger)
+    },
+    syncFullHistory: false,
+    markOnlineOnConnect: true,
+    generateHighQualityLinkPreview: false,
+    getMessage: async () => undefined
+  };
+  
+  console.log('[SOCKET] Browser:', socketConfig.browser);
+  
+  const sock = makeWASocket(socketConfig);
   
   session.socket = sock;
   session.socketCreatedAt = Date.now();
@@ -321,7 +349,27 @@ async function createSocketForSession(session) {
         return;
       }
       
-      // Tentar reconectar
+      // Erro 515 = Restart Required - reconectar
+      if (statusCode === 515) {
+        console.log('[515] Restart Required - reconectando...');
+        session.retryCount++;
+        if (session.retryCount < MAX_RETRIES) {
+          session.status = 'reconnecting';
+          setTimeout(async () => {
+            try {
+              await createSocketForSession(session);
+            } catch (err) {
+              console.error('[515] Erro ao reconectar:', err.message);
+              session.status = 'failed';
+            }
+          }, 3000);
+        } else {
+          session.status = 'failed';
+        }
+        return;
+      }
+      
+      // Tentar reconectar para outros erros
       if (session.retryCount < MAX_RETRIES) {
         session.retryCount++;
         session.status = 'reconnecting';
@@ -420,7 +468,6 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     version: VERSION,
-    baileys: '6.5.0',
     sessions: sessions.size,
     baileysLoaded,
     timestamp: new Date().toISOString()
@@ -445,7 +492,6 @@ app.post('/api/instance/create', async (req, res) => {
     res.json({
       success: true,
       version: VERSION,
-      baileys: '6.5.0',
       sessionId: session.sessionId,
       instanceName: session.instanceName,
       isConnected: session.isConnected,
@@ -594,16 +640,16 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(60));
   console.log(\`🚀 [\${VERSION}] Servidor HTTP na porta \${PORT}\`);
   console.log(\`📡 Webhook: \${WEBHOOK_URL || 'Não configurada'}\`);
-  console.log(\`📦 Baileys: 6.5.0 (versão estável)\`);
+  console.log(\`📦 Baileys: ^6.7.21 (com config completa)\`);
   console.log('='.repeat(60));
   console.log('');
   loadBaileys();
 });
 
-// ============ CARREGAR BAILEYS 6.5.0 ============
+// ============ CARREGAR BAILEYS ==========
 async function loadBaileys() {
   console.log('[BAILEYS] ========================================');
-  console.log('[BAILEYS] Carregando Baileys 6.5.0...');
+  console.log('[BAILEYS] Carregando Baileys ^6.7.21...');
   console.log('[BAILEYS] ========================================');
   
   try {
@@ -613,10 +659,10 @@ async function loadBaileys() {
     pino = require('pino');
     console.log('[BAILEYS] ✓ pino');
     
-    console.log('[BAILEYS] Importando @whiskeysockets/baileys 6.5.0...');
+    console.log('[BAILEYS] Importando @whiskeysockets/baileys...');
     const baileys = await import('@whiskeysockets/baileys');
     
-    // Baileys 6.5.0 tem estrutura diferente
+    // Detectar exports
     if (typeof baileys.default === 'function') {
       makeWASocket = baileys.default;
       console.log('[BAILEYS] ✓ makeWASocket via default');
@@ -628,29 +674,31 @@ async function loadBaileys() {
       console.log('[BAILEYS] ✓ makeWASocket via named export');
     } else {
       console.log('[BAILEYS] Exports disponíveis:', Object.keys(baileys));
-      console.log('[BAILEYS] Default type:', typeof baileys.default);
-      if (baileys.default) {
-        console.log('[BAILEYS] Default keys:', Object.keys(baileys.default));
-      }
       throw new Error('makeWASocket não encontrado');
     }
     
     // Funções auxiliares
     useMultiFileAuthState = baileys.useMultiFileAuthState || baileys.default?.useMultiFileAuthState;
     DisconnectReason = baileys.DisconnectReason || baileys.default?.DisconnectReason;
+    makeCacheableSignalKeyStore = baileys.makeCacheableSignalKeyStore || baileys.default?.makeCacheableSignalKeyStore;
+    fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion || baileys.default?.fetchLatestBaileysVersion;
+    Browsers = baileys.Browsers || baileys.default?.Browsers;
     
     console.log('[BAILEYS] ✓ useMultiFileAuthState:', typeof useMultiFileAuthState);
+    console.log('[BAILEYS] ✓ makeCacheableSignalKeyStore:', typeof makeCacheableSignalKeyStore);
+    console.log('[BAILEYS] ✓ fetchLatestBaileysVersion:', typeof fetchLatestBaileysVersion);
+    console.log('[BAILEYS] ✓ Browsers:', typeof Browsers);
     console.log('[BAILEYS] ✓ DisconnectReason:', typeof DisconnectReason);
     
-    if (!useMultiFileAuthState) {
-      throw new Error('useMultiFileAuthState não encontrado');
+    if (!useMultiFileAuthState || !makeCacheableSignalKeyStore || !Browsers) {
+      throw new Error('Funções auxiliares não encontradas');
     }
     
     baileysLoaded = true;
     
     console.log('');
     console.log('[BAILEYS] ========================================');
-    console.log('[BAILEYS] ✅ BAILEYS 6.5.0 PRONTO!');
+    console.log('[BAILEYS] ✅ BAILEYS PRONTO!');
     console.log('[BAILEYS] ========================================');
     console.log('');
   } catch (err) {
@@ -703,7 +751,7 @@ process.on('unhandledRejection', (reason) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v2.6.0.zip';
+      a.download = 'baileys-server-v2.7.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -711,7 +759,7 @@ process.on('unhandledRejection', (reason) => {
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v2.6.0 com Baileys 6.5.0 (estável)'
+        description: 'Servidor v2.7.0 com correção do erro 515'
       });
       
       setIsOpen(false);
@@ -744,35 +792,35 @@ process.on('unhandledRejection', (reason) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-green-600" />
-              Servidor Baileys v2.6.0
+              Servidor Baileys v2.7.0
             </DialogTitle>
             <DialogDescription>
-              Usando Baileys 6.5.0 (versão estável comprovada)
+              Corrige erro 515 "não foi possível conectar ao dispositivo"
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
+                ✅ Correções v2.7.0
+              </h4>
+              <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                <li>📦 Baileys ^6.7.21 (versão mais recente)</li>
+                <li>🖥️ Browsers.appropriate("Desktop")</li>
+                <li>🔐 makeCacheableSignalKeyStore</li>
+                <li>📡 fetchLatestBaileysVersion</li>
+              </ul>
+            </div>
+
             <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <h4 className="font-medium text-sm text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                Por que v2.6.0?
+                Erro 515 corrigido
               </h4>
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                O Baileys 6.7.x tem bugs que causam desconexão antes de gerar QR.
-                Esta versão usa <strong>6.5.0</strong> que é estável e funciona.
+                O erro "não foi possível conectar ao dispositivo" ocorria porque faltava:
+                identificação de browser correta e gerenciamento de chaves.
               </p>
-            </div>
-
-            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <h4 className="font-medium text-sm text-green-800 dark:text-green-200 mb-2">
-                ✨ Mudanças v2.6.0
-              </h4>
-              <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                <li>📦 Baileys 6.5.0 (versão fixa, não ^)</li>
-                <li>⚡ Configuração MÍNIMA do socket</li>
-                <li>🎯 Apenas 3 opções: auth, logger, printQR</li>
-                <li>🔄 Retry simplificado (3 tentativas)</li>
-              </ul>
             </div>
 
             <div className="bg-muted rounded-lg p-4 space-y-2">
@@ -780,11 +828,11 @@ process.on('unhandledRejection', (reason) => {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  package.json (Baileys 6.5.0)
+                  package.json (Baileys ^6.7.21)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  index.js (config simplificada)
+                  index.js (config completa)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -818,7 +866,7 @@ process.on('unhandledRejection', (reason) => {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Baixar v2.6.0
+              Baixar v2.7.0
             </Button>
           </div>
         </DialogContent>

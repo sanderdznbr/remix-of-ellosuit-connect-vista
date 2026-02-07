@@ -563,7 +563,7 @@ serve(async (req) => {
                               .eq('id', conversation?.id);
                             
                             // Send the AI response via the WhatsApp server
-                            const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                            const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
@@ -737,7 +737,7 @@ serve(async (req) => {
                                 .eq('id', conversation.id);
                               
                               // Send message via WhatsApp
-                              const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/send-message`, {
+                              const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({

@@ -39,12 +39,15 @@ export const useGmail = () => {
       if (data) {
         console.log('✅ Conta Gmail encontrada:', data.id);
         
-        // Verificar se o token não expirou
+        // Verificar se o token não expirou - se expirado, tentar refresh silenciosamente
         const now = new Date();
         const expiresAt = new Date(data.expires_at);
         
-        if (now >= expiresAt) {
-          console.log('⚠️ Token Gmail expirado, removendo conta inválida...');
+        if (now >= expiresAt && data.refresh_token) {
+          console.log('⚠️ Token Gmail expirado, mas há refresh_token disponível - mantendo conexão');
+          // Não remover a conta se há refresh_token - o backend fará o refresh automaticamente
+        } else if (now >= expiresAt && !data.refresh_token) {
+          console.log('⚠️ Token Gmail expirado sem refresh_token, removendo conta...');
           try {
             await supabase
               .from('user_email_accounts')
@@ -53,12 +56,8 @@ export const useGmail = () => {
             
             setIsConnected(false);
             setEmailAccount(null);
-            
-            toast({
-              title: "Token Expirado",
-              description: "Sua conexão com Gmail expirou. Conecte novamente.",
-              variant: "destructive"
-            });
+            // Não mostrar toast aqui para evitar erro flash durante OAuth callback
+            console.log('🗑️ Conta expirada removida silenciosamente');
             return;
           } catch (deleteError) {
             console.error('❌ Erro ao deletar conta expirada:', deleteError);
@@ -190,6 +189,11 @@ export const useGmail = () => {
     const code = urlParams.get('code');
     const state = urlParams.get('state');
     const error = urlParams.get('error');
+
+    // Se não há code nem error, não fazer nada (não é um callback OAuth)
+    if (!code && !error) {
+      return;
+    }
 
     if (error) {
       console.error('❌ Erro OAuth Gmail:', error);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import JSZip from 'jszip';
@@ -17,11 +17,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.2.0 ==========
+    // ========== PACKAGE.JSON v3.3.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.2.0",
-  "description": "Servidor Baileys com suporte a mídia e grupos para WhatsApp CRM",
+  "version": "3.3.0",
+  "description": "Servidor Baileys com suporte a mídia, grupos e sincronização completa",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -57,16 +57,19 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.2.0 - Grupos e Mídias
+    const readme = `# 🚀 Baileys Server v3.3.0 - Sync Completo
 
-## ✅ Novidades v3.2.0
+## ✅ Novidades v3.3.0
 
-### Mudanças v3.2.0:
+### Principais Mudanças:
+- ✅ **SYNC COMPLETO DE HISTÓRICO** - Sincroniza todas as conversas ao conectar
+- ✅ **Handler messaging-history.set** - Recebe mensagens históricas
+- ✅ **Handler chats.set** - Recebe lista de chats inicial
+- ✅ **Processamento em batches** - Evita timeout com muitos dados
 - ✅ **Nome do Grupo Correto** - Busca metadados do grupo para exibir nome real
 - ✅ **Identificação de Remetentes** - Mostra quem enviou cada mensagem nos grupos
 - ✅ **Suporte a Mídias** - Imagens, vídeos, áudios, documentos e stickers
 - ✅ **Upload para Supabase Storage** - Mídias são salvas no bucket whatsapp-media
-- ✅ **Retry em Downloads** - 3 tentativas para download de mídias
 
 ### Tipos de Mídia Suportados:
 | Tipo | Extensão | Descrição |
@@ -82,6 +85,7 @@ sessions/
 
 ### 1. Suba para o GitHub
 - Substitua **TODOS** os arquivos (especialmente index.js!)
+- Delete a pasta \`sessions/\` se existir
 
 ### 2. No Railway
 1. New Project → Deploy from GitHub
@@ -102,11 +106,18 @@ Após conectar, você verá:
 
 \`\`\`
 ============================================
-🚀 Baileys Server v3.1.0 running on port XXXX
+🚀 Baileys Server v3.3.0 running on port XXXX
 ============================================
 📡 Webhook URL: https://...
 📸 Media Support: ✅ Enabled
+📜 History Sync: ✅ Enabled
 ============================================
+\`\`\`
+
+E ao conectar um WhatsApp:
+\`\`\`
+📋 [CHATS.SET] Syncing X chats...
+📜 [HISTORY SYNC] X chats, Y messages
 \`\`\`
 
 ## Endpoints da API
@@ -154,12 +165,13 @@ Após conectar, você verá:
 \`\`\`
 `;
 
-    // ========== SERVIDOR v3.1.0 COMPLETO ==========
+    // ========== SERVIDOR v3.3.0 COMPLETO ==========
     const indexJs = `/**
  * ============================================
- * BAILEYS SERVER v3.1.0
+ * BAILEYS SERVER v3.3.0
  * ============================================
- * Servidor completo com suporte a mídias e grupos
+ * Servidor completo com suporte a mídias, grupos
+ * e SINCRONIZAÇÃO COMPLETA de histórico
  * Para WhatsApp CRM - Lovable
  * ============================================
  */
@@ -467,7 +479,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     },
     browser: Browsers.macOS('Desktop'),
     connectTimeoutMs: 60000,
-    qrTimeout: 60000
+    qrTimeout: 60000,
+    // Enable history sync
+    syncFullHistory: true
   });
 
   session.socket = socket;
@@ -555,9 +569,13 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     }
   });
 
-  // ============== INCOMING MESSAGES ==============
+  // ============== INCOMING MESSAGES (Real-time + History) ==============
   socket.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
+    // Process both 'notify' (real-time) and 'append' (history) messages
+    // Skip only 'prepend' to avoid duplicates
+    if (type === 'prepend') return;
+    
+    console.log(\`📨 Processing \${messages.length} messages (type: \${type})\`);
 
     for (const msg of messages) {
       // Skip status broadcast
@@ -597,13 +615,13 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
         senderName = msg.pushName || '';
       }
 
-      // Process media
+      // Process media only for real-time messages (to avoid downloading old media)
       let mediaUrl = null;
       let mediaMimeType = null;
       let mediaType = null;
       let mediaCaption = getMediaCaption(msg);
 
-      if (hasMedia(msg)) {
+      if (type === 'notify' && hasMedia(msg)) {
         console.log(\`📨 Media message from \${remoteJid}\`);
         const mediaResult = await processMediaMessage(socket, msg, sessionId);
         if (mediaResult) {
@@ -611,16 +629,26 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
           mediaMimeType = mediaResult.mediaMimeType || null;
           mediaType = mediaResult.mediaType || null;
         }
+      } else if (hasMedia(msg)) {
+        // For history messages, just indicate media type without downloading
+        const message = msg.message;
+        if (message?.imageMessage) mediaType = 'image';
+        else if (message?.videoMessage) mediaType = 'video';
+        else if (message?.audioMessage) mediaType = message.audioMessage.ptt ? 'ptt' : 'audio';
+        else if (message?.documentMessage) mediaType = 'document';
+        else if (message?.stickerMessage) mediaType = 'sticker';
       } else {
         const textContent = msg.message?.conversation || 
                           msg.message?.extendedTextMessage?.text || 
                           '';
-        console.log(\`📨 Text message from \${remoteJid}: \${textContent.substring(0, 50)}...\`);
+        if (textContent) {
+          console.log(\`📨 Text message from \${remoteJid}: \${textContent.substring(0, 50)}...\`);
+        }
       }
 
       // Get sender profile picture (only for non-group individual messages)
       let senderProfilePic = null;
-      if (!isGroup) {
+      if (!isGroup && type === 'notify') {
         try {
           senderProfilePic = await socket.profilePictureUrl(remoteJid, 'image');
         } catch (e) {
@@ -652,7 +680,9 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
             mediaType,
             mediaCaption,
             // Profile
-            senderProfilePic
+            senderProfilePic,
+            // Sync type indicator
+            syncType: type
           }]
         }
       });
@@ -670,16 +700,129 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     });
   });
 
-  // Chats sync (on connect)
+  // ============== CHAT SYNC (Initial connection) ==============
   socket.ev.on('chats.set', async ({ chats }) => {
-    console.log(\`📋 Syncing \${chats.length} chats...\`);
+    console.log(\`📋 [CHATS.SET] Syncing \${chats.length} chats...\`);
+    
+    // Process in batches to avoid timeout
+    const batchSize = 50;
+    for (let i = 0; i < chats.length; i += batchSize) {
+      const batch = chats.slice(i, i + batchSize);
+      console.log(\`📋 Sending batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(chats.length/batchSize)}\`);
+      
+      await sendWebhook({
+        event: 'chats.set',
+        sessionId,
+        instanceName,
+        webhookSecret,
+        data: { 
+          chats: batch,
+          batchInfo: {
+            current: Math.floor(i/batchSize) + 1,
+            total: Math.ceil(chats.length/batchSize),
+            totalChats: chats.length
+          }
+        }
+      });
+    }
+    
+    console.log(\`✅ [CHATS.SET] Finished syncing \${chats.length} chats\`);
+  });
+
+  // ============== CHAT UPSERT (New chats during session) ==============
+  socket.ev.on('chats.upsert', async (chats) => {
+    console.log(\`📋 [CHATS.UPSERT] \${chats.length} new chats\`);
     await sendWebhook({
-      event: 'chats.set',
+      event: 'chats.upsert',
       sessionId,
       instanceName,
       webhookSecret,
       data: { chats }
     });
+  });
+
+  // ============== MESSAGE HISTORY SYNC ==============
+  socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
+    console.log(\`📜 [HISTORY SYNC] \${chats?.length || 0} chats, \${messages?.length || 0} messages, isLatest: \${isLatest}\`);
+    
+    // Send chats if available
+    if (chats && chats.length > 0) {
+      const batchSize = 50;
+      for (let i = 0; i < chats.length; i += batchSize) {
+        const batch = chats.slice(i, i + batchSize);
+        await sendWebhook({
+          event: 'chats.set',
+          sessionId,
+          instanceName,
+          webhookSecret,
+          data: { 
+            chats: batch,
+            isHistorySync: true
+          }
+        });
+      }
+    }
+    
+    // Send messages if available (in batches)
+    if (messages && messages.length > 0) {
+      console.log(\`📜 Processing \${messages.length} history messages...\`);
+      const batchSize = 100;
+      for (let i = 0; i < messages.length; i += batchSize) {
+        const batch = messages.slice(i, i + batchSize);
+        console.log(\`📜 Sending message batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(messages.length/batchSize)}\`);
+        
+        // Process each message in the batch
+        for (const msg of batch) {
+          const remoteJid = msg.key?.remoteJid;
+          if (!remoteJid || remoteJid === 'status@broadcast') continue;
+          
+          const isGroup = isGroupJid(remoteJid);
+          let groupName = '';
+          let senderPhone = '';
+          let senderName = '';
+          
+          if (isGroup && !msg.key?.fromMe) {
+            const participantJid = msg.key?.participant;
+            if (participantJid) {
+              senderPhone = extractPhoneFromJid(participantJid) || '';
+              senderName = msg.pushName || '';
+            }
+          }
+          
+          // Detect media type without downloading
+          let mediaType = null;
+          const message = msg.message;
+          if (message?.imageMessage) mediaType = 'image';
+          else if (message?.videoMessage) mediaType = 'video';
+          else if (message?.audioMessage) mediaType = message.audioMessage.ptt ? 'ptt' : 'audio';
+          else if (message?.documentMessage) mediaType = 'document';
+          else if (message?.stickerMessage) mediaType = 'sticker';
+          
+          await sendWebhook({
+            event: 'messages.upsert',
+            sessionId,
+            instanceName,
+            webhookSecret,
+            data: {
+              messages: [{
+                key: msg.key,
+                message: msg.message,
+                messageTimestamp: msg.messageTimestamp,
+                pushName: msg.pushName,
+                groupName,
+                isGroup,
+                senderPhone,
+                senderName,
+                mediaType,
+                syncType: 'history'
+              }]
+            }
+          });
+        }
+      }
+    }
+    
+    console.log(\`✅ [HISTORY SYNC] Complete\`);
   });
 
   // Contacts sync
@@ -702,7 +845,7 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '3.2.0',
+    version: '3.3.0',
     sessions: sessions.size,
     mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
     timestamp: new Date().toISOString()
@@ -887,7 +1030,7 @@ app.post('/api/message/send-media', async (req, res) => {
 // ============== START SERVER ==============
 
 async function startServer() {
-  console.log('🚀 Starting Baileys Server v3.1.0...');
+  console.log('🚀 Starting Baileys Server v3.3.0...');
   
   // Dynamic imports for ESM modules
   const baileysModule = await import('@whiskeysockets/baileys');
@@ -917,10 +1060,11 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('============================================');
-    console.log(\`🚀 Baileys Server v3.1.0 running on port \${PORT}\`);
+    console.log(\`🚀 Baileys Server v3.3.0 running on port \${PORT}\`);
     console.log('============================================');
     console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Not configured'}\`);
     console.log(\`📸 Media Support: \${supabase ? '✅ Enabled' : '❌ Disabled'}\`);
+    console.log('📜 History Sync: ✅ Enabled');
     console.log('============================================');
     console.log('');
   });
@@ -929,21 +1073,22 @@ async function startServer() {
 startServer().catch(console.error);
 `;
 
-    const envExample = `# Webhook do Supabase (Edge Function)
+    const envExample = `# Webhook do Supabase
 SUPABASE_WEBHOOK_URL=${webhookUrl}
 
-# Supabase Storage (para upload de mídias)
+# Para upload de mídias (obrigatório)
 SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
 
-# NÃO defina PORT - Railway define automaticamente
+# NÃO defina PORT no Railway!
+# PORT=3333
 `;
 
     return {
       'package.json': packageJson,
-      '.gitignore': gitignore,
       '.node-version': nodeVersion,
       'nixpacks.toml': nixpacksToml,
+      '.gitignore': gitignore,
       'README.md': readme,
       'index.js': indexJs,
       '.env.example': envExample
@@ -968,7 +1113,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.2.0.zip';
+      a.download = 'baileys-server-v3.3.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -976,7 +1121,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v3.1.0 - Com suporte a mídias e grupos'
+        description: 'Servidor v3.3.0 - Com sincronização completa de histórico'
       });
       
       setIsOpen(false);
@@ -1009,10 +1154,10 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.2.0
+              Servidor Baileys v3.3.0
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp com suporte completo a mídias e grupos para deploy no Railway
+              Servidor WhatsApp com sincronização completa de histórico para deploy no Railway
             </DialogDescription>
           </DialogHeader>
 
@@ -1021,16 +1166,20 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.2.0
+                Novidades v3.3.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-primary" />
-                  <strong>Nome do Grupo Correto</strong> - Busca metadados do grupo
+                  <History className="h-3 w-3 text-primary" />
+                  <strong>Sync Completo</strong> - Sincroniza todas as conversas ao conectar
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  <strong>messaging-history.set</strong> - Recebe histórico completo
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-3 w-3 text-primary" />
-                  <strong>Remetentes em Grupos</strong> - Mostra quem enviou cada mensagem
+                  <strong>Grupos Corretos</strong> - Nome do grupo e remetentes
                 </li>
                 <li className="flex items-center gap-2">
                   <ImageIcon className="h-3 w-3 text-primary" />
@@ -1048,11 +1197,23 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <code>package.json</code> - Dependências (Baileys 6.7.9 + Supabase)</li>
-                <li>• <code>index.js</code> - Servidor completo com suporte a mídias e grupos</li>
+                <li>• <code>index.js</code> - Servidor completo com sync de histórico</li>
                 <li>• <code>.env.example</code> - Exemplo de variáveis de ambiente</li>
                 <li>• <code>README.md</code> - Instruções de deploy detalhadas</li>
                 <li>• <code>nixpacks.toml</code> - Configuração Railway</li>
               </ul>
+            </div>
+
+            {/* Important Note */}
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h4 className="font-medium text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Importante: Atualização Necessária
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Se você já tem o servidor no Railway, <strong>substitua TODOS os arquivos</strong> (especialmente <code>index.js</code>). 
+                Delete também a pasta <code>sessions/</code> para forçar uma nova sincronização completa.
+              </p>
             </div>
 
             {/* Requirements */}
@@ -1083,7 +1244,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.2.0.zip
+                  Baixar baileys-server-v3.3.0.zip
                 </>
               )}
             </Button>

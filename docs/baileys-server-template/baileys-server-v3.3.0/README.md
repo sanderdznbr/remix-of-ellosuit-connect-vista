@@ -1,6 +1,18 @@
-# 🚀 Baileys Server v3.1.0 - Com Suporte a Mídia
+# 🚀 Baileys Server v3.3.0 - Sync Completo
 
-Servidor Baileys completo com suporte a **mídias** (imagens, áudios, vídeos, documentos) e **grupos**.
+Servidor Baileys completo com suporte a **mídias**, **grupos** e **sincronização completa de histórico**.
+
+## ✅ Novidades v3.3.0
+
+### Principais Mudanças:
+- ✅ **SYNC COMPLETO DE HISTÓRICO** - Sincroniza todas as conversas ao conectar
+- ✅ **Handler messaging-history.set** - Recebe mensagens históricas
+- ✅ **Handler chats.set** - Recebe lista de chats inicial
+- ✅ **Processamento em batches** - Evita timeout com muitos dados
+- ✅ **Nome do Grupo Correto** - Busca metadados do grupo para exibir nome real
+- ✅ **Identificação de Remetentes** - Mostra quem enviou cada mensagem nos grupos
+- ✅ **Suporte a Mídias** - Imagens, vídeos, áudios, documentos e stickers
+- ✅ **Upload para Supabase Storage** - Mídias são salvas no bucket whatsapp-media
 
 ## 📁 Arquivos
 
@@ -50,17 +62,20 @@ npm start
 Você deve ver:
 ```
 ============================================
-🚀 Baileys Server v3.1.0 running on port 3333
+🚀 Baileys Server v3.3.0 running on port XXXX
 ============================================
 📡 Webhook URL: https://...
 📸 Media Support: ✅ Enabled
+📜 History Sync: ✅ Enabled
 ============================================
 ```
 
 ## 🚀 Deploy no Railway
 
 ### 1. Crie um repositório GitHub
-Faça upload dos dois arquivos (`package.json` e `index.js`)
+Faça upload dos arquivos (`package.json` e `index.js`)
+
+**IMPORTANTE:** Se já tem o servidor, substitua TODOS os arquivos e delete a pasta `sessions/`
 
 ### 2. No Railway
 1. New Project > Deploy from GitHub repo
@@ -83,10 +98,15 @@ Copie a URL do Railway (ex: `https://baileys-server-xxx.up.railway.app`) e atual
 
 ## 📋 Funcionalidades
 
+### ✅ Sincronização Completa de Histórico
+- `chats.set` - Lista inicial de conversas ao conectar
+- `messaging-history.set` - Mensagens históricas
+- Processamento em batches para evitar timeout
+
 ### ✅ Suporte Completo a Grupos
 - Nome do remetente extraído automaticamente
 - Telefone do remetente para mensagens de grupo
-- Funciona com grupos de qualquer tamanho
+- Busca metadados do grupo para nome correto
 
 ### ✅ Suporte a Mídias
 | Tipo | Extensão | Upload automático |
@@ -97,13 +117,6 @@ Copie a URL do Railway (ex: `https://baileys-server-xxx.up.railway.app`) e atual
 | PTT (voz) | ogg | ✅ |
 | Documento | pdf, doc, etc | ✅ |
 | Sticker | webp | ✅ |
-
-### ✅ Melhorias v3.1.0
-- Retry automático para download de mídia (3 tentativas)
-- Extração correta de remetente em grupos
-- Melhor tratamento de erros
-- Logs mais detalhados
-- Suporte a envio de mídia (imagem, vídeo, áudio, documento)
 
 ## 🔗 API Endpoints
 
@@ -143,13 +156,19 @@ mediaType: 'image' | 'video' | 'audio' | 'ptt' | 'document'
 
 ## ❓ Troubleshooting
 
+### Conversas não sincronizam ao conectar
+1. Verifique os logs: deve mostrar `[CHATS.SET]` e `[HISTORY SYNC]`
+2. Se não aparecer, atualize para v3.3.0
+3. Delete a pasta `sessions/` no Railway e reconecte
+
 ### Mídias não aparecem no CRM
 1. Verifique se `SUPABASE_SERVICE_ROLE_KEY` está configurada
 2. Verifique os logs: deve mostrar "Media Support: ✅ Enabled"
 3. Confirme que o bucket `whatsapp-media` existe e é público no Supabase
 
 ### Grupos mostram remetente vazio
-- Atualize para v3.1.0 que corrige a extração de participantes
+- A v3.3.0 corrige a extração de participantes
+- Verifique os logs: deve mostrar `👥 Group:` e `👤 Sender:`
 
 ### QR Code não aparece
 - Verifique os logs do servidor

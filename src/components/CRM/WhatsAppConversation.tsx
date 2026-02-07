@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import WhatsAppMediaMessage from './WhatsAppMediaMessage';
 
 interface Message {
   id: string;
@@ -14,6 +15,9 @@ interface Message {
   content: string;
   timestamp: string;
   status: string;
+  message_type?: string;
+  media_url?: string;
+  media_caption?: string;
 }
 
 interface Conversation {
@@ -61,7 +65,10 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
           from_me: m.from_me,
           content: m.content || '',
           timestamp: m.timestamp,
-          status: m.status
+          status: m.status,
+          message_type: m.message_type || 'text',
+          media_url: m.media_url || '',
+          media_caption: m.media_caption || ''
         })) || []);
       }
       setLoading(false);
@@ -84,7 +91,10 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
           from_me: newMsg.from_me,
           content: newMsg.content || '',
           timestamp: newMsg.timestamp,
-          status: newMsg.status
+          status: newMsg.status,
+          message_type: newMsg.message_type || 'text',
+          media_url: newMsg.media_url || '',
+          media_caption: newMsg.media_caption || ''
         }]);
       })
       .subscribe();
@@ -221,7 +231,17 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
                       : 'bg-white text-gray-900'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.message_type && message.message_type !== 'text' ? (
+                    <WhatsAppMediaMessage
+                      messageType={message.message_type}
+                      content={message.content}
+                      mediaUrl={message.media_url}
+                      mediaCaption={message.media_caption}
+                      fromMe={message.from_me}
+                    />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <div className={`flex items-center gap-1 justify-end mt-1`}>
                     <span className="text-[10px] text-gray-500">
                       {formatTime(message.timestamp)}

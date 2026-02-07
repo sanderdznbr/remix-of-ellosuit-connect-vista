@@ -76,7 +76,13 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = "v1.0.0";
+console.log('='.repeat(50));
+console.log('[INIT] Baileys Server iniciando...');
+console.log('[INIT] Node version:', process.version);
+console.log('[INIT] PORT:', process.env.PORT || 3333);
+console.log('='.repeat(50));
+
+const VERSION = "v2.0.0";
 const app = express();
 
 app.use(cors());
@@ -84,23 +90,29 @@ app.use(express.json());
 
 // ============ CONFIGURAÇÃO ============
 const WEBHOOK_URL = process.env.SUPABASE_WEBHOOK_URL || '';
-const SESSIONS_DIR = path.join(__dirname, 'sessions');
+const SESSIONS_DIR = path.join(process.cwd(), 'sessions');
 
-if (!fs.existsSync(SESSIONS_DIR)) {
-  fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+console.log('[CONFIG] Webhook URL:', WEBHOOK_URL ? 'Configurada' : 'NÃO configurada');
+console.log('[CONFIG] Sessions dir:', SESSIONS_DIR);
+
+try {
+  if (!fs.existsSync(SESSIONS_DIR)) {
+    fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+    console.log('[CONFIG] Pasta sessions criada');
+  }
+} catch (err) {
+  console.error('[CONFIG] Erro ao criar pasta sessions:', err.message);
 }
 
 // ============ VARIÁVEIS GLOBAIS ============
 const sessions = new Map();
-let makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore;
-let QRCode, pino;
+let baileys = null;
+let QRCode = null;
+let pino = null;
 
 // ============ WEBHOOK ============
 async function sendWebhook(payload) {
-  if (!WEBHOOK_URL) {
-    console.log('[WEBHOOK] URL não configurada');
-    return;
-  }
+  if (!WEBHOOK_URL) return;
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -115,14 +127,18 @@ async function sendWebhook(payload) {
 
 // ============ CRIAR SESSÃO WHATSAPP ============
 async function createSession(sessionId, instanceName, webhookSecret) {
+  if (!baileys) {
+    throw new Error('Baileys não carregado ainda');
+  }
+  
   if (sessions.has(sessionId)) {
     console.log(\`[SESSION] \${instanceName} já existe\`);
     return sessions.get(sessionId);
   }
 
   const sessionPath = path.join(SESSIONS_DIR, instanceName);
-  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-  const { version } = await fetchLatestBaileysVersion();
+  const { state, saveCreds } = await baileys.useMultiFileAuthState(sessionPath);
+  const { version } = await baileys.fetchLatestBaileysVersion();
   
   console.log(\`[SESSION] Criando \${instanceName} (Baileys v\${version.join('.')})\`);
 
@@ -141,13 +157,13 @@ async function createSession(sessionId, instanceName, webhookSecret) {
 
   const logger = pino({ level: 'silent' });
   
-  const socket = makeWASocket({
+  const socket = baileys.default({
     version,
     logger,
     printQRInTerminal: true,
     auth: {
       creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger)
+      keys: baileys.makeCacheableSignalKeyStore(state.keys, logger)
     },
     browser: ['Lovable CRM', 'Chrome', '120.0.0']
   });
@@ -189,7 +205,7 @@ async function createSession(sessionId, instanceName, webhookSecret) {
     if (connection === 'close') {
       session.isConnected = false;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason?.loggedOut;
+      const shouldReconnect = statusCode !== baileys.DisconnectReason?.loggedOut;
       console.log(\`[DISCONNECTED] \${instanceName} - Reconnect: \${shouldReconnect}\`);
       await sendWebhook({
         event: 'connection.update',
@@ -236,15 +252,24 @@ async function createSession(sessionId, instanceName, webhookSecret) {
 
 // ============ ROTAS ============
 
-// Health check
+// Health check - FUNCIONA MESMO SEM BAILEYS
 app.get('/api/health', (req, res) => {
   console.log(\`[\${VERSION}] Health check\`);
-  res.json({ status: 'ok', version: VERSION, sessions: sessions.size, timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    version: VERSION, 
+    sessions: sessions.size, 
+    baileysLoaded: !!baileys,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Criar instância
 app.post('/api/instance/create', async (req, res) => {
   try {
+    if (!baileys) {
+      return res.status(503).json({ error: 'Baileys ainda carregando, aguarde...' });
+    }
     const { sessionId, instanceName, webhookSecret } = req.body;
     if (!sessionId || !instanceName) {
       return res.status(400).json({ error: 'sessionId e instanceName são obrigatórios' });
@@ -320,30 +345,55 @@ app.post('/api/message/send-text', async (req, res) => {
 });
 
 // ============ INICIAR SERVIDOR ============
-async function startServer() {
-  console.log('[INIT] Carregando módulos...');
-  
-  // Import dinâmico do Baileys (ESM)
-  const baileysModule = await import('@whiskeysockets/baileys');
-  makeWASocket = baileysModule.default;
-  useMultiFileAuthState = baileysModule.useMultiFileAuthState;
-  DisconnectReason = baileysModule.DisconnectReason;
-  fetchLatestBaileysVersion = baileysModule.fetchLatestBaileysVersion;
-  makeCacheableSignalKeyStore = baileysModule.makeCacheableSignalKeyStore;
-  
-  QRCode = require('qrcode');
-  pino = require('pino');
+const PORT = process.env.PORT || 3333;
 
-  const PORT = process.env.PORT || 3333;
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(\`🚀 [\${VERSION}] Baileys Server rodando na porta \${PORT}\`);
-    console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Não configurada'}\`);
-  });
+// Iniciar Express PRIMEIRO (antes do Baileys)
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log('='.repeat(50));
+  console.log(\`🚀 [\${VERSION}] Servidor HTTP rodando na porta \${PORT}\`);
+  console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Não configurada'}\`);
+  console.log('='.repeat(50));
+  
+  // Carregar Baileys em background (não bloqueia o servidor)
+  loadBaileys();
+});
+
+async function loadBaileys() {
+  console.log('[BAILEYS] Carregando módulos...');
+  try {
+    // Carregar dependências
+    QRCode = require('qrcode');
+    console.log('[BAILEYS] qrcode carregado ✓');
+    
+    pino = require('pino');
+    console.log('[BAILEYS] pino carregado ✓');
+    
+    // Import dinâmico do Baileys (ESM)
+    baileys = await import('@whiskeysockets/baileys');
+    console.log('[BAILEYS] @whiskeysockets/baileys carregado ✓');
+    console.log('[BAILEYS] Pronto para criar sessões!');
+  } catch (err) {
+    console.error('[BAILEYS] ERRO ao carregar:', err.message);
+    console.error('[BAILEYS] Stack:', err.stack);
+  }
 }
 
-startServer().catch(err => {
-  console.error('[FATAL] Erro ao iniciar:', err);
-  process.exit(1);
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('[SHUTDOWN] Recebido SIGTERM, fechando...');
+  server.close(() => {
+    console.log('[SHUTDOWN] Servidor fechado');
+    process.exit(0);
+  });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection:', reason);
 });
 `;
 

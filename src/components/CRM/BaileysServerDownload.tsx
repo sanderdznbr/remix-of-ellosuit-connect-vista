@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users, History } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Image as ImageIcon, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import JSZip from 'jszip';
@@ -17,11 +17,11 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const [downloading, setDownloading] = useState(false);
 
   const generateServerFiles = () => {
-    // ========== PACKAGE.JSON v3.5.0 ==========
+    // ========== PACKAGE.JSON v3.6.0 ==========
     const packageJson = `{
   "name": "baileys-server",
-  "version": "3.5.0",
-  "description": "Servidor Baileys com suporte completo a grupos, nomes de remetentes e sincronização",
+  "version": "3.6.0",
+  "description": "Servidor Baileys SEM histórico - apenas mensagens em tempo real",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -57,22 +57,26 @@ sessions/
 .env
 *.log`;
 
-    const readme = `# 🚀 Baileys Server v3.5.0 - Correção Completa de Grupos
+    const readme = `# 🚀 Baileys Server v3.6.0 - SEM Histórico
 
-## ✅ Novidades v3.5.0
+## ✅ Novidades v3.6.0
 
-### Principais Correções:
-- ✅ **NOMES DE GRUPOS CORRETOS** - Busca groupMetadata para TODOS os grupos
-- ✅ **REMETENTES EM GRUPOS** - Extrai sender_phone e sender_name corretamente
-- ✅ **CACHE DE METADADOS** - Performance otimizada com cache de 5 minutos
-- ✅ **HISTORY SYNC COMPLETO** - Sincroniza todas conversas com nomes corretos
-- ✅ **SUPORTE A MÍDIAS** - Imagens, vídeos, áudios, documentos e stickers
+### 🚫 HISTÓRICO DESABILITADO
+- **Sem conversas antigas** - Apenas mensagens novas após conexão
+- **Sem grupos antigos** - Grupos aparecem quando há nova mensagem
+- **Performance otimizada** - Conexão muito mais rápida
+
+### Principais Features:
+- ✅ **NOMES DE GRUPOS CORRETOS** - Busca groupMetadata automaticamente
+- ✅ **REMETENTES EM GRUPOS** - sender_phone e sender_name corretos
+- ✅ **FOTOS DE PERFIL** - Para contatos e grupos
+- ✅ **MÍDIAS** - Imagens, vídeos, áudios, documentos
 
 ## Deploy no Railway
 
 ### 1. Suba para o GitHub
-- Substitua **TODOS** os arquivos (especialmente index.js!)
-- **IMPORTANTE:** Delete a pasta \`sessions/\` para forçar reconexão
+- Substitua **TODOS** os arquivos
+- **IMPORTANTE:** Delete a pasta \`sessions/\` para uma nova conexão limpa
 
 ### 2. No Railway
 1. New Project → Deploy from GitHub
@@ -83,15 +87,31 @@ sessions/
    \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\` (pegar no Dashboard Supabase > Settings > API)
 
 **NÃO** defina PORT - Railway define automaticamente!
+
+## Comportamento
+
+### ✅ O que SERÁ processado:
+- Mensagens novas recebidas após conexão
+- Mensagens enviadas por você
+- Novos grupos que você é adicionado
+- Contatos que enviam mensagem pela primeira vez
+
+### ❌ O que NÃO será processado:
+- Histórico de conversas antigas
+- Mensagens anteriores à conexão
+- Grupos antigos (só aparecem quando houver nova mensagem)
 `;
 
-    // ========== SERVIDOR v3.3.0 COMPLETO ==========
+    // ========== SERVIDOR v3.6.0 COMPLETO - SEM HISTÓRICO ==========
     const indexJs = `/**
  * ============================================
- * BAILEYS SERVER v3.3.0
+ * BAILEYS SERVER v3.6.0
  * ============================================
- * Servidor completo com suporte a mídias, grupos
- * e SINCRONIZAÇÃO COMPLETA de histórico
+ * SEM HISTÓRICO - Apenas mensagens novas em tempo real
+ * - Desabilita sincronização de histórico completamente
+ * - Busca groupMetadata para nomes corretos de grupos
+ * - Extrai sender_phone corretamente do participant
+ * - Cache de metadados para performance
  * Para WhatsApp CRM - Lovable
  * ============================================
  */
@@ -113,6 +133,9 @@ app.use(express.json({ limit: '50mb' }));
 // Store sessions in memory
 const sessions = new Map();
 
+// Cache for group metadata (persists across messages)
+const groupMetadataCache = new Map();
+
 // Environment variables
 const WEBHOOK_URL = process.env.SUPABASE_WEBHOOK_URL || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
@@ -126,57 +149,47 @@ if (!fs.existsSync(SESSIONS_DIR)) {
 
 // ============== HELPERS ==============
 
-/**
- * Extract phone number from JID
- * Handles: @s.whatsapp.net, @g.us (groups), @lid (linked devices)
- */
 function extractPhoneFromJid(jid) {
   if (!jid) return null;
-  
-  // Skip LIDs (Linked IDs) - they're not real phone numbers
-  if (jid.includes('@lid')) {
-    return null;
-  }
-  
-  // Extract the number part before @ symbol
+  if (jid.includes('@lid')) return null;
   const parts = jid.split('@');
   if (parts.length < 1) return null;
-  
-  // Clean to digits only
   const digits = parts[0].replace(/\\D/g, '');
-  
-  // Validate minimum length
   if (digits.length < 8) return null;
-  
   return digits;
 }
 
-/**
- * Check if JID is a group
- */
 function isGroupJid(jid) {
   return jid?.includes('@g.us') || false;
 }
 
-/**
- * Format JID for sending messages
- */
 function formatJidForSend(phone, isGroup = false) {
   let jid = phone.replace(/\\D/g, '');
-  
   if (isGroup || phone.includes('@g.us')) {
-    // Group: use @g.us suffix
-    if (!jid.includes('@')) {
-      jid = jid + '@g.us';
-    }
+    if (!jid.includes('@')) jid = jid + '@g.us';
   } else {
-    // Individual: use @s.whatsapp.net suffix
-    if (!jid.includes('@')) {
-      jid = jid + '@s.whatsapp.net';
+    if (!jid.includes('@')) jid = jid + '@s.whatsapp.net';
+  }
+  return jid;
+}
+
+async function getGroupMetadata(socket, groupJid) {
+  if (groupMetadataCache.has(groupJid)) {
+    const cached = groupMetadataCache.get(groupJid);
+    if (Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      return cached.data;
     }
   }
-  
-  return jid;
+  try {
+    const metadata = await socket.groupMetadata(groupJid);
+    if (metadata) {
+      groupMetadataCache.set(groupJid, { data: metadata, timestamp: Date.now() });
+      return metadata;
+    }
+  } catch (e) {
+    console.log(\`⚠️ Could not fetch group metadata for \${groupJid}: \${e.message}\`);
+  }
+  return null;
 }
 
 // ============== SUPABASE STORAGE ==============
@@ -186,32 +199,20 @@ async function uploadMediaToSupabase(buffer, sessionId, mediaType, extension) {
     console.log('⚠️ Supabase not configured for media upload');
     return null;
   }
-
   try {
     const timestamp = Date.now();
     const hash = crypto.randomBytes(8).toString('hex');
     const fileName = \`\${sessionId}/\${mediaType}/\${timestamp}-\${hash}.\${extension}\`;
-
     const mimeType = mime.lookup(extension) || 'application/octet-stream';
-
-    console.log(\`📤 Uploading media to Supabase: \${fileName} (\${mimeType})\`);
-
+    console.log(\`📤 Uploading media to Supabase: \${fileName}\`);
     const { data, error } = await supabase.storage
       .from('whatsapp-media')
-      .upload(fileName, buffer, {
-        contentType: mimeType,
-        upsert: false
-      });
-
+      .upload(fileName, buffer, { contentType: mimeType, upsert: false });
     if (error) {
       console.error('❌ Supabase upload error:', error.message);
       return null;
     }
-
-    const { data: urlData } = supabase.storage
-      .from('whatsapp-media')
-      .getPublicUrl(fileName);
-
+    const { data: urlData } = supabase.storage.from('whatsapp-media').getPublicUrl(fileName);
     console.log(\`✅ Media uploaded: \${urlData.publicUrl}\`);
     return { url: urlData.publicUrl, mimeType };
   } catch (error) {
@@ -226,81 +227,48 @@ async function processMediaMessage(socket, msg, sessionId) {
   try {
     const message = msg.message;
     if (!message) return null;
-
     let mediaType = null;
     let mediaMessage = null;
     let extension = '';
-
     if (message.imageMessage) {
-      mediaType = 'image';
-      mediaMessage = message.imageMessage;
-      extension = 'jpg';
+      mediaType = 'image'; mediaMessage = message.imageMessage; extension = 'jpg';
     } else if (message.videoMessage) {
-      mediaType = 'video';
-      mediaMessage = message.videoMessage;
-      extension = 'mp4';
+      mediaType = 'video'; mediaMessage = message.videoMessage; extension = 'mp4';
     } else if (message.audioMessage) {
       mediaType = message.audioMessage.ptt ? 'ptt' : 'audio';
       mediaMessage = message.audioMessage;
       extension = message.audioMessage.ptt ? 'ogg' : 'mp3';
     } else if (message.documentMessage) {
-      mediaType = 'document';
-      mediaMessage = message.documentMessage;
-      // Get extension from filename or default to pdf
+      mediaType = 'document'; mediaMessage = message.documentMessage;
       const fileName = mediaMessage.fileName || '';
       extension = fileName.split('.').pop() || 'pdf';
     } else if (message.stickerMessage) {
-      mediaType = 'sticker';
-      mediaMessage = message.stickerMessage;
-      extension = 'webp';
+      mediaType = 'sticker'; mediaMessage = message.stickerMessage; extension = 'webp';
     }
-
     if (!mediaType || !mediaMessage) return null;
-
     console.log(\`📥 Downloading \${mediaType} media...\`);
-
-    // Download media with retry
     let buffer = null;
     let retries = 3;
-    
     while (retries > 0 && !buffer) {
       try {
-        buffer = await downloadMediaMessage(
-          msg,
-          'buffer',
-          {},
-          {
-            logger: console,
-            reuploadRequest: socket.updateMediaMessage
-          }
-        );
+        buffer = await downloadMediaMessage(msg, 'buffer', {}, {
+          logger: console, reuploadRequest: socket.updateMediaMessage
+        });
       } catch (downloadError) {
         console.log(\`⚠️ Download attempt failed, \${retries - 1} retries left...\`);
         retries--;
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-
     if (!buffer) {
       console.error('❌ Failed to download media after all retries');
-      return { mediaType }; // Return type but no URL
+      return { mediaType };
     }
-
     console.log(\`✅ Media downloaded: \${buffer.length} bytes\`);
-
-    // Upload to Supabase
     const uploadResult = await uploadMediaToSupabase(buffer, sessionId, mediaType, extension);
-    
     if (uploadResult) {
-      return {
-        mediaUrl: uploadResult.url,
-        mediaMimeType: uploadResult.mimeType,
-        mediaType
-      };
+      return { mediaUrl: uploadResult.url, mediaMimeType: uploadResult.mimeType, mediaType };
     }
-
     return { mediaType };
   } catch (error) {
     console.error('❌ Error processing media:', error.message);
@@ -311,23 +279,13 @@ async function processMediaMessage(socket, msg, sessionId) {
 function hasMedia(msg) {
   const message = msg.message;
   if (!message) return false;
-  return !!(
-    message.imageMessage ||
-    message.videoMessage ||
-    message.audioMessage ||
-    message.documentMessage ||
-    message.stickerMessage
-  );
+  return !!(message.imageMessage || message.videoMessage || message.audioMessage || message.documentMessage || message.stickerMessage);
 }
 
 function getMediaCaption(msg) {
   const message = msg.message;
   if (!message) return '';
-  return message.imageMessage?.caption ||
-         message.videoMessage?.caption ||
-         message.documentMessage?.caption ||
-         message.documentMessage?.fileName ||
-         '';
+  return message.imageMessage?.caption || message.videoMessage?.caption || message.documentMessage?.caption || message.documentMessage?.fileName || '';
 }
 
 // ============== WEBHOOK ==============
@@ -337,17 +295,12 @@ async function sendWebhook(payload) {
     console.log('⚠️ No webhook URL configured');
     return;
   }
-
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-webhook-secret': payload.webhookSecret || ''
-      },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': payload.webhookSecret || '' },
       body: JSON.stringify(payload)
     });
-    
     if (response.ok) {
       console.log(\`📤 Webhook sent: \${payload.event}\`);
     } else {
@@ -365,117 +318,65 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     console.log(\`ℹ️ Session \${instanceName} already exists\`);
     return sessions.get(sessionId);
   }
-
   const sessionPath = path.join(SESSIONS_DIR, instanceName);
-
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
-
   console.log(\`📱 Creating session: \${instanceName} (Baileys v\${version.join('.')})\`);
+  console.log(\`🚫 History sync: DISABLED - Only real-time messages will be processed\`);
 
   const session = {
-    sessionId,
-    instanceName,
-    socket: null,
-    webhookSecret,
-    qrCode: null,
-    isConnected: false,
-    phoneNumber: null,
-    pushName: null,
-    profilePicture: null
+    sessionId, instanceName, socket: null, webhookSecret,
+    qrCode: null, isConnected: false, phoneNumber: null, pushName: null, profilePicture: null
   };
-
   sessions.set(sessionId, session);
 
   const logger = pino({ level: 'silent' });
 
   const socket = makeWASocket({
-    version,
-    logger,
-    printQRInTerminal: true,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger)
-    },
+    version, logger, printQRInTerminal: true,
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
     browser: Browsers.macOS('Desktop'),
     connectTimeoutMs: 60000,
     qrTimeout: 60000,
-    // Enable history sync
-    syncFullHistory: true
+    // ============== v3.6.0: DISABLE HISTORY SYNC ==============
+    syncFullHistory: false,
+    shouldSyncHistoryMessage: () => false,
+    fireInitQueries: false
   });
 
   session.socket = socket;
-
-  // Save credentials
   socket.ev.on('creds.update', saveCreds);
 
   // Connection updates
   socket.ev.on('connection.update', async (update) => {
     const { qr, connection, lastDisconnect } = update;
-
     if (qr) {
       session.qrCode = await QRCode.toDataURL(qr);
       console.log(\`📱 QR Code generated for \${instanceName}\`);
-
-      await sendWebhook({
-        event: 'qr.update',
-        sessionId,
-        instanceName,
-        webhookSecret,
-        data: { qrCode: session.qrCode }
-      });
+      await sendWebhook({ event: 'qr.update', sessionId, instanceName, webhookSecret, data: { qrCode: session.qrCode } });
     }
-
     if (connection === 'open') {
       session.isConnected = true;
       session.qrCode = null;
-
       const user = socket.user;
       if (user) {
         session.phoneNumber = user.id.split(':')[0].replace('@s.whatsapp.net', '');
         session.pushName = user.name || user.notify || null;
-
-        // Get profile picture
-        try {
-          session.profilePicture = await socket.profilePictureUrl(user.id, 'image');
-        } catch (e) {
-          session.profilePicture = null;
-        }
+        try { session.profilePicture = await socket.profilePictureUrl(user.id, 'image'); } catch (e) { session.profilePicture = null; }
       }
-
       console.log(\`✅ \${instanceName} connected! Phone: \${session.phoneNumber}\`);
-
+      console.log(\`🚫 History sync disabled - Only new messages will appear\`);
       await sendWebhook({
-        event: 'connection.update',
-        sessionId,
-        instanceName,
-        webhookSecret,
-        data: {
-          connection: 'open',
-          isConnected: true,
-          phoneNumber: session.phoneNumber,
-          pushName: session.pushName,
-          profilePicture: session.profilePicture
-        }
+        event: 'connection.update', sessionId, instanceName, webhookSecret,
+        data: { connection: 'open', isConnected: true, phoneNumber: session.phoneNumber, pushName: session.pushName, profilePicture: session.profilePicture }
       });
     }
-
     if (connection === 'close') {
       session.isConnected = false;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason?.loggedOut;
-
       console.log(\`❌ \${instanceName} disconnected. Code: \${statusCode}. Reconnect: \${shouldReconnect}\`);
-
-      await sendWebhook({
-        event: 'connection.update',
-        sessionId,
-        instanceName,
-        webhookSecret,
-        data: { connection: 'close', isConnected: false, statusCode }
-      });
-
-      // Quick reconnect for 515 (restartRequired)
+      await sendWebhook({ event: 'connection.update', sessionId, instanceName, webhookSecret, data: { connection: 'close', isConnected: false, statusCode } });
       if (statusCode === 515) {
         console.log('⚡ Quick reconnect for 515...');
         sessions.delete(sessionId);
@@ -489,59 +390,52 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
     }
   });
 
-  // ============== INCOMING MESSAGES (Real-time + History) ==============
+  // ============== v3.6.0: ONLY REAL-TIME MESSAGES ==============
   socket.ev.on('messages.upsert', async ({ messages, type }) => {
-    // Process both 'notify' (real-time) and 'append' (history) messages
-    // Skip only 'prepend' to avoid duplicates
-    if (type === 'prepend') return;
-    
-    console.log(\`📨 Processing \${messages.length} messages (type: \${type})\`);
+    // CRITICAL: Only process 'notify' (real-time messages)
+    if (type !== 'notify') {
+      console.log(\`⏭️ Skipping \${messages.length} messages (type: \${type}) - only real-time messages are processed\`);
+      return;
+    }
+    console.log(\`📨 Processing \${messages.length} REAL-TIME messages\`);
 
     for (const msg of messages) {
-      // Skip status broadcast
       if (msg.key.remoteJid === 'status@broadcast') continue;
-
       const remoteJid = msg.key.remoteJid;
       const fromMe = msg.key.fromMe || false;
       const isGroup = isGroupJid(remoteJid);
 
-      // Extract sender info for groups
       let senderPhone = '';
       let senderName = '';
       let groupName = '';
+      let groupProfilePic = null;
       
       if (isGroup) {
-        // Fetch group metadata to get the group name
-        try {
-          const groupMetadata = await socket.groupMetadata(remoteJid);
-          groupName = groupMetadata?.subject || '';
-          console.log(\`👥 Group: \${groupName}\`);
-        } catch (e) {
-          console.log(\`⚠️ Could not fetch group metadata for \${remoteJid}\`);
+        const groupMetadata = await getGroupMetadata(socket, remoteJid);
+        if (groupMetadata) {
+          groupName = groupMetadata.subject || '';
+          console.log(\`👥 Group: "\${groupName}" (\${remoteJid})\`);
+          try { groupProfilePic = await socket.profilePictureUrl(remoteJid, 'image'); } catch (e) {}
         }
-        
         if (!fromMe) {
-          // In groups, participant contains the actual sender's JID
           const participantJid = msg.key.participant;
           if (participantJid) {
             senderPhone = extractPhoneFromJid(participantJid) || '';
             senderName = msg.pushName || '';
-            console.log(\`👤 Sender: \${senderName} (\${senderPhone})\`);
+            console.log(\`👤 Sender: "\${senderName}" (\${senderPhone})\`);
           }
         }
       } else if (!fromMe) {
-        // Individual chat - sender is the contact
         senderPhone = extractPhoneFromJid(remoteJid) || '';
         senderName = msg.pushName || '';
       }
 
-      // Process media only for real-time messages (to avoid downloading old media)
       let mediaUrl = null;
       let mediaMimeType = null;
       let mediaType = null;
       let mediaCaption = getMediaCaption(msg);
 
-      if (type === 'notify' && hasMedia(msg)) {
+      if (hasMedia(msg)) {
         console.log(\`📨 Media message from \${remoteJid}\`);
         const mediaResult = await processMediaMessage(socket, msg, sessionId);
         if (mediaResult) {
@@ -549,211 +443,69 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
           mediaMimeType = mediaResult.mediaMimeType || null;
           mediaType = mediaResult.mediaType || null;
         }
-      } else if (hasMedia(msg)) {
-        // For history messages, just indicate media type without downloading
-        const message = msg.message;
-        if (message?.imageMessage) mediaType = 'image';
-        else if (message?.videoMessage) mediaType = 'video';
-        else if (message?.audioMessage) mediaType = message.audioMessage.ptt ? 'ptt' : 'audio';
-        else if (message?.documentMessage) mediaType = 'document';
-        else if (message?.stickerMessage) mediaType = 'sticker';
-      } else {
-        const textContent = msg.message?.conversation || 
-                          msg.message?.extendedTextMessage?.text || 
-                          '';
-        if (textContent) {
-          console.log(\`📨 Text message from \${remoteJid}: \${textContent.substring(0, 50)}...\`);
-        }
       }
 
-      // Get sender profile picture (only for non-group individual messages)
       let senderProfilePic = null;
-      if (!isGroup && type === 'notify') {
-        try {
-          senderProfilePic = await socket.profilePictureUrl(remoteJid, 'image');
-        } catch (e) {
-          // Profile picture not available
-        }
+      if (!isGroup) {
+        try { senderProfilePic = await socket.profilePictureUrl(remoteJid, 'image'); } catch (e) {}
       }
 
-      // Send webhook with all data
       await sendWebhook({
-        event: 'messages.upsert',
-        sessionId,
-        instanceName,
-        webhookSecret,
+        event: 'messages.upsert', sessionId, instanceName, webhookSecret,
         data: {
           messages: [{
-            key: msg.key,
-            message: msg.message,
-            messageTimestamp: msg.messageTimestamp,
-            pushName: msg.pushName,
-            // Group info
-            groupName,
-            isGroup,
-            // Sender info (for groups)
-            senderPhone,
-            senderName,
-            // Media fields
-            mediaUrl,
-            mediaMimeType,
-            mediaType,
-            mediaCaption,
-            // Profile
+            key: msg.key, message: msg.message, messageTimestamp: msg.messageTimestamp, pushName: msg.pushName,
+            groupName, groupSubject: groupName, groupProfilePic, isGroup,
+            senderPhone, senderName,
+            mediaUrl, mediaMimeType, mediaType, mediaCaption,
             senderProfilePic,
-            // Sync type indicator
-            syncType: type
+            syncType: 'realtime'
           }]
         }
       });
     }
   });
 
-  // Message status updates
   socket.ev.on('messages.update', async (updates) => {
-    await sendWebhook({
-      event: 'messages.update',
-      sessionId,
-      instanceName,
-      webhookSecret,
-      data: { updates }
-    });
+    await sendWebhook({ event: 'messages.update', sessionId, instanceName, webhookSecret, data: { updates } });
   });
 
-  // ============== CHAT SYNC (Initial connection) ==============
-  socket.ev.on('chats.set', async ({ chats }) => {
-    console.log(\`📋 [CHATS.SET] Syncing \${chats.length} chats...\`);
-    
-    // Process in batches to avoid timeout
-    const batchSize = 50;
-    for (let i = 0; i < chats.length; i += batchSize) {
-      const batch = chats.slice(i, i + batchSize);
-      console.log(\`📋 Sending batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(chats.length/batchSize)}\`);
-      
-      await sendWebhook({
-        event: 'chats.set',
-        sessionId,
-        instanceName,
-        webhookSecret,
-        data: { 
-          chats: batch,
-          batchInfo: {
-            current: Math.floor(i/batchSize) + 1,
-            total: Math.ceil(chats.length/batchSize),
-            totalChats: chats.length
-          }
-        }
-      });
-    }
-    
-    console.log(\`✅ [CHATS.SET] Finished syncing \${chats.length} chats\`);
-  });
-
-  // ============== CHAT UPSERT (New chats during session) ==============
+  // ============== v3.6.0: MINIMAL CHAT SYNC ==============
   socket.ev.on('chats.upsert', async (chats) => {
-    console.log(\`📋 [CHATS.UPSERT] \${chats.length} new chats\`);
-    await sendWebhook({
-      event: 'chats.upsert',
-      sessionId,
-      instanceName,
-      webhookSecret,
-      data: { chats }
-    });
-  });
-
-  // ============== MESSAGE HISTORY SYNC ==============
-  socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
-    console.log(\`📜 [HISTORY SYNC] \${chats?.length || 0} chats, \${messages?.length || 0} messages, isLatest: \${isLatest}\`);
-    
-    // Send chats if available
-    if (chats && chats.length > 0) {
-      const batchSize = 50;
-      for (let i = 0; i < chats.length; i += batchSize) {
-        const batch = chats.slice(i, i + batchSize);
-        await sendWebhook({
-          event: 'chats.set',
-          sessionId,
-          instanceName,
-          webhookSecret,
-          data: { 
-            chats: batch,
-            isHistorySync: true
-          }
-        });
-      }
-    }
-    
-    // Send messages if available (in batches)
-    if (messages && messages.length > 0) {
-      console.log(\`📜 Processing \${messages.length} history messages...\`);
-      const batchSize = 100;
-      for (let i = 0; i < messages.length; i += batchSize) {
-        const batch = messages.slice(i, i + batchSize);
-        console.log(\`📜 Sending message batch \${Math.floor(i/batchSize) + 1}/\${Math.ceil(messages.length/batchSize)}\`);
-        
-        // Process each message in the batch
-        for (const msg of batch) {
-          const remoteJid = msg.key?.remoteJid;
-          if (!remoteJid || remoteJid === 'status@broadcast') continue;
-          
-          const isGroup = isGroupJid(remoteJid);
-          let groupName = '';
-          let senderPhone = '';
-          let senderName = '';
-          
-          if (isGroup && !msg.key?.fromMe) {
-            const participantJid = msg.key?.participant;
-            if (participantJid) {
-              senderPhone = extractPhoneFromJid(participantJid) || '';
-              senderName = msg.pushName || '';
-            }
-          }
-          
-          // Detect media type without downloading
-          let mediaType = null;
-          const message = msg.message;
-          if (message?.imageMessage) mediaType = 'image';
-          else if (message?.videoMessage) mediaType = 'video';
-          else if (message?.audioMessage) mediaType = message.audioMessage.ptt ? 'ptt' : 'audio';
-          else if (message?.documentMessage) mediaType = 'document';
-          else if (message?.stickerMessage) mediaType = 'sticker';
-          
-          await sendWebhook({
-            event: 'messages.upsert',
-            sessionId,
-            instanceName,
-            webhookSecret,
-            data: {
-              messages: [{
-                key: msg.key,
-                message: msg.message,
-                messageTimestamp: msg.messageTimestamp,
-                pushName: msg.pushName,
-                groupName,
-                isGroup,
-                senderPhone,
-                senderName,
-                mediaType,
-                syncType: 'history'
-              }]
-            }
-          });
+    console.log(\`📋 [CHATS.UPSERT] \${chats.length} new/updated chats\`);
+    const enrichedChats = [];
+    for (const chat of chats) {
+      const jid = chat.id;
+      const isGroup = isGroupJid(jid);
+      let enrichedChat = { ...chat };
+      if (isGroup) {
+        const metadata = await getGroupMetadata(socket, jid);
+        if (metadata) {
+          enrichedChat.groupSubject = metadata.subject;
+          enrichedChat.subject = metadata.subject;
+          enrichedChat.groupName = metadata.subject;
+          enrichedChat.name = metadata.subject;
+          try { enrichedChat.profilePicture = await socket.profilePictureUrl(jid, 'image'); } catch (e) {}
         }
+      } else {
+        try { enrichedChat.profilePicture = await socket.profilePictureUrl(jid, 'image'); } catch (e) {}
       }
+      enrichedChats.push(enrichedChat);
     }
-    
-    console.log(\`✅ [HISTORY SYNC] Complete\`);
+    await sendWebhook({ event: 'chats.upsert', sessionId, instanceName, webhookSecret, data: { chats: enrichedChats } });
   });
 
-  // Contacts sync
+  // ============== v3.6.0: IGNORE HISTORY SYNC EVENTS ==============
+  socket.ev.on('chats.set', async ({ chats }) => {
+    console.log(\`🚫 [CHATS.SET] Ignoring \${chats.length} historical chats (history sync disabled)\`);
+  });
+
+  socket.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
+    console.log(\`🚫 [HISTORY SYNC] Ignoring \${chats?.length || 0} chats, \${messages?.length || 0} messages (history sync disabled)\`);
+  });
+
   socket.ev.on('contacts.update', async (contacts) => {
-    await sendWebhook({
-      event: 'contacts.update',
-      sessionId,
-      instanceName,
-      webhookSecret,
-      data: { contacts }
-    });
+    await sendWebhook({ event: 'contacts.update', sessionId, instanceName, webhookSecret, data: { contacts } });
   });
 
   return session;
@@ -761,242 +513,173 @@ async function createWhatsAppSession(sessionId, instanceName, webhookSecret) {
 
 // ============== API ROUTES ==============
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'ok',
-    version: '3.3.0',
-    sessions: sessions.size,
-    mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
-    timestamp: new Date().toISOString()
+    status: 'ok', version: '3.6.0', historySync: false,
+    sessions: sessions.size, mediaSupport: !!(SUPABASE_URL && SUPABASE_SERVICE_KEY),
+    groupMetadataCache: groupMetadataCache.size, timestamp: new Date().toISOString()
   });
 });
 
-// Create instance
 app.post('/api/instance/create', async (req, res) => {
   try {
     const { sessionId, instanceName, webhookSecret } = req.body;
-
     if (!sessionId || !instanceName) {
       return res.status(400).json({ error: 'sessionId and instanceName required' });
     }
-
     const session = await createWhatsAppSession(sessionId, instanceName, webhookSecret || '');
-
-    res.json({
-      success: true,
-      sessionId: session.sessionId,
-      instanceName: session.instanceName,
-      isConnected: session.isConnected
-    });
+    res.json({ success: true, sessionId: session.sessionId, instanceName: session.instanceName, isConnected: session.isConnected });
   } catch (error) {
     console.error('❌ Create instance error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get QR Code
 app.get('/api/instance/:sessionId/qr', (req, res) => {
   const session = sessions.get(req.params.sessionId);
-
-  if (!session) {
-    return res.status(404).json({ error: 'Session not found' });
-  }
-
-  res.json({
-    qrCode: session.qrCode,
-    isConnected: session.isConnected,
-    phoneNumber: session.phoneNumber,
-    pushName: session.pushName,
-    profilePicture: session.profilePicture
-  });
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  res.json({ qrCode: session.qrCode, isConnected: session.isConnected, phoneNumber: session.phoneNumber, pushName: session.pushName, profilePicture: session.profilePicture });
 });
 
-// Get status
 app.get('/api/instance/:sessionId/status', (req, res) => {
   const session = sessions.get(req.params.sessionId);
-
-  if (!session) {
-    return res.status(404).json({ error: 'Session not found', status: 'not_found' });
-  }
-
-  res.json({
-    status: session.isConnected ? 'connected' : (session.qrCode ? 'waiting_qr' : 'connecting'),
-    isConnected: session.isConnected,
-    phoneNumber: session.phoneNumber,
-    pushName: session.pushName,
-    profilePicture: session.profilePicture
-  });
+  if (!session) return res.status(404).json({ error: 'Session not found', status: 'not_found' });
+  res.json({ status: session.isConnected ? 'connected' : (session.qrCode ? 'waiting_qr' : 'connecting'), isConnected: session.isConnected, phoneNumber: session.phoneNumber, pushName: session.pushName, profilePicture: session.profilePicture });
 });
 
-// List all sessions
 app.get('/api/instance/list', (req, res) => {
   const list = [];
   for (const [id, session] of sessions) {
-    list.push({
-      sessionId: id,
-      instanceName: session.instanceName,
-      isConnected: session.isConnected,
-      phoneNumber: session.phoneNumber
-    });
+    list.push({ sessionId: id, instanceName: session.instanceName, isConnected: session.isConnected, phoneNumber: session.phoneNumber });
   }
   res.json({ sessions: list });
 });
 
-// Delete session
 app.delete('/api/instance/:sessionId', async (req, res) => {
   const session = sessions.get(req.params.sessionId);
-
-  if (!session) {
-    return res.status(404).json({ error: 'Session not found' });
-  }
-
-  try {
-    if (session.socket) {
-      await session.socket.logout();
-    }
-  } catch (e) {
-    console.log('Logout error:', e.message);
-  }
-
-  // Delete session files
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  try { if (session.socket) await session.socket.logout(); } catch (e) { console.log('Logout error:', e.message); }
   const sessionPath = path.join(SESSIONS_DIR, session.instanceName);
-  if (fs.existsSync(sessionPath)) {
-    fs.rmSync(sessionPath, { recursive: true });
-  }
-
+  if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true });
   sessions.delete(req.params.sessionId);
   res.json({ success: true });
 });
 
-// Send text message
-app.post('/api/message/send-text', async (req, res) => {
+app.post('/api/message/send', async (req, res) => {
   try {
-    const { sessionId, phone, message } = req.body;
-
+    const { sessionId, phone, message, isGroup } = req.body;
     const session = sessions.get(sessionId);
     if (!session || !session.socket || !session.isConnected) {
       return res.status(400).json({ error: 'Session not connected' });
     }
-
-    // Detect if it's a group
-    const isGroup = phone.includes('@g.us') || phone.length > 15;
     const jid = formatJidForSend(phone, isGroup);
-
-    const result = await session.socket.sendMessage(jid, { text: message });
-
-    res.json({ 
-      success: true, 
-      to: jid,
-      messageId: result?.key?.id 
-    });
+    console.log(\`📤 Sending message to \${jid}: \${message.substring(0, 50)}...\`);
+    await session.socket.sendMessage(jid, { text: message });
+    res.json({ success: true, jid });
   } catch (error) {
     console.error('❌ Send message error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Send media message
-app.post('/api/message/send-media', async (req, res) => {
+app.post('/api/message/media', async (req, res) => {
   try {
-    const { sessionId, phone, mediaUrl, mediaType, caption, fileName } = req.body;
-
+    const { sessionId, phone, mediaUrl, mediaType, caption, isGroup } = req.body;
     const session = sessions.get(sessionId);
     if (!session || !session.socket || !session.isConnected) {
       return res.status(400).json({ error: 'Session not connected' });
     }
-
-    const isGroup = phone.includes('@g.us') || phone.length > 15;
     const jid = formatJidForSend(phone, isGroup);
-
-    let content;
-    switch (mediaType) {
-      case 'image':
-        content = { image: { url: mediaUrl }, caption };
-        break;
-      case 'video':
-        content = { video: { url: mediaUrl }, caption };
-        break;
-      case 'audio':
-        content = { audio: { url: mediaUrl }, mimetype: 'audio/mp4', ptt: false };
-        break;
-      case 'ptt':
-        content = { audio: { url: mediaUrl }, mimetype: 'audio/ogg; codecs=opus', ptt: true };
-        break;
-      case 'document':
-        content = { 
-          document: { url: mediaUrl }, 
-          mimetype: mime.lookup(fileName || 'file.pdf') || 'application/octet-stream', 
-          fileName: fileName || caption || 'document.pdf' 
-        };
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid media type. Use: image, video, audio, ptt, document' });
-    }
-
-    const result = await session.socket.sendMessage(jid, content);
-
-    res.json({ 
-      success: true, 
-      to: jid,
-      messageId: result?.key?.id
-    });
+    let messageContent = {};
+    if (mediaType === 'image') messageContent = { image: { url: mediaUrl }, caption: caption || '' };
+    else if (mediaType === 'video') messageContent = { video: { url: mediaUrl }, caption: caption || '' };
+    else if (mediaType === 'audio') messageContent = { audio: { url: mediaUrl }, mimetype: 'audio/mpeg' };
+    else if (mediaType === 'document') messageContent = { document: { url: mediaUrl }, fileName: caption || 'document' };
+    console.log(\`📤 Sending \${mediaType} to \${jid}\`);
+    await session.socket.sendMessage(jid, messageContent);
+    res.json({ success: true, jid });
   } catch (error) {
     console.error('❌ Send media error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ============== START SERVER ==============
+app.get('/api/group/:sessionId/:groupId', async (req, res) => {
+  try {
+    const session = sessions.get(req.params.sessionId);
+    if (!session || !session.socket) return res.status(404).json({ error: 'Session not found' });
+    const groupJid = req.params.groupId.includes('@') ? req.params.groupId : \`\${req.params.groupId}@g.us\`;
+    const metadata = await getGroupMetadata(session.socket, groupJid);
+    if (metadata) res.json({ success: true, metadata });
+    else res.status(404).json({ error: 'Group not found' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-async function startServer() {
-  console.log('🚀 Starting Baileys Server v3.3.0...');
-  
-  // Dynamic imports for ESM modules
-  const baileysModule = await import('@whiskeysockets/baileys');
-  makeWASocket = baileysModule.default;
-  useMultiFileAuthState = baileysModule.useMultiFileAuthState;
-  DisconnectReason = baileysModule.DisconnectReason;
-  fetchLatestBaileysVersion = baileysModule.fetchLatestBaileysVersion;
-  makeCacheableSignalKeyStore = baileysModule.makeCacheableSignalKeyStore;
-  downloadMediaMessage = baileysModule.downloadMediaMessage;
-  Browsers = baileysModule.Browsers;
+app.get('/api/profile/:sessionId/:jid', async (req, res) => {
+  try {
+    const session = sessions.get(req.params.sessionId);
+    if (!session || !session.socket) return res.status(404).json({ error: 'Session not found' });
+    const jid = req.params.jid.includes('@') ? req.params.jid : \`\${req.params.jid}@s.whatsapp.net\`;
+    try {
+      const url = await session.socket.profilePictureUrl(jid, 'image');
+      res.json({ success: true, url });
+    } catch (e) {
+      res.json({ success: false, url: null });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  QRCode = require('qrcode');
-  pino = require('pino');
-  mime = require('mime-types');
+// ============== INITIALIZATION ==============
 
-  // Initialize Supabase client if credentials available
+async function init() {
+  const baileys = await import('@whiskeysockets/baileys');
+  makeWASocket = baileys.default;
+  useMultiFileAuthState = baileys.useMultiFileAuthState;
+  DisconnectReason = baileys.DisconnectReason;
+  fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+  makeCacheableSignalKeyStore = baileys.makeCacheableSignalKeyStore;
+  downloadMediaMessage = baileys.downloadMediaMessage;
+  Browsers = baileys.Browsers;
+
+  const qrModule = await import('qrcode');
+  QRCode = qrModule.default;
+
+  const pinoModule = await import('pino');
+  pino = pinoModule.default;
+
+  const mimeModule = await import('mime-types');
+  mime = mimeModule.default;
+
   if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-    const { createClient } = require('@supabase/supabase-js');
+    const { createClient } = await import('@supabase/supabase-js');
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    console.log('✅ Supabase Storage configured for media uploads');
+    console.log('✅ Supabase client initialized for media storage');
   } else {
     console.log('⚠️ Supabase not configured - media will not be uploaded');
-    console.log('   Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable media support');
   }
 
-  const PORT = process.env.PORT || 3333;
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('============================================');
-    console.log(\`🚀 Baileys Server v3.3.0 running on port \${PORT}\`);
-    console.log('============================================');
-    console.log(\`📡 Webhook URL: \${WEBHOOK_URL || 'Not configured'}\`);
-    console.log(\`📸 Media Support: \${supabase ? '✅ Enabled' : '❌ Disabled'}\`);
-    console.log('📜 History Sync: ✅ Enabled');
-    console.log('============================================');
-    console.log('');
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(\`\\n🚀 Baileys Server v3.6.0 running on port \${PORT}\`);
+    console.log(\`🚫 History sync: DISABLED\`);
+    console.log(\`📨 Only real-time messages will be processed\`);
+    console.log(\`🔗 Webhook URL: \${WEBHOOK_URL || 'Not configured'}\`);
+    console.log(\`📁 Sessions directory: \${SESSIONS_DIR}\`);
+    console.log(\`☁️ Supabase media: \${supabase ? 'Enabled' : 'Disabled'}\\n\`);
   });
 }
 
-startServer().catch(console.error);
+init().catch(console.error);
 `;
 
-    const envExample = `# Webhook do Supabase
+    const envExample = `# Webhook URL (OBRIGATÓRIO)
 SUPABASE_WEBHOOK_URL=${webhookUrl}
 
-# Para upload de mídias (obrigatório)
+# Para upload de mídia (OPCIONAL)
 SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
 
@@ -1033,7 +716,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v3.3.0.zip';
+      a.download = 'baileys-server-v3.6.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1041,7 +724,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
       
       toast({
         title: '✅ Download concluído!',
-        description: 'Servidor v3.3.0 - Com sincronização completa de histórico'
+        description: 'Servidor v3.6.0 - SEM histórico, apenas mensagens novas!'
       });
       
       setIsOpen(false);
@@ -1074,10 +757,10 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Servidor Baileys v3.4.0
+              Servidor Baileys v3.6.0 - SEM Histórico
             </DialogTitle>
             <DialogDescription>
-              Servidor WhatsApp com sincronização completa de histórico e metadata de grupos
+              Servidor WhatsApp otimizado - apenas mensagens novas em tempo real
             </DialogDescription>
           </DialogHeader>
 
@@ -1086,20 +769,20 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Novidades v3.4.0
+                Novidades v3.6.0
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-primary" />
-                  <strong>Metadata de Grupos no History</strong> - Busca nomes automaticamente
+                  <Zap className="h-3 w-3 text-green-500" />
+                  <strong>SEM HISTÓRICO</strong> - Apenas mensagens novas após conexão
                 </li>
                 <li className="flex items-center gap-2">
-                  <History className="h-3 w-3 text-primary" />
-                  <strong>Sync Completo</strong> - Sincroniza todas as conversas ao conectar
+                  <Users className="h-3 w-3 text-primary" />
+                  <strong>Nomes de Grupos</strong> - Busca automática via groupMetadata
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  <strong>Cache de Metadados</strong> - Performance otimizada
+                  <strong>Remetentes</strong> - Nome e telefone de quem enviou em grupos
                 </li>
                 <li className="flex items-center gap-2">
                   <ImageIcon className="h-3 w-3 text-primary" />
@@ -1107,20 +790,31 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Upload automático para Supabase Storage
+                  <strong>Fotos de Perfil</strong> - Para contatos e grupos
                 </li>
               </ul>
+            </div>
+
+            {/* Important: No History */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                🚫 Sem Conversas Antigas
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Esta versão <strong>NÃO sincroniza histórico</strong>. Apenas mensagens recebidas APÓS a conexão aparecerão. 
+                Isso significa conexão mais rápida e sem conversas antigas indesejadas!
+              </p>
             </div>
 
             {/* Files included */}
             <div className="bg-muted/50 rounded-lg p-4">
               <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <code>package.json</code> - Dependências (Baileys 6.7.9 + Supabase)</li>
-                <li>• <code>index.js</code> - Servidor completo com sync de histórico</li>
-                <li>• <code>.env.example</code> - Exemplo de variáveis de ambiente</li>
-                <li>• <code>README.md</code> - Instruções de deploy detalhadas</li>
-                <li>• <code>nixpacks.toml</code> - Configuração Railway</li>
+                <li>• <code>package.json</code> - Dependências (Baileys 6.7.9)</li>
+                <li>• <code>index.js</code> - Servidor SEM sync de histórico</li>
+                <li>• <code>.env.example</code> - Variáveis de ambiente</li>
+                <li>• <code>README.md</code> - Instruções de deploy</li>
               </ul>
             </div>
 
@@ -1132,7 +826,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               </h4>
               <p className="text-sm text-muted-foreground">
                 Se você já tem o servidor no Railway, <strong>substitua TODOS os arquivos</strong> (especialmente <code>index.js</code>). 
-                Delete também a pasta <code>sessions/</code> para forçar uma nova sincronização completa.
+                Delete também a pasta <code>sessions/</code> para uma nova conexão limpa.
               </p>
             </div>
 
@@ -1145,7 +839,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <code>SUPABASE_WEBHOOK_URL</code> - URL do webhook</li>
                 <li>• <code>SUPABASE_URL</code> - URL do projeto Supabase</li>
-                <li>• <code>SUPABASE_SERVICE_ROLE_KEY</code> - Chave de serviço (Settings &gt; API)</li>
+                <li>• <code>SUPABASE_SERVICE_ROLE_KEY</code> - Chave de serviço</li>
               </ul>
             </div>
 
@@ -1164,7 +858,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar baileys-server-v3.4.0.zip
+                  Baixar baileys-server-v3.6.0.zip
                 </>
               )}
             </Button>

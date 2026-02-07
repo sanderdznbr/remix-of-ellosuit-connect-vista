@@ -252,6 +252,106 @@ export type Database = {
           },
         ]
       }
+      chatbot_executions: {
+        Row: {
+          completed_at: string | null
+          contact_phone: string | null
+          conversation_id: string | null
+          current_node_id: string | null
+          execution_path: Json | null
+          flow_id: string
+          id: string
+          started_at: string
+          status: string
+          variables: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_phone?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          execution_path?: Json | null
+          flow_id: string
+          id?: string
+          started_at?: string
+          status?: string
+          variables?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          contact_phone?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          execution_path?: Json | null
+          flow_id?: string
+          id?: string
+          started_at?: string
+          status?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_executions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_flows: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          edges: Json
+          execution_count: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          nodes: Json
+          trigger_config: Json | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          edges?: Json
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          nodes?: Json
+          trigger_config?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          edges?: Json
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          nodes?: Json
+          trigger_config?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_flows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_interactions: {
         Row: {
           client_id: string

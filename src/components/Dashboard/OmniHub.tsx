@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Mail, Users, Bot, TrendingUp, Send, ArrowRight } from "lucide-react";
+import { MessageSquare, Mail, Users, Bot, TrendingUp, Send, ArrowRight, GitBranch } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,13 @@ const omniModules = [
     description: "Gerencie conversas, leads e atendimentos via WhatsApp",
     icon: MessageSquare,
     path: "/dashboard/crm-whatsapp",
+  },
+  {
+    id: "chatbot-builder",
+    title: "ChatBot Builder",
+    description: "Construa fluxos de atendimento automatizados",
+    icon: GitBranch,
+    path: "/dashboard/chatbot",
   },
   {
     id: "email-marketing",

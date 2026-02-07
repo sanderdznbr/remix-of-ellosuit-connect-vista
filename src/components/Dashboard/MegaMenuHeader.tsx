@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
-  Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell
+  Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +55,7 @@ const menuGroups: MenuGroup[] = [
         title: "Comunicação",
         items: [
           { id: "crm", label: "CRM WhatsApp", description: "Gerencie conversas e leads", icon: MessageSquare, path: "/dashboard/crm-whatsapp" },
+          { id: "chatbot", label: "ChatBot Builder", description: "Fluxos automatizados", icon: GitBranch, path: "/dashboard/chatbot" },
           { id: "email", label: "Email Marketing", description: "Campanhas e automações", icon: Mail, path: "/dashboard/email" },
         ]
       },

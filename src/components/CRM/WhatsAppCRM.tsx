@@ -18,6 +18,7 @@ import KanbanColumnConfig from './KanbanColumnConfig';
 import AudioRecorder from './AudioRecorder';
 import BaileysServerDownload from './BaileysServerDownload';
 import WhatsAppContacts from './WhatsAppContacts';
+import SwipeableConversationItem from './SwipeableConversationItem';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -370,6 +371,22 @@ const WhatsAppCRM: React.FC = () => {
       .eq('company_id', companyId);
     
     setContactsCount(count || 0);
+  };
+
+  // Mark conversation as read - reset unread_count
+  const markConversationAsRead = async (conv: WhatsAppConversationData) => {
+    if (!conv || (conv.unread_count || 0) === 0) return;
+    
+    // Update local state immediately
+    setConversations(prev => prev.map(c => 
+      c.id === conv.id ? { ...c, unread_count: 0 } : c
+    ));
+    
+    // Update database in background
+    await supabase
+      .from('whatsapp_conversations')
+      .update({ unread_count: 0 })
+      .eq('id', conv.id);
   };
 
   // Create label
@@ -1305,46 +1322,51 @@ const WhatsAppCRM: React.FC = () => {
           ) : (
             <div className="divide-y">
               {filteredConversations.map(conversation => (
-                <div
+                <SwipeableConversationItem
                   key={conversation.id}
-                  onClick={() => {
+                  onDelete={() => handleDeleteConversation(conversation)}
+                  onSelect={() => {
                     setSelectedConversation(conversation);
                     setSelectedAgent(null);
+                    markConversationAsRead(conversation);
                     setShowMobileChat(true);
                   }}
-                  className={cn(
-                    "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors",
-                    selectedConversation?.id === conversation.id && "bg-muted"
-                  )}
                 >
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={conversation.profile_picture} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium truncate">
-                        {conversation.contact_name || conversation.contact_phone}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(conversation.last_message_at)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground truncate pr-2">
-                        {conversation.last_message || 'Nova conversa'}
-                      </p>
-                      {(conversation.unread_count || 0) > 0 && (
-                        <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5 min-w-[20px] justify-center">
-                          {conversation.unread_count}
-                        </Badge>
-                      )}
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors",
+                      selectedConversation?.id === conversation.id && "bg-muted"
+                    )}
+                  >
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={conversation.profile_picture} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium truncate">
+                          {conversation.contact_name || conversation.contact_phone}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatTime(conversation.last_message_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground truncate pr-2">
+                          {conversation.last_message || 'Nova conversa'}
+                        </p>
+                        {(conversation.unread_count || 0) > 0 && (
+                          <Badge className="bg-primary text-primary-foreground text-xs px-2 py-0.5 min-w-[20px] justify-center">
+                            {conversation.unread_count}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </SwipeableConversationItem>
               ))}
             </div>
           )}

@@ -689,7 +689,9 @@ serve(async (req) => {
         }
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
         const cleanPhone = phone.replace(/\D/g, '');
+        const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
         // Check if server is configured and session is connected
         if (!serverUrl) {
@@ -710,27 +712,82 @@ serve(async (req) => {
         }
 
         try {
-          console.log(`[SEND MEDIA] Sending ${mediaType} to ${cleanPhone} via ${serverUrl}`);
+          console.log(`[SEND MEDIA] Sending ${mediaType} to ${jid} via ${normalizedServerUrl} (instanceName=${session.instance_name})`);
           
-          // Use the correct endpoint matching Baileys server v3.8.0: /api/message/media
-          const sendResponse = await fetch(`${serverUrl}/api/message/media`, {
+          // Baileys Server v4.2.0 uses /api/message/send-media with { instanceName, jid, mediaUrl, mediaType, caption }
+          // For audio/PTT, use /api/message/send-voice
+          let endpoint = `${normalizedServerUrl}/api/message/send-media`;
+          let payload: Record<string, unknown> = {
+            instanceName: session.instance_name,
+            jid,
+            mediaUrl,
+            mediaType: mediaType || 'image',
+            caption: caption || ''
+          };
+          
+          // For audio, use send-voice endpoint for PTT (push-to-talk) style
+          if (mediaType === 'audio' || mediaType === 'ptt') {
+            endpoint = `${normalizedServerUrl}/api/message/send-voice`;
+            payload = {
+              instanceName: session.instance_name,
+              jid,
+              audioUrl: mediaUrl
+            };
+          }
+          
+          const sendResponse = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              sessionId: sessionId,
-              phone: cleanPhone,
-              mediaUrl: mediaUrl,
-              mediaType: mediaType || 'image',
-              caption: caption || '',
-              fileName: fileName || ''
-            })
+            body: JSON.stringify(payload)
           });
 
           if (sendResponse.ok) {
             const sendData = await sendResponse.json();
             console.log(`[SEND MEDIA] Success:`, sendData);
+            
+            // Find or create conversation for saving the message
+            let { data: conversation } = await supabase
+              .from('whatsapp_conversations')
+              .select('id')
+              .eq('company_id', session.company_id)
+              .eq('contact_phone', cleanPhone)
+              .order('last_message_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (conversation) {
+              // Save the message to database with media_url
+              const contentText = mediaType === 'audio' || mediaType === 'ptt' 
+                ? '[Áudio]' 
+                : (caption || `[${mediaType === 'image' ? 'Imagem' : mediaType === 'video' ? 'Vídeo' : 'Documento'}]`);
+              
+              await supabase
+                .from('whatsapp_messages')
+                .insert({
+                  conversation_id: conversation.id,
+                  session_id: sessionId,
+                  company_id: session.company_id,
+                  from_me: true,
+                  content: contentText,
+                  message_type: mediaType === 'ptt' ? 'ptt' : mediaType,
+                  media_url: mediaUrl,
+                  media_caption: caption || null,
+                  status: 'sent',
+                  timestamp: new Date().toISOString(),
+                  wa_message_id: sendData.messageId || sendData.key?.id || null
+                });
+              
+              // Update conversation last_message
+              await supabase
+                .from('whatsapp_conversations')
+                .update({
+                  last_message: contentText,
+                  last_message_at: new Date().toISOString()
+                })
+                .eq('id', conversation.id);
+            }
             
             return new Response(JSON.stringify({ 
               success: true, 
@@ -750,7 +807,7 @@ serve(async (req) => {
                 errorMessage = errorJson.error;
                 
                 // Update session status if disconnected
-                if (errorJson.error.includes('not connected') || errorJson.error.includes('disconnected')) {
+                if (errorJson.error.includes('not connected') || errorJson.error.includes('disconnected') || errorJson.error.includes('não encontrada')) {
                   await supabase
                     .from('whatsapp_sessions')
                     .update({ status: 'disconnected', connected_at: null })
@@ -947,6 +1004,96 @@ serve(async (req) => {
           .eq('id', sessionId);
 
         return new Response(JSON.stringify({ success: true, message: 'Servidor configurado com sucesso' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==================== MARK AS READ ====================
+      case 'mark_as_read': {
+        const { conversationId } = body;
+        
+        if (!sessionId || !phone) {
+          return new Response(JSON.stringify({ error: 'sessionId e phone são obrigatórios' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: session } = await supabase
+          .from('whatsapp_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+
+        if (!session) {
+          return new Response(JSON.stringify({ error: 'Sessão não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
+        const cleanPhone = phone.replace(/\D/g, '');
+        const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+
+        // Update unread_count in database first
+        if (conversationId) {
+          await supabase
+            .from('whatsapp_conversations')
+            .update({ unread_count: 0 })
+            .eq('id', conversationId);
+        }
+
+        // If connected, also notify Baileys server to send read receipts
+        if (serverUrl && session.status === 'connected') {
+          try {
+            // Get the last few unread messages to mark as read
+            const { data: unreadMessages } = await supabase
+              .from('whatsapp_messages')
+              .select('wa_message_id')
+              .eq('conversation_id', conversationId)
+              .eq('from_me', false)
+              .eq('status', 'delivered')
+              .order('timestamp', { ascending: false })
+              .limit(20);
+
+            if (unreadMessages && unreadMessages.length > 0) {
+              const keys = unreadMessages
+                .filter(m => m.wa_message_id)
+                .map(m => ({
+                  remoteJid: jid,
+                  id: m.wa_message_id
+                }));
+
+              if (keys.length > 0) {
+                console.log(`[MARK READ] Sending read receipts for ${keys.length} messages to ${jid}`);
+                
+                await fetch(`${normalizedServerUrl}/api/message/read`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    instanceName: session.instance_name,
+                    keys
+                  })
+                });
+
+                // Update message statuses in database
+                await supabase
+                  .from('whatsapp_messages')
+                  .update({ status: 'read' })
+                  .eq('conversation_id', conversationId)
+                  .eq('from_me', false)
+                  .in('status', ['sent', 'delivered']);
+              }
+            }
+          } catch (e) {
+            console.error('[MARK READ] Error sending read receipts:', e);
+            // Don't fail - we already updated the database
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }

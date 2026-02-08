@@ -941,8 +941,34 @@ serve(async (req) => {
         const updates = data?.updates || [];
         console.log(`[MSG UPDATE] Processing ${updates.length} updates`);
         
+        // Get session context for unread count updates
+        let targetSessionId = sessionId;
+        let companyId = '';
+        
+        if (!targetSessionId && instanceName) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('id, company_id')
+            .eq('instance_name', instanceName)
+            .single();
+          
+          if (session) {
+            targetSessionId = session.id;
+            companyId = session.company_id;
+          }
+        } else if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id')
+            .eq('id', targetSessionId)
+            .single();
+          
+          if (session) companyId = session.company_id;
+        }
+        
         for (const update of updates) {
           const messageId = update.key?.id;
+          const remoteJid = update.key?.remoteJid;
           const status = update.update?.status;
           
           if (messageId && status !== undefined) {
@@ -958,12 +984,35 @@ serve(async (req) => {
             
             const statusStr = typeof status === 'number' ? statusMap[status] || 'unknown' : status;
             
-            console.log(`[MSG UPDATE] ${messageId} -> ${statusStr}`);
+            console.log(`[MSG UPDATE] ${messageId} -> ${statusStr}, jid: ${remoteJid}`);
             
+            // Update message status
             await supabase
               .from('whatsapp_messages')
               .update({ status: statusStr })
               .eq('wa_message_id', messageId);
+            
+            // ============== CRITICAL: Reset unread_count when messages are read ==============
+            // When status is 'read' (4) or 'played' (5), it means INCOMING messages were read
+            // This happens when the user views messages on their phone
+            if ((statusStr === 'read' || statusStr === 'played') && remoteJid && companyId) {
+              // Extract phone number from JID
+              const phoneNumber = remoteJid
+                .replace('@s.whatsapp.net', '')
+                .replace('@g.us', '')
+                .replace('@c.us', '')
+                .replace(/\D/g, '');
+              
+              if (phoneNumber) {
+                console.log(`[MSG UPDATE] Resetting unread_count for conversation with ${phoneNumber}`);
+                
+                await supabase
+                  .from('whatsapp_conversations')
+                  .update({ unread_count: 0 })
+                  .eq('company_id', companyId)
+                  .eq('contact_phone', phoneNumber);
+              }
+            }
           }
         }
         break;

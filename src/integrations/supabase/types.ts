@@ -3400,6 +3400,10 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      cleanup_disconnected_whatsapp_sessions: {
+        Args: never
+        Returns: undefined
+      }
       cleanup_meeting_rooms: { Args: never; Returns: undefined }
       increment_email_count: {
         Args: { p_company_id: string; p_user_id: string }

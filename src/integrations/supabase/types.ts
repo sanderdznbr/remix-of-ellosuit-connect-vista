@@ -2041,6 +2041,276 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_addons: {
+        Row: {
+          addon_type: Database["public"]["Enums"]["addon_type"]
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          purchased_at: string
+          quantity: number
+          subscription_id: string
+          unit_price: number
+        }
+        Insert: {
+          addon_type: Database["public"]["Enums"]["addon_type"]
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          purchased_at?: string
+          quantity?: number
+          subscription_id: string
+          unit_price: number
+        }
+        Update: {
+          addon_type?: Database["public"]["Enums"]["addon_type"]
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          purchased_at?: string
+          quantity?: number
+          subscription_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_addons_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_addons_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_limits: {
+        Row: {
+          company_id: string
+          has_meeting_recording: boolean
+          has_priority_support: boolean
+          id: string
+          max_ai_agents: number
+          max_booking_links: number
+          max_chatbot_flows: number
+          max_emails_month: number
+          max_meeting_hours: number
+          max_meeting_participants: number
+          max_storage_gb: number
+          max_tracked_docs: number
+          max_tracked_links: number
+          max_tracked_videos: number
+          max_users: number
+          max_whatsapp_sessions: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          has_meeting_recording?: boolean
+          has_priority_support?: boolean
+          id?: string
+          max_ai_agents?: number
+          max_booking_links?: number
+          max_chatbot_flows?: number
+          max_emails_month?: number
+          max_meeting_hours?: number
+          max_meeting_participants?: number
+          max_storage_gb?: number
+          max_tracked_docs?: number
+          max_tracked_links?: number
+          max_tracked_videos?: number
+          max_users?: number
+          max_whatsapp_sessions?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          has_meeting_recording?: boolean
+          has_priority_support?: boolean
+          id?: string
+          max_ai_agents?: number
+          max_booking_links?: number
+          max_chatbot_flows?: number
+          max_emails_month?: number
+          max_meeting_hours?: number
+          max_meeting_participants?: number
+          max_storage_gb?: number
+          max_tracked_docs?: number
+          max_tracked_links?: number
+          max_tracked_videos?: number
+          max_users?: number
+          max_whatsapp_sessions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_limits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_modules: {
+        Row: {
+          activated_at: string
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          module_type: Database["public"]["Enums"]["module_type"]
+          monthly_price: number
+          subscription_id: string
+        }
+        Insert: {
+          activated_at?: string
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          module_type: Database["public"]["Enums"]["module_type"]
+          monthly_price?: number
+          subscription_id: string
+        }
+        Update: {
+          activated_at?: string
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          module_type?: Database["public"]["Enums"]["module_type"]
+          monthly_price?: number
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_modules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_modules_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_usage: {
+        Row: {
+          company_id: string
+          current_usage: number
+          id: string
+          period_end: string
+          period_start: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          current_usage?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          current_usage?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          base_users_included: number
+          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
+          company_id: string
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          monthly_price: number
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_users_included?: number
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
+          company_id: string
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          monthly_price?: number
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_users_included?: number
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
+          company_id?: string
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          monthly_price?: number
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_routines: {
         Row: {
           assigned_user_id: string | null
@@ -3137,10 +3407,22 @@ export type Database = {
       }
     }
     Enums: {
+      addon_type:
+        | "users"
+        | "storage"
+        | "emails"
+        | "ai_agents"
+        | "whatsapp_sessions"
+        | "booking_links"
+        | "meeting_hours"
+        | "tracked_docs"
+        | "priority_support"
+      billing_cycle: "monthly" | "yearly"
       company_role: "admin" | "manager" | "employee"
       email_provider: "gmail" | "outlook" | "yahoo"
       event_type: "meeting" | "appointment" | "reminder"
       meeting_provider: "google_meet" | "zoom" | "teams"
+      module_type: "omni" | "flow" | "track"
       permission_type:
         | "view_calendar"
         | "manage_calendar"
@@ -3162,6 +3444,19 @@ export type Database = {
         | "manage_crm"
         | "view_tracking"
         | "manage_tracking"
+      plan_type: "base" | "pro" | "business" | "enterprise" | "custom"
+      resource_type:
+        | "users"
+        | "storage_gb"
+        | "emails_sent"
+        | "ai_agents_active"
+        | "whatsapp_sessions_active"
+        | "booking_links_active"
+        | "meeting_hours_used"
+        | "tracked_docs_created"
+        | "tracked_links_created"
+        | "tracked_videos_created"
+      subscription_status: "active" | "canceled" | "past_due" | "trialing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3289,10 +3584,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      addon_type: [
+        "users",
+        "storage",
+        "emails",
+        "ai_agents",
+        "whatsapp_sessions",
+        "booking_links",
+        "meeting_hours",
+        "tracked_docs",
+        "priority_support",
+      ],
+      billing_cycle: ["monthly", "yearly"],
       company_role: ["admin", "manager", "employee"],
       email_provider: ["gmail", "outlook", "yahoo"],
       event_type: ["meeting", "appointment", "reminder"],
       meeting_provider: ["google_meet", "zoom", "teams"],
+      module_type: ["omni", "flow", "track"],
       permission_type: [
         "view_calendar",
         "manage_calendar",
@@ -3315,6 +3623,20 @@ export const Constants = {
         "view_tracking",
         "manage_tracking",
       ],
+      plan_type: ["base", "pro", "business", "enterprise", "custom"],
+      resource_type: [
+        "users",
+        "storage_gb",
+        "emails_sent",
+        "ai_agents_active",
+        "whatsapp_sessions_active",
+        "booking_links_active",
+        "meeting_hours_used",
+        "tracked_docs_created",
+        "tracked_links_created",
+        "tracked_videos_created",
+      ],
+      subscription_status: ["active", "canceled", "past_due", "trialing"],
     },
   },
 } as const

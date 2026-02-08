@@ -508,6 +508,7 @@ serve(async (req) => {
         }
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
+        const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
         const cleanPhone = phone.replace(/\D/g, '');
         const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
@@ -535,20 +536,20 @@ serve(async (req) => {
         }
 
         // Send via Baileys if connected
-        if (serverUrl && session.status === 'connected') {
+        if (normalizedServerUrl && session.status === 'connected') {
           try {
-            console.log(`[SEND] Sending to ${jid} via ${serverUrl}`);
-            
-            // Use the correct endpoint: /api/message/send (v3.7.0)
-            const sendResponse = await fetch(`${serverUrl}/api/message/send`, {
+            console.log(`[SEND] Sending to ${jid} via ${normalizedServerUrl} (instanceName=${session.instance_name})`);
+
+            // Baileys Server v4.2.0 expects: { instanceName, jid, message }
+            const sendResponse = await fetch(`${normalizedServerUrl}/api/message/send`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                sessionId: sessionId,
-                phone: cleanPhone,
-                message: message
+                instanceName: session.instance_name,
+                jid,
+                message
               })
             });
 
@@ -584,10 +585,17 @@ serve(async (req) => {
               
               try {
                 const errorJson = JSON.parse(errorText);
-                if (errorJson.error === 'Session not connected') {
+                const rawErr = String(errorJson?.error || errorJson?.message || '');
+
+                if (
+                  rawErr === 'Session not connected' ||
+                  rawErr.toLowerCase().includes('sessão não encontrada') ||
+                  rawErr.toLowerCase().includes('sessao nao encontrada') ||
+                  rawErr.toLowerCase().includes('desconect')
+                ) {
                   errorMessage = 'WhatsApp desconectado no servidor';
-                  errorDetails = 'A sessão foi desconectada. Reconecte escaneando o QR Code novamente.';
-                  
+                  errorDetails = 'A sessão não está ativa no servidor Baileys. Abra a tela do QR Code e reconecte.';
+
                   // Update session status in database
                   await supabase
                     .from('whatsapp_sessions')

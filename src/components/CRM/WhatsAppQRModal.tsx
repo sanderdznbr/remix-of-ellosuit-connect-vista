@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone, AlertCircle, Clock } from 'lucide-react';
+import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone, AlertCircle, Clock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import WhatsAppSyncScreen from './WhatsAppSyncScreen';
 
 interface WhatsAppQRModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
   onSuccess
 }) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<'loading' | 'qr' | 'connected' | 'timeout'>('loading');
+  const [step, setStep] = useState<'loading' | 'qr' | 'connected' | 'syncing' | 'timeout'>('loading');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('disconnected');
@@ -33,6 +34,7 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [connectedSession, setConnectedSession] = useState<any>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -120,7 +122,6 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
               phoneNumber: statusData.phoneNumber,
               pushName: statusData.pushName
             });
-            setStep('connected');
             
             const { data: sessionData } = await supabase
               .from('whatsapp_sessions')
@@ -129,7 +130,9 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
               .maybeSingle();
             
             if (sessionData) {
-              onSuccess(sessionData);
+              setConnectedSession(sessionData);
+              // Go to syncing screen instead of directly completing
+              setStep('syncing');
             }
             return;
           }
@@ -153,7 +156,17 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
               phoneNumber: qrData.phoneNumber,
               pushName: qrData.pushName
             });
-            setStep('connected');
+            
+            const { data: sessionData } = await supabase
+              .from('whatsapp_sessions')
+              .select('*')
+              .eq('id', sessionId)
+              .maybeSingle();
+            
+            if (sessionData) {
+              setConnectedSession(sessionData);
+              setStep('syncing');
+            }
           }
         }
       } catch (e) {
@@ -288,6 +301,23 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
       setLoading(false);
     }
   };
+
+  const handleSyncComplete = () => {
+    if (connectedSession) {
+      onSuccess(connectedSession);
+    }
+    onClose();
+  };
+
+  // Show sync screen as a full overlay
+  if (step === 'syncing' && sessionId) {
+    return (
+      <WhatsAppSyncScreen 
+        sessionId={sessionId} 
+        onComplete={handleSyncComplete} 
+      />
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -451,6 +481,20 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
                 </p>
               </div>
             )}
+
+            {/* Security Info */}
+            <div className="bg-muted rounded-lg p-4 mb-4 text-left">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Conexão Segura</p>
+                  <p className="text-xs text-muted-foreground">
+                    Suas credenciais de sessão foram salvas de forma segura. 
+                    A reconexão será automática caso a conexão caia.
+                  </p>
+                </div>
+              </div>
+            </div>
             
             <p className="text-sm text-muted-foreground mb-6">
               Seu WhatsApp está pronto para receber e enviar mensagens.

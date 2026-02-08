@@ -3,11 +3,9 @@ import { Check, Sparkles, MessageSquare, Zap, BarChart3, Building2, ArrowRight }
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
-import { toast } from 'sonner';
+import { CheckoutModal } from './subscription/CheckoutModal';
 
 interface PlanConfig {
   id: 'omni' | 'flow' | 'track' | 'business';
@@ -142,9 +140,12 @@ const PLANS: PlanConfig[] = [
 export function SubscriptionPage() {
   const subscription = useSubscription();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  const [checkoutPlan, setCheckoutPlan] = useState<typeof PLANS[0] | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
 
-  const handleSubscribe = (planId: string) => {
-    toast.info('Funcionalidade de pagamento será implementada com Stripe');
+  const handleSubscribe = (plan: typeof PLANS[0]) => {
+    setCheckoutPlan(plan);
+    setShowCheckout(true);
   };
 
   const formatPrice = (price: number) => {
@@ -329,7 +330,7 @@ export function SubscriptionPage() {
                     )}
                     variant={currentPlan ? "outline" : plan.popular ? "default" : "outline"}
                     disabled={currentPlan}
-                    onClick={() => handleSubscribe(plan.id)}
+                    onClick={() => handleSubscribe(plan)}
                   >
                     {currentPlan ? (
                       'Plano Atual'
@@ -382,6 +383,16 @@ export function SubscriptionPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Checkout Modal */}
+        {checkoutPlan && (
+          <CheckoutModal
+            open={showCheckout}
+            onOpenChange={setShowCheckout}
+            plan={checkoutPlan}
+            billingCycle={billingCycle}
+          />
         )}
       </div>
     </div>

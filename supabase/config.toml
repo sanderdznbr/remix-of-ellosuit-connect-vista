@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.document-tracking]
 verify_jwt = false
+
+[functions.pagarme-checkout]
+verify_jwt = false
+
+[functions.pagarme-webhook]
+verify_jwt = false
+
+[functions.pagarme-cancel]
+verify_jwt = false

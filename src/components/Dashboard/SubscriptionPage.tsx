@@ -1,350 +1,482 @@
-import React, { useState } from 'react';
-import { Check, Crown, Zap, Building2, ArrowRight, CreditCard, Calendar, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, Sparkles, Check, ArrowRight, CreditCard, HelpCircle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
+import { useSubscription, type ModuleType, type AddonType, type PlanType, type ResourceType } from '@/hooks/useSubscription';
+import { ModuleCard } from './subscription/ModuleCard';
+import { ComboCard } from './subscription/ComboCard';
+import { AddonSelector } from './subscription/AddonSelector';
+import { PricingSummary } from './subscription/PricingSummary';
+import { UsageDashboard } from './subscription/UsageDashboard';
+import { UpgradeModal } from '@/components/shared/UpgradeModal';
+import { toast } from 'sonner';
 
-interface PlanFeature {
-  text: string;
-  included: boolean;
-}
+// Base plan info
+const BASE_PLAN = {
+  name: 'Ellosuit Base',
+  price: 97,
+  users: 2,
+  storage: 5,
+  features: [
+    'Dashboard e Home',
+    'Gestão (Cadastros unificados)',
+    'Drive (5 GB)',
+    'Analytics e Relatórios',
+    'Configurações',
+    '2 Usuários incluídos',
+  ],
+};
 
-interface Plan {
-  id: string;
-  name: string;
-  description: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  icon: React.ElementType;
-  popular?: boolean;
-  features: PlanFeature[];
-  limits: {
-    users: string;
-    storage: string;
-    aiCredits: string;
-    whatsappSessions: string;
-  };
-}
-
-const PLANS: Plan[] = [
+// FAQ items
+const FAQ_ITEMS = [
   {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfeito para profissionais autônomos',
-    monthlyPrice: 97,
-    yearlyPrice: 970, // ~17% discount
-    icon: Zap,
-    limits: {
-      users: '1 usuário',
-      storage: '5 GB',
-      aiCredits: '100 créditos/mês',
-      whatsappSessions: '1 sessão'
-    },
-    features: [
-      { text: 'CRM WhatsApp básico', included: true },
-      { text: 'Agenda online', included: true },
-      { text: 'Tarefas e lembretes', included: true },
-      { text: 'Email marketing (500/mês)', included: true },
-      { text: 'Rastreamento de documentos', included: true },
-      { text: 'Videoconferências (até 4 participantes)', included: true },
-      { text: 'Armazenamento de arquivos', included: true },
-      { text: 'Agentes de IA básico', included: true },
-      { text: 'Múltiplos usuários', included: false },
-      { text: 'WhatsApp multi-sessão', included: false },
-      { text: 'API de integrações', included: false },
-      { text: 'Relatórios avançados', included: false },
-      { text: 'Suporte prioritário', included: false },
-    ]
+    question: 'Como adicionar funcionários à minha empresa?',
+    answer: 'Você pode adicionar funcionários em Configurações > Usuários. O plano Base inclui 2 usuários. Para adicionar mais, você pode comprar add-ons de usuários adicionais por R$ 29/mês cada.',
   },
   {
-    id: 'professional',
-    name: 'Professional',
-    description: 'Ideal para pequenas equipes',
-    monthlyPrice: 197,
-    yearlyPrice: 1970, // ~17% discount
-    icon: Crown,
-    popular: true,
-    limits: {
-      users: 'Até 5 usuários',
-      storage: '50 GB',
-      aiCredits: '500 créditos/mês',
-      whatsappSessions: '3 sessões'
-    },
-    features: [
-      { text: 'Tudo do Starter, mais:', included: true },
-      { text: 'CRM WhatsApp avançado', included: true },
-      { text: 'WhatsApp multi-sessão (3)', included: true },
-      { text: 'Email marketing (5.000/mês)', included: true },
-      { text: 'Videoconferências (até 25 participantes)', included: true },
-      { text: 'Gravação de reuniões', included: true },
-      { text: 'Agentes de IA avançados', included: true },
-      { text: 'Fluxos de automação', included: true },
-      { text: 'Relatórios e analytics', included: true },
-      { text: 'Integração Google Calendar', included: true },
-      { text: 'Suporte por email', included: true },
-      { text: 'API de integrações', included: false },
-      { text: 'White-label', included: false },
-    ]
+    question: 'Posso ter vários WhatsApps conectados?',
+    answer: 'Sim! Com o módulo Omni, você tem 1 sessão de WhatsApp CRM. Você pode comprar sessões adicionais por R$ 67/mês cada para gerenciar múltiplos números.',
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'Para empresas em crescimento',
-    monthlyPrice: 497,
-    yearlyPrice: 4970, // ~17% discount
-    icon: Building2,
-    limits: {
-      users: 'Usuários ilimitados',
-      storage: '500 GB',
-      aiCredits: 'Ilimitado',
-      whatsappSessions: 'Ilimitado'
-    },
-    features: [
-      { text: 'Tudo do Professional, mais:', included: true },
-      { text: 'Usuários ilimitados', included: true },
-      { text: 'WhatsApp ilimitado', included: true },
-      { text: 'Email marketing ilimitado', included: true },
-      { text: 'Videoconferências ilimitadas', included: true },
-      { text: 'Transcrição automática com IA', included: true },
-      { text: 'Agentes de IA personalizados', included: true },
-      { text: 'API completa de integrações', included: true },
-      { text: 'Relatórios personalizados', included: true },
-      { text: 'White-label (sua marca)', included: true },
-      { text: 'Onboarding dedicado', included: true },
-      { text: 'Suporte prioritário 24/7', included: true },
-      { text: 'SLA garantido', included: true },
-    ]
-  }
+    question: 'Como funcionam as agendas online?',
+    answer: 'Com o módulo Flow, você pode criar 2 links de agendamento. Cada link pode ser atribuído a um funcionário diferente. Você pode comprar agendas extras por R$ 19/mês cada.',
+  },
+  {
+    question: 'O pagamento é proporcional se eu mudar de plano?',
+    answer: 'Sim! Ao fazer upgrade ou downgrade, o valor é calculado proporcionalmente ao período restante do seu ciclo de faturamento atual.',
+  },
+  {
+    question: 'Posso cancelar a qualquer momento?',
+    answer: 'Sim, você pode cancelar sua assinatura quando quiser. Você continuará tendo acesso até o fim do período já pago.',
+  },
+  {
+    question: 'Quais formas de pagamento são aceitas?',
+    answer: 'Aceitamos cartão de crédito (Visa, MasterCard, Elo, American Express), boleto bancário e Pix.',
+  },
 ];
 
 export function SubscriptionPage() {
-  const [isYearly, setIsYearly] = useState(false);
-  const { user } = useAuth();
-  
-  // Mock current plan - in real app, fetch from subscription data
-  const currentPlan = 'starter';
+  const subscription = useSubscription();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedModules, setSelectedModules] = useState<ModuleType[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<Record<AddonType, number>>({
+    users: 0,
+    storage: 0,
+    emails: 0,
+    ai_agents: 0,
+    whatsapp_sessions: 0,
+    booking_links: 0,
+    meeting_hours: 0,
+    tracked_docs: 0,
+    priority_support: 0,
+  });
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeResource, setUpgradeResource] = useState<ResourceType | undefined>();
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(price);
+  // Sync selected modules with current subscription
+  useEffect(() => {
+    const activeModules: ModuleType[] = [];
+    if (subscription.hasOmni) activeModules.push('omni');
+    if (subscription.hasFlow) activeModules.push('flow');
+    if (subscription.hasTrack) activeModules.push('track');
+    setSelectedModules(activeModules);
+  }, [subscription.hasOmni, subscription.hasFlow, subscription.hasTrack]);
+
+  const handleModuleToggle = (module: ModuleType) => {
+    setSelectedModules(prev => {
+      if (prev.includes(module)) {
+        return prev.filter(m => m !== module);
+      }
+      return [...prev, module];
+    });
   };
+
+  const handleAddonChange = (type: AddonType, quantity: number) => {
+    setSelectedAddons(prev => ({
+      ...prev,
+      [type]: quantity,
+    }));
+  };
+
+  const handleComboSelect = (planType: PlanType) => {
+    switch (planType) {
+      case 'pro':
+        setSelectedModules(['omni', 'flow']);
+        break;
+      case 'business':
+        setSelectedModules(['omni', 'flow', 'track']);
+        break;
+      case 'enterprise':
+        setSelectedModules(['omni', 'flow', 'track']);
+        break;
+    }
+    toast.success(`Combo ${planType.charAt(0).toUpperCase() + planType.slice(1)} selecionado!`);
+  };
+
+  const handleUpgradeClick = (resource: ResourceType) => {
+    setUpgradeResource(resource);
+    setUpgradeModalOpen(true);
+  };
+
+  const handleCheckout = () => {
+    toast.info('Funcionalidade de pagamento será implementada com Stripe');
+  };
+
+  if (subscription.isLoading) {
+    return (
+      <div className="container max-w-7xl mx-auto py-8 px-4">
+        <div className="animate-pulse space-y-8">
+          <div className="h-32 bg-muted rounded-xl" />
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="h-80 bg-muted rounded-xl" />
+            <div className="h-80 bg-muted rounded-xl" />
+            <div className="h-80 bg-muted rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
-      {/* Header */}
+      {/* Header Hero */}
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold mb-3">Escolha seu plano</h1>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
+          <Sparkles className="h-4 w-4" />
+          <span className="text-sm font-medium">Plano Modular para Empresas</span>
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold mb-3">
+          Escale sua empresa com o Ellosuit
+        </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Potencialize seu negócio com as ferramentas certas. Escolha o plano que melhor se adapta às suas necessidades.
+          Monte o plano ideal para seu time. Escolha os módulos que precisa e adicione recursos conforme cresce.
         </p>
         
         {/* Billing Toggle */}
         <div className="flex items-center justify-center gap-4 mt-8">
           <Label 
             htmlFor="billing-toggle" 
-            className={cn("cursor-pointer", !isYearly && "font-semibold text-foreground")}
+            className={cn("cursor-pointer text-base", billingCycle === 'monthly' && "font-semibold text-foreground")}
           >
             Mensal
           </Label>
           <Switch
             id="billing-toggle"
-            checked={isYearly}
-            onCheckedChange={setIsYearly}
+            checked={billingCycle === 'yearly'}
+            onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
           />
           <Label 
             htmlFor="billing-toggle" 
-            className={cn("cursor-pointer", isYearly && "font-semibold text-foreground")}
+            className={cn("cursor-pointer text-base flex items-center gap-2", billingCycle === 'yearly' && "font-semibold text-foreground")}
           >
             Anual
-            <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
-              -17%
+            <Badge className="bg-primary/10 text-primary">
+              Economia de 17%
             </Badge>
           </Label>
         </div>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-3 gap-6 mb-12">
-        {PLANS.map((plan) => {
-          const Icon = plan.icon;
-          const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
-          const isCurrentPlan = plan.id === currentPlan;
-          
-          return (
-            <Card 
-              key={plan.id}
-              className={cn(
-                "relative flex flex-col transition-all duration-300",
-                plan.popular && "border-primary shadow-lg scale-[1.02]",
-                isCurrentPlan && "ring-2 ring-primary"
-              )}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary text-primary-foreground shadow-md">
-                    Mais Popular
-                  </Badge>
+      <div className="grid lg:grid-cols-[1fr_320px] gap-8">
+        <div className="space-y-12">
+          {/* Base Plan - Always Included */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Plano Base</h2>
+              <Badge variant="secondary">Obrigatório</Badge>
+            </div>
+            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-2xl">{BASE_PLAN.name}</CardTitle>
+                    <CardDescription className="mt-1">
+                      Incluído em todos os planos. Gestão completa para sua empresa.
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-3xl font-bold">R$ {BASE_PLAN.price}</span>
+                    <span className="text-muted-foreground">/mês</span>
+                  </div>
                 </div>
-              )}
-              
-              {isCurrentPlan && (
-                <div className="absolute -top-3 right-4">
-                  <Badge variant="outline" className="bg-background">
-                    Plano Atual
-                  </Badge>
-                </div>
-              )}
-              
-              <CardHeader className="text-center pb-2">
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4",
-                  plan.popular ? "bg-primary text-primary-foreground" : "bg-muted"
-                )}>
-                  <Icon className="h-7 w-7" />
-                </div>
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
-              
-              <CardContent className="flex-1">
-                {/* Price */}
-                <div className="text-center mb-6">
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{formatPrice(price)}</span>
-                    <span className="text-muted-foreground">
-                      /{isYearly ? 'ano' : 'mês'}
-                    </span>
-                  </div>
-                  {isYearly && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formatPrice(Math.round(price / 12))}/mês
-                    </p>
-                  )}
-                </div>
-                
-                {/* Limits */}
-                <div className="grid grid-cols-2 gap-2 mb-6 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.limits.users}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.limits.storage}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Zap className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.limits.aiCredits}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.limits.whatsappSessions}</span>
-                  </div>
-                </div>
-                
-                {/* Features */}
-                <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li 
-                      key={index}
-                      className={cn(
-                        "flex items-start gap-3 text-sm",
-                        !feature.included && "text-muted-foreground"
-                      )}
-                    >
-                      <Check className={cn(
-                        "h-4 w-4 mt-0.5 flex-shrink-0",
-                        feature.included ? "text-primary" : "text-muted-foreground/30"
-                      )} />
-                      <span>{feature.text}</span>
-                    </li>
+              <CardContent>
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {BASE_PLAN.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span>{feature}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </CardContent>
-              
-              <CardFooter>
-                <Button 
-                  className={cn(
-                    "w-full",
-                    plan.popular && "bg-primary hover:bg-primary/90"
-                  )}
-                  variant={isCurrentPlan ? "outline" : plan.popular ? "default" : "outline"}
-                  disabled={isCurrentPlan}
-                >
-                  {isCurrentPlan ? (
-                    'Plano Atual'
-                  ) : (
-                    <>
-                      {plan.id === 'enterprise' ? 'Falar com Vendas' : 'Assinar Agora'}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
-          );
-        })}
-      </div>
+          </section>
 
-      {/* Current Plan Info */}
-      <Card className="bg-muted/30">
-        <CardContent className="py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold mb-1">Seu plano atual: Starter</h3>
-              <p className="text-sm text-muted-foreground">
-                Próxima cobrança: R$ 97,00 em 15/03/2026
-              </p>
+          {/* Modules Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Módulos</h2>
+              <Badge variant="outline">Escolha os que precisa</Badge>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline">
-                Gerenciar Pagamento
-              </Button>
-              <Button variant="outline" className="text-destructive hover:text-destructive">
-                Cancelar Assinatura
-              </Button>
+            <div className="grid md:grid-cols-3 gap-4">
+              <ModuleCard
+                type="omni"
+                isSelected={selectedModules.includes('omni')}
+                isOwned={subscription.hasOmni}
+                onToggle={handleModuleToggle}
+              />
+              <ModuleCard
+                type="flow"
+                isSelected={selectedModules.includes('flow')}
+                isOwned={subscription.hasFlow}
+                onToggle={handleModuleToggle}
+              />
+              <ModuleCard
+                type="track"
+                isSelected={selectedModules.includes('track')}
+                isOwned={subscription.hasTrack}
+                onToggle={handleModuleToggle}
+              />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </section>
 
-      {/* FAQ Section */}
-      <div className="mt-16 text-center">
-        <h2 className="text-2xl font-bold mb-4">Dúvidas Frequentes</h2>
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-          <div className="p-4 rounded-lg bg-muted/30">
-            <h4 className="font-semibold mb-2">Posso trocar de plano a qualquer momento?</h4>
-            <p className="text-sm text-muted-foreground">
-              Sim! Você pode fazer upgrade ou downgrade do seu plano quando quiser. O valor é calculado proporcionalmente.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-muted/30">
-            <h4 className="font-semibold mb-2">Como funciona o período de teste?</h4>
-            <p className="text-sm text-muted-foreground">
-              Oferecemos 7 dias de teste gratuito em qualquer plano pago. Você pode cancelar antes e não será cobrado.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-muted/30">
-            <h4 className="font-semibold mb-2">Quais formas de pagamento são aceitas?</h4>
-            <p className="text-sm text-muted-foreground">
-              Aceitamos cartão de crédito (Visa, MasterCard, Elo), boleto bancário e Pix.
-            </p>
-          </div>
-          <div className="p-4 rounded-lg bg-muted/30">
-            <h4 className="font-semibold mb-2">Há desconto para pagamento anual?</h4>
-            <p className="text-sm text-muted-foreground">
-              Sim! Ao optar pelo pagamento anual, você economiza 17% em relação ao pagamento mensal.
-            </p>
-          </div>
+          {/* Combos Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Combos</h2>
+              <Badge variant="outline">Economize até 18%</Badge>
+            </div>
+            <div className="grid md:grid-cols-3 gap-4">
+              <ComboCard
+                type="pro"
+                isCurrentPlan={subscription.planType === 'pro'}
+                onSelect={handleComboSelect}
+              />
+              <ComboCard
+                type="business"
+                isCurrentPlan={subscription.planType === 'business'}
+                onSelect={handleComboSelect}
+              />
+              <ComboCard
+                type="enterprise"
+                isCurrentPlan={subscription.planType === 'enterprise'}
+                onSelect={handleComboSelect}
+              />
+            </div>
+          </section>
+
+          {/* Add-ons Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowRight className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Personalize seu Plano</h2>
+              <Badge variant="outline">Add-ons avulsos</Badge>
+            </div>
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="team">Equipe</TabsTrigger>
+                <TabsTrigger value="communication">Comunicação</TabsTrigger>
+                <TabsTrigger value="productivity">Produtividade</TabsTrigger>
+                <TabsTrigger value="storage">Armazenamento</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                <AddonSelector
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  category="all"
+                />
+              </TabsContent>
+              <TabsContent value="team">
+                <AddonSelector
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  category="team"
+                />
+              </TabsContent>
+              <TabsContent value="communication">
+                <AddonSelector
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  category="communication"
+                />
+              </TabsContent>
+              <TabsContent value="productivity">
+                <AddonSelector
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  category="productivity"
+                />
+              </TabsContent>
+              <TabsContent value="storage">
+                <AddonSelector
+                  selectedAddons={selectedAddons}
+                  onAddonChange={handleAddonChange}
+                  category="storage"
+                />
+              </TabsContent>
+            </Tabs>
+          </section>
+
+          {/* Current Usage (if subscriber) */}
+          {subscription.isActive && (
+            <section>
+              <UsageDashboard
+                limits={subscription.limits}
+                usage={subscription.usage}
+                hasOmni={subscription.hasOmni}
+                hasFlow={subscription.hasFlow}
+                hasTrack={subscription.hasTrack}
+                onUpgrade={handleUpgradeClick}
+              />
+            </section>
+          )}
+
+          {/* Current Plan Info */}
+          {subscription.isActive && (
+            <section>
+              <Card className="bg-muted/30">
+                <CardContent className="py-6">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-1">
+                        Seu plano atual: {subscription.planType.charAt(0).toUpperCase() + subscription.planType.slice(1)}
+                        {subscription.status === 'trialing' && (
+                          <Badge variant="secondary" className="ml-2">Trial</Badge>
+                        )}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {subscription.currentPeriodEnd && (
+                          <>Próxima cobrança: R$ {subscription.monthlyPrice.toFixed(2)} em {subscription.currentPeriodEnd.toLocaleDateString('pt-BR')}</>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button variant="outline">
+                        Gerenciar Pagamento
+                      </Button>
+                      <Button variant="outline" className="text-destructive hover:text-destructive">
+                        Cancelar Assinatura
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
+          {/* FAQ Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Dúvidas Frequentes</h2>
+            </div>
+            <div className="space-y-2">
+              {FAQ_ITEMS.map((item, index) => (
+                <Collapsible key={index}>
+                  <Card>
+                    <CollapsibleTrigger className="w-full">
+                      <CardHeader className="py-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-medium text-left">
+                            {item.question}
+                          </CardTitle>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 pb-4">
+                        <p className="text-sm text-muted-foreground">
+                          {item.answer}
+                        </p>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Sticky Pricing Summary */}
+        <div className="hidden lg:block">
+          <PricingSummary
+            selectedModules={selectedModules.filter(m => !subscription.hasModule(m))}
+            selectedAddons={selectedAddons}
+            billingCycle={billingCycle}
+            onCheckout={handleCheckout}
+            isCurrentSubscription={subscription.isActive}
+          />
         </div>
       </div>
+
+      {/* Mobile Sticky Footer */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t lg:hidden">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <div>
+            <p className="text-sm text-muted-foreground">Total mensal</p>
+            <p className="text-xl font-bold">
+              R$ {BASE_PLAN.price + selectedModules.filter(m => !subscription.hasModule(m)).reduce((t, m) => {
+                const prices = { omni: 147, flow: 97, track: 67 };
+                return t + prices[m];
+              }, 0) + Object.entries(selectedAddons).reduce((t, [type, qty]) => {
+                const prices: Record<string, number> = {
+                  users: 29, storage: 19, emails: 29, ai_agents: 39,
+                  whatsapp_sessions: 67, booking_links: 19, meeting_hours: 49,
+                  tracked_docs: 29, priority_support: 97
+                };
+                return t + (prices[type] || 0) * qty;
+              }, 0)}
+            </p>
+          </div>
+          <Button size="lg" onClick={handleCheckout}>
+            {subscription.isActive ? 'Atualizar' : 'Assinar'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        resource={upgradeResource}
+        currentUsage={upgradeResource ? subscription.usage[
+          upgradeResource === 'users' ? 'currentUsers' :
+          upgradeResource === 'storage_gb' ? 'storageUsedGb' :
+          upgradeResource === 'emails_sent' ? 'emailsSentThisMonth' :
+          upgradeResource === 'ai_agents_active' ? 'aiAgentsActive' :
+          upgradeResource === 'whatsapp_sessions_active' ? 'whatsappSessionsActive' :
+          upgradeResource === 'booking_links_active' ? 'bookingLinksActive' :
+          upgradeResource === 'meeting_hours_used' ? 'meetingHoursUsed' :
+          upgradeResource === 'tracked_docs_created' ? 'trackedDocsCreated' :
+          upgradeResource === 'tracked_links_created' ? 'trackedLinksCreated' :
+          'trackedVideosCreated'
+        ] : undefined}
+        maxLimit={upgradeResource ? subscription.limits[
+          upgradeResource === 'users' ? 'maxUsers' :
+          upgradeResource === 'storage_gb' ? 'maxStorageGb' :
+          upgradeResource === 'emails_sent' ? 'maxEmailsMonth' :
+          upgradeResource === 'ai_agents_active' ? 'maxAiAgents' :
+          upgradeResource === 'whatsapp_sessions_active' ? 'maxWhatsappSessions' :
+          upgradeResource === 'booking_links_active' ? 'maxBookingLinks' :
+          upgradeResource === 'meeting_hours_used' ? 'maxMeetingHours' :
+          upgradeResource === 'tracked_docs_created' ? 'maxTrackedDocs' :
+          upgradeResource === 'tracked_links_created' ? 'maxTrackedLinks' :
+          'maxTrackedVideos'
+        ] : undefined}
+      />
     </div>
   );
 }

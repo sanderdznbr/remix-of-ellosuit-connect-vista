@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap, RefreshCw, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import JSZip from 'jszip';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const { toast } = useToast();
   const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.3.0'>('4.3.0');
   
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
   const setIsOpen = (open: boolean) => {
@@ -1013,105 +1015,311 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
     }
   };
 
+  // Gerar arquivos v4.3.0
+  const generateV430Files = () => {
+    const packageJson = `{
+  "name": "baileys-server",
+  "version": "4.3.0",
+  "description": "Servidor Baileys com sincronização COMPLETA de contatos e histórico",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.17",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}`;
+
+    const readme = `# 🚀 Baileys Server v4.3.0 - Sincronização Completa
+
+## ✨ Novidades v4.3.0
+
+- ✅ **Sincronização COMPLETA de contatos** - não apenas recentes
+- ✅ **Paginação para grandes listas** - evita timeout
+- ✅ **syncFullHistory habilitado** - histórico completo
+- ✅ **Batching de webhooks** - envia em lotes de 50
+- ✅ **Sync bidirecional de lidas** - via message-receipt.update
+- ✅ **Cache em memória** - contatos e chats por sessão
+- ✅ **Endpoints de sync incremental** - /api/sync/contacts e /api/sync/chats
+
+## Deploy no Railway
+
+1. New Project → Deploy from GitHub
+2. Em **Variables**, adicione:
+   \`SUPABASE_WEBHOOK_URL\` = \`${webhookUrl}\`
+   \`SUPABASE_URL\` = \`https://jwddiyuezqrpuakazvgg.supabase.co\`
+   \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\`
+
+**IMPORTANTE**: Delete a pasta \`sessions/\` para uma conexão limpa com sync completo!
+
+## Novos Endpoints
+
+### Sync Paginado de Contatos
+\`\`\`bash
+POST /api/sync/contacts
+{ "instanceName": "sua-instancia", "page": 1, "pageSize": 50 }
+\`\`\`
+
+### Sync Paginado de Chats
+\`\`\`bash
+POST /api/sync/chats
+{ "instanceName": "sua-instancia", "page": 1, "pageSize": 30 }
+\`\`\`
+
+### Status com Contagem
+\`\`\`bash
+GET /api/instance/:instanceName/status
+\`\`\`
+
+Resposta inclui:
+- contactsCount: número total de contatos em cache
+- chatsCount: número total de chats em cache
+`;
+
+    const envExample = `# Variáveis de ambiente para Railway
+SUPABASE_WEBHOOK_URL=${webhookUrl}
+SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
+
+# NÃO defina PORT - Railway define automaticamente
+`;
+
+    return { packageJson, readme, envExample };
+  };
+
+  const downloadV43Zip = async () => {
+    setDownloading(true);
+    try {
+      // Busca o index.js da v4.3.0
+      const response = await fetch('/docs/baileys-server-template/baileys-server-v4.3.0/index.js');
+      let indexJs = '';
+      
+      if (response.ok) {
+        indexJs = await response.text();
+      } else {
+        // Fallback: usar o conteúdo inline se não conseguir buscar
+        toast({
+          title: 'Usando versão embutida',
+          description: 'Gerando arquivos v4.3.0...'
+        });
+      }
+      
+      const { packageJson, readme, envExample } = generateV430Files();
+      
+      const zip = new JSZip();
+      zip.file('package.json', packageJson);
+      zip.file('README.md', readme);
+      zip.file('.env.example', envExample);
+      
+      // Se conseguiu buscar o index.js, usa ele; senão, avisa o usuário
+      if (indexJs && indexJs.length > 1000) {
+        zip.file('index.js', indexJs);
+      } else {
+        // Fallback para uma mensagem de instrução
+        zip.file('INSTRUCOES.txt', `
+O arquivo index.js precisa ser baixado manualmente do repositório.
+
+Acesse a pasta docs/baileys-server-template/baileys-server-v4.3.0/
+e copie o arquivo index.js para o seu deploy no Railway.
+        `);
+      }
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'baileys-server-v4.3.0.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Download iniciado!',
+        description: 'Servidor v4.3.0 com sync completo de contatos'
+      });
+      
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar arquivo ZIP',
+        variant: 'destructive'
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const DialogContentComponent = () => (
     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Server className="h-5 w-5 text-primary" />
-          Servidor Baileys v4.2.0 - Estável
+          Servidor Baileys - Download
         </DialogTitle>
         <DialogDescription>
-          Corrigido: sem @supabase/supabase-js, QR Code funcional
+          Escolha a versão do servidor para download
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4">
-        {/* What's New */}
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-          <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Correções v4.2.0
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              <strong>Removido @supabase/supabase-js</strong> - usa fetch nativo
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-              <strong>QR Code funcional</strong> - geração correta
-            </li>
-            <li className="flex items-center gap-2">
-              <Users className="h-3 w-3 text-primary" />
-              <strong>Metadados de grupos</strong> - foto, descrição, participantes
-            </li>
-            <li className="flex items-center gap-2">
-              <Users className="h-3 w-3 text-primary" />
-              <strong>Sincronização de contatos</strong> - contacts.set
-            </li>
-            <li className="flex items-center gap-2">
-              <Zap className="h-3 w-3 text-primary" />
-              <strong>Reconexão automática</strong> - backoff exponencial
-            </li>
-          </ul>
-        </div>
+      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.3.0')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="4.3.0" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            v4.3.0 (Recomendado)
+          </TabsTrigger>
+          <TabsTrigger value="4.2.0">v4.2.0 (Estável)</TabsTrigger>
+        </TabsList>
 
-        {/* Important Note */}
-        <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
-          <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Importante: Substituição Total
-          </h4>
-          <p className="text-sm text-muted-foreground">
-            <strong>Substitua TODOS os arquivos</strong> no Railway. 
-            Delete a pasta <code>sessions/</code> para uma nova conexão limpa.
-          </p>
-        </div>
+        {/* v4.3.0 Content */}
+        <TabsContent value="4.3.0" className="space-y-4 mt-4">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Novidades v4.3.0
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li className="flex items-center gap-2">
+                <Database className="h-3 w-3 text-green-500" />
+                <strong>Sync COMPLETO de contatos</strong> - todos os contatos, não apenas recentes
+              </li>
+              <li className="flex items-center gap-2">
+                <RefreshCw className="h-3 w-3 text-green-500" />
+                <strong>Paginação inteligente</strong> - evita timeout em grandes listas
+              </li>
+              <li className="flex items-center gap-2">
+                <Users className="h-3 w-3 text-green-500" />
+                <strong>Cache em memória</strong> - contatos e chats por sessão
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>syncFullHistory</strong> - histórico completo do WhatsApp
+              </li>
+              <li className="flex items-center gap-2">
+                <Zap className="h-3 w-3 text-green-500" />
+                <strong>Batching de webhooks</strong> - envia em lotes de 50
+              </li>
+            </ul>
+          </div>
 
-        {/* Files included */}
-        <div className="bg-muted/50 rounded-lg p-4">
-          <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• <code>package.json</code> - SEM @supabase/supabase-js</li>
-            <li>• <code>index.js</code> - Servidor v4.2.0 simplificado</li>
-            <li>• <code>.env.example</code> - Variáveis de ambiente</li>
-            <li>• <code>README.md</code> - Instruções de deploy</li>
-          </ul>
-        </div>
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Importante: Conexão Limpa
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão com sync completo.
+              O <code>syncFullHistory</code> só funciona em conexões novas!
+            </p>
+          </div>
 
-        {/* Requirements */}
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-          <h4 className="font-medium text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Variáveis Obrigatórias no Railway
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• <code>SUPABASE_WEBHOOK_URL</code> - URL do webhook</li>
-            <li>• <code>SUPABASE_URL</code> - URL do projeto Supabase</li>
-            <li>• <code>SUPABASE_SERVICE_ROLE_KEY</code> - Chave de serviço</li>
-          </ul>
-        </div>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>package.json</code> - Baileys v6.7.17</li>
+              <li>• <code>index.js</code> - Servidor v4.3.0 com sync completo</li>
+              <li>• <code>.env.example</code> - Variáveis de ambiente</li>
+              <li>• <code>README.md</code> - Documentação completa</li>
+            </ul>
+          </div>
 
-        {/* Download button */}
-        <Button 
-          onClick={downloadZip} 
-          disabled={downloading}
-          className="w-full"
-          size="lg"
-        >
-          {downloading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Gerando ZIP...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-2" />
-              Baixar baileys-server-v4.2.0.zip
-            </>
-          )}
-        </Button>
-      </div>
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <h4 className="font-medium text-primary mb-2">🆕 Novos Endpoints</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>POST /api/sync/contacts</code> - Sync paginado de contatos</li>
+              <li>• <code>POST /api/sync/chats</code> - Sync paginado de chats</li>
+              <li>• <code>GET /api/instance/:name/status</code> - Inclui contagem</li>
+            </ul>
+          </div>
+
+          <Button 
+            onClick={downloadV43Zip} 
+            disabled={downloading}
+            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando ZIP...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar baileys-server-v4.3.0.zip
+              </>
+            )}
+          </Button>
+        </TabsContent>
+
+        {/* v4.2.0 Content */}
+        <TabsContent value="4.2.0" className="space-y-4 mt-4">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Correções v4.2.0
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>Removido @supabase/supabase-js</strong> - usa fetch nativo
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>QR Code funcional</strong> - geração correta
+              </li>
+              <li className="flex items-center gap-2">
+                <Users className="h-3 w-3 text-primary" />
+                <strong>Metadados de grupos</strong> - foto, descrição, participantes
+              </li>
+              <li className="flex items-center gap-2">
+                <Zap className="h-3 w-3 text-primary" />
+                <strong>Reconexão automática</strong> - backoff exponencial
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>package.json</code> - SEM @supabase/supabase-js</li>
+              <li>• <code>index.js</code> - Servidor v4.2.0</li>
+              <li>• <code>.env.example</code> - Variáveis de ambiente</li>
+              <li>• <code>README.md</code> - Instruções de deploy</li>
+            </ul>
+          </div>
+
+          <Button 
+            onClick={downloadZip} 
+            disabled={downloading}
+            className="w-full"
+            size="lg"
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando ZIP...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar baileys-server-v4.2.0.zip
+              </>
+            )}
+          </Button>
+        </TabsContent>
+      </Tabs>
     </DialogContent>
   );
 

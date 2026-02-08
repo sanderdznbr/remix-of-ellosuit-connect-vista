@@ -511,6 +511,14 @@ serve(async (req) => {
         const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
         const cleanPhone = phone.replace(/\D/g, '');
         const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        const messageText = typeof message === 'string' ? message.trim() : String(message ?? '').trim();
+
+        if (!messageText) {
+          return new Response(JSON.stringify({ error: 'message não pode ser vazio' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
 
         // Find or create conversation
         let { data: conversation } = await supabase
@@ -540,7 +548,7 @@ serve(async (req) => {
           try {
             console.log(`[SEND] Sending to ${jid} via ${normalizedServerUrl} (instanceName=${session.instance_name})`);
 
-            // Baileys Server v4.2.0 expects: { instanceName, jid, message }
+            // Baileys Server v4.2.0 espera o conteúdo no formato Baileys: { text: "..." }
             const sendResponse = await fetch(`${normalizedServerUrl}/api/message/send`, {
               method: 'POST',
               headers: {
@@ -549,40 +557,40 @@ serve(async (req) => {
               body: JSON.stringify({
                 instanceName: session.instance_name,
                 jid,
-                message
+                message: { text: messageText }
               })
             });
 
             if (sendResponse.ok) {
               const sendData = await sendResponse.json();
-              
+
               // DON'T insert message here - the webhook will handle it
               // This prevents duplicate messages (one from API, one from webhook)
               // The webhook has proper deduplication by wa_message_id
-              
+
               // Just update conversation last_message
               await supabase
                 .from('whatsapp_conversations')
                 .update({
-                  last_message: message,
+                  last_message: messageText,
                   last_message_at: new Date().toISOString()
                 })
                 .eq('id', conversation?.id);
 
-              return new Response(JSON.stringify({ 
-                success: true, 
-                messageId: sendData.messageId || sendData.key?.id 
+              return new Response(JSON.stringify({
+                success: true,
+                messageId: sendData.messageId || sendData.key?.id
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });
             } else {
               const errorText = await sendResponse.text();
               console.error('Baileys send error:', errorText);
-              
+
               // Parse error message for better user feedback
               let errorMessage = 'Falha ao enviar mensagem';
               let errorDetails = errorText;
-              
+
               try {
                 const errorJson = JSON.parse(errorText);
                 const rawErr = String(errorJson?.error || errorJson?.message || '');
@@ -605,7 +613,7 @@ serve(async (req) => {
               } catch {
                 // Not JSON, use raw error
               }
-              
+
               return new Response(JSON.stringify({ error: errorMessage, details: errorDetails }), {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -613,8 +621,8 @@ serve(async (req) => {
             }
           } catch (e: any) {
             console.error('Error sending via Baileys:', e);
-            return new Response(JSON.stringify({ 
-              error: 'Erro de conexão com servidor', 
+            return new Response(JSON.stringify({
+              error: 'Erro de conexão com servidor',
               details: e.message || 'Não foi possível conectar ao servidor WhatsApp'
             }), {
               status: 500,
@@ -622,6 +630,7 @@ serve(async (req) => {
             });
           }
         }
+
 
         // Demo mode - save locally
         await supabase
@@ -631,7 +640,7 @@ serve(async (req) => {
             session_id: sessionId,
             company_id: session.company_id,
             from_me: true,
-            content: message,
+            content: messageText,
             message_type: 'text',
             status: 'sent',
             timestamp: new Date().toISOString()
@@ -640,10 +649,11 @@ serve(async (req) => {
         await supabase
           .from('whatsapp_conversations')
           .update({
-            last_message: message,
+            last_message: messageText,
             last_message_at: new Date().toISOString()
           })
           .eq('id', conversation?.id);
+
 
         return new Response(JSON.stringify({ 
           success: true, 

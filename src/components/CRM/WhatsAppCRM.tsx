@@ -23,6 +23,7 @@ import ConversationContextMenu from './ConversationContextMenu';
 import MessageContextMenu from './MessageContextMenu';
 import AudioRecorderButton from './AudioRecorderButton';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
+import { ChannelSelector } from './ChannelSelector';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -260,6 +261,9 @@ const WhatsAppCRM: React.FC = () => {
   
   // Sync data state
   const [syncingData, setSyncingData] = useState(false);
+  
+  // Selected session for channel selector
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Context menu states
   const [conversationContextMenu, setConversationContextMenu] = useState<{
@@ -391,6 +395,11 @@ const WhatsAppCRM: React.FC = () => {
     
     if (!error) {
       setSessions(data || []);
+      // Auto-select first connected session if none selected
+      if (!selectedSessionId && data && data.length > 0) {
+        const connected = data.find(s => s.status === 'connected');
+        setSelectedSessionId(connected?.id || data[0].id);
+      }
     }
   };
 
@@ -1826,6 +1835,18 @@ const WhatsAppCRM: React.FC = () => {
             "w-full md:w-96 lg:w-[400px] border-r flex flex-col bg-card",
             showMobileChat && "hidden md:flex"
           )}>
+            {/* Channel Selector */}
+            <ChannelSelector
+              sessions={sessions}
+              selectedSessionId={selectedSessionId}
+              onSelectSession={(id) => {
+                setSelectedSessionId(id);
+                // Reload conversations for this session
+                loadConversations();
+              }}
+              onAddNew={() => setShowQRModal(true)}
+            />
+            
             {/* Search & Filters */}
             <div className="p-4 border-b space-y-3">
               {/* Search */}

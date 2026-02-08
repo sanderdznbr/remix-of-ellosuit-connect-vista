@@ -626,7 +626,7 @@ const WhatsAppCRM: React.FC = () => {
     setContactsCount(count || 0);
   };
 
-  // Mark conversation as read - reset unread_count
+  // Mark conversation as read - reset unread_count and send read receipts to Baileys
   const markConversationAsRead = async (conv: WhatsAppConversationData) => {
     if (!conv || (conv.unread_count || 0) === 0) return;
     
@@ -635,11 +635,32 @@ const WhatsAppCRM: React.FC = () => {
       c.id === conv.id ? { ...c, unread_count: 0 } : c
     ));
     
-    // Update database in background
-    await supabase
-      .from('whatsapp_conversations')
-      .update({ unread_count: 0 })
-      .eq('id', conv.id);
+    // Get connected session for this conversation
+    const connectedSession = sessions.find(s => 
+      s.id === conv.session_id && s.status === 'connected'
+    ) || sessions.find(s => s.status === 'connected');
+    
+    // Call API to mark as read (updates DB + sends read receipts to Baileys)
+    try {
+      if (connectedSession) {
+        await supabase.functions.invoke('whatsapp-api', {
+          body: {
+            action: 'mark_as_read',
+            sessionId: connectedSession.id,
+            phone: conv.contact_phone,
+            conversationId: conv.id
+          }
+        });
+      } else {
+        // Just update database if no connected session
+        await supabase
+          .from('whatsapp_conversations')
+          .update({ unread_count: 0 })
+          .eq('id', conv.id);
+      }
+    } catch (e) {
+      console.error('Error marking conversation as read:', e);
+    }
   };
 
   // Create label

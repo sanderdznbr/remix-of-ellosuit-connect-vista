@@ -227,8 +227,8 @@ export function MegaMenuHeader() {
             return (
               <div
                 key={group.id}
-                className="relative flex items-stretch"
-                style={{ height: '64px' }}
+                className="relative flex items-end"
+                style={{ height: '64px', paddingBottom: 0 }}
                 onMouseEnter={() => handleMouseEnter(group.id)}
                 onMouseLeave={handleMouseLeave}
               >
@@ -238,10 +238,9 @@ export function MegaMenuHeader() {
                   style={{
                     backgroundColor: isOpen ? 'white' : isCurrentHub ? 'rgba(255,255,255,0.2)' : 'transparent',
                     color: isOpen ? '#1f2937' : isCurrentHub ? 'white' : 'rgba(255,255,255,0.75)',
-                    borderRadius: isOpen ? '12px 12px 0 0' : '12px',
-                    margin: isOpen ? '0' : '12px 0',
-                    paddingTop: isOpen ? '12px' : '0',
-                    paddingBottom: isOpen ? '0' : '0',
+                    borderRadius: isOpen ? '10px 10px 0 0' : '10px',
+                    height: isOpen ? '40px' : '36px',
+                    marginBottom: isOpen ? '0' : '14px',
                   }}
                 >
                   <span>{group.label}</span>

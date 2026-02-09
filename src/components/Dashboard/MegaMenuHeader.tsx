@@ -8,6 +8,7 @@ import {
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
 import { useAuth } from "@/hooks/useAuth";
+import { useHubColor } from "@/hooks/useHubColor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const COLORS = {
-  omni: "#E34800",
+  omni: "#FF4500",
   flow: "#007DE3",
   track: "#00E371",
   gestao: "#8B5CF6",
@@ -173,6 +174,7 @@ export function MegaMenuHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { color: hubColor } = useHubColor();
 
   const handleMouseEnter = (menuId: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -217,7 +219,7 @@ export function MegaMenuHeader() {
       <div className="h-16 px-6 flex items-center justify-between">
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-3">
-          <ElloLogo className="h-8 w-auto" color="#3000E3" />
+          <ElloLogo className="h-8 w-auto" color={hubColor} />
         </Link>
 
         {/* Main Navigation */}

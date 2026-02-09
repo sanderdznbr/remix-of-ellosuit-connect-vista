@@ -129,7 +129,7 @@ const SaveLeadModal: React.FC<SaveLeadModalProps> = ({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-blue-600" />
+            <UserPlus className="h-5 w-5 text-[#FF4500]" />
             Salvar como Lead
           </DialogTitle>
           <DialogDescription>
@@ -241,7 +241,7 @@ const SaveLeadModal: React.FC<SaveLeadModalProps> = ({
             <Button 
               onClick={handleSave} 
               disabled={saving || !formData.name.trim()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-[#FF4500] hover:bg-[#FF4500]/90"
             >
               {saving ? (
                 <>

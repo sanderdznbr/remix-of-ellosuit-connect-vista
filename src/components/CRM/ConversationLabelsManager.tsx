@@ -66,7 +66,7 @@ const ConversationLabelsManager: React.FC<ConversationLabelsManagerProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5 text-blue-600" />
+            <Tag className="h-5 w-5 text-[#FF4500]" />
             {mode === 'assign' ? 'Etiquetas da Conversa' : 'Gerenciar Etiquetas'}
           </DialogTitle>
         </DialogHeader>
@@ -88,7 +88,7 @@ const ConversationLabelsManager: React.FC<ConversationLabelsManagerProps> = ({
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer",
                       mode === 'assign' && selectedLabels.includes(label.id) 
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" 
+                        ? "border-[#FF4500] bg-[#FF4500]/10" 
                         : "hover:bg-muted/50"
                     )}
                     onClick={() => mode === 'assign' && onToggleLabel(label.id)}
@@ -103,7 +103,7 @@ const ConversationLabelsManager: React.FC<ConversationLabelsManagerProps> = ({
                     
                     <div className="flex items-center gap-2">
                       {mode === 'assign' && selectedLabels.includes(label.id) && (
-                        <Check className="h-4 w-4 text-blue-600" />
+                        <Check className="h-4 w-4 text-[#FF4500]" />
                       )}
                       {mode === 'manage' && (
                         <Button
@@ -143,7 +143,7 @@ const ConversationLabelsManager: React.FC<ConversationLabelsManagerProps> = ({
                     key={color}
                     className={cn(
                       "w-7 h-7 rounded-full transition-transform",
-                      newLabelColor === color && "ring-2 ring-offset-2 ring-blue-500 scale-110"
+                      newLabelColor === color && "ring-2 ring-offset-2 ring-[#FF4500] scale-110"
                     )}
                     style={{ backgroundColor: color }}
                     onClick={() => setNewLabelColor(color)}
@@ -164,7 +164,7 @@ const ConversationLabelsManager: React.FC<ConversationLabelsManagerProps> = ({
                   size="sm"
                   onClick={handleCreateLabel}
                   disabled={!newLabelName.trim()}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-[#FF4500] hover:bg-[#FF4500]/90"
                 >
                   Criar
                 </Button>

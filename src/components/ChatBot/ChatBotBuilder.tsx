@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   GitBranch, Save, Play, ArrowLeft, Plus, BarChart3,
-  Pause, Settings, ChevronDown, Trash2
+  Pause, Settings, ChevronDown, Trash2, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ChatBotSidebar from './ChatBotSidebar';
 import ChatBotCanvas from './ChatBotCanvas';
 import ChatBotPropertiesPanel from './ChatBotPropertiesPanel';
+import ChatBotAIAssistant from './ChatBotAIAssistant';
 import { FlowNode, FlowEdge, BlockDefinition, ChatBotFlow } from './types';
 
 const BRAND_COLOR = '#FF4500';
@@ -42,6 +43,7 @@ const ChatBotBuilder: React.FC = () => {
   const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showAIPanel, setShowAIPanel] = useState(true);
 
   // Get company ID
   useEffect(() => {
@@ -73,7 +75,6 @@ const ChatBotBuilder: React.FC = () => {
         .order('updated_at', { ascending: false });
       
       if (!error && data) {
-        // Cast the data to ChatBotFlow type with proper unknown intermediate
         const typedFlows = data.map(flow => ({
           ...flow,
           nodes: (Array.isArray(flow.nodes) ? flow.nodes : []) as unknown as FlowNode[],
@@ -82,7 +83,6 @@ const ChatBotBuilder: React.FC = () => {
         })) as ChatBotFlow[];
         setFlows(typedFlows);
         
-        // Load first flow if exists
         if (typedFlows.length > 0 && !currentFlow) {
           selectFlow(typedFlows[0]);
         }
@@ -115,6 +115,11 @@ const ChatBotBuilder: React.FC = () => {
     ));
   }, []);
 
+  const handleApplyAIFlow = useCallback((newNodes: FlowNode[], newEdges: FlowEdge[]) => {
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }, []);
+
   const saveFlow = async () => {
     if (!companyId || !user?.id) {
       toast({ title: 'Erro', description: 'Usuário não autenticado', variant: 'destructive' });
@@ -125,7 +130,6 @@ const ChatBotBuilder: React.FC = () => {
     
     try {
       if (currentFlow) {
-        // Update existing flow
         const { error } = await supabase
           .from('chatbot_flows')
           .update({
@@ -144,7 +148,6 @@ const ChatBotBuilder: React.FC = () => {
             : f
         ));
       } else {
-        // Create new flow
         const { data, error } = await supabase
           .from('chatbot_flows')
           .insert({
@@ -274,24 +277,29 @@ const ChatBotBuilder: React.FC = () => {
   if (loading) {
     return (
       <div className="h-[calc(100vh-64px)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: BRAND_COLOR }}></div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col bg-gray-50">
+    <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <div className="h-14 bg-white border-b flex items-center justify-between px-4 flex-shrink-0">
+      <div className="h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/omni')}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/dashboard/omni')}
+            className="rounded-xl hover:bg-gray-100"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           
           <div className="flex items-center gap-3">
             <div 
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: BRAND_COLOR }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+              style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR}dd)` }}
             >
               <GitBranch className="h-5 w-5 text-white" />
             </div>
@@ -304,11 +312,11 @@ const ChatBotBuilder: React.FC = () => {
               />
               <div className="flex items-center gap-2 mt-0.5">
                 {currentFlow?.is_active ? (
-                  <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0">
+                  <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0 rounded-full">
                     Ativo
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded-full">
                     Inativo
                   </Badge>
                 )}
@@ -323,16 +331,28 @@ const ChatBotBuilder: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* AI Toggle Button */}
+          <Button
+            variant={showAIPanel ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAIPanel(!showAIPanel)}
+            className="gap-2 rounded-xl"
+            style={showAIPanel ? { backgroundColor: BRAND_COLOR } : {}}
+          >
+            <Sparkles className="h-4 w-4" />
+            IA
+          </Button>
+
           {/* Flow Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl">
                 <span className="max-w-[100px] truncate">{currentFlow?.name || 'Selecionar'}</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => setShowNewFlowDialog(true)}>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl">
+              <DropdownMenuItem onClick={() => setShowNewFlowDialog(true)} className="rounded-lg">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Fluxo
               </DropdownMenuItem>
@@ -341,7 +361,7 @@ const ChatBotBuilder: React.FC = () => {
                 <DropdownMenuItem 
                   key={flow.id} 
                   onClick={() => selectFlow(flow)}
-                  className={currentFlow?.id === flow.id ? 'bg-gray-100' : ''}
+                  className={`rounded-lg ${currentFlow?.id === flow.id ? 'bg-gray-100' : ''}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="truncate">{flow.name}</span>
@@ -360,7 +380,7 @@ const ChatBotBuilder: React.FC = () => {
                 variant="outline" 
                 size="sm"
                 onClick={toggleFlowActive}
-                className="gap-2"
+                className="gap-2 rounded-xl"
               >
                 {currentFlow.is_active ? (
                   <>
@@ -377,17 +397,17 @@ const ChatBotBuilder: React.FC = () => {
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl">
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                <DropdownMenuContent align="end" className="rounded-xl">
+                  <DropdownMenuItem className="rounded-lg">
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Ver Estatísticas
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={deleteFlow} className="text-red-600">
+                  <DropdownMenuItem onClick={deleteFlow} className="text-red-600 rounded-lg">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Excluir Fluxo
                   </DropdownMenuItem>
@@ -399,8 +419,8 @@ const ChatBotBuilder: React.FC = () => {
           <Button 
             onClick={saveFlow} 
             disabled={isSaving}
-            className="gap-2"
-            style={{ backgroundColor: BRAND_COLOR }}
+            className="gap-2 rounded-xl text-white shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR}dd)` }}
           >
             <Save className="h-4 w-4" />
             {isSaving ? 'Salvando...' : 'Salvar'}
@@ -428,11 +448,19 @@ const ChatBotBuilder: React.FC = () => {
             onUpdate={handleNodeUpdate}
           />
         )}
+
+        {showAIPanel && !selectedNode && (
+          <ChatBotAIAssistant
+            onApplyFlow={handleApplyAIFlow}
+            currentNodes={nodes}
+            currentEdges={edges}
+          />
+        )}
       </div>
 
       {/* New Flow Dialog */}
       <Dialog open={showNewFlowDialog} onOpenChange={setShowNewFlowDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>Criar Novo Fluxo</DialogTitle>
           </DialogHeader>
@@ -441,14 +469,20 @@ const ChatBotBuilder: React.FC = () => {
               value={newFlowName}
               onChange={(e) => setNewFlowName(e.target.value)}
               placeholder="Nome do fluxo"
+              className="rounded-xl"
               onKeyDown={(e) => e.key === 'Enter' && createNewFlow()}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewFlowDialog(false)}>
+            <Button variant="outline" onClick={() => setShowNewFlowDialog(false)} className="rounded-xl">
               Cancelar
             </Button>
-            <Button onClick={createNewFlow} disabled={!newFlowName.trim()}>
+            <Button 
+              onClick={createNewFlow} 
+              disabled={!newFlowName.trim()}
+              className="rounded-xl text-white"
+              style={{ backgroundColor: BRAND_COLOR }}
+            >
               Criar
             </Button>
           </DialogFooter>

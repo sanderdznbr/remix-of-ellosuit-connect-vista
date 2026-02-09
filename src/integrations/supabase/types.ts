@@ -960,29 +960,53 @@ export type Database = {
       }
       email_events: {
         Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          device_type: string | null
           email_id: string
           event_type: string
           id: string
           ip_address: unknown
           metadata: Json | null
+          open_count: number | null
+          os: string | null
+          referrer: string | null
+          screen_resolution: string | null
           timestamp: string
           user_agent: string | null
         }
         Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
           email_id: string
           event_type: string
           id?: string
           ip_address?: unknown
           metadata?: Json | null
+          open_count?: number | null
+          os?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
           timestamp?: string
           user_agent?: string | null
         }
         Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
           email_id?: string
           event_type?: string
           id?: string
           ip_address?: unknown
           metadata?: Json | null
+          open_count?: number | null
+          os?: string | null
+          referrer?: string | null
+          screen_resolution?: string | null
           timestamp?: string
           user_agent?: string | null
         }
@@ -1074,7 +1098,10 @@ export type Database = {
           content_html: string
           content_text: string | null
           id: string
+          last_opened_at: string | null
           metadata: Json | null
+          open_count: number | null
+          opened_at: string | null
           recipient_email: string
           recipient_name: string | null
           sent_at: string
@@ -1087,7 +1114,10 @@ export type Database = {
           content_html: string
           content_text?: string | null
           id?: string
+          last_opened_at?: string | null
           metadata?: Json | null
+          open_count?: number | null
+          opened_at?: string | null
           recipient_email: string
           recipient_name?: string | null
           sent_at?: string
@@ -1100,7 +1130,10 @@ export type Database = {
           content_html?: string
           content_text?: string | null
           id?: string
+          last_opened_at?: string | null
           metadata?: Json | null
+          open_count?: number | null
+          opened_at?: string | null
           recipient_email?: string
           recipient_name?: string | null
           sent_at?: string

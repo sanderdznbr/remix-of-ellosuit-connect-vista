@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const { toast } = useToast();
   const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.4.0'>('4.4.0');
+  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.5.0'>('4.5.0');
   
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
   const setIsOpen = (open: boolean) => {
@@ -1015,12 +1015,12 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
     }
   };
 
-  // Gerar arquivos v4.4.0
-  const generateV440Files = () => {
+  // Gerar arquivos v4.5.0
+  const generateV450Files = () => {
     const packageJson = `{
   "name": "baileys-server",
-  "version": "4.4.0",
-  "description": "Servidor Baileys com histórico estendido de 6 horas",
+  "version": "4.5.0",
+  "description": "Servidor Baileys com histórico 6h + Stickers + Nomes",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -1038,16 +1038,16 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
   }
 }`;
 
-    const readme = `# 🚀 Baileys Server v4.4.0 - Histórico Estendido
+    const readme = `# 🚀 Baileys Server v4.5.0 - Full Sync + Stickers
 
-## ✨ Novidades v4.4.0
+## ✨ Novidades v4.5.0
 
-- ✅ **Histórico de 6 HORAS** - sincroniza mensagens das últimas 6 horas (era 1h)
-- ✅ **Sincronização COMPLETA de contatos** - não apenas recentes
-- ✅ **Paginação para grandes listas** - evita timeout
+- ✅ **Download de STICKERS** - salva no storage Supabase
+- ✅ **Nomes de contatos corretos** - cache global por JID
+- ✅ **Nome do remetente em grupos** - sempre incluído
+- ✅ **Foto de grupo sincronizada** - metadados completos
+- ✅ **Histórico de 6 HORAS** - mensagens antigas
 - ✅ **syncFullHistory habilitado** - histórico completo
-- ✅ **Batching otimizado** - envia em lotes de 20 mensagens
-- ✅ **Cache em memória** - contatos e chats por sessão
 
 ## Deploy no Railway
 
@@ -1057,7 +1057,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
    \`SUPABASE_URL\` = \`https://jwddiyuezqrpuakazvgg.supabase.co\`
    \`SUPABASE_SERVICE_ROLE_KEY\` = \`sua_service_role_key\`
 
-**IMPORTANTE**: Delete a pasta \`sessions/\` para uma conexão limpa com sync de 6h!
+**IMPORTANTE**: Delete a pasta \`sessions/\` para uma conexão limpa!
 
 ## Endpoints
 
@@ -1077,11 +1077,6 @@ POST /api/sync/chats
 \`\`\`bash
 GET /api/instance/:instanceName/status
 \`\`\`
-
-Resposta inclui:
-- contactsCount: número total de contatos em cache
-- chatsCount: número total de chats em cache
-- historyHours: 6 (horas de histórico)
 `;
 
     const envExample = `# Variáveis de ambiente para Railway
@@ -1095,57 +1090,52 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
     return { packageJson, readme, envExample };
   };
 
-  const downloadV44Zip = async () => {
+  const downloadV45Zip = async () => {
     setDownloading(true);
     try {
-      // Busca o index.js da v4.4.0
+      // Busca o index.js da v4.5.0 (está no mesmo diretório - renomeado internamente)
       const response = await fetch('/docs/baileys-server-template/baileys-server-v4.4.0/index.js');
       let indexJs = '';
       
       if (response.ok) {
         indexJs = await response.text();
       } else {
-        // Fallback: usar o conteúdo inline se não conseguir buscar
         toast({
           title: 'Usando versão embutida',
-          description: 'Gerando arquivos v4.4.0...'
+          description: 'Gerando arquivos v4.5.0...'
         });
       }
-      
-      const { packageJson, readme, envExample } = generateV440Files();
+
+      const { packageJson, readme, envExample } = generateV450Files();
       
       const zip = new JSZip();
       zip.file('package.json', packageJson);
-      zip.file('README.md', readme);
       zip.file('.env.example', envExample);
+      zip.file('README.md', readme);
       
-      // Se conseguiu buscar o index.js, usa ele; senão, avisa o usuário
-      if (indexJs && indexJs.length > 1000) {
+      if (indexJs) {
         zip.file('index.js', indexJs);
       } else {
-        // Fallback para uma mensagem de instrução
-        zip.file('INSTRUCOES.txt', `
-O arquivo index.js precisa ser baixado manualmente do repositório.
-
-Acesse a pasta docs/baileys-server-template/baileys-server-v4.4.0/
-e copie o arquivo index.js para o seu deploy no Railway.
+        zip.file('index.js', `// Baileys Server v4.5.0
+// O arquivo index.js precisa ser baixado manualmente do repositório.
+// Acesse a pasta docs/baileys-server-template/baileys-server-v4.4.0/
+// e copie o arquivo index.js para o seu deploy no Railway.
         `);
       }
-      
+
       const content = await zip.generateAsync({ type: 'blob' });
-      
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v4.4.0.zip';
+      a.download = 'baileys-server-v4.5.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: 'Download iniciado!',
-        description: 'Servidor v4.4.0 com histórico de 6 horas'
+        description: 'Servidor v4.5.0 com stickers e nomes de contatos'
       });
       
       setIsOpen(false);
@@ -1173,42 +1163,42 @@ e copie o arquivo index.js para o seu deploy no Railway.
         </DialogDescription>
       </DialogHeader>
 
-      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.4.0')}>
+      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.5.0')}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="4.4.0" className="flex items-center gap-2">
+          <TabsTrigger value="4.5.0" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            v4.4.0 (Recomendado)
+            v4.5.0 (Recomendado)
           </TabsTrigger>
           <TabsTrigger value="4.2.0">v4.2.0 (Estável)</TabsTrigger>
         </TabsList>
 
-        {/* v4.4.0 Content */}
-        <TabsContent value="4.4.0" className="space-y-4 mt-4">
+        {/* v4.5.0 Content */}
+        <TabsContent value="4.5.0" className="space-y-4 mt-4">
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
             <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Novidades v4.4.0
+              Novidades v4.5.0
             </h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li className="flex items-center gap-2">
-                <RefreshCw className="h-3 w-3 text-green-500" />
-                <strong>Histórico de 6 HORAS</strong> - sincroniza mensagens antigas
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>Download de STICKERS</strong> - salva no storage Supabase
               </li>
               <li className="flex items-center gap-2">
                 <Users className="h-3 w-3 text-green-500" />
-                <strong>Sync completo de contatos</strong> - nomes e fotos
+                <strong>Nomes de contatos corretos</strong> - cache global por JID
               </li>
               <li className="flex items-center gap-2">
-                <Database className="h-3 w-3 text-green-500" />
-                <strong>Cache em memória</strong> - contatos e chats por sessão
+                <Users className="h-3 w-3 text-green-500" />
+                <strong>Nome remetente em grupos</strong> - sempre incluído
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                <strong>syncFullHistory</strong> - histórico completo do WhatsApp
+                <RefreshCw className="h-3 w-3 text-green-500" />
+                <strong>Foto de grupo</strong> - metadados completos
               </li>
               <li className="flex items-center gap-2">
                 <Zap className="h-3 w-3 text-green-500" />
-                <strong>Batching otimizado</strong> - envia em lotes de 20
+                <strong>Histórico de 6 HORAS</strong> - mensagens antigas
               </li>
             </ul>
           </div>
@@ -1219,7 +1209,7 @@ e copie o arquivo index.js para o seu deploy no Railway.
               Importante: Conexão Limpa
             </h4>
             <p className="text-sm text-muted-foreground">
-              <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão com histórico de 6h.
+              <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão.
               O <code>syncFullHistory</code> só funciona em conexões novas!
             </p>
           </div>
@@ -1228,7 +1218,7 @@ e copie o arquivo index.js para o seu deploy no Railway.
             <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• <code>package.json</code> - Baileys v6.7.17</li>
-              <li>• <code>index.js</code> - Servidor v4.4.0 com histórico 6h</li>
+              <li>• <code>index.js</code> - Servidor v4.5.0 com stickers</li>
               <li>• <code>.env.example</code> - Variáveis de ambiente</li>
               <li>• <code>README.md</code> - Documentação completa</li>
             </ul>
@@ -1244,7 +1234,7 @@ e copie o arquivo index.js para o seu deploy no Railway.
           </div>
 
           <Button 
-            onClick={downloadV44Zip} 
+            onClick={downloadV45Zip} 
             disabled={downloading}
             className="w-full bg-green-600 hover:bg-green-700"
             size="lg"
@@ -1257,7 +1247,7 @@ e copie o arquivo index.js para o seu deploy no Railway.
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Baixar baileys-server-v4.4.0.zip
+                Baixar baileys-server-v4.5.0.zip
               </>
             )}
           </Button>

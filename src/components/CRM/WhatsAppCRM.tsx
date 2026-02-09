@@ -427,6 +427,12 @@ const WhatsAppCRM: React.FC = () => {
         console.log(`[Unify] ✅ Migrated ${migrated.length} conversations for phone ${phone}`);
       }
       
+      // Also migrate messages from old sessions
+      await supabase
+        .from('whatsapp_messages')
+        .update({ session_id: keepSession.id })
+        .in('session_id', oldIds);
+      
       // Delete old sessions
       await supabase
         .from('whatsapp_sessions')
@@ -1026,8 +1032,9 @@ const WhatsAppCRM: React.FC = () => {
     const loadData = async () => {
       if (!companyId) return;
       
+      // Load sessions first so selectedSessionId is set before loading conversations
+      await loadSessions();
       await Promise.all([
-        loadSessions(),
         loadConversations(),
         loadAiAgents(),
         loadLabels(),
@@ -1168,6 +1175,9 @@ const WhatsAppCRM: React.FC = () => {
 
   // Handle session success - sync conversations after connection
   const handleSessionSuccess = async (session: WhatsAppSession) => {
+    // Force select the new session immediately
+    setSelectedSessionId(session.id);
+    
     await loadSessions();
     toast({ title: 'Sucesso', description: 'WhatsApp conectado!' });
     

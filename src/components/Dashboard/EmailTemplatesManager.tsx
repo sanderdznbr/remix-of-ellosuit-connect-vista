@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Search, Eye, Edit, Copy, Trash2, Palette, 
-  Mail, Loader2, MoreVertical,
-  LayoutTemplate, Sparkles, Clock
+  Plus, Search, Edit, Copy, Trash2, Palette, 
+  Mail, Loader2, MoreVertical, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   DropdownMenu, 
@@ -46,220 +44,170 @@ const EmailTemplatesManager: React.FC = () => {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#FF4500]" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: OMNI_COLOR }} />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#FF4500]/10">
-            <Palette className="h-6 w-6 text-[#FF4500]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Designs de Email</h1>
-            <p className="text-muted-foreground text-sm">Gerencie seus designs visuais de email</p>
+    <div className="min-h-screen bg-background page-content">
+      {/* Clean Header */}
+      <div className="border-b border-border bg-card">
+        <div className="px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${OMNI_COLOR}12` }}
+              >
+                <Palette className="h-5 w-5" style={{ color: OMNI_COLOR }} />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">Designs de Email</h1>
+                <p className="text-sm text-muted-foreground">Gerencie seus designs visuais de email</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => navigate('/dashboard/email-builder')}
+              className="gap-2"
+              style={{ backgroundColor: OMNI_COLOR }}
+            >
+              <Plus className="h-4 w-4" />
+              Criar Design
+            </Button>
           </div>
         </div>
-        <Button 
-          onClick={() => navigate('/dashboard/email-builder')}
-          className="gap-2 bg-[#FF4500] hover:bg-[#FF4500]/90"
-        >
-          <Plus className="h-4 w-4" />
-          Criar Design
-        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#FF4500]/5 to-[#FF4500]/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#FF4500]/10">
-                <LayoutTemplate className="h-5 w-5 text-[#FF4500]" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-[#FF4500]">{designs.length}</p>
-                <p className="text-xs text-muted-foreground">Total de Designs</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-500/5 to-green-500/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Sparkles className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">
-                  {designs.filter(d => d.is_published).length}
-                </p>
-                <p className="text-xs text-muted-foreground">Publicados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/5 to-amber-500/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-600">
-                  {designs.filter(d => !d.is_published).length}
-                </p>
-                <p className="text-xs text-muted-foreground">Rascunhos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/5 to-violet-500/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-500/10 rounded-lg">
-                <Mail className="h-5 w-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-violet-600">
-                  {designs.length > 0 ? designs.length : '0'}
-                </p>
-                <p className="text-xs text-muted-foreground">Prontos p/ Uso</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-[#FF4500]/10">
-            <LayoutTemplate className="h-4 w-4 text-[#FF4500]" />
-          </div>
-          <span className="font-medium text-foreground">Designs Visuais</span>
-          <Badge className="bg-[#FF4500]/10 text-[#FF4500] border-0">{designs.length}</Badge>
+      <div className="p-6 max-w-5xl mx-auto space-y-4">
+        {/* Stats Row */}
+        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{designs.length} designs</span>
+          <span>{designs.filter(d => d.is_published).length} publicados</span>
+          <span>{designs.filter(d => !d.is_published).length} rascunhos</span>
         </div>
-        
-        <div className="relative w-full sm:w-64">
+
+        {/* Search */}
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar designs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-card border-border"
           />
         </div>
-      </div>
 
-      {/* Content */}
-      {filteredDesigns.length === 0 ? (
-        <Card className="border-dashed border-2 border-[#FF4500]/20 shadow-sm bg-[#FF4500]/5">
-          <CardContent className="p-12 text-center">
-            <div className="p-4 rounded-full bg-[#FF4500]/10 w-fit mx-auto mb-4">
-              <Palette className="h-10 w-10 text-[#FF4500]" />
+        {/* List */}
+        {filteredDesigns.length === 0 ? (
+          <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center">
+            <div 
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: `${OMNI_COLOR}10` }}
+            >
+              <Palette className="h-7 w-7" style={{ color: OMNI_COLOR }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhum design encontrado</h3>
-            <p className="text-muted-foreground mb-4">
+            <h3 className="text-base font-semibold text-foreground mb-1">Nenhum design encontrado</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Crie templates visualmente com nosso editor drag-and-drop
             </p>
             <Button 
               onClick={() => navigate('/dashboard/email-builder')}
-              className="bg-[#FF4500] hover:bg-[#FF4500]/90"
+              style={{ backgroundColor: OMNI_COLOR }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Criar Design
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDesigns.map(design => (
-            <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm hover:border-[#FF4500]/20">
-              <CardContent className="p-0">
-                {/* Preview Area */}
-                <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-t-lg flex items-center justify-center relative overflow-hidden">
+          </div>
+        ) : (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+            {filteredDesigns.map(design => (
+              <div 
+                key={design.id} 
+                className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group"
+              >
+                {/* Thumbnail */}
+                <div className="w-14 h-14 rounded-xl bg-muted/50 flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {design.thumbnail_url ? (
                     <img 
                       src={design.thumbnail_url} 
                       alt={design.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    <Mail className="h-12 w-12 text-muted-foreground/30" />
+                    <Mail className="h-6 w-6 text-muted-foreground/40" />
                   )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Button 
-                      size="sm" 
-                      className="bg-[#FF4500] hover:bg-[#FF4500]/90"
-                      onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                  </div>
                 </div>
-                
+
                 {/* Info */}
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold truncate">{design.name}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(design.created_at)}
-                      </p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicar
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleDeleteDesign(design.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {design.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {design.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-foreground truncate">{design.name}</h3>
                     {design.is_published ? (
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 text-xs">Publicado</Badge>
+                      <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-1.5 py-0 dark:bg-green-900/20 dark:text-green-400">
+                        Publicado
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-xs">Rascunho</Badge>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        Rascunho
+                      </Badge>
                     )}
                   </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {design.description && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {design.description}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatDate(design.created_at)}
+                    </span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    Editar
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => handleDeleteDesign(design.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

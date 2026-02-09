@@ -427,6 +427,13 @@ const MainDashboard = () => {
                 </div>
               </div>
             </div>
+            {kpis.clients === 0 && kpis.emailsSent === 0 && kpis.documentsTracked === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <TrendingUp className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">Ainda não capturamos dados para atualizar seu gráfico</p>
+                <p className="text-sm text-gray-400 mt-1">Comece a usar os módulos para ver os dados aqui</p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData}>
                 <defs>
@@ -486,6 +493,7 @@ const MainDashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -495,26 +503,33 @@ const MainDashboard = () => {
           <Card className="md:col-span-2">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Atividade por Categoria</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={chartData.slice(-7)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="leads" name="Leads" fill="#3000E3" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="emails" name="Emails" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="tracking" name="Tracking" fill="#10B981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {kpis.clients === 0 && kpis.emailsSent === 0 && kpis.documentsTracked === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <TrendingUp className="h-8 w-8 text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">Ainda não capturamos dados para atualizar seu gráfico</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData.slice(-7)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="leads" name="Leads" fill="#3000E3" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="emails" name="Emails" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="tracking" name="Tracking" fill="#10B981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 

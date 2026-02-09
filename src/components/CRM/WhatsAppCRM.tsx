@@ -1845,6 +1845,11 @@ const WhatsAppCRM: React.FC = () => {
                 loadConversations();
               }}
               onAddNew={() => setShowQRModal(true)}
+              onSessionDeleted={() => {
+                // Refresh sessions list
+                loadSessions();
+                loadConversations();
+              }}
             />
             
             {/* Search & Filters */}

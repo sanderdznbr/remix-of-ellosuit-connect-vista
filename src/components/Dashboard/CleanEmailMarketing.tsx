@@ -84,6 +84,7 @@ const CleanEmailMarketing: React.FC = () => {
   const [showSentEmails, setShowSentEmails] = useState(false);
   const [sentEmails, setSentEmails] = useState<SentEmail[]>([]);
   const [loadingSentEmails, setLoadingSentEmails] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -537,60 +538,81 @@ const CleanEmailMarketing: React.FC = () => {
             className="flex-1 h-12"
             onClick={() => setShowClientPicker(!showClientPicker)}
           >
-            <UserPlus className="h-5 w-5 mr-2" />
-            Selecionar da Agenda
+            <Users className="h-5 w-5 mr-2" />
+            Selecionar do Banco de Dados
           </Button>
         </div>
       </div>
 
-      {/* Client picker */}
-      <AnimatePresence>
-        {showClientPicker && clients.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <Card className="border-dashed border-2">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium">Selecionar clientes:</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const allEmails = clients.map(c => c.email).filter(Boolean);
-                      allEmails.forEach(email => addEmail(email));
-                      setShowClientPicker(false);
-                    }}
-                  >
-                    Selecionar todos
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                  {clients.map(client => (
-                    <Badge
+      {/* Contact Picker Dialog */}
+      <Dialog open={showClientPicker} onOpenChange={setShowClientPicker}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Selecionar Contatos</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Buscar contato..."
+              value={clientSearch}
+              onChange={e => setClientSearch(e.target.value)}
+              className="h-10"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{clients.length} contatos com email</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const allEmails = clients.map(c => c.email).filter(Boolean);
+                  allEmails.forEach(email => addEmail(email));
+                  setShowClientPicker(false);
+                }}
+              >
+                Selecionar todos
+              </Button>
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {clients
+                .filter(c => 
+                  !clientSearch || 
+                  c.name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                  c.email?.toLowerCase().includes(clientSearch.toLowerCase())
+                )
+                .map(client => {
+                  const isSelected = recipients.includes(client.email?.toLowerCase());
+                  return (
+                    <button
                       key={client.id}
-                      variant="outline"
-                      className={`cursor-pointer transition-all hover:bg-primary/10 py-1.5 px-3 ${
-                        recipients.includes(client.email?.toLowerCase()) 
-                          ? 'bg-primary/20 border-primary' 
-                          : ''
+                      className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                        isSelected ? 'bg-muted' : 'hover:bg-muted/50'
                       }`}
                       onClick={() => client.email && addEmail(client.email)}
                     >
-                      {client.name}
-                      {recipients.includes(client.email?.toLowerCase()) && (
-                        <Check className="h-3 w-3 ml-1" />
-                      )}
-                    </Badge>
-                  ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{client.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{client.email}</p>
+                      </div>
+                      {isSelected && <Check className="h-4 w-4 text-green-500 shrink-0 ml-2" />}
+                    </button>
+                  );
+                })}
+              {clients.length === 0 && (
+                <div className="text-center py-8">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">Nenhum contato com email cadastrado</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              )}
+            </div>
+            <Button 
+              className="w-full text-white" 
+              style={{ backgroundColor: '#FF4500' }}
+              onClick={() => setShowClientPicker(false)}
+            >
+              Confirmar ({recipients.length} selecionados)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Recipients list */}
       {recipients.length > 0 && (
@@ -626,6 +648,20 @@ const CleanEmailMarketing: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Inline navigation */}
+      {recipients.length > 0 && (
+        <div className="flex justify-end pt-2">
+          <Button
+            onClick={nextStep}
+            className="gap-2 text-white"
+            style={{ backgroundColor: '#FF4500' }}
+          >
+            Continuar
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -667,6 +703,20 @@ const CleanEmailMarketing: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Inline navigation */}
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={prevStep} className="gap-2">
+          <ChevronLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        {subject.trim() && (
+          <Button onClick={nextStep} className="gap-2 text-white" style={{ backgroundColor: '#FF4500' }}>
+            Continuar
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 
@@ -784,6 +834,20 @@ const CleanEmailMarketing: React.FC = () => {
           )}
         </div>
       ) : null}
+
+      {/* Inline navigation */}
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={prevStep} className="gap-2">
+          <ChevronLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        {content.trim() && (
+          <Button onClick={nextStep} className="gap-2 text-white" style={{ backgroundColor: '#FF4500' }}>
+            Continuar
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 
@@ -861,6 +925,32 @@ const CleanEmailMarketing: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Inline navigation */}
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={prevStep} className="gap-2">
+          <ChevronLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        <Button
+          onClick={sendEmails}
+          disabled={sending || !isConnected}
+          className="gap-2 text-white"
+          style={{ backgroundColor: '#FF4500' }}
+        >
+          {sending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+              Enviar {recipients.length} Email(s)
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 
@@ -897,108 +987,74 @@ const CleanEmailMarketing: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      <div className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF450012' }}>
-                <Mail className="h-5 w-5" style={{ color: '#FF4500' }} />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Enviar Email</h1>
-                {/* Clickable progress bar */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="flex items-center gap-2 mt-0.5 group cursor-pointer">
-                      <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all"
-                          style={{ width: `${(dailyLimit.sent / dailyLimit.limit) * 100}%`, backgroundColor: '#FF4500' }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                        {dailyLimit.sent}/{dailyLimit.limit}
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Limite diário</span>
-                        <Badge variant="outline">{dailyLimit.limit} emails</Badge>
-                      </div>
-                      <Progress value={(dailyLimit.sent / dailyLimit.limit) * 100} className="h-2" />
-                      <p className="text-xs text-muted-foreground">
-                        {dailyLimit.limit - dailyLimit.sent} emails restantes hoje
+      {/* Top bar - just settings icon */}
+      <div className="sticky top-0 z-10 bg-background">
+        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center justify-end">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2 relative">
+                <Settings className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline text-xs">Configurações</span>
+                <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${
+                  isConnected ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    isConnected ? 'bg-green-500/10' : 'bg-red-500/10'
+                  }`}>
+                    <Mail className={`h-5 w-5 ${isConnected ? 'text-green-600' : 'text-red-500'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {isConnected ? 'Conectado' : 'Desconectado'}
+                    </p>
+                    {isConnected && emailAccount?.email && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {emailAccount.email}
                       </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {/* Connection indicator */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Settings className="h-5 w-5 text-muted-foreground" />
-                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${
-                      isConnected ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 p-4" align="end">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isConnected ? 'bg-green-500/10' : 'bg-red-500/10'
-                      }`}>
-                        <Mail className={`h-5 w-5 ${isConnected ? 'text-green-600' : 'text-red-500'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">
-                          {isConnected ? 'Conectado' : 'Desconectado'}
-                        </p>
-                        {isConnected && emailAccount?.email && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {emailAccount.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {isConnected ? (
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={disconnectGmail}
-                        disabled={loading}
-                      >
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Desconectar Gmail
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full" 
-                        onClick={connectGmail}
-                        disabled={loading}
-                        style={{ backgroundColor: '#FF4500' }}
-                      >
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Conectar Gmail
-                      </Button>
                     )}
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Limite diário</span>
+                    <Badge variant="outline">{dailyLimit.sent}/{dailyLimit.limit}</Badge>
+                  </div>
+                  <Progress value={(dailyLimit.sent / dailyLimit.limit) * 100} className="h-1.5" />
+                </div>
+                {isConnected ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={disconnectGmail}
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Desconectar Gmail
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full text-white" 
+                    onClick={connectGmail}
+                    disabled={loading}
+                    style={{ backgroundColor: '#FF4500' }}
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Conectar Gmail
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {/* Content - NO STEP INDICATOR */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      {/* Content */}
+      <div className="max-w-3xl mx-auto px-6 py-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -1013,96 +1069,6 @@ const CleanEmailMarketing: React.FC = () => {
             {currentStep === 4 && renderStep4()}
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* Footer Navigation */}
-      <div className="border-t border-border bg-card sticky bottom-0">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          {/* Navigation buttons */}
-          <div className="flex items-center justify-between mb-4">
-            {currentStep > 1 ? (
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Voltar
-              </Button>
-            ) : (
-              <div /> /* Empty div to maintain layout */
-            )}
-
-            {currentStep < 4 ? (
-              <Button
-                onClick={nextStep}
-                disabled={!canProceed()}
-                className="gap-2 px-8 text-white"
-                size="lg"
-                style={{ backgroundColor: '#FF4500' }}
-              >
-                Próximo
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={sendEmails}
-                disabled={sending || !isConnected}
-                className="gap-2 px-8 text-white"
-                size="lg"
-                style={{ backgroundColor: '#FF4500' }}
-              >
-                {sending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Enviar {recipients.length} Email(s)
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-          
-          {/* 4 Quick Action Buttons */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 flex-col gap-1"
-              onClick={goToBuilder}
-            >
-              <Palette className="h-4 w-4" />
-              <span className="text-xs">Construir Templates</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 flex-col gap-1"
-              onClick={() => setContentMode('template')}
-            >
-              <LayoutTemplate className="h-4 w-4" />
-              <span className="text-xs">Ver Templates</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 flex-col gap-1"
-              onClick={() => setShowSentEmails(true)}
-            >
-              <History className="h-4 w-4" />
-              <span className="text-xs">Emails Enviados</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 flex-col gap-1"
-              onClick={() => navigate('/dashboard/settings')}
-            >
-              <Settings2 className="h-4 w-4" />
-              <span className="text-xs">Configurações</span>
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );

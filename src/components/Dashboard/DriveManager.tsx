@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
@@ -65,7 +65,7 @@ interface DriveFolder {
 }
 
 // Draggable File Component
-const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, formatFileSize, onShare, onDelete, isDragging }: {
+const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, formatFileSize, onShare, onDelete, onPreview, isDragging }: {
   file: DriveFile;
   isSelected: boolean;
   onSelect: (id: string, ctrlKey: boolean) => void;
@@ -74,6 +74,7 @@ const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, form
   formatFileSize: (bytes?: number) => string;
   onShare: () => void;
   onDelete: () => void;
+  onPreview: () => void;
   isDragging?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -122,7 +123,7 @@ const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, form
               <DropdownMenuContent align="end">
                 {file.file_url && (
                   <>
-                    <DropdownMenuItem onClick={() => window.open(file.file_url, '_blank')}>
+                    <DropdownMenuItem onClick={onPreview}>
                       <Eye className="h-4 w-4 mr-2" /> Visualizar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
@@ -187,7 +188,7 @@ const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, form
           <DropdownMenuContent align="end">
             {file.file_url && (
               <>
-                <DropdownMenuItem onClick={() => window.open(file.file_url, '_blank')}>
+                <DropdownMenuItem onClick={onPreview}>
                   <Eye className="h-4 w-4 mr-2" /> Visualizar
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
@@ -342,6 +343,7 @@ const DriveManager = () => {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
   
   const [folderForm, setFolderForm] = useState({
     name: '',
@@ -677,18 +679,26 @@ const DriveManager = () => {
   };
 
   const deleteFolder = async (folderId: string) => {
+    // First, move any documents in this folder to parent (set null)
+    await supabase
+      .from('documents')
+      .update({ folder_id: null })
+      .eq('folder_id', folderId);
+
     const { error } = await supabase
       .from('document_folders')
       .delete()
       .eq('id', folderId);
 
     if (error) {
-      toast({ title: 'Erro', description: 'Erro ao excluir pasta', variant: 'destructive' });
+      console.error('Delete folder error:', error);
+      toast({ title: 'Erro', description: 'Erro ao excluir pasta: ' + error.message, variant: 'destructive' });
       return;
     }
 
     toast({ title: 'Sucesso', description: 'Pasta excluída' });
     loadFolders();
+    loadFiles();
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -750,7 +760,7 @@ const DriveManager = () => {
             </h2>
           </div>
 
-          <nav className="space-y-1 flex-1">
+          <nav className="space-y-1">
             <Button
               variant={sidebarView === 'drive' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
@@ -788,7 +798,7 @@ const DriveManager = () => {
             </Button>
           </nav>
 
-          <div className="mt-auto pt-6 border-t">
+          <div className="mt-6 pt-4 border-t">
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Armazenamento</span>
@@ -1021,6 +1031,7 @@ const DriveManager = () => {
                     formatFileSize={formatFileSize}
                     onShare={() => generateShareableLink(file, 'file')}
                     onDelete={() => deleteFile(file.id)}
+                    onPreview={() => setPreviewFile(file)}
                   />
                 ))}
               </div>
@@ -1078,6 +1089,7 @@ const DriveManager = () => {
                         formatFileSize={formatFileSize}
                         onShare={() => generateShareableLink(file, 'file')}
                         onDelete={() => deleteFile(file.id)}
+                        onPreview={() => setPreviewFile(file)}
                         isDragging={activeId === `file-${file.id}`}
                       />
                     ))}
@@ -1131,6 +1143,57 @@ const DriveManager = () => {
           </Card>
         )}
       </DragOverlay>
+
+      {/* File Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="truncate">{previewFile?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto min-h-0">
+            {previewFile?.file_url && (
+              <>
+                {previewFile.file_type.includes('image') && (
+                  <img src={previewFile.file_url} alt={previewFile.name} className="max-w-full max-h-[70vh] mx-auto rounded-lg object-contain" />
+                )}
+                {previewFile.file_type.includes('video') && (
+                  <video src={previewFile.file_url} controls className="max-w-full max-h-[70vh] mx-auto rounded-lg" />
+                )}
+                {previewFile.file_type.includes('audio') && (
+                  <div className="flex items-center justify-center py-12">
+                    <audio src={previewFile.file_url} controls className="w-full max-w-md" />
+                  </div>
+                )}
+                {previewFile.file_type.includes('pdf') && (
+                  <iframe src={previewFile.file_url} className="w-full h-[70vh] rounded-lg border" />
+                )}
+                {!previewFile.file_type.includes('image') && !previewFile.file_type.includes('video') && !previewFile.file_type.includes('audio') && !previewFile.file_type.includes('pdf') && (
+                  <div className="text-center py-12">
+                    <File className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">Pré-visualização não disponível para este tipo de arquivo</p>
+                    <Button onClick={() => window.open(previewFile.file_url, '_blank')}>
+                      <Download className="h-4 w-4 mr-2" /> Baixar arquivo
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button variant="outline" onClick={() => setPreviewFile(null)}>Fechar</Button>
+            {previewFile?.file_url && (
+              <Button onClick={() => {
+                const link = document.createElement('a');
+                link.href = previewFile.file_url!;
+                link.download = previewFile.name;
+                link.click();
+              }}>
+                <Download className="h-4 w-4 mr-2" /> Download
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   );
 };

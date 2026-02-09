@@ -1,39 +1,64 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
 import { useTarefas } from '@/hooks/useTarefas';
 import TarefasList from './TarefasList';
 import NovoLembreteModal from './NovoLembreteModal';
+
+const FLOW_COLOR = "#007DE3";
 
 const TarefasWeb: React.FC = () => {
   const { tarefas, createTarefa, updateTarefa, deleteTarefa } = useTarefas();
   const [showCreate, setShowCreate] = useState(false);
   const [filter, setFilter] = useState<'hoje' | 'amanha' | 'semana' | 'mes'>('hoje');
 
+  const filters = [
+    { id: 'hoje' as const, label: 'Hoje' },
+    { id: 'amanha' as const, label: 'Amanhã' },
+    { id: 'semana' as const, label: 'Semana' },
+    { id: 'mes' as const, label: 'Mês' },
+  ];
+
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-white min-h-screen">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Clean Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
-          <Button onClick={() => setShowCreate(true)} className="bg-primary text-primary-foreground"><Plus className="h-4 w-4 mr-2" />Nova Task</Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Tarefas</h1>
+            <p className="text-sm text-gray-500">Organize suas atividades e lembretes</p>
+          </div>
+          <Button 
+            onClick={() => setShowCreate(true)} 
+            className="rounded-xl"
+            style={{ backgroundColor: FLOW_COLOR }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Tarefa
+          </Button>
         </div>
 
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-2">
-              {(['hoje','amanha','semana','mes'] as const).map((id) => (
-                <Button key={id} variant={filter===id? 'default':'outline'} onClick={() => setFilter(id)}>
-                  {id === 'hoje' ? 'Hoje' : id === 'amanha' ? 'Amanhã' : id === 'semana' ? 'Semana' : 'Mês'}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Filter Tabs */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-1.5 inline-flex gap-1">
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                filter === f.id 
+                  ? 'text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+              style={filter === f.id ? { backgroundColor: FLOW_COLOR } : {}}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
 
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent>
+        {/* Tasks List */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-6">
             <TarefasList
               tarefas={tarefas}
               onUpdate={updateTarefa}
@@ -41,8 +66,8 @@ const TarefasWeb: React.FC = () => {
               filter={filter}
               showPeriodDivision
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {showCreate && (

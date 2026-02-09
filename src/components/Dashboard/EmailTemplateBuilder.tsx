@@ -1386,7 +1386,7 @@ const EmailTemplateBuilder: React.FC = () => {
 
         {/* Canvas */}
         <div 
-          className={`flex-1 p-8 overflow-y-auto transition-colors bg-muted/30 ${isDraggingFile ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+          className={`flex-1 p-8 overflow-y-auto transition-colors bg-white ${isDraggingFile ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
           
           onDrop={handleFileDrop}
           onDragOver={handleFileDragOver}

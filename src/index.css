@@ -177,3 +177,14 @@
     }
   }
 }
+
+@keyframes megamenu-slide-down {
+  0% {
+    max-height: 0;
+    opacity: 0;
+  }
+  100% {
+    max-height: 500px;
+    opacity: 1;
+  }
+}

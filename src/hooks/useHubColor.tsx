@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 export const OMNI_COLOR = '#FF4500';
 export const FLOW_COLOR = '#007DE3';
 export const TRACK_COLOR = '#00E371';
+export const SUITE_COLOR = '#3000E3';
 export const DEFAULT_COLOR = '#3000E3';
 
 const omniRoutes = [
@@ -14,7 +15,6 @@ const omniRoutes = [
   '/dashboard/email-templates',
   '/dashboard/email-builder',
   '/dashboard/bot-ia',
-  '/dashboard/cadastros',
 ];
 
 const flowRoutes = [
@@ -33,7 +33,18 @@ const trackRoutes = [
   '/dashboard/email-tracker',
 ];
 
-export type HubType = 'omni' | 'flow' | 'track' | null;
+const suiteRoutes = [
+  '/dashboard/cadastros',
+  '/dashboard/drive',
+  '/dashboard/analytics',
+  '/dashboard/ello-vision',
+  '/dashboard/relatorios',
+  '/dashboard/perfil',
+  '/dashboard/assinatura',
+  '/dashboard/arquivos',
+];
+
+export type HubType = 'omni' | 'flow' | 'track' | 'suite' | null;
 
 export function useHubColor() {
   const location = useLocation();
@@ -47,6 +58,9 @@ export function useHubColor() {
   }
   if (trackRoutes.some(route => path.startsWith(route))) {
     return { color: TRACK_COLOR, hub: 'track' as const };
+  }
+  if (suiteRoutes.some(route => path.startsWith(route))) {
+    return { color: SUITE_COLOR, hub: 'suite' as const };
   }
   
   return { color: DEFAULT_COLOR, hub: null };

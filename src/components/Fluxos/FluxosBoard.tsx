@@ -228,8 +228,8 @@ const TrelloColumn: React.FC<{
   return (
     <div 
       ref={setNodeRef}
-      className={`w-80 flex-shrink-0 flex flex-col bg-muted/40 backdrop-blur-sm rounded-2xl max-h-[calc(100vh-220px)] border transition-all ${
-        isOver ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border/50'
+      className={`w-80 flex-shrink-0 flex flex-col bg-gray-50 rounded-2xl max-h-[calc(100vh-220px)] border transition-all ${
+        isOver ? 'border-blue-300 bg-blue-50/50 scale-[1.01]' : 'border-gray-100'
       }`}
     >
       {/* Column Header */}
@@ -1139,14 +1139,27 @@ const FluxosBoard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Clean Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="px-6 py-3 flex items-center justify-between gap-4">
-          {/* Left: Board & Flow selector */}
+      <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
+        <div className="px-6 py-4">
+          {/* Title Row */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Fluxos de Trabalho</h1>
+              <p className="text-sm text-gray-500">Kanban para gerenciar projetos e processos</p>
+            </div>
+            {currentWorkflow && (
+              <Badge variant="secondary" className="rounded-xl text-xs">
+                {columns.length} listas • {cards.length} cards
+              </Badge>
+            )}
+          </div>
+          
+          {/* Board & Flow Selector */}
           <div className="flex items-center gap-3">
             <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-              <SelectTrigger className="w-44 rounded-xl border-muted bg-background">
+              <SelectTrigger className="w-44 rounded-xl border-gray-200 bg-white">
                 <SelectValue placeholder="Quadro..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -1161,59 +1174,39 @@ const FluxosBoard: React.FC = () => {
               </SelectContent>
             </Select>
             
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowGroupModal(true)}
-              className="rounded-xl"
-            >
+            <Button variant="outline" size="icon" onClick={() => setShowGroupModal(true)} className="rounded-xl border-gray-200">
               <Plus className="h-4 w-4" />
             </Button>
             
             <Separator orientation="vertical" className="h-6" />
             
-            {/* Workflow tabs */}
             {selectedGroup && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1">
                 {workflows.map(workflow => (
-                  <Button
+                  <button
                     key={workflow.id}
-                    variant={selectedWorkflow === workflow.id ? "secondary" : "ghost"}
-                    size="sm"
                     onClick={() => setSelectedWorkflow(workflow.id)}
-                    className="rounded-xl"
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      selectedWorkflow === workflow.id
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
                   >
                     {workflow.name}
-                  </Button>
+                  </button>
                 ))}
-                <Button 
-                  variant="ghost" 
-                  size="sm"
+                <button
                   onClick={() => setShowWorkflowModal(true)}
-                  className="rounded-xl text-muted-foreground"
+                  className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-3.5 w-3.5" />
                   Novo
-                </Button>
+                </button>
               </div>
             )}
           </div>
-          
-          {/* Right: Info */}
-          {currentWorkflow && (
-            <Badge variant="secondary" className="rounded-xl">
-              {columns.length} listas • {cards.length} cards
-            </Badge>
-          )}
         </div>
       </div>
-
-      {/* Board Title */}
-      {currentWorkflow && (
-        <div className="px-6 py-4">
-          <h1 className="text-xl font-bold text-foreground">{currentWorkflow.name}</h1>
-        </div>
-      )}
 
       {/* Kanban Board */}
       {selectedWorkflow ? (

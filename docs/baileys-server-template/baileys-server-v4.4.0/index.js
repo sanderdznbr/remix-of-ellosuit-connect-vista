@@ -1,11 +1,11 @@
 /**
- * Baileys Server v4.5.0 - Full Sync + Stickers
+ * Baileys Server v4.6.0 - Proactive Metadata Sync
  * 
- * CORREÇÕES v4.5.0:
+ * CORREÇÕES v4.6.0:
+ * - SYNC PROATIVO de metadados após conexão (fotos + nomes)
+ * - Função syncAllMetadata busca foto e nome de TODOS os chats
+ * - Melhor cache de nomes de contatos
  * - Download de STICKERS para storage
- * - Melhor extração de nomes de contatos
- * - Nome do remetente em grupos sempre incluído
- * - Foto de grupo sincronizada
  * - Histórico de 6 horas mantido
  */
 
@@ -119,6 +119,72 @@ async function fetchContactMetadata(socket, jid) {
   }
 
   return metadata;
+}
+
+// ===== v4.6.0: SYNC PROATIVO DE METADADOS =====
+// Busca fotos de perfil e nomes para TODOS os chats logo após conexão
+async function syncAllMetadata(socket, session, webhookUrl, webhookSecret, sessionId, instanceName) {
+  try {
+    const chats = Array.from(session.allChats.values());
+    console.log(`📸 Sincronizando metadados para ${chats.length} chats...`);
+    
+    let processed = 0;
+    const BATCH_SIZE = 10;
+    
+    for (let i = 0; i < chats.length; i += BATCH_SIZE) {
+      const batch = chats.slice(i, i + BATCH_SIZE);
+      
+      for (const chat of batch) {
+        const jid = chat.id || chat.jid;
+        if (!jid || jid === 'status@broadcast') continue;
+        
+        try {
+          const metadata = await fetchContactMetadata(socket, jid);
+          const isGroup = jid.endsWith('@g.us');
+          
+          // Determinar nome
+          let contactName = null;
+          if (isGroup) {
+            contactName = metadata.groupSubject || chat.subject || chat.name || null;
+          } else {
+            contactName = contactNamesCache.get(jid) || chat.name || chat.notify || null;
+          }
+          
+          // Enviar webhook com metadados enriquecidos
+          if (metadata.profilePicture || contactName) {
+            await sendWebhook({
+              event: 'contact.metadata',
+              sessionId,
+              instanceName,
+              data: {
+                jid,
+                phone: jid.split('@')[0].replace(/\D/g, ''),
+                name: contactName,
+                profilePicture: metadata.profilePicture,
+                isGroup,
+                groupSubject: isGroup ? contactName : null,
+                groupDescription: metadata.groupDescription,
+                groupParticipants: metadata.groupParticipants
+              }
+            }, webhookUrl, webhookSecret);
+          }
+          
+          processed++;
+        } catch (e) {
+          // Silenciar erros individuais
+        }
+      }
+      
+      // Delay entre batches para não sobrecarregar
+      if (i + BATCH_SIZE < chats.length) {
+        await delay(300);
+      }
+    }
+    
+    console.log(`✅ Metadados sincronizados: ${processed}/${chats.length} chats`);
+  } catch (e) {
+    console.error('Erro sync metadados:', e.message);
+  }
 }
 
 // Upload mídia para Supabase storage
@@ -291,6 +357,13 @@ async function createSession(config) {
       }, webhookUrl, webhookSecret);
       
       console.log(`✅ ${instanceName} conectado!`);
+      
+      // ===== v4.6.0: SYNC PROATIVO DE METADADOS APÓS CONEXÃO =====
+      // Aguardar 3s para estabilizar, depois buscar fotos e nomes para TODOS os chats
+      setTimeout(async () => {
+        console.log(`📸 Iniciando sync proativo de metadados para ${instanceName}...`);
+        await syncAllMetadata(socket, session, webhookUrl, webhookSecret, sessionId, instanceName);
+      }, 3000);
     }
 
     if (connection === 'close') {

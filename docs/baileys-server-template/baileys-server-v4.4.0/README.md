@@ -1,12 +1,13 @@
-# Baileys Server v4.4.0
+# Baileys Server v4.6.0
 
 Servidor WhatsApp baseado na biblioteca Baileys para integração com o CRM WhatsApp do Lovable.
 
-## 🆕 Mudanças na v4.4.0
+## 🆕 Mudanças na v4.6.0
 
-- **Histórico estendido**: Sincroniza mensagens das últimas **6 HORAS** (era 1h na v4.3.0)
-- **Batching otimizado**: Melhor processamento de grandes volumes de mensagens
-- **Sincronização de perfil**: Melhor captura de nomes e fotos de perfil
+- **Sync proativo de metadados**: Busca fotos e nomes de TODOS os chats imediatamente após conexão
+- **Função syncAllMetadata**: Nova função que itera todos os chats e envia webhook `contact.metadata`
+- **Histórico estendido**: Sincroniza mensagens das últimas **6 HORAS**
+- **Suporte a stickers**: Download e armazenamento de figurinhas
 
 ## 🚀 Deploy no Railway
 

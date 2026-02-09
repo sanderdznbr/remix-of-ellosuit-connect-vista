@@ -455,10 +455,17 @@ const WhatsAppCRM: React.FC = () => {
   const loadConversations = async () => {
     if (!companyId) return;
     
-    const { data, error } = await supabase
+    let query = supabase
       .from('whatsapp_conversations')
       .select('*')
-      .eq('company_id', companyId)
+      .eq('company_id', companyId);
+    
+    // FILTRAR POR SESSÃO SELECIONADA se houver
+    if (selectedSessionId) {
+      query = query.eq('session_id', selectedSessionId);
+    }
+    
+    const { data, error } = await query
       .order('last_message_at', { ascending: false })
       .limit(200);
     
@@ -970,15 +977,26 @@ const WhatsAppCRM: React.FC = () => {
     
     loadData();
     
-    // Polling fallback for conversations - refresh every 500ms (instant sync)
+    // Polling fallback for conversations - refresh every 2s (reduce load)
     const conversationsPoll = setInterval(() => {
       if (companyId) {
         loadConversations();
       }
-    }, 500);
+    }, 2000);
     
     return () => clearInterval(conversationsPoll);
-  }, [companyId]);
+  }, [companyId, selectedSessionId]);
+  
+  // Recarregar conversas quando trocar de canal
+  useEffect(() => {
+    if (companyId && selectedSessionId) {
+      loadConversations();
+      // Limpar conversa selecionada ao trocar canal
+      setSelectedConversation(null);
+      setMessages([]);
+      setShowMobileChat(false);
+    }
+  }, [selectedSessionId]);
 
   // Real-time subscription for messages, conversations, contacts, sessions
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const OMNI_COLOR = "#E34800";
+const OMNI_COLOR = "#FF4500";
 
 const omniModules = [
   {

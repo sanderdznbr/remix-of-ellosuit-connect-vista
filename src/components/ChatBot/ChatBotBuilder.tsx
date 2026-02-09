@@ -23,7 +23,7 @@ import ChatBotCanvas from './ChatBotCanvas';
 import ChatBotPropertiesPanel from './ChatBotPropertiesPanel';
 import { FlowNode, FlowEdge, BlockDefinition, ChatBotFlow } from './types';
 
-const BRAND_COLOR = '#E34800';
+const BRAND_COLOR = '#FF4500';
 
 const ChatBotBuilder: React.FC = () => {
   const navigate = useNavigate();

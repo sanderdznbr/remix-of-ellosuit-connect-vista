@@ -118,12 +118,15 @@ const MainDashboard = () => {
           .eq('company_id', companyId)
           .gte('created_at', prevStartDate.toISOString())
           .lte('created_at', prevEndDate.toISOString()),
-        // Note: emails table has no company_id, so we return empty to avoid cross-company data
-        // TODO: Add company_id to emails table for proper filtering
-        Promise.resolve({ count: 0 }),
-        Promise.resolve({ count: 0 }),
-        // Email events - empty since we can't filter by company
-        Promise.resolve({ data: [] }),
+        // Current emails (now with company_id column)
+        supabase.from('emails').select('*', { count: 'exact', head: true })
+          .eq('company_id', companyId),
+        // Previous emails
+        supabase.from('emails').select('*', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .lt('sent_at', startDate.toISOString()),
+        // Email events for open rate
+        supabase.from('email_events').select('email_id, event_type'),
         // Current tracked docs
         supabase.from('trackable_documents').select('*', { count: 'exact', head: true })
           .eq('company_id', companyId),

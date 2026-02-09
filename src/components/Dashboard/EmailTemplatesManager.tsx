@@ -51,42 +51,35 @@ const EmailTemplatesManager: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background page-content">
-      {/* Clean Header */}
-      <div className="border-b border-border bg-card">
-        <div className="px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${OMNI_COLOR}12` }}
-              >
-                <Palette className="h-5 w-5" style={{ color: OMNI_COLOR }} />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">Designs de Email</h1>
-                <p className="text-sm text-muted-foreground">Gerencie seus designs visuais de email</p>
-              </div>
-            </div>
-            <Button 
-              onClick={() => navigate('/dashboard/email-builder')}
-              className="gap-2"
-              style={{ backgroundColor: OMNI_COLOR }}
+      {/* Header */}
+      <div className="border-b border-border bg-card px-6 py-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${OMNI_COLOR}12` }}
             >
-              <Plus className="h-4 w-4" />
-              Criar Design
-            </Button>
+              <Palette className="h-5 w-5" style={{ color: OMNI_COLOR }} />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">Designs de Email</h1>
+              <p className="text-sm text-muted-foreground">
+                {designs.length} design{designs.length !== 1 ? 's' : ''} · {designs.filter(d => d.is_published).length} publicado{designs.filter(d => d.is_published).length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
+          <Button 
+            onClick={() => navigate('/dashboard/email-builder')}
+            className="gap-2 rounded-xl"
+            style={{ backgroundColor: OMNI_COLOR }}
+          >
+            <Plus className="h-4 w-4" />
+            Criar Design
+          </Button>
         </div>
       </div>
 
-      <div className="p-6 max-w-5xl mx-auto space-y-4">
-        {/* Stats Row */}
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{designs.length} designs</span>
-          <span>{designs.filter(d => d.is_published).length} publicados</span>
-          <span>{designs.filter(d => !d.is_published).length} rascunhos</span>
-        </div>
-
+      <div className="p-6 max-w-4xl mx-auto space-y-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -94,25 +87,21 @@ const EmailTemplatesManager: React.FC = () => {
             placeholder="Buscar designs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-card border-border"
+            className="pl-9 bg-card border-border rounded-xl"
           />
         </div>
 
         {/* List */}
         {filteredDesigns.length === 0 ? (
           <div className="bg-card border border-dashed border-border rounded-2xl p-12 text-center">
-            <div 
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: `${OMNI_COLOR}10` }}
-            >
-              <Palette className="h-7 w-7" style={{ color: OMNI_COLOR }} />
-            </div>
+            <Palette className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
             <h3 className="text-base font-semibold text-foreground mb-1">Nenhum design encontrado</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Crie templates visualmente com nosso editor drag-and-drop
             </p>
             <Button 
               onClick={() => navigate('/dashboard/email-builder')}
+              className="rounded-xl"
               style={{ backgroundColor: OMNI_COLOR }}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -124,10 +113,11 @@ const EmailTemplatesManager: React.FC = () => {
             {filteredDesigns.map(design => (
               <div 
                 key={design.id} 
-                className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group"
+                className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
               >
                 {/* Thumbnail */}
-                <div className="w-14 h-14 rounded-xl bg-muted/50 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-muted/50 flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {design.thumbnail_url ? (
                     <img 
                       src={design.thumbnail_url} 
@@ -135,14 +125,14 @@ const EmailTemplatesManager: React.FC = () => {
                       className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    <Mail className="h-6 w-6 text-muted-foreground/40" />
+                    <Mail className="h-5 w-5 text-muted-foreground/30" />
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground truncate">{design.name}</h3>
+                    <h3 className="font-medium text-foreground text-sm truncate">{design.name}</h3>
                     {design.is_published ? (
                       <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-1.5 py-0 dark:bg-green-900/20 dark:text-green-400">
                         Publicado
@@ -153,30 +143,14 @@ const EmailTemplatesManager: React.FC = () => {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    {design.description && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                        {design.description}
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDate(design.created_at)}
-                    </span>
-                  </div>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(design.created_at)}
+                  </span>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
-                  >
-                    <Edit className="h-3.5 w-3.5 mr-1" />
-                    Editar
-                  </Button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">

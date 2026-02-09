@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Users, Clock, Image, Zap } from 'lucide-react';
 
 interface WhatsAppSyncScreenProps {
   onComplete: () => void;
@@ -7,14 +7,13 @@ interface WhatsAppSyncScreenProps {
 }
 
 const syncSteps = [
-  { id: 'connect', label: 'Conectando ao WhatsApp...', duration: 5000 },
-  { id: 'auth', label: 'Autenticando sessão...', duration: 4000 },
-  { id: 'contacts', label: 'Sincronizando contatos...', duration: 25000 },
-  { id: 'chats', label: 'Carregando conversas...', duration: 30000 },
-  { id: 'groups', label: 'Verificando grupos...', duration: 15000 },
-  { id: 'messages', label: 'Baixando mensagens recentes...', duration: 35000 },
-  { id: 'media', label: 'Preparando mídia...', duration: 10000 },
-  { id: 'finish', label: 'Finalizando configuração...', duration: 6000 },
+  { id: 'connect', label: 'Conectando ao WhatsApp...', duration: 4000, icon: Zap },
+  { id: 'auth', label: 'Autenticando sessão...', duration: 3000, icon: Clock },
+  { id: 'contacts', label: 'Sincronizando contatos...', duration: 30000, icon: Users },
+  { id: 'chats', label: 'Carregando conversas...', duration: 35000, icon: MessageCircle },
+  { id: 'messages', label: 'Baixando mensagens (6h)...', duration: 40000, icon: MessageCircle },
+  { id: 'media', label: 'Preparando mídia...', duration: 12000, icon: Image },
+  { id: 'finish', label: 'Finalizando...', duration: 6000, icon: CheckCircle2 },
 ];
 
 const WhatsAppSyncScreen: React.FC<WhatsAppSyncScreenProps> = ({ onComplete, sessionId }) => {
@@ -70,11 +69,46 @@ const WhatsAppSyncScreen: React.FC<WhatsAppSyncScreenProps> = ({ onComplete, ses
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: '#FF4500' }}>
-      <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-        {/* Loader Animation */}
-        <div className="relative">
-          <span className="whatsapp-sync-loader"></span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#FF4500' }}>
+      {/* Animated background particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white/10 animate-float"
+            style={{
+              width: Math.random() * 40 + 10,
+              height: Math.random() * 40 + 10,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${Math.random() * 10 + 10}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative flex flex-col items-center gap-8 p-8 max-w-md w-full">
+        {/* Modern Loader Animation */}
+        <div className="relative flex items-center justify-center">
+          {/* Outer spinning ring */}
+          <div className="absolute w-28 h-28 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+          
+          {/* Middle pulsing ring */}
+          <div className="absolute w-24 h-24 rounded-full border-2 border-white/30 animate-ping" style={{ animationDuration: '2s' }} />
+          
+          {/* Inner logo area */}
+          <div className="relative w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <MessageCircle className="w-10 h-10 text-white animate-pulse" />
+          </div>
+          
+          {/* Orbiting dots */}
+          <div className="absolute w-32 h-32 animate-spin" style={{ animationDuration: '3s' }}>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-lg" />
+          </div>
+          <div className="absolute w-36 h-36 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/70" />
+          </div>
         </div>
 
         {/* Title */}
@@ -83,33 +117,46 @@ const WhatsAppSyncScreen: React.FC<WhatsAppSyncScreenProps> = ({ onComplete, ses
             Sincronizando WhatsApp
           </h2>
           <p className="text-white/80 text-sm">
-            Aguarde enquanto preparamos tudo para você
+            Preparando suas conversas das últimas 6 horas
           </p>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
-          <div 
-            className="h-full bg-white rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
-          />
+        <div className="w-full">
+          <div className="flex justify-between text-xs text-white/70 mb-2">
+            <span>Progresso</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden backdrop-blur-sm">
+            <div 
+              className="h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
+              style={{ 
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,1) 100%)'
+              }}
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer" />
+            </div>
+          </div>
         </div>
 
-        {/* Steps List */}
-        <div className="w-full space-y-3">
+        {/* Steps List - Compact */}
+        <div className="w-full space-y-2">
           {syncSteps.map((step, index) => {
             const isCompleted = completedSteps.includes(step.id);
             const isCurrent = index === currentStep && !isCompleted;
             const isPending = index > currentStep;
+            const Icon = step.icon;
 
             return (
               <div 
                 key={step.id}
-                className={`flex items-center gap-3 transition-all duration-300 ${
+                className={`flex items-center gap-3 transition-all duration-500 ${
                   isPending ? 'opacity-40' : 'opacity-100'
-                }`}
+                } ${isCurrent ? 'transform scale-105' : ''}`}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isCompleted 
                     ? 'bg-white text-[#FF4500]' 
                     : isCurrent 
@@ -119,61 +166,53 @@ const WhatsAppSyncScreen: React.FC<WhatsAppSyncScreenProps> = ({ onComplete, ses
                   {isCompleted ? (
                     <CheckCircle2 className="w-4 h-4" />
                   ) : isCurrent ? (
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  ) : null}
+                    <Icon className="w-4 h-4 text-white animate-pulse" />
+                  ) : (
+                    <Icon className="w-4 h-4 text-white/50" />
+                  )}
                 </div>
-                <span className={`text-sm font-medium ${
-                  isCompleted || isCurrent ? 'text-white' : 'text-white/50'
+                <span className={`text-sm font-medium transition-all duration-300 ${
+                  isCompleted ? 'text-white' : isCurrent ? 'text-white' : 'text-white/50'
                 }`}>
                   {step.label}
                 </span>
+                {isCurrent && (
+                  <div className="ml-auto flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
         {/* Info */}
-        <p className="text-white/60 text-xs text-center mt-4">
-          Isso pode levar até 3 minutos dependendo da quantidade de dados
-        </p>
+        <div className="text-center space-y-1">
+          <p className="text-white/80 text-sm">
+            ⏱️ Isso pode levar até 3 minutos
+          </p>
+          <p className="text-white/60 text-xs">
+            Estamos baixando suas conversas e contatos
+          </p>
+        </div>
       </div>
 
       <style>{`
-        .whatsapp-sync-loader {
-          position: relative;
-          width: 80px;
-          height: 80px;
-          border: 8px solid #FFF;
-          border-radius: 50%;
-          box-sizing: border-box;
-          animation: eat 1s linear infinite;
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+          50% { transform: translateY(-20px) rotate(180deg); opacity: 0.6; }
         }
-        .whatsapp-sync-loader::after,
-        .whatsapp-sync-loader::before {
-          content: '';
-          position: absolute;
-          left: 50px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: #fff;
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          box-sizing: border-box;
-          opacity: 0;
-          animation: move 2s linear infinite;
+        .animate-float {
+          animation: float 10s ease-in-out infinite;
         }
-        .whatsapp-sync-loader::before {
-          animation-delay: 1s;
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
-        @keyframes eat {
-          0%, 49% { border-right-color: #FFF }
-          50%, 100% { border-right-color: transparent }
-        }
-        @keyframes move {
-          0% { left: 60px; opacity: 1 }
-          50% { left: 0px; opacity: 1 }
-          52%, 100% { left: -5px; opacity: 0 }
+        .animate-shimmer {
+          animation: shimmer 2s ease-in-out infinite;
         }
       `}</style>
     </div>

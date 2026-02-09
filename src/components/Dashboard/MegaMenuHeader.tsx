@@ -364,29 +364,6 @@ export function MegaMenuHeader() {
 
               return (
                 <div className="flex gap-12">
-                  {/* Hub Link */}
-                  <div className="w-64">
-                    <Link
-                      to={currentGroup.hubPath}
-                      onClick={() => setActiveMenu(null)}
-                      className="block p-4 rounded-xl transition-all hover:shadow-lg"
-                      style={{ 
-                        backgroundColor: `${currentGroup.color}10`,
-                        borderLeft: `4px solid ${currentGroup.color}`
-                      }}
-                    >
-                      <div className="mb-2">
-                        <EllosuitOmniLogo 
-                          className="h-6 w-auto" 
-                          variant={currentGroup.id as 'omni' | 'flow' | 'track' | 'suite'}
-                        />
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Visão geral e KPIs
-                      </p>
-                    </Link>
-                  </div>
-
                   {/* Columns */}
                   <div className="flex gap-10 flex-1">
                     {currentGroup.columns.map((column, idx) => (

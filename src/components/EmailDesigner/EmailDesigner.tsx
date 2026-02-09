@@ -248,7 +248,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
           <h2 className="text-xl font-semibold">Preview: {designName}</h2>
           <div></div>
         </div>
-        <div className="flex-1 p-4 bg-gray-100">
+        <div className="flex-1 p-4 bg-muted/30">
           <div className="max-w-2xl mx-auto">
             <iframe
               srcDoc={generateHTML()}
@@ -265,7 +265,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-white">
+        <div className="flex items-center justify-between p-4 border-b bg-card">
           <div className="flex items-center space-x-4">
             <Button variant="outline" onClick={onBack}>
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -309,12 +309,12 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
         {/* Main Content */}
         <div className="flex-1 flex">
           {/* Elements Palette */}
-          <div className="w-64 border-r bg-gray-50">
+          <div className="w-64 border-r bg-card">
             <ElementsPalette />
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 p-4 bg-gray-100">
+          <div className="flex-1 p-4 bg-muted/30">
             <DesignCanvas
               elements={elements}
               selectedElement={selectedElement}
@@ -325,7 +325,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
           </div>
 
           {/* Properties Panel */}
-          <div className="w-80 border-l bg-white">
+          <div className="w-80 border-l bg-card">
             <PropertiesPanel
               selectedElement={selectedElement}
               onUpdateStyles={updateElementStyles}

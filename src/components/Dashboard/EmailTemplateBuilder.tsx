@@ -102,9 +102,11 @@ const SortableElement: React.FC<{
   onSelect: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onUpdateText: (id: string, updates: Partial<EmailElement>) => void;
   globalStyles: any;
-}> = ({ element, isSelected, onSelect, onDelete, onDuplicate, globalStyles }) => {
+}> = ({ element, isSelected, onSelect, onDelete, onDuplicate, onUpdateText, globalStyles }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.id });
+  const [isEditing, setIsEditing] = React.useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -112,37 +114,81 @@ const SortableElement: React.FC<{
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (['header', 'paragraph', 'button', 'footer'].includes(element.type)) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<any>) => {
+    setIsEditing(false);
+    const newText = e.currentTarget.textContent || '';
+    if (element.type === 'header' || element.type === 'paragraph' || element.type === 'button') {
+      onUpdateText(element.id, { content: { ...element.content, text: newText } });
+    } else if (element.type === 'footer') {
+      onUpdateText(element.id, { content: { ...element.content, text: newText } });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      (e.target as HTMLElement).blur();
+    }
+  };
+
   const renderElement = () => {
     switch (element.type) {
       case 'header':
         const HeadingTag = element.content.level as keyof JSX.IntrinsicElements;
         return (
-          <div style={{ textAlign: element.styles.textAlign as any, padding: element.styles.padding }}>
-            <HeadingTag style={{ 
-              fontSize: element.styles.fontSize, 
-              color: element.styles.color, 
-              margin: 0,
-              fontWeight: element.styles.fontWeight 
-            }}>
+          <div style={{ textAlign: element.styles.textAlign as any, padding: element.styles.padding }} onDoubleClick={handleDoubleClick}>
+            <HeadingTag 
+              style={{ 
+                fontSize: element.styles.fontSize, 
+                color: element.styles.color, 
+                margin: 0,
+                fontWeight: element.styles.fontWeight,
+                outline: isEditing ? '2px solid #FF4500' : 'none',
+                borderRadius: '4px',
+                padding: isEditing ? '2px 4px' : undefined,
+                minWidth: '20px',
+              }}
+              contentEditable={isEditing}
+              suppressContentEditableWarning
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+            >
               {element.content.text}
             </HeadingTag>
           </div>
         );
       case 'paragraph':
         return (
-          <p style={{ 
-            ...element.styles, 
-            margin: 0,
-            textAlign: element.styles.textAlign as any
-          }}>
+          <p 
+            style={{ 
+              ...element.styles, 
+              margin: 0,
+              textAlign: element.styles.textAlign as any,
+              outline: isEditing ? '2px solid #FF4500' : 'none',
+              borderRadius: '4px',
+              padding: isEditing ? '2px 4px' : element.styles.padding,
+              minWidth: '20px',
+            }}
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            onDoubleClick={handleDoubleClick}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+          >
             {element.content.text}
           </p>
         );
       case 'button':
         return (
-          <div style={{ textAlign: element.styles.textAlign as any }}>
-            <a 
-              href={element.content.url} 
+          <div style={{ textAlign: element.styles.textAlign as any }} onDoubleClick={handleDoubleClick}>
+            <span 
               style={{ 
                 display: 'inline-block',
                 backgroundColor: element.styles.backgroundColor,
@@ -151,11 +197,18 @@ const SortableElement: React.FC<{
                 borderRadius: element.styles.borderRadius,
                 textDecoration: 'none',
                 fontWeight: 600,
-                fontSize: element.styles.fontSize
+                fontSize: element.styles.fontSize,
+                outline: isEditing ? '2px solid #FF4500' : 'none',
+                minWidth: '20px',
+                cursor: isEditing ? 'text' : 'pointer',
               }}
+              contentEditable={isEditing}
+              suppressContentEditableWarning
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
             >
               {element.content.text}
-            </a>
+            </span>
           </div>
         );
       case 'image':
@@ -254,15 +307,31 @@ const SortableElement: React.FC<{
         );
       case 'footer':
         return (
-          <div style={{ 
-            textAlign: 'center', 
-            color: element.styles.color, 
-            fontSize: element.styles.fontSize,
-            backgroundColor: element.styles.backgroundColor,
-            padding: element.styles.padding,
-            borderRadius: '8px'
-          }}>
-            <p style={{ margin: '0 0 8px 0' }}>{element.content.text}</p>
+          <div 
+            style={{ 
+              textAlign: 'center', 
+              color: element.styles.color, 
+              fontSize: element.styles.fontSize,
+              backgroundColor: element.styles.backgroundColor,
+              padding: element.styles.padding,
+              borderRadius: '8px'
+            }}
+            onDoubleClick={handleDoubleClick}
+          >
+            <p 
+              style={{ 
+                margin: '0 0 8px 0', 
+                outline: isEditing ? '2px solid #FF4500' : 'none',
+                borderRadius: '4px',
+                minWidth: '20px',
+              }}
+              contentEditable={isEditing}
+              suppressContentEditableWarning
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+            >
+              {element.content.text}
+            </p>
             {element.content.address && <p style={{ margin: '0 0 8px 0', opacity: 0.8 }}>{element.content.address}</p>}
             <a href={element.content.unsubscribe} style={{ color: '#888', fontSize: '11px' }}>Cancelar inscrição</a>
           </div>
@@ -308,6 +377,12 @@ const SortableElement: React.FC<{
           <Trash2 className="h-3.5 w-3.5 text-destructive" />
         </button>
       </div>
+
+      {isEditing && (
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#FF4500] text-white text-[10px] px-2 py-0.5 rounded-t-md whitespace-nowrap z-20">
+          Editando • Enter para salvar
+        </div>
+      )}
 
       {renderElement()}
     </div>
@@ -672,9 +747,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {['h1', 'h2', 'h3'].map(level => (
                   <Button
                     key={level}
-                    variant={selectedElementData.content.level === level ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.content.level === level ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, level }})}
                   >
                     {level.toUpperCase()}
@@ -688,9 +763,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {[{ value: 'left', icon: AlignLeft }, { value: 'center', icon: AlignCenter }, { value: 'right', icon: AlignRight }].map(({ value, icon: Icon }) => (
                   <Button
                     key={value}
-                    variant={selectedElementData.styles.textAlign === value ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.styles.textAlign === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, textAlign: value }})}
                   >
                     <Icon className="h-4 w-4" />
@@ -744,9 +819,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {[{ value: 'left', icon: AlignLeft }, { value: 'center', icon: AlignCenter }, { value: 'right', icon: AlignRight }].map(({ value, icon: Icon }) => (
                   <Button
                     key={value}
-                    variant={selectedElementData.styles.textAlign === value ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.styles.textAlign === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, textAlign: value }})}
                   >
                     <Icon className="h-4 w-4" />
@@ -799,9 +874,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {[{ value: 'left', icon: AlignLeft }, { value: 'center', icon: AlignCenter }, { value: 'right', icon: AlignRight }].map(({ value, icon: Icon }) => (
                   <Button
                     key={value}
-                    variant={selectedElementData.styles.textAlign === value ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.styles.textAlign === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, textAlign: value }})}
                   >
                     <Icon className="h-4 w-4" />
@@ -889,9 +964,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {[{ value: 'left', icon: AlignLeft }, { value: 'center', icon: AlignCenter }, { value: 'right', icon: AlignRight }].map(({ value, icon: Icon }) => (
                   <Button
                     key={value}
-                    variant={selectedElementData.styles.alignment === value ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.styles.alignment === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, alignment: value }})}
                   >
                     <Icon className="h-4 w-4" />
@@ -947,9 +1022,9 @@ const EmailTemplateBuilder: React.FC = () => {
                 {[{ value: 'left', icon: AlignLeft }, { value: 'center', icon: AlignCenter }, { value: 'right', icon: AlignRight }].map(({ value, icon: Icon }) => (
                   <Button
                     key={value}
-                    variant={selectedElementData.styles.alignment === value ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 ${selectedElementData.styles.alignment === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
                     onClick={() => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, alignment: value }})}
                   >
                     <Icon className="h-4 w-4" />
@@ -1502,6 +1577,7 @@ const EmailTemplateBuilder: React.FC = () => {
                           }}
                           onDelete={() => deleteElement(element.id)}
                           onDuplicate={() => duplicateElement(element.id)}
+                          onUpdateText={updateElement}
                           globalStyles={globalStyles}
                         />
                       ))}

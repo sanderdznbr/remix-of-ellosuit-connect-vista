@@ -1,164 +1,146 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MessageSquare, Zap, GitBranch, Clock, Mail, Hash, 
   UserPlus, Database, Send, Globe, 
-  Tag, Phone, Image, FileText, List, ToggleLeft
+  Tag, Phone, Image, FileText, List, ToggleLeft, Search, X
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { BlockCategory, BlockDefinition } from './types';
+
+const OMNI_COLOR = '#FF4500';
 
 const BLOCK_CATEGORIES: BlockCategory[] = [
   {
-    id: 'triggers',
-    label: 'Gatilhos',
-    color: '#3600FF',
+    id: 'start',
+    label: 'INÍCIO',
+    color: OMNI_COLOR,
     blocks: [
       { 
         type: 'trigger', 
         subType: 'whatsapp_channel', 
-        label: 'Canal WhatsApp', 
-        description: 'Inicia quando receber mensagem no WhatsApp conectado', 
+        label: 'Iniciar por um canal', 
+        description: 'Inicia quando o contato entra através de um canal.', 
         icon: 'Phone', 
         defaultConfig: { sessionId: '', triggerWhen: 'any_message' } 
       },
       { 
         type: 'trigger', 
-        subType: 'email_channel', 
-        label: 'Canal Email', 
-        description: 'Inicia quando receber email na conta configurada', 
-        icon: 'Mail', 
-        defaultConfig: { email: '' } 
+        subType: 'manual', 
+        label: 'Iniciar manualmente', 
+        description: 'Inicia quando o atendente ativa o fluxo manualmente.', 
+        icon: 'Zap', 
+        defaultConfig: {} 
       },
+    ]
+  },
+  {
+    id: 'conditions',
+    label: 'CONDIÇÃO',
+    color: OMNI_COLOR,
+    blocks: [
       { 
-        type: 'trigger', 
-        subType: 'keyword', 
-        label: 'Palavra-chave', 
-        description: 'Inicia quando detectar palavras específicas', 
-        icon: 'Hash', 
-        defaultConfig: { keywords: [], matchMode: 'contains' } 
-      },
-      { 
-        type: 'trigger', 
-        subType: 'conversation_start', 
-        label: 'Início de Conversa', 
-        description: 'Inicia quando uma nova conversa começar', 
-        icon: 'MessageSquare', 
-        defaultConfig: { startType: 'first_contact', channel: 'all' } 
-      },
-      { 
-        type: 'trigger', 
-        subType: 'inactivity', 
-        label: 'Inatividade', 
-        description: 'Inicia após X minutos sem resposta do usuário', 
+        type: 'condition', 
+        subType: 'weekday', 
+        label: 'Dias da semana', 
+        description: 'Defina ações a partir de cada dia da semana.', 
         icon: 'Clock', 
-        defaultConfig: { minutes: 5, maxAttempts: 3 } 
+        defaultConfig: { days: [] },
+        locked: false
       },
       { 
-        type: 'trigger', 
-        subType: 'webhook', 
-        label: 'Webhook', 
-        description: 'Inicia quando receber chamada de API externa', 
-        icon: 'Globe', 
-        defaultConfig: { url: '' } 
+        type: 'condition', 
+        subType: 'time', 
+        label: 'Horários', 
+        description: 'Defina ações a partir de intervalos de horários.', 
+        icon: 'Clock', 
+        defaultConfig: { startHour: 9, endHour: 18 },
+        locked: false
+      },
+      { 
+        type: 'condition', 
+        subType: 'if_else', 
+        label: 'Definir condição', 
+        description: 'Defina regras específicas para o seu fluxo.', 
+        icon: 'GitBranch', 
+        defaultConfig: { conditionType: 'user_response', operator: 'contains', value: '' },
+        locked: true
+      },
+      { 
+        type: 'condition', 
+        subType: 'multi', 
+        label: 'Multi-condicional', 
+        description: 'Defina múltiplas regras e múltiplos fluxo de saída.', 
+        icon: 'GitBranch', 
+        defaultConfig: { conditions: [] },
+        locked: true
+      },
+    ]
+  },
+  {
+    id: 'delays',
+    label: 'DELAYS',
+    color: OMNI_COLOR,
+    blocks: [
+      { 
+        type: 'delay', 
+        subType: 'wait_interval', 
+        label: 'Aguardar intervalo', 
+        description: 'Pausa o fluxo por um tempo específico.', 
+        icon: 'Clock', 
+        defaultConfig: { seconds: 5 } 
+      },
+      { 
+        type: 'delay', 
+        subType: 'wait_until', 
+        label: 'Aguardar até', 
+        description: 'Pausa até uma data/hora específica.', 
+        icon: 'Clock', 
+        defaultConfig: { datetime: '' } 
       },
     ]
   },
   {
     id: 'messages',
-    label: 'Mensagens',
-    color: '#3600FF',
+    label: 'MENSAGENS',
+    color: OMNI_COLOR,
     blocks: [
       { 
         type: 'message', 
         subType: 'text', 
-        label: 'Texto', 
-        description: 'Envia uma mensagem de texto simples', 
+        label: 'Enviar mensagem', 
+        description: 'Envia uma mensagem de texto.', 
         icon: 'MessageSquare', 
         defaultConfig: { content: '' } 
       },
       { 
         type: 'message', 
         subType: 'buttons', 
-        label: 'Com Botões', 
-        description: 'Envia mensagem com até 3 botões clicáveis', 
-        icon: 'ToggleLeft', 
+        label: 'Pedir para escolher', 
+        description: 'Envia opções para o usuário escolher.', 
+        icon: 'List', 
         defaultConfig: { content: '', buttons: [] } 
       },
       { 
         type: 'message', 
-        subType: 'list', 
-        label: 'Lista', 
-        description: 'Envia um menu de opções (lista interativa)', 
-        icon: 'List', 
-        defaultConfig: { title: '', items: [] } 
-      },
-      { 
-        type: 'message', 
         subType: 'image', 
-        label: 'Imagem', 
-        description: 'Envia uma foto ou ilustração com legenda', 
+        label: 'Enviar mídia', 
+        description: 'Envia imagem, vídeo ou arquivo.', 
         icon: 'Image', 
         defaultConfig: { url: '', caption: '' } 
-      },
-      { 
-        type: 'message', 
-        subType: 'file', 
-        label: 'Arquivo', 
-        description: 'Envia um PDF, documento ou arquivo', 
-        icon: 'FileText', 
-        defaultConfig: { url: '', filename: '' } 
-      },
-    ]
-  },
-  {
-    id: 'conditions',
-    label: 'Condições',
-    color: '#3600FF',
-    blocks: [
-      { 
-        type: 'condition', 
-        subType: 'if_else', 
-        label: 'Se/Senão', 
-        description: 'Divide o fluxo em "Sim" e "Não" baseado em condição', 
-        icon: 'GitBranch', 
-        defaultConfig: { conditionType: 'user_response', operator: 'contains', value: '' } 
-      },
-      { 
-        type: 'condition', 
-        subType: 'check_variable', 
-        label: 'Verificar Variável', 
-        description: 'Verifica o valor de uma variável salva', 
-        icon: 'Database', 
-        defaultConfig: { variable: '', operator: '==', value: '' } 
-      },
-      { 
-        type: 'condition', 
-        subType: 'check_time', 
-        label: 'Verificar Horário', 
-        description: 'Verifica se está dentro do horário comercial', 
-        icon: 'Clock', 
-        defaultConfig: { startHour: 9, endHour: 18 } 
-      },
-      { 
-        type: 'condition', 
-        subType: 'check_tag', 
-        label: 'Verificar Tag', 
-        description: 'Verifica se o contato possui determinada tag', 
-        icon: 'Tag', 
-        defaultConfig: { tag: '' } 
       },
     ]
   },
   {
     id: 'actions',
-    label: 'Ações',
-    color: '#3600FF',
+    label: 'AÇÕES',
+    color: OMNI_COLOR,
     blocks: [
       { 
         type: 'action', 
         subType: 'assign_tag', 
         label: 'Atribuir Tag', 
-        description: 'Adiciona uma tag/etiqueta ao contato', 
+        description: 'Adiciona uma etiqueta ao contato.', 
         icon: 'Tag', 
         defaultConfig: { tag: '' } 
       },
@@ -166,7 +148,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
         type: 'action', 
         subType: 'transfer_human', 
         label: 'Transferir para Humano', 
-        description: 'Encerra o bot e transfere para atendimento manual', 
+        description: 'Encerra o bot e transfere para atendimento.', 
         icon: 'UserPlus', 
         defaultConfig: { departmentName: '' } 
       },
@@ -174,64 +156,17 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
         type: 'action', 
         subType: 'save_crm', 
         label: 'Salvar no CRM', 
-        description: 'Salva o contato como lead no CRM', 
+        description: 'Salva o contato como lead.', 
         icon: 'Database', 
-        defaultConfig: { nameField: '{{nome}}', emailField: '{{email}}' } 
-      },
-      { 
-        type: 'action', 
-        subType: 'send_email', 
-        label: 'Enviar Email', 
-        description: 'Envia um email de notificação', 
-        icon: 'Send', 
-        defaultConfig: { to: '', subject: '', body: '' } 
+        defaultConfig: { nameField: '{{nome}}' } 
       },
       { 
         type: 'action', 
         subType: 'call_api', 
         label: 'Chamar API', 
-        description: 'Faz uma requisição HTTP para sistema externo', 
+        description: 'Faz requisição para sistema externo.', 
         icon: 'Globe', 
         defaultConfig: { url: '', method: 'POST' } 
-      },
-      { 
-        type: 'action', 
-        subType: 'set_variable', 
-        label: 'Definir Variável', 
-        description: 'Salva um valor em variável para uso posterior', 
-        icon: 'Database', 
-        defaultConfig: { name: '', value: '' } 
-      },
-    ]
-  },
-  {
-    id: 'delays',
-    label: 'Delays / Esperas',
-    color: '#3600FF',
-    blocks: [
-      { 
-        type: 'delay', 
-        subType: 'wait_seconds', 
-        label: 'Aguardar Tempo', 
-        description: 'Pausa o fluxo por X segundos', 
-        icon: 'Clock', 
-        defaultConfig: { seconds: 5 } 
-      },
-      { 
-        type: 'delay', 
-        subType: 'wait_response', 
-        label: 'Aguardar Resposta', 
-        description: 'Pausa e espera o usuário responder', 
-        icon: 'MessageSquare', 
-        defaultConfig: { timeout: 60, saveAs: '' } 
-      },
-      { 
-        type: 'delay', 
-        subType: 'wait_business_hours', 
-        label: 'Horário Comercial', 
-        description: 'Pausa até o próximo horário comercial', 
-        icon: 'Clock', 
-        defaultConfig: { startHour: 9, endHour: 18 } 
       },
     ]
   }
@@ -247,53 +182,127 @@ interface ChatBotSidebarProps {
 }
 
 const ChatBotSidebar: React.FC<ChatBotSidebarProps> = ({ onDragStart }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(true);
+
+  const filteredCategories = BLOCK_CATEGORIES.map(category => ({
+    ...category,
+    blocks: category.blocks.filter(block => 
+      block.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      block.description.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.blocks.length > 0);
+
+  if (!isOpen) {
+    return (
+      <div 
+        className="w-12 bg-white border-r flex flex-col items-center py-4 cursor-pointer hover:bg-gray-50"
+        onClick={() => setIsOpen(true)}
+      >
+        <div 
+          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: `${OMNI_COLOR}15` }}
+        >
+          <Zap className="h-4 w-4" style={{ color: OMNI_COLOR }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-72 bg-background border-r flex flex-col h-full">
+    <div className="w-80 bg-white border-r flex flex-col h-full shadow-sm">
+      {/* Header */}
       <div className="p-4 border-b">
-        <h2 className="font-semibold text-foreground">Blocos</h2>
-        <p className="text-xs text-muted-foreground mt-1">Arraste para o canvas para criar seu fluxo</p>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👋</span>
+            <span className="font-semibold text-gray-900">Clique ou arrastes</span>
+          </div>
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Pesquisar passo"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-gray-50 border-gray-200 rounded-xl"
+          />
+        </div>
       </div>
       
+      {/* Blocks */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-5">
-          {BLOCK_CATEGORIES.map((category) => (
+        <div className="p-4 space-y-6">
+          {filteredCategories.map((category) => (
             <div key={category.id}>
-              <div 
-                className="flex items-center gap-2 mb-2 px-2"
-                style={{ color: '#3600FF' }}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                <span className="text-xs font-semibold uppercase tracking-wider">
+              <div className="flex items-center gap-2 mb-3">
+                {category.id === 'start' && <span className="text-gray-600">▶</span>}
+                {category.id === 'conditions' && <span className="text-gray-600">⚙️</span>}
+                {category.id === 'delays' && <Clock className="h-4 w-4 text-gray-500" />}
+                {category.id === 'messages' && <MessageSquare className="h-4 w-4 text-gray-500" />}
+                {category.id === 'actions' && <Zap className="h-4 w-4 text-gray-500" />}
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   {category.label}
                 </span>
               </div>
               
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 {category.blocks.map((block) => {
                   const Icon = iconMap[block.icon] || MessageSquare;
+                  const isLocked = (block as any).locked;
+                  
                   return (
                     <div
                       key={`${block.type}-${block.subType}`}
-                      draggable
+                      draggable={!isLocked}
                       onDragStart={(e) => {
+                        if (isLocked) {
+                          e.preventDefault();
+                          return;
+                        }
                         e.dataTransfer.setData('block', JSON.stringify(block));
                         e.dataTransfer.effectAllowed = 'copy';
                         onDragStart(block);
                       }}
-                      className="flex items-start gap-3 p-2.5 rounded-lg cursor-grab active:cursor-grabbing border border-transparent hover:border-[#3600FF]/20 hover:bg-[#3600FF]/5 transition-all group"
+                      className={`
+                        relative p-3 rounded-xl border transition-all
+                        ${isLocked 
+                          ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60' 
+                          : 'bg-white border-gray-200 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm'
+                        }
+                      `}
                     >
-                      <div 
-                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-white border border-[#3600FF]/20 shadow-sm"
-                      >
-                        <Icon className="h-4 w-4" style={{ color: '#3600FF' }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-sm font-medium text-foreground block">
-                          {block.label}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground block leading-snug mt-0.5">
-                          {block.description}
-                        </span>
+                      {isLocked && (
+                        <div className="absolute top-2 right-2 text-gray-400">
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <div 
+                          className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{ 
+                            backgroundColor: isLocked ? '#f3f4f6' : `${OMNI_COLOR}15`,
+                            color: isLocked ? '#9ca3af' : OMNI_COLOR 
+                          }}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-medium text-gray-900 block leading-tight">
+                            {block.label}
+                          </span>
+                          <span className="text-[10px] text-gray-500 block leading-snug mt-0.5 line-clamp-2">
+                            {block.description}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -303,13 +312,6 @@ const ChatBotSidebar: React.FC<ChatBotSidebarProps> = ({ onDragStart }) => {
           ))}
         </div>
       </ScrollArea>
-      
-      {/* Help footer */}
-      <div className="p-3 border-t bg-[#3600FF]/5">
-        <p className="text-[10px] text-muted-foreground text-center">
-          💡 Dica: Comece com um gatilho, adicione mensagens, e conecte os blocos arrastando os círculos
-        </p>
-      </div>
     </div>
   );
 };

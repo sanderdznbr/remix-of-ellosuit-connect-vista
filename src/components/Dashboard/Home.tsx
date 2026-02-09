@@ -1,6 +1,6 @@
 import React from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MobileHomeScreen from '@/components/Mobile/MobileHomeScreen';
+import MobileHomeDashboard from '@/components/Mobile/MobileHomeDashboard';
 import AIAssistantHome from './AIAssistantHome';
 
 interface HomeProps {
@@ -10,12 +10,10 @@ interface HomeProps {
 const Home = ({ onNavigate }: HomeProps) => {
   const { isMobile } = useIsMobile();
 
-  // Se for mobile, usar a versão mobile-first
   if (isMobile) {
-    return <MobileHomeScreen onNavigate={onNavigate} />;
+    return <MobileHomeDashboard onNavigate={onNavigate} />;
   }
 
-  // Desktop: usar o novo assistente AI
   return <AIAssistantHome />;
 };
 

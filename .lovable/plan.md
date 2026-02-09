@@ -1,56 +1,50 @@
 
 
-## Melhorias no Chat do Bot IA
+## Header Colorido Dinamico por Hub
 
-### Problemas identificados
-1. Cores do modal usam `primary` (roxo) em vez de laranja (#FF4500)
-2. Texto das mensagens do bot tem baixa visibilidade (cinza claro sobre fundo cinza)
-3. Bot envia markdown com asteriscos (`**texto**`) que aparecem crus na tela
-4. System prompt nao instrui o bot a responder sem formatacao markdown
-5. Configuracoes do agente (limite de caracteres, etc.) nao sao passadas ao prompt
+### Cores por Rota
 
-### Alteracoes planejadas
+| Rota | Cor | Hub |
+|------|-----|-----|
+| `/dashboard` (home) | `#3000E3` (azul Ellosuit) | Default |
+| `/dashboard/omni/*` | `#FF4500` (laranja) | Omni |
+| `/dashboard/flows/*`, `/dashboard/agenda/*`, etc. | `#007DE3` (azul) | Flow |
+| `/dashboard/track/*` | `#00E371` (verde) | Track |
+| `/dashboard/cadastros/*`, `/dashboard/drive/*`, `/dashboard/analytics/*` | `#3000E3` (azul Ellosuit) | Suite |
 
-**1. `src/components/BotIA/BotIAChat.tsx` (Visual + Markdown strip)**
-- Trocar todas as referencias `primary` / `from-primary to-primary/60` pelo laranja `#FF4500`
-- Avatar do bot: fundo laranja em vez de roxo
-- Bolha do usuario: fundo laranja em vez de roxo
-- Botao de enviar: laranja
-- Header: icone laranja, modelo exibe "elloiav1.0"
-- Texto das mensagens do bot: usar `text-gray-900` para melhor contraste (em vez de `text-foreground` sobre `bg-muted`)
-- Adicionar funcao `cleanMarkdown()` que remove `**`, `*`, `##`, `#`, `` ` `` e outros caracteres markdown antes de exibir
-- No system prompt enviado a API, adicionar instrucao explicita: "Responda como um humano real. NAO use markdown, asteriscos, negrito, listas com marcadores ou qualquer formatacao especial. Escreva texto corrido e natural."
-- Passar `settings.maxResponseChars` do agente como instrucao no prompt (ex: "Limite suas respostas a no maximo X caracteres")
-- Passar `settings.temperature` no body da requisicao a API
-- Passar `settings.humor` como parte do prompt de personalidade
+### Visual
 
-**2. `supabase/functions/ai-chat/index.ts` (Suporte a temperature)**
-- Aceitar campo `temperature` no body da requisicao
-- Passar `temperature` ao AI Gateway na chamada `fetch`
+- Fundo do header (h-16) recebe a cor do hub ativo com transicao CSS suave (500ms)
+- Textos dos botoes de navegacao ficam brancos
+- Logo, icones (sino, engrenagem), avatar ficam brancos
+- Botao ativo: fundo `white/20` (glassmorphism sutil)
+- Hover nos botoes: `white/10`
+- O mega menu dropdown que abre embaixo continua branco com sombra, sem alteracao
 
-### Detalhes tecnicos
+### Detalhes Tecnicos
 
-Funcao `cleanMarkdown`:
-```
-function cleanMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')  // **bold**
-    .replace(/\*(.*?)\*/g, '$1')      // *italic*
-    .replace(/#{1,6}\s?/g, '')        // # headers
-    .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // `code`
-    .replace(/^[-*+]\s/gm, '• ')      // list markers -> bullet
-    .trim();
-}
-```
+**Arquivo: `src/hooks/useHubColor.tsx`**
 
-System prompt adicionado:
-```
-"IMPORTANTE: Responda como um ser humano real conversando. 
-NAO use asteriscos, negrito, italico, markdown ou formatacao especial. 
-Escreva texto corrido e natural, como uma pessoa digitando no WhatsApp."
-```
+- Adicionar rotas Suite: `/dashboard/drive`, `/dashboard/analytics`, `/dashboard/ello-vision`, `/dashboard/relatorios`, `/dashboard/perfil`, `/dashboard/assinatura`
+- Cor Suite: `#3000E3` (mesmo que DEFAULT_COLOR)
+- Adicionar `hub: 'suite'` ao retorno
 
-Arquivos afetados:
-- `src/components/BotIA/BotIAChat.tsx`
-- `supabase/functions/ai-chat/index.ts`
+**Arquivo: `src/components/Dashboard/MegaMenuHeader.tsx`**
+
+1. No `<header>`, trocar `bg-white border-b border-gray-100` por estilo inline: `backgroundColor: hubColor`, `transition: 'all 0.5s ease-in-out'`
+2. Remover `border-b border-gray-100` (nao precisa de borda quando tem cor)
+3. Textos de navegacao: brancos (`text-white/80` inativo, `text-white` ativo)
+4. Botao ativo do hub: `backgroundColor: 'rgba(255,255,255,0.2)'` em vez de `${group.color}10`
+5. Hover: `rgba(255,255,255,0.1)`
+6. Icones do lado direito (Bell, Settings): `text-white` em vez de `text-gray-500`
+7. Badge de notificacao: permanece vermelho
+8. Avatar fallback: permanece como esta (ja tem cor propria)
+9. Logo (ElloLogo): passar `color="white"` ou `className` branco
+10. ChevronDown: `text-white/60`
+11. O mega menu dropdown (parte que expande abaixo) permanece exatamente como esta: `bg-white`, icones coloridos, texto escuro
+
+### Animacoes
+
+- `transition: all 0.5s ease-in-out` no header para transicao suave entre cores ao navegar entre hubs
+- Botoes de nav com transicao de opacidade no hover
 

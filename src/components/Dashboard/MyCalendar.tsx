@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +23,8 @@ import './calendar-styles.css';
 interface MyCalendarProps {
   onNavigate?: (page: string) => void;
 }
+
+const FLOW_COLOR = "#007DE3";
 
 const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [showEventModal, setShowEventModal] = useState(false);
@@ -132,7 +132,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setSelectedRange(null);
   };
 
-  // Atualizar eventos quando houver mudanças na sincronização
   useEffect(() => {
     if (lastSyncTime) {
       refreshEvents();
@@ -144,9 +143,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       const startDate = event.start_date || event.start;
       const endDate = event.end_date || event.end;
       
-      if (!startDate) {
-        return null;
-      }
+      if (!startDate) return null;
 
       return {
         id: event.id,
@@ -177,8 +174,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const getEventColor = (eventType: string) => {
-    const colors = {
-      'meeting': '#3600FF',
+    const colors: Record<string, string> = {
+      'meeting': FLOW_COLOR,
       'appointment': '#10B981',
       'reminder': '#F59E0B',
       'task': '#EF4444',
@@ -194,8 +191,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       <div className="p-6 space-y-6 bg-white min-h-screen">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Meu Calendário</h1>
-            <p className="text-gray-600">Gerencie seus eventos, reuniões e compromissos</p>
+            <h1 className="text-2xl font-bold text-gray-900">Minha Agenda</h1>
+            <p className="text-sm text-gray-500">Gerencie seus eventos, reuniões e compromissos</p>
           </div>
         </div>
         <CalendarSkeleton />
@@ -204,29 +201,30 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+    <div className="p-6 space-y-6 bg-white min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3600FF] to-[#4F46E5] bg-clip-text text-transparent mb-2">
-            Meu Calendário
-          </h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900">Minha Agenda</h1>
+          <p className="text-sm text-gray-500">
             Gerencie seus eventos, reuniões e compromissos
           </p>
         </div>
         
-        <div className="flex space-x-3">
+        <div className="flex items-center gap-2">
           <Button 
             onClick={() => setShowBulkDeleteModal(true)}
             variant="outline"
-            className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            className="rounded-xl text-gray-600 hover:text-red-600"
+            size="sm"
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Excluir em Massa
           </Button>
           <Button 
             onClick={() => setShowTypeSelector(true)}
-            className="bg-gradient-to-r from-[#3600FF] to-[#4F46E5] hover:from-[#3600FF]/90 hover:to-[#4F46E5]/90 rounded-xl shadow-lg"
+            className="rounded-xl"
+            style={{ backgroundColor: FLOW_COLOR }}
+            size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Evento
@@ -234,8 +232,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
       </div>
 
-      <Card className="shadow-xl border-0 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm">
-        <CardContent className="p-6">
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6">
           <div className="calendar-container">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -288,8 +286,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               }}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <EventTypeSelector
         isOpen={showTypeSelector}

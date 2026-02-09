@@ -1410,7 +1410,7 @@ const EmailTemplateBuilder: React.FC = () => {
           >
             <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily, backgroundColor: globalStyles.contentBackgroundColor || '#ffffff' }}>
               {elements.length === 0 ? (
-                <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+                <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-white">
                   <Palette className="h-12 w-12 mb-4 text-gray-300" />
                   <p className="text-lg font-medium text-gray-600">Comece a construir seu email</p>
                   <p className="text-sm mb-4 text-gray-400">Adicione elementos ou arraste uma imagem</p>

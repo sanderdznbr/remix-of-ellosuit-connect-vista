@@ -1138,62 +1138,132 @@ const FluxosBoard: React.FC = () => {
     );
   }
 
+  const deleteGroup = async (groupId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este quadro e todos seus fluxos?')) return;
+    // Delete all workflows in this group first
+    const groupWorkflows = workflows.filter(w => w.group_id === groupId);
+    for (const wf of groupWorkflows) {
+      await supabase.from('workflow_cards').delete().eq('column_id', columns.filter(c => c.workflow_id === wf.id).map(c => c.id)[0] || '');
+      await supabase.from('workflow_columns').delete().eq('workflow_id', wf.id);
+    }
+    await supabase.from('workflows').delete().eq('group_id', groupId);
+    await supabase.from('workflow_groups').delete().eq('id', groupId);
+    setSelectedGroup('');
+    setSelectedWorkflow('');
+    loadGroups();
+    toast({ title: 'Quadro excluído!' });
+  };
+
+  const deleteWorkflow = async (workflowId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este fluxo e todos seus cards?')) return;
+    const wfColumns = columns.filter(c => c.workflow_id === workflowId);
+    for (const col of wfColumns) {
+      await supabase.from('workflow_cards').delete().eq('column_id', col.id);
+    }
+    await supabase.from('workflow_columns').delete().eq('workflow_id', workflowId);
+    await supabase.from('workflows').delete().eq('id', workflowId);
+    setSelectedWorkflow('');
+    loadWorkflows();
+    toast({ title: 'Fluxo excluído!' });
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Clean Header */}
       <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
         <div className="px-6 py-4">
           {/* Title Row */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Fluxos de Trabalho</h1>
               <p className="text-sm text-gray-500">Kanban para gerenciar projetos e processos</p>
             </div>
-            {currentWorkflow && (
-              <Badge variant="secondary" className="rounded-xl text-xs">
-                {columns.length} listas • {cards.length} cards
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {currentWorkflow && (
+                <Badge variant="secondary" className="rounded-xl text-xs px-3 py-1">
+                  {columns.length} listas • {cards.length} cards
+                </Badge>
+              )}
+            </div>
           </div>
           
           {/* Board & Flow Selector */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-              <SelectTrigger className="w-44 rounded-xl border-gray-200 bg-white">
-                <SelectValue placeholder="Quadro..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {groups.map(group => (
-                  <SelectItem key={group.id} value={group.id} className="rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-3 w-3 text-amber-500" />
-                      {group.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                <SelectTrigger className="w-48 rounded-xl border-gray-200 bg-white h-10">
+                  <SelectValue placeholder="Selecione um quadro..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {groups.map(group => (
+                    <SelectItem key={group.id} value={group.id} className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-3 w-3 text-amber-500" />
+                        {group.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button variant="outline" size="icon" onClick={() => setShowGroupModal(true)} className="rounded-xl border-gray-200 h-10 w-10" title="Novo quadro">
+                <Plus className="h-4 w-4" />
+              </Button>
+
+              {selectedGroup && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-xl border-gray-200 h-10 w-10" title="Opções do quadro">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="rounded-xl w-48">
+                    <DropdownMenuItem onClick={() => setShowGroupModal(true)} className="rounded-lg">
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Novo Quadro
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => deleteGroup(selectedGroup)} className="text-destructive rounded-lg">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Quadro
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
             
-            <Button variant="outline" size="icon" onClick={() => setShowGroupModal(true)} className="rounded-xl border-gray-200">
-              <Plus className="h-4 w-4" />
-            </Button>
-            
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-8 hidden sm:block" />
             
             {selectedGroup && (
               <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1">
                 {workflows.map(workflow => (
-                  <button
-                    key={workflow.id}
-                    onClick={() => setSelectedWorkflow(workflow.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      selectedWorkflow === workflow.id
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {workflow.name}
-                  </button>
+                  <div key={workflow.id} className="flex items-center group">
+                    <button
+                      onClick={() => setSelectedWorkflow(workflow.id)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        selectedWorkflow === workflow.id
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {workflow.name}
+                    </button>
+                    {selectedWorkflow === workflow.id && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1 rounded-md hover:bg-gray-200 transition-colors ml-0.5">
+                            <MoreHorizontal className="h-3.5 w-3.5 text-gray-400" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="rounded-xl w-44">
+                          <DropdownMenuItem onClick={() => deleteWorkflow(workflow.id)} className="text-destructive rounded-lg">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir Fluxo
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 ))}
                 <button
                   onClick={() => setShowWorkflowModal(true)}

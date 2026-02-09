@@ -227,19 +227,21 @@ export function MegaMenuHeader() {
             return (
               <div
                 key={group.id}
-                className="relative h-full flex items-center"
+                className="relative flex items-stretch"
+                style={{ height: '64px' }}
                 onMouseEnter={() => handleMouseEnter(group.id)}
                 onMouseLeave={handleMouseLeave}
               >
                 <button
                   onClick={() => handleMenuClick(group.hubPath)}
-                  className="relative px-5 py-2 flex items-center gap-1.5 text-sm font-medium transition-all duration-300 z-10"
+                  className="relative px-5 flex items-center gap-1.5 text-sm font-medium transition-all duration-300 z-10"
                   style={{
                     backgroundColor: isOpen ? 'white' : isCurrentHub ? 'rgba(255,255,255,0.2)' : 'transparent',
                     color: isOpen ? '#1f2937' : isCurrentHub ? 'white' : 'rgba(255,255,255,0.75)',
                     borderRadius: isOpen ? '12px 12px 0 0' : '12px',
-                    marginBottom: isOpen ? '-1px' : '0',
-                    paddingBottom: isOpen ? 'calc(0.5rem + 1px)' : '0.5rem',
+                    margin: isOpen ? '0' : '12px 0',
+                    paddingTop: isOpen ? '12px' : '0',
+                    paddingBottom: isOpen ? '0' : '0',
                   }}
                 >
                   <span>{group.label}</span>

@@ -6,7 +6,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <MegaMenuHeader />
-      <main className="w-full">
+      <main className="w-full pt-16">
         {children}
       </main>
     </div>

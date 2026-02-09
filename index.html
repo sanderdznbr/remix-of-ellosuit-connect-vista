@@ -21,10 +21,10 @@
     <meta name="author" content="ELLOSUIT" />
     <meta name="robots" content="index, follow" />
     
-    <!-- Theme Color for Mobile -->
-    <meta name="theme-color" content="#000000" />
-    <meta name="msapplication-TileColor" content="#000000" />
-    <meta name="msapplication-navbutton-color" content="#000000" />
+    <!-- Theme Color for Mobile / PWA -->
+    <meta name="theme-color" content="#007DE3" />
+    <meta name="msapplication-TileColor" content="#007DE3" />
+    <meta name="msapplication-navbutton-color" content="#007DE3" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -73,9 +73,8 @@
     
     <!-- Custom CSS for safe area -->
     <style>
-      /* Garantir fundo escuro SEMPRE, desde o primeiro frame */
       html, body {
-        background-color: #101010 !important;
+        background-color: #007DE3 !important;
         margin: 0;
         padding: 0;
       }
@@ -85,9 +84,8 @@
         padding-bottom: env(safe-area-inset-bottom);
       }
       
-      /* Prevenir qualquer flash branco */
       #root {
-        background-color: #101010 !important;
+        background-color: hsl(0 0% 100%) !important;
         min-height: 100vh;
       }
     </style>

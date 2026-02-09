@@ -272,7 +272,7 @@ const MeetingRecordings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-background">
+    <div className="p-6 bg-background min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

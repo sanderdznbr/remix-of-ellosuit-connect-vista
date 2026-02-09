@@ -154,15 +154,15 @@ const MobileHomeDashboard: React.FC<MobileHomeDashboardProps> = ({ onNavigate })
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-white/20">
-                <CalendarDays className="h-5 w-5" />
+                <CalendarDays className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs opacity-80">Próximo compromisso</p>
-                <p className="font-semibold text-sm truncate max-w-[200px]">{stats.nextEvent.title}</p>
-                <p className="text-xs opacity-80 mt-0.5">{formatEventDate(stats.nextEvent.start_date)}</p>
+                <p className="text-xs text-white/80">Próximo compromisso</p>
+                <p className="font-semibold text-sm truncate max-w-[200px] text-white">{stats.nextEvent.title}</p>
+                <p className="text-xs text-white/80 mt-0.5">{formatEventDate(stats.nextEvent.start_date)}</p>
               </div>
             </div>
-            <ArrowRight className="h-5 w-5 opacity-60" />
+            <ArrowRight className="h-5 w-5 text-white/60" />
           </div>
         </button>
       )}

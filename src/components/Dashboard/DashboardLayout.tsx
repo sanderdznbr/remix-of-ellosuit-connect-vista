@@ -8,7 +8,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { isMobile } = useIsMobile();
 
   return (
-    <div className={`min-h-screen ${isMobile ? 'bg-background' : 'bg-muted/30'}`}>
+    <div className="min-h-screen bg-background">
       {/* Desktop: Mega Menu Header | Mobile: App Header */}
       {isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
       

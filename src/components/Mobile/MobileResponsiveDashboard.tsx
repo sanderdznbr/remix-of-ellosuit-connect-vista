@@ -21,6 +21,7 @@ import ImprovedAgendaAberta from '@/components/Dashboard/ImprovedAgendaAberta';
 import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboardCustomizer';
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
+import CreateAgentPage from '@/components/BotIA/CreateAgentPage';
 import ChatBotBuilder from '@/components/ChatBot/ChatBotBuilder';
 import ChatbotManagement from '@/components/BotIA/ChatbotManagement';
 
@@ -83,6 +84,7 @@ const MobileResponsiveDashboard = () => {
         
         {/* Inteligência Artificial */}
         <Route path="/bot-ia" element={<BotIADashboard />} />
+        <Route path="/bot-ia/novo" element={<CreateAgentPage />} />
         <Route path="/chatbot" element={<ChatbotManagement />} />
         <Route path="/chatbot-builder" element={<ChatBotBuilder />} />
         

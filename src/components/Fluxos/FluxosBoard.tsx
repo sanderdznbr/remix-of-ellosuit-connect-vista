@@ -228,7 +228,7 @@ const TrelloColumn: React.FC<{
   return (
     <div 
       ref={setNodeRef}
-      className={`w-80 flex-shrink-0 flex flex-col bg-gray-50 rounded-2xl max-h-[calc(100vh-220px)] border transition-all ${
+      className={`w-72 flex-shrink-0 flex flex-col bg-gray-50 rounded-2xl max-h-[calc(100vh-180px)] border transition-all ${
         isOver ? 'border-blue-300 bg-blue-50/50 scale-[1.01]' : 'border-gray-100'
       }`}
     >
@@ -1280,7 +1280,7 @@ const FluxosBoard: React.FC = () => {
 
       {/* Kanban Board */}
       {selectedWorkflow ? (
-        <div className="px-6 pb-6 overflow-x-auto">
+        <div className="px-6 pb-6 overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300" style={{ height: 'calc(100vh - 160px)' }}>
           <DndContext 
             sensors={sensors} 
             collisionDetection={closestCorners}

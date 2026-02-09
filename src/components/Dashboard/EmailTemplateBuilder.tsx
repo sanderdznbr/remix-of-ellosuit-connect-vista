@@ -1406,9 +1406,9 @@ const EmailTemplateBuilder: React.FC = () => {
             className={`mx-auto shadow-xl rounded-lg transition-all overflow-hidden ${
               previewMode === 'mobile' ? 'max-w-[375px]' : 'max-w-[600px]'
             }`}
-            style={{ backgroundColor: globalStyles.contentBackgroundColor || '#ffffff' }}
+            style={{ backgroundColor: '#ffffff' }}
           >
-            <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily, backgroundColor: globalStyles.contentBackgroundColor || '#ffffff' }}>
+            <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily, backgroundColor: '#ffffff', color: '#000000' }}>
               {elements.length === 0 ? (
                 <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-white">
                   <Palette className="h-12 w-12 mb-4 text-gray-300" />

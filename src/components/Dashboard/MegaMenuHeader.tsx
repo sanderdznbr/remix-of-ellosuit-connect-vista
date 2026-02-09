@@ -366,10 +366,11 @@ export function MegaMenuHeader() {
       {/* Mega Menu Dropdown */}
       {activeMenu && (
         <div 
-          className="absolute left-0 right-0 bg-white shadow-xl animate-fade-in"
+          className="absolute left-0 right-0 bg-white shadow-xl overflow-hidden"
           style={{
             borderRadius: '0 0 16px 16px',
             top: '100%',
+            animation: 'megamenu-slide-down 0.25s ease-out forwards',
           }}
           onMouseEnter={() => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);

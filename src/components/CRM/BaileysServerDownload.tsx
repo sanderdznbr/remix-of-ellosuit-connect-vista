@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const { toast } = useToast();
   const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.5.0'>('4.5.0');
+  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.6.0'>('4.6.0');
   
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
   const setIsOpen = (open: boolean) => {
@@ -1015,12 +1015,12 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
     }
   };
 
-  // Gerar arquivos v4.5.0
-  const generateV450Files = () => {
+  // Gerar arquivos v4.6.0
+  const generateV460Files = () => {
     const packageJson = `{
   "name": "baileys-server",
-  "version": "4.5.0",
-  "description": "Servidor Baileys com histórico 6h + Stickers + Nomes",
+  "version": "4.6.0",
+  "description": "Servidor Baileys com sync proativo de fotos + 6h histórico",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -1038,14 +1038,14 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
   }
 }`;
 
-    const readme = `# 🚀 Baileys Server v4.5.0 - Full Sync + Stickers
+    const readme = `# 🚀 Baileys Server v4.6.0 - Proactive Metadata Sync
 
-## ✨ Novidades v4.5.0
+## ✨ Novidades v4.6.0
 
+- ✅ **SYNC PROATIVO de fotos** - busca automaticamente após conexão
+- ✅ **Webhook contact.metadata** - envia dados de cada contato/grupo
+- ✅ **Cache global de nomes** - por JID para todas as sessões
 - ✅ **Download de STICKERS** - salva no storage Supabase
-- ✅ **Nomes de contatos corretos** - cache global por JID
-- ✅ **Nome do remetente em grupos** - sempre incluído
-- ✅ **Foto de grupo sincronizada** - metadados completos
 - ✅ **Histórico de 6 HORAS** - mensagens antigas
 - ✅ **syncFullHistory habilitado** - histórico completo
 
@@ -1090,11 +1090,11 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
     return { packageJson, readme, envExample };
   };
 
-  const downloadV45Zip = async () => {
+  const downloadV46Zip = async () => {
     setDownloading(true);
     try {
-      // Busca o index.js da v4.5.0 (está no mesmo diretório - renomeado internamente)
-      const response = await fetch('/docs/baileys-server-template/baileys-server-v4.4.0/index.js');
+      // Busca o index.js da v4.6.0
+      const response = await fetch('/docs/baileys-server-template/baileys-server-v4.6.0/index.js');
       let indexJs = '';
       
       if (response.ok) {
@@ -1102,11 +1102,11 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
       } else {
         toast({
           title: 'Usando versão embutida',
-          description: 'Gerando arquivos v4.5.0...'
+          description: 'Gerando arquivos v4.6.0...'
         });
       }
 
-      const { packageJson, readme, envExample } = generateV450Files();
+      const { packageJson, readme, envExample } = generateV460Files();
       
       const zip = new JSZip();
       zip.file('package.json', packageJson);
@@ -1116,18 +1116,25 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
       if (indexJs) {
         zip.file('index.js', indexJs);
       } else {
-        zip.file('index.js', `// Baileys Server v4.5.0
+        // Fallback: buscar de outro local se necessário
+        const fallbackResponse = await fetch('/docs/baileys-server-template/baileys-server-v4.4.0/index.js');
+        if (fallbackResponse.ok) {
+          indexJs = await fallbackResponse.text();
+          zip.file('index.js', indexJs);
+        } else {
+          zip.file('index.js', `// Baileys Server v4.6.0
 // O arquivo index.js precisa ser baixado manualmente do repositório.
-// Acesse a pasta docs/baileys-server-template/baileys-server-v4.4.0/
+// Acesse a pasta docs/baileys-server-template/baileys-server-v4.6.0/
 // e copie o arquivo index.js para o seu deploy no Railway.
-        `);
+          `);
+        }
       }
 
       const content = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'baileys-server-v4.5.0.zip';
+      a.download = 'baileys-server-v4.6.0.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1135,7 +1142,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
 
       toast({
         title: 'Download iniciado!',
-        description: 'Servidor v4.5.0 com stickers e nomes de contatos'
+        description: 'Servidor v4.6.0 com sync proativo de fotos e nomes'
       });
       
       setIsOpen(false);
@@ -1163,41 +1170,41 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
         </DialogDescription>
       </DialogHeader>
 
-      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.5.0')}>
+      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.6.0')}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="4.5.0" className="flex items-center gap-2">
+          <TabsTrigger value="4.6.0" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            v4.5.0 (Recomendado)
+            v4.6.0 (Recomendado)
           </TabsTrigger>
           <TabsTrigger value="4.2.0">v4.2.0 (Estável)</TabsTrigger>
         </TabsList>
 
-        {/* v4.5.0 Content */}
-        <TabsContent value="4.5.0" className="space-y-4 mt-4">
+        {/* v4.6.0 Content */}
+        <TabsContent value="4.6.0" className="space-y-4 mt-4">
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
             <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Novidades v4.5.0
+              Novidades v4.6.0
             </h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li className="flex items-center gap-2">
+                <Zap className="h-3 w-3 text-green-500" />
+                <strong>SYNC PROATIVO de fotos</strong> - busca após conexão
+              </li>
+              <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
-                <strong>Download de STICKERS</strong> - salva no storage Supabase
+                <strong>Webhook contact.metadata</strong> - dados de cada contato
               </li>
               <li className="flex items-center gap-2">
                 <Users className="h-3 w-3 text-green-500" />
-                <strong>Nomes de contatos corretos</strong> - cache global por JID
+                <strong>Cache global de nomes</strong> - por JID
               </li>
               <li className="flex items-center gap-2">
-                <Users className="h-3 w-3 text-green-500" />
-                <strong>Nome remetente em grupos</strong> - sempre incluído
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>Download de STICKERS</strong> - salva no storage
               </li>
               <li className="flex items-center gap-2">
                 <RefreshCw className="h-3 w-3 text-green-500" />
-                <strong>Foto de grupo</strong> - metadados completos
-              </li>
-              <li className="flex items-center gap-2">
-                <Zap className="h-3 w-3 text-green-500" />
                 <strong>Histórico de 6 HORAS</strong> - mensagens antigas
               </li>
             </ul>
@@ -1210,7 +1217,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
             </h4>
             <p className="text-sm text-muted-foreground">
               <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão.
-              O <code>syncFullHistory</code> só funciona em conexões novas!
+              O <code>syncAllMetadata</code> só funciona em conexões novas!
             </p>
           </div>
 
@@ -1218,7 +1225,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
             <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• <code>package.json</code> - Baileys v6.7.17</li>
-              <li>• <code>index.js</code> - Servidor v4.5.0 com stickers</li>
+              <li>• <code>index.js</code> - Servidor v4.6.0 com sync proativo</li>
               <li>• <code>.env.example</code> - Variáveis de ambiente</li>
               <li>• <code>README.md</code> - Documentação completa</li>
             </ul>
@@ -1234,7 +1241,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
           </div>
 
           <Button 
-            onClick={downloadV45Zip} 
+            onClick={downloadV46Zip} 
             disabled={downloading}
             className="w-full bg-green-600 hover:bg-green-700"
             size="lg"
@@ -1247,7 +1254,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Baixar baileys-server-v4.5.0.zip
+                Baixar baileys-server-v4.6.0.zip
               </>
             )}
           </Button>

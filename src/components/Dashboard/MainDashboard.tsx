@@ -118,13 +118,12 @@ const MainDashboard = () => {
           .eq('company_id', companyId)
           .gte('created_at', prevStartDate.toISOString())
           .lte('created_at', prevEndDate.toISOString()),
-        // Current emails
-        supabase.from('emails').select('*', { count: 'exact', head: true }),
-        // Previous emails (approximation)
-        supabase.from('emails').select('*', { count: 'exact', head: true })
-          .lt('sent_at', startDate.toISOString()),
-        // Email events for open rate
-        supabase.from('email_events').select('email_id, event_type'),
+        // Note: emails table has no company_id, so we return empty to avoid cross-company data
+        // TODO: Add company_id to emails table for proper filtering
+        Promise.resolve({ count: 0 }),
+        Promise.resolve({ count: 0 }),
+        // Email events - empty since we can't filter by company
+        Promise.resolve({ data: [] }),
         // Current tracked docs
         supabase.from('trackable_documents').select('*', { count: 'exact', head: true })
           .eq('company_id', companyId),
@@ -185,15 +184,15 @@ const MainDashboard = () => {
         agentsChange: 0
       });
 
-      // Generate chart data for the last 30 days
+      // Generate chart data for the last 30 days (real zeros when no data)
       const chartDataArray: ChartData[] = [];
       for (let i = 29; i >= 0; i--) {
         const date = subDays(now, i);
         chartDataArray.push({
           date: format(date, 'dd/MM'),
-          leads: Math.floor(Math.random() * 50) + currentClients / 30,
-          emails: Math.floor(Math.random() * 100) + totalEmails / 30,
-          tracking: Math.floor(Math.random() * 30) + currentDocs / 30
+          leads: 0,
+          emails: 0,
+          tracking: 0
         });
       }
       setChartData(chartDataArray);

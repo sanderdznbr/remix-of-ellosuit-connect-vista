@@ -1,20 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Calendar, Mail, Users, LayoutGrid } from 'lucide-react';
-import { useState } from 'react';
-import QuickActionsModal from './QuickActionsModal';
+import { Home, MessageSquare, LayoutGrid, Eye, Briefcase } from 'lucide-react';
+import MobileMegaMenu from './MobileMegaMenu';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showMegaMenu, setShowMegaMenu] = useState(false);
 
   const items = [
     { icon: Home, label: 'Início', path: '/dashboard' },
-    { icon: Calendar, label: 'Agenda', path: '/dashboard/agenda' },
-    { icon: null, label: 'Menu', path: '' },
-    { icon: Mail, label: 'Email', path: '/dashboard/email' },
-    { icon: Users, label: 'Contatos', path: '/dashboard/cadastros' },
+    { icon: MessageSquare, label: 'Omni', path: '/dashboard/omni' },
+    { icon: null, label: 'Menu', path: '' }, // center button
+    { icon: Eye, label: 'Track', path: '/dashboard/track' },
+    { icon: Briefcase, label: 'Suite', path: '/dashboard/suite' },
   ];
 
   const isActive = (path: string) => {
@@ -32,7 +31,7 @@ const MobileBottomNav = () => {
                 return (
                   <button
                     key="center"
-                    onClick={() => setShowQuickActions(true)}
+                    onClick={() => setShowMegaMenu(true)}
                     className="relative -mt-5 flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 active:scale-90 transition-transform"
                   >
                     <LayoutGrid className="h-6 w-6" />
@@ -53,9 +52,7 @@ const MobileBottomNav = () => {
                   <span className={`text-[10px] transition-colors ${active ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
                     {item.label}
                   </span>
-                  {active && (
-                    <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />
-                  )}
+                  {active && <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
                 </button>
               );
             })}
@@ -63,10 +60,7 @@ const MobileBottomNav = () => {
         </div>
       </nav>
 
-      <QuickActionsModal
-        isOpen={showQuickActions}
-        onClose={() => setShowQuickActions(false)}
-      />
+      <MobileMegaMenu isOpen={showMegaMenu} onClose={() => setShowMegaMenu(false)} />
     </>
   );
 };

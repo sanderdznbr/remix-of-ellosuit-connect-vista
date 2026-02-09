@@ -107,4 +107,5 @@ export interface BlockDefinition {
   description: string;
   icon: string;
   defaultConfig: Record<string, any>;
+  locked?: boolean;
 }

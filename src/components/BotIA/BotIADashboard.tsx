@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Bot, Settings, Play, Pause, MessageCircle, Brain, Zap, Users, Phone, Link2 } from 'lucide-react';
+import { Plus, Bot, MessageCircle, Pencil, BarChart3, Search, MoreVertical, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import BotIAChat from './BotIAChat';
-import EditAgentModal from './EditAgentModal';
+
+const OMNI_COLOR = '#FF4500';
 
 interface AIAgent {
   id: string;
@@ -29,89 +32,12 @@ interface AIAgent {
   whatsapp_session_id?: string;
 }
 
-interface AgentTemplate {
-  name: string;
-  description: string;
-  personality: string;
-  instructions: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const AGENT_TEMPLATES: AgentTemplate[] = [
-  {
-    name: 'Atendimento ao Cliente',
-    description: 'Especialista em suporte e resolução de problemas',
-    personality: 'Profissional, empático e solucionador de problemas',
-    instructions: `Você é um especialista em atendimento ao cliente. Suas principais responsabilidades:
-
-1. Responder perguntas de forma clara e educada
-2. Resolver problemas de forma eficiente
-3. Escalar questões complexas quando necessário
-4. Manter sempre um tom profissional e empático
-5. Coletar feedback dos clientes
-
-Sempre pergunte se há mais alguma coisa em que pode ajudar antes de finalizar a conversa.`,
-    icon: MessageCircle
-  },
-  {
-    name: 'Vendas e Negócios',
-    description: 'Especialista em vendas consultivas e fechamento de negócios',
-    personality: 'Persuasivo, consultivo e focado em resultados',
-    instructions: `Você é um especialista em vendas consultivas. Suas principais responsabilidades:
-
-1. Qualificar leads e identificar necessidades
-2. Apresentar soluções adequadas ao perfil do cliente
-3. Conduzir o processo de vendas até o fechamento
-4. Manter relacionamento pós-venda
-5. Identificar oportunidades de upsell e cross-sell
-
-Use a metodologia SPIN (Situação, Problema, Implicação, Necessidade) para conduzir as conversas.`,
-    icon: Zap
-  },
-  {
-    name: 'Assistente Executivo',
-    description: 'Assistente inteligente para executivos e gestores',
-    personality: 'Organizado, proativo e estratégico',
-    instructions: `Você é um assistente executivo altamente qualificado. Suas principais responsabilidades:
-
-1. Gerenciar agenda e compromissos
-2. Preparar resumos e relatórios executivos
-3. Filtrar informações relevantes
-4. Auxiliar na tomada de decisões estratégicas
-5. Coordenar comunicações internas e externas
-
-Sempre priorize eficiência e resultados nas suas respostas.`,
-    icon: Brain
-  },
-  {
-    name: 'RH e Recrutamento',
-    description: 'Especialista em recursos humanos e seleção de talentos',
-    personality: 'Humano, analítico e focado em pessoas',
-    instructions: `Você é um especialista em recursos humanos. Suas principais responsabilidades:
-
-1. Avaliar perfis de candidatos
-2. Conduzir entrevistas iniciais
-3. Orientar sobre políticas de RH
-4. Apoiar desenvolvimento de talentos
-5. Resolver questões trabalhistas básicas
-
-Sempre mantenha confidencialidade e foque no desenvolvimento humano.`,
-    icon: Users
-  }
-];
-
 const AI_MODELS = [
-  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (Rápido)' },
-  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (Balanceado)' },
-  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Avançado)' },
-  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini (Rápido)' },
-  { value: 'openai/gpt-5', label: 'GPT-5 (Avançado)' },
-];
-
-const DEMO_CHANNELS = [
-  { id: '1', name: 'WhatsApp Business', number: '+55 11 99999-0001', type: 'whatsapp' },
-  { id: '2', name: 'WhatsApp Vendas', number: '+55 11 99999-0002', type: 'whatsapp' },
-  { id: '3', name: 'WhatsApp Suporte', number: '+55 11 99999-0003', type: 'whatsapp' },
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+  { value: 'openai/gpt-5', label: 'GPT-5' },
 ];
 
 const BotIADashboard: React.FC = () => {
@@ -121,21 +47,18 @@ const BotIADashboard: React.FC = () => {
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showChannelModal, setShowChannelModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
-  const [selectedChannel, setSelectedChannel] = useState<string>('');
   
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
   const [agentPersonality, setAgentPersonality] = useState('');
   const [agentInstructions, setAgentInstructions] = useState('');
   const [agentModel, setAgentModel] = useState('google/gemini-3-flash-preview');
-  const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
 
   const ensureCompany = async (): Promise<string | null> => {
     if (!user?.id) return null;
@@ -169,7 +92,6 @@ const BotIADashboard: React.FC = () => {
     
     await supabase.from('company_users').insert({ company_id: newCompany.id, user_id: user.id, role: 'admin' });
     await supabase.auth.updateUser({ data: { company_id: newCompany.id } });
-    toast({ title: 'Empresa criada', description: `"${companyName}" configurada com sucesso!` });
     
     return newCompany.id;
   };
@@ -201,10 +123,7 @@ const BotIADashboard: React.FC = () => {
       return;
     }
     
-    if (!user?.id || !companyId) {
-      toast({ title: 'Erro', description: 'Usuário ou empresa não identificado', variant: 'destructive' });
-      return;
-    }
+    if (!user?.id || !companyId) return;
     
     const { error } = await supabase
       .from('ai_agents')
@@ -221,376 +140,346 @@ const BotIADashboard: React.FC = () => {
       });
     
     if (error) {
-      toast({ title: 'Erro', description: 'Erro ao criar agente: ' + error.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
       return;
     }
     
+    resetForm();
+    setShowCreateModal(false);
+    loadAgents(companyId);
+    toast({ title: 'Sucesso', description: 'Agente criado!' });
+  };
+
+  const resetForm = () => {
     setAgentName('');
     setAgentDescription('');
     setAgentPersonality('');
     setAgentInstructions('');
     setAgentModel('google/gemini-3-flash-preview');
-    setShowCreateModal(false);
-    
-    loadAgents(companyId);
-    toast({ title: 'Sucesso', description: 'Agente criado com sucesso!' });
-  };
-
-  const useTemplate = () => {
-    if (!selectedTemplate) return;
-    setAgentName(selectedTemplate.name);
-    setAgentDescription(selectedTemplate.description);
-    setAgentPersonality(selectedTemplate.personality);
-    setAgentInstructions(selectedTemplate.instructions);
-    setShowTemplateModal(false);
-    setShowCreateModal(true);
   };
 
   const toggleAgent = async (id: string, isActive: boolean) => {
-    const { error } = await supabase
-      .from('ai_agents')
-      .update({ is_active: !isActive })
-      .eq('id', id);
-    
-    if (error) {
-      toast({ title: 'Erro', description: 'Erro ao alterar status', variant: 'destructive' });
-      return;
-    }
-    
+    await supabase.from('ai_agents').update({ is_active: !isActive }).eq('id', id);
     if (companyId) loadAgents(companyId);
-    toast({ title: 'Sucesso', description: isActive ? 'Agente pausado' : 'Agente ativado' });
   };
 
-  const assignAgentToChannel = () => {
-    if (!selectedAgent || !selectedChannel) {
-      toast({ title: 'Erro', description: 'Selecione um canal', variant: 'destructive' });
-      return;
+  const deleteAgent = async (id: string) => {
+    if (!confirm('Excluir este agente?')) return;
+    await supabase.from('ai_agents').delete().eq('id', id);
+    if (companyId) loadAgents(companyId);
+    toast({ title: 'Excluído', description: 'Agente removido' });
+  };
+
+  const filteredAgents = agents.filter(a => 
+    a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleSelectAgent = (id: string) => {
+    setSelectedAgents(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAgents.length === filteredAgents.length) {
+      setSelectedAgents([]);
+    } else {
+      setSelectedAgents(filteredAgents.map(a => a.id));
     }
-    
-    const channel = DEMO_CHANNELS.find(c => c.id === selectedChannel);
-    toast({ title: 'Agente Atribuído!', description: `${selectedAgent.name} agora responderá automaticamente em ${channel?.name}` });
-    setShowChannelModal(false);
-    setSelectedChannel('');
   };
-
-  const stats = [
-    { label: 'Agentes Ativos', value: agents.filter(a => a.is_active).length, icon: Bot, color: 'text-[#FF4500] bg-[#FF4500]/10' },
-    { label: 'Total de Agentes', value: agents.length, icon: Brain, color: 'text-[#FF4500] bg-[#FF4500]/10' },
-    { label: 'Conversas Hoje', value: 28, icon: MessageCircle, color: 'text-green-600 bg-green-100' },
-    { label: 'Taxa de Resposta', value: '94%', icon: Zap, color: 'text-purple-600 bg-purple-100' },
-  ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando agentes IA...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: OMNI_COLOR }}></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 page-content">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#FF4500]/10 rounded-xl">
-              <Bot className="h-6 w-6 text-[#FF4500]" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Agentes de IA
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Aqui você consegue criar, configurar e treinar os seus agentes de IA.
+          </p>
+        </div>
+
+        {/* Credits Banner */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+          <div className="flex items-center justify-center gap-8 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600">Você tem</span>
+              <span className="font-semibold text-gray-900">{agents.length} agente(s) disponível(eis)</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Agentes de IA</h1>
-              <p className="text-muted-foreground text-sm">
-                Crie e gerencie assistentes virtuais inteligentes
-              </p>
+            <div className="h-4 w-px bg-gray-200" />
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600">Créditos disponíveis para agentes de IA</span>
+              <span className="font-semibold" style={{ color: OMNI_COLOR }}>∞</span>
             </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowTemplateModal(true)}>
-              <Brain className="h-4 w-4 mr-2" />
-              Templates
-            </Button>
-            <Button onClick={() => setShowCreateModal(true)} className="bg-[#FF4500] hover:bg-[#FF4500]/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Agente
-            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, idx) => (
-          <Card key={idx} className="border-0 shadow-sm bg-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${stat.color}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        {/* Search + Actions */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="p-4 flex items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Pesquisar"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white"
+              />
+            </div>
+            <div className="flex-1" />
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              className="rounded-xl gap-2 text-white"
+              style={{ backgroundColor: OMNI_COLOR }}
+            >
+              <Plus className="h-4 w-4" />
+              Novo agente de IA
+            </Button>
+          </div>
 
-      {/* Main Content */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="border-b">
-          <CardTitle className="text-lg font-semibold">Meus Agentes</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {agents.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Bot className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum agente criado</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Comece criando seu primeiro agente IA para automatizar atendimentos
-              </p>
-              <div className="flex justify-center gap-3">
-                <Button variant="outline" onClick={() => setShowTemplateModal(true)}>
-                  Ver Templates
-                </Button>
-                <Button onClick={() => setShowCreateModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Agente
-                </Button>
-              </div>
+          {/* Table Header */}
+          <div className="grid grid-cols-[40px_1fr_150px_100px_200px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div className="flex items-center justify-center">
+              <Checkbox 
+                checked={selectedAgents.length === filteredAgents.length && filteredAgents.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+            </div>
+            <div>Nome</div>
+            <div>Tipo</div>
+            <div className="flex items-center gap-1">
+              Status
+            </div>
+            <div className="text-right">Ações</div>
+          </div>
+
+          {/* List */}
+          {filteredAgents.length === 0 ? (
+            <div className="text-center py-16">
+              <Bot className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum agente encontrado</h3>
+              <p className="text-gray-500 mb-6">Crie seu primeiro agente de IA para começar</p>
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                style={{ backgroundColor: OMNI_COLOR }}
+                className="text-white rounded-xl"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Agente
+              </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {agents.map(agent => (
-                <Card key={agent.id} className="border shadow-sm hover:shadow-md transition-all group">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-[#FF4500]/10 rounded-xl group-hover:bg-[#FF4500]/20 transition-colors">
-                          <Bot className="h-5 w-5 text-[#FF4500]" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold">{agent.name}</CardTitle>
-                          <p className="text-xs text-muted-foreground">
-                            {AI_MODELS.find(m => m.value === agent.model)?.label || agent.model}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant={agent.is_active ? 'default' : 'secondary'} className={agent.is_active ? 'bg-[#FF4500]' : ''}>
-                        {agent.is_active ? 'Ativo' : 'Pausado'}
-                      </Badge>
-                    </div>
-                  </CardHeader>
+            <div className="divide-y divide-gray-100">
+              {filteredAgents.map(agent => (
+                <div 
+                  key={agent.id}
+                  className="grid grid-cols-[40px_1fr_150px_100px_200px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
+                >
+                  <div className="flex items-center justify-center">
+                    <Checkbox 
+                      checked={selectedAgents.includes(agent.id)}
+                      onCheckedChange={() => toggleSelectAgent(agent.id)}
+                    />
+                  </div>
                   
-                  <CardContent className="pt-0">
-                    <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 rounded-xl">
+                      <AvatarImage src={agent.avatar_url || undefined} />
+                      <AvatarFallback 
+                        className="rounded-xl text-white text-sm font-medium"
+                        style={{ backgroundColor: OMNI_COLOR }}
+                      >
+                        {agent.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{agent.name}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className="text-[10px] px-1.5 py-0 rounded-md bg-green-100 text-green-700"
+                        >
+                          Standard
+                        </Badge>
+                      </div>
                       {agent.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{agent.description}</p>
+                        <p className="text-xs text-gray-500 truncate max-w-md">{agent.description}</p>
                       )}
-                      
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          Personalidade
-                        </label>
-                        <p className="text-sm text-foreground line-clamp-2 mt-1">{agent.personality}</p>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => { setSelectedAgent(agent); setShowChatModal(true); }}
-                          className="flex-1 bg-[#FF4500] hover:bg-[#FF4500]/90"
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Conversar
-                        </Button>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => { setSelectedAgent(agent); setShowChannelModal(true); }}
-                        >
-                          <Phone className="h-4 w-4 mr-1" />
-                          Canal
-                        </Button>
-                      </div>
-                      
-                      <div className="flex justify-end gap-2 pt-2 border-t">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => { setSelectedAgent(agent); setShowEditModal(true); }}
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAgent(agent.id, agent.is_active)}
-                        >
-                          {agent.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                        </Button>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    {AI_MODELS.find(m => m.value === agent.model)?.label || 'Vendas'}
+                  </div>
+                  
+                  <div>
+                    <Badge 
+                      className={`rounded-md text-xs ${
+                        agent.is_active 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-100' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {agent.is_active ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-600 hover:text-gray-900 gap-1.5"
+                      onClick={() => { setSelectedAgent(agent); setShowCreateModal(true); }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-600 hover:text-gray-900 gap-1.5"
+                      onClick={() => { setSelectedAgent(agent); setShowChatModal(true); }}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Conversar
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-600 hover:text-gray-900 h-8 w-8 p-0"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl">
+                        <DropdownMenuItem onClick={() => toggleAgent(agent.id, agent.is_active)}>
+                          {agent.is_active ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                          {agent.is_active ? 'Pausar' : 'Ativar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deleteAgent(agent.id)}
+                          className="text-red-600"
+                        >
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Templates Modal */}
-      <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Templates de Agentes</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {AGENT_TEMPLATES.map((template, index) => (
-              <Card 
-                key={index} 
-                className={`cursor-pointer hover:shadow-md transition-all border-2 ${
-                  selectedTemplate?.name === template.name ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/20'
-                }`}
-                onClick={() => setSelectedTemplate(template)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <template.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <CardTitle className="text-base">{template.name}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{template.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowTemplateModal(false)}>Cancelar</Button>
-            <Button onClick={useTemplate} disabled={!selectedTemplate}>
-              Usar Template
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Agent Modal */}
+      {/* Create/Edit Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Criar Novo Agente</DialogTitle>
+            <DialogTitle>{selectedAgent ? 'Editar Agente' : 'Novo Agente de IA'}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Nome do Agente *</label>
-                <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Ex: Assistente de Vendas" />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Descrição</label>
-                <Textarea value={agentDescription} onChange={(e) => setAgentDescription(e.target.value)} placeholder="Breve descrição do agente..." rows={2} />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Modelo de IA</label>
-                <Select value={agentModel} onValueChange={setAgentModel}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AI_MODELS.map(model => (
-                      <SelectItem key={model.value} value={model.value}>{model.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Personalidade *</label>
-                <Textarea value={agentPersonality} onChange={(e) => setAgentPersonality(e.target.value)} placeholder="Ex: Profissional, amigável e prestativo..." rows={2} />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Instruções *</label>
-                <Textarea value={agentInstructions} onChange={(e) => setAgentInstructions(e.target.value)} placeholder="Instruções detalhadas sobre como o agente deve se comportar..." rows={6} />
-              </div>
-            </div>
-          </ScrollArea>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancelar</Button>
-            <Button onClick={createAgent}>Criar Agente</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Channel Modal */}
-      <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-primary" />
-              Atribuir a Canal
-            </DialogTitle>
-          </DialogHeader>
+          
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Selecione o canal que o agente <strong>{selectedAgent?.name}</strong> irá atender automaticamente.
-            </p>
-            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um canal..." />
-              </SelectTrigger>
-              <SelectContent>
-                {DEMO_CHANNELS.map(channel => (
-                  <SelectItem key={channel.id} value={channel.id}>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-green-600" />
-                      <span>{channel.name}</span>
-                      <span className="text-muted-foreground text-xs">({channel.number})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input 
+                placeholder="Ex: Atendente"
+                value={agentName}
+                onChange={(e) => setAgentName(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Input 
+                placeholder="Descrição breve do agente"
+                value={agentDescription}
+                onChange={(e) => setAgentDescription(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Personalidade *</Label>
+              <Input 
+                placeholder="Ex: Profissional, empático e solucionador"
+                value={agentPersonality}
+                onChange={(e) => setAgentPersonality(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Modelo de IA</Label>
+              <Select value={agentModel} onValueChange={setAgentModel}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODELS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Instruções *</Label>
+              <Textarea 
+                placeholder="Descreva como o agente deve se comportar..."
+                value={agentInstructions}
+                onChange={(e) => setAgentInstructions(e.target.value)}
+                className="rounded-xl min-h-[120px]"
+              />
+            </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowChannelModal(false)}>Cancelar</Button>
-            <Button onClick={assignAgentToChannel} disabled={!selectedChannel}>
-              <Link2 className="h-4 w-4 mr-2" />
-              Atribuir
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCreateModal(false); resetForm(); }} className="rounded-xl">
+              Cancelar
             </Button>
-          </div>
+            <Button 
+              onClick={createAgent}
+              className="rounded-xl text-white"
+              style={{ backgroundColor: OMNI_COLOR }}
+            >
+              {selectedAgent ? 'Salvar' : 'Criar'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Chat Modal */}
       <Dialog open={showChatModal} onOpenChange={setShowChatModal}>
-        <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
-          {selectedAgent && <BotIAChat agent={selectedAgent} onClose={() => setShowChatModal(false)} />}
+        <DialogContent className="sm:max-w-2xl h-[80vh] p-0 rounded-2xl overflow-hidden">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5" style={{ color: OMNI_COLOR }} />
+              Conversar com {selectedAgent?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAgent && (
+            <BotIAChat agent={selectedAgent} />
+          )}
         </DialogContent>
       </Dialog>
-
-      {/* Edit Modal */}
-      {selectedAgent && (
-        <EditAgentModal
-          agent={selectedAgent}
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onUpdate={() => companyId && loadAgents(companyId)}
-          onDelete={() => companyId && loadAgents(companyId)}
-        />
-      )}
     </div>
   );
 };

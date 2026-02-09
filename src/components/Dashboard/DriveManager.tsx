@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useDropzone } from 'react-dropzone';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 
@@ -388,6 +389,8 @@ const DriveManager = () => {
     description: '',
     color: '#3B82F6'
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -850,8 +853,23 @@ const DriveManager = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        {/* Main Content with Context Menu */}
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <main className="flex-1 p-6 overflow-auto">
+              {/* Hidden file input for context menu upload */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    Array.from(e.target.files).forEach(f => uploadFile(f));
+                    e.target.value = '';
+                  }
+                }}
+              />
           {/* Header */}
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
             <div>
@@ -1162,7 +1180,41 @@ const DriveManager = () => {
               )}
             </div>
           )}
-        </main>
+            </main>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-56">
+            <ContextMenuItem onClick={() => setShowCreateFolder(true)}>
+              <FolderPlus className="h-4 w-4 mr-2" /> Nova Pasta
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Upload de Arquivo
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+              {viewMode === 'grid' ? <List className="h-4 w-4 mr-2" /> : <Grid3X3 className="h-4 w-4 mr-2" />}
+              {viewMode === 'grid' ? 'Visualização em Lista' : 'Visualização em Grade'}
+            </ContextMenuItem>
+            {selectedFiles.size > 0 && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={deleteSelectedFiles} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir Selecionados ({selectedFiles.size})
+                </ContextMenuItem>
+              </>
+            )}
+            {currentFolder && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => {
+                  setCurrentFolder(null);
+                  setFolderPath([]);
+                }}>
+                  <Home className="h-4 w-4 mr-2" /> Voltar ao Drive
+                </ContextMenuItem>
+              </>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
 
       {/* Drag Overlay */}

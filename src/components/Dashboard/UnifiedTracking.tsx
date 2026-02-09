@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FileText, Link2, Video } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DocumentTrackingDashboard from '@/components/DocumentTracking/DocumentTrackingDashboard';
 import LinkTrackingDashboard from './LinkTrackingDashboard';
 import VideoTrackingDashboard from './VideoTrackingDashboard';
@@ -23,41 +22,40 @@ const UnifiedTracking: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabValue>('documentos');
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Rastreamento</h1>
-        <p className="text-muted-foreground">Acompanhe o engajamento com seus conteúdos</p>
-      </div>
+    <div className="min-h-screen bg-white p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Rastreamento</h1>
+          <p className="text-sm text-gray-500">Acompanhe o engajamento com seus conteúdos</p>
+        </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+        {/* Tab Pills */}
+        <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 w-fit">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.value;
             return (
-              <TabsTrigger 
-                key={tab.value} 
-                value={tab.value}
-                className="flex items-center gap-2"
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
+              </button>
             );
           })}
-        </TabsList>
+        </div>
 
-        <TabsContent value="documentos" className="mt-6">
-          <DocumentTrackingDashboard />
-        </TabsContent>
-        
-        <TabsContent value="links" className="mt-6">
-          <LinkTrackingDashboard />
-        </TabsContent>
-        
-        <TabsContent value="videos" className="mt-6">
-          <VideoTrackingDashboard />
-        </TabsContent>
-      </Tabs>
+        {/* Content */}
+        {activeTab === 'documentos' && <DocumentTrackingDashboard />}
+        {activeTab === 'links' && <LinkTrackingDashboard />}
+        {activeTab === 'videos' && <VideoTrackingDashboard />}
+      </div>
     </div>
   );
 };

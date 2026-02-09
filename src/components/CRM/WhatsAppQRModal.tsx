@@ -348,6 +348,12 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
         }
       }
       
+      // Also migrate messages from old sessions
+      await supabase
+        .from('whatsapp_messages')
+        .update({ session_id: newSession.id })
+        .in('session_id', oldSessionIds);
+      
       // Delete old sessions (cleanup)
       await supabase
         .from('whatsapp_sessions')

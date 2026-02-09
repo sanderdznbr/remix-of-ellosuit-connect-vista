@@ -213,40 +213,47 @@ export function MegaMenuHeader() {
         transition: 'background-color 0.5s ease-in-out',
       }}
     >
-      <div className="h-16 px-6 flex items-center justify-between">
+      <div className="h-16 px-6 flex items-center justify-between relative">
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-3">
           <ElloLogo className="h-8 w-auto" color="white" />
         </Link>
 
         {/* Main Navigation */}
-        <nav className="flex items-center gap-1">
-          {menuGroups.map((group) => (
-            <div
-              key={group.id}
-              className="relative"
-              onMouseEnter={() => handleMouseEnter(group.id)}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                onClick={() => handleMenuClick(group.hubPath)}
-                className="px-4 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all hover:bg-white/10"
-                style={{
-                  backgroundColor: activeMenu === group.id || activeGroupId === group.id ? 'rgba(255,255,255,0.2)' : 'transparent',
-                  color: activeMenu === group.id || activeGroupId === group.id ? 'white' : 'rgba(255,255,255,0.75)',
-                }}
+        <nav className="flex items-center gap-0.5 h-full">
+          {menuGroups.map((group) => {
+            const isOpen = activeMenu === group.id;
+            const isCurrentHub = activeGroupId === group.id;
+            return (
+              <div
+                key={group.id}
+                className="relative h-full flex items-center"
+                onMouseEnter={() => handleMouseEnter(group.id)}
+                onMouseLeave={handleMouseLeave}
               >
-                <span>{group.label}</span>
-                <ChevronDown 
-                  className="h-4 w-4 transition-transform" 
+                <button
+                  onClick={() => handleMenuClick(group.hubPath)}
+                  className="relative px-5 py-2 flex items-center gap-1.5 text-sm font-medium transition-all duration-300 z-10"
                   style={{
-                    transform: activeMenu === group.id ? 'rotate(180deg)' : 'rotate(0deg)',
-                    opacity: 0.6,
+                    backgroundColor: isOpen ? 'white' : isCurrentHub ? 'rgba(255,255,255,0.2)' : 'transparent',
+                    color: isOpen ? '#1f2937' : isCurrentHub ? 'white' : 'rgba(255,255,255,0.75)',
+                    borderRadius: isOpen ? '12px 12px 0 0' : '12px',
+                    marginBottom: isOpen ? '-1px' : '0',
+                    paddingBottom: isOpen ? 'calc(0.5rem + 1px)' : '0.5rem',
                   }}
-                />
-              </button>
-            </div>
-          ))}
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown 
+                    className="h-4 w-4 transition-transform duration-300" 
+                    style={{
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      opacity: isOpen ? 0.5 : 0.6,
+                    }}
+                  />
+                </button>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Right Side */}
@@ -358,7 +365,11 @@ export function MegaMenuHeader() {
       {/* Mega Menu Dropdown */}
       {activeMenu && (
         <div 
-          className="absolute left-0 right-0 bg-white border-b border-gray-100 shadow-xl"
+          className="absolute left-0 right-0 bg-white shadow-xl animate-fade-in"
+          style={{
+            borderRadius: '0 0 16px 16px',
+            top: '100%',
+          }}
           onMouseEnter={() => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
           }}

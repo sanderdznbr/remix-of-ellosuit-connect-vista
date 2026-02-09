@@ -28,12 +28,15 @@ import ChatbotManagement from '@/components/BotIA/ChatbotManagement';
 // New unified pages
 import UnifiedDatabase from '@/components/Dashboard/UnifiedDatabase';
 import UnifiedTracking from '@/components/Dashboard/UnifiedTracking';
+import TrackUploadPage from '@/components/Dashboard/TrackUploadPage';
+import LinkShortenerPage from '@/components/Dashboard/LinkShortenerPage';
 import TeamManagement from '@/components/Dashboard/TeamManagement';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
 import FlowsHub from '@/components/Dashboard/FlowsHub';
 import TrackHub from '@/components/Dashboard/TrackHub';
+import SuiteHub from '@/components/Dashboard/SuiteHub';
 
 // Additional dashboard pages
 import ElloVisionDashboard from '@/components/Dashboard/ElloVisionDashboard';
@@ -82,6 +85,7 @@ const MobileResponsiveDashboard = () => {
         <Route path="/omni" element={<OmniHub />} />
         <Route path="/flows" element={<FlowsHub />} />
         <Route path="/track" element={<TrackHub />} />
+        <Route path="/suite" element={<SuiteHub />} />
         
         {/* Inteligência Artificial */}
         <Route path="/bot-ia" element={<BotIADashboard />} />
@@ -112,7 +116,8 @@ const MobileResponsiveDashboard = () => {
         <Route path="/cadastros" element={<UnifiedDatabase />} />
         <Route path="/drive" element={<DriveManager />} />
         <Route path="/equipe" element={<TeamManagement />} />
-        <Route path="/rastreamento" element={<UnifiedTracking />} />
+        <Route path="/rastreamento" element={<TrackUploadPage />} />
+        <Route path="/encurtador" element={<LinkShortenerPage />} />
         <Route path="/track/leads" element={<LeadTrackingDashboard />} />
         
         {/* Legacy routes - redirect to unified pages */}

@@ -320,9 +320,9 @@ const ImprovedBookingPublic = () => {
   const timeSlots = generateTimeSlots(selectedDate);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #dbeafe 100%)' }}>
       {/* Header com Logo */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-blue-100">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center">
           <div className="flex justify-center mb-4">
             <img 
@@ -334,7 +334,10 @@ const ImprovedBookingPublic = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {bookingLink.title}
           </h1>
-          <div className="flex items-center justify-center gap-2 text-gray-600">
+          {bookingLink.description && (
+            <p className="text-gray-500 mb-2">{bookingLink.description}</p>
+          )}
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
             <Clock className="h-4 w-4" />
             <span>{bookingLink.duration_minutes} minutos</span>
           </div>

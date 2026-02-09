@@ -30,10 +30,12 @@ const flowRoutes = [
 const trackRoutes = [
   '/dashboard/track',
   '/dashboard/rastreamento',
+  '/dashboard/encurtador',
   '/dashboard/email-tracker',
 ];
 
 const suiteRoutes = [
+  '/dashboard/suite',
   '/dashboard/cadastros',
   '/dashboard/drive',
   '/dashboard/equipe',

@@ -894,30 +894,44 @@ export type Database = {
       }
       email_campaigns: {
         Row: {
+          company_id: string | null
           created_at: string
           description: string | null
           id: string
           name: string
           status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name: string
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_designs: {
         Row: {
@@ -1095,6 +1109,7 @@ export type Database = {
       emails: {
         Row: {
           campaign_id: string | null
+          company_id: string | null
           content_html: string
           content_text: string | null
           id: string
@@ -1108,9 +1123,11 @@ export type Database = {
           status: string
           subject: string
           tracking_pixel_id: string
+          user_id: string | null
         }
         Insert: {
           campaign_id?: string | null
+          company_id?: string | null
           content_html: string
           content_text?: string | null
           id?: string
@@ -1124,9 +1141,11 @@ export type Database = {
           status?: string
           subject: string
           tracking_pixel_id?: string
+          user_id?: string | null
         }
         Update: {
           campaign_id?: string | null
+          company_id?: string | null
           content_html?: string
           content_text?: string | null
           id?: string
@@ -1140,6 +1159,7 @@ export type Database = {
           status?: string
           subject?: string
           tracking_pixel_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1147,6 +1167,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emails_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]

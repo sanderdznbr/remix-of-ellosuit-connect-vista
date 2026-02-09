@@ -534,54 +534,46 @@ const MainDashboard = () => {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="border-0 shadow-sm overflow-hidden">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Acesso Rápido</h3>
-              <div className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-3 h-12 hover:border-[#E34800]/50 hover:bg-[#E34800]/5 transition-all"
-                  onClick={() => navigate('/dashboard/omni')}
-                >
-                  <div className="p-1.5 rounded-lg bg-[#E34800]">
-                    <MessageSquare className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-medium">Omni</span>
-                  <span className="text-muted-foreground text-sm ml-auto">Comunicação</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-3 h-12 hover:border-[#007DE3]/50 hover:bg-[#007DE3]/5 transition-all"
-                  onClick={() => navigate('/dashboard/flows')}
-                >
-                  <div className="p-1.5 rounded-lg bg-[#007DE3]">
-                    <Calendar className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-medium">Flow</span>
-                  <span className="text-muted-foreground text-sm ml-auto">Produtividade</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-3 h-12 hover:border-[#00E371]/50 hover:bg-[#00E371]/5 transition-all"
-                  onClick={() => navigate('/dashboard/track')}
-                >
-                  <div className="p-1.5 rounded-lg bg-[#00E371]">
-                    <Radio className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-medium">Track</span>
-                  <span className="text-muted-foreground text-sm ml-auto">Rastreamento</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-3 h-12 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all"
-                  onClick={() => navigate('/dashboard/cadastros')}
-                >
-                  <div className="p-1.5 rounded-lg bg-purple-600">
-                    <Users className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-medium">Gestão</span>
-                  <span className="text-muted-foreground text-sm ml-auto">Clientes</span>
-                </Button>
+              <h3 className="text-lg font-semibold text-gray-900 mb-5">Acesso Rápido</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Omni', desc: 'Comunicação', icon: MessageSquare, color: '#FF4500', path: '/dashboard/omni' },
+                  { label: 'Flow', desc: 'Produtividade', icon: Calendar, color: '#007DE3', path: '/dashboard/flows' },
+                  { label: 'Track', desc: 'Rastreamento', icon: Radio, color: '#00E371', path: '/dashboard/track' },
+                  { label: 'Suite', desc: 'Gestão', icon: Users, color: '#3000E3', path: '/dashboard/cadastros' },
+                ].map((hub) => {
+                  const Icon = hub.icon;
+                  return (
+                    <button
+                      key={hub.label}
+                      onClick={() => navigate(hub.path)}
+                      className="group relative flex flex-col items-center gap-2 p-5 rounded-2xl border border-gray-100 hover:border-transparent transition-all duration-300 hover:shadow-lg"
+                      style={{
+                        // @ts-ignore
+                        '--hub-color': hub.color,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${hub.color}08`;
+                        e.currentTarget.style.borderColor = `${hub.color}30`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.borderColor = '';
+                      }}
+                    >
+                      <div 
+                        className="p-3 rounded-2xl transition-transform duration-300 group-hover:scale-110"
+                        style={{ backgroundColor: hub.color, color: 'white' }}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="font-semibold text-sm text-gray-900">{hub.label}</span>
+                      <span className="text-xs text-gray-400">{hub.desc}</span>
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

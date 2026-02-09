@@ -28,6 +28,7 @@ import ChatbotManagement from '@/components/BotIA/ChatbotManagement';
 // New unified pages
 import UnifiedDatabase from '@/components/Dashboard/UnifiedDatabase';
 import UnifiedTracking from '@/components/Dashboard/UnifiedTracking';
+import TeamManagement from '@/components/Dashboard/TeamManagement';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -110,6 +111,7 @@ const MobileResponsiveDashboard = () => {
         {/* Gestão - Unified pages */}
         <Route path="/cadastros" element={<UnifiedDatabase />} />
         <Route path="/drive" element={<DriveManager />} />
+        <Route path="/equipe" element={<TeamManagement />} />
         <Route path="/rastreamento" element={<UnifiedTracking />} />
         <Route path="/track/leads" element={<LeadTrackingDashboard />} />
         

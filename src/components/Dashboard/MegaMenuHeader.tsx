@@ -23,7 +23,7 @@ const COLORS = {
   omni: "#FF4500",
   flow: "#007DE3",
   track: "#00E371",
-  suite: "#8B5CF6",
+  suite: "#3000E3",
   config: "#64748B",
 };
 
@@ -128,6 +128,7 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "cadastros", label: "Cadastros", description: "Clientes e contatos", icon: Users, path: "/dashboard/cadastros" },
           { id: "arquivos", label: "Arquivos", description: "Drive de documentos", icon: FolderOpen, path: "/dashboard/drive" },
+          { id: "equipe", label: "Equipe", description: "Colaboradores e permissões", icon: Briefcase, path: "/dashboard/equipe" },
         ]
       },
       {

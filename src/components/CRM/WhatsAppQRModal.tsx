@@ -302,8 +302,68 @@ const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
     }
   };
 
-  const handleSyncComplete = () => {
+  // Migrate conversations from old sessions with the same phone number to the new session
+  const migrateConversationsToNewSession = async (newSession: any) => {
+    if (!newSession?.phone_number || !newSession?.id) return;
+    
+    const phoneNumber = newSession.phone_number.replace(/\D/g, '');
+    if (!phoneNumber) return;
+    
+    try {
+      // Find all other sessions with the same phone number
+      const { data: otherSessions } = await supabase
+        .from('whatsapp_sessions')
+        .select('id, phone_number')
+        .eq('company_id', companyId)
+        .neq('id', newSession.id);
+      
+      if (!otherSessions || otherSessions.length === 0) return;
+      
+      const matchingSessions = otherSessions.filter(s => 
+        s.phone_number?.replace(/\D/g, '') === phoneNumber
+      );
+      
+      if (matchingSessions.length === 0) return;
+      
+      const oldSessionIds = matchingSessions.map(s => s.id);
+      console.log(`[Session Migration] Found ${matchingSessions.length} old session(s) with same phone. Migrating conversations...`);
+      
+      // Migrate conversations from old sessions to new session
+      const { data: migratedConvs, error: migrateError } = await supabase
+        .from('whatsapp_conversations')
+        .update({ session_id: newSession.id })
+        .in('session_id', oldSessionIds)
+        .select('id');
+      
+      if (migrateError) {
+        console.error('[Session Migration] Error migrating conversations:', migrateError);
+      } else {
+        const count = migratedConvs?.length || 0;
+        if (count > 0) {
+          console.log(`[Session Migration] ✅ Migrated ${count} conversations to new session`);
+          toast({
+            title: 'Histórico recuperado!',
+            description: `${count} conversa(s) migrada(s) da sessão anterior.`,
+          });
+        }
+      }
+      
+      // Delete old sessions (cleanup)
+      await supabase
+        .from('whatsapp_sessions')
+        .delete()
+        .in('id', oldSessionIds);
+      
+      console.log(`[Session Migration] Deleted ${oldSessionIds.length} old session(s)`);
+    } catch (e) {
+      console.error('[Session Migration] Error:', e);
+    }
+  };
+
+  const handleSyncComplete = async () => {
+    // Migrate conversations from old sessions with same phone number
     if (connectedSession) {
+      await migrateConversationsToNewSession(connectedSession);
       onSuccess(connectedSession);
     }
     onClose();

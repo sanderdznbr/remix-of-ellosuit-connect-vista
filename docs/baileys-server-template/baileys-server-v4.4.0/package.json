@@ -1,7 +1,7 @@
 {
   "name": "baileys-server",
-  "version": "4.4.0",
-  "description": "WhatsApp Baileys Server for Lovable CRM - Extended History (6h)",
+  "version": "4.5.0",
+  "description": "WhatsApp Baileys Server for Lovable CRM - Full Sync + Stickers",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

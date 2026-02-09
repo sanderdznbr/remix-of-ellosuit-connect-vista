@@ -1,10 +1,12 @@
 /**
- * Baileys Server v4.4.0 - Histórico Estendido
+ * Baileys Server v4.5.0 - Full Sync + Stickers
  * 
- * CORREÇÕES v4.4.0:
- * - Sincronização de mensagens das últimas 6 HORAS (era 1h)
- * - Melhor sincronização de nomes e fotos de perfil
- * - Otimização de batching para evitar timeout
+ * CORREÇÕES v4.5.0:
+ * - Download de STICKERS para storage
+ * - Melhor extração de nomes de contatos
+ * - Nome do remetente em grupos sempre incluído
+ * - Foto de grupo sincronizada
+ * - Histórico de 6 horas mantido
  */
 
 const express = require('express');
@@ -41,13 +43,13 @@ app.use(express.json({ limit: '50mb' }));
 // Armazena sessões ativas
 const sessions = new Map();
 
-// Cache de contatos sincronizados por sessão
-const syncedContacts = new Map();
+// Cache de nomes de contatos por JID (para enriquecer mensagens)
+const contactNamesCache = new Map();
 
 // Controle de concorrência para downloads
 const downloadSemaphore = {
   current: 0,
-  max: 3,
+  max: 5,
   queue: []
 };
 
@@ -117,6 +119,43 @@ async function fetchContactMetadata(socket, jid) {
   }
 
   return metadata;
+}
+
+// Upload mídia para Supabase storage
+async function uploadMediaToStorage(buffer, sessionId, messageId, mediaType) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !buffer) return null;
+  
+  try {
+    const extMap = {
+      'image': 'jpg',
+      'video': 'mp4',
+      'audio': 'ogg',
+      'ptt': 'ogg',
+      'document': 'pdf',
+      'sticker': 'webp'
+    };
+    const ext = extMap[mediaType] || 'bin';
+    const fileName = `${sessionId}/${Date.now()}_${messageId}.${ext}`;
+    
+    const uploadResponse = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/whatsapp-media/${fileName}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: buffer
+      }
+    );
+
+    if (uploadResponse.ok) {
+      return `${SUPABASE_URL}/storage/v1/object/public/whatsapp-media/${fileName}`;
+    }
+  } catch (e) {
+    console.error('Erro upload mídia:', e.message);
+  }
+  return null;
 }
 
 // Enviar webhook via fetch puro
@@ -193,7 +232,7 @@ async function createSession(config) {
     qrTimeout: 60000,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 20000,
-    syncFullHistory: true // Ativar sync completo
+    syncFullHistory: true
   });
 
   session.socket = socket;
@@ -289,15 +328,19 @@ async function createSession(config) {
   });
 
   // ===== SYNC COMPLETO DE CONTATOS =====
-  // Armazena TODOS os contatos recebidos
   socket.ev.on('contacts.set', async ({ contacts }) => {
     console.log(`📇 contacts.set: ${contacts.length} contatos recebidos`);
     
-    // Armazena no cache da sessão
+    // Armazena no cache da sessão e no cache global de nomes
     for (const contact of contacts) {
       const jid = contact.id || contact.jid;
       if (jid) {
         session.allContacts.set(jid, contact);
+        // Cache nome para uso em mensagens
+        const name = contact.name || contact.notify || contact.pushName || contact.verifiedName;
+        if (name) {
+          contactNamesCache.set(jid, name);
+        }
       }
     }
     
@@ -318,7 +361,6 @@ async function createSession(config) {
         }
       }, webhookUrl, webhookSecret);
       
-      // Delay entre batches
       if (i + BATCH_SIZE < contacts.length) {
         await delay(200);
       }
@@ -330,11 +372,14 @@ async function createSession(config) {
   socket.ev.on('contacts.upsert', async (contacts) => {
     console.log(`📇 contacts.upsert: ${contacts.length} contatos`);
     
-    // Atualiza cache
     for (const contact of contacts) {
       const jid = contact.id || contact.jid;
       if (jid) {
         session.allContacts.set(jid, contact);
+        const name = contact.name || contact.notify || contact.pushName || contact.verifiedName;
+        if (name) {
+          contactNamesCache.set(jid, name);
+        }
       }
     }
     
@@ -350,7 +395,6 @@ async function createSession(config) {
   socket.ev.on('chats.set', async ({ chats }) => {
     console.log(`💬 chats.set: ${chats.length} chats recebidos`);
     
-    // Armazena no cache
     for (const chat of chats) {
       const jid = chat.id || chat.jid;
       if (jid) {
@@ -371,18 +415,30 @@ async function createSession(config) {
         const meta = await fetchContactMetadata(socket, jid);
         const isGroup = jid.endsWith('@g.us');
 
+        // ===== v4.5.0: Melhor extração de nomes =====
+        let contactName = null;
+        if (isGroup) {
+          // Grupos: prioridade para metadados do grupo
+          contactName = meta.groupSubject || chat.subject || chat.groupSubject || chat.name || null;
+        } else {
+          // Contatos individuais: buscar do cache ou chat
+          contactName = contactNamesCache.get(jid) || chat.name || chat.notify || chat.pushName || chat.verifiedName || null;
+        }
+
         const enriched = {
           ...chat,
           id: jid,
           jid,
+          name: contactName,
+          contactName,
           profilePicture: meta.profilePicture || chat.profilePicture || chat.imgUrl || null,
         };
 
         if (isGroup) {
-          enriched.groupSubject = meta.groupSubject || chat.groupSubject || chat.subject || chat.name || null;
+          enriched.groupSubject = contactName;
           enriched.metadata = {
             ...(chat.metadata || {}),
-            subject: meta.groupSubject || chat.groupSubject || chat.subject || chat.name || null,
+            subject: contactName,
             desc: meta.groupDescription || null,
             participants: meta.groupParticipants || null,
           };
@@ -390,7 +446,6 @@ async function createSession(config) {
 
         enrichedChats.push(enriched);
         
-        // Delay entre requests de metadados
         if (i % 10 === 0 && i > 0) {
           await delay(100);
         }
@@ -398,7 +453,6 @@ async function createSession(config) {
         console.log('Erro ao enriquecer chat:', e?.message || e);
       }
       
-      // Envia batch quando cheio ou no final
       if (enrichedChats.length >= BATCH_SIZE || i === chats.length - 1) {
         if (enrichedChats.length > 0) {
           await sendWebhook({
@@ -450,10 +504,13 @@ async function createSession(config) {
           const jid = contact.id || contact.jid;
           if (jid) {
             session.allContacts.set(jid, contact);
+            const name = contact.name || contact.notify || contact.pushName || contact.verifiedName;
+            if (name) {
+              contactNamesCache.set(jid, name);
+            }
           }
         }
         
-        // Envia em batches
         const BATCH_SIZE = 50;
         for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
           const batch = contacts.slice(i, i + BATCH_SIZE);
@@ -467,7 +524,7 @@ async function createSession(config) {
         }
       }
 
-      // ===== v4.4.0: Processa mensagens das últimas 6 HORAS =====
+      // ===== Processa mensagens das últimas 6 HORAS =====
       const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
       const cutoff = Date.now() - SIX_HOURS_MS;
 
@@ -508,8 +565,50 @@ async function createSession(config) {
           const isGroup = jid.endsWith('@g.us');
           const participant = m?.key?.participant;
 
-          const senderPhone = isGroup && participant ? participant.split('@')[0].replace(/\D/g, '') : undefined;
-          const senderName = isGroup ? (m?.pushName || null) : undefined;
+          // ===== v4.5.0: Melhor extração de remetente em grupos =====
+          let senderPhone = null;
+          let senderName = null;
+          
+          if (isGroup && participant) {
+            senderPhone = participant.split('@')[0].replace(/\D/g, '');
+            // Buscar nome do cache primeiro, depois pushName
+            senderName = contactNamesCache.get(participant) || m?.pushName || null;
+          }
+          
+          // Para contatos individuais incoming, usar pushName
+          if (!isGroup && !m?.key?.fromMe) {
+            senderName = contactNamesCache.get(jid) || m?.pushName || null;
+          }
+
+          // ===== v4.5.0: Detectar tipo de mídia incluindo sticker =====
+          let mediaType = null;
+          let mediaUrl = null;
+          const msgContent = m.message;
+          
+          if (msgContent) {
+            if (msgContent.imageMessage) mediaType = 'image';
+            else if (msgContent.videoMessage) mediaType = 'video';
+            else if (msgContent.audioMessage) {
+              mediaType = msgContent.audioMessage.ptt ? 'ptt' : 'audio';
+            }
+            else if (msgContent.documentMessage) mediaType = 'document';
+            else if (msgContent.stickerMessage) mediaType = 'sticker';
+          }
+
+          // ===== v4.5.0: Download de stickers e outras mídias do histórico =====
+          if (mediaType && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+            try {
+              await acquireDownload();
+              const buffer = await downloadMediaMessage(m, 'buffer', {});
+              if (buffer) {
+                mediaUrl = await uploadMediaToStorage(buffer, sessionId, m.key.id, mediaType);
+              }
+            } catch (e) {
+              console.error(`Erro download mídia (${mediaType}):`, e.message);
+            } finally {
+              releaseDownload();
+            }
+          }
 
           mapped.push({
             key: m.key,
@@ -518,8 +617,8 @@ async function createSession(config) {
             pushName: m.pushName,
             senderPhone,
             senderName,
-            mediaUrl: null,
-            mediaType: null,
+            mediaUrl,
+            mediaType,
           });
         }
 
@@ -540,7 +639,7 @@ async function createSession(config) {
     }
   });
 
-  // ===== MENSAGENS RECEBIDAS =====
+  // ===== MENSAGENS RECEBIDAS EM TEMPO REAL =====
   socket.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
 
@@ -553,7 +652,7 @@ async function createSession(config) {
       // Buscar metadados
       const metadata = await fetchContactMetadata(socket, jid);
       
-      // Detectar mídia
+      // ===== v4.5.0: Detectar mídia incluindo sticker =====
       let mediaUrl = null;
       let mediaType = null;
       const msgContent = msg.message;
@@ -561,36 +660,22 @@ async function createSession(config) {
       if (msgContent) {
         if (msgContent.imageMessage) mediaType = 'image';
         else if (msgContent.videoMessage) mediaType = 'video';
-        else if (msgContent.audioMessage) mediaType = 'audio';
+        else if (msgContent.audioMessage) {
+          mediaType = msgContent.audioMessage.ptt ? 'ptt' : 'audio';
+        }
         else if (msgContent.documentMessage) mediaType = 'document';
         else if (msgContent.stickerMessage) mediaType = 'sticker';
       }
 
-      // Download de mídia
-      if (mediaType && !msg.key.fromMe && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      // ===== v4.5.0: Download de TODAS as mídias incluindo stickers =====
+      if (mediaType && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
         try {
           await acquireDownload();
           const buffer = await downloadMediaMessage(msg, 'buffer', {});
           
           if (buffer) {
-            const ext = mediaType === 'audio' ? 'ogg' : mediaType === 'video' ? 'mp4' : 'jpg';
-            const fileName = `${sessionId}/${Date.now()}_${msg.key.id}.${ext}`;
-            
-            const uploadResponse = await fetch(
-              `${SUPABASE_URL}/storage/v1/object/whatsapp-media/${fileName}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                  'Content-Type': 'application/octet-stream'
-                },
-                body: buffer
-              }
-            );
-
-            if (uploadResponse.ok) {
-              mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/whatsapp-media/${fileName}`;
-            }
+            mediaUrl = await uploadMediaToStorage(buffer, sessionId, msg.key.id, mediaType);
+            console.log(`📎 Mídia ${mediaType} salva: ${mediaUrl ? 'OK' : 'FALHOU'}`);
           }
         } catch (e) {
           console.error('Erro download mídia:', e.message);
@@ -602,8 +687,21 @@ async function createSession(config) {
       // Dados de grupo
       const isGroup = jid.endsWith('@g.us');
       const participant = msg.key?.participant;
-      const senderPhone = isGroup && participant ? participant.split('@')[0].replace(/\D/g, '') : undefined;
-      const senderName = isGroup ? (msg.pushName || null) : undefined;
+      
+      let senderPhone = null;
+      let senderName = null;
+      
+      if (isGroup && participant) {
+        senderPhone = participant.split('@')[0].replace(/\D/g, '');
+        senderName = contactNamesCache.get(participant) || msg.pushName || null;
+      }
+      
+      if (!isGroup && !msg.key.fromMe) {
+        senderName = contactNamesCache.get(jid) || msg.pushName || null;
+      }
+
+      // Nome do grupo
+      const groupName = isGroup ? (metadata.groupSubject || null) : null;
 
       // Enviar webhook
       await sendWebhook({
@@ -620,6 +718,7 @@ async function createSession(config) {
             mediaType,
             senderPhone,
             senderName,
+            groupName,
             contactMetadata: metadata
           }]
         }
@@ -660,10 +759,11 @@ async function createSession(config) {
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    version: '4.4.0',
+    version: '4.5.0',
     sessions: sessions.size,
     timestamp: new Date().toISOString(),
-    historyHours: 6
+    historyHours: 6,
+    features: ['sticker-download', 'contact-name-cache', 'group-sender-names']
   });
 });
 
@@ -1005,8 +1105,9 @@ app.post('/api/message/read', async (req, res) => {
 
 // Iniciar servidor
 server.listen(PORT, () => {
-  console.log(`🚀 Baileys Server v4.4.0 rodando na porta ${PORT}`);
+  console.log(`🚀 Baileys Server v4.5.0 rodando na porta ${PORT}`);
   console.log(`📡 Webhook: ${SUPABASE_WEBHOOK_URL || 'não configurado'}`);
   console.log(`🔄 Sync completo de contatos habilitado`);
   console.log(`⏰ Histórico de mensagens: últimas 6 horas`);
+  console.log(`🎨 Stickers: download habilitado`);
 });

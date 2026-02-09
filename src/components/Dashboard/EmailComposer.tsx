@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useGmail } from '@/hooks/useGmail';
-import { Send, Upload, X, Plus, Mail, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Send, X, Plus, Mail, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+
+const OMNI_COLOR = '#FF4500';
 
 const EmailComposer = () => {
   const [fromEmail, setFromEmail] = useState('');
@@ -30,7 +31,6 @@ const EmailComposer = () => {
   const { user } = useAuth();
   const { isConnected, emailAccount } = useGmail();
 
-  // Auto-fill sender when Gmail is connected
   useEffect(() => {
     if (isConnected && emailAccount) {
       setFromEmail(emailAccount.email);
@@ -70,7 +70,7 @@ const EmailComposer = () => {
     if (!isConnected) {
       toast({
         title: "Gmail não conectado",
-        description: "Conecte seu Gmail na aba Conexão para enviar emails",
+        description: "Conecte seu Gmail nas Configurações para enviar emails",
         variant: "destructive"
       });
       return;
@@ -110,7 +110,6 @@ const EmailComposer = () => {
           description: `${successCount} email(s) enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falhou` : ''}`
         });
 
-        // Clear form
         setRecipients([]);
         setSubject('');
         setHtmlContent('');
@@ -151,174 +150,178 @@ const EmailComposer = () => {
     <div className="space-y-6">
       {/* Gmail Connection Status */}
       {!isConnected ? (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-amber-600">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">Conecte seu Gmail na aba "Conexão" para enviar emails</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm">Conecte seu Gmail nas Configurações para enviar emails</span>
+        </div>
       ) : (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="text-sm">Enviando como: <strong>{emailAccount?.email}</strong></span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 p-4 rounded-2xl bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="text-sm">Enviando como: <strong>{emailAccount?.email}</strong></span>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Compor Email
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-
-          {/* Template Selector */}
-          <div>
-            <Label htmlFor="template">Template (opcional)</Label>
-            <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um template" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="bg-muted/20 rounded-2xl p-6 space-y-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-xl" style={{ backgroundColor: `${OMNI_COLOR}15` }}>
+            <Mail className="h-5 w-5" style={{ color: OMNI_COLOR }} />
           </div>
+          <h3 className="text-lg font-semibold text-foreground">Compor Email</h3>
+        </div>
 
-          {/* Send Type */}
-          <div>
-            <Label>Tipo de envio</Label>
-            <div className="flex gap-4 mt-2">
-              <button
-                type="button"
-                onClick={() => setSendType('single')}
-                className={`px-4 py-2 rounded-lg border transition-all ${
-                  sendType === 'single' 
-                    ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                    : 'bg-white border-gray-300 hover:border-gray-400'
-                }`}
+        {/* Template Selector */}
+        <div>
+          <Label htmlFor="template" className="text-sm font-medium">Template (opcional)</Label>
+          <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+            <SelectTrigger className="mt-1.5 rounded-xl">
+              <SelectValue placeholder="Selecione um template" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Send Type */}
+        <div>
+          <Label className="text-sm font-medium">Tipo de envio</Label>
+          <div className="flex gap-3 mt-2">
+            <button
+              type="button"
+              onClick={() => setSendType('single')}
+              className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
+                sendType === 'single' 
+                  ? 'text-white' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+              style={sendType === 'single' ? { backgroundColor: OMNI_COLOR } : {}}
+            >
+              Envio Individual
+            </button>
+            <button
+              type="button"
+              onClick={() => setSendType('bulk')}
+              className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
+                sendType === 'bulk' 
+                  ? 'text-white' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+              style={sendType === 'bulk' ? { backgroundColor: OMNI_COLOR } : {}}
+            >
+              Envio em Massa
+            </button>
+          </div>
+        </div>
+
+        {/* Recipients */}
+        <div>
+          <Label className="text-sm font-medium">Destinatários*</Label>
+          <div className="space-y-3 mt-1.5">
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="destinatario@email.com"
+                value={currentRecipient}
+                onChange={(e) => setCurrentRecipient(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addRecipient()}
+                className="rounded-xl"
+              />
+              <Button 
+                onClick={addRecipient} 
+                size="icon"
+                className="rounded-xl shrink-0"
+                style={{ backgroundColor: OMNI_COLOR }}
               >
-                Envio Individual
-              </button>
-              <button
-                type="button"
-                onClick={() => setSendType('bulk')}
-                className={`px-4 py-2 rounded-lg border transition-all ${
-                  sendType === 'bulk' 
-                    ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                    : 'bg-white border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                Envio em Massa
-              </button>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
 
-          {/* Recipients */}
-          <div>
-            <Label>Destinatários*</Label>
-            <div className="space-y-3">
-              <div className="flex gap-2">
+            {sendType === 'bulk' && (
+              <div>
+                <Label htmlFor="bulk-upload" className="text-sm">Upload de lista (CSV/TXT)</Label>
                 <Input
-                  type="email"
-                  placeholder="destinatario@email.com"
-                  value={currentRecipient}
-                  onChange={(e) => setCurrentRecipient(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addRecipient()}
+                  id="bulk-upload"
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleBulkUpload}
+                  className="mt-1.5 rounded-xl"
                 />
-                <Button onClick={addRecipient} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
+            )}
 
-              {sendType === 'bulk' && (
-                <div>
-                  <Label htmlFor="bulk-upload">Ou faça upload de uma lista (CSV/TXT)</Label>
-                  <Input
-                    id="bulk-upload"
-                    type="file"
-                    accept=".csv,.txt"
-                    onChange={handleBulkUpload}
-                    className="mt-1"
-                  />
+            {recipients.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">{recipients.length} destinatário(s):</p>
+                <div className="flex flex-wrap gap-2">
+                  {recipients.map((email) => (
+                    <Badge 
+                      key={email} 
+                      variant="secondary" 
+                      className="flex items-center gap-1 rounded-lg px-3 py-1"
+                    >
+                      {email}
+                      <button onClick={() => removeRecipient(email)} className="ml-1 hover:text-red-500">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
-              )}
-
-              {recipients.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">{recipients.length} destinatário(s):</p>
-                  <div className="flex flex-wrap gap-2">
-                    {recipients.map((email) => (
-                      <Badge key={email} variant="secondary" className="flex items-center gap-1">
-                        {email}
-                        <button onClick={() => removeRecipient(email)}>
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* Subject */}
-          <div>
-            <Label htmlFor="subject">Assunto*</Label>
-            <Input
-              id="subject"
-              placeholder="Assunto do email"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
+        {/* Subject */}
+        <div>
+          <Label htmlFor="subject" className="text-sm font-medium">Assunto*</Label>
+          <Input
+            id="subject"
+            placeholder="Assunto do email"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="mt-1.5 rounded-xl"
+          />
+        </div>
 
-          {/* HTML Content */}
-          <div>
-            <Label htmlFor="htmlContent">Conteúdo HTML</Label>
-            <Textarea
-              id="htmlContent"
-              placeholder="<h1>Seu email em HTML</h1>"
-              value={htmlContent}
-              onChange={(e) => setHtmlContent(e.target.value)}
-              className="min-h-32 font-mono text-sm"
-            />
-          </div>
+        {/* HTML Content */}
+        <div>
+          <Label htmlFor="htmlContent" className="text-sm font-medium">Conteúdo HTML</Label>
+          <Textarea
+            id="htmlContent"
+            placeholder="<h1>Seu email em HTML</h1>"
+            value={htmlContent}
+            onChange={(e) => setHtmlContent(e.target.value)}
+            className="mt-1.5 min-h-32 font-mono text-sm rounded-xl"
+          />
+        </div>
 
-          {/* Text Content */}
-          <div>
-            <Label htmlFor="textContent">Conteúdo texto (fallback)</Label>
-            <Textarea
-              id="textContent"
-              placeholder="Versão em texto do seu email"
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              className="min-h-20"
-            />
-          </div>
+        {/* Text Content */}
+        <div>
+          <Label htmlFor="textContent" className="text-sm font-medium">Conteúdo texto (fallback)</Label>
+          <Textarea
+            id="textContent"
+            placeholder="Versão em texto do seu email"
+            value={textContent}
+            onChange={(e) => setTextContent(e.target.value)}
+            className="mt-1.5 min-h-20 rounded-xl"
+          />
+        </div>
 
-          {/* Send Button */}
-          <Button 
-            onClick={handleSendEmail} 
-            disabled={isSending || !isConnected}
-            className="w-full bg-[#3000E3] hover:bg-[#2500B3]"
-          >
-            <Send className="h-4 w-4 mr-2" />
-            {isSending ? 'Enviando...' : `Enviar Email${recipients.length > 1 ? 's' : ''}`}
-          </Button>
-        </CardContent>
-      </Card>
+        {/* Send Button */}
+        <Button 
+          onClick={handleSendEmail} 
+          disabled={isSending || !isConnected}
+          className="w-full rounded-xl text-white py-6 text-base font-medium"
+          style={{ backgroundColor: OMNI_COLOR }}
+        >
+          <Send className="h-4 w-4 mr-2" />
+          {isSending ? 'Enviando...' : `Enviar Email${recipients.length > 1 ? 's' : ''}`}
+        </Button>
+      </div>
     </div>
   );
 };

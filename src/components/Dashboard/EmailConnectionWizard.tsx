@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { 
   Mail, 
   Check, 
@@ -12,13 +10,13 @@ import {
   Loader2, 
   CheckCircle2, 
   AlertCircle,
-  ExternalLink,
-  Copy,
   RefreshCw
 } from 'lucide-react';
 import { useGmail } from '@/hooks/useGmail';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+const OMNI_COLOR = '#FF4500';
 
 const EmailConnectionWizard = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -26,34 +24,12 @@ const EmailConnectionWizard = () => {
   const { toast } = useToast();
 
   const steps = [
-    {
-      id: 'intro',
-      title: 'Bem-vindo',
-      description: 'Conecte seu email comercial'
-    },
-    {
-      id: 'requirements',
-      title: 'Requisitos',
-      description: 'O que você precisa'
-    },
-    {
-      id: 'permissions',
-      title: 'Permissões',
-      description: 'Autorização necessária'
-    },
-    {
-      id: 'connect',
-      title: 'Conectar',
-      description: 'Autenticação Google'
-    },
-    {
-      id: 'verify',
-      title: 'Verificação',
-      description: 'Confirmar conexão'
-    }
+    { id: 'intro', title: 'Bem-vindo', description: 'Conecte seu email comercial' },
+    { id: 'requirements', title: 'Requisitos', description: 'O que você precisa' },
+    { id: 'permissions', title: 'Permissões', description: 'Autorização necessária' },
+    { id: 'connect', title: 'Conectar', description: 'Autenticação Google' },
+    { id: 'verify', title: 'Verificação', description: 'Confirmar conexão' }
   ];
-
-  const progress = ((currentStep + 1) / steps.length) * 100;
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -71,21 +47,16 @@ const EmailConnectionWizard = () => {
     await connectGmail();
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copiado!",
-      description: "Texto copiado para a área de transferência"
-    });
-  };
-
   const renderStepContent = () => {
     switch (steps[currentStep].id) {
       case 'intro':
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <div 
+                className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                style={{ background: `linear-gradient(135deg, ${OMNI_COLOR}, ${OMNI_COLOR}dd)` }}
+              >
                 <Mail className="h-10 w-10 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -98,22 +69,22 @@ const EmailConnectionWizard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4 text-center">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Mail className="h-6 w-6 text-blue-600" />
+              <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: `${OMNI_COLOR}10` }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: `${OMNI_COLOR}20` }}>
+                  <Mail className="h-6 w-6" style={{ color: OMNI_COLOR }} />
                 </div>
                 <h4 className="font-semibold text-foreground mb-1">Envio Direto</h4>
                 <p className="text-sm text-muted-foreground">Envie emails sem sair da plataforma</p>
               </div>
-              <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 text-center">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <div className="bg-green-50 dark:bg-green-950/30 rounded-2xl p-5 text-center">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <Shield className="h-6 w-6 text-green-600" />
                 </div>
                 <h4 className="font-semibold text-foreground mb-1">100% Seguro</h4>
                 <p className="text-sm text-muted-foreground">Conexão OAuth2 criptografada</p>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-950/30 rounded-xl p-4 text-center">
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <div className="bg-purple-50 dark:bg-purple-950/30 rounded-2xl p-5 text-center">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <CheckCircle2 className="h-6 w-6 text-purple-600" />
                 </div>
                 <h4 className="font-semibold text-foreground mb-1">Rastreamento</h4>
@@ -127,67 +98,31 @@ const EmailConnectionWizard = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-foreground mb-2">
-                Requisitos para Conexão
-              </h2>
-              <p className="text-muted-foreground">
-                Verifique se você atende aos requisitos abaixo
-              </p>
+              <h2 className="text-xl font-bold text-foreground mb-2">Requisitos para Conexão</h2>
+              <p className="text-muted-foreground">Verifique se você atende aos requisitos abaixo</p>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Mail className="h-5 w-5 text-blue-600" />
+              <div className="flex items-start gap-4 p-5 bg-card rounded-2xl border border-border">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${OMNI_COLOR}15` }}>
+                  <Mail className="h-5 w-5" style={{ color: OMNI_COLOR }} />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-foreground mb-1">Conta Google/Gmail</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Você precisa de uma conta Gmail pessoal ou Google Workspace (empresarial).
-                  </p>
+                  <p className="text-sm text-muted-foreground">Gmail pessoal ou Google Workspace.</p>
                 </div>
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
               </div>
 
-              <div className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="flex items-start gap-4 p-5 bg-card rounded-2xl border border-border">
+                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Key className="h-5 w-5 text-purple-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-foreground mb-1">Acesso à Conta</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Tenha as credenciais de login da conta que deseja conectar.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Tenha suas credenciais em mãos.</p>
                 </div>
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-
-              <div className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-foreground mb-1">Verificação em 2 Etapas</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Se ativada, tenha seu dispositivo de autenticação em mãos.
-                  </p>
-                </div>
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-            </div>
-
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-              <div className="flex gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                    Importante
-                  </h4>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Para contas Google Workspace, o administrador da organização pode 
-                    precisar autorizar o aplicativo nas configurações de segurança.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -197,66 +132,43 @@ const EmailConnectionWizard = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-foreground mb-2">
-                Permissões Necessárias
-              </h2>
-              <p className="text-muted-foreground">
-                Entenda quais permissões serão solicitadas
-              </p>
+              <h2 className="text-xl font-bold text-foreground mb-2">Permissões Necessárias</h2>
+              <p className="text-muted-foreground">Entenda quais permissões serão solicitadas</p>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
-                  <Mail className="h-5 w-5 text-blue-600" />
+              <div className="flex items-center gap-4 p-5 bg-card rounded-2xl border border-border">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${OMNI_COLOR}15` }}>
+                  <Mail className="h-5 w-5" style={{ color: OMNI_COLOR }} />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-foreground">Ler emails</h4>
-                  <p className="text-sm text-muted-foreground">Para sincronizar sua caixa de entrada</p>
+                  <p className="text-sm text-muted-foreground">Para sincronizar sua caixa</p>
                 </div>
-                <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${OMNI_COLOR}15`, color: OMNI_COLOR }}>
                   Leitura
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-4 p-5 bg-card rounded-2xl border border-border">
+                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
                   <ArrowRight className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-foreground">Enviar emails</h4>
-                  <p className="text-sm text-muted-foreground">Para enviar emails em seu nome</p>
+                  <p className="text-sm text-muted-foreground">Para enviar em seu nome</p>
                 </div>
-                <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                  Envio
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-foreground">Informações do perfil</h4>
-                  <p className="text-sm text-muted-foreground">Nome e email para identificação</p>
-                </div>
-                <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">
-                  Perfil
-                </span>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Envio</span>
               </div>
             </div>
 
-            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4">
+            <div className="bg-green-50 dark:bg-green-950/30 rounded-2xl p-5">
               <div className="flex gap-3">
                 <Shield className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-green-800 dark:text-green-200 mb-1">
-                    Sua Privacidade é Prioridade
-                  </h4>
+                  <h4 className="font-semibold text-green-800 dark:text-green-200 mb-1">Sua Privacidade</h4>
                   <p className="text-sm text-green-700 dark:text-green-300">
-                    Não armazenamos suas senhas. Utilizamos OAuth2 do Google, 
-                    o mesmo padrão de segurança usado por grandes empresas.
-                    Você pode revogar o acesso a qualquer momento.
+                    Não armazenamos senhas. OAuth2 seguro do Google.
                   </p>
                 </div>
               </div>
@@ -268,74 +180,37 @@ const EmailConnectionWizard = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-foreground mb-2">
-                Conectar com Google
-              </h2>
-              <p className="text-muted-foreground">
-                Clique no botão abaixo para autorizar a conexão
-              </p>
+              <h2 className="text-xl font-bold text-foreground mb-2">Conectar com Google</h2>
+              <p className="text-muted-foreground">Clique no botão para autorizar</p>
             </div>
 
             {isConnected ? (
               <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="h-10 w-10 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Email Conectado!
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {emailAccount?.provider_email || 'Conta conectada com sucesso'}
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={disconnectGmail}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Email Conectado!</h3>
+                  <p className="text-muted-foreground mb-4">{emailAccount?.provider_email}</p>
+                  <Button variant="outline" onClick={disconnectGmail} className="text-red-600 border-red-200 hover:bg-red-50 rounded-xl">
                     Desconectar
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <h4 className="font-semibold text-foreground mb-4">
-                    Passo a Passo:
-                  </h4>
+                <div className="bg-card rounded-2xl p-6">
+                  <h4 className="font-semibold text-foreground mb-4">Passo a Passo:</h4>
                   <ol className="space-y-3">
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-sm font-medium text-blue-600 flex-shrink-0">
-                        1
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Clique no botão "Conectar com Google" abaixo
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-sm font-medium text-blue-600 flex-shrink-0">
-                        2
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Selecione a conta Google que deseja conectar
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-sm font-medium text-blue-600 flex-shrink-0">
-                        3
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Revise e aceite as permissões solicitadas
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-sm font-medium text-blue-600 flex-shrink-0">
-                        4
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Aguarde o redirecionamento de volta para a plataforma
-                      </span>
-                    </li>
+                    {['Clique em "Conectar com Google"', 'Selecione sua conta', 'Aceite as permissões', 'Aguarde o redirecionamento'].map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0" 
+                          style={{ backgroundColor: `${OMNI_COLOR}15`, color: OMNI_COLOR }}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{step}</span>
+                      </li>
+                    ))}
                   </ol>
                 </div>
 
@@ -344,7 +219,8 @@ const EmailConnectionWizard = () => {
                     size="lg"
                     onClick={handleConnect}
                     disabled={loading}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-xl shadow-lg"
+                    className="text-white px-8 py-6 text-lg rounded-2xl shadow-lg transition-all hover:scale-105"
+                    style={{ background: `linear-gradient(135deg, ${OMNI_COLOR}, ${OMNI_COLOR}dd)` }}
                   >
                     {loading ? (
                       <>
@@ -373,82 +249,39 @@ const EmailConnectionWizard = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-foreground mb-2">
-                Verificação da Conexão
-              </h2>
-              <p className="text-muted-foreground">
-                Confirme se tudo está funcionando corretamente
-              </p>
+              <h2 className="text-xl font-bold text-foreground mb-2">Verificação</h2>
+              <p className="text-muted-foreground">Confirme se tudo está funcionando</p>
             </div>
 
             {isConnected ? (
               <div className="space-y-6">
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
+                <div className="bg-green-50 dark:bg-green-950/30 rounded-2xl p-8 text-center">
                   <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-green-800 dark:text-green-200 mb-2">
-                    Conexão Verificada!
-                  </h3>
-                  <p className="text-green-700 dark:text-green-300 mb-4">
-                    Seu email está pronto para uso.
-                  </p>
-                  <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg border border-green-200 dark:border-green-700">
+                  <h3 className="text-xl font-bold text-green-800 dark:text-green-200 mb-2">Conexão Verificada!</h3>
+                  <p className="text-green-700 dark:text-green-300 mb-4">Seu email está pronto.</p>
+                  <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-green-200">
                     <Mail className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-foreground">
-                      {emailAccount?.provider_email || 'Email conectado'}
-                    </span>
+                    <span className="font-medium text-foreground">{emailAccount?.provider_email}</span>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-card border border-border rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-foreground">Leitura de emails</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Permissão concedida para ler emails
-                    </p>
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-foreground">Envio de emails</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Permissão concedida para enviar emails
-                    </p>
-                  </div>
-                </div>
-
                 <div className="text-center">
-                  <p className="text-muted-foreground mb-4">
-                    Você já pode começar a enviar emails profissionais!
-                  </p>
+                  <p className="text-muted-foreground">Você pode começar a enviar emails!</p>
                 </div>
               </div>
             ) : (
               <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/50 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
                   <AlertCircle className="h-10 w-10 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Email não conectado
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Volte ao passo anterior para conectar seu email.
-                  </p>
-                  <Button onClick={() => setCurrentStep(3)}>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Email não conectado</h3>
+                  <p className="text-muted-foreground mb-4">Volte ao passo anterior.</p>
+                  <Button onClick={() => setCurrentStep(3)} className="rounded-xl text-white" style={{ backgroundColor: OMNI_COLOR }}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Voltar para Conexão
+                    Voltar
                   </Button>
                 </div>
-
-                <Button 
-                  variant="outline" 
-                  onClick={checkConnection}
-                  className="mt-4"
-                >
+                <Button variant="outline" onClick={checkConnection} className="rounded-xl">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Verificar Novamente
                 </Button>
@@ -468,36 +301,18 @@ const EmailConnectionWizard = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           {steps.map((step, index) => (
-            <div 
-              key={step.id}
-              className={cn(
-                "flex items-center",
-                index < steps.length - 1 && "flex-1"
-              )}
-            >
+            <div key={step.id} className={cn("flex items-center", index < steps.length - 1 && "flex-1")}>
               <div 
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm transition-all",
-                  index < currentStep 
-                    ? "bg-green-500 text-white" 
-                    : index === currentStep 
-                      ? "bg-blue-600 text-white shadow-lg" 
-                      : "bg-muted text-muted-foreground"
+                  index < currentStep ? "bg-green-500 text-white" : index === currentStep ? "text-white shadow-lg" : "bg-muted text-muted-foreground"
                 )}
+                style={index === currentStep ? { backgroundColor: OMNI_COLOR } : {}}
               >
-                {index < currentStep ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  index + 1
-                )}
+                {index < currentStep ? <Check className="h-5 w-5" /> : index + 1}
               </div>
               {index < steps.length - 1 && (
-                <div 
-                  className={cn(
-                    "flex-1 h-1 mx-2 rounded-full transition-all",
-                    index < currentStep ? "bg-green-500" : "bg-muted"
-                  )}
-                />
+                <div className={cn("flex-1 h-1 mx-2 rounded-full transition-all", index < currentStep ? "bg-green-500" : "bg-muted")} />
               )}
             </div>
           ))}
@@ -509,41 +324,51 @@ const EmailConnectionWizard = () => {
       </div>
 
       {/* Content Card */}
-      <Card className="border-0 shadow-lg rounded-2xl">
-        <CardContent className="p-8">
-          {renderStepContent()}
-        </CardContent>
-      </Card>
+      <div className="bg-card rounded-3xl shadow-sm p-8">
+        {renderStepContent()}
+      </div>
 
-      {/* Navigation */}
+      {/* Navigation - NO buttons on first step, only "Começar" */}
       <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={prevStep}
-          disabled={currentStep === 0}
-          className="rounded-xl"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Anterior
-        </Button>
+        {currentStep === 0 ? (
+          <>
+            <div /> {/* Empty spacer */}
+            <Button 
+              onClick={nextStep}
+              className="rounded-xl text-white"
+              style={{ backgroundColor: OMNI_COLOR }}
+            >
+              Começar
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" onClick={prevStep} className="rounded-xl">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Anterior
+            </Button>
 
-        {currentStep < steps.length - 1 ? (
-          <Button 
-            onClick={nextStep}
-            className="bg-blue-600 hover:bg-blue-700 rounded-xl"
-          >
-            Próximo
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : isConnected ? (
-          <Button 
-            className="bg-green-600 hover:bg-green-700 rounded-xl"
-            onClick={() => window.location.reload()}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Concluir Setup
-          </Button>
-        ) : null}
+            {currentStep < steps.length - 1 ? (
+              <Button 
+                onClick={nextStep}
+                className="rounded-xl text-white"
+                style={{ backgroundColor: OMNI_COLOR }}
+              >
+                Próximo
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : isConnected ? (
+              <Button 
+                className="bg-green-600 hover:bg-green-700 rounded-xl"
+                onClick={() => window.location.reload()}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Concluir
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );

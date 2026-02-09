@@ -1,37 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, History, Users, FileText, BarChart3, Send, Inbox, Clock, TrendingUp, Settings, CheckCircle2, AlertCircle, Palette, ExternalLink } from 'lucide-react';
+import { Mail, Users, Settings, Send, CheckCircle2, AlertCircle, Palette, ExternalLink } from 'lucide-react';
 import EmailComposer from './EmailComposer';
 import MailTracking from './MailTracking';
 import CampaignMail from './CampaignMail';
-import EmailTemplates from './EmailTemplates';
 import EmailConnectionWizard from './EmailConnectionWizard';
+import EmailLimitIndicator from './EmailLimitIndicator';
 import { useGmail } from '@/hooks/useGmail';
 import { Button } from '@/components/ui/button';
+
+const OMNI_COLOR = '#FF4500';
 
 const EmailDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('compose');
   const { isConnected, emailAccount } = useGmail();
 
-  // Quick stats
-  const stats = [
-    { label: 'Enviados Hoje', value: '24', icon: Send, color: 'text-blue-600 bg-blue-100' },
-    { label: 'Na Caixa', value: '156', icon: Inbox, color: 'text-green-600 bg-green-100' },
-    { label: 'Agendados', value: '8', icon: Clock, color: 'text-orange-600 bg-orange-100' },
-    { label: 'Taxa Abertura', value: '68%', icon: TrendingUp, color: 'text-purple-600 bg-purple-100' },
-  ];
-
   return (
     <div className="min-h-screen bg-background p-6 page-content">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl">
-              <Mail className="h-6 w-6 text-primary" />
+            <div 
+              className="p-2.5 rounded-2xl"
+              style={{ backgroundColor: `${OMNI_COLOR}15` }}
+            >
+              <Mail className="h-6 w-6" style={{ color: OMNI_COLOR }} />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Email Marketing</h1>
@@ -60,7 +56,7 @@ const EmailDashboard = () => {
                   size="sm" 
                   variant="ghost" 
                   className="h-6 px-2 text-xs"
-                  onClick={() => setActiveTab('connect')}
+                  onClick={() => setActiveTab('settings')}
                 >
                   Conectar
                 </Button>
@@ -70,89 +66,100 @@ const EmailDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, idx) => (
-          <Card key={idx} className="border-0 shadow-sm bg-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${stat.color}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <Card className="border-0 shadow-sm">
+      {/* Main Content - Clean Card */}
+      <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <CardHeader className="pb-0 border-b">
-            <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-0 flex-wrap">
-              <TabsTrigger 
-                value="connect" 
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-primary font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Conectar Email</span>
-              </TabsTrigger>
+          {/* Tabs Navigation - Integrated, no divisions */}
+          <div className="px-6 pt-6">
+            <TabsList className="w-full justify-start bg-muted/30 h-auto p-1.5 gap-1 rounded-2xl">
               <TabsTrigger 
                 value="compose" 
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-primary font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm text-muted-foreground data-[state=active]:text-foreground font-medium transition-all"
+                style={{ 
+                  color: activeTab === 'compose' ? OMNI_COLOR : undefined 
+                }}
               >
-                <Mail className="h-4 w-4" />
-                <span className="hidden sm:inline">Compor</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="tracking" 
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-primary font-medium"
-              >
-                <History className="h-4 w-4" />
-                <span className="hidden sm:inline">Histórico</span>
+                <Send className="h-4 w-4" />
+                <span>Compor</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="campaigns" 
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-primary font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm text-muted-foreground data-[state=active]:text-foreground font-medium transition-all"
+                style={{ 
+                  color: activeTab === 'campaigns' ? OMNI_COLOR : undefined 
+                }}
               >
                 <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Campanhas</span>
+                <span>Campanhas</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="tracking" 
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm text-muted-foreground data-[state=active]:text-foreground font-medium transition-all"
+                style={{ 
+                  color: activeTab === 'tracking' ? OMNI_COLOR : undefined 
+                }}
+              >
+                <Mail className="h-4 w-4" />
+                <span>Histórico</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings" 
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm text-muted-foreground data-[state=active]:text-foreground font-medium transition-all"
+                style={{ 
+                  color: activeTab === 'settings' ? OMNI_COLOR : undefined 
+                }}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Configurações</span>
               </TabsTrigger>
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 px-6 py-3 rounded-none border-b-2 border-transparent text-muted-foreground font-medium hover:text-primary"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-muted-foreground font-medium hover:bg-muted/50 ml-auto"
                 onClick={() => navigate('/dashboard/email-templates')}
               >
                 <Palette className="h-4 w-4" />
-                <span className="hidden sm:inline">Ver Templates</span>
+                <span>Templates</span>
                 <ExternalLink className="h-3 w-3 ml-1" />
               </Button>
             </TabsList>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-6">
-            <TabsContent value="connect" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <EmailConnectionWizard />
-            </TabsContent>
-
+          {/* Tab Contents - Clean padding */}
+          <div className="p-6">
             <TabsContent value="compose" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <EmailComposer />
+            </TabsContent>
+
+            <TabsContent value="campaigns" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <CampaignMail />
             </TabsContent>
 
             <TabsContent value="tracking" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <MailTracking />
             </TabsContent>
 
-            <TabsContent value="campaigns" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <CampaignMail />
+            <TabsContent value="settings" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+              {/* Settings includes Connection Wizard + Email Limits */}
+              <div className="space-y-8">
+                {/* Email Limits Section */}
+                <div className="bg-muted/30 rounded-2xl p-6">
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Limite de Envios</h3>
+                  <EmailLimitIndicator showDetails={true} className="w-full" />
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Seu limite diário de envios é renovado a cada 24 horas.
+                  </p>
+                </div>
+
+                {/* Connection Wizard */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Conexão de Email</h3>
+                  <EmailConnectionWizard />
+                </div>
+              </div>
             </TabsContent>
-          </CardContent>
+          </div>
         </Tabs>
-      </Card>
+      </div>
     </div>
   );
 };

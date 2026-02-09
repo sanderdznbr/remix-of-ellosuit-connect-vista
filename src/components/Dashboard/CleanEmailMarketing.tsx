@@ -72,6 +72,7 @@ const CleanEmailMarketing: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
   const [templates, setTemplates] = useState<any[]>([]);
   const [contentMode, setContentMode] = useState<'template' | 'scratch' | null>(null);
   const [sending, setSending] = useState(false);
@@ -816,7 +817,7 @@ const CleanEmailMarketing: React.FC = () => {
                         className="h-7 px-2 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
-                          selectTemplate(template);
+                          setPreviewTemplate(template);
                         }}
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
@@ -1083,6 +1084,42 @@ const CleanEmailMarketing: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Template Preview Dialog */}
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewTemplate?.name || 'Preview do Template'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {previewTemplate?.html_content ? (
+              <iframe
+                srcDoc={previewTemplate.html_content}
+                className="w-full min-h-[500px] border rounded-lg"
+                title="Template Preview"
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            ) : (
+              <p className="text-center text-muted-foreground py-12">Sem conteúdo para exibir</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t">
+            <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+              Fechar
+            </Button>
+            <Button 
+              className="bg-[#FF4500] hover:bg-[#E03E00] text-white"
+              onClick={() => {
+                selectTemplate(previewTemplate);
+                setPreviewTemplate(null);
+              }}
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Usar este template
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

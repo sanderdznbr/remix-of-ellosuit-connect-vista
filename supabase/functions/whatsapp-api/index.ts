@@ -510,7 +510,8 @@ serve(async (req) => {
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
         const cleanPhone = phone.replace(/\D/g, '');
-        const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        // Groups have 18+ digit IDs and use @g.us, individual contacts use @s.whatsapp.net
+        const jid = cleanPhone.includes('@') ? cleanPhone : (cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`);
         const messageText = typeof message === 'string' ? message.trim() : String(message ?? '').trim();
 
         if (!messageText) {

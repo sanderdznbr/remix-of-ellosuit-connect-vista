@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_impersonation_logs: {
+        Row: {
+          admin_user_id: string
+          ended_at: string | null
+          id: string
+          ip_address: string | null
+          reason: string | null
+          started_at: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          started_at?: string
+          target_user_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          started_at?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       ai_agents: {
         Row: {
           avatar_url: string | null
@@ -156,6 +186,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      bug_reports: {
+        Row: {
+          admin_notes: string | null
+          browser_info: string | null
+          company_id: string | null
+          created_at: string
+          description: string
+          id: string
+          screenshot_url: string | null
+          severity: string
+          status: string
+          steps_to_reproduce: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          browser_info?: string | null
+          company_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          screenshot_url?: string | null
+          severity?: string
+          status?: string
+          steps_to_reproduce?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          browser_info?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          screenshot_url?: string | null
+          severity?: string
+          status?: string
+          steps_to_reproduce?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calendar_events: {
         Row: {
@@ -2377,6 +2463,62 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          category: string | null
+          company_id: string | null
+          created_at: string
+          description: string
+          id: string
+          priority: string
+          responded_at: string | null
+          responded_by: string | null
+          response: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          company_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          priority?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_routines: {
         Row: {
           assigned_user_id: string | null
@@ -3469,6 +3611,7 @@ export type Database = {
         Args: { p_company_id: string; p_user_id: string }
         Returns: undefined
       }
+      is_adminmaster: { Args: { _user_id: string }; Returns: boolean }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -3515,7 +3658,7 @@ export type Database = {
         | "tracked_docs"
         | "priority_support"
       billing_cycle: "monthly" | "yearly"
-      company_role: "admin" | "manager" | "employee"
+      company_role: "admin" | "manager" | "employee" | "adminmaster"
       email_provider: "gmail" | "outlook" | "yahoo"
       event_type: "meeting" | "appointment" | "reminder"
       meeting_provider: "google_meet" | "zoom" | "teams"
@@ -3693,7 +3836,7 @@ export const Constants = {
         "priority_support",
       ],
       billing_cycle: ["monthly", "yearly"],
-      company_role: ["admin", "manager", "employee"],
+      company_role: ["admin", "manager", "employee", "adminmaster"],
       email_provider: ["gmail", "outlook", "yahoo"],
       event_type: ["meeting", "appointment", "reminder"],
       meeting_provider: ["google_meet", "zoom", "teams"],

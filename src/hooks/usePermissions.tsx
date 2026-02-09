@@ -59,11 +59,11 @@ export const usePermissions = (): PermissionsHook => {
           return;
         }
 
-        setIsAdmin(companyUser.role === 'admin');
+        setIsAdmin(companyUser.role === 'admin' || companyUser.role === 'adminmaster');
         setIsManager(companyUser.role === 'manager');
 
         // Admins have all permissions
-        if (companyUser.role === 'admin') {
+        if (companyUser.role === 'admin' || companyUser.role === 'adminmaster') {
           setPermissions([
             'view_calendar', 'manage_calendar',
             'view_clients', 'manage_clients',

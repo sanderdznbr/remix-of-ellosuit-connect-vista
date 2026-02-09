@@ -56,6 +56,13 @@ import LeadFunnelBuilder from '@/components/LeadCapture/LeadFunnelBuilder';
 import LeadFunnelAnalytics from '@/pages/LeadFunnelAnalytics';
 import LeadTrackingDashboard from '@/pages/LeadTrackingDashboard';
 
+// Admin
+import AdminMasterDashboard from '@/components/Admin/AdminMasterDashboard';
+import AdminUsersPanel from '@/components/Admin/AdminUsersPanel';
+import AdminSubscriptionsPanel from '@/components/Admin/AdminSubscriptionsPanel';
+import AdminSystemHealth from '@/components/Admin/AdminSystemHealth';
+import AdminSupportPanel from '@/components/Admin/AdminSupportPanel';
+
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
 
@@ -145,6 +152,13 @@ const MobileResponsiveDashboard = () => {
         {/* User Profile & Subscription */}
         <Route path="/perfil" element={<UserProfilePage />} />
         <Route path="/assinatura" element={<SubscriptionPage />} />
+        
+        {/* Admin Master */}
+        <Route path="/admin" element={<AdminMasterDashboard />} />
+        <Route path="/admin/users" element={<AdminUsersPanel />} />
+        <Route path="/admin/subs" element={<AdminSubscriptionsPanel />} />
+        <Route path="/admin/system" element={<AdminSystemHealth />} />
+        <Route path="/admin/support" element={<AdminSupportPanel />} />
         
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

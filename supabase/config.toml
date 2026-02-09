@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.pagarme-cancel]
 verify_jwt = false
+
+[functions.admin-impersonate]
+verify_jwt = false

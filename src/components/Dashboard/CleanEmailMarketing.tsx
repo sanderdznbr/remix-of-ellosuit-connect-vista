@@ -502,7 +502,8 @@ const CleanEmailMarketing: React.FC = () => {
           <Button
             variant="default"
             size="icon"
-            className="h-12 w-12 shrink-0"
+            className="h-12 w-12 shrink-0 text-white"
+            style={{ backgroundColor: '#FF4500' }}
             onClick={() => {
               if (addEmail(emailInput)) {
                 setEmailInput('');
@@ -897,23 +898,23 @@ const CleanEmailMarketing: React.FC = () => {
       </Dialog>
 
       {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-border bg-card sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Mail className="h-5 w-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF450012' }}>
+                <Mail className="h-5 w-5" style={{ color: '#FF4500' }} />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">Enviar Email</h1>
+                <h1 className="text-lg font-semibold text-foreground">Enviar Email</h1>
                 {/* Clickable progress bar */}
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-2 mt-1 group cursor-pointer">
+                    <button className="flex items-center gap-2 mt-0.5 group cursor-pointer">
                       <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: `${(dailyLimit.sent / dailyLimit.limit) * 100}%` }}
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${(dailyLimit.sent / dailyLimit.limit) * 100}%`, backgroundColor: '#FF4500' }}
                         />
                       </div>
                       <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
@@ -938,12 +939,12 @@ const CleanEmailMarketing: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Connection gear icon */}
+              {/* Connection indicator */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
-                    <Settings className="h-5 w-5" />
-                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${
+                    <Settings className="h-5 w-5 text-muted-foreground" />
+                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${
                       isConnected ? 'bg-green-500' : 'bg-red-500'
                     }`} />
                   </Button>
@@ -982,6 +983,7 @@ const CleanEmailMarketing: React.FC = () => {
                         className="w-full" 
                         onClick={connectGmail}
                         disabled={loading}
+                        style={{ backgroundColor: '#FF4500' }}
                       >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                         Conectar Gmail
@@ -1014,7 +1016,7 @@ const CleanEmailMarketing: React.FC = () => {
       </div>
 
       {/* Footer Navigation */}
-      <div className="border-t bg-card/50 backdrop-blur-sm sticky bottom-0">
+      <div className="border-t border-border bg-card sticky bottom-0">
         <div className="max-w-5xl mx-auto px-6 py-4">
           {/* Navigation buttons */}
           <div className="flex items-center justify-between mb-4">
@@ -1035,8 +1037,9 @@ const CleanEmailMarketing: React.FC = () => {
               <Button
                 onClick={nextStep}
                 disabled={!canProceed()}
-                className="gap-2 px-8"
+                className="gap-2 px-8 text-white"
                 size="lg"
+                style={{ backgroundColor: '#FF4500' }}
               >
                 Próximo
                 <ChevronRight className="h-4 w-4" />
@@ -1045,8 +1048,9 @@ const CleanEmailMarketing: React.FC = () => {
               <Button
                 onClick={sendEmails}
                 disabled={sending || !isConnected}
-                className="gap-2 px-8"
+                className="gap-2 px-8 text-white"
                 size="lg"
+                style={{ backgroundColor: '#FF4500' }}
               >
                 {sending ? (
                   <>

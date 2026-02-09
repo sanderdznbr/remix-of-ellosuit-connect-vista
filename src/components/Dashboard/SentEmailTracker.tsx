@@ -1,164 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Mail, Eye, MousePointer, Clock, Search, Filter,
-  CheckCircle, AlertCircle, TrendingUp, Users, RefreshCw,
-  ArrowUpRight, ChevronRight, MailOpen, ExternalLink
+  AlertCircle, RefreshCw, ChevronRight, MailOpen, ExternalLink,
+  Smartphone, Monitor, Tablet, Globe, MapPin, Chrome
 } from 'lucide-react';
-import { format, subDays, subHours } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-// Demo data for sent emails
-const demoEmails = [
-  {
-    id: '1',
-    recipient: 'carlos.silva@empresa.com',
-    recipientName: 'Carlos Silva',
-    subject: 'Proposta Comercial - Serviços de Marketing Digital',
-    sentAt: subHours(new Date(), 2),
-    status: 'opened',
-    opens: 5,
-    lastOpened: subHours(new Date(), 1),
-    clicks: 3,
-    links: ['https://proposta.com/ver', 'https://calendario.com/agendar'],
-    device: 'Desktop',
-    location: 'São Paulo, BR'
-  },
-  {
-    id: '2',
-    recipient: 'maria.santos@techcorp.com',
-    recipientName: 'Maria Santos',
-    subject: 'Follow-up: Reunião de Ontem',
-    sentAt: subHours(new Date(), 5),
-    status: 'opened',
-    opens: 2,
-    lastOpened: subHours(new Date(), 3),
-    clicks: 1,
-    links: ['https://docs.google.com/presentation'],
-    device: 'Mobile',
-    location: 'Rio de Janeiro, BR'
-  },
-  {
-    id: '3',
-    recipient: 'joao.oliveira@startup.io',
-    recipientName: 'João Oliveira',
-    subject: 'Novo Catálogo de Produtos 2026',
-    sentAt: subDays(new Date(), 1),
-    status: 'delivered',
-    opens: 0,
-    lastOpened: null,
-    clicks: 0,
-    links: ['https://catalogo.com/download'],
-    device: null,
-    location: null
-  },
-  {
-    id: '4',
-    recipient: 'ana.costa@financeira.com.br',
-    recipientName: 'Ana Costa',
-    subject: 'Relatório Mensal - Janeiro 2026',
-    sentAt: subDays(new Date(), 1),
-    status: 'opened',
-    opens: 8,
-    lastOpened: subHours(new Date(), 12),
-    clicks: 4,
-    links: ['https://relatorio.com/janeiro', 'https://dashboard.com'],
-    device: 'Desktop',
-    location: 'Brasília, BR'
-  },
-  {
-    id: '5',
-    recipient: 'pedro.lima@agencia.com',
-    recipientName: 'Pedro Lima',
-    subject: 'Orçamento Aprovado - Projeto X',
-    sentAt: subDays(new Date(), 2),
-    status: 'clicked',
-    opens: 12,
-    lastOpened: subHours(new Date(), 6),
-    clicks: 7,
-    links: ['https://contrato.com/assinar', 'https://pagamento.com/link'],
-    device: 'Tablet',
-    location: 'Curitiba, BR'
-  },
-  {
-    id: '6',
-    recipient: 'fernanda.rocha@consultoria.com',
-    recipientName: 'Fernanda Rocha',
-    subject: 'Convite: Workshop de Inovação',
-    sentAt: subDays(new Date(), 3),
-    status: 'bounced',
-    opens: 0,
-    lastOpened: null,
-    clicks: 0,
-    links: [],
-    device: null,
-    location: null,
-    bounceReason: 'Caixa de entrada cheia'
-  },
-  {
-    id: '7',
-    recipient: 'lucas.mendes@ecommerce.com',
-    recipientName: 'Lucas Mendes',
-    subject: 'Integração API - Documentação Técnica',
-    sentAt: subDays(new Date(), 4),
-    status: 'opened',
-    opens: 3,
-    lastOpened: subDays(new Date(), 2),
-    clicks: 2,
-    links: ['https://docs.api.com', 'https://github.com/repo'],
-    device: 'Desktop',
-    location: 'Belo Horizonte, BR'
-  },
-  {
-    id: '8',
-    recipient: 'patricia.alves@hospital.org',
-    recipientName: 'Patrícia Alves',
-    subject: 'Confirmação de Agendamento',
-    sentAt: subDays(new Date(), 5),
-    status: 'delivered',
-    opens: 0,
-    lastOpened: null,
-    clicks: 0,
-    links: ['https://agenda.com/confirmar'],
-    device: null,
-    location: null
-  },
-];
+interface TrackedEmail {
+  id: string;
+  recipient_email: string;
+  recipient_name: string | null;
+  subject: string;
+  sent_at: string;
+  status: string;
+  open_count: number;
+  opened_at: string | null;
+  last_opened_at: string | null;
+  metadata: any;
+  tracking_pixel_id: string;
+}
+
+interface EmailEvent {
+  id: string;
+  email_id: string;
+  event_type: string;
+  timestamp: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  browser: string | null;
+  os: string | null;
+  device_type: string | null;
+  country: string | null;
+  city: string | null;
+  referrer: string | null;
+  open_count: number | null;
+  metadata: any;
+}
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
+  sent: { label: 'Enviado', color: 'text-blue-600', bgColor: 'bg-blue-100', icon: Mail },
   delivered: { label: 'Entregue', color: 'text-blue-600', bgColor: 'bg-blue-100', icon: Mail },
   opened: { label: 'Aberto', color: 'text-green-600', bgColor: 'bg-green-100', icon: MailOpen },
   clicked: { label: 'Clicado', color: 'text-purple-600', bgColor: 'bg-purple-100', icon: MousePointer },
   bounced: { label: 'Falhou', color: 'text-red-600', bgColor: 'bg-red-100', icon: AlertCircle },
 };
 
+const getDeviceIcon = (deviceType: string | null) => {
+  switch (deviceType) {
+    case 'mobile': return Smartphone;
+    case 'tablet': return Tablet;
+    case 'email_proxy': return Globe;
+    default: return Monitor;
+  }
+};
+
 const SentEmailTracker: React.FC = () => {
+  const { toast } = useToast();
+  const [emails, setEmails] = useState<TrackedEmail[]>([]);
+  const [events, setEvents] = useState<EmailEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedEmail, setSelectedEmail] = useState<typeof demoEmails[0] | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<TrackedEmail | null>(null);
+  const [selectedEmailEvents, setSelectedEmailEvents] = useState<EmailEvent[]>([]);
+  const [showEventsModal, setShowEventsModal] = useState(false);
 
-  // Calculate stats
-  const totalEmails = demoEmails.length;
-  const openedEmails = demoEmails.filter(e => e.opens > 0).length;
-  const clickedEmails = demoEmails.filter(e => e.clicks > 0).length;
-  const bouncedEmails = demoEmails.filter(e => e.status === 'bounced').length;
-  const openRate = ((openedEmails / totalEmails) * 100).toFixed(1);
-  const clickRate = ((clickedEmails / totalEmails) * 100).toFixed(1);
+  const loadEmails = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('emails')
+      .select('*')
+      .order('sent_at', { ascending: false })
+      .limit(200);
 
-  // Filter emails
-  const filteredEmails = demoEmails.filter(email => {
-    const matchesSearch = 
-      email.recipient.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    if (!error && data) {
+      setEmails(data as any);
+    }
+    setLoading(false);
+  };
+
+  const loadEventsForEmail = async (emailId: string) => {
+    const { data } = await supabase
+      .from('email_events')
+      .select('*')
+      .eq('email_id', emailId)
+      .order('timestamp', { ascending: false });
+
+    if (data) {
+      setSelectedEmailEvents(data as any);
+    }
+  };
+
+  useEffect(() => {
+    loadEmails();
+  }, []);
+
+  useEffect(() => {
+    if (selectedEmail) {
+      loadEventsForEmail(selectedEmail.id);
+    }
+  }, [selectedEmail?.id]);
+
+  const getEmailStatus = (email: TrackedEmail) => {
+    if ((email.open_count || 0) > 0) return 'opened';
+    return email.status || 'sent';
+  };
+
+  // Stats
+  const totalEmails = emails.length;
+  const openedEmails = emails.filter(e => (e.open_count || 0) > 0).length;
+  const totalOpens = emails.reduce((sum, e) => sum + (e.open_count || 0), 0);
+  const openRate = totalEmails > 0 ? ((openedEmails / totalEmails) * 100).toFixed(1) : '0';
+
+  // Filter
+  const filteredEmails = emails.filter(email => {
+    const matchesSearch =
+      email.recipient_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.recipientName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || email.status === filterStatus;
-    
+      (email.recipient_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    const emailStatus = getEmailStatus(email);
+    const matchesStatus = filterStatus === 'all' || emailStatus === filterStatus;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -168,17 +141,17 @@ const SentEmailTracker: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl">
-              <Eye className="h-6 w-6 text-primary" />
+            <div className="p-2.5 rounded-xl" style={{ backgroundColor: '#FF450015' }}>
+              <Eye className="h-6 w-6" style={{ color: '#FF4500' }} />
             </div>
             Rastrear Emails Enviados
           </h1>
           <p className="text-muted-foreground mt-1">
-            Acompanhe aberturas, cliques e engajamento dos seus emails
+            Acompanhe aberturas e engajamento dos seus emails em tempo real
           </p>
         </div>
-        <Button variant="outline" className="rounded-xl gap-2">
-          <RefreshCw className="h-4 w-4" />
+        <Button variant="outline" className="rounded-xl gap-2" onClick={loadEmails} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>
       </div>
@@ -217,11 +190,11 @@ const SentEmailTracker: React.FC = () => {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-100 rounded-xl">
-                <MousePointer className="h-5 w-5 text-purple-600" />
+                <Eye className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{clickRate}%</p>
-                <p className="text-sm text-muted-foreground">Taxa de Clique</p>
+                <p className="text-2xl font-bold">{totalOpens}</p>
+                <p className="text-sm text-muted-foreground">Total de Aberturas</p>
               </div>
             </div>
           </CardContent>
@@ -230,12 +203,12 @@ const SentEmailTracker: React.FC = () => {
         <Card className="rounded-2xl border-0 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-100 rounded-xl">
-                <AlertCircle className="h-5 w-5 text-red-600" />
+              <div className="p-3 bg-amber-100 rounded-xl">
+                <MailOpen className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{bouncedEmails}</p>
-                <p className="text-sm text-muted-foreground">Falhas</p>
+                <p className="text-2xl font-bold">{openedEmails}</p>
+                <p className="text-sm text-muted-foreground">Emails Abertos</p>
               </div>
             </div>
           </CardContent>
@@ -267,10 +240,8 @@ const SentEmailTracker: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
                       <SelectItem value="all" className="rounded-lg">Todos</SelectItem>
-                      <SelectItem value="delivered" className="rounded-lg">Entregue</SelectItem>
+                      <SelectItem value="sent" className="rounded-lg">Enviado</SelectItem>
                       <SelectItem value="opened" className="rounded-lg">Aberto</SelectItem>
-                      <SelectItem value="clicked" className="rounded-lg">Clicado</SelectItem>
-                      <SelectItem value="bounced" className="rounded-lg">Falhou</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -278,58 +249,77 @@ const SentEmailTracker: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px]">
-                <div className="space-y-2">
-                  {filteredEmails.map((email) => {
-                    const status = statusConfig[email.status];
-                    const StatusIcon = status.icon;
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredEmails.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Mail className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum email rastreado ainda</p>
+                    <p className="text-xs text-muted-foreground mt-1">Envie emails pelo módulo de Email Marketing para rastreá-los</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredEmails.map((email) => {
+                      const emailStatus = getEmailStatus(email);
+                      const status = statusConfig[emailStatus] || statusConfig.sent;
+                      const StatusIcon = status.icon;
 
-                    return (
-                      <div
-                        key={email.id}
-                        onClick={() => setSelectedEmail(email)}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
-                          selectedEmail?.id === email.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/30'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium truncate">{email.recipientName}</p>
-                              <Badge className={`${status.bgColor} ${status.color} border-0 text-xs`}>
-                                <StatusIcon className="h-3 w-3 mr-1" />
-                                {status.label}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate mb-2">
-                              {email.subject}
-                            </p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(email.sentAt, "dd MMM 'às' HH:mm", { locale: ptBR })}
-                              </span>
-                              {email.opens > 0 && (
-                                <span className="flex items-center gap-1 text-green-600">
-                                  <Eye className="h-3 w-3" />
-                                  {email.opens}x aberto
+                      return (
+                        <div
+                          key={email.id}
+                          onClick={() => setSelectedEmail(email)}
+                          className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
+                            selectedEmail?.id === email.id
+                              ? 'border-[#FF4500] bg-[#FF4500]/5'
+                              : 'border-border hover:border-[#FF4500]/30'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium truncate">
+                                  {email.recipient_name || email.recipient_email}
+                                </p>
+                                <Badge className={`${status.bgColor} ${status.color} border-0 text-xs`}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {status.label}
+                                </Badge>
+                                {(email.open_count || 0) > 1 && (
+                                  <Badge variant="outline" className="text-[10px] border-green-300 text-green-600">
+                                    {email.open_count}x
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate mb-2">
+                                {email.subject}
+                              </p>
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {format(new Date(email.sent_at), "dd MMM 'às' HH:mm", { locale: ptBR })}
                                 </span>
-                              )}
-                              {email.clicks > 0 && (
-                                <span className="flex items-center gap-1 text-purple-600">
-                                  <MousePointer className="h-3 w-3" />
-                                  {email.clicks} cliques
-                                </span>
-                              )}
+                                {(email.open_count || 0) > 0 && (
+                                  <span className="flex items-center gap-1 text-green-600">
+                                    <Eye className="h-3 w-3" />
+                                    {email.open_count}x aberto
+                                  </span>
+                                )}
+                                {email.last_opened_at && (
+                                  <span className="flex items-center gap-1 text-muted-foreground">
+                                    Último: {format(new Date(email.last_opened_at), "dd/MM HH:mm")}
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </ScrollArea>
             </CardContent>
           </Card>
@@ -343,12 +333,12 @@ const SentEmailTracker: React.FC = () => {
             </CardHeader>
             <CardContent>
               {selectedEmail ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {/* Recipient */}
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Destinatário</p>
-                    <p className="font-medium">{selectedEmail.recipientName}</p>
-                    <p className="text-sm text-muted-foreground">{selectedEmail.recipient}</p>
+                    <p className="font-medium">{selectedEmail.recipient_name || 'Sem nome'}</p>
+                    <p className="text-sm text-muted-foreground">{selectedEmail.recipient_email}</p>
                   </div>
 
                   {/* Subject */}
@@ -357,89 +347,105 @@ const SentEmailTracker: React.FC = () => {
                     <p className="font-medium text-sm">{selectedEmail.subject}</p>
                   </div>
 
+                  {/* Provider */}
+                  {selectedEmail.metadata?.provider && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Enviado via</p>
+                      <Badge variant="outline" className="capitalize">{selectedEmail.metadata.provider}</Badge>
+                    </div>
+                  )}
+
                   {/* Stats */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-muted/50 rounded-xl">
                       <div className="flex items-center gap-2 mb-1">
                         <Eye className="h-4 w-4 text-green-600" />
                         <span className="text-xs text-muted-foreground">Aberturas</span>
                       </div>
-                      <p className="text-xl font-bold">{selectedEmail.opens}</p>
+                      <p className="text-xl font-bold">{selectedEmail.open_count || 0}</p>
                     </div>
                     <div className="p-3 bg-muted/50 rounded-xl">
                       <div className="flex items-center gap-2 mb-1">
-                        <MousePointer className="h-4 w-4 text-purple-600" />
-                        <span className="text-xs text-muted-foreground">Cliques</span>
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs text-muted-foreground">Primeira abertura</span>
                       </div>
-                      <p className="text-xl font-bold">{selectedEmail.clicks}</p>
+                      <p className="text-sm font-medium">
+                        {selectedEmail.opened_at
+                          ? format(new Date(selectedEmail.opened_at), "dd/MM HH:mm")
+                          : '—'
+                        }
+                      </p>
                     </div>
                   </div>
 
-                  {/* Timeline */}
+                  {/* Events Timeline */}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-3">Histórico</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-muted-foreground">Histórico de Eventos</p>
+                      {selectedEmailEvents.length > 3 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs h-6 px-2"
+                          onClick={() => setShowEventsModal(true)}
+                        >
+                          Ver todos ({selectedEmailEvents.length})
+                        </Button>
+                      )}
+                    </div>
                     <div className="space-y-3">
+                      {/* Always show sent */}
                       <div className="flex items-start gap-3">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
                         <div>
                           <p className="text-sm font-medium">Enviado</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(selectedEmail.sentAt, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                            {format(new Date(selectedEmail.sent_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
-                      {selectedEmail.opens > 0 && selectedEmail.lastOpened && (
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5" />
-                          <div>
-                            <p className="text-sm font-medium">Última abertura</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(selectedEmail.lastOpened, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                            </p>
-                            {selectedEmail.device && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {selectedEmail.device} • {selectedEmail.location}
+
+                      {/* Show recent events */}
+                      {selectedEmailEvents.slice(0, 3).map((event) => {
+                        const DeviceIcon = getDeviceIcon(event.device_type);
+                        return (
+                          <div key={event.id} className="flex items-start gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                              event.event_type === 'opened' ? 'bg-green-500' : 'bg-gray-400'
+                            }`} />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium capitalize">
+                                {event.event_type === 'opened' ? 'Aberto' : event.event_type}
                               </p>
-                            )}
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {event.browser && (
+                                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                                    <Chrome className="h-2.5 w-2.5" />
+                                    {event.browser}
+                                  </Badge>
+                                )}
+                                {event.os && (
+                                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                                    <DeviceIcon className="h-2.5 w-2.5" />
+                                    {event.os}
+                                  </Badge>
+                                )}
+                                {event.city && event.country && (
+                                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                                    <MapPin className="h-2.5 w-2.5" />
+                                    {event.city}, {event.country}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {selectedEmail.status === 'bounced' && (
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5" />
-                          <div>
-                            <p className="text-sm font-medium text-red-600">Falha na entrega</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(selectedEmail as any).bounceReason}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
                   </div>
-
-                  {/* Links clicked */}
-                  {selectedEmail.links.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-2">Links no email</p>
-                      <div className="space-y-2">
-                        {selectedEmail.links.map((link, idx) => (
-                          <div 
-                            key={idx}
-                            className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg text-xs"
-                          >
-                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                            <span className="truncate flex-1">{link}</span>
-                            {selectedEmail.clicks > 0 && idx === 0 && (
-                              <Badge variant="outline" className="text-[10px]">
-                                Clicado
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -455,6 +461,68 @@ const SentEmailTracker: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Events Detail Modal */}
+      <Dialog open={showEventsModal} onOpenChange={setShowEventsModal}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" style={{ color: '#FF4500' }} />
+              Todas as aberturas ({selectedEmailEvents.filter(e => e.event_type === 'opened').length})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 max-h-[60vh]">
+            <div className="space-y-3 pr-4">
+              {selectedEmailEvents
+                .filter(e => e.event_type === 'opened')
+                .map((event, idx) => {
+                  const DeviceIcon = getDeviceIcon(event.device_type);
+                  return (
+                    <div key={event.id} className="p-3 border rounded-xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Abertura #{selectedEmailEvents.filter(e => e.event_type === 'opened').length - idx}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {event.browser && (
+                          <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                            <Chrome className="h-2.5 w-2.5" />
+                            {event.browser}
+                          </Badge>
+                        )}
+                        {event.os && (
+                          <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                            <DeviceIcon className="h-2.5 w-2.5" />
+                            {event.os}
+                          </Badge>
+                        )}
+                        {event.device_type && (
+                          <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                            <DeviceIcon className="h-2.5 w-2.5" />
+                            {event.device_type === 'mobile' ? 'Mobile' : event.device_type === 'tablet' ? 'Tablet' : event.device_type === 'email_proxy' ? 'Proxy' : 'Desktop'}
+                          </Badge>
+                        )}
+                        {event.city && event.country && (
+                          <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                            <MapPin className="h-2.5 w-2.5" />
+                            {event.city}, {event.country}
+                          </Badge>
+                        )}
+                      </div>
+                      {event.ip_address && (
+                        <p className="text-[10px] text-muted-foreground mt-2">
+                          IP: {String(event.ip_address)}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

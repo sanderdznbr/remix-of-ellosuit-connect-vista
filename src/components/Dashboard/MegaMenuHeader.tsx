@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
-  Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch
+  Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
+  Briefcase
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
@@ -22,8 +23,7 @@ const COLORS = {
   omni: "#FF4500",
   flow: "#007DE3",
   track: "#00E371",
-  gestao: "#8B5CF6",
-  insights: "#EC4899",
+  suite: "#8B5CF6",
   config: "#64748B",
 };
 
@@ -66,7 +66,6 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "email-builder", label: "Templates de Email", description: "Editor visual de emails", icon: FileText, path: "/dashboard/email-templates" },
           { id: "agentes", label: "Agentes de IA", description: "Chatbots inteligentes", icon: Bot, path: "/dashboard/bot-ia" },
-          { id: "clientes", label: "Banco de Clientes", description: "Base de contatos", icon: Users, path: "/dashboard/cadastros" },
         ]
       }
     ]
@@ -119,9 +118,9 @@ const menuGroups: MenuGroup[] = [
     ]
   },
   {
-    id: "gestao",
-    label: "Gestão",
-    color: COLORS.gestao,
+    id: "suite",
+    label: "Suite",
+    color: COLORS.suite,
     hubPath: "/dashboard/cadastros",
     columns: [
       {
@@ -130,15 +129,7 @@ const menuGroups: MenuGroup[] = [
           { id: "cadastros", label: "Cadastros", description: "Clientes e contatos", icon: Users, path: "/dashboard/cadastros" },
           { id: "arquivos", label: "Arquivos", description: "Drive de documentos", icon: FolderOpen, path: "/dashboard/drive" },
         ]
-      }
-    ]
-  },
-  {
-    id: "insights",
-    label: "Insights",
-    color: COLORS.insights,
-    hubPath: "/dashboard/analytics",
-    columns: [
+      },
       {
         title: "Análises",
         items: [
@@ -387,7 +378,7 @@ export function MegaMenuHeader() {
                       <div className="mb-2">
                         <EllosuitOmniLogo 
                           className="h-6 w-auto" 
-                          variant={currentGroup.id as 'omni' | 'flow' | 'track' | 'gestao' | 'insights'}
+                          variant={currentGroup.id as 'omni' | 'flow' | 'track' | 'suite'}
                         />
                       </div>
                       <p className="text-sm text-gray-600">
@@ -433,7 +424,7 @@ export function MegaMenuHeader() {
                                   >
                                     {item.label}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 block mt-0.5">
                                     {item.description}
                                   </span>
                                 </div>
@@ -453,5 +444,3 @@ export function MegaMenuHeader() {
     </header>
   );
 }
-
-export default MegaMenuHeader;

@@ -274,8 +274,8 @@ const BotIADashboard: React.FC = () => {
   };
 
   const stats = [
-    { label: 'Agentes Ativos', value: agents.filter(a => a.is_active).length, icon: Bot, color: 'text-blue-600 bg-blue-100' },
-    { label: 'Total de Agentes', value: agents.length, icon: Brain, color: 'text-indigo-600 bg-indigo-100' },
+    { label: 'Agentes Ativos', value: agents.filter(a => a.is_active).length, icon: Bot, color: 'text-[#FF4500] bg-[#FF4500]/10' },
+    { label: 'Total de Agentes', value: agents.length, icon: Brain, color: 'text-[#FF4500] bg-[#FF4500]/10' },
     { label: 'Conversas Hoje', value: 28, icon: MessageCircle, color: 'text-green-600 bg-green-100' },
     { label: 'Taxa de Resposta', value: '94%', icon: Zap, color: 'text-purple-600 bg-purple-100' },
   ];
@@ -297,8 +297,8 @@ const BotIADashboard: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl">
-              <Bot className="h-6 w-6 text-primary" />
+            <div className="p-2.5 bg-[#FF4500]/10 rounded-xl">
+              <Bot className="h-6 w-6 text-[#FF4500]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Agentes de IA</h1>
@@ -313,7 +313,7 @@ const BotIADashboard: React.FC = () => {
               <Brain className="h-4 w-4 mr-2" />
               Templates
             </Button>
-            <Button onClick={() => setShowCreateModal(true)}>
+            <Button onClick={() => setShowCreateModal(true)} className="bg-[#FF4500] hover:bg-[#FF4500]/90">
               <Plus className="h-4 w-4 mr-2" />
               Novo Agente
             </Button>
@@ -372,8 +372,8 @@ const BotIADashboard: React.FC = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
-                          <Bot className="h-5 w-5 text-primary" />
+                        <div className="p-2 bg-[#FF4500]/10 rounded-xl group-hover:bg-[#FF4500]/20 transition-colors">
+                          <Bot className="h-5 w-5 text-[#FF4500]" />
                         </div>
                         <div>
                           <CardTitle className="text-base font-semibold">{agent.name}</CardTitle>
@@ -382,7 +382,7 @@ const BotIADashboard: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <Badge variant={agent.is_active ? 'default' : 'secondary'}>
+                      <Badge variant={agent.is_active ? 'default' : 'secondary'} className={agent.is_active ? 'bg-[#FF4500]' : ''}>
                         {agent.is_active ? 'Ativo' : 'Pausado'}
                       </Badge>
                     </div>
@@ -405,7 +405,7 @@ const BotIADashboard: React.FC = () => {
                         <Button
                           size="sm"
                           onClick={() => { setSelectedAgent(agent); setShowChatModal(true); }}
-                          className="flex-1"
+                          className="flex-1 bg-[#FF4500] hover:bg-[#FF4500]/90"
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Conversar

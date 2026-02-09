@@ -1,50 +1,41 @@
-# ✅ IMPLEMENTADO: Cores Dinâmicas por Hub (Omni, Flow, Track)
 
-## Status: CONCLUÍDO
 
-## O que foi implementado
+# Fix: Sent Messages Appearing in All Conversations
 
-### 1. Hook useHubColor criado
-**Arquivo:** `src/hooks/useHubColor.tsx`
+## Problem
+When you send a message in one conversation, it visually appears in ALL other conversations. The messages "Bom dia tudo bem?" and "Vi sim, o problema era no seu banco de dados..." are showing in Edina Ribeiro, Antonio Galli, 555181153408, and Gustavo Oliveira conversations simultaneously.
 
-- Detecta automaticamente qual hub está ativo pela URL
-- Retorna a cor correspondente (#FF4500, #007DE3, #00E371 ou padrão #3000E3)
-- Exporta constantes de cor para uso em componentes
+## Root Cause
+The bug is in the optimistic message handling inside the `loadMessagesByPhone` function in `WhatsAppCRM.tsx`. When you send a message:
 
-### 2. MegaMenuHeader atualizado
-**Arquivo:** `src/components/Dashboard/MegaMenuHeader.tsx`
+1. A temporary ("optimistic") message is added to the shared `messages` state with a `conversation_id`
+2. When you switch to another conversation, the system loads messages from the database for that new contact
+3. During the merge step, it keeps ALL temporary messages that haven't been matched to server data -- but it never checks whether those temp messages actually belong to the current conversation
+4. Result: temp messages from conversation A leak into conversation B, C, D, etc.
 
-- Importa o hook `useHubColor`
-- Logo Ellosuit muda de cor conforme o hub ativo
-- COLORS.omni atualizado para #FF4500
+## Solution
+Filter temporary messages by `conversation_id` during the merge step so only temp messages belonging to the currently selected conversation are preserved.
 
-### 3. Componentes Omni atualizados para #FF4500
+## Technical Details
 
-- `src/components/Dashboard/OmniHub.tsx` - OMNI_COLOR
-- `src/components/CRM/SaveLeadModal.tsx` - Botões e ícones
-- `src/components/CRM/ConversationLabelsManager.tsx` - Ícones e seleções
-- `src/components/ChatBot/ChatBotBuilder.tsx` - BRAND_COLOR
+**File:** `src/components/CRM/WhatsAppCRM.tsx`
 
-### 4. Hubs Flow e Track já configurados
+**Change in `loadMessagesByPhone` function (around line 566-604):**
 
-- `src/components/Dashboard/FlowsHub.tsx` - FLOW_COLOR = #007DE3
-- `src/components/Dashboard/TrackHub.tsx` - TRACK_COLOR = #00E371
+Currently the code does:
+```typescript
+const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+```
 
-## Mapeamento de Rotas por Hub
+This needs to also filter by the current conversation's ID:
+```typescript
+const tempMessages = prev.filter(m =>
+  m.id.startsWith('temp-') &&
+  m.conversation_id === currentConversationId
+);
+```
 
-### Omni (#FF4500) - Comunicação
-- `/dashboard/omni`, `/dashboard/crm-whatsapp`, `/dashboard/chatbot`
-- `/dashboard/email`, `/dashboard/email-templates`, `/dashboard/bot-ia`, `/dashboard/cadastros`
+The function will need access to the current conversation ID. Since `loadMessagesByPhone` takes `contactPhone` as parameter, we need to pass the conversation ID as well, or derive it from the conversations loaded in the query (the `conversationIds` array already available at line 516).
 
-### Flow (#007DE3) - Produtividade
-- `/dashboard/flows`, `/dashboard/agenda`, `/dashboard/agenda-aberta`
-- `/dashboard/tasks`, `/dashboard/reunioes`, `/dashboard/fluxos`, `/dashboard/leads`
+The fix adds a single filtering condition to scope temp messages to only the conversation(s) matching the current contact phone, preventing cross-conversation message leakage.
 
-### Track (#00E371) - Rastreamento
-- `/dashboard/track`, `/dashboard/rastreamento`, `/dashboard/email-tracker`
-
-## Resultado
-
-✅ Logo Ellosuit no header muda de cor conforme o hub ativo
-✅ Botões e elementos do Omni usam #FF4500
-✅ Páginas neutras usam azul padrão #3000E3

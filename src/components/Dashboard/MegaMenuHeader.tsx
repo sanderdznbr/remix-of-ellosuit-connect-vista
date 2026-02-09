@@ -206,11 +206,17 @@ export function MegaMenuHeader() {
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "US";
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+    <header 
+      className="sticky top-0 z-50"
+      style={{ 
+        backgroundColor: hubColor,
+        transition: 'background-color 0.5s ease-in-out',
+      }}
+    >
       <div className="h-16 px-6 flex items-center justify-between">
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-3">
-          <ElloLogo className="h-8 w-auto" color={hubColor} />
+          <ElloLogo className="h-8 w-auto" color="white" />
         </Link>
 
         {/* Main Navigation */}
@@ -224,10 +230,10 @@ export function MegaMenuHeader() {
             >
               <button
                 onClick={() => handleMenuClick(group.hubPath)}
-                className="px-4 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all"
+                className="px-4 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all hover:bg-white/10"
                 style={{
-                  backgroundColor: activeMenu === group.id || activeGroupId === group.id ? `${group.color}10` : 'transparent',
-                  color: activeMenu === group.id || activeGroupId === group.id ? group.color : '#374151',
+                  backgroundColor: activeMenu === group.id || activeGroupId === group.id ? 'rgba(255,255,255,0.2)' : 'transparent',
+                  color: activeMenu === group.id || activeGroupId === group.id ? 'white' : 'rgba(255,255,255,0.75)',
                 }}
               >
                 <span>{group.label}</span>
@@ -235,6 +241,7 @@ export function MegaMenuHeader() {
                   className="h-4 w-4 transition-transform" 
                   style={{
                     transform: activeMenu === group.id ? 'rotate(180deg)' : 'rotate(0deg)',
+                    opacity: 0.6,
                   }}
                 />
               </button>
@@ -247,8 +254,8 @@ export function MegaMenuHeader() {
           {/* Notifications Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
-                <Bell className="h-5 w-5 text-gray-500" />
+              <button className="p-2 rounded-lg hover:bg-white/10 transition-colors relative">
+                <Bell className="h-5 w-5 text-white" />
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
                   3
                 </span>
@@ -303,15 +310,15 @@ export function MegaMenuHeader() {
             onMouseEnter={() => handleMouseEnter('config')}
             onMouseLeave={handleMouseLeave}
           >
-            <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <Settings className="h-5 w-5 text-gray-500" />
+            <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+              <Settings className="h-5 w-5 text-white" />
             </button>
           </div>
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+              <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="" />
                   <AvatarFallback className="bg-blue-500 text-white text-xs">

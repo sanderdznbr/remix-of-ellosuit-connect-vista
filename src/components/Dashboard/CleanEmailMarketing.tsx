@@ -731,12 +731,12 @@ const CleanEmailMarketing: React.FC = () => {
       {!contentMode ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card 
-            className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all group"
+            className="cursor-pointer hover:shadow-lg transition-all group border-2 hover:border-[#FF4500]/40"
             onClick={() => setContentMode('template')}
           >
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
-                <FileText className="h-8 w-8 text-primary" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors" style={{ backgroundColor: '#FF450015' }}>
+                <FileText className="h-8 w-8" style={{ color: '#FF4500' }} />
               </div>
               <h4 className="font-bold text-lg mb-2">Usar Template</h4>
               <p className="text-muted-foreground">
@@ -751,12 +751,12 @@ const CleanEmailMarketing: React.FC = () => {
           </Card>
           
           <Card 
-            className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all group"
+            className="cursor-pointer hover:shadow-lg transition-all group border-2 hover:border-[#FF4500]/40"
             onClick={goToBuilder}
           >
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
-                <Palette className="h-8 w-8 text-primary" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors" style={{ backgroundColor: '#FF450015' }}>
+                <Palette className="h-8 w-8" style={{ color: '#FF4500' }} />
               </div>
               <h4 className="font-bold text-lg mb-2">Criar do Zero</h4>
               <p className="text-muted-foreground">
@@ -787,37 +787,50 @@ const CleanEmailMarketing: React.FC = () => {
           </div>
           
           {templates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map(template => (
-                <Card
-                  key={template.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedTemplate?.id === template.id 
-                      ? 'border-primary ring-2 ring-primary/20' 
-                      : 'hover:border-primary/50'
-                  }`}
-                  onClick={() => selectTemplate(template)}
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{template.name}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {template.description || 'Sem descrição'}
-                        </p>
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          {template.category}
-                        </Badge>
-                      </div>
-                      {selectedTemplate?.id === template.id && (
-                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                          <Check className="h-4 w-4 text-primary-foreground" />
+            <div className="space-y-2">
+              {templates.map(template => {
+                const isSelected = selectedTemplate?.id === template.id;
+                return (
+                  <div
+                    key={template.id}
+                    className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'border-[#FF4500] bg-[#FF4500]/5 ring-1 ring-[#FF4500]/20' 
+                        : 'hover:bg-muted/50 hover:border-muted-foreground/20'
+                    }`}
+                    onClick={() => selectTemplate(template)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm">{template.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {template.description || 'Sem descrição'}
+                      </p>
+                      <Badge variant="outline" className="mt-1.5 text-xs">
+                        {template.category}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectTemplate(template);
+                        }}
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        Pré-visualizar
+                      </Button>
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FF4500' }}>
+                          <Check className="h-3 w-3 text-white" />
                         </div>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <Card className="border-dashed border-2">

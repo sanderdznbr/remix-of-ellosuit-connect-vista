@@ -383,6 +383,65 @@ const WhatsAppCRM: React.FC = () => {
     getCompanyId();
   }, [user?.id]);
 
+  // Unify sessions with the same phone number - migrate conversations to the newest session
+  const unifyDuplicateSessions = async (sessionsData: WhatsAppSession[]) => {
+    if (!companyId || sessionsData.length < 2) return sessionsData;
+    
+    // Group sessions by phone number
+    const byPhone = new Map<string, WhatsAppSession[]>();
+    sessionsData.forEach(s => {
+      const phone = s.phone_number?.replace(/\D/g, '');
+      if (phone) {
+        if (!byPhone.has(phone)) byPhone.set(phone, []);
+        byPhone.get(phone)!.push(s);
+      }
+    });
+    
+    const sessionsToDelete: string[] = [];
+    
+    for (const [phone, group] of byPhone.entries()) {
+      if (group.length < 2) continue;
+      
+      // Keep the newest connected session, or newest overall
+      const sorted = [...group].sort((a, b) => {
+        // Prefer connected
+        if (a.status === 'connected' && b.status !== 'connected') return -1;
+        if (b.status === 'connected' && a.status !== 'connected') return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      
+      const keepSession = sorted[0];
+      const oldSessions = sorted.slice(1);
+      const oldIds = oldSessions.map(s => s.id);
+      
+      console.log(`[Unify] Phone ${phone}: keeping ${keepSession.id}, merging ${oldIds.length} old session(s)`);
+      
+      // Migrate conversations from old sessions to the keep session
+      const { data: migrated } = await supabase
+        .from('whatsapp_conversations')
+        .update({ session_id: keepSession.id })
+        .in('session_id', oldIds)
+        .select('id');
+      
+      if (migrated && migrated.length > 0) {
+        console.log(`[Unify] ✅ Migrated ${migrated.length} conversations for phone ${phone}`);
+      }
+      
+      // Delete old sessions
+      await supabase
+        .from('whatsapp_sessions')
+        .delete()
+        .in('id', oldIds);
+      
+      sessionsToDelete.push(...oldIds);
+    }
+    
+    if (sessionsToDelete.length > 0) {
+      return sessionsData.filter(s => !sessionsToDelete.includes(s.id));
+    }
+    return sessionsData;
+  };
+
   // Load data
   const loadSessions = async () => {
     if (!companyId) return;
@@ -393,12 +452,14 @@ const WhatsAppCRM: React.FC = () => {
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
     
-    if (!error) {
-      setSessions(data || []);
+    if (!error && data) {
+      // Auto-unify duplicate sessions with same phone number
+      const unified = await unifyDuplicateSessions(data);
+      setSessions(unified);
       // Auto-select first connected session if none selected
-      if (!selectedSessionId && data && data.length > 0) {
-        const connected = data.find(s => s.status === 'connected');
-        setSelectedSessionId(connected?.id || data[0].id);
+      if (!selectedSessionId && unified.length > 0) {
+        const connected = unified.find(s => s.status === 'connected');
+        setSelectedSessionId(connected?.id || unified[0].id);
       }
     }
   };

@@ -565,7 +565,7 @@ const WhatsAppCRM: React.FC = () => {
       // OPTIMISTIC UI: Preserve temp messages and merge with server data
       setMessages(prev => {
         // Separate temp messages (optimistic) from real messages
-        const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+        const tempMessages = prev.filter(m => m.id.startsWith('temp-') && conversationIds.includes(m.conversation_id));
         
         // Find which temp messages have been synced to server
         const matchedTempIds = new Set<string>();

@@ -49,7 +49,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({ onBack, existingDesign })
   
   // Global styles - default to white backgrounds
   const [emailBackgroundColor, setEmailBackgroundColor] = useState(
-    existingDesign?.design_data?.globalStyles?.backgroundColor || '#ffffff'
+    existingDesign?.design_data?.globalStyles?.backgroundColor || '#f4f4f4'
   );
   const [contentBackgroundColor, setContentBackgroundColor] = useState(
     existingDesign?.design_data?.globalStyles?.contentBackgroundColor || '#ffffff'

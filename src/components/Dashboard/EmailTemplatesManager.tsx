@@ -2,25 +2,66 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Edit, Copy, Trash2, Eye,
-  Mail, Loader2, Clock, Palette
+  Mail, Loader2, Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
 const OMNI_COLOR = '#FF4500';
 
+interface UnifiedTemplate {
+  id: string;
+  name: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  thumbnail_url?: string;
+  source: 'design' | 'template';
+  html_content?: string;
+  category?: string;
+}
+
 const EmailTemplatesManager: React.FC = () => {
   const navigate = useNavigate();
-  const { designs, loading, deleteDesign } = useEmailDesigns();
+  const { designs, loading: loadingDesigns, deleteDesign } = useEmailDesigns();
+  const { templates, loading: loadingTemplates, deleteTemplate, duplicateTemplate } = useEmailTemplates();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedDesigns, setSelectedDesigns] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
-  const filteredDesigns = designs.filter(d => {
+  const loading = loadingDesigns || loadingTemplates;
+
+  // Merge both sources into a unified list
+  const unifiedList: UnifiedTemplate[] = [
+    ...designs.map(d => ({
+      id: d.id,
+      name: d.name,
+      is_published: d.is_published,
+      created_at: d.created_at,
+      updated_at: d.updated_at,
+      thumbnail_url: d.thumbnail_url,
+      source: 'design' as const,
+    })),
+    ...templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      is_published: t.is_active,
+      created_at: t.created_at,
+      updated_at: t.updated_at,
+      source: 'template' as const,
+      html_content: t.html_content,
+      category: t.category,
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const filteredItems = unifiedList.filter(d => {
     const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterStatus === 'all' || 
       (filterStatus === 'published' && d.is_published) ||
@@ -39,21 +80,47 @@ const EmailTemplatesManager: React.FC = () => {
     return `${Math.floor(diffDays / 30)} meses atrás`;
   };
 
-  const handleDeleteDesign = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este design?')) {
-      await deleteDesign(id);
+  const handleDelete = async (item: UnifiedTemplate) => {
+    if (!confirm('Tem certeza que deseja excluir este template?')) return;
+    if (item.source === 'design') {
+      await deleteDesign(item.id);
+    } else {
+      await deleteTemplate(item.id);
+    }
+  };
+
+  const handleEdit = (item: UnifiedTemplate) => {
+    if (item.source === 'design') {
+      navigate(`/dashboard/email-builder?id=${item.id}`);
+    } else {
+      navigate(`/dashboard/email-builder?templateId=${item.id}`);
+    }
+  };
+
+  const handleDuplicate = async (item: UnifiedTemplate) => {
+    if (item.source === 'template') {
+      const tpl = templates.find(t => t.id === item.id);
+      if (tpl) await duplicateTemplate(tpl);
+    }
+  };
+
+  const handlePreview = (item: UnifiedTemplate) => {
+    if (item.source === 'design') {
+      navigate(`/dashboard/email-builder?id=${item.id}`);
+    } else if (item.html_content) {
+      setPreviewHtml(item.html_content);
     }
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedDesigns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedItems(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
   const toggleSelectAll = () => {
-    if (selectedDesigns.length === filteredDesigns.length) {
-      setSelectedDesigns([]);
+    if (selectedItems.length === filteredItems.length) {
+      setSelectedItems([]);
     } else {
-      setSelectedDesigns(filteredDesigns.map(d => d.id));
+      setSelectedItems(filteredItems.map(d => d.id));
     }
   };
 
@@ -111,14 +178,15 @@ const EmailTemplatesManager: React.FC = () => {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_120px_140px_140px_120px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="grid grid-cols-[40px_1fr_100px_120px_140px_140px_120px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
             <div className="flex items-center justify-center">
               <Checkbox 
-                checked={selectedDesigns.length === filteredDesigns.length && filteredDesigns.length > 0}
+                checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
                 onCheckedChange={toggleSelectAll}
               />
             </div>
             <div>Nome</div>
+            <div>Tipo</div>
             <div>Status</div>
             <div>Criado em</div>
             <div>Atualizado em</div>
@@ -126,7 +194,7 @@ const EmailTemplatesManager: React.FC = () => {
           </div>
 
           {/* List */}
-          {filteredDesigns.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="text-center py-16">
               <Palette className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum template encontrado</h3>
@@ -146,37 +214,43 @@ const EmailTemplatesManager: React.FC = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredDesigns.map(design => (
+              {filteredItems.map(item => (
                 <div 
-                  key={design.id}
-                  className="grid grid-cols-[40px_1fr_120px_140px_140px_120px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
+                  key={`${item.source}-${item.id}`}
+                  className="grid grid-cols-[40px_1fr_100px_120px_140px_140px_120px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-center justify-center">
                     <Checkbox 
-                      checked={selectedDesigns.includes(design.id)}
-                      onCheckedChange={() => toggleSelect(design.id)}
+                      checked={selectedItems.includes(item.id)}
+                      onCheckedChange={() => toggleSelect(item.id)}
                     />
                   </div>
 
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                      {design.thumbnail_url ? (
+                      {item.thumbnail_url ? (
                         <img 
-                          src={design.thumbnail_url} 
-                          alt={design.name}
+                          src={item.thumbnail_url} 
+                          alt={item.name}
                           className="w-full h-full object-cover rounded-xl"
                         />
                       ) : (
                         <Mail className="h-4 w-4 text-gray-400" />
                       )}
                     </div>
-                    <span className="font-medium text-gray-900 truncate">{design.name}</span>
+                    <span className="font-medium text-gray-900 truncate">{item.name}</span>
                   </div>
 
                   <div>
-                    {design.is_published ? (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                      {item.source === 'design' ? 'Design' : item.category || 'Template'}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    {item.is_published ? (
                       <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-2 py-0.5 dark:bg-green-900/20 dark:text-green-400">
-                        Publicado
+                        Ativo
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
@@ -186,11 +260,11 @@ const EmailTemplatesManager: React.FC = () => {
                   </div>
 
                   <div className="text-sm text-gray-500">
-                    {formatRelativeDate(design.created_at)}
+                    {formatRelativeDate(item.created_at)}
                   </div>
 
                   <div className="text-sm text-gray-500">
-                    {formatRelativeDate(design.updated_at)}
+                    {formatRelativeDate(item.updated_at)}
                   </div>
 
                   <div className="flex items-center justify-end gap-1">
@@ -198,7 +272,8 @@ const EmailTemplatesManager: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
+                      onClick={() => handlePreview(item)}
+                      title="Pré-visualizar"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -206,7 +281,8 @@ const EmailTemplatesManager: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
+                      onClick={() => handleEdit(item)}
+                      title="Editar"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -214,6 +290,8 @@ const EmailTemplatesManager: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      onClick={() => handleDuplicate(item)}
+                      title="Duplicar"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -221,7 +299,8 @@ const EmailTemplatesManager: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
-                      onClick={() => handleDeleteDesign(design.id)}
+                      onClick={() => handleDelete(item)}
+                      title="Excluir"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -232,6 +311,24 @@ const EmailTemplatesManager: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* HTML Preview Dialog */}
+      <Dialog open={!!previewHtml} onOpenChange={(open) => !open && setPreviewHtml(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Pré-visualização do Template</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border rounded-lg bg-white">
+            {previewHtml && (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-[60vh] border-0"
+                title="Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

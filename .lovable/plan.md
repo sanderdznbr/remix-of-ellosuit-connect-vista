@@ -1,438 +1,212 @@
 
+# Plano de Correção: CRM WhatsApp - Sincronização e Usabilidade
 
-# Plano: Sistema de Assinatura Modular para Empresas
+## Problemas Identificados
 
-## Visão Geral
+1. **Ao alternar entre canais, as conversas não mudam** - A função `loadConversations` não filtra por `session_id` quando um canal específico está selecionado
+2. **Tela de sync duplicada e feia** - O SVG está sendo renderizado dentro dele mesmo (barra de progresso duplicada no SVG + componente separado)
+3. **Carregamento muito lento** - Timeout de 60s pode ser excessivo; o progresso visual não reflete o estado real da sincronização
+4. **Contatos vindo sem nome, foto de perfil e foto de grupo** - O servidor Baileys precisa buscar metadados proativamente logo após a conexão
+5. **Nomes mostrando número em vez de nome salvo** - WhatsApp retorna pushName/notify, não o nome do contato salvo no telefone (limitação da API)
 
-Sistema de assinatura B2B focado em **EMPRESAS**, onde o cliente (empresa) pode:
-- Cadastrar múltiplos funcionários (custo adicional por usuário)
-- Ter múltiplos CRMs WhatsApp com alternância entre eles
-- Criar múltiplas agendas online
-- Comprar add-ons conforme necessidade de crescimento
+## Solução Proposta
 
-O **Ellosuit Base** é obrigatório e os módulos (Omni, Flow, Track) são complementares.
+### 1. Filtrar Conversas por Canal Selecionado
+**Arquivo:** `src/components/CRM/WhatsAppCRM.tsx`
 
----
-
-## Arquitetura de Preços (Atualizada)
-
-### Plano Base Obrigatório: **Ellosuit Base**
-
-| Recurso | Incluído no Base |
-|---------|------------------|
-| Dashboard e Home | Sim |
-| Gestão (Cadastros unificados) | Sim |
-| Drive (5 GB) | Sim |
-| Analytics e Relatórios | Sim |
-| Configurações | Sim |
-| **2 Usuários** | Sim |
-
-**Preço:** R$ 97/mês (ou R$ 970/ano - 17% desconto)
-
----
-
-### Módulos Adicionais
-
-#### **Omni** (Comunicação) - Cor: #E34800
-
-| Recurso | Limite Base |
-|---------|-------------|
-| CRM WhatsApp | 1 sessão (pode comprar mais) |
-| Email Marketing | 2.000/mês |
-| Agentes de IA | 2 agentes |
-| ChatBot Builder | 3 fluxos |
-| Alternância de CRMs | Sim |
-
-**Preço:** R$ 147/mês (ou R$ 1.470/ano)
-
----
-
-#### **Flow** (Produtividade) - Cor: #007DE3
-
-| Recurso | Limite Base |
-|---------|-------------|
-| Minha Agenda | Ilimitado |
-| Agenda Online | 2 links (pode comprar mais) |
-| Tarefas | Ilimitado |
-| Videoconferência | 8 participantes |
-| Gravação de Reuniões | 5 horas/mês |
-| Fluxos de Trabalho | 5 quadros |
-
-**Preço:** R$ 97/mês (ou R$ 970/ano)
-
----
-
-#### **Track** (Rastreamento) - Cor: #00E371
-
-| Recurso | Limite Base |
-|---------|-------------|
-| Rastrear Documentos | 100/mês |
-| Rastrear Links | 200/mês |
-| Rastrear Vídeos | 50/mês |
-| Rastrear Emails | Integrado com Omni |
-| Analytics de Rastreamento | Sim |
-
-**Preço:** R$ 67/mês (ou R$ 670/ano)
-
----
-
-### Combos (Desconto de 15%)
-
-| Combo | Módulos Inclusos | Usuários | Mensal | Anual |
-|-------|------------------|----------|--------|-------|
-| **Essencial** | Base + 1 módulo | 2 | R$ 194-244/mês | Varia |
-| **Pro** | Base + Omni + Flow | 5 | R$ 297/mês | R$ 2.970/ano |
-| **Business** | Base + Omni + Flow + Track | 10 | R$ 397/mês | R$ 3.970/ano |
-| **Enterprise** | Tudo ilimitado | Ilimitado | R$ 797/mês | R$ 7.970/ano |
-
----
-
-### Add-ons (Compras Avulsas por Empresa)
-
-| Add-on | Preço Mensal | Descrição |
-|--------|--------------|-----------|
-| +1 Usuário (funcionário) | R$ 29/mês | Por usuário adicional |
-| +5 Usuários | R$ 119/mês | Pacote economia |
-| +10 GB Armazenamento | R$ 19/mês | Espaço extra no Drive |
-| +50 GB Armazenamento | R$ 79/mês | Pacote economia |
-| +1 Sessão WhatsApp CRM | R$ 67/mês | CRM adicional |
-| +3 Sessões WhatsApp | R$ 167/mês | Pacote economia |
-| +2.000 Emails | R$ 29/mês | Créditos extras |
-| +1 Agente IA | R$ 39/mês | Agente adicional |
-| +5 Agentes IA | R$ 159/mês | Pacote economia |
-| +1 Agenda Online | R$ 19/mês | Link extra de booking |
-| +5 Agendas Online | R$ 79/mês | Pacote economia |
-| Gravação Reuniões (+10h) | R$ 49/mês | Horas extras |
-| +100 Docs Rastreados | R$ 29/mês | Limite extra |
-| Suporte Prioritário | R$ 97/mês | Atendimento VIP |
-
----
-
-## Estrutura do Banco de Dados
-
-### Novas Tabelas a Criar
+- Modificar `loadConversations()` para filtrar por `session_id` quando um canal específico está selecionado
+- Adicionar lógica: se `selectedSessionId` existir, adicionar `.eq('session_id', selectedSessionId)` na query
+- Chamar `loadConversations()` automaticamente quando `selectedSessionId` mudar
 
 ```text
-subscriptions (Assinatura principal da empresa)
-+---------------------------+---------------------------+
-| Coluna                    | Tipo                      |
-+---------------------------+---------------------------+
-| id                        | uuid (PK)                 |
-| company_id                | uuid (FK -> companies)    |
-| plan_type                 | enum (base, pro, business, enterprise, custom) |
-| billing_cycle             | enum (monthly, yearly)    |
-| status                    | enum (active, canceled, past_due, trialing) |
-| base_users_included       | integer (default: 2)      |
-| current_period_start      | timestamptz               |
-| current_period_end        | timestamptz               |
-| trial_ends_at             | timestamptz (nullable)    |
-| stripe_subscription_id    | text (nullable)           |
-| stripe_customer_id        | text (nullable)           |
-| monthly_price             | decimal                   |
-| created_at / updated_at   | timestamptz               |
-+---------------------------+---------------------------+
+Mudanças na função loadConversations:
+- Verificar se selectedSessionId existe
+- Se sim, adicionar filtro .eq('session_id', selectedSessionId)
+- Isso fará as conversas alternarem corretamente entre canais
 ```
 
-```text
-subscription_modules (Módulos ativos por empresa)
-+---------------------------+---------------------------+
-| Coluna                    | Tipo                      |
-+---------------------------+---------------------------+
-| id                        | uuid (PK)                 |
-| subscription_id           | uuid (FK)                 |
-| company_id                | uuid (FK)                 |
-| module_type               | enum (omni, flow, track)  |
-| is_active                 | boolean                   |
-| activated_at              | timestamptz               |
-| expires_at                | timestamptz (nullable)    |
-| monthly_price             | decimal                   |
-+---------------------------+---------------------------+
-```
+### 2. Corrigir Tela de Sincronização
+**Arquivo:** `src/components/CRM/WhatsAppSyncScreen.tsx`
+
+- Redesenhar completamente para o layout solicitado:
+  - Fundo **branco**
+  - Logo SVG laranja (conforme fornecido pelo usuário)
+  - Barra de progresso laranja separada e limpa
+  - Mensagem "Puxando conversas..." abaixo
+- Remover duplicação (o SVG atual tem uma barra de progresso embutida E uma separada)
+- Duração fixa de **60 segundos** com fechamento automático
 
 ```text
-subscription_addons (Add-ons comprados pela empresa)
-+---------------------------+---------------------------+
-| Coluna                    | Tipo                      |
-+---------------------------+---------------------------+
-| id                        | uuid (PK)                 |
-| subscription_id           | uuid (FK)                 |
-| company_id                | uuid (FK)                 |
-| addon_type                | enum (users, storage, emails, ai_agents, whatsapp_sessions, booking_links, meeting_hours, tracked_docs, priority_support) |
-| quantity                  | integer                   |
-| unit_price                | decimal                   |
-| is_active                 | boolean                   |
-| purchased_at              | timestamptz               |
-| expires_at                | timestamptz (nullable)    |
-+---------------------------+---------------------------+
+Layout correto:
+┌─────────────────────────────┐
+│         (fundo branco)      │
+│                             │
+│          🟠 LOGO            │
+│       (SVG Ellosuit)        │
+│                             │
+│   ═══════════════════       │
+│   (barra progresso laranja) │
+│          65%                │
+│                             │
+│   Puxando conversas...      │
+│                             │
+└─────────────────────────────┘
 ```
 
-```text
-subscription_limits (Limites consolidados por empresa)
-+---------------------------+---------------------------+
-| Coluna                    | Tipo                      |
-+---------------------------+---------------------------+
-| id                        | uuid (PK)                 |
-| company_id                | uuid (FK, unique)         |
-| max_users                 | integer (default: 2)      |
-| max_storage_gb            | integer (default: 5)      |
-| max_emails_month          | integer (default: 0)      |
-| max_ai_agents             | integer (default: 0)      |
-| max_whatsapp_sessions     | integer (default: 0)      |
-| max_booking_links         | integer (default: 0)      |
-| max_meeting_hours         | integer (default: 0)      |
-| max_tracked_docs          | integer (default: 0)      |
-| max_tracked_links         | integer (default: 0)      |
-| max_tracked_videos        | integer (default: 0)      |
-| has_priority_support      | boolean (default: false)  |
-| updated_at                | timestamptz               |
-+---------------------------+---------------------------+
-```
+### 3. Forçar Sincronização Imediata de Metadados
+**Arquivo:** `docs/baileys-server-template/baileys-server-v4.4.0/index.js`
+
+Melhorar a lógica de sincronização:
+- Após conexão, forçar busca de metadados para TODOS os chats imediatamente
+- Priorizar grupos (que precisam de `groupMetadata()`)
+- Buscar fotos de perfil em paralelo com semáforo
 
 ```text
-subscription_usage (Uso atual no período)
-+---------------------------+---------------------------+
-| Coluna                    | Tipo                      |
-+---------------------------+---------------------------+
-| id                        | uuid (PK)                 |
-| company_id                | uuid (FK)                 |
-| resource_type             | enum (users, storage_gb, emails_sent, ai_agents_active, whatsapp_sessions_active, booking_links_active, meeting_hours_used, tracked_docs_created, tracked_links_created, tracked_videos_created) |
-| current_usage             | integer                   |
-| period_start              | date                      |
-| period_end                | date                      |
-| updated_at                | timestamptz               |
-+---------------------------+---------------------------+
+Fluxo melhorado no connection.open:
+1. Conexão estabelecida
+2. Aguardar 3s para estabilizar
+3. Para cada chat no cache:
+   - Buscar profilePictureUrl()
+   - Se grupo: buscar groupMetadata() 
+   - Enviar webhook com dados enriquecidos
+4. Processar mensagens das últimas 6h
 ```
+
+### 4. Melhorar Extração de Nomes de Contatos
+**Arquivo:** `docs/baileys-server-template/baileys-server-v4.4.0/index.js`
+
+- Manter cache de nomes mais agressivo
+- Usar múltiplas fontes: `contact.name`, `contact.notify`, `contact.pushName`, `contact.verifiedName`
+- Para grupos: usar `groupMetadata().subject` como fonte primária
+
+**Nota importante:** O WhatsApp **não** fornece acesso aos nomes salvos na agenda do telefone do usuário. Só temos acesso ao nome que o contato escolheu para si mesmo (pushName). Esta é uma limitação da API do WhatsApp, não um bug do sistema.
+
+### 5. Adicionar Dependência de selectedSessionId
+**Arquivo:** `src/components/CRM/WhatsAppCRM.tsx`
+
+- Adicionar `selectedSessionId` como dependência do useEffect que carrega conversas
+- Garantir que ao trocar de canal, os dados sejam recarregados corretamente
 
 ---
 
-## Fluxo de Funcionários (Multi-usuário)
+## Detalhes Técnicos
 
-### Como Funciona
-
-1. **Empresa cria conta** -> Recebe plano Base com 2 usuários inclusos
-2. **Admin convida funcionários** -> Sistema verifica limite de usuários
-3. **Se limite excedido** -> Mostra modal de upgrade para comprar +usuários
-4. **Funcionários têm permissões granulares** -> Já implementado em ImprovedUserManagement.tsx
-
-### Verificação de Limite
+### Alterações em WhatsAppCRM.tsx
 
 ```typescript
-// Antes de adicionar funcionário
-const { currentUsers, maxUsers } = useSubscription();
+// loadConversations com filtro de sessão
+const loadConversations = async () => {
+  if (!companyId) return;
+  
+  let query = supabase
+    .from('whatsapp_conversations')
+    .select('*')
+    .eq('company_id', companyId);
+  
+  // NOVO: Filtrar por sessão selecionada
+  if (selectedSessionId) {
+    query = query.eq('session_id', selectedSessionId);
+  }
+  
+  const { data, error } = await query
+    .order('last_message_at', { ascending: false })
+    .limit(200);
+  // ... resto do código
+};
 
-if (currentUsers >= maxUsers) {
-  showUpgradeModal('users'); // Mostra opção de comprar +usuários
-  return;
-}
+// useEffect que recarrega ao trocar sessão
+useEffect(() => {
+  if (companyId && selectedSessionId) {
+    loadConversations();
+  }
+}, [selectedSessionId]);
 ```
 
----
-
-## Fluxo de Múltiplos CRMs WhatsApp
-
-### Como Funciona
-
-1. **Com módulo Omni** -> 1 sessão WhatsApp incluída
-2. **Usuário quer mais CRMs** -> Compra add-on de sessões
-3. **Interface de alternância** -> Dropdown no topo do CRM para trocar entre sessões
-4. **Cada sessão independente** -> Conversas e contatos separados por session_id
-
-### Verificação
+### Alterações em WhatsAppSyncScreen.tsx
 
 ```typescript
-const { whatsappSessionsActive, maxWhatsappSessions } = useSubscription();
+// Tela simplificada e limpa
+return (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
+    {/* Logo SVG grande */}
+    <div className="mb-8">
+      <svg width="200" viewBox="0 0 981 406" ...>
+        {/* Apenas o logo, sem barra de progresso */}
+      </svg>
+    </div>
 
-if (whatsappSessionsActive >= maxWhatsappSessions) {
-  showUpgradeModal('whatsapp_sessions');
-  return;
-}
-```
+    {/* Barra de progresso separada */}
+    <div className="w-80 mb-6">
+      <div className="h-4 rounded-full bg-gray-100 overflow-hidden">
+        <div 
+          className="h-full rounded-full bg-[#FF4500] transition-all"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-center text-sm text-gray-500 mt-2">
+        {Math.round(progress)}%
+      </p>
+    </div>
 
----
-
-## Fluxo de Múltiplas Agendas Online
-
-### Como Funciona
-
-1. **Com módulo Flow** -> 2 links de agenda incluídos
-2. **Usuário quer mais agendas** -> Compra add-on de booking links
-3. **Cada agenda pode ser atribuída** -> A funcionários diferentes
-4. **Links únicos** -> /agendar/empresa/funcionario-1, /agendar/empresa/funcionario-2
-
----
-
-## Interface da Página /dashboard/assinatura
-
-### Layout em Seções
-
-**1. Header Hero**
-- Logo Ellosuit com animação
-- Título: "Escale sua empresa com o Ellosuit"
-- Subtítulo: "Monte o plano ideal para seu time"
-
-**2. Seção: Plano Base (Obrigatório)**
-- Card grande destacado
-- "Incluído em todos os planos"
-- Lista de recursos base
-- "Já inclui 2 usuários"
-
-**3. Seção: Módulos**
-- 3 cards coloridos (Omni laranja, Flow azul, Track verde)
-- Checkbox/Toggle para ativar cada um
-- Preço individual exibido
-- Recursos listados em cada card
-
-**4. Seção: Combos Sugeridos**
-- Cards Pro, Business, Enterprise
-- Badge "Economia de X%"
-- "Inclui X usuários"
-- Seleção rápida
-
-**5. Seção: Personalize seu Plano (Add-ons)**
-- Abas: Usuários | Armazenamento | Comunicação | Produtividade
-- Cada aba mostra add-ons relevantes
-- Seletores de quantidade
-- Cálculo em tempo real
-
-**6. Resumo Lateral (Sticky)**
-- Lista de itens selecionados
-- Subtotal por categoria
-- Descontos aplicados
-- **Total mensal/anual**
-- Botão "Assinar Agora" / "Atualizar Plano"
-
-**7. Seção: Uso Atual (se já assinante)**
-- Cards com barras de progresso:
-  - Usuários: 3/5 usados
-  - Storage: 12/50 GB
-  - Emails: 1.200/5.000 enviados
-  - WhatsApp: 2/3 sessões
-  - Agendas: 4/5 links
-- Botões de upgrade rápido
-
-**8. FAQ Atualizado**
-- "Como adicionar funcionários?"
-- "Posso ter vários WhatsApps?"
-- "Como funcionam as agendas?"
-- "Pagamento proporcional?"
-
----
-
-## Hook useSubscription
-
-Novo hook centralizado para toda verificação de limites:
-
-```typescript
-interface SubscriptionData {
-  // Status
-  isActive: boolean;
-  planType: 'base' | 'pro' | 'business' | 'enterprise' | 'custom';
-  billingCycle: 'monthly' | 'yearly';
-  
-  // Módulos
-  hasOmni: boolean;
-  hasFlow: boolean;
-  hasTrack: boolean;
-  
-  // Limites
-  limits: {
-    maxUsers: number;
-    maxStorageGb: number;
-    maxEmailsMonth: number;
-    maxAiAgents: number;
-    maxWhatsappSessions: number;
-    maxBookingLinks: number;
-    maxMeetingHours: number;
-    maxTrackedDocs: number;
-    maxTrackedLinks: number;
-    maxTrackedVideos: number;
-    hasPrioritySupport: boolean;
-  };
-  
-  // Uso atual
-  usage: {
-    currentUsers: number;
-    storageUsedGb: number;
-    emailsSentThisMonth: number;
-    aiAgentsActive: number;
-    whatsappSessionsActive: number;
-    bookingLinksActive: number;
-    meetingHoursUsed: number;
-    trackedDocsCreated: number;
-    trackedLinksCreated: number;
-    trackedVideosCreated: number;
-  };
-  
-  // Helpers
-  hasModule: (module: 'omni' | 'flow' | 'track') => boolean;
-  checkLimit: (resource: string) => boolean;
-  getUsagePercent: (resource: string) => number;
-  canAddUser: () => boolean;
-  canAddWhatsApp: () => boolean;
-  canAddBookingLink: () => boolean;
-}
-```
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/Dashboard/SubscriptionPage.tsx` | Reescrever completamente |
-| `src/components/Dashboard/subscription/ModuleCard.tsx` | Novo - Card de módulo |
-| `src/components/Dashboard/subscription/AddonSelector.tsx` | Novo - Seletor de add-ons |
-| `src/components/Dashboard/subscription/PricingSummary.tsx` | Novo - Resumo lateral |
-| `src/components/Dashboard/subscription/UsageDashboard.tsx` | Novo - Uso atual |
-| `src/components/Dashboard/subscription/ComboCard.tsx` | Novo - Card de combo |
-| `src/hooks/useSubscription.tsx` | Novo - Hook central |
-| `src/components/shared/UpgradeModal.tsx` | Novo - Modal de upgrade |
-| Migration SQL | Nova - Criar tabelas |
-
----
-
-## Enums SQL
-
-```sql
-CREATE TYPE plan_type AS ENUM ('base', 'pro', 'business', 'enterprise', 'custom');
-CREATE TYPE billing_cycle AS ENUM ('monthly', 'yearly');
-CREATE TYPE subscription_status AS ENUM ('active', 'canceled', 'past_due', 'trialing');
-CREATE TYPE module_type AS ENUM ('omni', 'flow', 'track');
-CREATE TYPE addon_type AS ENUM (
-  'users', 'storage', 'emails', 'ai_agents', 
-  'whatsapp_sessions', 'booking_links', 'meeting_hours', 
-  'tracked_docs', 'priority_support'
-);
-CREATE TYPE resource_type AS ENUM (
-  'users', 'storage_gb', 'emails_sent', 'ai_agents_active',
-  'whatsapp_sessions_active', 'booking_links_active', 
-  'meeting_hours_used', 'tracked_docs_created',
-  'tracked_links_created', 'tracked_videos_created'
+    {/* Mensagem de status */}
+    <p className="text-lg font-medium text-[#FF4500]">
+      {syncMessages[messageIndex]}
+    </p>
+  </div>
 );
 ```
 
+### Alterações no Servidor Baileys
+
+```javascript
+// Após connection.open, forçar sync de metadados
+socket.ev.on('connection.update', async (update) => {
+  if (connection === 'open') {
+    // ... código existente ...
+    
+    // NOVO: Forçar sync de metadados após 3s
+    setTimeout(async () => {
+      await syncAllMetadata(socket, session, webhookUrl, webhookSecret);
+    }, 3000);
+  }
+});
+
+async function syncAllMetadata(socket, session, webhookUrl, webhookSecret) {
+  const chats = Array.from(session.allChats.values());
+  
+  for (const chat of chats) {
+    const jid = chat.id || chat.jid;
+    if (!jid) continue;
+    
+    // Buscar foto e metadados
+    const metadata = await fetchContactMetadata(socket, jid);
+    
+    // Enviar webhook com dados enriquecidos
+    await sendWebhook({
+      event: 'contact.metadata',
+      sessionId: session.sessionId,
+      data: {
+        jid,
+        name: metadata.groupSubject || contactNamesCache.get(jid) || null,
+        profilePicture: metadata.profilePicture
+      }
+    }, webhookUrl, webhookSecret);
+  }
+}
+```
+
 ---
 
-## Resumo de Preços Final
+## Arquivos a Modificar
 
-| Plano | Usuários | Mensal | Anual | Economia |
-|-------|----------|--------|-------|----------|
-| Base | 2 | R$ 97 | R$ 970 | R$ 194 |
-| Base + Omni | 2 | R$ 244 | R$ 2.440 | R$ 488 |
-| Base + Flow | 2 | R$ 194 | R$ 1.940 | R$ 388 |
-| Base + Track | 2 | R$ 164 | R$ 1.640 | R$ 328 |
-| **Pro** (Base+Omni+Flow) | **5** | R$ 297 | R$ 2.970 | R$ 594 |
-| **Business** (Tudo) | **10** | R$ 397 | R$ 3.970 | R$ 794 |
-| **Enterprise** | **Ilimitado** | R$ 797 | R$ 7.970 | R$ 1.594 |
+1. `src/components/CRM/WhatsAppCRM.tsx` - Filtro por sessão
+2. `src/components/CRM/WhatsAppSyncScreen.tsx` - Redesign completo
+3. `docs/baileys-server-template/baileys-server-v4.4.0/index.js` - Sync de metadados
 
----
+## Resultado Esperado
 
-## Próximos Passos
-
-Após aprovação:
-1. Criar migration com todas as tabelas de subscription
-2. Implementar hook useSubscription
-3. Reescrever página /dashboard/assinatura
-4. Criar componentes auxiliares
-5. Integrar verificações de limite em pontos críticos (adicionar usuário, criar sessão WhatsApp, criar agenda)
-
+- Ao alternar canais, as conversas mudam instantaneamente
+- Tela de sync limpa, elegante, com fundo branco e logo laranja
+- Sincronização completa com nomes e fotos em até 60 segundos
+- Grupos com nomes e fotos corretos
+- UX 100% funcional e profissional

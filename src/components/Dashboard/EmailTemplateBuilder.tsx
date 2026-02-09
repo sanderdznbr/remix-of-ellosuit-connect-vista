@@ -81,7 +81,7 @@ const createDefaultElement = (type: string): EmailElement => {
   const defaults: Record<string, any> = {
     header: { content: { text: 'Título do Email', level: 'h1' }, styles: { color: '#1a1a1a', fontSize: '32px', textAlign: 'center', fontWeight: '700', padding: '16px 0' } },
     paragraph: { content: { text: 'Seu texto aqui. Clique para editar e personalizar.' }, styles: { color: '#4a4a4a', fontSize: '16px', lineHeight: '1.6', textAlign: 'left', padding: '8px 0' } },
-    button: { content: { text: 'Clique Aqui', url: '#' }, styles: { backgroundColor: '#3000E3', color: '#ffffff', padding: '16px 32px', borderRadius: '8px', fontSize: '16px', textAlign: 'center' } },
+    button: { content: { text: 'Clique Aqui', url: '#' }, styles: { backgroundColor: '#FF4500', color: '#ffffff', padding: '16px 32px', borderRadius: '8px', fontSize: '16px', textAlign: 'center' } },
     image: { content: { src: '', alt: 'Imagem' }, styles: { width: '100%', maxWidth: '100%', borderRadius: '8px', alignment: 'center' } },
     video: { content: { src: '', thumbnail: '', alt: 'Vídeo' }, styles: { width: '100%', maxWidth: '100%', borderRadius: '8px', alignment: 'center' } },
     divider: { content: {}, styles: { borderColor: '#e0e0e0', borderWidth: '1px', margin: '24px 0' } },
@@ -195,7 +195,7 @@ const SortableElement: React.FC<{
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                   <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-                    <div className="w-0 h-0 border-l-[20px] border-l-primary border-y-[12px] border-y-transparent ml-1" />
+                    <div className="w-0 h-0 border-l-[20px] border-l-[#FF4500] border-y-[12px] border-y-transparent ml-1" />
                   </div>
                 </div>
               </div>
@@ -277,7 +277,7 @@ const SortableElement: React.FC<{
       ref={setNodeRef}
       style={style}
       className={`group relative border-2 rounded-lg p-4 transition-all cursor-pointer ${
-        isSelected ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-transparent hover:border-primary/30 hover:bg-muted/30'
+        isSelected ? 'border-[#FF4500] bg-[#FF4500]/5 shadow-lg shadow-[#FF4500]/10' : 'border-transparent hover:border-[#FF4500]/40 hover:bg-[#FF4500]/5'
       }`}
       onClick={onSelect}
     >
@@ -341,6 +341,8 @@ const EmailTemplateBuilder: React.FC = () => {
   const [globalStyles, setGlobalStyles] = useState({
     backgroundColor: '#ffffff',
     contentBackgroundColor: '#ffffff',
+    backgroundImage: '',
+    backgroundSize: 'cover',
     fontFamily: 'Arial, sans-serif',
     maxWidth: '600px',
     padding: '20px'
@@ -507,8 +509,8 @@ const EmailTemplateBuilder: React.FC = () => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 0; font-family: ${globalStyles.fontFamily}; background-color: ${globalStyles.backgroundColor}; }
-    .email-wrapper { background-color: ${globalStyles.backgroundColor}; padding: 20px 0; }
+    body { margin: 0; padding: 0; font-family: ${globalStyles.fontFamily}; background-color: ${globalStyles.backgroundColor};${globalStyles.backgroundImage ? ` background-image: url('${globalStyles.backgroundImage}'); background-size: ${globalStyles.backgroundSize}; background-position: center; background-repeat: no-repeat;` : ''} }
+    .email-wrapper { background-color: ${globalStyles.backgroundImage ? 'transparent' : globalStyles.backgroundColor}; padding: 20px 0; }
     .email-container { max-width: ${globalStyles.maxWidth}; margin: 0 auto; padding: ${globalStyles.padding}; background-color: ${globalStyles.contentBackgroundColor || '#ffffff'}; }
     img { max-width: 100%; height: auto; }
     a { text-decoration: none; }
@@ -536,7 +538,7 @@ const EmailTemplateBuilder: React.FC = () => {
           break;
         case 'video':
           if (el.content.thumbnail) {
-            html += `<div style="text-align: ${el.styles.alignment}; padding: 16px 0;"><a href="${el.content.src}" target="_blank" style="display: inline-block; position: relative;"><img src="${el.content.thumbnail}" alt="${el.content.alt}" style="max-width: ${el.styles.maxWidth}; width: ${el.styles.width}; border-radius: ${el.styles.borderRadius};"><div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><div style="width: 0; height: 0; border-left: 20px solid #3000E3; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px;"></div></div></a></div>`;
+            html += `<div style="text-align: ${el.styles.alignment}; padding: 16px 0;"><a href="${el.content.src}" target="_blank" style="display: inline-block; position: relative;"><img src="${el.content.thumbnail}" alt="${el.content.alt}" style="max-width: ${el.styles.maxWidth}; width: ${el.styles.width}; border-radius: ${el.styles.borderRadius};"><div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><div style="width: 0; height: 0; border-left: 20px solid #FF4500; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px;"></div></div></a></div>`;
           }
           break;
         case 'divider':
@@ -1208,7 +1210,7 @@ const EmailTemplateBuilder: React.FC = () => {
               </Button>
             </div>
             
-            <Button onClick={saveTemplate} disabled={saving} className="gap-2 ml-2">
+            <Button onClick={saveTemplate} disabled={saving} className="gap-2 ml-2 bg-[#FF4500] hover:bg-[#E03E00] text-white">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {fromWizard ? 'Salvar e Usar' : 'Salvar Template'}
             </Button>
@@ -1245,7 +1247,7 @@ const EmailTemplateBuilder: React.FC = () => {
                       <Button
                         key={type}
                         variant="outline"
-                        className="h-auto py-3 flex-col gap-1.5 hover:border-primary hover:bg-primary/5"
+                        className="h-auto py-3 flex-col gap-1.5 hover:border-[#FF4500] hover:bg-[#FF4500]/5"
                         onClick={() => addElement(type)}
                       >
                         <Icon className="h-5 w-5" />
@@ -1262,7 +1264,7 @@ const EmailTemplateBuilder: React.FC = () => {
                       <Button
                         key={type}
                         variant="outline"
-                        className="h-auto py-3 flex-col gap-1.5 hover:border-primary hover:bg-primary/5"
+                        className="h-auto py-3 flex-col gap-1.5 hover:border-[#FF4500] hover:bg-[#FF4500]/5"
                         onClick={() => addElement(type)}
                       >
                         <Icon className="h-5 w-5" />
@@ -1279,7 +1281,7 @@ const EmailTemplateBuilder: React.FC = () => {
                       <Button
                         key={type}
                         variant="outline"
-                        className="h-auto py-3 flex-col gap-1.5 hover:border-primary hover:bg-primary/5"
+                        className="h-auto py-3 flex-col gap-1.5 hover:border-[#FF4500] hover:bg-[#FF4500]/5"
                         onClick={() => addElement(type)}
                       >
                         <Icon className="h-5 w-5" />
@@ -1330,7 +1332,69 @@ const EmailTemplateBuilder: React.FC = () => {
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1">Fundo branco recomendado para melhor legibilidade</p>
                 </div>
-                <div>
+
+                {/* Background Image */}
+                <div className="pt-2 border-t">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Imagem de Fundo</Label>
+                  <div className="mt-1.5">
+                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer hover:bg-[#FF4500]/5 hover:border-[#FF4500]/40 transition-colors">
+                      <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+                      <span className="text-xs text-muted-foreground">
+                        {uploading ? 'Enviando...' : 'Upload imagem de fundo'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const url = await uploadFile(file, 'logos');
+                          if (url) {
+                            setGlobalStyles({ ...globalStyles, backgroundImage: url });
+                            toast({ title: "Imagem de fundo adicionada!" });
+                          }
+                          e.target.value = '';
+                        }}
+                        disabled={uploading}
+                      />
+                    </label>
+                  </div>
+                  <Input 
+                    value={globalStyles.backgroundImage}
+                    onChange={e => setGlobalStyles({ ...globalStyles, backgroundImage: e.target.value })}
+                    placeholder="Ou cole uma URL..."
+                    className="mt-2 text-xs"
+                  />
+                  {globalStyles.backgroundImage && (
+                    <div className="mt-2 space-y-2">
+                      <div className="relative h-20 rounded-lg overflow-hidden border">
+                        <img src={globalStyles.backgroundImage} alt="Background" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => setGlobalStyles({ ...globalStyles, backgroundImage: '' })}
+                          className="absolute top-1 right-1 p-1 bg-black/60 rounded-full hover:bg-black/80"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Tamanho</Label>
+                        <select
+                          value={globalStyles.backgroundSize}
+                          onChange={e => setGlobalStyles({ ...globalStyles, backgroundSize: e.target.value })}
+                          className="w-full mt-1 h-8 px-2 text-xs rounded-md border border-input bg-background"
+                        >
+                          <option value="cover">Cobrir (cover)</option>
+                          <option value="contain">Conter (contain)</option>
+                          <option value="100% 100%">Esticar</option>
+                          <option value="auto">Original</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t">
                   <Label className="text-xs text-muted-foreground uppercase tracking-wide">Largura Máxima</Label>
                   <Input 
                     value={globalStyles.maxWidth}
@@ -1369,7 +1433,7 @@ const EmailTemplateBuilder: React.FC = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="w-full mt-2 gap-2"
+                    className="w-full mt-2 gap-2 hover:border-[#FF4500] hover:text-[#FF4500]"
                     onClick={() => {
                       navigator.clipboard.writeText(generateHTML());
                       toast({ title: "HTML copiado!" });
@@ -1386,16 +1450,16 @@ const EmailTemplateBuilder: React.FC = () => {
 
         {/* Canvas */}
         <div 
-          className={`flex-1 p-8 overflow-y-auto transition-colors ${isDraggingFile ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+          className={`flex-1 p-8 overflow-y-auto transition-colors ${isDraggingFile ? 'ring-2 ring-[#FF4500] ring-inset' : ''}`}
           style={{ backgroundColor: isDraggingFile ? undefined : '#ffffff' }}
           onDrop={handleFileDrop}
           onDragOver={handleFileDragOver}
           onDragLeave={handleFileDragLeave}
         >
           {isDraggingFile && (
-            <div className="absolute inset-0 flex items-center justify-center bg-primary/10 z-10 pointer-events-none">
-              <div className="bg-background border-2 border-dashed border-primary rounded-xl p-8 text-center">
-                <Upload className="h-12 w-12 mx-auto mb-3 text-primary" />
+            <div className="absolute inset-0 flex items-center justify-center bg-[#FF4500]/10 z-10 pointer-events-none">
+              <div className="bg-background border-2 border-dashed border-[#FF4500] rounded-xl p-8 text-center">
+                <Upload className="h-12 w-12 mx-auto mb-3 text-[#FF4500]" />
                 <p className="text-lg font-medium">Solte a imagem aqui</p>
                 <p className="text-sm text-muted-foreground">A imagem será adicionada ao seu email</p>
               </div>

@@ -95,6 +95,192 @@ const createDefaultElement = (type: string): EmailElement => {
   return { id, type: type as any, ...defaults[type] };
 };
 
+// Parse saved HTML back into EmailElement[] for editing
+const parseHtmlToElements = (html: string): { elements: EmailElement[]; globalStyles?: any } => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const container = doc.querySelector('.email-container');
+  if (!container) return { elements: [] };
+
+  const elements: EmailElement[] = [];
+  const makeId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const getStyle = (el: Element, prop: string) => (el as HTMLElement).style?.getPropertyValue(prop) || '';
+
+  container.childNodes.forEach(node => {
+    if (node.nodeType !== 1) return;
+    const el = node as HTMLElement;
+    const tag = el.tagName?.toLowerCase();
+
+    // Header (h1-h6)
+    if (/^h[1-6]$/.test(tag)) {
+      elements.push({
+        id: makeId(), type: 'header',
+        content: { text: el.textContent || '', level: tag },
+        styles: {
+          color: el.style.color || '#1a1a1a',
+          fontSize: el.style.fontSize || '32px',
+          textAlign: (el.style.textAlign || 'center') as any,
+          fontWeight: el.style.fontWeight || '700',
+          padding: el.style.padding || '16px 0',
+        }
+      });
+    }
+    // Paragraph
+    else if (tag === 'p') {
+      elements.push({
+        id: makeId(), type: 'paragraph',
+        content: { text: el.innerHTML || '' },
+        styles: {
+          color: el.style.color || '#4a4a4a',
+          fontSize: el.style.fontSize || '16px',
+          lineHeight: el.style.lineHeight || '1.6',
+          textAlign: (el.style.textAlign || 'left') as any,
+          padding: el.style.padding || '8px 0',
+        }
+      });
+    }
+    // HR = divider
+    else if (tag === 'hr') {
+      elements.push({
+        id: makeId(), type: 'divider', content: {},
+        styles: {
+          borderColor: el.style.borderTopColor || '#e0e0e0',
+          borderWidth: el.style.borderTopWidth || '1px',
+          margin: el.style.margin || '24px 0',
+        }
+      });
+    }
+    // UL = list
+    else if (tag === 'ul') {
+      const items = Array.from(el.querySelectorAll('li')).map(li => li.textContent || '');
+      elements.push({
+        id: makeId(), type: 'list',
+        content: { items },
+        styles: { color: el.style.color || '#4a4a4a', fontSize: el.style.fontSize || '16px', lineHeight: el.style.lineHeight || '1.8' }
+      });
+    }
+    // Div - could be button, image, spacer, social, footer, columns
+    else if (tag === 'div') {
+      const link = el.querySelector('a');
+      const img = el.querySelector('img');
+
+      // Spacer (empty div with height)
+      if (!el.children.length && !el.textContent?.trim() && el.style.height) {
+        elements.push({ id: makeId(), type: 'spacer', content: {}, styles: { height: el.style.height } });
+      }
+      // Button (div > a without img)
+      else if (link && !img) {
+        // Check if it's social links (multiple <a>)
+        const links = el.querySelectorAll('a');
+        if (links.length > 1) {
+          const social: any = { facebook: '', instagram: '', linkedin: '', whatsapp: '', twitter: '' };
+          links.forEach(a => {
+            const href = a.getAttribute('href') || '';
+            const text = (a.textContent || '').toLowerCase();
+            if (text.includes('facebook') || href.includes('facebook')) social.facebook = href;
+            else if (text.includes('instagram') || href.includes('instagram')) social.instagram = href;
+            else if (text.includes('linkedin') || href.includes('linkedin')) social.linkedin = href;
+            else if (text.includes('whatsapp') || href.includes('whatsapp')) social.whatsapp = href;
+            else if (text.includes('twitter') || href.includes('twitter')) social.twitter = href;
+          });
+          elements.push({
+            id: makeId(), type: 'social', content: social,
+            styles: { iconSize: '32px', gap: '16px', alignment: el.style.textAlign || 'center' }
+          });
+        } else {
+          elements.push({
+            id: makeId(), type: 'button',
+            content: { text: link.textContent || 'Clique Aqui', url: link.getAttribute('href') || '#' },
+            styles: {
+              backgroundColor: link.style.backgroundColor || '#FF4500',
+              color: link.style.color || '#ffffff',
+              padding: link.style.padding || '16px 32px',
+              borderRadius: link.style.borderRadius || '8px',
+              fontSize: link.style.fontSize || '16px',
+              textAlign: (el.style.textAlign || 'center') as any,
+            }
+          });
+        }
+      }
+      // Image (div > img)
+      else if (img && !link) {
+        elements.push({
+          id: makeId(), type: 'image',
+          content: { src: img.getAttribute('src') || '', alt: img.getAttribute('alt') || 'Imagem' },
+          styles: {
+            width: img.style.width || '100%',
+            maxWidth: img.style.maxWidth || '100%',
+            borderRadius: img.style.borderRadius || '8px',
+            alignment: el.style.textAlign || 'center',
+          }
+        });
+      }
+      // Video (div > a > img with play overlay)
+      else if (link && img) {
+        elements.push({
+          id: makeId(), type: 'video',
+          content: { src: link.getAttribute('href') || '', thumbnail: img.getAttribute('src') || '', alt: img.getAttribute('alt') || 'Vídeo' },
+          styles: {
+            width: img.style.width || '100%',
+            maxWidth: img.style.maxWidth || '100%',
+            borderRadius: img.style.borderRadius || '8px',
+            alignment: el.style.textAlign || 'center',
+          }
+        });
+      }
+      // Footer (div with unsubscribe link)
+      else if (el.querySelector('a[href]') && el.textContent?.includes('©')) {
+        const unsub = el.querySelector('a')?.getAttribute('href') || '#';
+        const pTags = el.querySelectorAll('p');
+        const mainText = pTags[0]?.textContent || '';
+        const address = pTags.length > 1 ? pTags[1]?.textContent || '' : '';
+        elements.push({
+          id: makeId(), type: 'footer',
+          content: { text: mainText, unsubscribe: unsub, address },
+          styles: {
+            color: el.style.color || '#888888',
+            fontSize: el.style.fontSize || '12px',
+            backgroundColor: el.style.backgroundColor || '#f9f9f9',
+            padding: el.style.padding || '24px',
+          }
+        });
+      }
+      // Columns (div with display:flex and 2 children)
+      else if (el.style.display === 'flex' && el.children.length === 2) {
+        elements.push({
+          id: makeId(), type: 'columns',
+          content: { left: el.children[0].innerHTML, right: el.children[1].innerHTML },
+          styles: {
+            gap: el.style.gap || '16px',
+            backgroundColor: (el.children[0] as HTMLElement).style.backgroundColor || '#f5f5f5',
+            padding: (el.children[0] as HTMLElement).style.padding || '16px',
+            borderRadius: (el.children[0] as HTMLElement).style.borderRadius || '8px',
+          }
+        });
+      }
+    }
+  });
+
+  // Extract global styles from wrapper/container
+  const wrapper = doc.querySelector('.email-wrapper');
+  const body = doc.querySelector('body');
+  let parsedGlobal: any = {};
+  if (wrapper) {
+    parsedGlobal.backgroundColor = (wrapper as HTMLElement).style.backgroundColor || '#ffffff';
+  }
+  if (container) {
+    parsedGlobal.contentBackgroundColor = (container as HTMLElement).style.backgroundColor || '#ffffff';
+    parsedGlobal.maxWidth = (container as HTMLElement).style.maxWidth || '600px';
+    parsedGlobal.padding = (container as HTMLElement).style.padding || '20px';
+  }
+  if (body) {
+    parsedGlobal.fontFamily = body.style.fontFamily || 'Arial, sans-serif';
+  }
+
+  return { elements, globalStyles: parsedGlobal };
+};
+
 // Sortable Element Component
 const SortableElement: React.FC<{ 
   element: EmailElement; 
@@ -412,6 +598,9 @@ const EmailTemplateBuilder: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  
   // Global styles - default to white backgrounds
   const [globalStyles, setGlobalStyles] = useState({
     backgroundColor: '#ffffff',
@@ -436,6 +625,48 @@ const EmailTemplateBuilder: React.FC = () => {
     };
     fetchCompanyId();
   }, [user]);
+
+  // Load existing template for editing
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const templateId = params.get('templateId');
+    if (!templateId || !user) return;
+
+    const loadTemplate = async () => {
+      setLoadingTemplate(true);
+      try {
+        const { data, error } = await supabase
+          .from('email_templates')
+          .select('*')
+          .eq('id', templateId)
+          .single();
+
+        if (error) throw error;
+        if (!data) return;
+
+        setEditingTemplateId(data.id);
+        setTemplateName(data.name);
+        setTemplateDescription(data.description || '');
+
+        // Parse HTML back into elements
+        const parsed = parseHtmlToElements(data.html_content);
+        if (parsed.elements.length > 0) {
+          setElements(parsed.elements);
+          saveToHistory(parsed.elements);
+        }
+        if (parsed.globalStyles) {
+          setGlobalStyles(prev => ({ ...prev, ...parsed.globalStyles }));
+        }
+      } catch (err) {
+        console.error('Error loading template:', err);
+        toast({ title: "Erro ao carregar template", variant: "destructive" });
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    loadTemplate();
+  }, [user, location.search]);
 
   // Save to history
   const saveToHistory = useCallback((newElements: EmailElement[]) => {
@@ -670,34 +901,47 @@ const EmailTemplateBuilder: React.FC = () => {
     try {
       const htmlContent = generateHTML();
       
-      const { data, error } = await supabase
-        .from('email_templates')
-        .insert({
-          name: templateName,
-          description: templateDescription,
-          html_content: htmlContent,
-          category: 'custom',
-          user_id: user.id,
-          company_id: companyId
-        })
-        .select()
-        .single();
+      if (editingTemplateId) {
+        // Update existing template
+        const { error } = await supabase
+          .from('email_templates')
+          .update({
+            name: templateName,
+            description: templateDescription,
+            html_content: htmlContent,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingTemplateId);
 
-      if (error) throw error;
-
-      toast({ title: "Template salvo!", description: "Seu template foi salvo com sucesso" });
-      
-      // If coming from wizard, return with template selected
-      if (fromWizard && data) {
-        navigate('/dashboard/email', { 
-          state: { 
-            selectedTemplate: data,
-            returnToStep: 3
-          } 
-        });
+        if (error) throw error;
+        toast({ title: "Template atualizado!", description: "Suas alterações foram salvas" });
       } else {
-        navigate('/dashboard/email');
+        // Insert new template
+        const { data, error } = await supabase
+          .from('email_templates')
+          .insert({
+            name: templateName,
+            description: templateDescription,
+            html_content: htmlContent,
+            category: 'custom',
+            user_id: user.id,
+            company_id: companyId
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        toast({ title: "Template salvo!", description: "Seu template foi salvo com sucesso" });
+
+        if (fromWizard && data) {
+          navigate('/dashboard/email', { 
+            state: { selectedTemplate: data, returnToStep: 3 } 
+          });
+          return;
+        }
       }
+      
+      navigate('/dashboard/email-templates');
     } catch (error: any) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } finally {
@@ -1219,13 +1463,21 @@ const EmailTemplateBuilder: React.FC = () => {
     );
   };
 
+  if (loadingTemplate) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FF4500]" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b bg-card shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(fromWizard ? '/dashboard/email' : '/dashboard/email')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(fromWizard ? '/dashboard/email' : '/dashboard/email-templates')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1 min-w-0">
@@ -1287,7 +1539,7 @@ const EmailTemplateBuilder: React.FC = () => {
             
             <Button onClick={saveTemplate} disabled={saving} className="gap-2 ml-2 bg-[#FF4500] hover:bg-[#E03E00] text-white">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {fromWizard ? 'Salvar e Usar' : 'Salvar Template'}
+              {fromWizard ? 'Salvar e Usar' : editingTemplateId ? 'Atualizar Template' : 'Salvar Template'}
             </Button>
           </div>
         </div>

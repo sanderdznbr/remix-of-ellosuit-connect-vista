@@ -273,7 +273,7 @@ const ChatbotManagement: React.FC = () => {
             <p className="text-muted-foreground text-sm">Crie e gerencie fluxos automatizados</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2 bg-[#FF4500] hover:bg-[#FF4500]/90">
           <Plus className="h-4 w-4" />
           Novo Chatbot
         </Button>
@@ -281,14 +281,14 @@ const ChatbotManagement: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-primary/5 to-primary/10">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#FF4500]/5 to-[#FF4500]/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <GitBranch className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-[#FF4500]/10">
+                <GitBranch className="h-5 w-5 text-[#FF4500]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">{flows.length}</p>
+                <p className="text-2xl font-bold text-[#FF4500]">{flows.length}</p>
                 <p className="text-xs text-muted-foreground">Total de Chatbots</p>
               </div>
             </div>

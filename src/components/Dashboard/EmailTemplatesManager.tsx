@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useEmailDesigns } from '@/hooks/useEmailDesigns';
 
+const OMNI_COLOR = '#FF4500';
+
 const EmailTemplatesManager: React.FC = () => {
   const navigate = useNavigate();
   const { designs, loading, deleteDesign } = useEmailDesigns();
@@ -44,7 +46,7 @@ const EmailTemplatesManager: React.FC = () => {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#3600FF]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#FF4500]" />
       </div>
     );
   }
@@ -54,8 +56,8 @@ const EmailTemplatesManager: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#3600FF]/10">
-            <Palette className="h-6 w-6 text-[#3600FF]" />
+          <div className="p-2.5 rounded-xl bg-[#FF4500]/10">
+            <Palette className="h-6 w-6 text-[#FF4500]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Designs de Email</h1>
@@ -64,7 +66,7 @@ const EmailTemplatesManager: React.FC = () => {
         </div>
         <Button 
           onClick={() => navigate('/dashboard/email-builder')}
-          className="gap-2 bg-[#3600FF] hover:bg-[#3600FF]/90"
+          className="gap-2 bg-[#FF4500] hover:bg-[#FF4500]/90"
         >
           <Plus className="h-4 w-4" />
           Criar Design
@@ -73,14 +75,14 @@ const EmailTemplatesManager: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#3600FF]/5 to-[#3600FF]/10">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#FF4500]/5 to-[#FF4500]/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#3600FF]/10">
-                <LayoutTemplate className="h-5 w-5 text-[#3600FF]" />
+              <div className="p-2 rounded-lg bg-[#FF4500]/10">
+                <LayoutTemplate className="h-5 w-5 text-[#FF4500]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-[#3600FF]">{designs.length}</p>
+                <p className="text-2xl font-bold text-[#FF4500]">{designs.length}</p>
                 <p className="text-xs text-muted-foreground">Total de Designs</p>
               </div>
             </div>
@@ -139,11 +141,11 @@ const EmailTemplatesManager: React.FC = () => {
       {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-[#3600FF]/10">
-            <LayoutTemplate className="h-4 w-4 text-[#3600FF]" />
+          <div className="p-2 rounded-lg bg-[#FF4500]/10">
+            <LayoutTemplate className="h-4 w-4 text-[#FF4500]" />
           </div>
           <span className="font-medium text-foreground">Designs Visuais</span>
-          <Badge className="bg-[#3600FF]/10 text-[#3600FF] border-0">{designs.length}</Badge>
+          <Badge className="bg-[#FF4500]/10 text-[#FF4500] border-0">{designs.length}</Badge>
         </div>
         
         <div className="relative w-full sm:w-64">
@@ -159,10 +161,10 @@ const EmailTemplatesManager: React.FC = () => {
 
       {/* Content */}
       {filteredDesigns.length === 0 ? (
-        <Card className="border-dashed border-2 border-[#3600FF]/20 shadow-sm bg-[#3600FF]/5">
+        <Card className="border-dashed border-2 border-[#FF4500]/20 shadow-sm bg-[#FF4500]/5">
           <CardContent className="p-12 text-center">
-            <div className="p-4 rounded-full bg-[#3600FF]/10 w-fit mx-auto mb-4">
-              <Palette className="h-10 w-10 text-[#3600FF]" />
+            <div className="p-4 rounded-full bg-[#FF4500]/10 w-fit mx-auto mb-4">
+              <Palette className="h-10 w-10 text-[#FF4500]" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Nenhum design encontrado</h3>
             <p className="text-muted-foreground mb-4">
@@ -170,7 +172,7 @@ const EmailTemplatesManager: React.FC = () => {
             </p>
             <Button 
               onClick={() => navigate('/dashboard/email-builder')}
-              className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+              className="bg-[#FF4500] hover:bg-[#FF4500]/90"
             >
               <Plus className="h-4 w-4 mr-2" />
               Criar Design
@@ -180,7 +182,7 @@ const EmailTemplatesManager: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDesigns.map(design => (
-            <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm hover:border-[#3600FF]/20">
+            <Card key={design.id} className="group hover:shadow-lg transition-all border-0 shadow-sm hover:border-[#FF4500]/20">
               <CardContent className="p-0">
                 {/* Preview Area */}
                 <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-t-lg flex items-center justify-center relative overflow-hidden">
@@ -196,7 +198,7 @@ const EmailTemplatesManager: React.FC = () => {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <Button 
                       size="sm" 
-                      className="bg-[#3600FF] hover:bg-[#3600FF]/90"
+                      className="bg-[#FF4500] hover:bg-[#FF4500]/90"
                       onClick={() => navigate(`/dashboard/email-builder?id=${design.id}`)}
                     >
                       <Edit className="h-4 w-4 mr-1" />

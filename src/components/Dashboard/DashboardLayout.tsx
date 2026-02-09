@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import MegaMenuHeader from './MegaMenuHeader';
+import { MegaMenuHeader } from './MegaMenuHeader';
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   return (

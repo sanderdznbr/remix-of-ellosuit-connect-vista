@@ -43,7 +43,7 @@ body::before {
   --tw-bg-opacity: 1 !important;
 }
 
-/* Garantir que nenhum elemento pai mostre branco */
-div[style*="background"] {
+/* Garantir que nenhum elemento pai mostre branco - apenas em páginas de reunião */
+[data-meeting-page] div[style*="background"] {
   background-color: #101010 !important;
 }

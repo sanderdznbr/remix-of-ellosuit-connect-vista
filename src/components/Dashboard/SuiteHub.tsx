@@ -1,36 +1,57 @@
 import { Link } from "react-router-dom";
-import { FileText, Link2, PlayCircle, Mail, Radio, ArrowRight, MousePointer } from "lucide-react";
+import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const TRACK_COLOR = "#00E371";
+const SUITE_COLOR = "#3000E3";
 
-const trackModules = [
+const suiteModules = [
   {
-    id: "rastreamento-conteudo",
-    title: "Rastrear Conteúdo",
-    description: "Envie PDFs, vídeos ou imagens e gere links rastreáveis automaticamente",
+    id: "cadastros",
+    title: "Cadastros",
+    description: "Gerencie clientes, leads, fornecedores e todos os contatos da empresa",
+    icon: Users,
+    path: "/dashboard/cadastros",
+  },
+  {
+    id: "drive",
+    title: "Arquivos",
+    description: "Drive de documentos e arquivos da empresa organizados por pastas",
+    icon: FolderOpen,
+    path: "/dashboard/drive",
+  },
+  {
+    id: "equipe",
+    title: "Equipe",
+    description: "Gerencie colaboradores, permissões e papéis da equipe",
+    icon: Briefcase,
+    path: "/dashboard/equipe",
+  },
+  {
+    id: "analytics",
+    title: "Analytics",
+    description: "Métricas gerais e indicadores de performance da empresa",
+    icon: BarChart3,
+    path: "/dashboard/analytics",
+  },
+  {
+    id: "ello-vision",
+    title: "Ello Vision",
+    description: "Insights avançados com inteligência artificial",
+    icon: BarChart3,
+    path: "/dashboard/ello-vision",
+  },
+  {
+    id: "relatorios",
+    title: "Relatórios",
+    description: "Exporte e visualize relatórios detalhados",
     icon: FileText,
-    path: "/dashboard/rastreamento",
+    path: "/dashboard/relatorios",
   },
-  {
-    id: "encurtador-rastreavel",
-    title: "Encurtador Rastreável",
-    description: "Encurte qualquer URL e acompanhe cada clique em tempo real com analytics",
-    icon: Link2,
-    path: "/dashboard/encurtador",
-  },
-  {
-    id: "rastreamento-emails",
-    title: "Rastrear Emails",
-    description: "Saiba exatamente quando e quantas vezes seus emails foram abertos",
-    icon: Mail,
-    path: "/dashboard/email-tracker",
-  }
 ];
 
-export default function TrackHub() {
+export default function SuiteHub() {
   const { user } = useAuth();
 
   const { data: companyId } = useQuery({
@@ -47,75 +68,64 @@ export default function TrackHub() {
     enabled: !!user?.id,
   });
 
+  const { data: clientsCount = 0 } = useQuery({
+    queryKey: ['suite-clients-count', companyId],
+    queryFn: async () => {
+      if (!companyId) return 0;
+      const { count } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId);
+      return count || 0;
+    },
+    enabled: !!companyId,
+  });
+
   const { data: docsCount = 0 } = useQuery({
-    queryKey: ['track-docs-count', companyId],
+    queryKey: ['suite-docs-count', companyId],
     queryFn: async () => {
       if (!companyId) return 0;
       const { count } = await supabase
-        .from('trackable_documents')
+        .from('documents')
         .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId);
       return count || 0;
     },
     enabled: !!companyId,
-  });
-
-  const { data: linksCount = 0 } = useQuery({
-    queryKey: ['track-links-count', companyId],
-    queryFn: async () => {
-      if (!companyId) return 0;
-      const { count } = await supabase
-        .from('tracked_links')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId);
-      return count || 0;
-    },
-    enabled: !!companyId,
-  });
-
-  const { data: emailsTracked = 0 } = useQuery({
-    queryKey: ['track-emails-count'],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('email_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_type', 'open');
-      return count || 0;
-    },
   });
 
   const stats = [
-    { label: "Docs Rastreados", value: docsCount, icon: FileText },
-    { label: "Links Ativos", value: linksCount, icon: Link2 },
-    { label: "Emails Abertos", value: emailsTracked, icon: Mail },
-    { label: "Cliques Hoje", value: 0, icon: MousePointer },
+    { label: "Contatos", value: clientsCount, icon: Users },
+    { label: "Arquivos", value: docsCount, icon: FolderOpen },
+    { label: "Membros", value: 0, icon: Briefcase },
+    { label: "Relatórios", value: 0, icon: FileText },
   ];
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-white">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl" style={{ backgroundColor: `${TRACK_COLOR}15` }}>
-            <Radio className="h-7 w-7" style={{ color: TRACK_COLOR }} />
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 rounded-2xl" style={{ backgroundColor: `${SUITE_COLOR}12` }}>
+            <Users className="h-7 w-7" style={{ color: SUITE_COLOR }} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ellosuit Track</h1>
-            <p className="text-sm text-gray-500">Rastreamento inteligente de conteúdo</p>
+            <h1 className="text-2xl font-bold text-gray-900">Ellosuit Suite</h1>
+            <p className="text-sm text-gray-500">Central de Gestão e Análises</p>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
-                <div 
+                <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${TRACK_COLOR}12` }}
+                  style={{ backgroundColor: `${SUITE_COLOR}12` }}
                 >
-                  <Icon className="h-5 w-5" style={{ color: TRACK_COLOR }} />
+                  <Icon className="h-5 w-5" style={{ color: SUITE_COLOR }} />
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
@@ -128,9 +138,9 @@ export default function TrackHub() {
 
         {/* Modules */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Tipos de Rastreamento</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Módulos</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {trackModules.map((module) => {
+            {suiteModules.map((module) => {
               const Icon = module.icon;
               return (
                 <Link
@@ -139,9 +149,9 @@ export default function TrackHub() {
                   className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-gray-200 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div 
+                    <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: TRACK_COLOR }}
+                      style={{ backgroundColor: SUITE_COLOR }}
                     >
                       <Icon className="h-6 w-6 text-white" />
                     </div>

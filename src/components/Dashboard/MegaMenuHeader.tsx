@@ -107,12 +107,11 @@ const menuGroups: MenuGroup[] = [
     hubPath: "/dashboard/track",
     columns: [
       {
-        title: "Rastreamento",
+      title: "Rastreamento",
         items: [
-          { id: "docs", label: "Documentos", description: "PDFs rastreados", icon: FileText, path: "/dashboard/rastreamento?tab=documents" },
-          { id: "links", label: "Links", description: "URLs rastreadas", icon: Link2, path: "/dashboard/rastreamento?tab=links" },
-          { id: "videos", label: "Vídeos", description: "Visualizações rastreadas", icon: PlayCircle, path: "/dashboard/rastreamento?tab=videos" },
-          { id: "emails", label: "Emails", description: "Aberturas rastreadas", icon: Eye, path: "/dashboard/email-tracker" },
+          { id: "docs", label: "Rastrear Conteúdo", description: "Upload e rastreamento de PDFs, vídeos e imagens", icon: FileText, path: "/dashboard/rastreamento" },
+          { id: "links", label: "Encurtador Rastreável", description: "Encurte URLs e acompanhe cliques", icon: Link2, path: "/dashboard/encurtador" },
+          { id: "emails", label: "Rastrear Emails", description: "Aberturas rastreadas", icon: Eye, path: "/dashboard/email-tracker" },
         ]
       }
     ]
@@ -121,7 +120,7 @@ const menuGroups: MenuGroup[] = [
     id: "suite",
     label: "Suite",
     color: COLORS.suite,
-    hubPath: "/dashboard/cadastros",
+    hubPath: "/dashboard/suite",
     columns: [
       {
         title: "Dados",
@@ -222,6 +221,22 @@ export function MegaMenuHeader() {
 
         {/* Main Navigation */}
         <nav className="flex items-center gap-0.5 h-full">
+          {/* Dashboard link */}
+          <div className="relative flex items-center" style={{ height: '64px' }}>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="relative px-4 flex items-center gap-1.5 text-sm font-medium transition-all duration-300 z-10"
+              style={{
+                backgroundColor: location.pathname === '/dashboard' ? 'rgba(255,255,255,0.2)' : 'transparent',
+                color: location.pathname === '/dashboard' ? 'white' : 'rgba(255,255,255,0.75)',
+                borderRadius: '10px',
+                height: '36px',
+              }}
+            >
+              <span>Dashboard</span>
+            </button>
+          </div>
+
           {menuGroups.map((group) => {
             const isOpen = activeMenu === group.id;
             const isCurrentHub = activeGroupId === group.id;

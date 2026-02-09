@@ -13,6 +13,7 @@ import {
   Folder,
   File,
   Download,
+  Play,
   Trash2,
   Grid3X3,
   List,
@@ -88,35 +89,74 @@ const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, form
   } : undefined;
 
   if (viewMode === 'grid') {
+    const isImage = file.file_type.includes('image');
+    const isVideo = file.file_type.includes('video');
+    const isPdf = file.file_type.includes('pdf');
+    const hasPreviewable = (isImage || isVideo || isPdf) && file.file_url;
+
     return (
       <Card 
         ref={setNodeRef}
         style={style}
         className={cn(
-          "group hover:shadow-md transition-all cursor-grab active:cursor-grabbing",
+          "group hover:shadow-md transition-all cursor-grab active:cursor-grabbing overflow-hidden",
           isSelected && "ring-2 ring-primary border-primary",
           isDragging && "opacity-50"
         )}
         onClick={(e) => onSelect(file.id, e.ctrlKey || e.metaKey)}
+        onDoubleClick={(e) => { e.stopPropagation(); if (file.file_url) onPreview(); }}
         {...attributes}
         {...listeners}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
+        {/* Thumbnail area */}
+        {hasPreviewable ? (
+          <div 
+            className="relative w-full h-32 bg-muted flex items-center justify-center overflow-hidden cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onPreview(); }}
+          >
+            {isImage && (
+              <img src={file.file_url!} alt={file.name} className="w-full h-full object-cover" />
+            )}
+            {isVideo && (
+              <>
+                <video src={file.file_url!} className="w-full h-full object-cover" muted preload="metadata" />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                    <Play className="h-6 w-6 text-foreground ml-0.5" />
+                  </div>
+                </div>
+              </>
+            )}
+            {isPdf && (
+              <div className="flex flex-col items-center gap-1">
+                <FileText className="h-10 w-10 text-red-500" />
+                <span className="text-xs text-muted-foreground">Clique para ver</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full h-24 bg-muted flex items-center justify-center">
+            {getFileIcon(file.file_type)}
+          </div>
+        )}
+
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <Checkbox 
                 checked={isSelected} 
                 onClick={(e) => e.stopPropagation()}
                 onCheckedChange={() => onSelect(file.id, true)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
               />
-              <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center">
-                {getFileIcon(file.file_type)}
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">{file.name}</p>
+                <p className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</p>
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -146,8 +186,6 @@ const DraggableFile = ({ file, isSelected, onSelect, viewMode, getFileIcon, form
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <p className="font-medium text-sm truncate">{file.name}</p>
-          <p className="text-xs text-muted-foreground mt-1">{formatFileSize(file.file_size)}</p>
         </CardContent>
       </Card>
     );

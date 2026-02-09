@@ -36,6 +36,7 @@ const trackRoutes = [
 const suiteRoutes = [
   '/dashboard/cadastros',
   '/dashboard/drive',
+  '/dashboard/equipe',
   '/dashboard/analytics',
   '/dashboard/ello-vision',
   '/dashboard/relatorios',

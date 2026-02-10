@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Copy, Trash2, Plus, Eye, EyeOff, Power, Code, Loader2, RefreshCw, ExternalLink, CheckCircle, XCircle, Clock, AlertTriangle, ArrowLeft, BarChart3 } from 'lucide-react';
+import { Key, Copy, Trash2, Plus, Eye, EyeOff, Power, Code, Loader2, RefreshCw, ExternalLink, CheckCircle, XCircle, Clock, AlertTriangle, ArrowLeft, BarChart3, ChevronDown, ChevronUp, Lightbulb, AlertCircle, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,21 @@ interface WhatsAppSession {
   phone_number?: string;
 }
 
+const getErrorSolution = (status: string, errorMessage: string | null): { title: string; solution: string } | null => {
+  if (status === 'sent') return null;
+  const err = (errorMessage || '').toLowerCase();
+  if (status === 'rate_limited') return { title: 'Limite de taxa excedido', solution: 'Você está enviando mensagens muito rápido. Reduza a frequência ou aumente o rate_limit_per_minute da API Key. Aguarde 60s.' };
+  if (err.includes('not connected') || err.includes('session not connected')) return { title: 'Sessão desconectada', solution: 'A sessão WhatsApp está desconectada. Vá ao painel de sessões e escaneie o QR Code novamente.' };
+  if (err.includes('baileys') || err.includes('server not configured')) return { title: 'Servidor não configurado', solution: 'O servidor Baileys não está configurado ou offline. Verifique a variável BAILEYS_SERVER_URL.' };
+  if (err.includes('timeout') || err.includes('econnrefused')) return { title: 'Timeout de conexão', solution: 'O servidor não respondeu a tempo. Verifique se o servidor Baileys está acessível e tente novamente.' };
+  if (err.includes('not on whatsapp') || err.includes('not registered')) return { title: 'Número sem WhatsApp', solution: 'O número informado não possui conta no WhatsApp. Verifique se está correto.' };
+  if (err.includes('media') || err.includes('download')) return { title: 'Erro de mídia', solution: 'Não foi possível processar o arquivo. Verifique se a URL é pública, o formato é suportado e o arquivo não excede 16MB.' };
+  if (err.includes('<!doctype') || err.includes('<html')) return { title: 'Resposta HTML inesperada', solution: 'O servidor retornou uma página HTML em vez de JSON. Isso geralmente indica que a URL do servidor Baileys está incorreta ou o endpoint não existe. Verifique a configuração da URL do servidor.' };
+  if (err.includes('401') || err.includes('unauthorized')) return { title: 'Não autorizado', solution: 'API Key inválida ou desativada. Verifique se a chave está correta e ativa.' };
+  if (err.includes('500') || err.includes('internal')) return { title: 'Erro interno', solution: 'Erro inesperado no servidor. Tente novamente ou contate o suporte.' };
+  return { title: 'Erro', solution: 'Verifique a mensagem de erro completa abaixo. Se necessário, contate o suporte técnico.' };
+};
+
 const WhatsAppApiPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,6 +75,7 @@ const WhatsAppApiPage: React.FC = () => {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('keys');
   const [logFilter, setLogFilter] = useState<'all' | 'sent' | 'failed' | 'rate_limited'>('all');
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const SUPABASE_URL = 'https://jwddiyuezqrpuakazvgg.supabase.co';
   const connectedSessions = sessions.filter(s => s.status === 'connected');
@@ -387,7 +403,6 @@ const WhatsAppApiPage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* Logs Tab */}
           <TabsContent value="logs" className="flex-1 overflow-hidden mt-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -411,48 +426,103 @@ const WhatsAppApiPage: React.FC = () => {
 
             <Card className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">Status</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Mensagem</TableHead>
-                      <TableHead>Erro</TableHead>
-                      <TableHead>IP</TableHead>
-                      <TableHead>Data/Hora</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          Nenhum log encontrado
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredLogs.map(log => (
-                        <TableRow key={log.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-1" title={getStatusLabel(log.status)}>
+                {filteredLogs.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Nenhum log encontrado</p>
+                ) : (
+                  <div className="divide-y">
+                    {filteredLogs.map(log => {
+                      const isExpanded = expandedLogId === log.id;
+                      const solution = getErrorSolution(log.status, log.error_message);
+
+                      return (
+                        <div key={log.id}>
+                          <button
+                            className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
+                            onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                          >
+                            <div className="shrink-0" title={getStatusLabel(log.status)}>
                               {getStatusIcon(log.status)}
                             </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{log.phone}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {log.message_preview || '-'}
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-destructive">
-                            {log.error_message || '-'}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{log.ip_address || '-'}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(log.created_at).toLocaleString('pt-BR')}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                            <span className="font-mono text-xs w-32 shrink-0">{log.phone}</span>
+                            <span className="text-xs text-muted-foreground truncate flex-1">
+                              {log.message_preview || '-'}
+                            </span>
+                            {log.error_message && (
+                              <span className="text-xs text-destructive truncate max-w-[250px] hidden md:inline">
+                                {log.error_message.substring(0, 60)}...
+                              </span>
+                            )}
+                            <span className="font-mono text-xs text-muted-foreground shrink-0 hidden md:inline">{log.ip_address || '-'}</span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                              {new Date(log.created_at).toLocaleString('pt-BR')}
+                            </span>
+                            {isExpanded ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="px-4 pb-4 space-y-3 bg-muted/20">
+                              {/* Details grid */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 text-xs">
+                                <div>
+                                  <span className="text-muted-foreground block">Status</span>
+                                  <span className="font-medium">{getStatusLabel(log.status)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block">Telefone</span>
+                                  <span className="font-mono">{log.phone}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block">IP de Origem</span>
+                                  <span className="font-mono">{log.ip_address || '—'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground block">Data/Hora</span>
+                                  <span>{new Date(log.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })}</span>
+                                </div>
+                              </div>
+
+                              {/* Message preview */}
+                              {log.message_preview && (
+                                <div className="text-xs">
+                                  <span className="text-muted-foreground block mb-1">Mensagem Enviada</span>
+                                  <div className="bg-muted p-2 rounded font-mono break-all">{log.message_preview}</div>
+                                </div>
+                              )}
+
+                              {/* Full error */}
+                              {log.error_message && (
+                                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs font-semibold text-destructive block">Erro Completo</span>
+                                      <pre className="text-xs text-destructive/80 mt-1 whitespace-pre-wrap break-all font-mono bg-destructive/5 p-2 rounded max-h-[300px] overflow-auto">
+                                        {log.error_message}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Solution */}
+                              {solution && (
+                                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                                  <div className="flex items-start gap-2">
+                                    <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                    <div>
+                                      <span className="text-xs font-semibold text-primary block">💡 {solution.title}</span>
+                                      <p className="text-xs text-foreground/70 mt-1">{solution.solution}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </ScrollArea>
             </Card>
           </TabsContent>

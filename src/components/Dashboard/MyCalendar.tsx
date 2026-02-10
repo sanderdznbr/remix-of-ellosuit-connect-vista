@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -41,7 +41,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   const { events, loading, createEvent, bulkDeleteEvents, refreshEvents } = useCalendarData();
-  const { isConnected } = useGoogleCalendar();
+  const { isConnected, connectGoogle, loading: googleLoading } = useGoogleCalendar();
   const { lastSyncTime, syncGoogleCalendar } = useRealtimeGoogleSync();
   const { toast } = useToast();
 
@@ -211,6 +211,18 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
         
         <div className="flex items-center gap-2">
+          {!isConnected && (
+            <Button
+              onClick={() => connectGoogle()}
+              variant="outline"
+              className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50"
+              size="sm"
+              disabled={googleLoading}
+            >
+              <Video className="h-4 w-4 mr-2" />
+              Conectar Google Calendar
+            </Button>
+          )}
           <Button 
             onClick={() => setShowBulkDeleteModal(true)}
             variant="outline"

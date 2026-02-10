@@ -302,6 +302,13 @@ const AuthScreen = () => {
               {mode === 'signin' ? 'Cadastre-se' : 'Entrar'}
             </button>
           </p>
+
+          {/* Legal links */}
+          <div className="flex justify-center gap-3 text-[10px] text-muted-foreground pt-2">
+            <a href="/privacy" className="hover:underline">Política de Privacidade</a>
+            <span>•</span>
+            <a href="/terms" className="hover:underline">Termos de Uso</a>
+          </div>
         </div>
       </div>
 

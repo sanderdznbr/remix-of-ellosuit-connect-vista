@@ -118,6 +118,54 @@ export default function DisparosPage() {
 
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+  /**
+   * Resolve o JID correto usando /api/number/check do Baileys.
+   * Se não encontrar e for BR (55), tenta variação do 9º dígito.
+   * Fallback: usa o número original.
+   */
+  const resolveJid = async (baileysUrl: string, instanceName: string, phone: string): Promise<string> => {
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    const checkNumber = async (p: string): Promise<string | null> => {
+      try {
+        const res = await fetch(`${baileysUrl}/api/number/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instanceName, phone: p }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data?.exists && data?.jid) return data.jid;
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // 1. Tentar número original
+    const jid = await checkNumber(cleanPhone);
+    if (jid) return jid;
+
+    // 2. Se BR, tentar variação do 9º dígito
+    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+      const ddd = cleanPhone.substring(2, 4);
+      const rest = cleanPhone.substring(4);
+      let alt: string | null = null;
+      if (rest.length === 9 && rest.startsWith('9')) {
+        alt = `55${ddd}${rest.substring(1)}`;
+      } else if (rest.length === 8) {
+        alt = `55${ddd}9${rest}`;
+      }
+      if (alt) {
+        const altJid = await checkNumber(alt);
+        if (altJid) return altJid;
+      }
+    }
+
+    // 3. Fallback
+    return `${cleanPhone}@s.whatsapp.net`;
+  };
+
   const startDisparo = async () => {
     if (!selectedSession) {
       toast({ title: 'Selecione uma sessão', variant: 'destructive' });
@@ -155,6 +203,10 @@ export default function DisparosPage() {
           phone = '55' + phone;
         }
 
+        // Resolver JID correto antes de enviar (igual à API pública)
+        const jid = await resolveJid(baileysUrl, instanceName, phone);
+        console.log(`[Disparos] Número ${phone} → JID: ${jid}`);
+
         if (mediaType === 'text') {
           // Send text
           const res = await fetch(`${baileysUrl}/api/message/send`, {
@@ -162,7 +214,7 @@ export default function DisparosPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               instanceName,
-              jid: `${phone}@s.whatsapp.net`,
+              jid,
               message: { text: message },
             }),
           });
@@ -180,7 +232,7 @@ export default function DisparosPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               instanceName,
-              jid: `${phone}@s.whatsapp.net`,
+              jid,
               mediaType: mediaTypeMap[mediaType],
               url: mediaUrl,
               caption: mediaCaption || undefined,

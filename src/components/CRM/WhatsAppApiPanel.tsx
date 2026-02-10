@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Copy, Trash2, Plus, Eye, EyeOff, Power, Code, BarChart3, Clock, Loader2, RefreshCw } from 'lucide-react';
+import WhatsAppApiLogs from './WhatsAppApiLogs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -332,6 +333,9 @@ print(response.json())`,
           </div>
         </CardContent>
       </Card>
+
+      {/* API Logs */}
+      <WhatsAppApiLogs companyId={companyId} />
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

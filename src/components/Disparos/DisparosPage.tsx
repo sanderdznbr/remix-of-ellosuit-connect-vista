@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone } from 'lucide-react';
+import AudioRecorder from './AudioRecorder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -337,7 +338,7 @@ export default function DisparosPage() {
                   />
                 </TabsContent>
 
-                {['image', 'video', 'audio', 'document'].map(type => (
+                {['image', 'video', 'document'].map(type => (
                   <TabsContent key={type} value={type} className="mt-3 space-y-3">
                     <Input
                       placeholder="URL do arquivo (ex: https://...)"
@@ -345,18 +346,34 @@ export default function DisparosPage() {
                       onChange={e => setMediaUrl(e.target.value)}
                       disabled={isSending}
                     />
-                    {type !== 'audio' && (
-                      <Textarea
-                        placeholder="Legenda (opcional)"
-                        value={mediaCaption}
-                        onChange={e => setMediaCaption(e.target.value)}
-                        rows={3}
-                        disabled={isSending}
-                        className="resize-none"
-                      />
-                    )}
+                    <Textarea
+                      placeholder="Legenda (opcional)"
+                      value={mediaCaption}
+                      onChange={e => setMediaCaption(e.target.value)}
+                      rows={3}
+                      disabled={isSending}
+                      className="resize-none"
+                    />
                   </TabsContent>
                 ))}
+
+                <TabsContent value="audio" className="mt-3 space-y-3">
+                  <AudioRecorder
+                    onAudioUrl={(url) => setMediaUrl(url)}
+                    disabled={isSending}
+                  />
+                  <div className="relative flex items-center gap-2">
+                    <div className="flex-1 border-t border-gray-200" />
+                    <span className="text-xs text-gray-400">ou cole uma URL</span>
+                    <div className="flex-1 border-t border-gray-200" />
+                  </div>
+                  <Input
+                    placeholder="URL do áudio (ex: https://...)"
+                    value={mediaUrl}
+                    onChange={e => setMediaUrl(e.target.value)}
+                    disabled={isSending}
+                  />
+                </TabsContent>
               </Tabs>
 
               {/* Delay config */}

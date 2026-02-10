@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Search,
-  MessageSquare, Mail, Users, Phone, Key,
+  MessageSquare, Mail, Users, Phone, Key, Megaphone,
   Calendar, Video, CheckSquare, FolderOpen, Zap, CalendarClock, Bot,
   FileText, Link, Play, Eye, BarChart3,
   Shield, HelpCircle, Settings, CreditCard
@@ -20,6 +20,7 @@ const hubs = [
     items: [
       { icon: MessageSquare, label: 'WhatsApp CRM', path: '/dashboard/crm-whatsapp' },
       { icon: Key, label: 'API WhatsApp', path: '/dashboard/api-whatsapp' },
+      { icon: Megaphone, label: 'Disparos', path: '/dashboard/disparos' },
       { icon: Mail, label: 'Email', path: '/dashboard/email' },
       { icon: Users, label: 'Clientes', path: '/dashboard/cadastros' },
       { icon: Phone, label: 'Contatos', path: '/dashboard/contatos' },

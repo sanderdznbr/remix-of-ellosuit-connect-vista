@@ -56,6 +56,7 @@ import LeadFunnelBuilder from '@/components/LeadCapture/LeadFunnelBuilder';
 import LeadFunnelAnalytics from '@/pages/LeadFunnelAnalytics';
 import LeadTrackingDashboard from '@/pages/LeadTrackingDashboard';
 import WhatsAppApiPage from '@/pages/WhatsAppApiPage';
+import DisparosPage from '@/components/Disparos/DisparosPage';
 
 // Admin
 import AdminMasterDashboard from '@/components/Admin/AdminMasterDashboard';
@@ -104,6 +105,7 @@ const MobileResponsiveDashboard = () => {
         {/* Comunicação */}
         <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
         <Route path="/api-whatsapp" element={<WhatsAppApiPage />} />
+        <Route path="/disparos" element={<DisparosPage />} />
         <Route path="/email" element={<CleanEmailMarketing />} />
         <Route path="/email/builder" element={<EmailTemplateBuilder />} />
         <Route path="/email-builder" element={<EmailTemplateBuilder />} />

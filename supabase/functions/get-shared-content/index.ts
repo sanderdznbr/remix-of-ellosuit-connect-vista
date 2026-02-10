@@ -20,7 +20,9 @@ serve(async (req) => {
       });
     }
 
-    const [type, id] = shareId.split("-");
+    const dashIndex = shareId.indexOf("-");
+    const type = shareId.substring(0, dashIndex);
+    const id = shareId.substring(dashIndex + 1);
     if (!type || !id || !["file", "folder"].includes(type)) {
       return new Response(JSON.stringify({ error: "Invalid shareId format" }), {
         status: 400,

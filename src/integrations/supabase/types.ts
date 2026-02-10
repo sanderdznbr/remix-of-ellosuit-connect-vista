@@ -2873,6 +2873,104 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_api_keys: {
+        Row: {
+          api_key: string
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          rate_limit_per_minute: number
+          session_id: string
+          total_messages_sent: number
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          rate_limit_per_minute?: number
+          session_id: string
+          total_messages_sent?: number
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          rate_limit_per_minute?: number
+          session_id?: string
+          total_messages_sent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_api_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_api_keys_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_api_logs: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          message_preview: string | null
+          phone: string
+          status: string
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          message_preview?: string | null
+          phone: string
+          status: string
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          message_preview?: string | null
+          phone?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_api_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_contacts: {
         Row: {
           business_name: string | null

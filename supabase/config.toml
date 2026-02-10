@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.get-shared-content]
 verify_jwt = false
+
+[functions.whatsapp-public-api]
+verify_jwt = false

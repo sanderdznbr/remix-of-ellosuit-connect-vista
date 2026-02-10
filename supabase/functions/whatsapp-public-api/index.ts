@@ -116,15 +116,17 @@ serve(async (req) => {
 
       try {
         const instanceName = session.instance_name;
+        const cleanPhone = phone.replace(/\D/g, '');
+        const jid = `${cleanPhone}@s.whatsapp.net`;
 
-        // Endpoint correto: /api/message/send (instanceName no body)
+        // Baileys v4.x espera jid e message: { text: "..." }
         const sendResponse = await fetch(`${baileysUrl}/api/message/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             instanceName,
-            phone: phone.replace(/\D/g, ''),
-            message,
+            jid,
+            message: { text: message },
           }),
         });
 
@@ -194,13 +196,16 @@ serve(async (req) => {
         const instanceName = session.instance_name;
         const logPreview = `[${media_type || 'media'}] ${caption || media_url}`.substring(0, 100);
 
-        // Endpoint correto: /api/message/send-media (instanceName no body)
+        const cleanMediaPhone = mediaPhone.replace(/\D/g, '');
+        const mediaJid = `${cleanMediaPhone}@s.whatsapp.net`;
+
+        // Baileys v4.x espera jid no body
         const sendRes = await fetch(`${bUrl}/api/message/send-media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             instanceName,
-            phone: mediaPhone.replace(/\D/g, ''),
+            jid: mediaJid,
             mediaUrl: media_url,
             caption: caption || '',
             mediaType: media_type || 'image',

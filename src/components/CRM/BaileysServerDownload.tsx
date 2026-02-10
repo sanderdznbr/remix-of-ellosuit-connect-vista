@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap, RefreshCw, Database } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap, RefreshCw, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const { toast } = useToast();
   const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.6.0'>('4.6.0');
+  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.6.0' | '4.7.0'>('4.7.0');
   
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
   const setIsOpen = (open: boolean) => {
@@ -1090,6 +1090,111 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
     return { packageJson, readme, envExample };
   };
 
+  const downloadV47Zip = async () => {
+    setDownloading(true);
+    try {
+      const response = await fetch('/docs/baileys-server-template/baileys-server-v4.7.0/index.js');
+      let indexJs = '';
+      
+      if (response.ok) {
+        indexJs = await response.text();
+      }
+
+      const packageJson = `{
+  "name": "baileys-server",
+  "version": "4.7.0",
+  "description": "WhatsApp Baileys Server for Lovable CRM - Number Validation & JID Resolution",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.17",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}`;
+
+      const envExample = `# Variáveis de ambiente para Railway
+SUPABASE_WEBHOOK_URL=${webhookUrl}
+SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
+
+# NÃO defina PORT - Railway define automaticamente
+`;
+
+      const readme = `# 🚀 Baileys Server v4.7.0 - Number Validation & JID Resolution
+
+## ✨ Novidades v4.7.0
+
+- 🔍 **Validação de número** - endpoint /api/number/check via onWhatsApp()
+- 🇧🇷 **Correção 9o dígito brasileiro** - resolve automaticamente
+- ✅ Tudo do v4.6.0 mantido (sync proativo, stickers, cache, etc.)
+
+## Deploy no Railway
+
+1. New Project → Deploy from GitHub
+2. Em **Variables**, adicione:
+   \\\`SUPABASE_WEBHOOK_URL\\\` = \\\`${webhookUrl}\\\`
+   \\\`SUPABASE_URL\\\` = \\\`https://jwddiyuezqrpuakazvgg.supabase.co\\\`
+   \\\`SUPABASE_SERVICE_ROLE_KEY\\\` = \\\`sua_service_role_key\\\`
+
+**IMPORTANTE**: Delete a pasta \\\`sessions/\\\` para uma conexão limpa!
+
+## Novo Endpoint v4.7.0
+
+### Verificar Número
+\\\`\\\`\\\`bash
+POST /api/number/check
+{ "instanceName": "sua-instancia", "phone": "5541996875461" }
+# Resposta: { "exists": true, "jid": "554196875461@s.whatsapp.net" }
+\\\`\\\`\\\`
+`;
+      
+      const zip = new JSZip();
+      zip.file('package.json', packageJson);
+      zip.file('.env.example', envExample);
+      zip.file('README.md', readme);
+      
+      if (indexJs) {
+        zip.file('index.js', indexJs);
+      } else {
+        zip.file('index.js', '// Baileys Server v4.7.0\\n// Baixe index.js de docs/baileys-server-template/baileys-server-v4.7.0/');
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'baileys-server-v4.7.0.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download iniciado!',
+        description: 'Servidor v4.7.0 com validação de número e correção do 9o dígito'
+      });
+      
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar arquivo ZIP',
+        variant: 'destructive'
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const downloadV46Zip = async () => {
     setDownloading(true);
     try {
@@ -1170,14 +1275,94 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
         </DialogDescription>
       </DialogHeader>
 
-      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.6.0')}>
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.6.0' | '4.7.0')}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="4.7.0" className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            v4.7.0 (Recomendado)
+          </TabsTrigger>
           <TabsTrigger value="4.6.0" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            v4.6.0 (Recomendado)
+            v4.6.0
           </TabsTrigger>
-          <TabsTrigger value="4.2.0">v4.2.0 (Estável)</TabsTrigger>
+          <TabsTrigger value="4.2.0">v4.2.0</TabsTrigger>
         </TabsList>
+
+        {/* v4.7.0 Content */}
+        <TabsContent value="4.7.0" className="space-y-4 mt-4">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Novidades v4.7.0
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li className="flex items-center gap-2">
+                <Search className="h-3 w-3 text-green-500" />
+                <strong>Validação de número</strong> - verifica via onWhatsApp()
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>Correção 9º dígito BR</strong> - resolve automaticamente
+              </li>
+              <li className="flex items-center gap-2">
+                <Zap className="h-3 w-3 text-green-500" />
+                <strong>Endpoint /api/number/check</strong> - JID correto
+              </li>
+              <li className="flex items-center gap-2">
+                <RefreshCw className="h-3 w-3 text-green-500" />
+                <strong>Tudo do v4.6.0</strong> - sync proativo, stickers, cache
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Importante: Conexão Limpa
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão.
+            </p>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>package.json</code> - Baileys v6.7.17</li>
+              <li>• <code>index.js</code> - Servidor v4.7.0 com validação de número</li>
+              <li>• <code>.env.example</code> - Variáveis de ambiente</li>
+              <li>• <code>README.md</code> - Documentação completa</li>
+            </ul>
+          </div>
+
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <h4 className="font-medium text-primary mb-2">🔍 Novo Endpoint</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>POST /api/number/check</code> - Verifica número no WhatsApp</li>
+              <li>• Retorna o JID correto (resolve 9º dígito BR)</li>
+              <li>• Usado automaticamente pela API pública</li>
+            </ul>
+          </div>
+
+          <Button 
+            onClick={downloadV47Zip} 
+            disabled={downloading}
+            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando ZIP...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar baileys-server-v4.7.0.zip
+              </>
+            )}
+          </Button>
+        </TabsContent>
 
         {/* v4.6.0 Content */}
         <TabsContent value="4.6.0" className="space-y-4 mt-4">

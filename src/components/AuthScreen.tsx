@@ -304,10 +304,10 @@ const AuthScreen = () => {
           </p>
 
           {/* Legal links */}
-          <div className="flex justify-center gap-3 text-[10px] text-muted-foreground pt-2">
-            <a href="/privacy" className="hover:underline">Política de Privacidade</a>
+          <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-4 pb-2">
+            <a href="/privacy" className="underline hover:text-foreground transition-colors">Política de Privacidade</a>
             <span>•</span>
-            <a href="/terms" className="hover:underline">Termos de Uso</a>
+            <a href="/terms" className="underline hover:text-foreground transition-colors">Termos de Uso</a>
           </div>
         </div>
       </div>

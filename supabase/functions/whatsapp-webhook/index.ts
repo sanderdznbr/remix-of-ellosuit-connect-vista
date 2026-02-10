@@ -57,11 +57,8 @@ function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string 
     return null;
   }
   
-  // For LID contacts, prefix with 'lid_' to distinguish from regular phone numbers
-  if (isLid && !isGroup) {
-    return `lid_${identifier}`;
-  }
-  
+  // NO longer prefix with 'lid_' - just return the digits
+  // The real phone resolution happens at a higher level using remoteJidAlt
   return identifier;
 }
 
@@ -207,21 +204,32 @@ serve(async (req) => {
             
             const isGroup = isGroupJid(jid);
             
+            // For LID chats, try to resolve to real phone using alternative JID fields
+            let resolvedJid = jid;
+            if (isLidJid(jid) && !isGroup) {
+              const altJid = chat.lidJid || chat.phoneJid || chat.altJid;
+              if (altJid && !isLidJid(altJid)) {
+                console.log(`[CHAT LID] Resolved ${jid} -> ${altJid}`);
+                resolvedJid = altJid;
+              }
+            }
+            
             // Extract and validate identifier (phone number or group ID)
-            // Allow groups now - they have longer IDs but are valid
-            const phoneNumber = extractPhoneFromJid(jid, true);
+            const phoneNumber = extractPhoneFromJid(resolvedJid, true);
             if (!phoneNumber) continue;
             
             // ============== IMPROVED: Get contact/group name ==============
             // For groups: prioritize groupSubject, subject, groupName
-            // For individuals: prioritize name, notify, pushName
+            // For individuals: prioritize name, notify, pushName - NEVER fall back to raw LID
             let contactName: string;
             if (isGroup) {
               contactName = chat.groupSubject || chat.subject || chat.groupName || 
                            chat.name || chat.metadata?.subject || phoneNumber;
               console.log(`[CHAT GROUP] ${phoneNumber} => "${contactName}"`);
             } else {
-              contactName = chat.name || chat.notify || chat.pushName || chat.verifiedName || phoneNumber;
+              contactName = chat.name || chat.notify || chat.pushName || chat.verifiedName || '';
+              // If no name available, use phone number (not LID identifier)
+              if (!contactName) contactName = phoneNumber;
             }
             
             // Profile picture - from enriched data or chat object

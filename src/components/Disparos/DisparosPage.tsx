@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone } from 'lucide-react';
 import AudioRecorder from './AudioRecorder';
+import FileUploader from './FileUploader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -338,40 +339,76 @@ export default function DisparosPage() {
                   />
                 </TabsContent>
 
-                {['image', 'video', 'document'].map(type => (
-                  <TabsContent key={type} value={type} className="mt-3 space-y-3">
-                    <Input
-                      placeholder="URL do arquivo (ex: https://...)"
-                      value={mediaUrl}
-                      onChange={e => setMediaUrl(e.target.value)}
-                      disabled={isSending}
-                    />
-                    <Textarea
-                      placeholder="Legenda (opcional)"
-                      value={mediaCaption}
-                      onChange={e => setMediaCaption(e.target.value)}
-                      rows={3}
-                      disabled={isSending}
-                      className="resize-none"
-                    />
-                  </TabsContent>
-                ))}
+                <TabsContent value="image" className="mt-3 space-y-3">
+                  <FileUploader
+                    type="image"
+                    accept="image/*"
+                    onFileUrl={setMediaUrl}
+                    disabled={isSending}
+                    currentUrl={mediaType === 'image' ? mediaUrl : ''}
+                  />
+                  <Textarea
+                    placeholder="Legenda (opcional)"
+                    value={mediaCaption}
+                    onChange={e => setMediaCaption(e.target.value)}
+                    rows={3}
+                    disabled={isSending}
+                    className="resize-none"
+                  />
+                </TabsContent>
+
+                <TabsContent value="video" className="mt-3 space-y-3">
+                  <FileUploader
+                    type="video"
+                    accept="video/*"
+                    onFileUrl={setMediaUrl}
+                    disabled={isSending}
+                    currentUrl={mediaType === 'video' ? mediaUrl : ''}
+                  />
+                  <Textarea
+                    placeholder="Legenda (opcional)"
+                    value={mediaCaption}
+                    onChange={e => setMediaCaption(e.target.value)}
+                    rows={3}
+                    disabled={isSending}
+                    className="resize-none"
+                  />
+                </TabsContent>
 
                 <TabsContent value="audio" className="mt-3 space-y-3">
                   <AudioRecorder
-                    onAudioUrl={(url) => setMediaUrl(url)}
+                    onAudioUrl={setMediaUrl}
                     disabled={isSending}
                   />
                   <div className="relative flex items-center gap-2">
                     <div className="flex-1 border-t border-gray-200" />
-                    <span className="text-xs text-gray-400">ou cole uma URL</span>
+                    <span className="text-xs text-gray-400">ou envie um arquivo</span>
                     <div className="flex-1 border-t border-gray-200" />
                   </div>
-                  <Input
-                    placeholder="URL do áudio (ex: https://...)"
-                    value={mediaUrl}
-                    onChange={e => setMediaUrl(e.target.value)}
+                  <FileUploader
+                    type="audio"
+                    accept="audio/*"
+                    onFileUrl={setMediaUrl}
                     disabled={isSending}
+                    currentUrl={mediaType === 'audio' ? mediaUrl : ''}
+                  />
+                </TabsContent>
+
+                <TabsContent value="document" className="mt-3 space-y-3">
+                  <FileUploader
+                    type="document"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+                    onFileUrl={setMediaUrl}
+                    disabled={isSending}
+                    currentUrl={mediaType === 'document' ? mediaUrl : ''}
+                  />
+                  <Textarea
+                    placeholder="Legenda (opcional)"
+                    value={mediaCaption}
+                    onChange={e => setMediaCaption(e.target.value)}
+                    rows={3}
+                    disabled={isSending}
+                    className="resize-none"
                   />
                 </TabsContent>
               </Tabs>

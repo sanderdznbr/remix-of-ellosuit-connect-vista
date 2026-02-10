@@ -32,65 +32,56 @@ async function resolveWhatsAppJid(
   phone: string
 ): Promise<{ success: true; jid: string } | { success: false; error: string }> {
   const cleanPhone = phone.replace(/\D/g, '');
-
-  // Tentar o número original
   const checkUrl = `${baileysUrl}/api/number/check`;
 
-  try {
-    const res = await fetch(checkUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instanceName, phone: cleanPhone }),
-    });
-
-    const result = await fetchJsonSafely(res);
-
-    if (result.ok && result.data?.exists && result.data?.jid) {
-      console.log(`[resolveJid] Número ${cleanPhone} encontrado: ${result.data.jid}`);
-      return { success: true, jid: result.data.jid };
-    }
-
-    // Se não encontrou e é número brasileiro, tentar variação do 9o dígito
-    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
-      const ddd = cleanPhone.substring(2, 4);
-      const rest = cleanPhone.substring(4);
-      let altPhone: string;
-
-      if (rest.length === 9 && rest.startsWith('9')) {
-        // Tem 9o dígito → tentar sem
-        altPhone = `55${ddd}${rest.substring(1)}`;
-      } else if (rest.length === 8) {
-        // Não tem 9o dígito → tentar com
-        altPhone = `55${ddd}9${rest}`;
-      } else {
-        return { success: false, error: `Número ${cleanPhone} não encontrado no WhatsApp` };
-      }
-
-      console.log(`[resolveJid] Tentando variação brasileira: ${altPhone}`);
-
-      const altRes = await fetch(checkUrl, {
+  // Função auxiliar para verificar um número
+  async function checkNumber(phoneToCheck: string): Promise<string | null> {
+    try {
+      const res = await fetch(checkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instanceName, phone: altPhone }),
+        body: JSON.stringify({ instanceName, phone: phoneToCheck }),
       });
-
-      const altResult = await fetchJsonSafely(altRes);
-
-      if (altResult.ok && altResult.data?.exists && altResult.data?.jid) {
-        console.log(`[resolveJid] Variação ${altPhone} encontrada: ${altResult.data.jid}`);
-        return { success: true, jid: altResult.data.jid };
+      const result = await fetchJsonSafely(res);
+      if (result.ok && result.data?.exists && result.data?.jid) {
+        console.log(`[resolveJid] Número ${phoneToCheck} encontrado: ${result.data.jid}`);
+        return result.data.jid;
       }
+      return null;
+    } catch (e) {
+      console.error(`[resolveJid] Erro ao verificar ${phoneToCheck}: ${e}`);
+      return null;
+    }
+  }
+
+  // 1. Tentar o número original
+  const originalJid = await checkNumber(cleanPhone);
+  if (originalJid) return { success: true, jid: originalJid };
+
+  // 2. Se brasileiro, tentar variação do 9o dígito
+  if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+    const ddd = cleanPhone.substring(2, 4);
+    const rest = cleanPhone.substring(4);
+    let altPhone: string | null = null;
+
+    if (rest.length === 9 && rest.startsWith('9')) {
+      altPhone = `55${ddd}${rest.substring(1)}`;
+    } else if (rest.length === 8) {
+      altPhone = `55${ddd}9${rest}`;
     }
 
-    return { success: false, error: `Número ${cleanPhone} não encontrado no WhatsApp` };
-  } catch (e) {
-    const errMsg = e instanceof Error ? e.message : String(e);
-    console.error(`[resolveJid] Erro ao verificar número: ${errMsg}`);
-    // Fallback: usar o número original como JID (comportamento anterior)
-    const fallbackJid = `${cleanPhone}@s.whatsapp.net`;
-    console.log(`[resolveJid] Usando fallback JID: ${fallbackJid}`);
-    return { success: true, jid: fallbackJid };
+    if (altPhone) {
+      console.log(`[resolveJid] Tentando variação brasileira: ${altPhone}`);
+      const altJid = await checkNumber(altPhone);
+      if (altJid) return { success: true, jid: altJid };
+    }
   }
+
+  // 3. FALLBACK: se a validação falhou, enviar mesmo assim com o número original
+  // Isso cobre casos de números com LID ou quando o endpoint /api/number/check não funciona corretamente
+  const fallbackJid = `${cleanPhone}@s.whatsapp.net`;
+  console.log(`[resolveJid] Validação não encontrou o número, usando fallback JID: ${fallbackJid}`);
+  return { success: true, jid: fallbackJid };
 }
 
 serve(async (req) => {

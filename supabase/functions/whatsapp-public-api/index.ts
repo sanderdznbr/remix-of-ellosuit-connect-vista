@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Helper to safely parse JSON responses and detect HTML errors
 async function fetchJsonSafely(response: Response): Promise<{ ok: boolean; data?: any; error?: string }> {
   const contentType = response.headers.get('content-type') || '';
   const text = await response.text();
@@ -20,6 +19,77 @@ async function fetchJsonSafely(response: Response): Promise<{ ok: boolean; data?
     return { ok: response.ok, data, error: response.ok ? undefined : text };
   } catch {
     return { ok: false, error: `Resposta inválida (status ${response.status}): ${text.substring(0, 200)}` };
+  }
+}
+
+/**
+ * Resolve o JID correto de um número usando o endpoint /api/number/check do Baileys.
+ * Se o número não for encontrado e for brasileiro (55), tenta variações com/sem 9o dígito.
+ */
+async function resolveWhatsAppJid(
+  baileysUrl: string,
+  instanceName: string,
+  phone: string
+): Promise<{ success: true; jid: string } | { success: false; error: string }> {
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  // Tentar o número original
+  const checkUrl = `${baileysUrl}/api/number/check`;
+
+  try {
+    const res = await fetch(checkUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instanceName, phone: cleanPhone }),
+    });
+
+    const result = await fetchJsonSafely(res);
+
+    if (result.ok && result.data?.exists && result.data?.jid) {
+      console.log(`[resolveJid] Número ${cleanPhone} encontrado: ${result.data.jid}`);
+      return { success: true, jid: result.data.jid };
+    }
+
+    // Se não encontrou e é número brasileiro, tentar variação do 9o dígito
+    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+      const ddd = cleanPhone.substring(2, 4);
+      const rest = cleanPhone.substring(4);
+      let altPhone: string;
+
+      if (rest.length === 9 && rest.startsWith('9')) {
+        // Tem 9o dígito → tentar sem
+        altPhone = `55${ddd}${rest.substring(1)}`;
+      } else if (rest.length === 8) {
+        // Não tem 9o dígito → tentar com
+        altPhone = `55${ddd}9${rest}`;
+      } else {
+        return { success: false, error: `Número ${cleanPhone} não encontrado no WhatsApp` };
+      }
+
+      console.log(`[resolveJid] Tentando variação brasileira: ${altPhone}`);
+
+      const altRes = await fetch(checkUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceName, phone: altPhone }),
+      });
+
+      const altResult = await fetchJsonSafely(altRes);
+
+      if (altResult.ok && altResult.data?.exists && altResult.data?.jid) {
+        console.log(`[resolveJid] Variação ${altPhone} encontrada: ${altResult.data.jid}`);
+        return { success: true, jid: altResult.data.jid };
+      }
+    }
+
+    return { success: false, error: `Número ${cleanPhone} não encontrado no WhatsApp` };
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error(`[resolveJid] Erro ao verificar número: ${errMsg}`);
+    // Fallback: usar o número original como JID (comportamento anterior)
+    const fallbackJid = `${cleanPhone}@s.whatsapp.net`;
+    console.log(`[resolveJid] Usando fallback JID: ${fallbackJid}`);
+    return { success: true, jid: fallbackJid };
   }
 }
 
@@ -116,18 +186,26 @@ serve(async (req) => {
 
       try {
         const instanceName = session.instance_name;
-        const cleanPhone = phone.replace(/\D/g, '');
-        const jid = `${cleanPhone}@s.whatsapp.net`;
 
-        // Baileys v4.x espera jid e message: { text: "..." }
+        // Resolver o JID correto antes de enviar
+        const jidResult = await resolveWhatsAppJid(baileysUrl, instanceName, phone);
+        if (!jidResult.success) {
+          await supabase.from('whatsapp_api_logs').insert({
+            api_key_id: keyData.id, phone, message_preview: message.substring(0, 100),
+            status: 'failed', error_message: jidResult.error, ip_address: ip,
+          });
+          return new Response(JSON.stringify({ error: jidResult.error }), {
+            status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const jid = jidResult.jid;
+        console.log(`[send_text] Enviando para JID resolvido: ${jid} (original: ${phone})`);
+
         const sendResponse = await fetch(`${baileysUrl}/api/message/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instanceName,
-            jid,
-            message: { text: message },
-          }),
+          body: JSON.stringify({ instanceName, jid, message: { text: message } }),
         });
 
         const result = await fetchJsonSafely(sendResponse);
@@ -142,7 +220,7 @@ serve(async (req) => {
             last_used_at: new Date().toISOString(),
           }).eq('id', keyData.id);
 
-          return new Response(JSON.stringify({ success: true, message_id: result.data?.messageId }), {
+          return new Response(JSON.stringify({ success: true, message_id: result.data?.messageId, resolved_jid: jid }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         } else {
@@ -196,10 +274,21 @@ serve(async (req) => {
         const instanceName = session.instance_name;
         const logPreview = `[${media_type || 'media'}] ${caption || media_url}`.substring(0, 100);
 
-        const cleanMediaPhone = mediaPhone.replace(/\D/g, '');
-        const mediaJid = `${cleanMediaPhone}@s.whatsapp.net`;
+        // Resolver o JID correto antes de enviar
+        const jidResult = await resolveWhatsAppJid(bUrl, instanceName, mediaPhone);
+        if (!jidResult.success) {
+          await supabase.from('whatsapp_api_logs').insert({
+            api_key_id: keyData.id, phone: mediaPhone, message_preview: logPreview,
+            status: 'failed', error_message: jidResult.error, ip_address: ip,
+          });
+          return new Response(JSON.stringify({ error: jidResult.error }), {
+            status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
 
-        // Baileys v4.x espera jid no body
+        const mediaJid = jidResult.jid;
+        console.log(`[send_media] Enviando para JID resolvido: ${mediaJid} (original: ${mediaPhone})`);
+
         const sendRes = await fetch(`${bUrl}/api/message/send-media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -224,7 +313,7 @@ serve(async (req) => {
             last_used_at: new Date().toISOString(),
           }).eq('id', keyData.id);
 
-          return new Response(JSON.stringify({ success: true, message_id: result.data?.messageId }), {
+          return new Response(JSON.stringify({ success: true, message_id: result.data?.messageId, resolved_jid: mediaJid }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         } else {

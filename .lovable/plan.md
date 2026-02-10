@@ -1,80 +1,84 @@
 
-# Correção da API Pública WhatsApp - Endpoints Incorretos
+# Correção: Validação de Número WhatsApp Antes do Envio
 
-## Problema Identificado
+## Problema
 
-A Edge Function `whatsapp-public-api` está chamando endpoints que **nao existem** no servidor Baileys v4.6.0:
+A API constrói o JID (identificador WhatsApp) diretamente a partir do telefone recebido, sem verificar se aquele número existe no WhatsApp. Isso causa falha silenciosa quando:
 
-| O que a API chama (ERRADO) | O que o Baileys tem (CORRETO) |
-|---|---|
-| `/api/instance/{name}/send-message` | `/api/message/send` |
-| `/api/instance/{name}/send-media` | `/api/message/send-media` |
+- O número tem o 9o dígito brasileiro extra (ex: 5541**9**96875461 vs 554196875461)
+- O número está no formato diferente do registrado no WhatsApp
 
-Isso faz o servidor Baileys retornar uma pagina HTML de erro 404, que a API interpreta como falha.
+A mensagem retorna "sent" mas nunca chega ao destinatário real.
 
-## Correção
+## Solução em 2 partes
 
-Atualizar o arquivo `supabase/functions/whatsapp-public-api/index.ts`:
+### Parte 1: Novo endpoint no servidor Baileys (instrução para deploy)
 
-### 1. Corrigir endpoint de envio de texto (send_text)
+Adicionar endpoint `/api/number/check` no servidor Baileys que usa a função `onWhatsApp()` do Baileys para resolver o JID correto de um número.
 
-**De:**
-```
-/api/instance/${instanceKey}/send-message
-```
-**Para:**
-```
-/api/message/send
-```
+O usuário precisará atualizar o `index.js` do Baileys no Railway com este novo endpoint.
 
-E incluir o `instanceName` no body da requisicao em vez da URL.
+### Parte 2: Atualizar a Edge Function
 
-### 2. Corrigir endpoint de envio de midia (send_media)
+Antes de enviar mensagem (texto ou mídia), a Edge Function vai:
 
-**De:**
-```
-/api/instance/${iKey}/send-media
-```
-**Para:**
-```
-/api/message/send-media
-```
+1. Chamar `/api/number/check` no Baileys com o número fornecido
+2. Se o número existir no WhatsApp, usar o JID retornado (que é o correto)
+3. Se não existir, tentar variações do número brasileiro (com/sem 9o dígito)
+4. Se nenhum funcionar, retornar erro claro ao chamador
 
-Mesma logica: instanceName vai no body.
+## Detalhes Técnicos
 
-### 3. Adicionar tratamento de resposta HTML
+### Novo endpoint no Baileys (`index.js`)
 
-Antes de tentar parsear o JSON da resposta, verificar o Content-Type. Se vier HTML, registrar erro claro no log.
+Adicionar antes dos endpoints de mensagem:
 
-### 4. Ajustar o body enviado ao Baileys
-
-O Baileys v4.6.0 espera o campo `instanceName` no body para identificar a sessao, junto com `phone` e `message`.
-
----
-
-## Instrucoes para o outro site (para voce enviar)
-
-Nenhuma mudanca e necessaria no lado do site que consome a API. O problema e exclusivamente nos endpoints internos do Ellosuit que se comunicam com o servidor Baileys. A API publica (`/functions/v1/whatsapp-public-api`) continuara funcionando com os mesmos parametros:
-
-```json
-{
-  "action": "send_text",
-  "phone": "5511999999999",
-  "message": "Ola!"
-}
+```text
+POST /api/number/check
+Body: { "instanceName": "xxx", "phone": "5541996875461" }
+Response: { "exists": true, "jid": "554196875461@s.whatsapp.net" }
 ```
 
-O header `X-API-Key` e o formato do body permanecem identicos.
+Internamente usa `socket.onWhatsApp(phone)` que retorna o JID real.
 
----
+### Alterações na Edge Function (`whatsapp-public-api/index.ts`)
 
-## Detalhes Tecnicos
+1. Criar função auxiliar `resolveWhatsAppJid()` que:
+   - Chama o endpoint `/api/number/check` no Baileys
+   - Se o número não for encontrado e for brasileiro (começa com 55), tenta remover ou adicionar o 9o dígito
+   - Retorna o JID correto ou erro
 
-Arquivo modificado: `supabase/functions/whatsapp-public-api/index.ts`
+2. Nos cases `send_text` e `send_media`:
+   - Substituir a construção manual do JID pelo resultado de `resolveWhatsAppJid()`
+   - Logar o JID resolvido para debug
 
-Mudancas especificas:
-- Linha ~133: URL de send-message corrigida para `/api/message/send`
-- Linha ~136-139: Body atualizado para incluir `instanceName`
-- Linha ~217: URL de send-media corrigida para `/api/message/send-media`
-- Linha ~220-225: Body atualizado para incluir `instanceName`
-- Adicao de `fetchJsonSafely` para detectar respostas HTML e gerar logs mais claros
+### Fluxo corrigido
+
+```text
+Site externo envia: phone "5541996875461"
+    |
+    v
+Edge Function chama: /api/number/check com "5541996875461"
+    |
+    v
+Baileys onWhatsApp() retorna: jid "554196875461@s.whatsapp.net"
+    |
+    v
+Edge Function envia para o JID correto
+    |
+    v
+Mensagem chega ao contato real (Amor)
+```
+
+### Arquivo criado
+- `docs/baileys-server-template/baileys-server-v4.6.0/number-check-endpoint.js` -- snippet para o usuário adicionar ao Baileys
+
+### Arquivo modificado
+- `supabase/functions/whatsapp-public-api/index.ts` -- adicionar resolução de JID antes do envio
+
+## Instruções para o servidor Baileys (Railway)
+
+O usuário precisará adicionar o endpoint `/api/number/check` ao `index.js` do Baileys no Railway. Será fornecido o código pronto para copiar e colar.
+
+Vou implementar e atualizar o arquivo em crm-whatsapp servidor para bayleys 4.7.0
+

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone } from 'lucide-react';
+import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone, Users, RefreshCw } from 'lucide-react';
 import AudioRecorder from './AudioRecorder';
 import FileUploader from './FileUploader';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
 interface Recipient {
@@ -31,6 +32,7 @@ const OMNI_COLOR = '#FF4500';
 export default function DisparosPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -42,6 +44,9 @@ export default function DisparosPage() {
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [delaySeconds, setDelaySeconds] = useState(3);
+  const [saveGroupName, setSaveGroupName] = useState('');
+  const [showSaveGroup, setShowSaveGroup] = useState(false);
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
 
   // Fetch company
   const { data: companyId } = useQuery({
@@ -73,6 +78,21 @@ export default function DisparosPage() {
     enabled: !!companyId,
   });
 
+  // Fetch contact groups
+  const { data: contactGroups = [] } = useQuery({
+    queryKey: ['contact-groups', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data } = await supabase
+        .from('contact_groups')
+        .select('id, name, description, created_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!companyId,
+  });
+
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
   const addRecipient = () => {
@@ -81,12 +101,60 @@ export default function DisparosPage() {
       toast({ title: 'Número inválido', description: 'Informe um número com DDD', variant: 'destructive' });
       return;
     }
-    if (recipients.some(r => r.phone === clean)) {
-      toast({ title: 'Duplicado', description: 'Esse número já foi adicionado', variant: 'destructive' });
+    const existing = recipients.find(r => r.phone === clean);
+    if (existing) {
+      if (existing.status !== 'pending') {
+        // Reset to pending for re-send
+        setRecipients(prev => prev.map(r => r.phone === clean ? { ...r, status: 'pending' as const, error: undefined } : r));
+        setNewPhone('');
+        toast({ title: 'Número resetado para reenvio' });
+      } else {
+        toast({ title: 'Duplicado', description: 'Esse número já está pendente', variant: 'destructive' });
+      }
       return;
     }
     setRecipients(prev => [...prev, { id: crypto.randomUUID(), phone: clean, status: 'pending' }]);
     setNewPhone('');
+  };
+
+  const resetAllRecipients = () => {
+    setRecipients(prev => prev.map(r => ({ ...r, status: 'pending' as const, error: undefined })));
+  };
+
+  const loadGroup = async (groupId: string) => {
+    const { data } = await supabase
+      .from('contact_group_members')
+      .select('phone, name')
+      .eq('group_id', groupId);
+    if (!data) return;
+    const newRecipients: Recipient[] = [];
+    for (const m of data) {
+      if (!recipients.some(r => r.phone === m.phone) && !newRecipients.some(r => r.phone === m.phone)) {
+        newRecipients.push({ id: crypto.randomUUID(), phone: m.phone, name: m.name || undefined, status: 'pending' });
+      }
+    }
+    setRecipients(prev => [...prev, ...newRecipients]);
+    setShowGroupPicker(false);
+    toast({ title: `${newRecipients.length} contatos carregados do grupo` });
+  };
+
+  const saveAsGroup = async () => {
+    if (!saveGroupName.trim() || !companyId || !user?.id) return;
+    const { data: group, error } = await supabase
+      .from('contact_groups')
+      .insert({ company_id: companyId, name: saveGroupName.trim(), created_by: user.id })
+      .select('id')
+      .single();
+    if (error || !group) {
+      toast({ title: 'Erro ao salvar grupo', variant: 'destructive' });
+      return;
+    }
+    const members = recipients.map(r => ({ group_id: group.id, phone: r.phone, name: r.name || null }));
+    await supabase.from('contact_group_members').insert(members);
+    queryClient.invalidateQueries({ queryKey: ['contact-groups'] });
+    setSaveGroupName('');
+    setShowSaveGroup(false);
+    toast({ title: `Grupo "${saveGroupName.trim()}" salvo com ${members.length} contatos` });
   };
 
   const removeRecipient = (id: string) => {
@@ -305,12 +373,45 @@ export default function DisparosPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold">Destinatários ({recipients.length})</CardTitle>
-                <label className="cursor-pointer">
-                  <input type="file" accept=".csv,.txt" className="hidden" onChange={handleImportCSV} />
-                  <span className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: OMNI_COLOR }}>
-                    <Upload className="h-3.5 w-3.5" /> Importar Lista
-                  </span>
-                </label>
+                <div className="flex items-center gap-2">
+                  {/* Load from group */}
+                  <Dialog open={showGroupPicker} onOpenChange={setShowGroupPicker}>
+                    <DialogTrigger asChild>
+                      <button className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: OMNI_COLOR }}>
+                        <Users className="h-3.5 w-3.5" /> Grupos
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Carregar Grupo de Contatos</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {contactGroups.length === 0 && (
+                          <p className="text-sm text-gray-400 text-center py-4">Nenhum grupo salvo ainda</p>
+                        )}
+                        {contactGroups.map(g => (
+                          <button
+                            key={g.id}
+                            onClick={() => loadGroup(g.id)}
+                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">{g.name}</p>
+                              {g.description && <p className="text-xs text-gray-400">{g.description}</p>}
+                            </div>
+                            <Users className="h-4 w-4 text-gray-400" />
+                          </button>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <label className="cursor-pointer">
+                    <input type="file" accept=".csv,.txt" className="hidden" onChange={handleImportCSV} />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: OMNI_COLOR }}>
+                      <Upload className="h-3.5 w-3.5" /> Importar
+                    </span>
+                  </label>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -355,10 +456,44 @@ export default function DisparosPage() {
               </ScrollArea>
 
               {recipients.length > 0 && (
-                <div className="flex gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge variant="outline" className="text-green-600 border-green-200">{sentCount} enviados</Badge>
                   <Badge variant="outline" className="text-red-600 border-red-200">{errorCount} erros</Badge>
                   <Badge variant="outline" className="text-gray-600 border-gray-200">{pendingCount} pendentes</Badge>
+                  {(sentCount > 0 || errorCount > 0) && !isSending && (
+                    <button onClick={resetAllRecipients} className="inline-flex items-center gap-1 text-xs font-medium ml-auto" style={{ color: OMNI_COLOR }}>
+                      <RefreshCw className="h-3 w-3" /> Reenviar todos
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Save as group */}
+              {recipients.length > 0 && !isSending && (
+                <div>
+                  {showSaveGroup ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nome do grupo..."
+                        value={saveGroupName}
+                        onChange={e => setSaveGroupName(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                      <Button size="sm" className="h-8 text-xs text-white" style={{ backgroundColor: OMNI_COLOR }} onClick={saveAsGroup}>
+                        Salvar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowSaveGroup(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowSaveGroup(true)}
+                      className="inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                      style={{ color: OMNI_COLOR }}
+                    >
+                      <Users className="h-3 w-3" /> Salvar como grupo
+                    </button>
+                  )}
                 </div>
               )}
             </CardContent>

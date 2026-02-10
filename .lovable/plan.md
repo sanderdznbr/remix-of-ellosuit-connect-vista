@@ -1,122 +1,80 @@
 
-# API WhatsApp Publica - Estilo 2chat.co
+# Correção da API Pública WhatsApp - Endpoints Incorretos
 
-## O que sera construido
+## Problema Identificado
 
-Um sistema de API publica que permite que sites externos enviem mensagens WhatsApp atraves da Ellosuit. O fluxo sera:
+A Edge Function `whatsapp-public-api` está chamando endpoints que **nao existem** no servidor Baileys v4.6.0:
 
-1. Usuario conecta WhatsApp via QR Code no painel da Ellosuit (ja funciona)
-2. Sistema gera uma **API Key** unica para aquela sessao
-3. O site externo usa essa API Key para enviar mensagens via HTTP
+| O que a API chama (ERRADO) | O que o Baileys tem (CORRETO) |
+|---|---|
+| `/api/instance/{name}/send-message` | `/api/message/send` |
+| `/api/instance/{name}/send-media` | `/api/message/send-media` |
 
-```text
-Site Externo                    Ellosuit                      WhatsApp
-    |                              |                              |
-    |-- POST /whatsapp-public-api -|                              |
-    |   (API Key + numero + msg)   |                              |
-    |                              |-- Valida API Key             |
-    |                              |-- Busca sessao conectada     |
-    |                              |-- Envia via Baileys -------->|
-    |                              |                              |
-    |<---- { success: true } ------|                              |
+Isso faz o servidor Baileys retornar uma pagina HTML de erro 404, que a API interpreta como falha.
+
+## Correção
+
+Atualizar o arquivo `supabase/functions/whatsapp-public-api/index.ts`:
+
+### 1. Corrigir endpoint de envio de texto (send_text)
+
+**De:**
+```
+/api/instance/${instanceKey}/send-message
+```
+**Para:**
+```
+/api/message/send
 ```
 
-## Alteracoes no Banco de Dados
+E incluir o `instanceName` no body da requisicao em vez da URL.
 
-### 1. Tabela `whatsapp_api_keys`
-Armazena as chaves de API geradas por sessao.
+### 2. Corrigir endpoint de envio de midia (send_media)
 
-```sql
-CREATE TABLE whatsapp_api_keys (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-  session_id UUID NOT NULL REFERENCES whatsapp_sessions(id) ON DELETE CASCADE,
-  api_key TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL DEFAULT 'Default',
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  rate_limit_per_minute INTEGER NOT NULL DEFAULT 30,
-  total_messages_sent BIGINT NOT NULL DEFAULT 0,
-  last_used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+**De:**
+```
+/api/instance/${iKey}/send-media
+```
+**Para:**
+```
+/api/message/send-media
 ```
 
-Com RLS para que apenas o dono da empresa veja suas chaves.
+Mesma logica: instanceName vai no body.
 
-### 2. Tabela `whatsapp_api_logs`
-Log de todas as chamadas a API para auditoria.
+### 3. Adicionar tratamento de resposta HTML
 
-```sql
-CREATE TABLE whatsapp_api_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key_id UUID NOT NULL REFERENCES whatsapp_api_keys(id) ON DELETE CASCADE,
-  phone TEXT NOT NULL,
-  message_preview TEXT,
-  status TEXT NOT NULL, -- 'sent', 'failed', 'rate_limited'
-  error_message TEXT,
-  ip_address TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+Antes de tentar parsear o JSON da resposta, verificar o Content-Type. Se vier HTML, registrar erro claro no log.
+
+### 4. Ajustar o body enviado ao Baileys
+
+O Baileys v4.6.0 espera o campo `instanceName` no body para identificar a sessao, junto com `phone` e `message`.
+
+---
+
+## Instrucoes para o outro site (para voce enviar)
+
+Nenhuma mudanca e necessaria no lado do site que consome a API. O problema e exclusivamente nos endpoints internos do Ellosuit que se comunicam com o servidor Baileys. A API publica (`/functions/v1/whatsapp-public-api`) continuara funcionando com os mesmos parametros:
+
+```json
+{
+  "action": "send_text",
+  "phone": "5511999999999",
+  "message": "Ola!"
+}
 ```
 
-## Nova Edge Function: `whatsapp-public-api`
+O header `X-API-Key` e o formato do body permanecem identicos.
 
-Endpoint publico (sem JWT) que recebe chamadas externas autenticadas por API Key.
+---
 
-**Endpoints suportados:**
+## Detalhes Tecnicos
 
-| Metodo | Rota (via body action) | Descricao |
-|--------|----------------------|-----------|
-| POST | `send_text` | Enviar mensagem de texto |
-| POST | `send_media` | Enviar imagem/video/documento |
-| POST | `check_status` | Verificar se a sessao esta conectada |
+Arquivo modificado: `supabase/functions/whatsapp-public-api/index.ts`
 
-**Autenticacao:** Header `X-API-Key: ek_xxxxxxxxxxxx`
-
-**Exemplo de uso pelo site externo:**
-```text
-POST https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/whatsapp-public-api
-Headers:
-  X-API-Key: ek_abc123def456...
-  Content-Type: application/json
-Body:
-  {
-    "action": "send_text",
-    "phone": "5511999999999",
-    "message": "Sua compra foi aprovada! Obrigado."
-  }
-```
-
-**Protecoes incluidas:**
-- Rate limiting (30 msgs/minuto por padrao, configuravel)
-- Validacao de API Key ativa
-- Verificacao de sessao conectada
-- Log de todas as chamadas
-- Contador de mensagens enviadas
-
-## Interface no Painel (novo componente)
-
-### `WhatsAppApiPanel.tsx`
-Acessivel dentro da area de WhatsApp do dashboard, com:
-
-- Botao "Gerar API Key" vinculado a sessao conectada
-- Lista de API Keys com nome, status (ativa/inativa), data de criacao
-- Botao copiar chave
-- Botao desativar/ativar
-- Botao deletar
-- Exemplo de codigo (curl, JavaScript, Python) pronto para copiar
-- Estatisticas: total de mensagens enviadas, ultima utilizacao
-
-## Configuracao
-
-- Adicionar `whatsapp-public-api` ao `config.toml` com `verify_jwt = false`
-- Nenhum secret adicional necessario (usa `SUPABASE_SERVICE_ROLE_KEY` que ja existe)
-
-## Ordem de Implementacao
-
-1. Criar tabelas `whatsapp_api_keys` e `whatsapp_api_logs` com RLS
-2. Criar Edge Function `whatsapp-public-api` com autenticacao por API Key
-3. Criar componente `WhatsAppApiPanel.tsx` com gerenciamento de chaves
-4. Integrar o painel na interface do WhatsApp existente
-5. Adicionar exemplos de codigo na interface para facilitar integracao
+Mudancas especificas:
+- Linha ~133: URL de send-message corrigida para `/api/message/send`
+- Linha ~136-139: Body atualizado para incluir `instanceName`
+- Linha ~217: URL de send-media corrigida para `/api/message/send-media`
+- Linha ~220-225: Body atualizado para incluir `instanceName`
+- Adicao de `fetchJsonSafely` para detectar respostas HTML e gerar logs mais claros

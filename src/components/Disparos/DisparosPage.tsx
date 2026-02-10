@@ -287,24 +287,29 @@ export default function DisparosPage() {
             }),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } else if (mediaType === 'audio') {
+          // Audio uses send-voice endpoint for PTT style
+          const res = await fetch(`${baileysUrl}/api/message/send-voice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instanceName,
+              jid,
+              audioUrl: mediaUrl,
+            }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
         } else {
-          // Send media
-          const mediaTypeMap: Record<string, string> = {
-            image: 'image',
-            video: 'video',
-            audio: 'audio',
-            document: 'document',
-          };
+          // Send media (image, video, document)
           const res = await fetch(`${baileysUrl}/api/message/send-media`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               instanceName,
               jid,
-              mediaType: mediaTypeMap[mediaType],
-              url: mediaUrl,
-              caption: mediaCaption || undefined,
-              fileName: mediaType === 'document' ? 'arquivo' : undefined,
+              mediaUrl,
+              mediaType: mediaType,
+              caption: mediaCaption || '',
             }),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);

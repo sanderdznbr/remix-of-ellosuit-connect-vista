@@ -42,41 +42,18 @@ const SharedContent = () => {
 
     try {
       setLoading(true);
-      const [type, id] = shareId.split('-');
 
-      if (type === 'file') {
-        // Load shared file
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', id)
-          .single();
+      const { data: result, error } = await supabase.functions.invoke('get-shared-content', {
+        body: { shareId }
+      });
 
-        if (error) throw error;
-        setContent(data);
-      } else if (type === 'folder') {
-        // Load shared folder and its files
-        const { data: folderData, error: folderError } = await supabase
-          .from('document_folders')
-          .select('*')
-          .eq('id', id)
-          .single();
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
 
-        if (folderError) throw folderError;
-
-        const { data: filesData, error: filesError } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('folder_id', id);
-
-        if (filesError) throw filesError;
-
-        setContent({
-          ...folderData,
-          files: filesData || []
-        });
+      if (result.type === 'folder') {
+        setContent(result.data);
       } else {
-        throw new Error('Tipo de compartilhamento inválido');
+        setContent(result.data);
       }
     } catch (error) {
       console.error('Error loading shared content:', error);

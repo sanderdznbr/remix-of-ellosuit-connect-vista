@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone, Users, RefreshCw } from 'lucide-react';
+import { Send, Upload, Plus, Trash2, Image, Video, Mic, FileText, Loader2, CheckCircle, XCircle, Phone, Users, RefreshCw, Wifi } from 'lucide-react';
 import AudioRecorder from './AudioRecorder';
 import FileUploader from './FileUploader';
+import WhatsAppQRModal from '@/components/CRM/WhatsAppQRModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +48,7 @@ export default function DisparosPage() {
   const [saveGroupName, setSaveGroupName] = useState('');
   const [showSaveGroup, setShowSaveGroup] = useState(false);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Fetch company
   const { data: companyId } = useQuery({
@@ -354,20 +356,45 @@ export default function DisparosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o número para envio" />
-              </SelectTrigger>
-              <SelectContent>
-                {sessions.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.phone_number || s.instance_name} — {s.status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione o número para envio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sessions.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.phone_number || s.instance_name} — {s.status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowQRModal(true)}
+                className="flex items-center gap-1.5 text-white hover:opacity-90 shrink-0"
+                style={{ backgroundColor: OMNI_COLOR }}
+              >
+                <Wifi className="h-4 w-4" />
+                Conectar
+              </Button>
+            </div>
             {sessions.length === 0 && (
-              <p className="text-xs text-gray-400 mt-2">Nenhuma sessão conectada. Conecte um número no CRM WhatsApp primeiro.</p>
+              <p className="text-xs text-gray-400 mt-2">Nenhuma sessão conectada. Clique em "Conectar" para adicionar um número.</p>
+            )}
+
+            {companyId && user?.id && (
+              <WhatsAppQRModal
+                isOpen={showQRModal}
+                onClose={() => setShowQRModal(false)}
+                companyId={companyId}
+                userId={user.id}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['whatsapp-sessions'] });
+                  setShowQRModal(false);
+                }}
+              />
             )}
           </CardContent>
         </Card>

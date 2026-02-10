@@ -21,39 +21,45 @@ function isValidIdentifier(id: string, isGroup: boolean): boolean {
     // Groups have longer IDs (typically 18+ digits) - just check minimum
     return digits.length >= 8;
   } else {
-    // Individual chats: 8-15 digits (filter LIDs which are 15+ digits)
-    return digits.length >= 8 && digits.length <= 15;
+    // Individual chats: 8+ digits (includes LIDs which can be 15+ digits)
+    return digits.length >= 8;
   }
+}
+
+// ============== HELPER: Check if JID is a LID (Linked ID) ==============
+function isLidJid(jid: string): boolean {
+  return jid?.includes('@lid') || false;
 }
 
 // ============== HELPER: Clean phone/ID from JID ==============
 function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string | null {
   if (!jid) return null;
   
-  // Handle @lid format (WhatsApp Linked ID) - these are not real phone numbers
-  if (jid.includes('@lid')) {
-    console.log(`[LID FILTER] Skipping LID: ${jid}`);
-    return null;
-  }
-  
   const isGroup = isGroupJid(jid);
+  const isLid = isLidJid(jid);
   
   // Skip groups if not allowed
   if (isGroup && !allowGroups) {
     return null;
   }
   
-  // Extract identifier from JID
+  // Extract identifier from JID (handle @lid, @s.whatsapp.net, @g.us, @c.us)
   let identifier = jid
     .replace('@s.whatsapp.net', '')
     .replace('@g.us', '')
     .replace('@c.us', '')
+    .replace('@lid', '')
     .replace(/\D/g, ''); // Remove any remaining non-digits
   
   // Validate the extracted identifier
   if (!isValidIdentifier(identifier, isGroup)) {
-    console.log(`[FILTER] Invalid identifier: ${identifier} (length: ${identifier.length}, isGroup: ${isGroup})`);
+    console.log(`[FILTER] Invalid identifier: ${identifier} (length: ${identifier.length}, isGroup: ${isGroup}, isLid: ${isLid})`);
     return null;
+  }
+  
+  // For LID contacts, prefix with 'lid_' to distinguish from regular phone numbers
+  if (isLid && !isGroup) {
+    return `lid_${identifier}`;
   }
   
   return identifier;
@@ -409,8 +415,18 @@ serve(async (req) => {
 
         for (const msg of messages) {
           const messageKey = msg.key || {};
-          // Use remoteJidAlt if available (contains real phone number)
+          // Use remoteJidAlt if available (contains real phone number instead of LID)
+          // This is critical for LID contacts where remoteJid is @lid but remoteJidAlt has the real @s.whatsapp.net JID
           let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
+          
+          // If still a LID, try to get real JID from other fields
+          if (isLidJid(remoteJid)) {
+            const altJid = msg.remoteJidAlt || msg.chatJid || msg.from;
+            if (altJid && !isLidJid(altJid)) {
+              console.log(`[LID] Resolved LID ${remoteJid} to real JID ${altJid}`);
+              remoteJid = altJid;
+            }
+          }
 
           // ============== IMPROVED: Determine fromMe more reliably ==============
           // Compare sender with session phone to fix cases where Baileys misflags fromMe

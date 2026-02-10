@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import MessageContextMenu from './MessageContextMenu';
 import AudioRecorderButton from './AudioRecorderButton';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ChannelSelector } from './ChannelSelector';
+import WhatsAppApiPanel from './WhatsAppApiPanel';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -232,7 +233,7 @@ const WhatsAppCRM: React.FC = () => {
   const [agentChatHistory, setAgentChatHistory] = useState<Record<string, WhatsAppMessage[]>>({});
   
   // New CRM Features State
-  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'contacts'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'contacts' | 'api'>('list');
   const [labels, setLabels] = useState<ConversationLabel[]>([]);
   const [showLabelsManager, setShowLabelsManager] = useState(false);
   const [showSaveLeadModal, setShowSaveLeadModal] = useState(false);
@@ -1701,6 +1702,15 @@ const WhatsAppCRM: React.FC = () => {
                 </Badge>
               )}
             </Button>
+            <Button
+              variant={viewMode === 'api' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('api')}
+              className="h-7 px-2"
+            >
+              <Key className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">API</span>
+            </Button>
           </div>
         </div>
         
@@ -1915,6 +1925,13 @@ const WhatsAppCRM: React.FC = () => {
               });
               setShowSaveLeadModal(true);
             }}
+          />
+        </div>
+      ) : viewMode === 'api' ? (
+        <div className="flex-1 overflow-auto">
+          <WhatsAppApiPanel
+            sessions={sessions.map(s => ({ id: s.id, instance_name: s.instance_name, status: s.status, phone_number: s.phone_number }))}
+            companyId={companyId || ''}
           />
         </div>
       ) : (

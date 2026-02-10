@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Mail, Users, Bot, Send, ArrowRight, GitBranch } from "lucide-react";
+import { MessageSquare, Mail, Users, Bot, Send, ArrowRight, GitBranch, Key } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,13 @@ const omniModules = [
     description: "Gerencie conversas, leads e atendimentos via WhatsApp",
     icon: MessageSquare,
     path: "/dashboard/crm-whatsapp",
+  },
+  {
+    id: "api-whatsapp",
+    title: "API WhatsApp",
+    description: "API pública para integrar envio de mensagens com sistemas externos",
+    icon: Key,
+    path: "/dashboard/api-whatsapp",
   },
   {
     id: "chatbot-builder",

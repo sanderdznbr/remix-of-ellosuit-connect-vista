@@ -873,11 +873,12 @@ serve(async (req) => {
                         'Responda sempre em português brasileiro.'
                       ].join('\n');
                       
-                      // Load recent conversation history for context
+                      // Load recent conversation history for context (exclude the current message)
                       const { data: recentMessages } = await supabase
                         .from('whatsapp_messages')
                         .select('from_me, content, is_ai_response')
                         .eq('conversation_id', conversation.id)
+                        .neq('wa_message_id', messageId)
                         .order('timestamp', { ascending: false })
                         .limit(10);
                       
@@ -943,28 +944,10 @@ serve(async (req) => {
                             
                             console.log(`🤖 Audio mode: ${audioResponseMode}, messageType: ${messageType}, shouldSendAudio: ${shouldSendAudio}`);
                             
-                            // Resolve JID for sending
-                            const targetJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
-                            let resolvedJid = targetJid;
-                            try {
-                              const checkResponse = await fetch(`${sessionData.baileys_server_url}/api/number/check`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  instanceName: sessionData.instance_name,
-                                  phone: phoneNumber
-                                })
-                              });
-                              if (checkResponse.ok) {
-                                const checkData = await checkResponse.json();
-                                if (checkData.jid) {
-                                  resolvedJid = checkData.jid;
-                                  console.log(`🤖 Resolved JID: ${resolvedJid}`);
-                                }
-                              }
-                            } catch (jidError) {
-                              console.log('🤖 JID resolution failed, using original:', targetJid);
-                            }
+                            // Use remoteJid directly - it's already resolved from remoteJidAlt in the webhook
+                            // For LID contacts, the remoteJid is the best we have
+                            const sendJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
+                            console.log(`🤖 Send JID: ${sendJid}, remoteJid: ${remoteJid}, phoneNumber: ${phoneNumber}`);
                             
                             // Send each message part
                             for (let partIndex = 0; partIndex < messageParts.length; partIndex++) {
@@ -1032,7 +1015,7 @@ serve(async (req) => {
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                           instanceName: sessionData.instance_name,
-                                          jid: resolvedJid,
+                                          jid: sendJid,
                                           audioUrl: audioPublicUrl
                                         })
                                       });
@@ -1053,8 +1036,8 @@ serve(async (req) => {
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
                                         instanceName: sessionData.instance_name,
-                                        jid: resolvedJid,
-                                        content: { text: partContent }
+                                        jid: sendJid,
+                                        message: { text: partContent }
                                       })
                                     });
                                     sendSuccess = sendResponse.ok;
@@ -1070,8 +1053,8 @@ serve(async (req) => {
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                       instanceName: sessionData.instance_name,
-                                      jid: resolvedJid,
-                                      content: { text: partContent }
+                                      jid: sendJid,
+                                      message: { text: partContent }
                                     })
                                   });
                                   sendSuccess = sendResponse.ok;

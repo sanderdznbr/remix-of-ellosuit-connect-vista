@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice = 'alloy', speed = 1.0 } = await req.json();
+    const { text, voice = 'alloy', speed = 1.0, format = 'opus' } = await req.json();
 
     if (!text || typeof text !== 'string') {
       return new Response(JSON.stringify({ error: 'Text is required' }), {
@@ -28,8 +28,11 @@ serve(async (req) => {
 
     // Limit text to ~4000 chars for TTS
     const trimmedText = text.slice(0, 4000);
+    
+    // Use opus format for WhatsApp PTT compatibility, mp3 as fallback
+    const responseFormat = format === 'mp3' ? 'mp3' : 'opus';
 
-    console.log(`🎙️ TTS request: voice=${voice}, text length=${trimmedText.length}`);
+    console.log(`🎙️ TTS request: voice=${voice}, format=${responseFormat}, text length=${trimmedText.length}`);
 
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
@@ -41,7 +44,7 @@ serve(async (req) => {
         model: 'tts-1',
         input: trimmedText,
         voice: voice,
-        response_format: 'mp3',
+        response_format: responseFormat,
         speed: speed,
       }),
     });
@@ -63,11 +66,11 @@ serve(async (req) => {
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = base64Encode(audioBuffer);
 
-    console.log(`✅ TTS audio generated: ${audioBuffer.byteLength} bytes`);
+    console.log(`✅ TTS audio generated: ${audioBuffer.byteLength} bytes, format: ${responseFormat}`);
 
     return new Response(JSON.stringify({
       audio_base64: base64Audio,
-      format: 'mp3',
+      format: responseFormat,
       size: audioBuffer.byteLength,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

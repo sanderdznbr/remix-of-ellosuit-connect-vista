@@ -1019,20 +1019,30 @@ serve(async (req) => {
                                     body: JSON.stringify({
                                       text: partContent,
                                       voice: ttsVoice,
-                                      speed: 1.0
+                                      speed: 1.0,
+                                      format: 'opus'
                                     })
                                   });
                                   
                                   if (ttsResponse.ok) {
                                     const ttsData = await ttsResponse.json();
                                     const audioBase64 = ttsData.audio_base64;
-                                    const audioFileName = `ai-audio/${aiMessageId}.mp3`;
-                                    const audioBytes = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+                                    const audioFormat = ttsData.format || 'opus';
+                                    const fileExt = audioFormat === 'mp3' ? 'mp3' : 'ogg';
+                                    const contentType = audioFormat === 'mp3' ? 'audio/mpeg' : 'audio/ogg; codecs=opus';
+                                    const audioFileName = `ai-audio/${aiMessageId}.${fileExt}`;
+                                    
+                                    // Decode base64 to binary
+                                    const binaryString = atob(audioBase64);
+                                    const audioBytes = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) {
+                                      audioBytes[i] = binaryString.charCodeAt(i);
+                                    }
                                     
                                     const { error: uploadError } = await supabase.storage
                                       .from('whatsapp-media')
                                       .upload(audioFileName, audioBytes, {
-                                        contentType: 'audio/mpeg',
+                                        contentType: contentType,
                                         upsert: true
                                       });
                                     
@@ -1042,8 +1052,9 @@ serve(async (req) => {
                                         .getPublicUrl(audioFileName);
                                       
                                       const audioPublicUrl = publicUrlData.publicUrl;
+                                      console.log(`🎙️ Audio uploaded: ${audioPublicUrl} (${contentType})`);
                                       
-                                      // Send via send-voice with correct mimetype for MP3 (TTS generates MP3)
+                                      // Send via send-voice - OGG Opus with ptt:true for WhatsApp voice note
                                       const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -1051,7 +1062,7 @@ serve(async (req) => {
                                           instanceName: sessionData.instance_name,
                                           jid: sendJid,
                                           audioUrl: audioPublicUrl,
-                                          mimetype: 'audio/mpeg'
+                                          mimetype: contentType
                                         })
                                       });
                                       
@@ -1060,13 +1071,18 @@ serve(async (req) => {
                                         const errText = await sendResponse.text();
                                         console.error('🎙️ send-voice failed:', sendResponse.status, errText);
                                       } else {
-                                        console.log('🎙️ Audio sent successfully via send-voice');
+                                        console.log('🎙️ Audio sent successfully via send-voice as PTT');
                                       }
                                       await supabase
                                         .from('whatsapp_messages')
                                         .update({ media_url: audioPublicUrl })
                                         .eq('wa_message_id', aiMessageId);
+                                    } else {
+                                      console.error('🎙️ Audio upload failed:', uploadError.message);
                                     }
+                                  } else {
+                                    const ttsErr = await ttsResponse.text();
+                                    console.error('🎙️ TTS generation failed:', ttsResponse.status, ttsErr);
                                   }
                                   
                                   // Fallback to text if audio failed

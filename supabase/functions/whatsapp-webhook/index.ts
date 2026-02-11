@@ -1021,17 +1021,25 @@ serve(async (req) => {
                                       
                                       const audioPublicUrl = publicUrlData.publicUrl;
                                       
+                                      // Send via send-voice with correct mimetype for MP3 (TTS generates MP3)
                                       const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                           instanceName: sessionData.instance_name,
                                           jid: sendJid,
-                                          audioUrl: audioPublicUrl
+                                          audioUrl: audioPublicUrl,
+                                          mimetype: 'audio/mpeg'
                                         })
                                       });
                                       
                                       sendSuccess = sendResponse.ok;
+                                      if (!sendSuccess) {
+                                        const errText = await sendResponse.text();
+                                        console.error('🎙️ send-voice failed:', sendResponse.status, errText);
+                                      } else {
+                                        console.log('🎙️ Audio sent successfully via send-voice');
+                                      }
                                       await supabase
                                         .from('whatsapp_messages')
                                         .update({ media_url: audioPublicUrl })

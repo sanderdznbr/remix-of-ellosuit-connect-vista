@@ -1190,6 +1190,66 @@ export type Database = {
           },
         ]
       }
+      email_link_clicks: {
+        Row: {
+          browser: string | null
+          city: string | null
+          clicked_at: string
+          country: string | null
+          device_type: string | null
+          email_id: string
+          id: string
+          ip_address: unknown
+          os: string | null
+          referrer: string | null
+          tracked_link_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          clicked_at?: string
+          country?: string | null
+          device_type?: string | null
+          email_id: string
+          id?: string
+          ip_address?: unknown
+          os?: string | null
+          referrer?: string | null
+          tracked_link_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          clicked_at?: string
+          country?: string | null
+          device_type?: string | null
+          email_id?: string
+          id?: string
+          ip_address?: unknown
+          os?: string | null
+          referrer?: string | null
+          tracked_link_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_link_clicks_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_link_clicks_tracked_link_id_fkey"
+            columns: ["tracked_link_id"]
+            isOneToOne: false
+            referencedRelation: "email_tracked_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_limits: {
         Row: {
           company_id: string
@@ -1261,6 +1321,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_tracked_links: {
+        Row: {
+          click_count: number | null
+          created_at: string
+          email_id: string
+          id: string
+          original_url: string
+          tracking_id: string
+        }
+        Insert: {
+          click_count?: number | null
+          created_at?: string
+          email_id: string
+          id?: string
+          original_url: string
+          tracking_id?: string
+        }
+        Update: {
+          click_count?: number | null
+          created_at?: string
+          email_id?: string
+          id?: string
+          original_url?: string
+          tracking_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_tracked_links_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emails: {
         Row: {

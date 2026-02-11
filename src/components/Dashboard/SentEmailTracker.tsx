@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
   Mail, Eye, MousePointer, Clock, Search, Filter,
   AlertCircle, RefreshCw, ChevronRight, MailOpen,
-  Smartphone, Monitor, Tablet, Globe
+  Smartphone, Monitor, Tablet, Globe, Link2, MapPin,
+  BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface TrackedEmail {
   id: string;
@@ -64,6 +65,48 @@ const getDeviceIcon = (deviceType: string | null) => {
   }
 };
 
+const TRACK_COLOR = "#3A9A1C";
+
+// Engagement chart by hour
+const EngagementChart: React.FC<{ events: EmailEvent[] }> = ({ events }) => {
+  const hourData = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, i) => ({ hour: `${i}h`, aberturas: 0, cliques: 0 }));
+    events.forEach(e => {
+      const h = new Date(e.timestamp).getHours();
+      if (e.event_type === 'opened') hours[h].aberturas++;
+      if (e.event_type === 'clicked') hours[h].cliques++;
+    });
+    return hours;
+  }, [events]);
+
+  if (events.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 className="h-4 w-4" style={{ color: TRACK_COLOR }} />
+        <h3 className="text-sm font-semibold text-gray-900">Engajamento por Horário</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={hourData} barGap={0}>
+          <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
+          <Tooltip
+            contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid #e5e7eb' }}
+            labelFormatter={(v) => `${v}:00`}
+          />
+          <Bar dataKey="aberturas" fill={TRACK_COLOR} radius={[4, 4, 0, 0]} name="Aberturas" />
+          <Bar dataKey="cliques" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Cliques" />
+        </BarChart>
+      </ResponsiveContainer>
+      <div className="flex items-center gap-4 mt-2 justify-center">
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: TRACK_COLOR }} /><span className="text-xs text-gray-500">Aberturas</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-purple-500" /><span className="text-xs text-gray-500">Cliques</span></div>
+      </div>
+    </div>
+  );
+};
+
 const SentEmailTracker: React.FC = () => {
   const { toast } = useToast();
   const [emails, setEmails] = useState<TrackedEmail[]>([]);
@@ -72,6 +115,7 @@ const SentEmailTracker: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedEmail, setSelectedEmail] = useState<TrackedEmail | null>(null);
   const [selectedEmailEvents, setSelectedEmailEvents] = useState<EmailEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<EmailEvent[]>([]);
   const [showEventsModal, setShowEventsModal] = useState(false);
 
   const loadEmails = async () => {
@@ -81,12 +125,17 @@ const SentEmailTracker: React.FC = () => {
     setLoading(false);
   };
 
+  const loadAllEvents = async () => {
+    const { data } = await supabase.from('email_events').select('*').order('timestamp', { ascending: false }).limit(1000);
+    if (data) setAllEvents(data as any);
+  };
+
   const loadEventsForEmail = async (emailId: string) => {
     const { data } = await supabase.from('email_events').select('*').eq('email_id', emailId).order('timestamp', { ascending: false });
     if (data) setSelectedEmailEvents(data as any);
   };
 
-  useEffect(() => { loadEmails(); }, []);
+  useEffect(() => { loadEmails(); loadAllEvents(); }, []);
   useEffect(() => { if (selectedEmail) loadEventsForEmail(selectedEmail.id); }, [selectedEmail?.id]);
 
   const getEmailStatus = (email: TrackedEmail) => {
@@ -97,6 +146,7 @@ const SentEmailTracker: React.FC = () => {
   const totalEmails = emails.length;
   const openedEmails = emails.filter(e => (e.open_count || 0) > 0).length;
   const totalOpens = emails.reduce((sum, e) => sum + (e.open_count || 0), 0);
+  const totalClicks = allEvents.filter(e => e.event_type === 'clicked').length;
   const openRate = totalEmails > 0 ? ((openedEmails / totalEmails) * 100).toFixed(1) : '0';
 
   const filteredEmails = emails.filter(email => {
@@ -112,10 +162,11 @@ const SentEmailTracker: React.FC = () => {
     { label: "Emails Enviados", value: totalEmails, icon: Mail, color: "#3B82F6" },
     { label: "Taxa de Abertura", value: `${openRate}%`, icon: MailOpen, color: "#10B981" },
     { label: "Total Aberturas", value: totalOpens, icon: Eye, color: "#8B5CF6" },
-    { label: "Emails Abertos", value: openedEmails, icon: MailOpen, color: "#F59E0B" },
+    { label: "Cliques em Links", value: totalClicks, icon: Link2, color: "#F59E0B" },
   ];
 
-  const TRACK_COLOR = "#3A9A1C";
+  // Count clicks for selected email
+  const selectedClickCount = selectedEmailEvents.filter(e => e.event_type === 'clicked').length;
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -128,10 +179,10 @@ const SentEmailTracker: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Rastrear Emails</h1>
-              <p className="text-sm text-gray-500">Acompanhe aberturas e engajamento em tempo real</p>
+              <p className="text-sm text-gray-500">Acompanhe aberturas, cliques e engajamento em tempo real</p>
             </div>
           </div>
-          <Button variant="outline" className="rounded-xl gap-2" onClick={loadEmails} disabled={loading}>
+          <Button variant="outline" className="rounded-xl gap-2" onClick={() => { loadEmails(); loadAllEvents(); }} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
@@ -155,6 +206,9 @@ const SentEmailTracker: React.FC = () => {
           })}
         </div>
 
+        {/* Engagement Chart */}
+        <EngagementChart events={allEvents} />
+
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Email List */}
@@ -176,6 +230,7 @@ const SentEmailTracker: React.FC = () => {
                       <SelectItem value="all" className="rounded-lg">Todos</SelectItem>
                       <SelectItem value="sent" className="rounded-lg">Enviado</SelectItem>
                       <SelectItem value="opened" className="rounded-lg">Aberto</SelectItem>
+                      <SelectItem value="clicked" className="rounded-lg">Clicado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -252,47 +307,78 @@ const SentEmailTracker: React.FC = () => {
                       <Badge variant="outline" className="capitalize rounded-lg text-xs">{selectedEmail.metadata.provider}</Badge>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-2 mb-1"><Eye className="h-3.5 w-3.5" style={{ color: TRACK_COLOR }} /><span className="text-xs text-gray-500">Aberturas</span></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 bg-gray-50 rounded-xl text-center">
+                      <Eye className="h-3.5 w-3.5 mx-auto mb-1" style={{ color: TRACK_COLOR }} />
                       <p className="text-lg font-bold text-gray-900">{selectedEmail.open_count || 0}</p>
+                      <p className="text-[10px] text-gray-500">Aberturas</p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-2 mb-1"><Clock className="h-3.5 w-3.5 text-blue-600" /><span className="text-xs text-gray-500">1ª abertura</span></div>
+                    <div className="p-3 bg-gray-50 rounded-xl text-center">
+                      <MousePointer className="h-3.5 w-3.5 mx-auto mb-1 text-purple-600" />
+                      <p className="text-lg font-bold text-gray-900">{selectedClickCount}</p>
+                      <p className="text-[10px] text-gray-500">Cliques</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl text-center">
+                      <Clock className="h-3.5 w-3.5 mx-auto mb-1 text-blue-600" />
                       <p className="text-sm font-medium text-gray-900">{selectedEmail.opened_at ? format(new Date(selectedEmail.opened_at), "dd/MM HH:mm") : '—'}</p>
+                      <p className="text-[10px] text-gray-500">1ª abertura</p>
                     </div>
                   </div>
 
-                  {/* Events */}
+                  {/* Full Timeline */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs text-gray-400">Eventos</p>
-                      {selectedEmailEvents.length > 3 && (
+                      <p className="text-xs font-medium text-gray-600">Timeline Completa</p>
+                      {selectedEmailEvents.length > 5 && (
                         <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setShowEventsModal(true)}>
                           Ver todos ({selectedEmailEvents.length})
                         </Button>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-1.5" />
-                        <div>
+                    <div className="space-y-0 relative">
+                      {/* Vertical line */}
+                      <div className="absolute left-[5px] top-3 bottom-3 w-px bg-gray-200" />
+
+                      {/* Sent event */}
+                      <div className="flex items-start gap-3 relative pb-3">
+                        <div className="w-[11px] h-[11px] bg-blue-400 rounded-full mt-0.5 z-10 ring-2 ring-white" />
+                        <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">Enviado</p>
                           <p className="text-xs text-gray-500">{format(new Date(selectedEmail.sent_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
                         </div>
                       </div>
-                      {selectedEmailEvents.slice(0, 3).map((event) => {
+
+                      {selectedEmailEvents.slice(0, 5).map((event) => {
                         const DeviceIcon = getDeviceIcon(event.device_type);
+                        const isClick = event.event_type === 'clicked';
+                        const dotColor = isClick ? '#8B5CF6' : TRACK_COLOR;
                         return (
-                          <div key={event.id} className="flex items-start gap-3">
-                            <div className="w-2 h-2 rounded-full mt-1.5" style={{ backgroundColor: TRACK_COLOR }} />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-gray-900 capitalize">{event.event_type === 'open' ? 'Aberto' : event.event_type}</p>
+                          <div key={event.id} className="flex items-start gap-3 relative pb-3">
+                            <div className="w-[11px] h-[11px] rounded-full mt-0.5 z-10 ring-2 ring-white" style={{ backgroundColor: dotColor }} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {event.event_type === 'opened' ? 'Aberto' : event.event_type === 'clicked' ? 'Link Clicado' : event.event_type}
+                                </p>
                                 <DeviceIcon className="h-3 w-3 text-gray-400" />
                               </div>
-                              <p className="text-xs text-gray-500">{format(new Date(event.timestamp), "dd/MM 'às' HH:mm")}</p>
-                              {event.browser && <p className="text-xs text-gray-400">{event.browser} • {event.os}</p>}
+                              <p className="text-xs text-gray-500">{format(new Date(event.timestamp), "dd/MM 'às' HH:mm:ss")}</p>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                {event.browser && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5">{event.browser}</span>
+                                )}
+                                {event.os && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5">{event.os}</span>
+                                )}
+                                {event.city && event.country && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-50 rounded px-1.5 py-0.5 flex items-center gap-0.5">
+                                    <MapPin className="h-2.5 w-2.5" />{event.city}, {event.country}
+                                  </span>
+                                )}
+                              </div>
+                              {isClick && event.metadata?.url && (
+                                <p className="text-[10px] text-purple-500 mt-1 truncate">🔗 {event.metadata.url}</p>
+                              )}
                             </div>
                           </div>
                         );
@@ -311,29 +397,42 @@ const SentEmailTracker: React.FC = () => {
         </div>
       </div>
 
-      {/* Events Modal */}
+      {/* Events Modal - Full Timeline */}
       <Dialog open={showEventsModal} onOpenChange={setShowEventsModal}>
         <DialogContent className="rounded-2xl max-w-lg">
           <DialogHeader>
-            <DialogTitle>Todos os Eventos</DialogTitle>
+            <DialogTitle>Timeline Completa</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-2">
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-3 pr-4">
               {selectedEmailEvents.map((event) => {
                 const DeviceIcon = getDeviceIcon(event.device_type);
+                const isClick = event.event_type === 'clicked';
                 return (
                   <div key={event.id} className="p-3 rounded-xl border border-gray-100">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs rounded-lg capitalize">{event.event_type === 'open' ? 'Abertura' : event.event_type}</Badge>
+                        <Badge 
+                          className={`text-xs rounded-lg border-0 ${isClick ? 'bg-purple-50 text-purple-600' : 'bg-[#3A9A1C]/10 text-[#3A9A1C]'}`}
+                        >
+                          {event.event_type === 'opened' ? 'Abertura' : event.event_type === 'clicked' ? 'Clique' : event.event_type}
+                        </Badge>
                         <DeviceIcon className="h-3.5 w-3.5 text-gray-400" />
                       </div>
-                      <span className="text-xs text-gray-500">{format(new Date(event.timestamp), "dd/MM/yy HH:mm")}</span>
+                      <span className="text-xs text-gray-500">{format(new Date(event.timestamp), "dd/MM/yy HH:mm:ss")}</span>
                     </div>
-                    {(event.browser || event.city) && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        {[event.browser, event.os, event.city, event.country].filter(Boolean).join(' • ')}
-                      </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      {event.browser && <span className="text-[10px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">{event.browser}</span>}
+                      {event.os && <span className="text-[10px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">{event.os}</span>}
+                      {event.device_type && <span className="text-[10px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5 capitalize">{event.device_type}</span>}
+                      {event.city && event.country && (
+                        <span className="text-[10px] text-gray-500 bg-gray-50 rounded px-1.5 py-0.5 flex items-center gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" />{event.city}, {event.country}
+                        </span>
+                      )}
+                    </div>
+                    {isClick && event.metadata?.url && (
+                      <p className="text-[10px] text-purple-500 mt-1.5 truncate">🔗 {event.metadata.url}</p>
                     )}
                   </div>
                 );

@@ -9,6 +9,7 @@ export const DEFAULT_COLOR = '#3000E3';
 const omniRoutes = [
   '/dashboard/omni',
   '/dashboard/crm-whatsapp',
+  '/dashboard/api-whatsapp',
   '/dashboard/chatbot',
   '/dashboard/chatbot-builder',
   '/dashboard/email',

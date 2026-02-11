@@ -36,6 +36,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   const isConnectingRef = useRef(false);
   const isCleaningUpRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keepaliveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -195,6 +196,14 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
             roomId: roomName
           }));
 
+          // Start keepalive ping every 3 seconds to prevent Supabase from shutting down the function
+          if (keepaliveTimerRef.current) clearInterval(keepaliveTimerRef.current);
+          keepaliveTimerRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'ping' }));
+            }
+          }, 3000);
+
           console.log('📡 Transcrição iniciada para sala:', roomName);
           resolve();
         };
@@ -277,10 +286,14 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     console.log('🧹 Limpando captura de áudio...');
     isCleaningUpRef.current = true;
 
-    // Clear reconnect timer
+    // Clear timers
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
+    }
+    if (keepaliveTimerRef.current) {
+      clearInterval(keepaliveTimerRef.current);
+      keepaliveTimerRef.current = null;
     }
 
     // Send stop

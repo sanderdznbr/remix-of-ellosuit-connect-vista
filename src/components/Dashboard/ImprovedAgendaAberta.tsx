@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { 
-  Calendar, Clock, Plus, Copy, Link as LinkIcon, Trash2, Users,
-  ExternalLink, CheckCircle2, XCircle, Mail, Phone, CalendarDays, Timer,
-  Pencil, Palette
+  Clock, Plus, Copy, Link as LinkIcon, Trash2, Users,
+  ExternalLink, CheckCircle2, XCircle, Mail, CalendarDays, Timer,
+  Palette
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -161,96 +161,30 @@ const ImprovedAgendaAberta = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Agenda Online</h1>
-            <p className="text-sm text-gray-500">Gerencie seus links e compromissos de agendamento</p>
-          </div>
-          
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Link
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg rounded-2xl">
-              <DialogHeader>
-                <DialogTitle>Criar Link de Agendamento</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Título do Evento</Label>
-                  <Input placeholder="Ex: Consultoria de 30min" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Descrição (opcional)</Label>
-                  <Textarea placeholder="Descreva o compromisso..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="rounded-xl resize-none" rows={3} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Timer className="h-4 w-4 text-gray-400" />Duração</Label>
-                    <Select value={formData.duration_minutes.toString()} onValueChange={(v) => setFormData({ ...formData, duration_minutes: parseInt(v) })}>
-                      <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="15">15 minutos</SelectItem>
-                        <SelectItem value="30">30 minutos</SelectItem>
-                        <SelectItem value="45">45 minutos</SelectItem>
-                        <SelectItem value="60">1 hora</SelectItem>
-                        <SelectItem value="90">1h 30min</SelectItem>
-                        <SelectItem value="120">2 horas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-gray-400" />Intervalo</Label>
-                    <Select value={formData.buffer_minutes.toString()} onValueChange={(v) => setFormData({ ...formData, buffer_minutes: parseInt(v) })}>
-                      <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="0">Sem intervalo</SelectItem>
-                        <SelectItem value="5">5 minutos</SelectItem>
-                        <SelectItem value="10">10 minutos</SelectItem>
-                        <SelectItem value="15">15 minutos</SelectItem>
-                        <SelectItem value="30">30 minutos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1 rounded-xl">Cancelar</Button>
-                <Button onClick={createBookingLink} disabled={!formData.title} className="flex-1 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>Criar Link</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+  const formatRelativeDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
+    return `${Math.floor(diffDays / 30)} meses atrás`;
+  };
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { icon: LinkIcon, label: 'Links', value: bookingLinks.length, color: FLOW_COLOR },
-            { icon: CalendarDays, label: 'Agendamentos', value: bookings.length, color: '#10B981' },
-            { icon: Clock, label: 'Pendentes', value: bookings.filter(b => b.status === 'pending').length, color: '#F59E0B' },
-            { icon: CheckCircle2, label: 'Confirmados', value: bookings.filter(b => b.status === 'confirmed').length, color: '#8B5CF6' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${stat.color}12` }}>
-                <stat.icon className="h-5 w-5" style={{ color: stat.color }} />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                <p className="text-xs text-gray-500">{stat.label}</p>
-              </div>
-            </div>
-          ))}
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Agenda Online</h1>
+          <p className="text-gray-500 mt-1">
+            Gerencie seus links de agendamento e compromissos marcados.
+          </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-1.5 inline-flex gap-1">
+        <div className="flex items-center gap-2 mb-6">
           {[
             { id: 'links' as const, label: 'Meus Links', icon: LinkIcon },
             { id: 'bookings' as const, label: 'Agendamentos', icon: CalendarDays },
@@ -259,7 +193,7 @@ const ImprovedAgendaAberta = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === tab.id ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                activeTab === tab.id ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
               }`}
               style={activeTab === tab.id ? { backgroundColor: FLOW_COLOR } : {}}
             >
@@ -271,187 +205,282 @@ const ImprovedAgendaAberta = () => {
 
         {/* Links Tab */}
         {activeTab === 'links' && (
-          <>
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            {/* Search + Actions */}
+            <div className="p-4 flex items-center gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Pesquisar links..."
+                  className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white"
+                />
+              </div>
+              <div className="flex-1" />
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl gap-2 text-white" style={{ backgroundColor: FLOW_COLOR }}>
+                    <Plus className="h-4 w-4" />
+                    Novo Link
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg rounded-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Criar Link de Agendamento</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Título do Evento</Label>
+                      <Input placeholder="Ex: Consultoria de 30min" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Descrição (opcional)</Label>
+                      <Textarea placeholder="Descreva o compromisso..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="rounded-xl resize-none" rows={3} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Timer className="h-4 w-4 text-gray-400" />Duração</Label>
+                        <Select value={formData.duration_minutes.toString()} onValueChange={(v) => setFormData({ ...formData, duration_minutes: parseInt(v) })}>
+                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="15">15 minutos</SelectItem>
+                            <SelectItem value="30">30 minutos</SelectItem>
+                            <SelectItem value="45">45 minutos</SelectItem>
+                            <SelectItem value="60">1 hora</SelectItem>
+                            <SelectItem value="90">1h 30min</SelectItem>
+                            <SelectItem value="120">2 horas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-gray-400" />Intervalo</Label>
+                        <Select value={formData.buffer_minutes.toString()} onValueChange={(v) => setFormData({ ...formData, buffer_minutes: parseInt(v) })}>
+                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="0">Sem intervalo</SelectItem>
+                            <SelectItem value="5">5 minutos</SelectItem>
+                            <SelectItem value="10">10 minutos</SelectItem>
+                            <SelectItem value="15">15 minutos</SelectItem>
+                            <SelectItem value="30">30 minutos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1 rounded-xl">Cancelar</Button>
+                    <Button onClick={createBookingLink} disabled={!formData.title} className="flex-1 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>Criar Link</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Table Header */}
+            <div className="grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <div>Nome</div>
+              <div>Duração</div>
+              <div>Status</div>
+              <div>Agendamentos</div>
+              <div>Criado em</div>
+              <div className="text-right">Ações</div>
+            </div>
+
+            {/* List */}
             {bookingLinks.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
-                <div className="p-4 rounded-2xl w-fit mx-auto mb-4" style={{ backgroundColor: `${FLOW_COLOR}10` }}>
-                  <LinkIcon className="h-10 w-10" style={{ color: FLOW_COLOR }} />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Crie seu primeiro link</h3>
-                <p className="text-gray-500 mb-6">Permita que clientes agendem reuniões com você</p>
-                <Button onClick={() => setShowCreateDialog(true)} className="rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                  <Plus className="mr-2 h-4 w-4" />Criar Link
+              <div className="text-center py-16">
+                <LinkIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum link criado</h3>
+                <p className="text-gray-500 mb-6">Crie seu primeiro link para permitir agendamentos</p>
+                <Button onClick={() => setShowCreateDialog(true)} className="text-white rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                  <Plus className="h-4 w-4 mr-2" />Criar Link
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-100">
                 {bookingLinks.map((link) => {
                   const stats = getLinkStats(link.id);
                   return (
                     <div
                       key={link.id}
                       className={cn(
-                        "bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all",
+                        "grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors",
                         !link.is_active && "opacity-60"
                       )}
                     >
-                      <div className="flex items-center gap-4">
-                        {/* Icon / Logo */}
+                      {/* Name */}
+                      <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="p-3 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                          style={{ backgroundColor: link.logo_url ? 'transparent' : `${link.primary_color || FLOW_COLOR}10` }}
-                          onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)}
+                          className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+                          style={{ backgroundColor: link.logo_url ? 'transparent' : `${link.primary_color || FLOW_COLOR}12` }}
                         >
                           {link.logo_url ? (
-                            <img src={link.logo_url} alt="Logo" className="h-5 w-5 object-contain" />
+                            <img src={link.logo_url} alt="Logo" className="w-full h-full object-cover rounded-xl" />
                           ) : (
-                            <LinkIcon className="h-5 w-5" style={{ color: link.primary_color || FLOW_COLOR }} />
+                            <LinkIcon className="h-4 w-4" style={{ color: link.primary_color || FLOW_COLOR }} />
                           )}
                         </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-gray-900 truncate">{link.title}</h3>
-                            <Badge variant={link.is_active ? 'default' : 'secondary'} className="text-[10px] shrink-0" style={link.is_active ? { backgroundColor: '#10B981' } : {}}>
-                              {link.is_active ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                            {link.primary_color && link.primary_color !== FLOW_COLOR && (
-                              <div className="w-3 h-3 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: link.primary_color }} />
-                            )}
-                          </div>
-                          {link.description && <p className="text-sm text-gray-500 line-clamp-1 mb-1">{link.description}</p>}
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1"><Timer className="h-3 w-3" />{link.duration_minutes} min</span>
-                            {link.buffer_minutes > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />+{link.buffer_minutes} intervalo</span>}
-                            <span>{stats.total} agendamentos</span>
-                            <span className="text-green-600">{stats.confirmed} confirmados</span>
-                          </div>
+                        <div className="min-w-0">
+                          <span className="font-medium text-gray-900 truncate block">{link.title}</span>
+                          {link.description && <p className="text-xs text-gray-500 truncate">{link.description}</p>}
                         </div>
+                      </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Switch checked={link.is_active} onCheckedChange={() => toggleLinkStatus(link.id, link.is_active)} />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-xl gap-1.5"
-                            onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)}
-                          >
-                            <Palette className="h-3.5 w-3.5" />
-                            Personalizar
-                          </Button>
-                          <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => copyLinkToClipboard(link.link_slug)}>
-                            <Copy className="h-3.5 w-3.5" />Copiar
-                          </Button>
-                          <Button size="icon" variant="outline" className="rounded-xl h-8 w-8" onClick={() => openBookingPage(link.link_slug)}>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="outline" className="rounded-xl h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteLink(link.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                      {/* Duration */}
+                      <div className="text-sm text-gray-600">
+                        {link.duration_minutes} min
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        {link.is_active ? (
+                          <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-2 py-0.5">Ativo</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">Inativo</Badge>
+                        )}
+                      </div>
+
+                      {/* Bookings count */}
+                      <div className="text-sm text-gray-600">
+                        {stats.total} total
+                      </div>
+
+                      {/* Created */}
+                      <div className="text-sm text-gray-500">
+                        {formatRelativeDate(link.created_at)}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)} title="Personalizar">
+                          <Palette className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => copyLinkToClipboard(link.link_slug)} title="Copiar link">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => openBookingPage(link.link_slug)} title="Abrir">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => toggleLinkStatus(link.id, link.is_active)} title={link.is_active ? 'Desativar' : 'Ativar'}>
+                          {link.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600" onClick={() => deleteLink(link.id)} title="Excluir">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* Bookings Tab */}
         {activeTab === 'bookings' && (
-          <>
-            <div className="flex gap-2">
-              {(['upcoming', 'all', 'past'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setBookingFilter(filter)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    bookingFilter === filter ? 'text-white' : 'text-gray-600 hover:bg-gray-50 bg-white border border-gray-100'
-                  }`}
-                  style={bookingFilter === filter ? { backgroundColor: FLOW_COLOR } : {}}
-                >
-                  {filter === 'upcoming' && 'Próximos'}
-                  {filter === 'all' && 'Todos'}
-                  {filter === 'past' && 'Passados'}
-                </button>
-              ))}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            {/* Filters */}
+            <div className="p-4 flex items-center gap-3">
+              <div className="flex gap-2">
+                {(['upcoming', 'all', 'past'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setBookingFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      bookingFilter === filter ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                    style={bookingFilter === filter ? { backgroundColor: FLOW_COLOR } : {}}
+                  >
+                    {filter === 'upcoming' && 'Próximos'}
+                    {filter === 'all' && 'Todos'}
+                    {filter === 'past' && 'Passados'}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Table Header */}
+            <div className="grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <div>Cliente</div>
+              <div>Data</div>
+              <div>Horário</div>
+              <div>Status</div>
+              <div className="text-right">Ações</div>
+            </div>
+
+            {/* List */}
             {filteredBookings.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
-                <div className="p-4 rounded-2xl w-fit mx-auto mb-4" style={{ backgroundColor: `${FLOW_COLOR}10` }}>
-                  <CalendarDays className="h-10 w-10" style={{ color: FLOW_COLOR }} />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum agendamento</h3>
+              <div className="text-center py-16">
+                <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum agendamento</h3>
                 <p className="text-gray-500">
                   {bookingFilter === 'upcoming' ? 'Sem agendamentos futuros' : bookingFilter === 'past' ? 'Sem agendamentos passados' : 'Aguardando agendamentos'}
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-100">
                 {filteredBookings.map((booking) => {
-                  const bookingLink = bookingLinks.find(l => l.id === booking.booking_link_id);
                   const isPast = isBefore(parseISO(booking.booking_date), startOfDay(new Date()));
-                  
                   return (
                     <div
                       key={booking.id}
                       className={cn(
-                        "bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all",
+                        "grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors",
                         isPast && "opacity-60"
                       )}
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${FLOW_COLOR}10` }}>
-                            <Users className="h-5 w-5" style={{ color: FLOW_COLOR }} />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-gray-900">{booking.client_name}</h3>
-                            <p className="text-sm text-gray-500">{bookingLink?.title || 'Agendamento'}</p>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
-                              <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{booking.client_email}</span>
-                              {booking.client_phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{booking.client_phone}</span>}
-                            </div>
-                          </div>
+                      {/* Client */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `${FLOW_COLOR}12` }}>
+                          <Users className="h-4 w-4" style={{ color: FLOW_COLOR }} />
                         </div>
+                        <div className="min-w-0">
+                          <span className="font-medium text-gray-900 truncate block">{booking.client_name}</span>
+                          <span className="text-xs text-gray-500 truncate block">{booking.client_email}</span>
+                        </div>
+                      </div>
 
-                        <div className="flex items-center gap-4 shrink-0">
-                          <div className="text-right">
-                            <p className="font-semibold text-gray-900">{format(parseISO(booking.booking_date), "dd 'de' MMM", { locale: ptBR })}</p>
-                            <p className="text-sm text-gray-500">{booking.booking_time}</p>
-                          </div>
-                          <Badge className={cn(
-                            "rounded-lg",
-                            booking.status === 'confirmed' && "bg-green-50 text-green-700 hover:bg-green-50",
-                            booking.status === 'pending' && "bg-amber-50 text-amber-700 hover:bg-amber-50",
-                            booking.status === 'cancelled' && "bg-red-50 text-red-700 hover:bg-red-50"
-                          )}>
-                            {booking.status === 'confirmed' && '✓ Confirmado'}
-                            {booking.status === 'pending' && '⏳ Pendente'}
-                            {booking.status === 'cancelled' && '✕ Cancelado'}
-                          </Badge>
-                          {!isPast && booking.status === 'pending' && (
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => updateBookingStatus(booking.id, 'confirmed')}>
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => updateBookingStatus(booking.id, 'cancelled')}>
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                      {/* Date */}
+                      <div className="text-sm text-gray-600">
+                        {format(parseISO(booking.booking_date), "dd 'de' MMM", { locale: ptBR })}
+                      </div>
+
+                      {/* Time */}
+                      <div className="text-sm text-gray-600">
+                        {booking.booking_time}
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        <Badge className={cn(
+                          "text-[10px] px-2 py-0.5 border-0",
+                          booking.status === 'confirmed' && "bg-green-50 text-green-700",
+                          booking.status === 'pending' && "bg-amber-50 text-amber-700",
+                          booking.status === 'cancelled' && "bg-red-50 text-red-700"
+                        )}>
+                          {booking.status === 'confirmed' && '✓ Confirmado'}
+                          {booking.status === 'pending' && '⏳ Pendente'}
+                          {booking.status === 'cancelled' && '✕ Cancelado'}
+                        </Badge>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-end gap-1">
+                        {!isPast && booking.status === 'pending' && (
+                          <>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600 hover:bg-green-50" onClick={() => updateBookingStatus(booking.id, 'confirmed')}>
+                              <CheckCircle2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50" onClick={() => updateBookingStatus(booking.id, 'cancelled')}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

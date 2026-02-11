@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Bot, Save, Loader2, Trash2, Upload, FileText, X,
   Settings2, MessageSquare, Brain, Zap, Shield, Send, User,
-  Smile, AlertTriangle, Globe, Clock, Hash, Sparkles, RefreshCw
+  Smile, AlertTriangle, Globe, Clock, Hash, Sparkles, RefreshCw, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import IntegrationTab from './IntegrationTab';
+import AgentDebugChat from './AgentDebugChat';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,6 +30,7 @@ const TABS = [
   { id: 'arquivos', label: 'Arquivos', icon: FileText },
   { id: 'configuracoes', label: 'Configurações', icon: Settings2 },
   { id: 'integracoes', label: 'Integrações', icon: Zap },
+  { id: 'corrigir', label: 'Corrigir', icon: Wrench },
   { id: 'conversar', label: 'Conversar', icon: MessageSquare },
 ];
 
@@ -1031,6 +1033,22 @@ const EditAgentPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* CORRIGIR TAB */}
+        {activeTab === 'corrigir' && (
+          <AgentDebugChat
+            agentName={name}
+            currentInstructions={instructions}
+            currentPersonality={personality}
+            currentDoNot={doNot}
+            onApplySuggestion={(field, newValue) => {
+              if (field === 'instructions') setInstructions(newValue);
+              else if (field === 'personality') setPersonality(newValue);
+              else if (field === 'doNot') setDoNot(newValue);
+              markChanged();
+            }}
+          />
         )}
       </div>
     </div>

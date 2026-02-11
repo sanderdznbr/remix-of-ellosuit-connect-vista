@@ -944,12 +944,38 @@ serve(async (req) => {
                                     console.log(`🎙️ Audio uploaded: ${audioPublicUrl}`);
                                     
                                     // Send as voice message via Baileys
+                                    // Use remoteJid directly (already resolved) instead of reconstructing
+                                    const targetJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
+                                    console.log(`🎙️ Sending voice to JID: ${targetJid}`);
+                                    
+                                    // Try resolving JID via number/check for Brazilian 9th digit
+                                    let resolvedJidForSend = targetJid;
+                                    try {
+                                      const checkResponse = await fetch(`${sessionData.baileys_server_url}/api/number/check`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          instanceName: sessionData.instance_name,
+                                          phone: phoneNumber
+                                        })
+                                      });
+                                      if (checkResponse.ok) {
+                                        const checkData = await checkResponse.json();
+                                        if (checkData.jid) {
+                                          resolvedJidForSend = checkData.jid;
+                                          console.log(`🎙️ Resolved JID: ${resolvedJidForSend}`);
+                                        }
+                                      }
+                                    } catch (jidError) {
+                                      console.log('🎙️ JID resolution failed, using original:', targetJid);
+                                    }
+                                    
                                     const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
                                         instanceName: sessionData.instance_name,
-                                        jid: `${phoneNumber}@s.whatsapp.net`,
+                                        jid: resolvedJidForSend,
                                         audioUrl: audioPublicUrl
                                       })
                                     });

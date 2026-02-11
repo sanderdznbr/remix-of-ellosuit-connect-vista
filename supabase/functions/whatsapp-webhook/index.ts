@@ -928,6 +928,13 @@ serve(async (req) => {
                           
                           console.log('🤖 AI Response (cleaned):', aiReply.substring(0, 100) + '...');
                           
+                          // Check for handoff signal - if present, remove the tag from the message and flag for handoff
+                          const isHandoff = aiReply.includes('[HANDOFF]');
+                          if (isHandoff) {
+                            aiReply = aiReply.replace('[HANDOFF]', '').trim();
+                            console.log('🤖🔄 HANDOFF detected! Will disable AI auto-reply after sending message.');
+                          }
+                          
                           // Split response by separator
                           const messageParts = aiReply.split(MESSAGE_SEPARATOR).map((p: string) => p.trim()).filter((p: string) => p.length > 0);
                           console.log(`🤖 Message parts: ${messageParts.length}`);
@@ -1094,12 +1101,21 @@ serve(async (req) => {
                             }
                             
                             // Update conversation last message
+                            const convUpdate: Record<string, unknown> = {
+                              last_message: shouldSendAudio ? '🎙️ Áudio' : messageParts[messageParts.length - 1].substring(0, 100),
+                              last_message_at: new Date().toISOString()
+                            };
+                            
+                            // If handoff was triggered, disable AI auto-reply
+                            if (isHandoff) {
+                              convUpdate.ai_auto_reply_enabled = false;
+                              convUpdate.assigned_agent_id = null;
+                              console.log('🤖🔄 HANDOFF: AI auto-reply DISABLED for conversation:', conversation.id);
+                            }
+                            
                             await supabase
                               .from('whatsapp_conversations')
-                              .update({
-                                last_message: shouldSendAudio ? '🎙️ Áudio' : messageParts[messageParts.length - 1].substring(0, 100),
-                                last_message_at: new Date().toISOString()
-                              })
+                              .update(convUpdate)
                               .eq('id', conversation.id);
                           }
                         }

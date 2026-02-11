@@ -176,16 +176,16 @@ print(response.json())`,
   return (
     <div className="space-y-6 p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between p-4 rounded-2xl" style={{ background: 'linear-gradient(135deg, #FF4500, #FF6B35)' }}>
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
             <Key className="h-5 w-5" /> API Pública WhatsApp
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-white/80 mt-1">
             Gere API Keys para enviar mensagens WhatsApp de sites e sistemas externos
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0}>
+        <Button onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0} className="bg-white text-[#FF4500] hover:bg-white/90">
           <Plus className="h-4 w-4 mr-2" /> Nova API Key
         </Button>
       </div>
@@ -200,9 +200,9 @@ print(response.json())`,
 
       {/* API Keys Table */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 border-b border-[#FF4500]/10">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Suas API Keys</CardTitle>
+            <CardTitle className="text-base text-[#FF4500]">Suas API Keys</CardTitle>
             <Button variant="ghost" size="sm" onClick={fetchApiKeys}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -273,7 +273,7 @@ print(response.json())`,
       {/* Code Examples */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2 text-[#FF4500]">
             <Code className="h-4 w-4" /> Exemplos de Integração
           </CardTitle>
           <CardDescription>Copie e cole no seu site ou sistema para enviar mensagens</CardDescription>

@@ -11,6 +11,16 @@ function isGroupJid(jid: string): boolean {
   return jid?.includes('@g.us') || false;
 }
 
+// ============== HELPER: Check if JID is a newsletter/channel ==============
+function isNewsletterJid(jid: string): boolean {
+  if (!jid) return false;
+  // WhatsApp Channels/Newsletters use @newsletter suffix
+  if (jid.includes('@newsletter')) return true;
+  // Some Baileys versions send newsletters as @g.us but with specific patterns
+  // Newsletter JIDs from "Updates" tab - detect by checking if it's a status broadcast variant
+  return false;
+}
+
 // ============== HELPER: Validate phone/group ID ==============
 function isValidIdentifier(id: string, isGroup: boolean): boolean {
   if (!id) return false;
@@ -201,6 +211,12 @@ serve(async (req) => {
           try {
             const jid = chat.id || chat.jid;
             if (!jid || jid === 'status@broadcast') continue;
+            
+            // Skip WhatsApp Channels/Newsletters (Updates tab)
+            if (isNewsletterJid(jid)) {
+              console.log(`[FILTER] Skipping newsletter/channel: ${jid}`);
+              continue;
+            }
             
             const isGroup = isGroupJid(jid);
             
@@ -426,6 +442,12 @@ serve(async (req) => {
           // Use remoteJidAlt if available (contains real phone number instead of LID)
           // This is critical for LID contacts where remoteJid is @lid but remoteJidAlt has the real @s.whatsapp.net JID
           let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
+          
+          // Skip WhatsApp Channels/Newsletters (Updates tab)
+          if (isNewsletterJid(remoteJid)) {
+            console.log(`[FILTER] Skipping newsletter message from: ${remoteJid}`);
+            continue;
+          }
           
           // If still a LID, try to get real JID from other fields
           if (isLidJid(remoteJid)) {

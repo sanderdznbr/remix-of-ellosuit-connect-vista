@@ -850,25 +850,29 @@ serve(async (req) => {
                       const agentHumor = (agentSettings.humor as string) ?? 'profissional';
                       const MESSAGE_SEPARATOR = '|||';
                       
-                      // Build proper system prompt matching BotIAChat behavior
+                      // Build proper system prompt - concise, one message at a time
                       const systemPrompt = [
                         `Personalidade: ${agent.personality}`,
                         `Tom/Humor: ${agentHumor}`,
                         '',
                         agent.instructions,
                         '',
-                        'IMPORTANTE: Responda como um ser humano real conversando.',
-                        'NAO use asteriscos, negrito, italico, markdown ou formatacao especial.',
-                        'Escreva texto corrido e natural, como uma pessoa digitando no WhatsApp.',
-                        'NAO use listas com marcadores ou numeradas. Escreva em frases corridas.',
-                        'NAO use links com formatacao markdown como [texto](url). Escreva a URL direta.',
+                        'REGRAS ESSENCIAIS DE COMPORTAMENTO NO WHATSAPP:',
+                        '1. Responda APENAS o que foi perguntado. Seja direto e conciso.',
+                        '2. NUNCA antecipe perguntas que o cliente nao fez. Espere ele perguntar.',
+                        '3. Envie UMA UNICA mensagem curta por vez. NAO divida em multiplas mensagens.',
+                        '4. Se o cliente perguntar algo simples, responda em 1-2 frases no maximo.',
+                        '5. NAO despeje todas as informacoes de uma vez. Va respondendo conforme o cliente pergunta.',
+                        '6. Aja como um vendedor real no WhatsApp: respostas curtas, naturais e objetivas.',
                         '',
-                        `REGRA DE LIMITE: Cada mensagem deve ter NO MAXIMO ${agentMaxChars} caracteres.`,
-                        `Se sua resposta precisar de mais de ${agentMaxChars} caracteres, divida em multiplas mensagens usando o separador "${MESSAGE_SEPARATOR}" entre cada parte.`,
-                        `Exemplo: "Primeira parte da resposta${MESSAGE_SEPARATOR}Segunda parte da resposta${MESSAGE_SEPARATOR}Terceira parte"`,
-                        `Cada parte separada por "${MESSAGE_SEPARATOR}" deve respeitar o limite de ${agentMaxChars} caracteres.`,
-                        'Isso simula um humano enviando varias mensagens curtas seguidas, como no WhatsApp.',
-                        'Divida de forma natural, nunca corte uma frase no meio.',
+                        'FORMATACAO:',
+                        '- NAO use asteriscos, negrito, italico, markdown ou formatacao especial.',
+                        '- Escreva texto corrido e natural, como uma pessoa digitando no WhatsApp.',
+                        '- NAO use listas com marcadores. Escreva em frases corridas.',
+                        '- NAO use links com formatacao markdown. Escreva a URL direta.',
+                        '',
+                        `LIMITE: Responda com NO MAXIMO ${agentMaxChars} caracteres. Prefira respostas bem mais curtas.`,
+                        `NUNCA use o separador "|||". Envie sempre UMA unica mensagem.`,
                         '',
                         'Responda sempre em português brasileiro.'
                       ].join('\n');

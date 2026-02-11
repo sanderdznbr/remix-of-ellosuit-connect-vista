@@ -196,9 +196,23 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate tracking pixel ID
     const tracking_pixel_id = crypto.randomUUID();
     
+    // Replace links with tracked redirects and collect them
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const trackedLinks: { original_url: string; tracking_id: string }[] = [];
+    
+    let htmlWithTrackedLinks = content_html.replace(
+      /href=["'](https?:\/\/[^"']+)["']/gi,
+      (_match: string, url: string) => {
+        const trackingId = crypto.randomUUID();
+        trackedLinks.push({ original_url: url, tracking_id: trackingId });
+        const trackedUrl = `${supabaseUrl}/functions/v1/track-email-link?tracking_id=${trackingId}&url=${encodeURIComponent(url)}`;
+        return `href="${trackedUrl}"`;
+      }
+    );
+
     // Insert pixel tracking into HTML
-    const pixelUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?pixel_id=${tracking_pixel_id}`;
-    const htmlWithPixel = content_html + `<img src="${pixelUrl}" width="1" height="1" style="display:none;" />`;
+    const pixelUrl = `${supabaseUrl}/functions/v1/track-email-open?pixel_id=${tracking_pixel_id}`;
+    const htmlWithPixel = htmlWithTrackedLinks + `<img src="${pixelUrl}" width="1" height="1" style="display:none;" />`;
 
     let sendResult;
     let finalFromEmail = from_email;
@@ -278,6 +292,23 @@ const handler = async (req: Request): Promise<Response> => {
     if (emailError) {
       console.error('Error saving email:', emailError);
       throw emailError;
+    }
+
+    // Save tracked links to database
+    if (trackedLinks.length > 0) {
+      const linkRows = trackedLinks.map(link => ({
+        email_id: emailData.id,
+        original_url: link.original_url,
+        tracking_id: link.tracking_id,
+      }));
+      const { error: linksError } = await supabase
+        .from('email_tracked_links')
+        .insert(linkRows);
+      if (linksError) {
+        console.error('Error saving tracked links:', linksError);
+      } else {
+        console.log(`🔗 ${trackedLinks.length} links tracked for email ${emailData.id}`);
+      }
     }
 
     // Register send event

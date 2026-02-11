@@ -843,7 +843,56 @@ serve(async (req) => {
                     if (agent) {
                       console.log('🤖 Using AI agent:', agent.name);
                       
-                      // Call the ai-chat edge function
+                      // Get agent settings
+                      const agentSettings = (agent.settings as Record<string, unknown>) || {};
+                      const agentTemperature = (agentSettings.temperature as number) ?? 0.7;
+                      const agentMaxChars = (agentSettings.maxResponseChars as number) ?? 500;
+                      const agentHumor = (agentSettings.humor as string) ?? 'profissional';
+                      const MESSAGE_SEPARATOR = '|||';
+                      
+                      // Build proper system prompt matching BotIAChat behavior
+                      const systemPrompt = [
+                        `Personalidade: ${agent.personality}`,
+                        `Tom/Humor: ${agentHumor}`,
+                        '',
+                        agent.instructions,
+                        '',
+                        'IMPORTANTE: Responda como um ser humano real conversando.',
+                        'NAO use asteriscos, negrito, italico, markdown ou formatacao especial.',
+                        'Escreva texto corrido e natural, como uma pessoa digitando no WhatsApp.',
+                        'NAO use listas com marcadores ou numeradas. Escreva em frases corridas.',
+                        'NAO use links com formatacao markdown como [texto](url). Escreva a URL direta.',
+                        '',
+                        `REGRA DE LIMITE: Cada mensagem deve ter NO MAXIMO ${agentMaxChars} caracteres.`,
+                        `Se sua resposta precisar de mais de ${agentMaxChars} caracteres, divida em multiplas mensagens usando o separador "${MESSAGE_SEPARATOR}" entre cada parte.`,
+                        `Exemplo: "Primeira parte da resposta${MESSAGE_SEPARATOR}Segunda parte da resposta${MESSAGE_SEPARATOR}Terceira parte"`,
+                        `Cada parte separada por "${MESSAGE_SEPARATOR}" deve respeitar o limite de ${agentMaxChars} caracteres.`,
+                        'Isso simula um humano enviando varias mensagens curtas seguidas, como no WhatsApp.',
+                        'Divida de forma natural, nunca corte uma frase no meio.',
+                        '',
+                        'Responda sempre em português brasileiro.'
+                      ].join('\n');
+                      
+                      // Load recent conversation history for context
+                      const { data: recentMessages } = await supabase
+                        .from('whatsapp_messages')
+                        .select('from_me, content, is_ai_response')
+                        .eq('conversation_id', conversation.id)
+                        .order('timestamp', { ascending: false })
+                        .limit(10);
+                      
+                      const historyMessages = (recentMessages || []).reverse().map(m => ({
+                        role: m.from_me ? 'assistant' as const : 'user' as const,
+                        content: m.content || ''
+                      }));
+                      
+                      const apiMessages = [
+                        { role: 'system' as const, content: systemPrompt },
+                        ...historyMessages,
+                        { role: 'user' as const, content: content }
+                      ];
+                      
+                      // Call the ai-chat edge function with full messages array
                       const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
                         method: 'POST',
                         headers: {
@@ -851,18 +900,32 @@ serve(async (req) => {
                           'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
                         },
                         body: JSON.stringify({
-                          message: content,
-                          personality: agent.personality,
-                          instructions: agent.instructions
+                          messages: apiMessages,
+                          model: 'google/gemini-3-flash-preview',
+                          temperature: agentTemperature
                         })
                       });
                       
                       if (aiResponse.ok) {
                         const aiData = await aiResponse.json();
-                        const aiReply = aiData.response || aiData.message;
+                        let aiReply = aiData.response || aiData.message;
                         
                         if (aiReply) {
-                          console.log('🤖 AI Response:', aiReply.substring(0, 100) + '...');
+                          // Clean markdown from response
+                          aiReply = aiReply
+                            .replace(/\*\*(.*?)\*\*/g, '$1')
+                            .replace(/\*(.*?)\*/g, '$1')
+                            .replace(/#{1,6}\s?/g, '')
+                            .replace(/`{1,3}(.*?)`{1,3}/gs, '$1')
+                            .replace(/\[(.*?)\]\((.*?)\)/g, '$2')
+                            .replace(/^[-*+]\s/gm, '• ')
+                            .trim();
+                          
+                          console.log('🤖 AI Response (cleaned):', aiReply.substring(0, 100) + '...');
+                          
+                          // Split response by separator
+                          const messageParts = aiReply.split(MESSAGE_SEPARATOR).map((p: string) => p.trim()).filter((p: string) => p.length > 0);
+                          console.log(`🤖 Message parts: ${messageParts.length}`);
                           
                           // Get session server URL
                           const { data: sessionData } = await supabase
@@ -873,7 +936,6 @@ serve(async (req) => {
                           
                           if (sessionData?.baileys_server_url) {
                             // Determine if we should respond with audio
-                            const agentSettings = (agent.settings as Record<string, unknown>) || {};
                             const audioResponseMode = (agentSettings.audioResponseMode as string) || 'disabled';
                             const ttsVoice = (agentSettings.ttsVoice as string) || 'nova';
                             const shouldSendAudio = audioResponseMode === 'always' || 
@@ -881,182 +943,177 @@ serve(async (req) => {
                             
                             console.log(`🤖 Audio mode: ${audioResponseMode}, messageType: ${messageType}, shouldSendAudio: ${shouldSendAudio}`);
                             
-                            // First, save the AI message to database with ai marker
-                            const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-                            
-                            await supabase
-                              .from('whatsapp_messages')
-                              .insert({
-                                conversation_id: conversation.id,
-                                session_id: targetSessionId,
-                                company_id: companyId,
-                                wa_message_id: aiMessageId,
-                                from_me: true,
-                                content: shouldSendAudio ? '[Áudio]' : aiReply,
-                                message_type: shouldSendAudio ? 'ptt' : 'text',
-                                status: 'sending',
-                                is_ai_response: true,
-                                sender_name: agent.name,
-                                timestamp: new Date().toISOString()
-                              });
-                            
-                            // Then send via WhatsApp
+                            // Resolve JID for sending
+                            const targetJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
+                            let resolvedJid = targetJid;
                             try {
-                              let sendSuccess = false;
+                              const checkResponse = await fetch(`${sessionData.baileys_server_url}/api/number/check`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  instanceName: sessionData.instance_name,
+                                  phone: phoneNumber
+                                })
+                              });
+                              if (checkResponse.ok) {
+                                const checkData = await checkResponse.json();
+                                if (checkData.jid) {
+                                  resolvedJid = checkData.jid;
+                                  console.log(`🤖 Resolved JID: ${resolvedJid}`);
+                                }
+                              }
+                            } catch (jidError) {
+                              console.log('🤖 JID resolution failed, using original:', targetJid);
+                            }
+                            
+                            // Send each message part
+                            for (let partIndex = 0; partIndex < messageParts.length; partIndex++) {
+                              const partContent = messageParts[partIndex];
+                              const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
                               
-                              if (shouldSendAudio) {
-                                // Generate TTS audio
-                                console.log(`🎙️ Generating TTS audio with voice: ${ttsVoice}`);
-                                const ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-                                  },
-                                  body: JSON.stringify({
-                                    text: aiReply,
-                                    voice: ttsVoice,
-                                    speed: 1.0
-                                  })
+                              // Save to database
+                              await supabase
+                                .from('whatsapp_messages')
+                                .insert({
+                                  conversation_id: conversation.id,
+                                  session_id: targetSessionId,
+                                  company_id: companyId,
+                                  wa_message_id: aiMessageId,
+                                  from_me: true,
+                                  content: shouldSendAudio && partIndex === 0 ? '[Áudio]' : partContent,
+                                  message_type: shouldSendAudio && partIndex === 0 ? 'ptt' : 'text',
+                                  status: 'sending',
+                                  is_ai_response: true,
+                                  sender_name: agent.name,
+                                  timestamp: new Date(Date.now() + partIndex * 1000).toISOString()
                                 });
+                              
+                              try {
+                                let sendSuccess = false;
                                 
-                                if (ttsResponse.ok) {
-                                  const ttsData = await ttsResponse.json();
-                                  const audioBase64 = ttsData.audio_base64;
+                                if (shouldSendAudio && partIndex === 0) {
+                                  // Generate TTS audio for first part only
+                                  console.log(`🎙️ Generating TTS audio with voice: ${ttsVoice}`);
+                                  const ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                                    },
+                                    body: JSON.stringify({
+                                      text: partContent,
+                                      voice: ttsVoice,
+                                      speed: 1.0
+                                    })
+                                  });
                                   
-                                  // Upload audio to Supabase Storage
-                                  const audioFileName = `ai-audio/${aiMessageId}.mp3`;
-                                  const audioBytes = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
-                                  
-                                  const { data: uploadData, error: uploadError } = await supabase.storage
-                                    .from('whatsapp-media')
-                                    .upload(audioFileName, audioBytes, {
-                                      contentType: 'audio/mpeg',
-                                      upsert: true
-                                    });
-                                  
-                                  if (!uploadError) {
-                                    const { data: publicUrlData } = supabase.storage
+                                  if (ttsResponse.ok) {
+                                    const ttsData = await ttsResponse.json();
+                                    const audioBase64 = ttsData.audio_base64;
+                                    const audioFileName = `ai-audio/${aiMessageId}.mp3`;
+                                    const audioBytes = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+                                    
+                                    const { error: uploadError } = await supabase.storage
                                       .from('whatsapp-media')
-                                      .getPublicUrl(audioFileName);
+                                      .upload(audioFileName, audioBytes, {
+                                        contentType: 'audio/mpeg',
+                                        upsert: true
+                                      });
                                     
-                                    const audioPublicUrl = publicUrlData.publicUrl;
-                                    console.log(`🎙️ Audio uploaded: ${audioPublicUrl}`);
-                                    
-                                    // Send as voice message via Baileys
-                                    // Use remoteJid directly (already resolved) instead of reconstructing
-                                    const targetJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
-                                    console.log(`🎙️ Sending voice to JID: ${targetJid}`);
-                                    
-                                    // Try resolving JID via number/check for Brazilian 9th digit
-                                    let resolvedJidForSend = targetJid;
-                                    try {
-                                      const checkResponse = await fetch(`${sessionData.baileys_server_url}/api/number/check`, {
+                                    if (!uploadError) {
+                                      const { data: publicUrlData } = supabase.storage
+                                        .from('whatsapp-media')
+                                        .getPublicUrl(audioFileName);
+                                      
+                                      const audioPublicUrl = publicUrlData.publicUrl;
+                                      
+                                      const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                           instanceName: sessionData.instance_name,
-                                          phone: phoneNumber
+                                          jid: resolvedJid,
+                                          audioUrl: audioPublicUrl
                                         })
                                       });
-                                      if (checkResponse.ok) {
-                                        const checkData = await checkResponse.json();
-                                        if (checkData.jid) {
-                                          resolvedJidForSend = checkData.jid;
-                                          console.log(`🎙️ Resolved JID: ${resolvedJidForSend}`);
-                                        }
-                                      }
-                                    } catch (jidError) {
-                                      console.log('🎙️ JID resolution failed, using original:', targetJid);
+                                      
+                                      sendSuccess = sendResponse.ok;
+                                      await supabase
+                                        .from('whatsapp_messages')
+                                        .update({ media_url: audioPublicUrl })
+                                        .eq('wa_message_id', aiMessageId);
                                     }
-                                    
-                                    const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
+                                  }
+                                  
+                                  // Fallback to text if audio failed
+                                  if (!sendSuccess) {
+                                    console.log('🎙️ Audio failed, falling back to text');
+                                    const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
                                         instanceName: sessionData.instance_name,
-                                        jid: resolvedJidForSend,
-                                        audioUrl: audioPublicUrl
+                                        jid: resolvedJid,
+                                        content: { text: partContent }
                                       })
                                     });
-                                    
                                     sendSuccess = sendResponse.ok;
-                                    if (!sendSuccess) {
-                                      console.error('🎙️ Failed to send voice:', await sendResponse.text());
-                                    }
-                                    
-                                    // Update message with media URL
                                     await supabase
                                       .from('whatsapp_messages')
-                                      .update({ media_url: audioPublicUrl })
+                                      .update({ content: partContent, message_type: 'text' })
                                       .eq('wa_message_id', aiMessageId);
-                                  } else {
-                                    console.error('🎙️ Upload error:', uploadError);
                                   }
                                 } else {
-                                  console.error('🎙️ TTS error:', await ttsResponse.text());
-                                }
-                                
-                                // Fallback to text if audio failed
-                                if (!sendSuccess) {
-                                  console.log('🎙️ Audio failed, falling back to text');
-                                  const fallbackResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
+                                  // Send as text using correct Baileys format
+                                  const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                      sessionId: targetSessionId,
-                                      phone: phoneNumber,
-                                      message: aiReply
+                                      instanceName: sessionData.instance_name,
+                                      jid: resolvedJid,
+                                      content: { text: partContent }
                                     })
                                   });
-                                  sendSuccess = fallbackResponse.ok;
-                                  
-                                  // Update message back to text type
+                                  sendSuccess = sendResponse.ok;
+                                  if (!sendSuccess) {
+                                    console.error('🤖 Failed to send AI message part:', await sendResponse.text());
+                                  }
+                                }
+                                
+                                if (sendSuccess) {
+                                  console.log(`🤖 AI message part ${partIndex + 1}/${messageParts.length} sent successfully`);
                                   await supabase
                                     .from('whatsapp_messages')
-                                    .update({ content: aiReply, message_type: 'text' })
+                                    .update({ status: 'sent' })
+                                    .eq('wa_message_id', aiMessageId);
+                                } else {
+                                  await supabase
+                                    .from('whatsapp_messages')
+                                    .update({ status: 'failed' })
                                     .eq('wa_message_id', aiMessageId);
                                 }
-                              } else {
-                                // Send as text (original behavior)
-                                const sendResponse = await fetch(`${sessionData.baileys_server_url}/api/message/send-text`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    sessionId: targetSessionId,
-                                    phone: phoneNumber,
-                                    message: aiReply
-                                  })
-                                });
-                                sendSuccess = sendResponse.ok;
-                                if (!sendSuccess) {
-                                  console.error('🤖 Failed to send AI message:', await sendResponse.text());
-                                }
-                              }
-                              
-                              if (sendSuccess) {
-                                console.log('🤖 AI message sent successfully');
-                                await supabase
-                                  .from('whatsapp_messages')
-                                  .update({ status: 'sent' })
-                                  .eq('wa_message_id', aiMessageId);
-                                
-                                await supabase
-                                  .from('whatsapp_conversations')
-                                  .update({
-                                    last_message: shouldSendAudio ? '🎙️ Áudio' : aiReply,
-                                    last_message_at: new Date().toISOString()
-                                  })
-                                  .eq('id', conversation.id);
-                              } else {
+                              } catch (sendError) {
+                                console.error('🤖 Error sending AI message part:', sendError);
                                 await supabase
                                   .from('whatsapp_messages')
                                   .update({ status: 'failed' })
                                   .eq('wa_message_id', aiMessageId);
                               }
-                            } catch (sendError) {
-                              console.error('🤖 Error sending AI message:', sendError);
+                              
+                              // Small delay between parts to simulate typing
+                              if (partIndex < messageParts.length - 1) {
+                                await new Promise(r => setTimeout(r, 1500));
+                              }
                             }
+                            
+                            // Update conversation last message
+                            await supabase
+                              .from('whatsapp_conversations')
+                              .update({
+                                last_message: shouldSendAudio ? '🎙️ Áudio' : messageParts[messageParts.length - 1].substring(0, 100),
+                                last_message_at: new Date().toISOString()
+                              })
+                              .eq('id', conversation.id);
                           }
                         }
                       } else {

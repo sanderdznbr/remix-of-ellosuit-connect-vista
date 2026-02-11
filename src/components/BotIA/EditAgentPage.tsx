@@ -128,6 +128,8 @@ const EditAgentPage: React.FC = () => {
   const [contextMemory, setContextMemory] = useState(10);
   const [responseDelay, setResponseDelay] = useState(0);
   const [splitLongMessages, setSplitLongMessages] = useState(false);
+  const [audioResponseMode, setAudioResponseMode] = useState<'disabled' | 'when_audio' | 'always'>('disabled');
+  const [ttsVoice, setTtsVoice] = useState('alloy');
 
   // Files
   const [trainingFiles, setTrainingFiles] = useState<TrainingFile[]>([]);
@@ -222,6 +224,8 @@ const EditAgentPage: React.FC = () => {
       setWelcomeMessage(settings?.welcomeMessage || '');
       setResponseDelay(settings?.responseDelay || 0);
       setSplitLongMessages(settings?.splitLongMessages || false);
+      setAudioResponseMode(settings?.audioResponseMode || 'disabled');
+      setTtsVoice(settings?.ttsVoice || 'alloy');
 
       // Init chat
       setChatMessages([{
@@ -309,6 +313,8 @@ const EditAgentPage: React.FC = () => {
             welcomeMessage,
             responseDelay,
             splitLongMessages,
+            audioResponseMode,
+            ttsVoice,
           }
         })
         .eq('id', id!);
@@ -852,6 +858,73 @@ const EditAgentPage: React.FC = () => {
                   </div>
                   <Switch checked={splitLongMessages} onCheckedChange={(v) => { setSplitLongMessages(v); markChanged(); }} />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Audio Response Settings */}
+            <Card className="rounded-2xl border-gray-200">
+              <CardContent className="p-6 space-y-5">
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  🎙️ Resposta por Áudio
+                </h2>
+                <p className="text-xs text-gray-400 -mt-3">Configure quando o agente deve responder com áudio no WhatsApp</p>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Modo de Resposta por Áudio</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                    {([
+                      { value: 'disabled', label: 'Desativado', desc: 'Apenas texto', emoji: '💬' },
+                      { value: 'when_audio', label: 'Quando receber áudio', desc: 'Responde áudio com áudio', emoji: '🎤' },
+                      { value: 'always', label: 'Sempre', desc: 'Todas respostas em áudio', emoji: '🔊' },
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { setAudioResponseMode(opt.value); markChanged(); }}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          audioResponseMode === opt.value
+                            ? 'border-2 bg-orange-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        style={audioResponseMode === opt.value ? { borderColor: OMNI_COLOR } : {}}
+                      >
+                        <span className="text-lg">{opt.emoji}</span>
+                        <p className="text-sm font-medium text-gray-900 mt-1">{opt.label}</p>
+                        <p className="text-xs text-gray-400">{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {audioResponseMode !== 'disabled' && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Voz</Label>
+                    <p className="text-xs text-gray-400 mb-2">Escolha a voz para as respostas em áudio (OpenAI TTS)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { value: 'alloy', label: 'Alloy', desc: 'Neutra e versátil' },
+                        { value: 'echo', label: 'Echo', desc: 'Masculina suave' },
+                        { value: 'fable', label: 'Fable', desc: 'Expressiva' },
+                        { value: 'onyx', label: 'Onyx', desc: 'Masculina grave' },
+                        { value: 'nova', label: 'Nova', desc: 'Feminina jovem' },
+                        { value: 'shimmer', label: 'Shimmer', desc: 'Feminina clara' },
+                      ].map(v => (
+                        <button
+                          key={v.value}
+                          onClick={() => { setTtsVoice(v.value); markChanged(); }}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            ttsVoice === v.value
+                              ? 'border-2 bg-orange-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          style={ttsVoice === v.value ? { borderColor: OMNI_COLOR } : {}}
+                        >
+                          <p className="text-sm font-medium text-gray-900">{v.label}</p>
+                          <p className="text-xs text-gray-400">{v.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

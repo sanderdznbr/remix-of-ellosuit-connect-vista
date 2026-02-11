@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.whatsapp-public-api]
 verify_jwt = false
+
+[functions.tts-openai]
+verify_jwt = false

@@ -176,6 +176,12 @@ serve(async (req) => {
       const data = JSON.parse(event.data);
       console.log('📥 Mensagem recebida do cliente - Tipo:', data.type);
 
+      if (data.type === 'ping') {
+        // Keepalive ping - respond with pong to keep connection alive
+        socket.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
+
       if (data.type === 'start_transcription') {
         roomId = data.roomId;
         isTranscribing = true;

@@ -94,6 +94,7 @@ const BookingThemeBuilder = () => {
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>('desktop');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [previewStep, setPreviewStep] = useState<'date' | 'time' | 'form' | 'success'>('date');
 
   // Theme state
   const [theme, setTheme] = useState({
@@ -716,154 +717,307 @@ const BookingThemeBuilder = () => {
         </div>
 
         {/* Preview Area */}
-        <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
-          <div
-            className="transition-all duration-300 h-full"
-            style={{
-              width: typeof previewWidth === 'number' ? previewWidth : undefined,
-              maxWidth: typeof previewWidth === 'string' ? '100%' : previewWidth,
-              flex: typeof previewWidth === 'string' ? 1 : undefined,
-            }}
-          >
+        <div className="flex-1 flex flex-col overflow-auto">
+          {/* Preview Step Navigation */}
+          <div className="bg-white border-b px-4 py-2 flex items-center gap-2 shrink-0">
+            <span className="text-xs font-medium text-gray-500 mr-2">Etapa:</span>
+            {[
+              { id: 'date' as const, label: '1. Data' },
+              { id: 'time' as const, label: '2. Horário' },
+              { id: 'form' as const, label: '3. Formulário' },
+              { id: 'success' as const, label: '✓ Sucesso' },
+            ].map(s => (
+              <button
+                key={s.id}
+                onClick={() => setPreviewStep(s.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                  previewStep === s.id
+                    ? 'text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                )}
+                style={previewStep === s.id ? { backgroundColor: theme.primary_color } : {}}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
             <div
-              className="h-full rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col"
-              style={{ backgroundColor: theme.background_color }}
+              className="transition-all duration-300 h-full"
+              style={{
+                width: typeof previewWidth === 'number' ? previewWidth : undefined,
+                maxWidth: typeof previewWidth === 'string' ? '100%' : previewWidth,
+                flex: typeof previewWidth === 'string' ? 1 : undefined,
+              }}
             >
-              {/* Preview Header */}
-              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-5">
-                {/* Logo */}
-                {theme.logo_url ? (
-                  <motion.img
-                    key={theme.logo_url}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    src={theme.logo_url}
-                    alt="Logo"
-                    className="h-14 w-14 object-contain"
-                    style={{ borderRadius: `${parseInt(theme.border_radius)}px` }}
-                  />
-                ) : (
-                  <div
-                    className="w-14 h-14 flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${theme.primary_color}15`,
-                      borderRadius: `${parseInt(theme.border_radius)}px`,
-                    }}
-                  >
-                    <CalendarIcon className="h-7 w-7" style={{ color: theme.primary_color }} />
-                  </div>
-                )}
+              <div
+                className="h-full rounded-2xl shadow-2xl border border-gray-200 overflow-auto flex flex-col"
+                style={{ backgroundColor: theme.background_color }}
+              >
+                <div className="flex-1 flex flex-col items-center p-8 gap-5">
+                  {/* Header - always visible */}
+                  {theme.logo_url ? (
+                    <motion.img
+                      key={theme.logo_url}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      src={theme.logo_url}
+                      alt="Logo"
+                      className="h-14 w-14 object-contain"
+                      style={{ borderRadius: `${parseInt(theme.border_radius)}px` }}
+                    />
+                  ) : (
+                    <div
+                      className="w-14 h-14 flex items-center justify-center"
+                      style={{
+                        backgroundColor: `${theme.primary_color}15`,
+                        borderRadius: `${parseInt(theme.border_radius)}px`,
+                      }}
+                    >
+                      <CalendarIcon className="h-7 w-7" style={{ color: theme.primary_color }} />
+                    </div>
+                  )}
 
-                {/* Title */}
-                <h2
-                  className="text-2xl font-bold text-center"
-                  style={{
-                    color: isDarkBg ? '#FFFFFF' : '#111827',
-                    fontFamily: theme.font_family,
-                  }}
-                >
-                  {theme.title || 'Título do evento'}
-                </h2>
-
-                {/* Description */}
-                {theme.show_description && theme.description && (
-                  <p
-                    className="text-sm text-center max-w-md"
-                    style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}
+                  <h2
+                    className="text-2xl font-bold text-center"
+                    style={{ color: isDarkBg ? '#FFFFFF' : '#111827', fontFamily: theme.font_family }}
                   >
-                    {theme.description}
-                  </p>
-                )}
+                    {theme.title || 'Título do evento'}
+                  </h2>
 
-                {/* Custom Message */}
-                {theme.custom_message && (
-                  <p
-                    className="text-xs text-center max-w-sm italic"
-                    style={{ color: theme.secondary_color }}
-                  >
-                    {theme.custom_message}
-                  </p>
-                )}
-
-                {/* Duration Badge */}
-                {theme.show_duration && (
-                  <div
-                    className="flex items-center gap-2 px-3 py-1.5"
-                    style={{
-                      backgroundColor: `${theme.primary_color}10`,
-                      borderRadius: `${parseInt(theme.border_radius)}px`,
-                    }}
-                  >
-                    <Timer className="h-4 w-4" style={{ color: theme.primary_color }} />
-                    <span className="text-sm font-medium" style={{ color: theme.primary_color }}>
-                      {theme.duration_minutes} min
-                    </span>
-                  </div>
-                )}
-
-                {/* Mock Calendar */}
-                <div className="w-full max-w-sm mt-4">
-                  <div
-                    className="p-4 border"
-                    style={{
-                      borderColor: isDarkBg ? '#374151' : '#E5E7EB',
-                      borderRadius: `${parseInt(theme.border_radius)}px`,
-                      backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF',
-                    }}
-                  >
-                    <p className="text-xs font-medium mb-3" style={{ color: isDarkBg ? '#D1D5DB' : '#374151' }}>
-                      Próximos horários disponíveis
+                  {theme.show_description && theme.description && (
+                    <p className="text-sm text-center max-w-md" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
+                      {theme.description}
                     </p>
-                    <div className="space-y-2">
-                      {mockDays.map((day, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between p-2.5 border transition-colors cursor-pointer"
-                          style={{
-                            borderColor: i === 0 ? theme.primary_color : isDarkBg ? '#374151' : '#E5E7EB',
-                            borderRadius: `${Math.min(parseInt(theme.border_radius), 12)}px`,
-                            backgroundColor: i === 0 ? `${theme.primary_color}08` : 'transparent',
-                          }}
-                        >
-                          <span className="text-xs font-medium" style={{ color: isDarkBg ? '#E5E7EB' : '#374151' }}>
-                            {format(day, "EEE, dd 'de' MMM", { locale: ptBR })}
-                          </span>
-                          <div className="flex gap-1.5">
-                            {['09:00', '10:30', '14:00'].map(time => (
-                              <span
-                                key={time}
-                                className="text-[10px] px-2 py-1 font-medium"
-                                style={{
-                                  backgroundColor: `${theme.primary_color}12`,
-                                  color: theme.primary_color,
-                                  borderRadius: `${Math.min(parseInt(theme.border_radius), 8)}px`,
-                                }}
-                              >
-                                {time}
-                              </span>
+                  )}
+
+                  {theme.custom_message && (
+                    <p className="text-xs text-center max-w-sm italic" style={{ color: theme.secondary_color }}>
+                      {theme.custom_message}
+                    </p>
+                  )}
+
+                  {theme.show_duration && (
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5"
+                      style={{ backgroundColor: `${theme.primary_color}10`, borderRadius: `${parseInt(theme.border_radius)}px` }}
+                    >
+                      <Timer className="h-4 w-4" style={{ color: theme.primary_color }} />
+                      <span className="text-sm font-medium" style={{ color: theme.primary_color }}>{theme.duration_minutes} min</span>
+                    </div>
+                  )}
+
+                  {/* Progress indicators */}
+                  {previewStep !== 'success' && (
+                    <div className="flex items-center gap-2">
+                      {(['date', 'time', 'form'] as const).map((s, i) => {
+                        const stepIndex = ['date', 'time', 'form'].indexOf(previewStep);
+                        const isActive = previewStep === s;
+                        const isCompleted = stepIndex > i;
+                        return (
+                          <React.Fragment key={s}>
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
+                              style={{
+                                backgroundColor: isActive ? theme.primary_color : isCompleted ? `${theme.primary_color}30` : isDarkBg ? '#374151' : '#e5e7eb',
+                                color: isActive ? 'white' : isCompleted ? theme.primary_color : isDarkBg ? '#6B7280' : '#9ca3af',
+                              }}
+                            >
+                              {isCompleted ? <Check className="h-4 w-4" /> : i + 1}
+                            </div>
+                            {i < 2 && (
+                              <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: stepIndex > i ? theme.primary_color : isDarkBg ? '#374151' : '#e5e7eb' }} />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Step Content */}
+                  <div className="w-full max-w-sm mt-2">
+                    <AnimatePresence mode="wait">
+                      {/* Date Step */}
+                      {previewStep === 'date' && (
+                        <motion.div key="date" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <div
+                            className="p-4 border"
+                            style={{ borderColor: isDarkBg ? '#374151' : '#E5E7EB', borderRadius: `${parseInt(theme.border_radius)}px`, backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF' }}
+                          >
+                            <p className="text-xs font-medium mb-3" style={{ color: isDarkBg ? '#D1D5DB' : '#374151' }}>
+                              Selecione a data
+                            </p>
+                            {/* Mock calendar grid */}
+                            <div className="grid grid-cols-7 gap-1 mb-3">
+                              {['D','S','T','Q','Q','S','S'].map((d, i) => (
+                                <div key={i} className="text-center text-[10px] font-medium py-1" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>{d}</div>
+                              ))}
+                              {Array.from({ length: 35 }, (_, i) => {
+                                const day = i - 2;
+                                const isValid = day >= 1 && day <= 31;
+                                const isSelected = day === 15;
+                                const isAvailable = isValid && [1,3,5,8,10,12,15,17,19,22,24,26,29].includes(day);
+                                return (
+                                  <div
+                                    key={i}
+                                    className="aspect-square flex items-center justify-center text-[10px] font-medium"
+                                    style={{
+                                      borderRadius: `${Math.min(parseInt(theme.border_radius), 8)}px`,
+                                      backgroundColor: isSelected ? theme.primary_color : 'transparent',
+                                      color: isSelected ? 'white' : isAvailable ? (isDarkBg ? '#E5E7EB' : '#374151') : (isDarkBg ? '#4B5563' : '#D1D5DB'),
+                                      cursor: isAvailable ? 'pointer' : 'default',
+                                    }}
+                                  >
+                                    {isValid ? day : ''}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <button
+                            className="w-full mt-4 px-6 py-3 text-sm font-semibold"
+                            style={{
+                              borderRadius: `${parseInt(theme.border_radius)}px`,
+                              ...(theme.button_style === 'filled' ? { backgroundColor: theme.primary_color, color: '#FFFFFF' } :
+                                theme.button_style === 'outlined' ? { border: `2px solid ${theme.primary_color}`, color: theme.primary_color, backgroundColor: 'transparent' } :
+                                { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }),
+                            }}
+                          >
+                            Continuar
+                          </button>
+                        </motion.div>
+                      )}
+
+                      {/* Time Step */}
+                      {previewStep === 'time' && (
+                        <motion.div key="time" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <div
+                            className="p-4 border"
+                            style={{ borderColor: isDarkBg ? '#374151' : '#E5E7EB', borderRadius: `${parseInt(theme.border_radius)}px`, backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF' }}
+                          >
+                            <p className="text-xs font-medium mb-3" style={{ color: isDarkBg ? '#D1D5DB' : '#374151' }}>
+                              Horários disponíveis
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['09:00','09:30','10:00','10:30','11:00','14:00','14:30','15:00','15:30'].map((time, i) => (
+                                <div
+                                  key={time}
+                                  className="text-center py-2 text-xs font-medium cursor-pointer transition-all"
+                                  style={{
+                                    borderRadius: `${Math.min(parseInt(theme.border_radius), 10)}px`,
+                                    backgroundColor: i === 2 ? theme.primary_color : `${theme.primary_color}10`,
+                                    color: i === 2 ? 'white' : theme.primary_color,
+                                    border: i === 2 ? 'none' : `1px solid ${theme.primary_color}20`,
+                                  }}
+                                >
+                                  {time}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            className="w-full mt-4 px-6 py-3 text-sm font-semibold"
+                            style={{
+                              borderRadius: `${parseInt(theme.border_radius)}px`,
+                              ...(theme.button_style === 'filled' ? { backgroundColor: theme.primary_color, color: '#FFFFFF' } :
+                                theme.button_style === 'outlined' ? { border: `2px solid ${theme.primary_color}`, color: theme.primary_color, backgroundColor: 'transparent' } :
+                                { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }),
+                            }}
+                          >
+                            Continuar
+                          </button>
+                        </motion.div>
+                      )}
+
+                      {/* Form Step */}
+                      {previewStep === 'form' && (
+                        <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <div
+                            className="p-4 border space-y-3"
+                            style={{ borderColor: isDarkBg ? '#374151' : '#E5E7EB', borderRadius: `${parseInt(theme.border_radius)}px`, backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF' }}
+                          >
+                            <p className="text-xs font-medium mb-1" style={{ color: isDarkBg ? '#D1D5DB' : '#374151' }}>Seus dados</p>
+                            {['Nome completo *', 'Email *', 'Telefone', 'Observações'].map((field, i) => (
+                              <div key={field}>
+                                <label className="text-[10px] font-medium mb-1 block" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>{field}</label>
+                                <div
+                                  className="h-8 border px-2 flex items-center text-[10px]"
+                                  style={{
+                                    borderColor: isDarkBg ? '#374151' : '#E5E7EB',
+                                    borderRadius: `${Math.min(parseInt(theme.border_radius), 8)}px`,
+                                    backgroundColor: isDarkBg ? '#111827' : '#F9FAFB',
+                                    color: isDarkBg ? '#6B7280' : '#9CA3AF',
+                                    height: i === 3 ? 48 : 32,
+                                  }}
+                                >
+                                  {i === 0 ? 'João Silva' : i === 1 ? 'joao@email.com' : i === 2 ? '(11) 99999-0000' : ''}
+                                </div>
+                              </div>
                             ))}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                          <button
+                            className="w-full mt-4 px-6 py-3 text-sm font-semibold"
+                            style={{
+                              borderRadius: `${parseInt(theme.border_radius)}px`,
+                              ...(theme.button_style === 'filled' ? { backgroundColor: theme.primary_color, color: '#FFFFFF' } :
+                                theme.button_style === 'outlined' ? { border: `2px solid ${theme.primary_color}`, color: theme.primary_color, backgroundColor: 'transparent' } :
+                                { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }),
+                            }}
+                          >
+                            Confirmar Agendamento
+                          </button>
+                        </motion.div>
+                      )}
 
-                {/* CTA Button */}
-                <button
-                  className="mt-4 px-8 py-3 text-sm font-semibold transition-all"
-                  style={{
-                    borderRadius: `${parseInt(theme.border_radius)}px`,
-                    ...(theme.button_style === 'filled'
-                      ? { backgroundColor: theme.primary_color, color: '#FFFFFF' }
-                      : theme.button_style === 'outlined'
-                      ? { border: `2px solid ${theme.primary_color}`, color: theme.primary_color, backgroundColor: 'transparent' }
-                      : { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }
-                    ),
-                  }}
-                >
-                  Confirmar Horário
-                </button>
+                      {/* Success Step */}
+                      {previewStep === 'success' && (
+                        <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-4">
+                          <div
+                            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+                            style={{ backgroundColor: `${theme.primary_color}15` }}
+                          >
+                            <Check className="h-8 w-8" style={{ color: theme.primary_color }} />
+                          </div>
+                          <h3 className="text-lg font-bold mb-2" style={{ color: isDarkBg ? '#FFFFFF' : '#111827' }}>
+                            Agendamento Confirmado!
+                          </h3>
+                          <p className="text-xs mb-4" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
+                            Enviamos os detalhes para o seu email.
+                          </p>
+                          <div
+                            className="p-4 text-left space-y-2 text-xs"
+                            style={{
+                              backgroundColor: `${theme.primary_color}08`,
+                              borderRadius: `${parseInt(theme.border_radius)}px`,
+                              color: isDarkBg ? '#E5E7EB' : '#374151',
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <CalendarIcon className="h-4 w-4" style={{ color: theme.primary_color }} />
+                              <span>Quarta, 15 de Janeiro de 2025</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" style={{ color: theme.primary_color }} />
+                              <span>10:00 • {theme.duration_minutes} minutos</span>
+                            </div>
+                          </div>
+                          {theme.custom_message && (
+                            <p className="mt-4 text-xs italic" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
+                              "{theme.custom_message}"
+                            </p>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Footer */}
+                  <p className="text-[10px] mt-auto pt-4" style={{ color: isDarkBg ? '#4B5563' : '#9CA3AF' }}>
+                    Powered by <span className="font-semibold" style={{ color: theme.primary_color }}>ellosuit</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

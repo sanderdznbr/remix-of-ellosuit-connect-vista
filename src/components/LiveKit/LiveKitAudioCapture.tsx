@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
 
@@ -33,28 +33,16 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
   const audioBufferRef = useRef<Int16Array>(new Int16Array(0));
   const lastSendTimeRef = useRef<number>(0);
   const lastTranscriptRef = useRef<string>('');
+  const isConnectingRef = useRef(false);
+  const isCleaningUpRef = useRef(false);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-  useEffect(() => {
-    if (!isActive) {
-      cleanup();
-      return;
-    }
-
-    // Silently skip transcription on mobile (component won't render on mobile anyway)
-    if (isMobile) {
-      console.log('📱 Transcrição desabilitada em dispositivo móvel');
-      return;
-    }
-
-    startCapture();
-
-    return () => cleanup();
-  }, [isActive, roomName, isMobile]);
+  const isMobileRef = useRef(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
 
   // Check for similar text (duplicate detection)
-  const isSimilarText = (text1: string, text2: string): boolean => {
+  const isSimilarText = useCallback((text1: string, text2: string): boolean => {
     const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
     const norm1 = normalize(text1);
     const norm2 = normalize(text2);
@@ -64,80 +52,15 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     if (norm2.includes(norm1) && norm1.length > 10) return true;
     
     return false;
-  };
+  }, []);
 
-  const startCapture = async () => {
-    try {
-      console.log('🎤 Iniciando captura de TODOS os participantes para transcrição...');
-      console.log('📍 Capturando áudio local + remoto via LiveKit');
-
-      if (!room) {
-        throw new Error('Room não disponível');
-      }
-
-      // Create AudioContext com sample rate otimizado para qualidade
-      audioContextRef.current = new AudioContext({ sampleRate: 48000 });
-      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
-
-      // Criar um mixer node para combinar todos os áudios
-      mixerNodeRef.current = audioContextRef.current.createGain();
-      mixerNodeRef.current.gain.value = 1.0;
-
-      // Criar o processor para capturar o áudio mixado
-      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
-
-      // Conectar mixer ao processor
-      mixerNodeRef.current.connect(processorRef.current);
-      processorRef.current.connect(audioContextRef.current.destination);
-
-      // Capturar áudio LOCAL (do participante atual)
-      await setupLocalAudio();
-
-      // Capturar áudio REMOTO (de todos os outros participantes)
-      await setupRemoteAudio();
-
-      // Connect to WebSocket BEFORE processing audio
-      await connectWebSocket();
-
-      // Process mixed audio in real-time
-      processorRef.current.onaudioprocess = (e) => {
-        if (!isActive || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-          return;
-        }
-
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Convert Float32 to Int16 (PCM16)
-        const int16Data = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        
-        // Accumulate audio and send when buffer is large enough
-        accumulateAndSendAudio(int16Data);
-      };
-
-      console.log('✅ Pipeline de áudio mixado conectado - Capturando TODOS participantes');
-
-    } catch (error) {
-      console.error('❌ Erro ao iniciar captura:', error);
-      toast({
-        title: "Erro na Transcrição",
-        description: "Não foi possível iniciar transcrição de todos os participantes",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const setupLocalAudio = async () => {
+  const setupLocalAudio = useCallback(async () => {
     if (!audioContextRef.current || !mixerNodeRef.current) return;
 
     try {
-      // Obter o microfone local com configurações otimizadas para português
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 48000, // Sample rate mais alto para melhor qualidade
+          sampleRate: 48000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -146,66 +69,45 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       });
 
       streamRef.current = stream;
-      
-      // Criar source do áudio local
       localSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-      
-      // Conectar ao mixer
       localSourceRef.current.connect(mixerNodeRef.current);
       
       console.log('✅ Áudio LOCAL conectado ao mixer');
     } catch (error) {
       console.error('❌ Erro ao capturar áudio local:', error);
     }
-  };
+  }, []);
 
-  const setupRemoteAudio = async () => {
+  const setupRemoteAudio = useCallback(async () => {
     if (!audioContextRef.current || !mixerNodeRef.current || !room) return;
 
     try {
-      // Obter todos os tracks de áudio remotos
       const audioTracks = Array.from(room.remoteParticipants.values())
         .flatMap(participant => Array.from(participant.audioTrackPublications.values()))
         .filter(pub => pub.track)
         .map(pub => pub.track!.mediaStreamTrack);
 
-      console.log(`🎧 Encontrados ${audioTracks.length} tracks de áudio remotos`);
-
-      // Criar um MediaStream com todos os tracks remotos
       if (audioTracks.length > 0) {
         const remoteStream = new MediaStream(audioTracks);
-        
-        // Criar source do áudio remoto
         const remoteSource = audioContextRef.current.createMediaStreamSource(remoteStream);
-        
-        // Conectar ao mixer
         remoteSource.connect(mixerNodeRef.current);
-        
-        console.log('✅ Áudio REMOTO conectado ao mixer');
+        console.log(`✅ ${audioTracks.length} áudio(s) REMOTO(s) conectado(s)`);
       }
     } catch (error) {
       console.error('❌ Erro ao capturar áudio remoto:', error);
     }
-  };
+  }, [room]);
 
-  // Accumulate and send audio intelligently - optimized thresholds
-  const accumulateAndSendAudio = (pcm16Data: Int16Array) => {
-    // Calculate RMS to detect actual audio content
+  const accumulateAndSendAudio = useCallback((pcm16Data: Int16Array) => {
     let sum = 0;
     for (let i = 0; i < pcm16Data.length; i++) {
       sum += pcm16Data[i] * pcm16Data[i];
     }
     const rms = Math.sqrt(sum / pcm16Data.length);
     
-    // Lower threshold to capture speech better (was 1500, too aggressive)
     const SILENCE_THRESHOLD = 400;
-    
-    // Skip pure silence
-    if (rms < SILENCE_THRESHOLD) {
-      return;
-    }
+    if (rms < SILENCE_THRESHOLD) return;
 
-    // Accumulate audio in buffer
     const combined = new Int16Array(audioBufferRef.current.length + pcm16Data.length);
     combined.set(audioBufferRef.current);
     combined.set(pcm16Data, audioBufferRef.current.length);
@@ -215,7 +117,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     const timeSinceLastSend = now - lastSendTimeRef.current;
     const bufferDurationMs = (audioBufferRef.current.length / 48000) * 1000;
 
-    // Send every 5 seconds with at least 3s of audio (was 10s/8s - too long)
     if (bufferDurationMs >= 3000 && timeSinceLastSend >= 5000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms)`);
@@ -240,10 +141,28 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         lastSendTimeRef.current = now;
       }
     }
-  };
+  }, []);
 
-  const connectWebSocket = (): Promise<void> => {
+  const connectWebSocket = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
+      // Prevent concurrent connection attempts
+      if (isConnectingRef.current) {
+        console.log('⏳ Conexão já em andamento, ignorando');
+        resolve();
+        return;
+      }
+
+      // Close any existing connection first
+      if (wsRef.current) {
+        try {
+          wsRef.current.onclose = null; // Remove handler to prevent reconnect loop
+          wsRef.current.close();
+        } catch {}
+        wsRef.current = null;
+      }
+
+      isConnectingRef.current = true;
+
       try {
         const wsUrl = `wss://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/realtime-transcription`;
         console.log('🔌 Conectando WebSocket:', wsUrl);
@@ -251,31 +170,26 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        // Timeout de 10 segundos para conexão
         const connectionTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
             console.error('❌ Timeout na conexão WebSocket');
+            isConnectingRef.current = false;
+            ws.onclose = null;
             ws.close();
-            reject(new Error('Timeout ao conectar com serviço de transcrição'));
-            toast({
-              title: "Erro de Conexão",
-              description: "Timeout ao conectar com serviço de transcrição",
-              variant: "destructive"
-            });
+            reject(new Error('Timeout'));
           }
         }, 10000);
 
         ws.onopen = () => {
           clearTimeout(connectionTimeout);
+          isConnectingRef.current = false;
           console.log('✅ WebSocket conectado para transcrição');
           setIsConnected(true);
           
-          // Reset state for new session
           lastTranscriptRef.current = '';
           audioBufferRef.current = new Int16Array(0);
           lastSendTimeRef.current = Date.now();
 
-          // Start transcription
           ws.send(JSON.stringify({
             type: 'start_transcription',
             roomId: roomName
@@ -288,11 +202,9 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log('📥 WebSocket:', data.type);
 
             if (data.type === 'transcript_update') {
               if (data.is_final) {
-                // Check for duplicate text
                 const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);
                 
                 if (!isDuplicate && data.text.trim().length > 0) {
@@ -304,11 +216,8 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
                     timestamp: data.timestamp || new Date().toISOString(),
                     speaker: data.speaker || 'Participante'
                   });
-                } else {
-                  console.log('⏭️ Texto duplicado ignorado');
                 }
               } else {
-                // Partial transcript
                 onTranscriptionUpdate({
                   text: data.text,
                   is_final: false,
@@ -318,11 +227,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
               }
             } else if (data.type === 'error') {
               console.error('❌ Erro do servidor:', data.error);
-              toast({
-                title: "Erro na Transcrição",
-                description: data.error,
-                variant: "destructive"
-              });
             }
           } catch (error) {
             console.error('❌ Erro ao processar mensagem:', error);
@@ -331,90 +235,59 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
         ws.onerror = (error) => {
           clearTimeout(connectionTimeout);
+          isConnectingRef.current = false;
           console.error('❌ WebSocket error:', error);
           setIsConnected(false);
-          toast({
-            title: "Erro de Conexão",
-            description: "Falha na conexão com serviço de transcrição. Verifique os logs.",
-            variant: "destructive"
-          });
           reject(error);
         };
 
         ws.onclose = (event) => {
           clearTimeout(connectionTimeout);
+          isConnectingRef.current = false;
           console.log('🔌 WebSocket desconectado:', event.code, event.reason);
           setIsConnected(false);
           
-          // Mensagens específicas por código de erro
-          if (event.code !== 1000 && isActive) {
-            let errorMsg = "Conexão com serviço de transcrição perdida";
-            if (event.code === 1006) {
-              errorMsg = "Serviço de transcrição não alcançável. Verifique a edge function.";
-            } else if (event.code === 1011) {
-              errorMsg = "Erro interno no serviço de transcrição";
+          // Only reconnect if still mounted and active, with exponential backoff
+          if (event.code !== 1000 && mountedRef.current && !isCleaningUpRef.current) {
+            // Clear any existing reconnect timer
+            if (reconnectTimerRef.current) {
+              clearTimeout(reconnectTimerRef.current);
             }
             
-            toast({
-              title: "Desconectado",
-              description: errorMsg,
-              variant: "destructive"
-            });
-            
-            console.log('🔄 Tentando reconectar em 5 segundos...');
-            setTimeout(() => {
-              if (isActive) {
-                connectWebSocket();
+            console.log('🔄 Tentando reconectar em 10 segundos...');
+            reconnectTimerRef.current = setTimeout(() => {
+              if (mountedRef.current && !isCleaningUpRef.current) {
+                connectWebSocket().catch(err => {
+                  console.error('❌ Falha na reconexão:', err);
+                });
               }
-            }, 5000);
+            }, 10000); // 10s instead of 5s to reduce loop frequency
           }
         };
 
       } catch (error) {
+        isConnectingRef.current = false;
         console.error('❌ Erro ao conectar WebSocket:', error);
         reject(error);
       }
     });
-  };
+  }, [roomName, isSimilarText, onTranscriptionUpdate]);
 
-  // Watch for new participants joining and add their audio
-  useEffect(() => {
-    if (!isActive || !audioContextRef.current || !mixerNodeRef.current) return;
-
-    const updateRemoteAudio = async () => {
-      await setupRemoteAudio();
-    };
-
-    updateRemoteAudio();
-  }, [remoteParticipants, isActive]);
-
-  const cleanup = () => {
+  const cleanup = useCallback(() => {
     console.log('🧹 Limpando captura de áudio...');
+    isCleaningUpRef.current = true;
 
-    // Send final audio buffer
-    if (audioBufferRef.current.length > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log(`🎵 Enviando áudio final: ${audioBufferRef.current.length} samples`);
-      
-      const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
-      let binary = '';
-      const chunkSize = 0x8000;
-      
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      
-      const base64Audio = btoa(binary);
-      
-      wsRef.current.send(JSON.stringify({
-        type: 'audio_data',
-        audio: base64Audio
-      }));
+    // Clear reconnect timer
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
 
-    // Stop transcription
+    // Send stop
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
+      try {
+        wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
+      } catch {}
     }
 
     // Disconnect audio pipeline
@@ -430,7 +303,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       mixerNodeRef.current.disconnect();
       mixerNodeRef.current = null;
     }
-    // Disconnect all remote sources
     remoteSourcesRef.current.forEach(source => source.disconnect());
     remoteSourcesRef.current.clear();
     
@@ -439,24 +311,99 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       audioContextRef.current = null;
     }
 
-    // Stop stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
 
-    // Close WebSocket
+    // Close WebSocket without triggering reconnect
     if (wsRef.current) {
+      wsRef.current.onclose = null;
       wsRef.current.close();
       wsRef.current = null;
     }
 
     audioBufferRef.current = new Int16Array(0);
     lastTranscriptRef.current = '';
+    isConnectingRef.current = false;
     setIsConnected(false);
+    isCleaningUpRef.current = false;
     
     console.log('✅ Limpeza concluída');
-  };
+  }, []);
+
+  const startCapture = useCallback(async () => {
+    try {
+      console.log('🎤 Iniciando captura para transcrição...');
+
+      if (!room) {
+        throw new Error('Room não disponível');
+      }
+
+      audioContextRef.current = new AudioContext({ sampleRate: 48000 });
+      mixerNodeRef.current = audioContextRef.current.createGain();
+      mixerNodeRef.current.gain.value = 1.0;
+      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+
+      mixerNodeRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioContextRef.current.destination);
+
+      await setupLocalAudio();
+      await setupRemoteAudio();
+      await connectWebSocket();
+
+      processorRef.current.onaudioprocess = (e) => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+        const inputData = e.inputBuffer.getChannelData(0);
+        const int16Data = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        
+        accumulateAndSendAudio(int16Data);
+      };
+
+      console.log('✅ Pipeline de áudio conectado');
+
+    } catch (error) {
+      console.error('❌ Erro ao iniciar captura:', error);
+      toast({
+        title: "Erro na Transcrição",
+        description: "Não foi possível iniciar transcrição",
+        variant: "destructive"
+      });
+    }
+  }, [room, setupLocalAudio, setupRemoteAudio, connectWebSocket, accumulateAndSendAudio, toast]);
+
+  // Main effect - only depends on isActive and roomName
+  useEffect(() => {
+    mountedRef.current = true;
+    isCleaningUpRef.current = false;
+
+    if (!isActive || isMobileRef.current) {
+      if (isMobileRef.current) {
+        console.log('📱 Transcrição desabilitada em dispositivo móvel');
+      }
+      return;
+    }
+
+    startCapture();
+
+    return () => {
+      mountedRef.current = false;
+      cleanup();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, roomName]);
+
+  // Watch for new participants joining and add their audio
+  useEffect(() => {
+    if (!isActive || !audioContextRef.current || !mixerNodeRef.current || isMobileRef.current) return;
+    setupRemoteAudio();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteParticipants.length]);
 
   return null;
 };

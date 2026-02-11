@@ -375,7 +375,7 @@ const WhatsAppApiPage: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={key.is_active ? 'default' : 'secondary'}>
+                            <Badge variant={key.is_active ? 'default' : 'secondary'} className={key.is_active ? 'bg-[#FF4500] hover:bg-[#FF4500]/90 text-white' : ''}>
                               {key.is_active ? 'Ativa' : 'Inativa'}
                             </Badge>
                           </TableCell>

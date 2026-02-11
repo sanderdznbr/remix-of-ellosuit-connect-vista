@@ -47,11 +47,12 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 5): Promise<Response> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const response = await fetch(url, options);
     if (response.status === 429 && attempt < maxRetries - 1) {
-      const waitMs = Math.min(2000 * Math.pow(2, attempt), 10000);
+      const waitMs = Math.min(3000 * Math.pow(2, attempt), 30000);
+      console.log(`Rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
       await sleep(waitMs);
       continue;
     }

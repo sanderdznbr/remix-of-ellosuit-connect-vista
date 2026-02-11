@@ -103,7 +103,7 @@ const VideoTrackingDashboard = () => {
   const deleteVideo = (videoId: string) => { setVideos(videos.filter(v => v.id !== videoId)); if (selectedVideo?.id === videoId) setSelectedVideo(null); toast({ title: 'Vídeo removido' }); };
 
   const stats = [
-    { label: "Vídeos", value: videos.length, icon: Video, color: "#00E371" },
+    { label: "Vídeos", value: videos.length, icon: Video, color: "#3A9A1C" },
     { label: "Visualizações", value: videos.reduce((a, b) => a + b.views, 0), icon: Eye, color: "#10B981" },
     { label: "Tempo Médio", value: formatDuration(Math.round(videos.reduce((a, b) => a + b.avgWatchTime, 0) / videos.length || 0)), icon: Clock, color: "#8B5CF6" },
     { label: "Taxa Conclusão", value: `${Math.round(videos.reduce((a, b) => a + b.completionRate, 0) / videos.length || 0)}%`, icon: TrendingUp, color: "#F59E0B" },

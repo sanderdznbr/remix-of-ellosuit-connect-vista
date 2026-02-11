@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 
 export const OMNI_COLOR = '#FF4500';
 export const FLOW_COLOR = '#007DE3';
-export const TRACK_COLOR = '#00E371';
+export const TRACK_COLOR = '#3A9A1C';
 export const SUITE_COLOR = '#3000E3';
 export const DEFAULT_COLOR = '#3000E3';
 

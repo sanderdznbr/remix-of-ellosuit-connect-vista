@@ -545,7 +545,7 @@ const MainDashboard = () => {
                 {[
                   { label: 'Omni', desc: 'Comunicação', icon: MessageSquare, color: '#FF4500', path: '/dashboard/omni' },
                   { label: 'Flow', desc: 'Produtividade', icon: Calendar, color: '#007DE3', path: '/dashboard/flows' },
-                  { label: 'Track', desc: 'Rastreamento', icon: Radio, color: '#00E371', path: '/dashboard/track' },
+                  { label: 'Track', desc: 'Rastreamento', icon: Radio, color: '#3A9A1C', path: '/dashboard/track' },
                   { label: 'Suite', desc: 'Gestão', icon: Users, color: '#3000E3', path: '/dashboard/cadastros' },
                 ].map((hub) => {
                   const Icon = hub.icon;

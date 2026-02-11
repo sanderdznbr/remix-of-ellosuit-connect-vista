@@ -77,7 +77,7 @@ const DEFAULT_MENU_GROUPS = [
     id: 'ellosuit-track',
     label: 'Ellosuit Track',
     icon: 'Radio',
-    color: '#00E371',
+    color: '#3A9A1C',
     hubPath: '/dashboard/track',
     items: [
       { id: 'rastreamento-docs', path: '/dashboard/rastreamento?tab=documents', icon: 'FileText', label: 'Rastrear Documentos' },

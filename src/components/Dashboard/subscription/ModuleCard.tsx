@@ -57,10 +57,10 @@ const moduleConfig = {
     subtitle: 'Rastreamento',
     description: 'Rastreamento de Documentos, Links, Vídeos e Analytics',
     price: 67,
-    color: 'hsl(153, 100%, 45%)', // #00E371
-    bgClass: 'bg-[#00E371]/10',
-    borderClass: 'border-[#00E371]',
-    textClass: 'text-[#00E371]',
+    color: 'hsl(104, 70%, 36%)', // #3A9A1C
+    bgClass: 'bg-[#3A9A1C]/10',
+    borderClass: 'border-[#3A9A1C]',
+    textClass: 'text-[#3A9A1C]',
     icon: BarChart3,
     features: [
       'Rastrear Documentos (100/mês)',

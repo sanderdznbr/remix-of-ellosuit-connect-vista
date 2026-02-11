@@ -22,7 +22,7 @@ import {
 const COLORS = {
   omni: "#FF4500",
   flow: "#007DE3",
-  track: "#00E371",
+  track: "#3A9A1C",
   suite: "#3000E3",
   config: "#64748B",
 };

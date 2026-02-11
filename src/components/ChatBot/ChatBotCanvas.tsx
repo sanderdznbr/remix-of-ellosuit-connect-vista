@@ -190,6 +190,17 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     if (handle === 'yes') startY = node.position.y + 60;
     if (handle === 'no') startY = node.position.y + 90;
     
+    // Multi-conditional handles
+    if (node.subType === 'multi' && handle) {
+      const conditions = node.data.config?.conditions || [];
+      const condIndex = conditions.findIndex((c: any) => c.id === handle);
+      if (condIndex >= 0) {
+        startY = node.position.y + 55 + condIndex * 28;
+      } else if (handle === 'else') {
+        startY = node.position.y + 55 + conditions.length * 28;
+      }
+    }
+    
     setConnectingLine({
       sourceId: nodeId,
       sourceHandle: handle,
@@ -332,13 +343,33 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     if (edge.sourceHandle === 'yes') sourceY = sourceNode.position.y + 60;
     if (edge.sourceHandle === 'no') sourceY = sourceNode.position.y + 90;
     
+    // Multi-conditional handles
+    if (sourceNode.subType === 'multi' && edge.sourceHandle) {
+      const conditions = sourceNode.data.config?.conditions || [];
+      const condIndex = conditions.findIndex((c: any) => c.id === edge.sourceHandle);
+      if (condIndex >= 0) {
+        sourceY = sourceNode.position.y + 55 + condIndex * 28;
+      } else if (edge.sourceHandle === 'else') {
+        sourceY = sourceNode.position.y + 55 + conditions.length * 28;
+      }
+    }
+    
     const targetX = targetNode.position.x;
     const targetY = targetNode.position.y + 40;
 
     const midX = (sourceX + targetX) / 2;
     const path = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
 
-    const edgeColor = edge.sourceHandle === 'yes' ? '#22C55E' : edge.sourceHandle === 'no' ? '#EF4444' : '#94A3B8';
+    const handleColors: Record<string, string> = { 'yes': '#22C55E', 'no': '#EF4444', 'else': '#94A3B8' };
+    let edgeColor = handleColors[edge.sourceHandle || ''] || '#94A3B8';
+    
+    // Color for multi-condition handles
+    if (sourceNode.subType === 'multi' && edge.sourceHandle && !handleColors[edge.sourceHandle]) {
+      const colors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+      const conditions = sourceNode.data.config?.conditions || [];
+      const idx = conditions.findIndex((c: any) => c.id === edge.sourceHandle);
+      if (idx >= 0) edgeColor = colors[idx % colors.length];
+    }
 
     return (
       <g key={edge.id} className="edge-group">
@@ -447,8 +478,11 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
         {nodes.map((node) => {
           const color = nodeColors[node.type];
           const Icon = iconMap[node.data.config?.icon] || MessageSquare;
-          const isCondition = node.type === 'condition';
-          const nodeHeight = isCondition ? 110 : 80;
+          const isCondition = node.type === 'condition' && node.subType === 'if_else';
+          const isMultiCondition = node.type === 'condition' && node.subType === 'multi';
+          const multiConditions = isMultiCondition ? (node.data.config?.conditions || []) : [];
+          const isTimeOrWeekday = node.type === 'condition' && (node.subType === 'time' || node.subType === 'weekday');
+          const hasMultipleOutputs = isCondition || isMultiCondition || isTimeOrWeekday;
           
           return (
             <div
@@ -504,6 +538,15 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
               {/* Node Content */}
               <div className="px-3 py-2 text-xs text-muted-foreground min-h-[40px]">
                 <p className="line-clamp-2">{getNodeDescription(node)}</p>
+                {isMultiCondition && multiConditions.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {multiConditions.map((c: any, i: number) => (
+                      <div key={c.id} className="text-[10px] text-muted-foreground/70">
+                        {i + 1}. {c.label || `Condição ${i + 1}`}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Connection Points */}
@@ -525,8 +568,38 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                 <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
               </div>
 
-              {/* Output (right side) - different for conditions */}
-              {isCondition ? (
+              {/* Output (right side) */}
+              {isMultiCondition && multiConditions.length > 0 ? (
+                <>
+                  {multiConditions.map((c: any, i: number) => {
+                    const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+                    const handleColor = handleColors[i % handleColors.length];
+                    return (
+                      <React.Fragment key={c.id}>
+                        <div 
+                          className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                          style={{ top: 45 + i * 28, borderColor: handleColor }}
+                          onMouseDown={(e) => handleOutputMouseDown(e, node.id, c.id)}
+                        >
+                          <span className="text-[8px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
+                        </div>
+                        <span className="absolute right-5 text-[9px] font-medium truncate max-w-[60px]" style={{ top: 48 + i * 28, color: handleColor }}>
+                          {c.label || `C${i + 1}`}
+                        </span>
+                      </React.Fragment>
+                    );
+                  })}
+                  {/* Default/Else output */}
+                  <div 
+                    className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 border-gray-400 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                    style={{ top: 45 + multiConditions.length * 28 }}
+                    onMouseDown={(e) => handleOutputMouseDown(e, node.id, 'else')}
+                  >
+                    <span className="text-[8px] font-bold text-gray-400">✕</span>
+                  </div>
+                  <span className="absolute right-5 text-[9px] text-gray-400 font-medium" style={{ top: 48 + multiConditions.length * 28 }}>Senão</span>
+                </>
+              ) : isCondition || isTimeOrWeekday ? (
                 <>
                   {/* Yes output */}
                   <div 

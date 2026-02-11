@@ -63,8 +63,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
         label: 'Definir condição', 
         description: 'Defina regras específicas para o seu fluxo.', 
         icon: 'GitBranch', 
-        defaultConfig: { conditionType: 'user_response', operator: 'contains', value: '' },
-        locked: true
+        defaultConfig: { conditionType: 'user_response', operator: 'contains', value: '' }
       },
       { 
         type: 'condition', 
@@ -72,8 +71,7 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
         label: 'Multi-condicional', 
         description: 'Defina múltiplas regras e múltiplos fluxo de saída.', 
         icon: 'GitBranch', 
-        defaultConfig: { conditions: [] },
-        locked: true
+        defaultConfig: { conditions: [{ id: 'cond_1', label: 'Condição 1', operator: 'contains', value: '' }, { id: 'cond_2', label: 'Condição 2', operator: 'contains', value: '' }] }
       },
     ]
   },

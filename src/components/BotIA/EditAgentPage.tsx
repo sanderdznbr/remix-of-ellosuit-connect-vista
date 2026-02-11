@@ -656,7 +656,7 @@ const EditAgentPage: React.FC = () => {
                     </div>
                     <Badge variant="outline" className="font-mono">{maxResponseChars}</Badge>
                   </div>
-                  <Slider value={[maxResponseChars]} onValueChange={([v]) => { setMaxResponseChars(v); markChanged(); }} min={100} max={10000} step={100} />
+                  <Slider value={[maxResponseChars]} onValueChange={([v]) => { setMaxResponseChars(v); markChanged(); }} min={100} max={10000} step={100} className="[&_[role=slider]]:border-gray-400 [&_[role=slider]]:bg-white [&>span:first-child>span]:bg-gray-400 [&>span:first-child]:bg-gray-200" />
                 </div>
 
                 <div>
@@ -667,7 +667,7 @@ const EditAgentPage: React.FC = () => {
                     </div>
                     <Badge variant="outline" className="font-mono">{temperature.toFixed(1)}</Badge>
                   </div>
-                  <Slider value={[temperature * 100]} onValueChange={([v]) => { setTemperature(v / 100); markChanged(); }} min={0} max={100} step={10} />
+                  <Slider value={[temperature * 100]} onValueChange={([v]) => { setTemperature(v / 100); markChanged(); }} min={0} max={100} step={10} className="[&_[role=slider]]:border-gray-400 [&_[role=slider]]:bg-white [&>span:first-child>span]:bg-gray-400 [&>span:first-child]:bg-gray-200" />
                 </div>
 
                 <div>
@@ -678,7 +678,7 @@ const EditAgentPage: React.FC = () => {
                     </div>
                     <Badge variant="outline" className="font-mono">{contextMemory} msgs</Badge>
                   </div>
-                  <Slider value={[contextMemory]} onValueChange={([v]) => { setContextMemory(v); markChanged(); }} min={1} max={50} step={1} />
+                  <Slider value={[contextMemory]} onValueChange={([v]) => { setContextMemory(v); markChanged(); }} min={1} max={50} step={1} className="[&_[role=slider]]:border-gray-400 [&_[role=slider]]:bg-white [&>span:first-child>span]:bg-gray-400 [&>span:first-child]:bg-gray-200" />
                 </div>
 
                 <div>
@@ -689,7 +689,7 @@ const EditAgentPage: React.FC = () => {
                     </div>
                     <Badge variant="outline" className="font-mono">{responseDelay}s</Badge>
                   </div>
-                  <Slider value={[responseDelay]} onValueChange={([v]) => { setResponseDelay(v); markChanged(); }} min={0} max={10} step={1} />
+                  <Slider value={[responseDelay]} onValueChange={([v]) => { setResponseDelay(v); markChanged(); }} min={0} max={10} step={1} className="[&_[role=slider]]:border-gray-400 [&_[role=slider]]:bg-white [&>span:first-child>span]:bg-gray-400 [&>span:first-child]:bg-gray-200" />
                 </div>
 
                 <div className="flex items-center justify-between py-2">

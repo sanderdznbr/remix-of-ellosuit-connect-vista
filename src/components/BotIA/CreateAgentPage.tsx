@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Bot, Brain, MessageSquare, Upload, FileText, X, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Brain, MessageSquare, Upload, FileText, X, Check, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +60,82 @@ const CreateAgentPage: React.FC = () => {
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [whatsappSessions, setWhatsappSessions] = useState<any[]>([]);
   const [whatsappSessionId, setWhatsappSessionId] = useState('');
+
+  // AI Creation
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  const handleCreateWithAI = async () => {
+    if (!aiPrompt.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          model: 'google/gemini-2.5-flash',
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'system',
+              content: `Você é um especialista em criar agentes de IA para atendimento ao cliente. 
+O usuário vai descrever o tipo de agente que quer. Você deve gerar uma configuração completa.
+
+IMPORTANTE: Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem texto extra. Apenas o JSON puro.
+
+O JSON deve ter esta estrutura exata:
+{
+  "name": "nome curto do agente",
+  "description": "descrição breve do que o agente faz",
+  "personality": "descrição detalhada da personalidade, tom de voz e estilo de comunicação",
+  "instructions": "instruções completas e detalhadas de como o agente deve se comportar, o que perguntar, como responder, fluxo de atendimento",
+  "doNot": "lista de coisas que o agente NÃO deve fazer",
+  "humor": "profissional|amigavel|formal|descontraido|tecnico",
+  "temperature": 0.7,
+  "maxChars": 2000,
+  "contextMemory": 10
+}
+
+Seja criativo e detalhado nas instruções. O personality deve ter pelo menos 100 caracteres. As instructions devem ter pelo menos 300 caracteres com fluxo de atendimento completo.`
+            },
+            { role: 'user', content: aiPrompt }
+          ]
+        }
+      });
+
+      if (error) throw error;
+
+      const responseText = data?.response || data?.message || '';
+      
+      // Parse JSON - try to extract from possible markdown code blocks
+      let jsonStr = responseText.trim();
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) jsonStr = jsonMatch[1].trim();
+      
+      const agentConfig = JSON.parse(jsonStr);
+
+      // Fill all fields
+      if (agentConfig.name) setName(agentConfig.name);
+      if (agentConfig.description) setDescription(agentConfig.description);
+      if (agentConfig.personality) setPersonality(agentConfig.personality);
+      if (agentConfig.instructions) setInstructions(agentConfig.instructions);
+      if (agentConfig.doNot) setDoNot(agentConfig.doNot);
+      if (agentConfig.humor) setHumor(agentConfig.humor);
+      if (agentConfig.temperature != null) setTemperature(agentConfig.temperature);
+      if (agentConfig.maxChars) setMaxChars(agentConfig.maxChars);
+      if (agentConfig.contextMemory) setContextMemory(agentConfig.contextMemory);
+
+      setShowAiDialog(false);
+      setAiPrompt('');
+      setCurrentStep(1); // Go to step 1 to review
+
+      toast({ title: '✨ Agente gerado!', description: 'Revise as configurações e ajuste se necessário.' });
+    } catch (e: any) {
+      console.error('AI generation error:', e);
+      toast({ title: 'Erro ao gerar', description: 'Não foi possível gerar o agente. Tente novamente.', variant: 'destructive' });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   const ensureCompany = async (): Promise<string | null> => {
     if (!user?.id) return null;
@@ -151,10 +228,17 @@ const CreateAgentPage: React.FC = () => {
           <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate('/dashboard/bot-ia')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-gray-900">Novo Agente de IA</h1>
             <p className="text-sm text-gray-500">Modelo de IA: elloiav1.0</p>
           </div>
+          <Button
+            onClick={() => setShowAiDialog(true)}
+            className="rounded-xl gap-2 text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-md"
+          >
+            <Wand2 className="h-4 w-4" />
+            Criar com IA
+          </Button>
         </div>
 
         {/* Stepper */}
@@ -429,6 +513,59 @@ const CreateAgentPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* AI Creation Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-violet-500" />
+              Criar Agente com IA
+            </DialogTitle>
+            <DialogDescription>
+              Descreva o agente que você precisa e a IA vai configurar tudo automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-2">
+            <Textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Ex: Preciso de um agente de vendas para uma loja de roupas femininas. Ele deve ser simpático, perguntar o que a cliente procura, sugerir produtos, informar sobre promoções e direcionar para o pagamento. Deve falar de forma jovem e descontraída."
+              className="min-h-[160px] rounded-xl"
+              disabled={aiGenerating}
+            />
+            
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Quanto mais detalhes você fornecer, melhor será o resultado</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setShowAiDialog(false)} disabled={aiGenerating}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreateWithAI} 
+                disabled={!aiPrompt.trim() || aiGenerating}
+                className="rounded-xl gap-2 text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+              >
+                {aiGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4" />
+                    Gerar Agente
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

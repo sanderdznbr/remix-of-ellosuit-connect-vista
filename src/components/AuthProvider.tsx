@@ -22,6 +22,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check "remember me" preference on app start
+    const rememberMe = localStorage.getItem('ellosuit_remember_me');
+    const sessionActive = sessionStorage.getItem('ellosuit_session_active');
+    
+    // If user chose NOT to stay logged in and this is a new browser session, sign out
+    if (rememberMe === 'false' && !sessionActive) {
+      supabase.auth.signOut().then(() => {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        localStorage.removeItem('ellosuit_remember_me');
+      });
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

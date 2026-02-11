@@ -18,6 +18,7 @@ const AuthScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +60,14 @@ const AuthScreen = () => {
           setError(String(error.message));
         }
         return;
+      }
+      // Salvar preferência de "manter conectado"
+      if (rememberMe) {
+        localStorage.setItem('ellosuit_remember_me', 'true');
+        sessionStorage.removeItem('ellosuit_session_active');
+      } else {
+        localStorage.setItem('ellosuit_remember_me', 'false');
+        sessionStorage.setItem('ellosuit_session_active', 'true');
       }
       navigate(getReturnPath(), { replace: true });
     } catch {
@@ -180,7 +189,16 @@ const AuthScreen = () => {
                 required
               />
 
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">Manter conectado</span>
+                </label>
                 <button
                   type="button"
                   className="text-xs text-primary hover:underline"

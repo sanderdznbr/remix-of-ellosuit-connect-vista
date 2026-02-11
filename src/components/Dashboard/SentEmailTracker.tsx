@@ -50,7 +50,7 @@ interface EmailEvent {
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   sent: { label: 'Enviado', color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Mail },
   delivered: { label: 'Entregue', color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Mail },
-  opened: { label: 'Aberto', color: 'text-green-600', bgColor: 'bg-green-50', icon: MailOpen },
+  opened: { label: 'Aberto', color: 'text-[#3A9A1C]', bgColor: 'bg-[#3A9A1C]/10', icon: MailOpen },
   clicked: { label: 'Clicado', color: 'text-purple-600', bgColor: 'bg-purple-50', icon: MousePointer },
   bounced: { label: 'Falhou', color: 'text-red-600', bgColor: 'bg-red-50', icon: AlertCircle },
 };
@@ -115,14 +115,16 @@ const SentEmailTracker: React.FC = () => {
     { label: "Emails Abertos", value: openedEmails, icon: MailOpen, color: "#F59E0B" },
   ];
 
+  const TRACK_COLOR = "#3A9A1C";
+
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-green-50">
-              <Eye className="h-6 w-6 text-green-600" />
+            <div className="p-3 rounded-2xl" style={{ backgroundColor: `${TRACK_COLOR}15` }}>
+              <Eye className="h-6 w-6" style={{ color: TRACK_COLOR }} />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Rastrear Emails</h1>
@@ -198,7 +200,7 @@ const SentEmailTracker: React.FC = () => {
                           key={email.id}
                           onClick={() => setSelectedEmail(email)}
                           className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                            selectedEmail?.id === email.id ? 'border-green-300 bg-green-50/50' : 'border-gray-100 hover:border-gray-200'
+                            selectedEmail?.id === email.id ? 'border-[#3A9A1C]/30 bg-[#3A9A1C]/5' : 'border-gray-100 hover:border-gray-200'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -209,13 +211,13 @@ const SentEmailTracker: React.FC = () => {
                                   <StatusIcon className="h-3 w-3 mr-1" />{status.label}
                                 </Badge>
                                 {(email.open_count || 0) > 1 && (
-                                  <Badge variant="outline" className="text-[10px] border-green-200 text-green-600">{email.open_count}x</Badge>
+                                  <Badge variant="outline" className="text-[10px] border-[#3A9A1C]/30 text-[#3A9A1C]">{email.open_count}x</Badge>
                                 )}
                               </div>
                               <p className="text-xs text-gray-500 truncate mb-1.5">{email.subject}</p>
                               <div className="flex items-center gap-3 text-xs text-gray-400">
                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(email.sent_at), "dd MMM 'às' HH:mm", { locale: ptBR })}</span>
-                                {(email.open_count || 0) > 0 && <span className="flex items-center gap-1 text-green-600"><Eye className="h-3 w-3" />{email.open_count}x</span>}
+                                {(email.open_count || 0) > 0 && <span className="flex items-center gap-1" style={{ color: TRACK_COLOR }}><Eye className="h-3 w-3" />{email.open_count}x</span>}
                               </div>
                             </div>
                             <ChevronRight className="h-4 w-4 text-gray-300 mt-1" />
@@ -252,7 +254,7 @@ const SentEmailTracker: React.FC = () => {
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-2 mb-1"><Eye className="h-3.5 w-3.5 text-green-600" /><span className="text-xs text-gray-500">Aberturas</span></div>
+                      <div className="flex items-center gap-2 mb-1"><Eye className="h-3.5 w-3.5" style={{ color: TRACK_COLOR }} /><span className="text-xs text-gray-500">Aberturas</span></div>
                       <p className="text-lg font-bold text-gray-900">{selectedEmail.open_count || 0}</p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl">
@@ -283,7 +285,7 @@ const SentEmailTracker: React.FC = () => {
                         const DeviceIcon = getDeviceIcon(event.device_type);
                         return (
                           <div key={event.id} className="flex items-start gap-3">
-                            <div className="w-2 h-2 bg-green-400 rounded-full mt-1.5" />
+                            <div className="w-2 h-2 rounded-full mt-1.5" style={{ backgroundColor: TRACK_COLOR }} />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-medium text-gray-900 capitalize">{event.event_type === 'open' ? 'Aberto' : event.event_type}</p>

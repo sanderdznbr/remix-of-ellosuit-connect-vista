@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -2216,12 +2216,51 @@ const WhatsAppCRM: React.FC = () => {
               
               <div className="flex items-center gap-2">
                 {selectedConversation && (
-                  <Badge 
-                    className={selectedConversation.status === 'open' ? 'bg-[#FF4500] hover:bg-[#FF4500]/90 text-white' : ''}
-                    variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}
-                  >
-                    {selectedConversation.status === 'open' ? 'Aberta' : selectedConversation.status === 'archived' ? 'Arquivada' : 'Fechada'}
-                  </Badge>
+                  <>
+                    <Badge 
+                      className={selectedConversation.status === 'open' ? 'bg-[#FF4500] hover:bg-[#FF4500]/90 text-white' : ''}
+                      variant={selectedConversation.status === 'open' ? 'default' : 'secondary'}
+                    >
+                      {selectedConversation.status === 'open' ? 'Aberta' : selectedConversation.status === 'archived' ? 'Arquivada' : 'Fechada'}
+                    </Badge>
+                    {selectedConversation.assigned_agent_id && selectedConversation.ai_auto_reply_enabled && (() => {
+                      const assignedAgent = aiAgents.find(a => a.id === selectedConversation.assigned_agent_id);
+                      return assignedAgent ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-xs gap-1 px-2">
+                            <Bot className="h-3 w-3" />
+                            {assignedAgent.name} atendendo
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            onClick={async () => {
+                              const { error } = await supabase
+                                .from('whatsapp_conversations')
+                                .update({ ai_auto_reply_enabled: false })
+                                .eq('id', selectedConversation.id);
+                              if (!error) {
+                                setConversations(prev => prev.map(c => 
+                                  c.id === selectedConversation.id 
+                                    ? { ...c, ai_auto_reply_enabled: false } 
+                                    : c
+                                ));
+                                setSelectedConversation(prev => prev 
+                                  ? { ...prev, ai_auto_reply_enabled: false } 
+                                  : null
+                                );
+                                toast({ title: 'IA pausada', description: 'O agente IA não responderá mais automaticamente.' });
+                              }
+                            }}
+                          >
+                            <Square className="h-3 w-3 mr-1" />
+                            Parar
+                          </Button>
+                        </div>
+                      ) : null;
+                    })()}
+                  </>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -2357,16 +2396,23 @@ const WhatsAppCRM: React.FC = () => {
                         key={message.id}
                         className={cn(
                           "flex group",
-                          message.from_me ? 'justify-end' : 'justify-start'
+                          message.from_me ? 'justify-end' : 'justify-start',
+                          message.from_me && message.is_ai_response && 'items-end gap-2'
                         )}
                         onContextMenu={(e) => handleMessageContextMenu(e, message)}
                       >
+                        {/* Bot avatar for AI responses */}
+                        {message.from_me && message.is_ai_response && (
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 mb-1 order-first">
+                            <Bot className="h-3.5 w-3.5 text-white" />
+                          </div>
+                        )}
                         <div
                           className={cn(
                             "max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm relative",
                             message.from_me
                               ? message.is_ai_response 
-                                ? "bg-gradient-to-br from-[#FF4500] to-orange-600 rounded-br-sm" 
+                                ? "bg-gradient-to-br from-violet-500 to-purple-600 rounded-br-sm" 
                                 : message.status === 'sending'
                                   ? "bg-[#FF4500]/70 rounded-br-sm"
                                   : message.status === 'failed'

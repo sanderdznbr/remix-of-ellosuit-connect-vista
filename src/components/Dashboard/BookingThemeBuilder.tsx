@@ -1,0 +1,876 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import {
+  ArrowLeft, Save, Eye, Smartphone, Monitor, Tablet,
+  Palette, Type, Image, Upload, Clock, Timer, MessageSquare,
+  Calendar as CalendarIcon, ChevronRight, Undo2, Redo2,
+  Check, Loader2, ExternalLink, Copy, Sparkles,
+  Layout, AlignCenter, Square, Circle
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+import { format, addDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const FLOW_COLOR = '#007DE3';
+
+interface BookingLinkData {
+  id: string;
+  title: string;
+  description: string | null;
+  duration_minutes: number;
+  buffer_minutes: number;
+  link_slug: string;
+  is_active: boolean;
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  background_color: string | null;
+  custom_message: string | null;
+}
+
+type EditorSection = 'general' | 'colors' | 'typography' | 'logo' | 'layout';
+type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+
+const COLOR_PRESETS = [
+  { label: 'Azul', colors: { primary: '#007DE3', secondary: '#60A5FA', bg: '#EFF6FF' } },
+  { label: 'Laranja', colors: { primary: '#FF4500', secondary: '#FB923C', bg: '#FFF7ED' } },
+  { label: 'Verde', colors: { primary: '#10B981', secondary: '#34D399', bg: '#F0FDF4' } },
+  { label: 'Roxo', colors: { primary: '#8B5CF6', secondary: '#A78BFA', bg: '#FAF5FF' } },
+  { label: 'Rosa', colors: { primary: '#EC4899', secondary: '#F472B6', bg: '#FDF2F8' } },
+  { label: 'Dark', colors: { primary: '#6366F1', secondary: '#818CF8', bg: '#111827' } },
+  { label: 'Minimal', colors: { primary: '#374151', secondary: '#6B7280', bg: '#FFFFFF' } },
+  { label: 'Teal', colors: { primary: '#14B8A6', secondary: '#2DD4BF', bg: '#F0FDFA' } },
+];
+
+const SINGLE_COLORS = [
+  '#007DE3', '#FF4500', '#10B981', '#8B5CF6', '#F59E0B',
+  '#EC4899', '#06B6D4', '#EF4444', '#14B8A6', '#6366F1',
+  '#000000', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB',
+  '#FFFFFF', '#F9FAFB', '#F3F4F6', '#FEF3F2', '#F0FDF4',
+];
+
+const FONT_OPTIONS = [
+  { value: 'Inter', label: 'Inter' },
+  { value: 'Poppins', label: 'Poppins' },
+  { value: 'Roboto', label: 'Roboto' },
+  { value: 'Open Sans', label: 'Open Sans' },
+  { value: 'Montserrat', label: 'Montserrat' },
+  { value: 'Lato', label: 'Lato' },
+  { value: 'Nunito', label: 'Nunito' },
+  { value: 'Playfair Display', label: 'Playfair Display' },
+];
+
+const BORDER_RADIUS_OPTIONS = [
+  { value: '0', label: 'Reto', icon: Square },
+  { value: '8', label: 'Suave', icon: Square },
+  { value: '16', label: 'Arredondado', icon: Square },
+  { value: '24', label: 'Muito arredondado', icon: Circle },
+];
+
+const BookingThemeBuilder = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const linkId = searchParams.get('linkId');
+
+  const [linkData, setLinkData] = useState<BookingLinkData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState<EditorSection>('general');
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>('desktop');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Theme state
+  const [theme, setTheme] = useState({
+    title: '',
+    description: '',
+    duration_minutes: 30,
+    buffer_minutes: 15,
+    custom_message: '',
+    logo_url: '',
+    primary_color: FLOW_COLOR,
+    secondary_color: '#10B981',
+    background_color: '#FFFFFF',
+    font_family: 'Inter',
+    border_radius: '16',
+    button_style: 'filled' as 'filled' | 'outlined' | 'gradient',
+    show_duration: true,
+    show_description: true,
+  });
+
+  // History for undo/redo
+  const [history, setHistory] = useState<typeof theme[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  useEffect(() => {
+    if (linkId) loadLinkData();
+  }, [linkId]);
+
+  const loadLinkData = async () => {
+    if (!linkId) return;
+    const { data, error } = await supabase
+      .from('public_booking_links')
+      .select('*')
+      .eq('id', linkId)
+      .single();
+
+    if (error || !data) {
+      toast({ title: 'Erro', description: 'Link não encontrado', variant: 'destructive' });
+      navigate('/dashboard/agenda-aberta');
+      return;
+    }
+
+    setLinkData(data as BookingLinkData);
+    const newTheme = {
+      title: data.title || '',
+      description: data.description || '',
+      duration_minutes: data.duration_minutes || 30,
+      buffer_minutes: data.buffer_minutes || 15,
+      custom_message: data.custom_message || '',
+      logo_url: data.logo_url || '',
+      primary_color: data.primary_color || FLOW_COLOR,
+      secondary_color: data.secondary_color || '#10B981',
+      background_color: data.background_color || '#FFFFFF',
+      font_family: 'Inter',
+      border_radius: '16',
+      button_style: 'filled' as const,
+      show_duration: true,
+      show_description: true,
+    };
+    setTheme(newTheme);
+    setHistory([newTheme]);
+    setHistoryIndex(0);
+    setLoading(false);
+  };
+
+  const updateTheme = useCallback((updates: Partial<typeof theme>) => {
+    setTheme(prev => {
+      const next = { ...prev, ...updates };
+      setHistory(h => [...h.slice(0, historyIndex + 1), next]);
+      setHistoryIndex(i => i + 1);
+      setHasUnsavedChanges(true);
+      return next;
+    });
+  }, [historyIndex]);
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(i => i - 1);
+      setTheme(history[historyIndex - 1]);
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(i => i + 1);
+      setTheme(history[historyIndex + 1]);
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `booking-logos/${linkId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      updateTheme({ logo_url: urlData.publicUrl });
+      toast({ title: 'Logo enviado!' });
+    } catch (err: any) {
+      toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const saveChanges = async () => {
+    if (!linkData) return;
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('public_booking_links')
+      .update({
+        title: theme.title,
+        description: theme.description || null,
+        duration_minutes: theme.duration_minutes,
+        buffer_minutes: theme.buffer_minutes,
+        custom_message: theme.custom_message || null,
+        logo_url: theme.logo_url || null,
+        primary_color: theme.primary_color,
+        secondary_color: theme.secondary_color,
+        background_color: theme.background_color,
+      })
+      .eq('id', linkData.id);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Falha ao salvar', variant: 'destructive' });
+    } else {
+      toast({ title: 'Salvo!', description: 'Alterações aplicadas com sucesso' });
+      setHasUnsavedChanges(false);
+    }
+    setSaving(false);
+  };
+
+  const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
+    updateTheme({
+      primary_color: preset.colors.primary,
+      secondary_color: preset.colors.secondary,
+      background_color: preset.colors.bg,
+    });
+  };
+
+  const copyLink = () => {
+    if (!linkData) return;
+    navigator.clipboard.writeText(`${window.location.origin}/agendamentos/${linkData.link_slug}`);
+    toast({ title: 'Link copiado!' });
+  };
+
+  const isDarkBg = theme.background_color === '#111827' || theme.background_color === '#000000';
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  const sidebarSections: { id: EditorSection; label: string; icon: React.ElementType }[] = [
+    { id: 'general', label: 'Geral', icon: Type },
+    { id: 'colors', label: 'Cores & Tema', icon: Palette },
+    { id: 'logo', label: 'Logo & Imagem', icon: Image },
+    { id: 'layout', label: 'Layout', icon: Layout },
+  ];
+
+  const previewWidth = previewDevice === 'mobile' ? 375 : previewDevice === 'tablet' ? 768 : '100%';
+
+  // Generate mock days for preview
+  const mockDays = Array.from({ length: 5 }, (_, i) => addDays(new Date(), i + 1));
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-100">
+      {/* Top Bar */}
+      <div className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 z-10">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (hasUnsavedChanges && !confirm('Descartar alterações não salvas?')) return;
+              navigate('/dashboard/agenda-aberta');
+            }}
+            className="rounded-xl"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="h-6 w-px bg-gray-200" />
+          <div>
+            <h1 className="text-sm font-semibold text-gray-900 leading-tight">Editor Visual</h1>
+            <p className="text-[11px] text-gray-500">{theme.title || 'Link de agendamento'}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Undo/Redo */}
+          <div className="flex items-center gap-1 mr-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={undo} disabled={historyIndex <= 0}>
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={redo} disabled={historyIndex >= history.length - 1}>
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Device Switcher */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+            {[
+              { id: 'desktop' as const, icon: Monitor },
+              { id: 'tablet' as const, icon: Tablet },
+              { id: 'mobile' as const, icon: Smartphone },
+            ].map(device => (
+              <button
+                key={device.id}
+                onClick={() => setPreviewDevice(device.id)}
+                className={cn(
+                  'p-1.5 rounded-md transition-all',
+                  previewDevice === device.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                )}
+              >
+                <device.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+
+          <div className="h-6 w-px bg-gray-200 mx-1" />
+
+          <Button variant="outline" size="sm" className="rounded-lg gap-2" onClick={copyLink}>
+            <Copy className="h-3.5 w-3.5" />
+            Copiar Link
+          </Button>
+
+          {linkData && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg gap-2"
+              onClick={() => window.open(`/agendamentos/${linkData.link_slug}`, '_blank')}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Visualizar
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            onClick={saveChanges}
+            disabled={saving || !hasUnsavedChanges}
+            className="rounded-lg gap-2 text-white"
+            style={{ backgroundColor: FLOW_COLOR }}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Section Nav */}
+        <div className="w-14 bg-white border-r flex flex-col items-center py-3 gap-1 shrink-0">
+          {sidebarSections.map(section => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center transition-all group relative',
+                activeSection === section.id
+                  ? 'text-white'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              )}
+              style={activeSection === section.id ? { backgroundColor: FLOW_COLOR } : {}}
+              title={section.label}
+            >
+              <section.icon className="h-4.5 w-4.5" />
+              {/* Tooltip */}
+              <span className="absolute left-12 bg-gray-900 text-white text-[11px] px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20">
+                {section.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Editor Panel */}
+        <div className="w-80 bg-white border-r shrink-0 flex flex-col">
+          <div className="p-4 border-b">
+            <h2 className="text-sm font-semibold text-gray-900">
+              {sidebarSections.find(s => s.id === activeSection)?.label}
+            </h2>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-5">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeSection}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {/* General Section */}
+                  {activeSection === 'general' && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Título do evento</Label>
+                        <Input
+                          value={theme.title}
+                          onChange={e => updateTheme({ title: e.target.value })}
+                          className="rounded-lg"
+                          placeholder="Ex: Consultoria"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-gray-600">Descrição</Label>
+                          <Switch
+                            checked={theme.show_description}
+                            onCheckedChange={v => updateTheme({ show_description: v })}
+                          />
+                        </div>
+                        {theme.show_description && (
+                          <Textarea
+                            value={theme.description}
+                            onChange={e => updateTheme({ description: e.target.value })}
+                            className="rounded-lg resize-none"
+                            rows={3}
+                            placeholder="Descreva o compromisso..."
+                          />
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                          <Timer className="h-3.5 w-3.5" />Duração
+                        </Label>
+                        <Select value={theme.duration_minutes.toString()} onValueChange={v => updateTheme({ duration_minutes: parseInt(v) })}>
+                          <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-lg">
+                            {[15, 30, 45, 60, 90, 120].map(m => (
+                              <SelectItem key={m} value={m.toString()}>
+                                {m < 60 ? `${m} minutos` : `${m / 60}h${m % 60 ? ` ${m % 60}min` : ''}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5" />Intervalo entre reuniões
+                        </Label>
+                        <Select value={theme.buffer_minutes.toString()} onValueChange={v => updateTheme({ buffer_minutes: parseInt(v) })}>
+                          <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-lg">
+                            {[0, 5, 10, 15, 30].map(m => (
+                              <SelectItem key={m} value={m.toString()}>
+                                {m === 0 ? 'Sem intervalo' : `${m} minutos`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                          <MessageSquare className="h-3.5 w-3.5" />Mensagem personalizada
+                        </Label>
+                        <Textarea
+                          value={theme.custom_message}
+                          onChange={e => updateTheme({ custom_message: e.target.value })}
+                          className="rounded-lg resize-none"
+                          rows={2}
+                          placeholder="Ex: Bem-vindo! Escolha o melhor horário..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Colors Section */}
+                  {activeSection === 'colors' && (
+                    <div className="space-y-5">
+                      {/* Quick Presets */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                          <Sparkles className="h-3.5 w-3.5" />Temas rápidos
+                        </Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {COLOR_PRESETS.map(preset => (
+                            <button
+                              key={preset.label}
+                              onClick={() => applyPreset(preset)}
+                              className="group relative"
+                            >
+                              <div
+                                className={cn(
+                                  'h-12 rounded-lg border-2 transition-all overflow-hidden flex flex-col',
+                                  theme.primary_color === preset.colors.primary && theme.background_color === preset.colors.bg
+                                    ? 'border-gray-900 scale-105'
+                                    : 'border-gray-200 hover:border-gray-300 hover:scale-102'
+                                )}
+                              >
+                                <div className="flex-1" style={{ backgroundColor: preset.colors.bg }} />
+                                <div className="h-3 flex">
+                                  <div className="flex-1" style={{ backgroundColor: preset.colors.primary }} />
+                                  <div className="flex-1" style={{ backgroundColor: preset.colors.secondary }} />
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-gray-500 mt-1 block">{preset.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Individual Colors */}
+                      {[
+                        { key: 'primary_color' as const, label: 'Cor principal', desc: 'Botões e elementos de destaque' },
+                        { key: 'secondary_color' as const, label: 'Cor secundária', desc: 'Acentos e detalhes' },
+                        { key: 'background_color' as const, label: 'Cor de fundo', desc: 'Fundo da página' },
+                      ].map(colorConfig => (
+                        <div key={colorConfig.key} className="space-y-2">
+                          <Label className="text-xs font-medium text-gray-600">{colorConfig.label}</Label>
+                          <p className="text-[10px] text-gray-400">{colorConfig.desc}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {SINGLE_COLORS.slice(0, 10).map(color => (
+                                <button
+                                  key={`${colorConfig.key}-${color}`}
+                                  onClick={() => updateTheme({ [colorConfig.key]: color })}
+                                  className={cn(
+                                    'w-6 h-6 rounded-md border transition-all',
+                                    theme[colorConfig.key] === color
+                                      ? 'border-gray-900 scale-110 ring-2 ring-gray-300'
+                                      : 'border-gray-200 hover:scale-105'
+                                  )}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                            <input
+                              type="color"
+                              value={theme[colorConfig.key]}
+                              onChange={e => updateTheme({ [colorConfig.key]: e.target.value })}
+                              className="w-8 h-8 rounded-lg cursor-pointer border-0 p-0"
+                            />
+                          </div>
+                          <Input
+                            value={theme[colorConfig.key]}
+                            onChange={e => updateTheme({ [colorConfig.key]: e.target.value })}
+                            className="rounded-lg text-xs font-mono h-8"
+                            placeholder="#000000"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Logo Section */}
+                  {activeSection === 'logo' && (
+                    <div className="space-y-5">
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium text-gray-600">Logo da empresa</Label>
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center space-y-3">
+                          {theme.logo_url ? (
+                            <div className="space-y-3">
+                              <img
+                                src={theme.logo_url}
+                                alt="Logo"
+                                className="h-16 w-16 mx-auto object-contain rounded-xl border border-gray-100"
+                              />
+                              <div className="flex gap-2 justify-center">
+                                <label className="cursor-pointer">
+                                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors">
+                                    <Upload className="h-3 w-3" />Trocar
+                                  </span>
+                                </label>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-600 text-xs h-auto py-1.5"
+                                  onClick={() => updateTheme({ logo_url: '' })}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer block">
+                              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                              <div className="space-y-2">
+                                <div className="w-12 h-12 mx-auto bg-gray-100 rounded-xl flex items-center justify-center">
+                                  {uploadingLogo ? (
+                                    <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                                  ) : (
+                                    <Upload className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium text-gray-600">
+                                  {uploadingLogo ? 'Enviando...' : 'Clique para enviar'}
+                                </p>
+                                <p className="text-[10px] text-gray-400">PNG, JPG ou SVG • Max 2MB</p>
+                              </div>
+                            </label>
+                          )}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">URL da logo (alternativo)</Label>
+                        <Input
+                          value={theme.logo_url}
+                          onChange={e => updateTheme({ logo_url: e.target.value })}
+                          className="rounded-lg text-xs"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Layout Section */}
+                  {activeSection === 'layout' && (
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Estilo dos botões</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'filled' as const, label: 'Sólido' },
+                            { id: 'outlined' as const, label: 'Contorno' },
+                            { id: 'gradient' as const, label: 'Gradiente' },
+                          ].map(style => (
+                            <button
+                              key={style.id}
+                              onClick={() => updateTheme({ button_style: style.id })}
+                              className={cn(
+                                'p-3 rounded-lg border-2 text-xs font-medium transition-all',
+                                theme.button_style === style.id
+                                  ? 'border-gray-900 bg-gray-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              )}
+                            >
+                              <div
+                                className="h-6 rounded-md mb-2 mx-auto"
+                                style={
+                                  style.id === 'filled' ? { backgroundColor: theme.primary_color } :
+                                  style.id === 'outlined' ? { border: `2px solid ${theme.primary_color}`, backgroundColor: 'transparent' } :
+                                  { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})` }
+                                }
+                              />
+                              {style.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Arredondamento</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {BORDER_RADIUS_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => updateTheme({ border_radius: opt.value })}
+                              className={cn(
+                                'p-2 border-2 text-center text-[10px] font-medium transition-all',
+                                theme.border_radius === opt.value
+                                  ? 'border-gray-900 bg-gray-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              )}
+                              style={{ borderRadius: `${parseInt(opt.value)}px` }}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium text-gray-600">Exibir na página</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between py-1">
+                            <span className="text-xs text-gray-600">Mostrar duração</span>
+                            <Switch checked={theme.show_duration} onCheckedChange={v => updateTheme({ show_duration: v })} />
+                          </div>
+                          <div className="flex items-center justify-between py-1">
+                            <span className="text-xs text-gray-600">Mostrar descrição</span>
+                            <Switch checked={theme.show_description} onCheckedChange={v => updateTheme({ show_description: v })} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Preview Area */}
+        <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+          <div
+            className="transition-all duration-300 h-full"
+            style={{
+              width: typeof previewWidth === 'number' ? previewWidth : undefined,
+              maxWidth: typeof previewWidth === 'string' ? '100%' : previewWidth,
+              flex: typeof previewWidth === 'string' ? 1 : undefined,
+            }}
+          >
+            <div
+              className="h-full rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col"
+              style={{ backgroundColor: theme.background_color }}
+            >
+              {/* Preview Header */}
+              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-5">
+                {/* Logo */}
+                {theme.logo_url ? (
+                  <motion.img
+                    key={theme.logo_url}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    src={theme.logo_url}
+                    alt="Logo"
+                    className="h-14 w-14 object-contain"
+                    style={{ borderRadius: `${parseInt(theme.border_radius)}px` }}
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${theme.primary_color}15`,
+                      borderRadius: `${parseInt(theme.border_radius)}px`,
+                    }}
+                  >
+                    <CalendarIcon className="h-7 w-7" style={{ color: theme.primary_color }} />
+                  </div>
+                )}
+
+                {/* Title */}
+                <h2
+                  className="text-2xl font-bold text-center"
+                  style={{
+                    color: isDarkBg ? '#FFFFFF' : '#111827',
+                    fontFamily: theme.font_family,
+                  }}
+                >
+                  {theme.title || 'Título do evento'}
+                </h2>
+
+                {/* Description */}
+                {theme.show_description && theme.description && (
+                  <p
+                    className="text-sm text-center max-w-md"
+                    style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}
+                  >
+                    {theme.description}
+                  </p>
+                )}
+
+                {/* Custom Message */}
+                {theme.custom_message && (
+                  <p
+                    className="text-xs text-center max-w-sm italic"
+                    style={{ color: theme.secondary_color }}
+                  >
+                    {theme.custom_message}
+                  </p>
+                )}
+
+                {/* Duration Badge */}
+                {theme.show_duration && (
+                  <div
+                    className="flex items-center gap-2 px-3 py-1.5"
+                    style={{
+                      backgroundColor: `${theme.primary_color}10`,
+                      borderRadius: `${parseInt(theme.border_radius)}px`,
+                    }}
+                  >
+                    <Timer className="h-4 w-4" style={{ color: theme.primary_color }} />
+                    <span className="text-sm font-medium" style={{ color: theme.primary_color }}>
+                      {theme.duration_minutes} min
+                    </span>
+                  </div>
+                )}
+
+                {/* Mock Calendar */}
+                <div className="w-full max-w-sm mt-4">
+                  <div
+                    className="p-4 border"
+                    style={{
+                      borderColor: isDarkBg ? '#374151' : '#E5E7EB',
+                      borderRadius: `${parseInt(theme.border_radius)}px`,
+                      backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF',
+                    }}
+                  >
+                    <p className="text-xs font-medium mb-3" style={{ color: isDarkBg ? '#D1D5DB' : '#374151' }}>
+                      Próximos horários disponíveis
+                    </p>
+                    <div className="space-y-2">
+                      {mockDays.map((day, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-2.5 border transition-colors cursor-pointer"
+                          style={{
+                            borderColor: i === 0 ? theme.primary_color : isDarkBg ? '#374151' : '#E5E7EB',
+                            borderRadius: `${Math.min(parseInt(theme.border_radius), 12)}px`,
+                            backgroundColor: i === 0 ? `${theme.primary_color}08` : 'transparent',
+                          }}
+                        >
+                          <span className="text-xs font-medium" style={{ color: isDarkBg ? '#E5E7EB' : '#374151' }}>
+                            {format(day, "EEE, dd 'de' MMM", { locale: ptBR })}
+                          </span>
+                          <div className="flex gap-1.5">
+                            {['09:00', '10:30', '14:00'].map(time => (
+                              <span
+                                key={time}
+                                className="text-[10px] px-2 py-1 font-medium"
+                                style={{
+                                  backgroundColor: `${theme.primary_color}12`,
+                                  color: theme.primary_color,
+                                  borderRadius: `${Math.min(parseInt(theme.border_radius), 8)}px`,
+                                }}
+                              >
+                                {time}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  className="mt-4 px-8 py-3 text-sm font-semibold transition-all"
+                  style={{
+                    borderRadius: `${parseInt(theme.border_radius)}px`,
+                    ...(theme.button_style === 'filled'
+                      ? { backgroundColor: theme.primary_color, color: '#FFFFFF' }
+                      : theme.button_style === 'outlined'
+                      ? { border: `2px solid ${theme.primary_color}`, color: theme.primary_color, backgroundColor: 'transparent' }
+                      : { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }
+                    ),
+                  }}
+                >
+                  Confirmar Horário
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BookingThemeBuilder;

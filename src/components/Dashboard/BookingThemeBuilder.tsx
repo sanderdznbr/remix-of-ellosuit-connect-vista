@@ -180,14 +180,14 @@ const BookingThemeBuilder = () => {
       primary_color: data.primary_color || FLOW_COLOR,
       secondary_color: data.secondary_color || '#10B981',
       background_color: data.background_color || '#FFFFFF',
-      font_family: 'Inter',
-      border_radius: '16',
-      button_style: 'filled' as const,
-      show_duration: true,
-      show_description: true,
-      success_title: 'Agendamento Confirmado!',
-      success_message: 'Enviamos os detalhes para o seu email.',
-      button_text: 'Confirmar Agendamento',
+      font_family: (data as any).font_family || 'Inter',
+      border_radius: (data as any).border_radius || '16',
+      button_style: ((data as any).button_style || 'filled') as 'filled' | 'outlined' | 'gradient',
+      show_duration: (data as any).show_duration ?? true,
+      show_description: (data as any).show_description ?? true,
+      success_title: (data as any).success_title || 'Agendamento Confirmado!',
+      success_message: (data as any).success_message || 'Enviamos os detalhes para o seu email.',
+      button_text: (data as any).button_text || 'Confirmar Agendamento',
     };
     setTheme(newTheme);
     setHistory([newTheme]);
@@ -265,6 +265,14 @@ const BookingThemeBuilder = () => {
         primary_color: theme.primary_color,
         secondary_color: theme.secondary_color,
         background_color: theme.background_color,
+        font_family: theme.font_family,
+        border_radius: theme.border_radius,
+        button_style: theme.button_style,
+        success_title: theme.success_title || null,
+        success_message: theme.success_message || null,
+        button_text: theme.button_text || null,
+        show_duration: theme.show_duration,
+        show_description: theme.show_description,
       })
       .eq('id', linkData.id);
 

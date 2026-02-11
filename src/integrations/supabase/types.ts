@@ -1895,57 +1895,81 @@ export type Database = {
       public_booking_links: {
         Row: {
           background_color: string | null
+          border_radius: string | null
           buffer_minutes: number
+          button_style: string | null
+          button_text: string | null
           company_id: string
           created_at: string
           custom_message: string | null
           description: string | null
           duration_minutes: number
           expires_at: string | null
+          font_family: string | null
           id: string
           is_active: boolean
           link_slug: string
           logo_url: string | null
           primary_color: string | null
           secondary_color: string | null
+          show_description: boolean | null
+          show_duration: boolean | null
+          success_message: string | null
+          success_title: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           background_color?: string | null
+          border_radius?: string | null
           buffer_minutes?: number
+          button_style?: string | null
+          button_text?: string | null
           company_id: string
           created_at?: string
           custom_message?: string | null
           description?: string | null
           duration_minutes?: number
           expires_at?: string | null
+          font_family?: string | null
           id?: string
           is_active?: boolean
           link_slug: string
           logo_url?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          show_description?: boolean | null
+          show_duration?: boolean | null
+          success_message?: string | null
+          success_title?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           background_color?: string | null
+          border_radius?: string | null
           buffer_minutes?: number
+          button_style?: string | null
+          button_text?: string | null
           company_id?: string
           created_at?: string
           custom_message?: string | null
           description?: string | null
           duration_minutes?: number
           expires_at?: string | null
+          font_family?: string | null
           id?: string
           is_active?: boolean
           link_slug?: string
           logo_url?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          show_description?: boolean | null
+          show_duration?: boolean | null
+          success_message?: string | null
+          success_title?: string | null
           title?: string
           updated_at?: string
           user_id?: string

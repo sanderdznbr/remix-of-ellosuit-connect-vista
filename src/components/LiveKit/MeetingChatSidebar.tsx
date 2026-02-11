@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Paperclip, Users, MessageSquare, Bot, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Users, MessageSquare, Bot, Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface MeetingChatSidebarProps {
   roomCode: string;
@@ -29,6 +30,7 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'participants' | 'chat' | 'ia'>('chat');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -53,6 +55,18 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
       aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight;
     }
   }, [aiMessages]);
+
+  // Auto-collapse on small screens
+  useEffect(() => {
+    const checkWidth = () => {
+      if (window.innerWidth < 1100) {
+        setIsCollapsed(true);
+      }
+    };
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
 
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -79,7 +93,6 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -90,7 +103,6 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
     }
 
     try {
-      // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `chat-files/${roomCode}/${fileName}`;
@@ -105,7 +117,6 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
         .from('meeting-audios')
         .getPublicUrl(filePath);
 
-      // Send message with file
       const newMessage: ChatMessage = {
         id: Math.random().toString(),
         sender_name: user?.user_metadata?.full_name || 'Convidado',
@@ -182,8 +193,44 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
     }
   };
 
+  // Collapsed state - just a toggle button
+  if (isCollapsed) {
+    return (
+      <div className="flex flex-col items-center gap-2 mr-4 mb-4 pt-4">
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+          title="Abrir chat"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <button
+          onClick={() => { setIsCollapsed(false); setActiveTab('chat'); }}
+          className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+          title="Chat"
+        >
+          <MessageSquare className="w-4 h-4 text-gray-600" />
+        </button>
+        <button
+          onClick={() => { setIsCollapsed(false); setActiveTab('participants'); }}
+          className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+          title="Participantes"
+        >
+          <Users className="w-4 h-4 text-gray-600" />
+        </button>
+        <button
+          onClick={() => { setIsCollapsed(false); setActiveTab('ia'); }}
+          className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+          title="Assistente IA"
+        >
+          <Bot className="w-4 h-4 text-gray-600" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-[360px] bg-white flex flex-col rounded-3xl shadow-2xl mr-4 mb-4">
+    <div className="w-[320px] xl:w-[360px] bg-white flex flex-col rounded-3xl shadow-2xl mr-4 mb-4 transition-all duration-300">
       {/* Tabs Header */}
       <div className="flex items-center border-b px-2 pt-4">
         <div className="flex gap-1 flex-1">
@@ -221,13 +268,19 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
             <span className="text-xs">IA</span>
           </button>
         </div>
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          title="Minimizar"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' && (
           <div className="h-full flex flex-col">
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {messages.length === 0 && (
                 <div className="text-center text-gray-400 text-sm py-8">
@@ -263,9 +316,8 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="p-4 border-t rounded-b-3xl">
-              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2">
+            <div className="p-3 border-t rounded-b-3xl">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-1.5">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -284,8 +336,8 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Escrever mensagem..."
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="Mensagem..."
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
                 />
                 <Button
                   onClick={sendMessage}
@@ -309,29 +361,27 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
 
         {activeTab === 'ia' && (
           <div className="h-full flex flex-col bg-white">
-            {/* AI Header */}
             <div className="p-4 border-b">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#3600FF' }}>
                   <Bot className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900">Assistente IA da Reunião</h3>
-                  <p className="text-xs text-gray-500">Pergunte-me sobre o que foi discutido na reunião</p>
+                  <h3 className="font-medium text-gray-900 text-sm">Assistente IA</h3>
+                  <p className="text-xs text-gray-500">Pergunte sobre a reunião</p>
                 </div>
               </div>
             </div>
 
-            {/* AI Messages */}
             <ScrollArea className="flex-1 p-4" ref={aiScrollRef}>
               {aiMessages.length === 0 && (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: '#F5F3FF' }}>
                     <Bot className="w-8 h-8" style={{ color: '#3600FF' }} />
                   </div>
-                  <h4 className="font-medium text-gray-900 mb-2">Olá! Sou seu assistente IA.</h4>
-                  <p className="text-sm text-gray-500">
-                    Pergunte-me sobre o que foi discutido na reunião!
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm">Olá! Sou seu assistente IA.</h4>
+                  <p className="text-xs text-gray-500">
+                    Pergunte-me sobre a reunião!
                   </p>
                 </div>
               )}
@@ -365,16 +415,15 @@ const MeetingChatSidebar: React.FC<MeetingChatSidebarProps> = ({ roomCode, trans
               </div>
             </ScrollArea>
 
-            {/* AI Input */}
-            <div className="p-4 border-t rounded-b-3xl">
-              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2">
+            <div className="p-3 border-t rounded-b-3xl">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-1.5">
                 <Input
                   value={aiInput}
                   onChange={(e) => setAiInput(e.target.value)}
                   onKeyPress={handleAiKeyPress}
-                  placeholder="Pergunte sobre a reunião..."
+                  placeholder="Pergunte..."
                   disabled={isAiLoading}
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
                 />
                 <Button
                   onClick={handleAiSend}

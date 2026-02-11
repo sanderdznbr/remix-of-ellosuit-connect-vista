@@ -188,25 +188,19 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
     }
   };
 
-  // Exactly like InPersonMeeting - accumulate and send intelligently
+  // Accumulate and send audio intelligently - optimized thresholds
   const accumulateAndSendAudio = (pcm16Data: Int16Array) => {
-    // Calculate RMS (Root Mean Square) to detect if there's actual audio content
+    // Calculate RMS to detect actual audio content
     let sum = 0;
     for (let i = 0; i < pcm16Data.length; i++) {
       sum += pcm16Data[i] * pcm16Data[i];
     }
     const rms = Math.sqrt(sum / pcm16Data.length);
     
-    // Threshold mais rigoroso para detectar silêncio
-    // Aumentado significativamente para evitar capturar ruídos
-    const SILENCE_THRESHOLD = 1500;
+    // Lower threshold to capture speech better (was 1500, too aggressive)
+    const SILENCE_THRESHOLD = 400;
     
-    // Log do nível de áudio para debug
-    if (rms > SILENCE_THRESHOLD / 2) {
-      console.log('🔊 Nível RMS:', rms.toFixed(2));
-    }
-    
-    // Se o RMS está abaixo do threshold, é silêncio - não acumula
+    // Skip pure silence
     if (rms < SILENCE_THRESHOLD) {
       return;
     }
@@ -219,16 +213,13 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
     const now = Date.now();
     const timeSinceLastSend = now - lastSendTimeRef.current;
-    const bufferDurationMs = (audioBufferRef.current.length / 48000) * 1000; // Atualizado para 48kHz
+    const bufferDurationMs = (audioBufferRef.current.length / 48000) * 1000;
 
-    // Send only if:
-    // 1. Buffer has at least 10 seconds of audio (maior = melhor contexto para Whisper)
-    // 2. At least 8 seconds passed since last send
-    if (bufferDurationMs >= 10000 && timeSinceLastSend >= 8000) {
+    // Send every 5 seconds with at least 3s of audio (was 10s/8s - too long)
+    if (bufferDurationMs >= 3000 && timeSinceLastSend >= 5000) {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms, RMS: ${rms.toFixed(2)})`);
+        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms)`);
         
-        // Convert to Uint8Array for base64 encoding
         const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
         let binary = '';
         const chunkSize = 0x8000;
@@ -245,7 +236,6 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
           audio: base64Audio
         }));
 
-        // Clear buffer and update timestamp
         audioBufferRef.current = new Int16Array(0);
         lastSendTimeRef.current = now;
       }

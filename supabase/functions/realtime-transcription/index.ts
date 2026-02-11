@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const supabase = createClient(
@@ -118,21 +118,21 @@ serve(async (req) => {
         length: text.length
       });
       
-      // Se a probabilidade de "não fala" é MUITO alta, ignorar (mais permissivo)
-      if (noSpeechProb > 0.65) {
-        console.log('⚠️ Alta probabilidade de não-fala detectada:', noSpeechProb);
+      // If probability of "no speech" is very high, ignore
+      if (noSpeechProb > 0.8) {
+        console.log('⚠️ Alta probabilidade de não-fala:', noSpeechProb);
         return '';
       }
       
-      // Filtrar transcrições muito curtas (menos de 10 caracteres - mais permissivo)
-      if (text.length < 10) {
+      // Filter very short transcriptions (less than 5 characters - more permissive)
+      if (text.length < 5) {
         console.log('⚠️ Transcrição muito curta, ignorando:', text);
         return '';
       }
       
-      // Se a confiança média é muito baixa, pode ser ruído
-      if (avgLogprob < -1.0) {
-        console.log('⚠️ Confiança muito baixa na transcrição:', avgLogprob);
+      // Very low confidence means noise
+      if (avgLogprob < -1.5) {
+        console.log('⚠️ Confiança muito baixa:', avgLogprob);
         return '';
       }
       
@@ -258,31 +258,9 @@ serve(async (req) => {
                 }));
                 console.log('📤 Sent transcript to client');
                 
-                // Save backup incrementally to database
-                try {
-                  if (roomId && fullTranscript.trim().length > 20) {
-                    const { error: upsertError } = await supabase
-                      .from('meeting_recordings')
-                      .upsert({
-                        room_id: roomId,
-                        title: `Reunião ${roomId} - ${new Date().toLocaleDateString('pt-BR')}`,
-                        transcript: fullTranscript.trim(),
-                        file_url: '',
-                        company_id: roomId, 
-                        created_by: roomId,
-                        duration_seconds: Math.floor((Date.now() - bufferStartTime) / 1000)
-                      }, {
-                        onConflict: 'room_id'
-                      });
-                    if (upsertError) {
-                      console.error('⚠️ Erro ao salvar backup:', upsertError);
-                    } else {
-                      console.log('💾 Backup salvo no banco');
-                    }
-                  }
-                } catch (dbError) {
-                  console.error('⚠️ Erro ao salvar backup:', dbError);
-                }
+                // Note: We skip incremental DB saves here since room_id != company_id
+                // The full transcript will be saved when transcription stops
+                console.log('💾 Transcript updated, total length:', fullTranscript.length);
               } else {
                 console.log('⚠️ Transcrição vazia ou filtrada, não enviando ao cliente');
               }
@@ -330,28 +308,10 @@ serve(async (req) => {
           }
         }
         
-        // Save full transcript to meeting recording with UPSERT
+        // Note: Full transcript is sent to the client via WebSocket
+        // The client (SimpleLiveKitRoom) handles saving via autoSaveMeeting()
         if (fullTranscript.trim()) {
-          console.log('Saving full transcript to database for room:', roomId);
-          const { error: upsertError } = await supabase
-            .from('meeting_recordings')
-            .upsert({
-              room_id: roomId,
-              title: `Reunião ${roomId} - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`,
-              transcript: fullTranscript.trim(),
-              file_url: '',
-              company_id: roomId,
-              created_by: roomId,
-              duration_seconds: Math.floor((Date.now() - bufferStartTime) / 1000)
-            }, {
-              onConflict: 'room_id'
-            });
-          
-          if (upsertError) {
-            console.error('Error saving transcript:', upsertError);
-          } else {
-            console.log('✅ Full transcript saved successfully');
-          }
+          console.log('📝 Full transcript ready, length:', fullTranscript.trim().length);
         }
         
         socket.send(JSON.stringify({ 

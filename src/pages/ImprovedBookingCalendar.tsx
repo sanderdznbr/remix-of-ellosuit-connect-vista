@@ -224,6 +224,9 @@ const ImprovedBookingCalendar = () => {
   };
 
   const primaryColor = bookingLink?.primary_color || '#3600FF';
+  const secondaryColor = bookingLink?.secondary_color || primaryColor;
+  const backgroundColor = bookingLink?.background_color || '';
+  const customMessage = bookingLink?.custom_message || '';
 
   // Calendar generation
   const monthStart = startOfMonth(currentMonth);
@@ -265,7 +268,10 @@ const ImprovedBookingCalendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div 
+      className="min-h-screen"
+      style={{ background: backgroundColor || 'linear-gradient(to bottom right, #f8fafc, rgba(239,246,255,0.3))' }}
+    >
       <div className="max-w-lg mx-auto px-4 py-8 sm:py-12">
         {/* Header Card */}
         <motion.div 
@@ -293,6 +299,9 @@ const ImprovedBookingCalendar = () => {
             <Clock className="h-4 w-4" />
             {bookingLink.duration_minutes} minutos
           </div>
+          {customMessage && (
+            <p className="text-sm text-muted-foreground italic mt-2">"{customMessage}"</p>
+          )}
         </motion.div>
 
         {/* Progress Steps */}

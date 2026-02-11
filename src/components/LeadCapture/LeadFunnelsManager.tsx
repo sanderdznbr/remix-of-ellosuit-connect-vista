@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Target, BarChart3, Users, Eye, 
   Trash2, Play, Pause, Loader2, Copy, ExternalLink,
-  LayoutGrid, List, TrendingUp
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 const FLOW_COLOR = "#007DE3";
 
@@ -44,7 +43,6 @@ const LeadFunnelsManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFunnel, setNewFunnel] = useState({ 
     name: '', description: '',
@@ -139,33 +137,25 @@ const LeadFunnelsManager: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Captura de Leads</h1>
-            <p className="text-sm text-gray-500">Crie funis interativos para capturar e qualificar leads</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate('/dashboard/track/leads')} className="gap-2 rounded-xl">
-              <BarChart3 className="h-4 w-4" />Gerenciar
-            </Button>
-            <Button onClick={() => setShowCreateModal(true)} className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-              <Plus className="h-4 w-4" />Novo Funil
-            </Button>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Captura de Leads</h1>
+          <p className="text-gray-500 mt-1">
+            Crie funis interativos para capturar e qualificar leads
+          </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           {[
             { icon: Target, label: 'Funis', value: stats.total, color: FLOW_COLOR },
             { icon: Play, label: 'Ativos', value: stats.active, color: '#10B981' },
             { icon: Users, label: 'Acessos', value: stats.submissions, color: '#3B82F6' },
             { icon: TrendingUp, label: 'Conversão', value: stats.submissions > 0 ? `${Math.round((stats.conversions / stats.submissions) * 100)}%` : '0%', color: '#8B5CF6' },
           ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
+            <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3">
               <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${stat.color}12` }}>
                 <stat.icon className="h-5 w-5" style={{ color: stat.color }} />
               </div>
@@ -177,183 +167,203 @@ const LeadFunnelsManager: React.FC = () => {
           ))}
         </div>
 
-        {/* Search + View Toggle */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Buscar funis..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 rounded-xl" />
-          </div>
-          <div className="flex items-center border border-gray-100 rounded-xl p-1 bg-gray-50">
-            <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" className="h-7 px-2 rounded-lg" onClick={() => setViewMode('list')}>
-              <List className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" className="h-7 px-2 rounded-lg" onClick={() => setViewMode('grid')}>
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Empty State */}
-        {filteredFunnels.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
-            <div className="p-4 rounded-2xl w-fit mx-auto mb-4" style={{ backgroundColor: `${FLOW_COLOR}10` }}>
-              <Target className="h-10 w-10" style={{ color: FLOW_COLOR }} />
+        {/* Main Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {/* Search + Actions */}
+          <div className="p-4 flex items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Pesquisar funis..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white"
+              />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum funil encontrado</h3>
-            <p className="text-gray-500 mb-4">{searchQuery ? 'Tente uma busca diferente' : 'Crie seu primeiro funil para capturar leads'}</p>
-            {!searchQuery && (
-              <Button onClick={() => setShowCreateModal(true)} className="rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                <Plus className="h-4 w-4 mr-2" />Criar Funil
-              </Button>
-            )}
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => navigate('/dashboard/track/leads')} className="gap-2 rounded-xl">
+              <BarChart3 className="h-4 w-4" />Gerenciar
+            </Button>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="rounded-xl gap-2 text-white"
+              style={{ backgroundColor: FLOW_COLOR }}
+            >
+              <Plus className="h-4 w-4" />
+              Novo Funil
+            </Button>
           </div>
-        ) : viewMode === 'list' ? (
-          <div className="space-y-3">
-            {filteredFunnels.map(funnel => {
-              const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
-              const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
-              return (
-                <div
-                  key={funnel.id}
-                  className={cn(
-                    "bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all cursor-pointer",
-                    funnel.is_active && "border-l-4"
-                  )}
-                  style={funnel.is_active ? { borderLeftColor: FLOW_COLOR } : {}}
-                  onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
+
+          {/* Table Header */}
+          <div className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div />
+            <div>Nome</div>
+            <div>Status</div>
+            <div>Link</div>
+            <div>Acessos</div>
+            <div>Conversões</div>
+            <div>Taxa</div>
+            <div className="text-right">Ações</div>
+          </div>
+
+          {/* List */}
+          {filteredFunnels.length === 0 ? (
+            <div className="text-center py-16">
+              <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum funil encontrado</h3>
+              <p className="text-gray-500 mb-6">
+                {searchQuery ? 'Tente uma busca diferente' : 'Crie seu primeiro funil para capturar leads'}
+              </p>
+              {!searchQuery && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  style={{ backgroundColor: FLOW_COLOR }}
+                  className="text-white rounded-xl"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0")}
-                      style={{ backgroundColor: funnel.is_active ? `${FLOW_COLOR}12` : '#f3f4f6' }}>
-                      <Target className="h-5 w-5" style={{ color: funnel.is_active ? FLOW_COLOR : '#9ca3af' }} />
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Funil
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredFunnels.map(funnel => {
+                const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
+                const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
+                return (
+                  <div
+                    key={funnel.id}
+                    className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
+                  >
+                    <div className="flex items-center justify-center">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: funnel.is_active ? `${FLOW_COLOR}12` : '#f3f4f6' }}
+                      >
+                        <Target className="h-4 w-4" style={{ color: funnel.is_active ? FLOW_COLOR : '#9ca3af' }} />
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">{funnel.name}</h3>
-                        <Badge variant={funnel.is_active ? 'default' : 'secondary'} className="text-[10px] shrink-0"
-                          style={funnel.is_active ? { backgroundColor: '#10B981' } : {}}>
-                          {funnel.is_active ? 'Ativo' : 'Pausado'}
+                    <div className="min-w-0">
+                      <span className="font-medium text-gray-900 truncate block">{funnel.name}</span>
+                      {funnel.description && (
+                        <span className="text-xs text-gray-400 truncate block">{funnel.description}</span>
+                      )}
+                    </div>
+
+                    <div>
+                      {funnel.is_active ? (
+                        <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-2 py-0.5">
+                          Ativo
                         </Badge>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1" onClick={(e) => e.stopPropagation()}>
-                        <span className="font-mono truncate">/f/{funnel.slug}</span>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e) => copyFunnelLink(funnel.slug, e)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="flex items-center gap-1 text-gray-500"><Eye className="h-3 w-3" />{fStats.views} acessos</span>
-                        <span className="flex items-center gap-1 text-green-600"><Users className="h-3 w-3" />{fStats.completions} conversões</span>
-                        <span className="flex items-center gap-1" style={{ color: FLOW_COLOR }}><TrendingUp className="h-3 w-3" />{convRate}%</span>
-                      </div>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                          Pausado
+                        </Badge>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={funnel.is_active} onCheckedChange={() => handleToggleFunnel(funnel.id, funnel.is_active)} />
-                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => navigate(`/dashboard/leads/analytics/${funnel.id}`)}>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-xs text-gray-500 font-mono truncate">/f/{funnel.slug.slice(0, 8)}...</span>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={(e) => copyFunnelLink(funnel.slug, e)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <div className="text-sm text-gray-500 flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      {fStats.views}
+                    </div>
+
+                    <div className="text-sm text-green-600 flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {fStats.completions}
+                    </div>
+
+                    <div className="text-sm font-medium" style={{ color: FLOW_COLOR }}>
+                      {convRate}%
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                        onClick={() => handleToggleFunnel(funnel.id, funnel.is_active)}
+                        title={funnel.is_active ? 'Pausar' : 'Ativar'}
+                      >
+                        {funnel.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                        onClick={() => navigate(`/dashboard/leads/analytics/${funnel.id}`)}
+                        title="Analytics"
+                      >
                         <BarChart3 className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" className="rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteFunnel(funnel.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                        onClick={() => handleDeleteFunnel(funnel.id)}
+                        title="Excluir"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFunnels.map(funnel => {
-              const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
-              const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
-              return (
-                <div
-                  key={funnel.id}
-                  className={cn("bg-white rounded-2xl border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all cursor-pointer overflow-hidden")}
-                  onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
-                >
-                  <div className={cn("h-20 flex items-center justify-center")}
-                    style={{ backgroundColor: funnel.is_active ? `${FLOW_COLOR}10` : '#f9fafb' }}>
-                    <Target className="h-8 w-8" style={{ color: funnel.is_active ? FLOW_COLOR : '#d1d5db' }} />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-gray-900 truncate">{funnel.name}</h3>
-                        <p className="text-xs text-gray-500 font-mono truncate">/f/{funnel.slug}</p>
-                      </div>
-                      <Badge variant={funnel.is_active ? 'default' : 'secondary'} className="text-[10px] shrink-0 ml-2"
-                        style={funnel.is_active ? { backgroundColor: '#10B981' } : {}}>
-                        {funnel.is_active ? 'Ativo' : 'Pausado'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs mb-4">
-                      <span className="flex items-center gap-1 text-gray-500"><Eye className="h-3 w-3" />{fStats.views}</span>
-                      <span className="flex items-center gap-1 text-green-600"><Users className="h-3 w-3" />{fStats.completions}</span>
-                      <span className="font-medium" style={{ color: FLOW_COLOR }}>{convRate}%</span>
-                    </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={funnel.is_active} onCheckedChange={() => handleToggleFunnel(funnel.id, funnel.is_active)} />
-                      <div className="flex-1" />
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => copyFunnelLink(funnel.slug, e)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => handleDeleteFunnel(funnel.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Create Modal */}
-        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-lg rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Funil</DialogTitle>
-              <DialogDescription>Configure as informações básicas do seu funil</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-2">
-                <Label>Nome do Funil *</Label>
-                <Input placeholder="Ex: Captação de Leads 2024" value={newFunnel.name} onChange={(e) => setNewFunnel(prev => ({ ...prev, name: e.target.value }))} className="rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição (opcional)</Label>
-                <Textarea placeholder="Descreva o objetivo..." value={newFunnel.description} onChange={(e) => setNewFunnel(prev => ({ ...prev, description: e.target.value }))} rows={2} className="rounded-xl" />
-              </div>
-              <div className="pt-4 border-t">
-                <h4 className="text-sm font-medium mb-3">Personalização</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Cor dos Botões</Label>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
-                      <Input value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="flex-1 rounded-xl" />
-                    </div>
+      {/* Create Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Funil</DialogTitle>
+            <DialogDescription>Configure as informações básicas do seu funil</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-2">
+              <Label>Nome do Funil *</Label>
+              <Input placeholder="Ex: Captação de Leads 2024" value={newFunnel.name} onChange={(e) => setNewFunnel(prev => ({ ...prev, name: e.target.value }))} className="rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição (opcional)</Label>
+              <Textarea placeholder="Descreva o objetivo..." value={newFunnel.description} onChange={(e) => setNewFunnel(prev => ({ ...prev, description: e.target.value }))} rows={2} className="rounded-xl" />
+            </div>
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-3">Personalização</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Cor dos Botões</Label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
+                    <Input value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="flex-1 rounded-xl" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Cor de Fundo</Label>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
-                      <Input value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="flex-1 rounded-xl" />
-                    </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor de Fundo</Label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
+                    <Input value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="flex-1 rounded-xl" />
                   </div>
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
-              <Button onClick={handleCreateFunnel} className="rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>Criar Funil</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={handleCreateFunnel} className="rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>Criar Funil</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

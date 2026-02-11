@@ -237,28 +237,28 @@ const WhatsAppApiPage: React.FC = () => {
   return (
     <div className="h-[calc(100vh-64px)] bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 md:p-6 border-b bg-card flex-shrink-0">
+      <div className="p-4 md:p-6 flex-shrink-0" style={{ background: 'linear-gradient(135deg, #FF4500, #FF6B35)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/crm-whatsapp')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/crm-whatsapp')} className="text-white hover:bg-white/20">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
-                <Key className="h-5 w-5 text-primary" />
+              <h1 className="text-xl font-bold flex items-center gap-2 text-white">
+                <Key className="h-5 w-5" />
                 API CRM WhatsApp
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/80">
                 Gerencie API Keys, visualize logs e acesse a documentação
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => window.open('/docs-apicrm', '_blank')}>
+            <Button variant="outline" size="sm" onClick={() => window.open('/docs-apicrm', '_blank')} className="border-white/30 text-white bg-white/10 hover:bg-white/20">
               <ExternalLink className="h-4 w-4 mr-2" />
               Documentação Pública
             </Button>
-            <Button size="sm" onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0}>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0} className="bg-white text-[#FF4500] hover:bg-white/90">
               <Plus className="h-4 w-4 mr-2" />
               Nova API Key
             </Button>
@@ -269,10 +269,10 @@ const WhatsAppApiPage: React.FC = () => {
       {/* Stats Cards */}
       <div className="p-4 md:p-6 flex-shrink-0">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card>
+          <Card className="border-[#FF4500]/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-primary" />
+                <Key className="h-4 w-4 text-[#FF4500]" />
                 <span className="text-sm text-muted-foreground">API Keys</span>
               </div>
               <p className="text-2xl font-bold mt-1">{apiKeys.length}</p>
@@ -311,15 +311,15 @@ const WhatsAppApiPage: React.FC = () => {
       {/* Tabs */}
       <div className="flex-1 overflow-hidden px-4 md:px-6 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="w-fit">
-            <TabsTrigger value="keys">API Keys</TabsTrigger>
-            <TabsTrigger value="logs">
+          <TabsList className="w-fit" style={{ '--tabs-active-bg': '#FF4500' } as React.CSSProperties}>
+            <TabsTrigger value="keys" className="data-[state=active]:bg-[#FF4500] data-[state=active]:text-white">API Keys</TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-[#FF4500] data-[state=active]:text-white">
               Logs
               {logs.length > 0 && (
                 <Badge variant="secondary" className="ml-2 text-xs">{logs.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="examples">Exemplos de Código</TabsTrigger>
+            <TabsTrigger value="examples" className="data-[state=active]:bg-[#FF4500] data-[state=active]:text-white">Exemplos de Código</TabsTrigger>
           </TabsList>
 
           {/* API Keys Tab */}
@@ -558,7 +558,7 @@ const WhatsAppApiPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCreateKey} disabled={creating}>
+            <Button onClick={handleCreateKey} disabled={creating} className="bg-[#FF4500] hover:bg-[#FF4500]/90 text-white">
               {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Key className="h-4 w-4 mr-2" />}
               Gerar API Key
             </Button>
@@ -637,7 +637,7 @@ echo $response;`,
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2 text-[#FF4500]">
             <Code className="h-4 w-4" /> Exemplos de Integração
           </CardTitle>
           <CardDescription>Copie e cole no seu site ou sistema para enviar mensagens</CardDescription>
@@ -666,22 +666,22 @@ echo $response;`,
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Ações Disponíveis</CardTitle>
+          <CardTitle className="text-base text-[#FF4500]">Ações Disponíveis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-3 bg-muted/50 rounded-lg border">
-              <code className="font-bold text-primary text-sm">send_text</code>
+              <code className="font-bold text-[#FF4500] text-sm">send_text</code>
               <p className="text-xs text-muted-foreground mt-1">Envia mensagem de texto</p>
               <p className="text-xs text-muted-foreground font-mono mt-2">phone, message</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg border">
-              <code className="font-bold text-primary text-sm">send_media</code>
+              <code className="font-bold text-[#FF4500] text-sm">send_media</code>
               <p className="text-xs text-muted-foreground mt-1">Envia imagem/vídeo/documento</p>
               <p className="text-xs text-muted-foreground font-mono mt-2">phone, media_url, caption, media_type</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg border">
-              <code className="font-bold text-primary text-sm">check_status</code>
+              <code className="font-bold text-[#FF4500] text-sm">check_status</code>
               <p className="text-xs text-muted-foreground mt-1">Verifica se sessão está conectada</p>
               <p className="text-xs text-muted-foreground font-mono mt-2">Sem campos adicionais</p>
             </div>

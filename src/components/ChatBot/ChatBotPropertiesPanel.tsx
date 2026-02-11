@@ -618,6 +618,168 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
           </div>
         );
 
+      case 'multi':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Condições Múltiplas</Label>
+              <p className="text-xs text-muted-foreground">
+                Cada condição gera uma saída separada. Se nenhuma for verdadeira, segue pela saída "Senão".
+              </p>
+            </div>
+            
+            {(node.data.config?.conditions || []).map((cond: any, index: number) => (
+              <div key={cond.id} className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">Condição {index + 1}</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => {
+                      const conditions = [...(node.data.config?.conditions || [])];
+                      conditions.splice(index, 1);
+                      updateConfig('conditions', conditions);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <Input
+                  value={cond.label || ''}
+                  onChange={(e) => {
+                    const conditions = [...(node.data.config?.conditions || [])];
+                    conditions[index] = { ...conditions[index], label: e.target.value };
+                    updateConfig('conditions', conditions);
+                  }}
+                  placeholder="Nome da condição"
+                  className="h-8 text-sm"
+                />
+                <Select
+                  value={cond.operator || 'contains'}
+                  onValueChange={(v) => {
+                    const conditions = [...(node.data.config?.conditions || [])];
+                    conditions[index] = { ...conditions[index], operator: v };
+                    updateConfig('conditions', conditions);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contains">Contém</SelectItem>
+                    <SelectItem value="equals">É igual a</SelectItem>
+                    <SelectItem value="starts_with">Começa com</SelectItem>
+                    <SelectItem value="is_number">É um número</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!['is_number', 'is_email'].includes(cond.operator || '') && (
+                  <Input
+                    value={cond.value || ''}
+                    onChange={(e) => {
+                      const conditions = [...(node.data.config?.conditions || [])];
+                      conditions[index] = { ...conditions[index], value: e.target.value };
+                      updateConfig('conditions', conditions);
+                    }}
+                    placeholder="Valor"
+                    className="h-8 text-sm"
+                  />
+                )}
+              </div>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                const conditions = [...(node.data.config?.conditions || [])];
+                conditions.push({
+                  id: `cond_${Date.now()}`,
+                  label: `Condição ${conditions.length + 1}`,
+                  operator: 'contains',
+                  value: ''
+                });
+                updateConfig('conditions', conditions);
+              }}
+            >
+              + Adicionar Condição
+            </Button>
+
+            <div className="mt-2 p-3 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                <strong>Saídas:</strong><br />
+                {(node.data.config?.conditions || []).map((c: any, i: number) => (
+                  <span key={c.id}>• <span className="font-medium">{c.label || `Condição ${i + 1}`}</span><br /></span>
+                ))}
+                • <span className="text-gray-500">Senão (nenhuma condição)</span>
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'weekday':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Dias da Semana</Label>
+              <p className="text-xs text-muted-foreground">
+                Selecione os dias em que o fluxo seguirá pela saída "Sim"
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map((day, i) => (
+                  <label key={day} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(node.data.config?.days || []).includes(i)}
+                      onChange={(e) => {
+                        const days = [...(node.data.config?.days || [])];
+                        if (e.target.checked) {
+                          days.push(i);
+                        } else {
+                          const idx = days.indexOf(i);
+                          if (idx >= 0) days.splice(idx, 1);
+                        }
+                        updateConfig('days', days);
+                      }}
+                      className="rounded"
+                    />
+                    {day}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'time':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Intervalo de Horário</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="number"
+                  value={node.data.config?.startHour || 9}
+                  onChange={(e) => updateConfig('startHour', parseInt(e.target.value))}
+                  min={0} max={23} className="w-20"
+                />
+                <span className="text-muted-foreground">h até</span>
+                <Input
+                  type="number"
+                  value={node.data.config?.endHour || 18}
+                  onChange={(e) => updateConfig('endHour', parseInt(e.target.value))}
+                  min={0} max={23} className="w-20"
+                />
+                <span className="text-muted-foreground">h</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                "Sim" se dentro do horário, "Não" se fora
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }

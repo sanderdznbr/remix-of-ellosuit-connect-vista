@@ -41,8 +41,20 @@ interface BookingLinkData {
   custom_message: string | null;
 }
 
-type EditorSection = 'general' | 'colors' | 'typography' | 'logo' | 'layout';
+type EditorSection = 'general' | 'colors' | 'themes' | 'logo' | 'layout';
 type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+type EditableElement = 'title' | 'description' | 'custom_message' | 'duration' | 'success_title' | 'success_message' | 'logo' | null;
+
+const STYLE_THEMES = [
+  { label: 'Moderno', font: 'Inter', radius: '16', button: 'filled' as const, primary: '#007DE3', secondary: '#60A5FA', bg: '#EFF6FF' },
+  { label: 'Elegante', font: 'Playfair Display', radius: '8', button: 'outlined' as const, primary: '#374151', secondary: '#6B7280', bg: '#FFFFFF' },
+  { label: 'Vibrante', font: 'Poppins', radius: '24', button: 'gradient' as const, primary: '#EC4899', secondary: '#F472B6', bg: '#FDF2F8' },
+  { label: 'Dark Pro', font: 'Montserrat', radius: '12', button: 'filled' as const, primary: '#6366F1', secondary: '#818CF8', bg: '#111827' },
+  { label: 'Natural', font: 'Nunito', radius: '16', button: 'filled' as const, primary: '#10B981', secondary: '#34D399', bg: '#F0FDF4' },
+  { label: 'Corporativo', font: 'Roboto', radius: '8', button: 'filled' as const, primary: '#1E40AF', secondary: '#3B82F6', bg: '#F8FAFC' },
+  { label: 'Sunset', font: 'Lato', radius: '20', button: 'gradient' as const, primary: '#FF4500', secondary: '#FB923C', bg: '#FFF7ED' },
+  { label: 'Minimal', font: 'Inter', radius: '0', button: 'outlined' as const, primary: '#000000', secondary: '#6B7280', bg: '#FFFFFF' },
+];
 
 const COLOR_PRESETS = [
   { label: 'Azul', colors: { primary: '#007DE3', secondary: '#60A5FA', bg: '#EFF6FF' } },
@@ -95,6 +107,7 @@ const BookingThemeBuilder = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewStep, setPreviewStep] = useState<'date' | 'time' | 'form' | 'success'>('date');
+  const [selectedElement, setSelectedElement] = useState<EditableElement>(null);
 
   // Theme state
   const [theme, setTheme] = useState({
@@ -112,6 +125,9 @@ const BookingThemeBuilder = () => {
     button_style: 'filled' as 'filled' | 'outlined' | 'gradient',
     show_duration: true,
     show_description: true,
+    success_title: 'Agendamento Confirmado!',
+    success_message: 'Enviamos os detalhes para o seu email.',
+    button_text: 'Confirmar Agendamento',
   });
 
   // History for undo/redo
@@ -152,6 +168,9 @@ const BookingThemeBuilder = () => {
       button_style: 'filled' as const,
       show_duration: true,
       show_description: true,
+      success_title: 'Agendamento Confirmado!',
+      success_message: 'Enviamos os detalhes para o seu email.',
+      button_text: 'Confirmar Agendamento',
     };
     setTheme(newTheme);
     setHistory([newTheme]);
@@ -241,6 +260,28 @@ const BookingThemeBuilder = () => {
     setSaving(false);
   };
 
+  const applyStyleTheme = (t: typeof STYLE_THEMES[0]) => {
+    updateTheme({
+      primary_color: t.primary,
+      secondary_color: t.secondary,
+      background_color: t.bg,
+      font_family: t.font,
+      border_radius: t.radius,
+      button_style: t.button,
+    });
+  };
+
+  const selectElement = (el: EditableElement) => {
+    setSelectedElement(el);
+    if (el === 'title' || el === 'description' || el === 'custom_message' || el === 'duration') {
+      setActiveSection('general');
+    } else if (el === 'logo') {
+      setActiveSection('logo');
+    } else if (el === 'success_title' || el === 'success_message') {
+      setActiveSection('general');
+    }
+  };
+
   const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
     updateTheme({
       primary_color: preset.colors.primary,
@@ -267,8 +308,9 @@ const BookingThemeBuilder = () => {
 
   const sidebarSections: { id: EditorSection; label: string; icon: React.ElementType }[] = [
     { id: 'general', label: 'Geral', icon: Type },
-    { id: 'colors', label: 'Cores & Tema', icon: Palette },
-    { id: 'logo', label: 'Logo & Imagem', icon: Image },
+    { id: 'themes', label: 'Temas', icon: Sparkles },
+    { id: 'colors', label: 'Cores', icon: Palette },
+    { id: 'logo', label: 'Logo', icon: Image },
     { id: 'layout', label: 'Layout', icon: Layout },
   ];
 
@@ -486,6 +528,99 @@ const BookingThemeBuilder = () => {
                           rows={2}
                           placeholder="Ex: Bem-vindo! Escolha o melhor horário..."
                         />
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Texto do botão</Label>
+                        <Input
+                          value={theme.button_text}
+                          onChange={e => updateTheme({ button_text: e.target.value })}
+                          className="rounded-lg"
+                          placeholder="Confirmar Agendamento"
+                        />
+                      </div>
+
+                      <Separator />
+
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Página de Sucesso</p>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Título de confirmação</Label>
+                        <Input
+                          value={theme.success_title}
+                          onChange={e => updateTheme({ success_title: e.target.value })}
+                          className="rounded-lg"
+                          placeholder="Agendamento Confirmado!"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-600">Mensagem de confirmação</Label>
+                        <Textarea
+                          value={theme.success_message}
+                          onChange={e => updateTheme({ success_message: e.target.value })}
+                          className="rounded-lg resize-none"
+                          rows={2}
+                          placeholder="Enviamos os detalhes para o seu email."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Themes Section */}
+                  {activeSection === 'themes' && (
+                    <div className="space-y-4">
+                      <p className="text-xs text-gray-500">Escolha um tema completo que altera cores, fonte, arredondamento e estilo dos botões.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {STYLE_THEMES.map(t => {
+                          const isActive = theme.primary_color === t.primary && theme.font_family === t.font && theme.border_radius === t.radius;
+                          const tDark = t.bg === '#111827';
+                          return (
+                            <button
+                              key={t.label}
+                              onClick={() => applyStyleTheme(t)}
+                              className={cn(
+                                'relative rounded-xl border-2 overflow-hidden transition-all text-left',
+                                isActive ? 'border-gray-900 shadow-lg scale-[1.02]' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                              )}
+                            >
+                              <div className="p-3" style={{ backgroundColor: t.bg }}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: `${t.primary}20` }}>
+                                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.primary }} />
+                                  </div>
+                                  <div className="h-2 flex-1 rounded-full" style={{ backgroundColor: tDark ? '#374151' : '#E5E7EB' }} />
+                                </div>
+                                <div className="space-y-1 mb-2">
+                                  <div className="h-1.5 w-3/4 rounded-full" style={{ backgroundColor: tDark ? '#4B5563' : '#D1D5DB' }} />
+                                  <div className="h-1.5 w-1/2 rounded-full" style={{ backgroundColor: tDark ? '#374151' : '#E5E7EB' }} />
+                                </div>
+                                <div
+                                  className="h-5 w-full flex items-center justify-center text-[8px] font-semibold"
+                                  style={{
+                                    borderRadius: `${Math.min(parseInt(t.radius), 8)}px`,
+                                    ...(t.button === 'filled' ? { backgroundColor: t.primary, color: '#FFF' } :
+                                      t.button === 'outlined' ? { border: `1.5px solid ${t.primary}`, color: t.primary } :
+                                      { background: `linear-gradient(135deg, ${t.primary}, ${t.secondary})`, color: '#FFF' }),
+                                  }}
+                                >
+                                  Botão
+                                </div>
+                              </div>
+                              <div className="px-3 py-2 bg-white border-t">
+                                <p className="text-[11px] font-semibold text-gray-800" style={{ fontFamily: t.font }}>{t.label}</p>
+                                <p className="text-[9px] text-gray-500">{t.font} • {t.button === 'filled' ? 'Sólido' : t.button === 'outlined' ? 'Contorno' : 'Gradiente'}</p>
+                              </div>
+                              {isActive && (
+                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: t.primary }}>
+                                  <Check className="h-3 w-3 text-white" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -756,52 +891,81 @@ const BookingThemeBuilder = () => {
                 className="h-full rounded-2xl shadow-2xl border border-gray-200 overflow-auto flex flex-col"
                 style={{ backgroundColor: theme.background_color }}
               >
-                <div className="flex-1 flex flex-col items-center p-8 gap-5">
-                  {/* Header - always visible */}
-                  {theme.logo_url ? (
-                    <motion.img
-                      key={theme.logo_url}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      src={theme.logo_url}
-                      alt="Logo"
-                      className="h-14 w-14 object-contain"
-                      style={{ borderRadius: `${parseInt(theme.border_radius)}px` }}
-                    />
-                  ) : (
-                    <div
-                      className="w-14 h-14 flex items-center justify-center"
-                      style={{
-                        backgroundColor: `${theme.primary_color}15`,
-                        borderRadius: `${parseInt(theme.border_radius)}px`,
-                      }}
-                    >
-                      <CalendarIcon className="h-7 w-7" style={{ color: theme.primary_color }} />
-                    </div>
-                  )}
+                <div className="flex-1 flex flex-col items-center p-8 gap-5" onClick={() => setSelectedElement(null)}>
+                  {/* Logo - clickable */}
+                  <div
+                    onClick={(e) => { e.stopPropagation(); selectElement('logo'); }}
+                    className={cn('cursor-pointer transition-all rounded-2xl', selectedElement === 'logo' && 'ring-2 ring-blue-500 ring-offset-2')}
+                  >
+                    {theme.logo_url ? (
+                      <motion.img
+                        key={theme.logo_url}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        src={theme.logo_url}
+                        alt="Logo"
+                        className="h-14 w-14 object-contain"
+                        style={{ borderRadius: `${parseInt(theme.border_radius)}px` }}
+                      />
+                    ) : (
+                      <div
+                        className="w-14 h-14 flex items-center justify-center"
+                        style={{
+                          backgroundColor: `${theme.primary_color}15`,
+                          borderRadius: `${parseInt(theme.border_radius)}px`,
+                        }}
+                      >
+                        <CalendarIcon className="h-7 w-7" style={{ color: theme.primary_color }} />
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Title - clickable */}
                   <h2
-                    className="text-2xl font-bold text-center"
+                    onClick={(e) => { e.stopPropagation(); selectElement('title'); }}
+                    className={cn(
+                      'text-2xl font-bold text-center cursor-pointer transition-all px-2 py-1 rounded-lg',
+                      selectedElement === 'title' && 'ring-2 ring-blue-500 ring-offset-2'
+                    )}
                     style={{ color: isDarkBg ? '#FFFFFF' : '#111827', fontFamily: theme.font_family }}
                   >
                     {theme.title || 'Título do evento'}
                   </h2>
 
-                  {theme.show_description && theme.description && (
-                    <p className="text-sm text-center max-w-md" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
-                      {theme.description}
+                  {/* Description - clickable */}
+                  {theme.show_description && (
+                    <p
+                      onClick={(e) => { e.stopPropagation(); selectElement('description'); }}
+                      className={cn(
+                        'text-sm text-center max-w-md cursor-pointer transition-all px-2 py-1 rounded-lg',
+                        selectedElement === 'description' && 'ring-2 ring-blue-500 ring-offset-2'
+                      )}
+                      style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}
+                    >
+                      {theme.description || 'Clique para adicionar descrição'}
                     </p>
                   )}
 
-                  {theme.custom_message && (
-                    <p className="text-xs text-center max-w-sm italic" style={{ color: theme.secondary_color }}>
-                      {theme.custom_message}
-                    </p>
-                  )}
+                  {/* Custom Message - clickable */}
+                  <p
+                    onClick={(e) => { e.stopPropagation(); selectElement('custom_message'); }}
+                    className={cn(
+                      'text-xs text-center max-w-sm italic cursor-pointer transition-all px-2 py-1 rounded-lg',
+                      selectedElement === 'custom_message' && 'ring-2 ring-blue-500 ring-offset-2'
+                    )}
+                    style={{ color: theme.custom_message ? theme.secondary_color : (isDarkBg ? '#4B5563' : '#D1D5DB') }}
+                  >
+                    {theme.custom_message || 'Clique para adicionar mensagem'}
+                  </p>
 
+                  {/* Duration - clickable */}
                   {theme.show_duration && (
                     <div
-                      className="flex items-center gap-2 px-3 py-1.5"
+                      onClick={(e) => { e.stopPropagation(); selectElement('duration'); }}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all',
+                        selectedElement === 'duration' && 'ring-2 ring-blue-500 ring-offset-2'
+                      )}
                       style={{ backgroundColor: `${theme.primary_color}10`, borderRadius: `${parseInt(theme.border_radius)}px` }}
                     >
                       <Timer className="h-4 w-4" style={{ color: theme.primary_color }} />
@@ -966,7 +1130,7 @@ const BookingThemeBuilder = () => {
                                 { background: `linear-gradient(135deg, ${theme.primary_color}, ${theme.secondary_color})`, color: '#FFFFFF' }),
                             }}
                           >
-                            Confirmar Agendamento
+                            {theme.button_text || 'Confirmar Agendamento'}
                           </button>
                         </motion.div>
                       )}
@@ -980,11 +1144,25 @@ const BookingThemeBuilder = () => {
                           >
                             <Check className="h-8 w-8" style={{ color: theme.primary_color }} />
                           </div>
-                          <h3 className="text-lg font-bold mb-2" style={{ color: isDarkBg ? '#FFFFFF' : '#111827' }}>
-                            Agendamento Confirmado!
+                          <h3
+                            onClick={(e) => { e.stopPropagation(); selectElement('success_title'); }}
+                            className={cn(
+                              'text-lg font-bold mb-2 cursor-pointer transition-all px-2 py-1 rounded-lg inline-block',
+                              selectedElement === 'success_title' && 'ring-2 ring-blue-500 ring-offset-2'
+                            )}
+                            style={{ color: isDarkBg ? '#FFFFFF' : '#111827' }}
+                          >
+                            {theme.success_title || 'Agendamento Confirmado!'}
                           </h3>
-                          <p className="text-xs mb-4" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
-                            Enviamos os detalhes para o seu email.
+                          <p
+                            onClick={(e) => { e.stopPropagation(); selectElement('success_message'); }}
+                            className={cn(
+                              'text-xs mb-4 cursor-pointer transition-all px-2 py-1 rounded-lg',
+                              selectedElement === 'success_message' && 'ring-2 ring-blue-500 ring-offset-2'
+                            )}
+                            style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}
+                          >
+                            {theme.success_message || 'Clique para editar mensagem'}
                           </p>
                           <div
                             className="p-4 text-left space-y-2 text-xs"
@@ -1004,7 +1182,14 @@ const BookingThemeBuilder = () => {
                             </div>
                           </div>
                           {theme.custom_message && (
-                            <p className="mt-4 text-xs italic" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
+                            <p
+                              onClick={(e) => { e.stopPropagation(); selectElement('custom_message'); }}
+                              className={cn(
+                                'mt-4 text-xs italic cursor-pointer transition-all px-2 py-1 rounded-lg inline-block',
+                                selectedElement === 'custom_message' && 'ring-2 ring-blue-500 ring-offset-2'
+                              )}
+                              style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}
+                            >
                               "{theme.custom_message}"
                             </p>
                           )}

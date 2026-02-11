@@ -29,6 +29,14 @@ interface BookingLink {
   secondary_color?: string;
   background_color?: string;
   custom_message?: string;
+  font_family?: string;
+  border_radius?: string;
+  button_style?: 'filled' | 'outlined' | 'gradient';
+  success_title?: string;
+  success_message?: string;
+  button_text?: string;
+  show_duration?: boolean;
+  show_description?: boolean;
 }
 
 interface UserAvailability {
@@ -83,7 +91,7 @@ const ImprovedBookingCalendar = () => {
         return;
       }
 
-      setBookingLink(linkData);
+      setBookingLink(linkData as BookingLink);
 
       const { data: availabilityData } = await supabase
         .from('availability_schedules')
@@ -227,6 +235,27 @@ const ImprovedBookingCalendar = () => {
   const secondaryColor = bookingLink?.secondary_color || primaryColor;
   const backgroundColor = bookingLink?.background_color || '';
   const customMessage = bookingLink?.custom_message || '';
+  const fontFamily = bookingLink?.font_family || 'Inter';
+  const borderRadius = bookingLink?.border_radius || '16';
+  const buttonStyle = bookingLink?.button_style || 'filled';
+  const successTitle = bookingLink?.success_title || 'Agendamento Confirmado!';
+  const successMessage = bookingLink?.success_message || 'Enviamos os detalhes para o seu email.';
+  const buttonText = bookingLink?.button_text || 'Confirmar Agendamento';
+  const showDuration = bookingLink?.show_duration ?? true;
+  const showDescription = bookingLink?.show_description ?? true;
+  const isDarkBg = ['#111827', '#000000', '#0A0A0A', '#18181B', '#1E1B4B'].includes(bookingLink?.background_color || '');
+
+  const getButtonStyle = (isEnabled: boolean) => {
+    if (!isEnabled) return { backgroundColor: '#e5e7eb', color: '#9ca3af' };
+    switch (buttonStyle) {
+      case 'outlined':
+        return { border: `2px solid ${primaryColor}`, color: primaryColor, backgroundColor: 'transparent' };
+      case 'gradient':
+        return { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: '#FFFFFF' };
+      default:
+        return { backgroundColor: primaryColor, color: '#FFFFFF' };
+    }
+  };
 
   // Calendar generation
   const monthStart = startOfMonth(currentMonth);
@@ -270,37 +299,56 @@ const ImprovedBookingCalendar = () => {
   return (
     <div 
       className="min-h-screen"
-      style={{ background: backgroundColor || 'linear-gradient(to bottom right, #f8fafc, rgba(239,246,255,0.3))' }}
+      style={{ 
+        background: backgroundColor || 'linear-gradient(to bottom right, #f8fafc, rgba(239,246,255,0.3))',
+        fontFamily: fontFamily,
+      }}
     >
       <div className="max-w-lg mx-auto px-4 py-8 sm:py-12">
         {/* Header Card */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-xl shadow-primary/5 p-6 mb-6 text-center"
+          className="shadow-xl shadow-primary/5 p-6 mb-6 text-center"
+          style={{ 
+            backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF', 
+            borderRadius: `${parseInt(borderRadius) + 8}px` 
+          }}
         >
-          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl overflow-hidden bg-white shadow-md flex items-center justify-center">
+          <div 
+            className="w-14 h-14 mx-auto mb-4 overflow-hidden shadow-md flex items-center justify-center"
+            style={{ 
+              borderRadius: `${parseInt(borderRadius)}px`,
+              backgroundColor: isDarkBg ? '#374151' : '#FFFFFF'
+            }}
+          >
             <img 
               src={bookingLink.logo_url || ellosuitLogo} 
               alt={bookingLink.title} 
               className="h-10 w-auto object-contain"
             />
           </div>
-          <h1 className="text-xl font-bold text-foreground mb-1">
+          <h1 className="text-xl font-bold mb-1" style={{ color: isDarkBg ? '#FFFFFF' : '#111827' }}>
             {bookingLink.title}
           </h1>
-          {bookingLink.description && (
-            <p className="text-sm text-muted-foreground mb-3">{bookingLink.description}</p>
+          {showDescription && bookingLink.description && (
+            <p className="text-sm mb-3" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>{bookingLink.description}</p>
           )}
-          <div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
-            style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
-          >
-            <Clock className="h-4 w-4" />
-            {bookingLink.duration_minutes} minutos
-          </div>
+          {showDuration && (
+            <div 
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+              style={{ 
+                backgroundColor: `${primaryColor}15`, 
+                color: primaryColor,
+                borderRadius: `${parseInt(borderRadius)}px`
+              }}
+            >
+              <Clock className="h-4 w-4" />
+              {bookingLink.duration_minutes} minutos
+            </div>
+          )}
           {customMessage && (
-            <p className="text-sm text-muted-foreground italic mt-2">"{customMessage}"</p>
+            <p className="text-sm italic mt-2" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>"{customMessage}"</p>
           )}
         </motion.div>
 
@@ -341,7 +389,11 @@ const ImprovedBookingCalendar = () => {
 
         {/* Main Card */}
         <motion.div 
-          className="bg-white rounded-3xl shadow-xl shadow-primary/5 overflow-hidden"
+          className="shadow-xl shadow-primary/5 overflow-hidden"
+          style={{ 
+            backgroundColor: isDarkBg ? '#1F2937' : '#FFFFFF',
+            borderRadius: `${parseInt(borderRadius) + 8}px`
+          }}
           layout
         >
           <AnimatePresence mode="wait">
@@ -409,13 +461,14 @@ const ImprovedBookingCalendar = () => {
                         onClick={() => available && setSelectedDate(day)}
                         disabled={!available}
                         className={cn(
-                          "aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 relative text-sm",
+                          "aspect-square flex flex-col items-center justify-center transition-all duration-200 relative text-sm",
                           available && !selected && "hover:scale-105 cursor-pointer",
                           !available && "opacity-30 cursor-not-allowed"
                         )}
                         style={{
+                          borderRadius: `${Math.min(parseInt(borderRadius), 12)}px`,
                           backgroundColor: selected ? primaryColor : 'transparent',
-                          color: selected ? 'white' : available ? '#1f2937' : '#9ca3af',
+                          color: selected ? 'white' : available ? (isDarkBg ? '#E5E7EB' : '#1f2937') : (isDarkBg ? '#4B5563' : '#9ca3af'),
                           boxShadow: selected ? `0 4px 14px ${primaryColor}40` : 'none'
                         }}
                       >
@@ -437,10 +490,10 @@ const ImprovedBookingCalendar = () => {
                 <Button
                   onClick={() => setStep('time')}
                   disabled={!selectedDate}
-                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6 transition-all duration-300"
+                  className="w-full h-12 text-base font-semibold mt-6 transition-all duration-300"
                   style={{ 
-                    backgroundColor: selectedDate ? primaryColor : '#e5e7eb',
-                    color: selectedDate ? 'white' : '#9ca3af'
+                    borderRadius: `${parseInt(borderRadius)}px`,
+                    ...getButtonStyle(!!selectedDate)
                   }}
                 >
                   Continuar
@@ -484,10 +537,11 @@ const ImprovedBookingCalendar = () => {
                           key={time}
                           onClick={() => setSelectedTime(time)}
                           className={cn(
-                            "py-3 px-3 rounded-xl text-sm font-medium transition-all duration-200",
-                            !isSelected && "bg-slate-100 hover:bg-slate-200 text-foreground"
+                            "py-3 px-3 text-sm font-medium transition-all duration-200",
+                            !isSelected && (isDarkBg ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-slate-100 hover:bg-slate-200 text-foreground")
                           )}
                           style={{
+                            borderRadius: `${Math.min(parseInt(borderRadius), 12)}px`,
                             backgroundColor: isSelected ? primaryColor : undefined,
                             color: isSelected ? 'white' : undefined,
                             boxShadow: isSelected ? `0 4px 14px ${primaryColor}40` : 'none'
@@ -508,10 +562,10 @@ const ImprovedBookingCalendar = () => {
                 <Button
                   onClick={() => setStep('form')}
                   disabled={!selectedTime}
-                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6 transition-all duration-300"
+                  className="w-full h-12 text-base font-semibold mt-6 transition-all duration-300"
                   style={{ 
-                    backgroundColor: selectedTime ? primaryColor : '#e5e7eb',
-                    color: selectedTime ? 'white' : '#9ca3af'
+                    borderRadius: `${parseInt(borderRadius)}px`,
+                    ...getButtonStyle(!!selectedTime)
                   }}
                 >
                   Continuar
@@ -626,8 +680,11 @@ const ImprovedBookingCalendar = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting || !formData.client_name || !formData.client_email}
-                  className="w-full h-12 rounded-2xl text-base font-semibold mt-6"
-                  style={{ backgroundColor: primaryColor }}
+                  className="w-full h-12 text-base font-semibold mt-6"
+                  style={{ 
+                    borderRadius: `${parseInt(borderRadius)}px`,
+                    ...getButtonStyle(!submitting && !!formData.client_name && !!formData.client_email)
+                  }}
                 >
                   {submitting ? (
                     <>
@@ -636,7 +693,7 @@ const ImprovedBookingCalendar = () => {
                     </>
                   ) : (
                     <>
-                      Confirmar Agendamento
+                      {buttonText}
                       <CheckCircle className="ml-2 h-5 w-5" />
                     </>
                   )}
@@ -662,9 +719,9 @@ const ImprovedBookingCalendar = () => {
                   <CheckCircle className="h-10 w-10" style={{ color: primaryColor }} />
                 </motion.div>
                 
-                <h2 className="text-2xl font-bold mb-2">Agendamento Confirmado!</h2>
-                <p className="text-muted-foreground mb-6">
-                  Enviamos os detalhes para o seu email.
+                <h2 className="text-2xl font-bold mb-2" style={{ color: isDarkBg ? '#FFFFFF' : '#111827' }}>{successTitle}</h2>
+                <p className="mb-6" style={{ color: isDarkBg ? '#9CA3AF' : '#6B7280' }}>
+                  {successMessage}
                 </p>
 
                 <div 

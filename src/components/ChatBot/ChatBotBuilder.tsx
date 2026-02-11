@@ -43,7 +43,7 @@ const ChatBotBuilder: React.FC = () => {
   const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   // Get company ID
   useEffect(() => {

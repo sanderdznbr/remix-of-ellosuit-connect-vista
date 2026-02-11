@@ -839,17 +839,22 @@ app.post('/api/message/send-media', async (req, res) => {
 // Enviar voz
 app.post('/api/message/send-voice', async (req, res) => {
   try {
-    const { instanceName, jid, audioUrl } = req.body;
+    const { instanceName, jid, audioUrl, mimetype } = req.body;
     
     const session = Array.from(sessions.values()).find(s => s.instanceName === instanceName);
     if (!session || !session.socket || !session.isConnected) {
       return res.status(404).json({ error: 'Sessão não encontrada' });
     }
     
+    // Auto-detect mimetype from URL extension if not provided
+    const audioMimetype = mimetype || (audioUrl?.endsWith('.mp3') ? 'audio/mpeg' : 'audio/ogg; codecs=opus');
+    // Only use ptt:true for ogg/opus format (WhatsApp requirement)
+    const isPtt = audioMimetype.includes('ogg');
+    
     const result = await session.socket.sendMessage(jid, {
       audio: { url: audioUrl },
-      mimetype: 'audio/ogg; codecs=opus',
-      ptt: true
+      mimetype: audioMimetype,
+      ptt: isPtt
     });
     
     res.json({ success: true, messageId: result.key.id });

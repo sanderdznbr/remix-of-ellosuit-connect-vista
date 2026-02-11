@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
+import IntegrationTab from './IntegrationTab';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -845,46 +846,7 @@ const EditAgentPage: React.FC = () => {
 
         {/* INTEGRAÇÕES TAB */}
         {activeTab === 'integracoes' && (
-          <div className="space-y-6">
-            <Card className="rounded-2xl border-gray-200">
-              <CardContent className="p-6 space-y-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-semibold text-gray-900">WhatsApp</h2>
-                      <p className="text-xs text-gray-400">Responder automaticamente mensagens do CRM</p>
-                    </div>
-                  </div>
-                  <Switch checked={whatsappEnabled} onCheckedChange={(v) => { setWhatsappEnabled(v); markChanged(); }} />
-                </div>
-
-                {whatsappEnabled && (
-                  <div className="ml-[52px]">
-                    <Label className="text-sm text-gray-700">Conexão</Label>
-                    <Select value={whatsappSessionId} onValueChange={(v) => { setWhatsappSessionId(v); markChanged(); }}>
-                      <SelectTrigger className="mt-1.5 rounded-xl h-11">
-                        <SelectValue placeholder="Selecione uma conexão..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {whatsappSessions.length === 0 ? (
-                          <SelectItem value="none" disabled>Nenhuma conexão disponível</SelectItem>
-                        ) : (
-                          whatsappSessions.map(session => (
-                            <SelectItem key={session.id} value={session.id}>
-                              {session.instance_name} ({session.phone_number || 'Sem número'})
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <IntegrationTab agentId={id!} agentName={name} />
         )}
 
         {/* CONVERSAR TAB */}

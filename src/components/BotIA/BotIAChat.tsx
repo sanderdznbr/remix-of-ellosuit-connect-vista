@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
 const OMNI_COLOR = '#FF4500';
+const MESSAGE_SEPARATOR = '|||';
 
 function cleanMarkdown(text: string): string {
   return text
@@ -44,6 +45,21 @@ interface BotIAChatProps {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status === 429 && attempt < maxRetries - 1) {
+      const waitMs = Math.min(2000 * Math.pow(2, attempt), 10000);
+      await sleep(waitMs);
+      continue;
+    }
+    return response;
+  }
+  throw new Error('Máximo de tentativas atingido');
+}
+
 const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
@@ -70,7 +86,7 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
 
   const settings = agent.settings || {};
   const agentTemperature = settings.temperature ?? 0.7;
-  const agentMaxChars = settings.maxResponseChars ?? 2000;
+  const agentMaxChars = settings.maxResponseChars ?? 500;
   const agentHumor = settings.humor ?? 'profissional';
 
   const sendMessage = async () => {
@@ -101,7 +117,13 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
       'Escreva texto corrido e natural, como uma pessoa digitando no WhatsApp.',
       'NAO use listas com marcadores ou numeradas. Escreva em frases corridas.',
       '',
-      `Limite suas respostas a no maximo ${agentMaxChars} caracteres.`,
+      `REGRA DE LIMITE: Cada mensagem deve ter NO MAXIMO ${agentMaxChars} caracteres.`,
+      `Se sua resposta precisar de mais de ${agentMaxChars} caracteres, divida em multiplas mensagens usando o separador "${MESSAGE_SEPARATOR}" entre cada parte.`,
+      `Exemplo: "Primeira parte da resposta${MESSAGE_SEPARATOR}Segunda parte da resposta${MESSAGE_SEPARATOR}Terceira parte"`,
+      `Cada parte separada por "${MESSAGE_SEPARATOR}" deve respeitar o limite de ${agentMaxChars} caracteres.`,
+      'Isso simula um humano enviando varias mensagens curtas seguidas, como no WhatsApp.',
+      'Divida de forma natural, nunca corte uma frase no meio.',
+      '',
       'Responda sempre em português brasileiro.'
     ].join('\n');
 
@@ -114,7 +136,7 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
     let assistantContent = '';
 
     try {
-      const response = await fetch(CHAT_URL, {
+      const response = await fetchWithRetry(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,8 +185,10 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
+              // Show streaming content without separator in the temp message
+              const displayContent = cleanMarkdown(assistantContent.replace(/\|\|\|/g, '\n\n'));
               setMessages(prev => prev.map(m =>
-                m.id === assistantMessageId ? { ...m, content: cleanMarkdown(assistantContent) } : m
+                m.id === assistantMessageId ? { ...m, content: displayContent } : m
               ));
             }
           } catch {
@@ -174,6 +198,7 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
         }
       }
 
+      // Flush remaining buffer
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split('\n')) {
           if (!raw) continue;
@@ -187,9 +212,6 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMessageId ? { ...m, content: cleanMarkdown(assistantContent) } : m
-              ));
             }
           } catch { /* ignore */ }
         }
@@ -199,6 +221,26 @@ const BotIAChat: React.FC<BotIAChatProps> = ({ agent, onClose }) => {
         setMessages(prev => prev.map(m =>
           m.id === assistantMessageId ? { ...m, content: 'Desculpe, não consegui gerar uma resposta.' } : m
         ));
+      } else {
+        // Split into multiple messages if separator exists
+        const parts = assistantContent.split(MESSAGE_SEPARATOR).map(p => cleanMarkdown(p)).filter(p => p.length > 0);
+        
+        if (parts.length > 1) {
+          setMessages(prev => {
+            const withoutTemp = prev.filter(m => m.id !== assistantMessageId);
+            const newMsgs: Message[] = parts.map((part, i) => ({
+              id: `${assistantMessageId}-${i}`,
+              role: 'assistant' as const,
+              content: part,
+              timestamp: new Date(Date.now() + i * 500)
+            }));
+            return [...withoutTemp, ...newMsgs];
+          });
+        } else {
+          setMessages(prev => prev.map(m =>
+            m.id === assistantMessageId ? { ...m, content: cleanMarkdown(assistantContent) } : m
+          ));
+        }
       }
     } catch (error) {
       console.error('Chat error:', error);

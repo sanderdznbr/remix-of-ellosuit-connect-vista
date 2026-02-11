@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap, RefreshCw, Database, Search } from 'lucide-react';
+import { Download, Server, CheckCircle2, Loader2, AlertTriangle, Users, Zap, RefreshCw, Database, Search, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +20,7 @@ const BaileysServerDownload: React.FC<BaileysServerDownloadProps> = ({
   const { toast } = useToast();
   const [isOpenInternal, setIsOpenInternal] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.6.0' | '4.7.0'>('4.7.0');
+  const [selectedVersion, setSelectedVersion] = useState<'4.2.0' | '4.6.0' | '4.7.0' | '4.8.0'>('4.8.0');
   
   const isOpen = isOpenExternal !== undefined ? isOpenExternal : isOpenInternal;
   const setIsOpen = (open: boolean) => {
@@ -1095,6 +1095,125 @@ SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
     return { packageJson, readme, envExample };
   };
 
+  const downloadV48Zip = async () => {
+    setDownloading(true);
+    try {
+      // Fetch v4.7.0 index.js as base and patch the send-voice endpoint
+      const response = await fetch('/docs/baileys-server-template/baileys-server-v4.7.0/index.js');
+      let indexJs = '';
+      
+      if (response.ok) {
+        indexJs = await response.text();
+        // Patch send-voice endpoint to support mimetype parameter and auto-detect MP3
+        indexJs = indexJs.replace(
+          /const \{ instanceName, jid, audioUrl \} = req\.body;/,
+          'const { instanceName, jid, audioUrl, mimetype } = req.body;'
+        );
+        indexJs = indexJs.replace(
+          /mimetype: 'audio\/ogg; codecs=opus',\s*\n\s*ptt: true/,
+          `mimetype: mimetype || (audioUrl?.endsWith('.mp3') ? 'audio/mpeg' : 'audio/ogg; codecs=opus'),\n      ptt: !(mimetype || (audioUrl?.endsWith('.mp3') ? 'audio/mpeg' : '')).includes('mpeg')`
+        );
+      }
+
+      const packageJson = `{
+  "name": "baileys-server",
+  "version": "4.8.0",
+  "description": "WhatsApp Baileys Server - Audio Fix & Mimetype Detection",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.17",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}`;
+
+      const envExample = `# Variáveis de ambiente para Railway
+SUPABASE_WEBHOOK_URL=${webhookUrl}
+SUPABASE_URL=https://jwddiyuezqrpuakazvgg.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
+
+# NÃO defina PORT - Railway define automaticamente
+`;
+
+      const readme = `# 🚀 Baileys Server v4.8.0 - Audio Fix & Mimetype Detection
+
+## ✨ Novidades v4.8.0
+
+- 🎙️ **Correção de áudio IA** - detecta mimetype MP3 vs OGG automaticamente
+- 🔊 **send-voice aceita mimetype** - parâmetro opcional para formato do áudio
+- ✅ Tudo do v4.7.0 mantido (validação de número, 9º dígito, etc.)
+
+## Deploy no Railway
+
+1. New Project → Deploy from GitHub
+2. Em **Variables**, adicione:
+   \\\`SUPABASE_WEBHOOK_URL\\\` = \\\`${webhookUrl}\\\`
+   \\\`SUPABASE_URL\\\` = \\\`https://jwddiyuezqrpuakazvgg.supabase.co\\\`
+   \\\`SUPABASE_SERVICE_ROLE_KEY\\\` = \\\`sua_service_role_key\\\`
+
+**IMPORTANTE**: Delete a pasta \\\`sessions/\\\` para uma conexão limpa!
+
+## Correção v4.8.0
+
+### send-voice com mimetype
+\\\`\\\`\\\`bash
+POST /api/message/send-voice
+{
+  "instanceName": "sua-instancia",
+  "jid": "5541999999999@s.whatsapp.net",
+  "audioUrl": "https://..../audio.mp3",
+  "mimetype": "audio/mpeg"  // opcional - auto-detecta pela extensão
+}
+\\\`\\\`\\\`
+`;
+      
+      const zip = new JSZip();
+      zip.file('package.json', packageJson);
+      zip.file('.env.example', envExample);
+      zip.file('README.md', readme);
+      
+      if (indexJs) {
+        zip.file('index.js', indexJs);
+      } else {
+        zip.file('index.js', '// Baileys Server v4.8.0\\n// Baseado no v4.7.0 com correção de áudio');
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'baileys-server-v4.8.0.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download iniciado!',
+        description: 'Servidor v4.8.0 com correção de áudio IA e detecção de mimetype'
+      });
+      
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar arquivo ZIP',
+        variant: 'destructive'
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const downloadV47Zip = async () => {
     setDownloading(true);
     try {
@@ -1280,11 +1399,15 @@ POST /api/number/check
         </DialogDescription>
       </DialogHeader>
 
-      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.6.0' | '4.7.0')}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={selectedVersion} onValueChange={(v) => setSelectedVersion(v as '4.2.0' | '4.6.0' | '4.7.0' | '4.8.0')}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="4.8.0" className="flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            v4.8.0 (Rec.)
+          </TabsTrigger>
           <TabsTrigger value="4.7.0" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
-            v4.7.0 (Recomendado)
+            v4.7.0
           </TabsTrigger>
           <TabsTrigger value="4.6.0" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
@@ -1292,6 +1415,69 @@ POST /api/number/check
           </TabsTrigger>
           <TabsTrigger value="4.2.0">v4.2.0</TabsTrigger>
         </TabsList>
+
+        {/* v4.8.0 Content */}
+        <TabsContent value="4.8.0" className="space-y-4 mt-4">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Novidades v4.8.0
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li className="flex items-center gap-2">
+                <Mic className="h-3 w-3 text-green-500" />
+                <strong>Correção áudio IA</strong> - detecta MP3 vs OGG automaticamente
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <strong>send-voice com mimetype</strong> - parâmetro opcional
+              </li>
+              <li className="flex items-center gap-2">
+                <RefreshCw className="h-3 w-3 text-green-500" />
+                <strong>Tudo do v4.7.0</strong> - validação de número, 9º dígito, sync
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+            <h4 className="font-medium text-[#FF4500] dark:text-orange-400 mb-2 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Importante: Conexão Limpa
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              <strong>Delete a pasta <code>sessions/</code></strong> no Railway para uma nova conexão.
+            </p>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-2">📦 Arquivos incluídos:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• <code>package.json</code> - Baileys v6.7.17</li>
+              <li>• <code>index.js</code> - Servidor v4.8.0 com correção de áudio</li>
+              <li>• <code>.env.example</code> - Variáveis de ambiente</li>
+              <li>• <code>README.md</code> - Documentação completa</li>
+            </ul>
+          </div>
+
+          <Button 
+            onClick={downloadV48Zip} 
+            disabled={downloading}
+            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando ZIP...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar baileys-server-v4.8.0.zip
+              </>
+            )}
+          </Button>
+        </TabsContent>
 
         {/* v4.7.0 Content */}
         <TabsContent value="4.7.0" className="space-y-4 mt-4">

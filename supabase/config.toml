@@ -3,6 +3,9 @@ project_id = "jwddiyuezqrpuakazvgg"
 [functions.realtime-transcription]
 verify_jwt = false
 
+[functions.elevenlabs-scribe-token]
+verify_jwt = false
+
 [functions.whatsapp-api]
 verify_jwt = false
 

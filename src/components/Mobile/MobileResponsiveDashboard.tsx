@@ -18,6 +18,7 @@ import TarefasWeb from '@/components/Tarefas/TarefasWeb';
 import WhatsAppCRM from '@/components/CRM/WhatsAppCRM';
 import DriveManager from '@/components/Dashboard/DriveManager';
 import ImprovedAgendaAberta from '@/components/Dashboard/ImprovedAgendaAberta';
+import BookingThemeBuilder from '@/components/Dashboard/BookingThemeBuilder';
 import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboardCustomizer';
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
@@ -115,6 +116,7 @@ const MobileResponsiveDashboard = () => {
         {/* Produtividade */}
         <Route path="/agenda" element={<MyCalendar />} />
         <Route path="/agenda-aberta" element={<ImprovedAgendaAberta />} />
+        <Route path="/agenda-aberta/editor" element={<BookingThemeBuilder />} />
         <Route path="/tasks" element={<TarefasWeb />} />
         <Route path="/reunioes" element={<MeetingRooms />} />
         <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />

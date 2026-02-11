@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,11 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Calendar, Clock, Plus, Copy, Link as LinkIcon, Trash2, Eye, EyeOff, Users,
+  Calendar, Clock, Plus, Copy, Link as LinkIcon, Trash2, Users,
   ExternalLink, CheckCircle2, XCircle, Mail, Phone, CalendarDays, Timer,
-  Pencil, Palette, Image, Type, Upload
+  Pencil, Palette
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -34,9 +34,6 @@ interface BookingLink {
   created_at: string;
   logo_url?: string | null;
   primary_color?: string | null;
-  secondary_color?: string | null;
-  background_color?: string | null;
-  custom_message?: string | null;
 }
 
 interface PublicBooking {
@@ -52,15 +49,10 @@ interface PublicBooking {
   created_at: string;
 }
 
-const COLOR_PRESETS = [
-  '#007DE3', '#FF4500', '#10B981', '#8B5CF6', '#F59E0B',
-  '#EC4899', '#06B6D4', '#EF4444', '#14B8A6', '#6366F1',
-  '#000000', '#374151', '#6B7280', '#9CA3AF', '#FFFFFF',
-];
-
 const ImprovedAgendaAberta = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [bookingLinks, setBookingLinks] = useState<BookingLink[]>([]);
   const [bookings, setBookings] = useState<PublicBooking[]>([]);
@@ -70,21 +62,6 @@ const ImprovedAgendaAberta = () => {
   const [activeTab, setActiveTab] = useState<'links' | 'bookings'>('links');
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
   
-  const [editingLink, setEditingLink] = useState<BookingLink | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    title: '',
-    description: '',
-    duration_minutes: 30,
-    buffer_minutes: 15,
-    logo_url: '',
-    primary_color: FLOW_COLOR,
-    secondary_color: '#10B981',
-    background_color: '#FFFFFF',
-    custom_message: '',
-  });
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -124,12 +101,16 @@ const ImprovedAgendaAberta = () => {
   const createBookingLink = async () => {
     if (!user?.id || !companyId) return;
     const linkSlug = `${user.email?.split('@')[0]}-${Date.now().toString(36)}`;
-    const { error } = await supabase.from('public_booking_links').insert({ ...formData, link_slug: linkSlug, user_id: user.id, company_id: companyId, is_active: true });
+    const { data, error } = await supabase.from('public_booking_links').insert({ ...formData, link_slug: linkSlug, user_id: user.id, company_id: companyId, is_active: true }).select().single();
     if (error) { toast({ title: 'Erro', description: 'Erro ao criar link', variant: 'destructive' }); return; }
-    toast({ title: 'Link criado!', description: 'Seu link de agendamento está pronto' });
+    toast({ title: 'Link criado!', description: 'Personalize o visual do seu link agora' });
     setFormData({ title: '', description: '', duration_minutes: 30, buffer_minutes: 15 });
     setShowCreateDialog(false);
     loadBookingLinks();
+    // Navigate to the editor for the newly created link
+    if (data?.id) {
+      navigate(`/dashboard/agenda-aberta/editor?linkId=${data.id}`);
+    }
   };
 
   const toggleLinkStatus = async (linkId: string, isActive: boolean) => {
@@ -138,13 +119,14 @@ const ImprovedAgendaAberta = () => {
   };
 
   const copyLinkToClipboard = (linkSlug: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/booking/${linkSlug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/agendamentos/${linkSlug}`);
     toast({ title: 'Link copiado!' });
   };
 
-  const openBookingPage = (linkSlug: string) => window.open(`/booking/${linkSlug}`, '_blank');
+  const openBookingPage = (linkSlug: string) => window.open(`/agendamentos/${linkSlug}`, '_blank');
 
   const deleteLink = async (linkId: string) => {
+    if (!confirm('Excluir este link? Esta ação não pode ser desfeita.')) return;
     const { error } = await supabase.from('public_booking_links').delete().eq('id', linkId);
     if (!error) { loadBookingLinks(); toast({ title: 'Link excluído' }); }
   };
@@ -167,86 +149,6 @@ const ImprovedAgendaAberta = () => {
   const getLinkStats = (linkId: string) => {
     const lb = bookings.filter(b => b.booking_link_id === linkId);
     return { total: lb.length, confirmed: lb.filter(b => b.status === 'confirmed').length, pending: lb.filter(b => b.status === 'pending').length };
-  };
-
-  const openEditDialog = (link: BookingLink) => {
-    setEditingLink(link);
-    setEditFormData({
-      title: link.title,
-      description: link.description || '',
-      duration_minutes: link.duration_minutes,
-      buffer_minutes: link.buffer_minutes,
-      logo_url: link.logo_url || '',
-      primary_color: link.primary_color || FLOW_COLOR,
-      secondary_color: link.secondary_color || '#10B981',
-      background_color: link.background_color || '#FFFFFF',
-      custom_message: link.custom_message || '',
-    });
-    setShowEditDialog(true);
-  };
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !companyId) return;
-
-    setUploadingLogo(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${companyId}/booking-logos/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('company-assets')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        // Try creating the bucket if it doesn't exist
-        await supabase.storage.createBucket('company-assets', { public: true });
-        const { error: retryError } = await supabase.storage
-          .from('company-assets')
-          .upload(filePath, file, { upsert: true });
-        if (retryError) throw retryError;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('company-assets')
-        .getPublicUrl(filePath);
-      
-      setEditFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
-      toast({ title: 'Logo enviado!' });
-    } catch (err: any) {
-      toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-
-  const saveEditedLink = async () => {
-    if (!editingLink) return;
-
-    const { error } = await supabase
-      .from('public_booking_links')
-      .update({
-        title: editFormData.title,
-        description: editFormData.description || null,
-        duration_minutes: editFormData.duration_minutes,
-        buffer_minutes: editFormData.buffer_minutes,
-        logo_url: editFormData.logo_url || null,
-        primary_color: editFormData.primary_color,
-        secondary_color: editFormData.secondary_color,
-        background_color: editFormData.background_color,
-        custom_message: editFormData.custom_message || null,
-      })
-      .eq('id', editingLink.id);
-
-    if (error) {
-      toast({ title: 'Erro', description: 'Erro ao salvar alterações', variant: 'destructive' });
-      return;
-    }
-
-    toast({ title: 'Salvo!', description: 'Link atualizado com sucesso' });
-    setShowEditDialog(false);
-    setEditingLink(null);
-    loadBookingLinks();
   };
 
   const filteredBookings = getFilteredBookings();
@@ -395,7 +297,11 @@ const ImprovedAgendaAberta = () => {
                     >
                       <div className="flex items-center gap-4">
                         {/* Icon / Logo */}
-                        <div className="p-3 rounded-xl shrink-0 overflow-hidden" style={{ backgroundColor: link.logo_url ? 'transparent' : `${link.primary_color || FLOW_COLOR}10` }}>
+                        <div
+                          className="p-3 rounded-xl shrink-0 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ backgroundColor: link.logo_url ? 'transparent' : `${link.primary_color || FLOW_COLOR}10` }}
+                          onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)}
+                        >
                           {link.logo_url ? (
                             <img src={link.logo_url} alt="Logo" className="h-5 w-5 object-contain" />
                           ) : (
@@ -426,8 +332,14 @@ const ImprovedAgendaAberta = () => {
                         {/* Actions */}
                         <div className="flex items-center gap-2 shrink-0">
                           <Switch checked={link.is_active} onCheckedChange={() => toggleLinkStatus(link.id, link.is_active)} />
-                          <Button size="icon" variant="outline" className="rounded-xl h-8 w-8" onClick={() => openEditDialog(link)} title="Editar">
-                            <Pencil className="h-3.5 w-3.5" />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl gap-1.5"
+                            onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)}
+                          >
+                            <Palette className="h-3.5 w-3.5" />
+                            Personalizar
                           </Button>
                           <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => copyLinkToClipboard(link.link_slug)}>
                             <Copy className="h-3.5 w-3.5" />Copiar
@@ -451,7 +363,6 @@ const ImprovedAgendaAberta = () => {
         {/* Bookings Tab */}
         {activeTab === 'bookings' && (
           <>
-            {/* Filter Pills */}
             <div className="flex gap-2">
               {(['upcoming', 'all', 'past'] as const).map((filter) => (
                 <button
@@ -543,294 +454,6 @@ const ImprovedAgendaAberta = () => {
           </>
         )}
       </div>
-
-      {/* Edit Link Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="h-5 w-5" style={{ color: FLOW_COLOR }} />
-              Editar Link de Agendamento
-            </DialogTitle>
-          </DialogHeader>
-
-          <Tabs defaultValue="general" className="mt-2">
-            <TabsList className="grid w-full grid-cols-3 rounded-xl bg-gray-100">
-              <TabsTrigger value="general" className="rounded-lg gap-2 text-xs">
-                <Type className="h-3.5 w-3.5" />Geral
-              </TabsTrigger>
-              <TabsTrigger value="visual" className="rounded-lg gap-2 text-xs">
-                <Palette className="h-3.5 w-3.5" />Visual
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="rounded-lg gap-2 text-xs">
-                <Eye className="h-3.5 w-3.5" />Preview
-              </TabsTrigger>
-            </TabsList>
-
-            {/* General Tab */}
-            <TabsContent value="general" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Título do Evento</Label>
-                <Input
-                  value={editFormData.title}
-                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                  className="rounded-xl"
-                  placeholder="Ex: Consultoria de 30min"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={editFormData.description}
-                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                  className="rounded-xl resize-none"
-                  rows={3}
-                  placeholder="Descreva o compromisso..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Timer className="h-4 w-4 text-gray-400" />Duração</Label>
-                  <Select value={editFormData.duration_minutes.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, duration_minutes: parseInt(v) })}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="15">15 minutos</SelectItem>
-                      <SelectItem value="30">30 minutos</SelectItem>
-                      <SelectItem value="45">45 minutos</SelectItem>
-                      <SelectItem value="60">1 hora</SelectItem>
-                      <SelectItem value="90">1h 30min</SelectItem>
-                      <SelectItem value="120">2 horas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-gray-400" />Intervalo</Label>
-                  <Select value={editFormData.buffer_minutes.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, buffer_minutes: parseInt(v) })}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="0">Sem intervalo</SelectItem>
-                      <SelectItem value="5">5 minutos</SelectItem>
-                      <SelectItem value="10">10 minutos</SelectItem>
-                      <SelectItem value="15">15 minutos</SelectItem>
-                      <SelectItem value="30">30 minutos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Mensagem de boas-vindas</Label>
-                <Textarea
-                  value={editFormData.custom_message}
-                  onChange={(e) => setEditFormData({ ...editFormData, custom_message: e.target.value })}
-                  className="rounded-xl resize-none"
-                  rows={2}
-                  placeholder="Mensagem exibida na página de agendamento..."
-                />
-              </div>
-            </TabsContent>
-
-            {/* Visual Tab */}
-            <TabsContent value="visual" className="space-y-5 mt-4">
-              {/* Logo Upload */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2"><Image className="h-4 w-4 text-gray-400" />Logo</Label>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
-                    {editFormData.logo_url ? (
-                      <img src={editFormData.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
-                    ) : (
-                      <Upload className="h-6 w-6 text-gray-300" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleLogoUpload}
-                        disabled={uploadingLogo}
-                      />
-                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium text-gray-700 transition-colors">
-                        <Upload className="h-3.5 w-3.5" />
-                        {uploadingLogo ? 'Enviando...' : 'Enviar logo'}
-                      </span>
-                    </label>
-                    {editFormData.logo_url && (
-                      <button
-                        onClick={() => setEditFormData({ ...editFormData, logo_url: '' })}
-                        className="text-xs text-red-500 hover:text-red-600"
-                      >
-                        Remover logo
-                      </button>
-                    )}
-                    <p className="text-[11px] text-gray-400">PNG, JPG ou SVG. Recomendado 200x200px</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Primary Color */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-gray-400" />Cor Principal
-                </Label>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {COLOR_PRESETS.map((color) => (
-                      <button
-                        key={`primary-${color}`}
-                        onClick={() => setEditFormData({ ...editFormData, primary_color: color })}
-                        className={cn(
-                          "w-7 h-7 rounded-lg border-2 transition-all",
-                          editFormData.primary_color === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <Input
-                    type="color"
-                    value={editFormData.primary_color}
-                    onChange={(e) => setEditFormData({ ...editFormData, primary_color: e.target.value })}
-                    className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Secondary Color */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-gray-400" />Cor Secundária
-                </Label>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {COLOR_PRESETS.map((color) => (
-                      <button
-                        key={`secondary-${color}`}
-                        onClick={() => setEditFormData({ ...editFormData, secondary_color: color })}
-                        className={cn(
-                          "w-7 h-7 rounded-lg border-2 transition-all",
-                          editFormData.secondary_color === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <Input
-                    type="color"
-                    value={editFormData.secondary_color}
-                    onChange={(e) => setEditFormData({ ...editFormData, secondary_color: e.target.value })}
-                    className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Background Color */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-gray-400" />Cor de Fundo
-                </Label>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {['#FFFFFF', '#F9FAFB', '#F3F4F6', '#EFF6FF', '#FEF3F2', '#F0FDF4', '#FDF4FF', '#FFFBEB', '#F8FAFC', '#111827'].map((color) => (
-                      <button
-                        key={`bg-${color}`}
-                        onClick={() => setEditFormData({ ...editFormData, background_color: color })}
-                        className={cn(
-                          "w-7 h-7 rounded-lg border-2 transition-all",
-                          editFormData.background_color === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <Input
-                    type="color"
-                    value={editFormData.background_color}
-                    onChange={(e) => setEditFormData({ ...editFormData, background_color: e.target.value })}
-                    className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Preview Tab */}
-            <TabsContent value="preview" className="mt-4">
-              <div
-                className="rounded-2xl border border-gray-200 p-8 flex flex-col items-center gap-4 min-h-[300px]"
-                style={{ backgroundColor: editFormData.background_color }}
-              >
-                {/* Logo preview */}
-                {editFormData.logo_url ? (
-                  <img src={editFormData.logo_url} alt="Logo" className="h-12 w-12 object-contain rounded-xl" />
-                ) : (
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: `${editFormData.primary_color}20` }}
-                  >
-                    <CalendarDays className="h-6 w-6" style={{ color: editFormData.primary_color }} />
-                  </div>
-                )}
-                
-                <h3
-                  className="text-xl font-bold"
-                  style={{ color: editFormData.background_color === '#111827' ? '#FFFFFF' : '#111827' }}
-                >
-                  {editFormData.title || 'Título do evento'}
-                </h3>
-                
-                {editFormData.description && (
-                  <p
-                    className="text-sm text-center max-w-sm"
-                    style={{ color: editFormData.background_color === '#111827' ? '#9CA3AF' : '#6B7280' }}
-                  >
-                    {editFormData.description}
-                  </p>
-                )}
-
-                {editFormData.custom_message && (
-                  <p
-                    className="text-xs text-center max-w-sm italic"
-                    style={{ color: editFormData.secondary_color }}
-                  >
-                    {editFormData.custom_message}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-3 mt-2">
-                  <span
-                    className="text-sm flex items-center gap-1.5"
-                    style={{ color: editFormData.background_color === '#111827' ? '#D1D5DB' : '#374151' }}
-                  >
-                    <Timer className="h-4 w-4" />{editFormData.duration_minutes} min
-                  </span>
-                </div>
-                
-                <button
-                  className="mt-4 px-6 py-2.5 rounded-xl text-white text-sm font-medium"
-                  style={{ backgroundColor: editFormData.primary_color }}
-                >
-                  Agendar Horário
-                </button>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 rounded-xl">
-              Cancelar
-            </Button>
-            <Button
-              onClick={saveEditedLink}
-              disabled={!editFormData.title}
-              className="flex-1 rounded-xl text-white"
-              style={{ backgroundColor: FLOW_COLOR }}
-            >
-              Salvar Alterações
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

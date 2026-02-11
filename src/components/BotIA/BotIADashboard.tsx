@@ -12,7 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import BotIAChat from './BotIAChat';
-import EditAgentModal from './EditAgentModal';
 
 const OMNI_COLOR = '#FF4500';
 
@@ -43,7 +42,6 @@ const BotIADashboard: React.FC = () => {
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   
   const [showChatModal, setShowChatModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AIAgent | null>(null);
 
   const ensureCompany = async (): Promise<string | null> => {
@@ -236,7 +234,7 @@ const BotIADashboard: React.FC = () => {
                     <Button 
                       variant="ghost" size="sm" 
                       className="text-gray-600 hover:text-gray-900 gap-1.5"
-                      onClick={() => { setSelectedAgent(agent); setShowEditModal(true); }}
+                      onClick={() => navigate(`/dashboard/bot-ia/editar/${agent.id}`)}
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Editar
@@ -272,17 +270,6 @@ const BotIADashboard: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {selectedAgent && (
-        <EditAgentModal
-          agent={selectedAgent}
-          isOpen={showEditModal}
-          onClose={() => { setShowEditModal(false); setSelectedAgent(null); }}
-          onUpdate={() => { if (companyId) loadAgents(companyId); }}
-          onDelete={() => { if (companyId) loadAgents(companyId); }}
-        />
-      )}
 
       {/* Chat Modal */}
       <Dialog open={showChatModal} onOpenChange={setShowChatModal}>

@@ -55,14 +55,14 @@ export function useHubColor() {
   const location = useLocation();
   const path = location.pathname;
   
+  if (trackRoutes.some(route => path.startsWith(route))) {
+    return { color: TRACK_COLOR, hub: 'track' as const };
+  }
   if (omniRoutes.some(route => path.startsWith(route))) {
     return { color: OMNI_COLOR, hub: 'omni' as const };
   }
   if (flowRoutes.some(route => path.startsWith(route))) {
     return { color: FLOW_COLOR, hub: 'flow' as const };
-  }
-  if (trackRoutes.some(route => path.startsWith(route))) {
-    return { color: TRACK_COLOR, hub: 'track' as const };
   }
   if (suiteRoutes.some(route => path.startsWith(route))) {
     return { color: SUITE_COLOR, hub: 'suite' as const };

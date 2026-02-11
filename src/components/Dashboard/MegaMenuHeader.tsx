@@ -193,14 +193,18 @@ export function MegaMenuHeader() {
   };
 
   const getActiveGroup = () => {
+    let bestMatch: { groupId: string; pathLen: number } | null = null;
     for (const group of menuGroups) {
       for (const col of group.columns) {
         for (const item of col.items) {
-          if (isActive(item.path)) return group.id;
+          const itemPath = item.path.includes('?') ? item.path.split('?')[0] : item.path;
+          if (location.pathname.startsWith(itemPath) && (!bestMatch || itemPath.length > bestMatch.pathLen)) {
+            bestMatch = { groupId: group.id, pathLen: itemPath.length };
+          }
         }
       }
     }
-    return null;
+    return bestMatch?.groupId || null;
   };
 
   const activeGroupId = getActiveGroup();

@@ -575,6 +575,37 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     return allConsented;
   };
 
+  const startRecordingDirectly = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('meeting-recording', {
+        body: {
+          action: 'start',
+          roomName: roomName,
+          userId: user?.id,
+          companyId: companyId
+        }
+      });
+
+      if (error) throw error;
+
+      setIsRecording(true);
+      setRecordingId(data.recording_id);
+      setLivekitRecordingId(data.livekit_recording_id || '');
+
+      toast({
+        title: "Gravação iniciada",
+        description: "A reunião está sendo gravada.",
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast({
+        title: "Erro ao gravar",
+        description: "Não foi possível iniciar a gravação",
+        variant: "destructive",
+      });
+    }
+  };
+
   const startRecording = async () => {
     if (!isHost) {
       toast({
@@ -582,6 +613,23 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
         description: "Apenas o anfitrião pode iniciar gravação",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Check how many OTHER participants are in the room (excluding host)
+    const { data: otherParticipants } = await supabase
+      .from('room_participants')
+      .select('id')
+      .eq('room_id', currentRoomId)
+      .is('left_at', null)
+      .neq('is_host', true);
+
+    const otherCount = otherParticipants?.length || 0;
+
+    // If alone, skip consent and start recording directly
+    if (otherCount === 0) {
+      console.log('👤 Solo recording - skipping consent');
+      await startRecordingDirectly();
       return;
     }
 
@@ -616,7 +664,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
 
     // Wait for all participants to respond (max 30 seconds)
     let attempts = 0;
-    const maxAttempts = 30; // 30 seconds
+    const maxAttempts = 30;
 
     const checkInterval = setInterval(async () => {
       attempts++;
@@ -626,37 +674,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       if (allConsented) {
         clearInterval(checkInterval);
         setPendingRecordingRequest(false);
-
-        // Start actual recording
-        try {
-          const { data, error } = await supabase.functions.invoke('meeting-recording', {
-            body: {
-              action: 'start',
-              roomName: roomName,
-              userId: user?.id,
-              companyId: companyId
-            }
-          });
-
-          if (error) throw error;
-
-          setIsRecording(true);
-          setRecordingId(data.recording_id);
-          setLivekitRecordingId(data.livekit_recording_id || '');
-
-          toast({
-            title: "Gravação iniciada",
-            description: "Todos os participantes consentiram. A reunião está sendo gravada.",
-          });
-        } catch (error) {
-          console.error('Erro ao iniciar gravação:', error);
-          toast({
-            title: "Erro ao gravar",
-            description: "Não foi possível iniciar a gravação",
-            variant: "destructive",
-          });
-        }
-
+        await startRecordingDirectly();
         return;
       }
 

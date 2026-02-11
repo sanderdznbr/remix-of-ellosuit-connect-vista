@@ -17,6 +17,7 @@ const MobileAuthScreen = () => {
   const [company, setCompany] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +29,14 @@ const MobileAuthScreen = () => {
       if (error) {
         if (error.message.includes('Invalid login credentials')) setError('Email ou senha incorretos.');
         else setError(String(error.message));
+      } else {
+        if (rememberMe) {
+          localStorage.setItem('ellosuit_remember_me', 'true');
+          sessionStorage.removeItem('ellosuit_session_active');
+        } else {
+          localStorage.setItem('ellosuit_remember_me', 'false');
+          sessionStorage.setItem('ellosuit_session_active', 'true');
+        }
       }
     } catch { setError('Erro inesperado.'); }
     finally { setLoading(false); }
@@ -105,7 +114,16 @@ const MobileAuthScreen = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">Manter conectado</span>
+                </label>
                 <button type="button" className="text-xs text-primary hover:underline">Esqueci minha senha</button>
               </div>
               <Button type="submit" className="w-full h-10 rounded-full bg-primary text-primary-foreground text-sm" disabled={loading}>

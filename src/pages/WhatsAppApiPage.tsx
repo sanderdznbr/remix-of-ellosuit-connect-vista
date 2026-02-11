@@ -238,29 +238,30 @@ const WhatsAppApiPage: React.FC = () => {
     <div className="h-[calc(100vh-64px)] bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 md:p-6 flex-shrink-0" style={{ background: 'linear-gradient(135deg, #FF4500, #FF6B35)' }}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/crm-whatsapp')} className="text-white hover:bg-white/20">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/crm-whatsapp')} className="text-white hover:bg-white/20 shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2 text-white">
-                <Key className="h-5 w-5" />
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 text-white truncate">
+                <Key className="h-5 w-5 shrink-0" />
                 API CRM WhatsApp
               </h1>
-              <p className="text-sm text-white/80">
-                Gerencie API Keys, visualize logs e acesse a documentação
+              <p className="text-xs md:text-sm text-white/80 truncate">
+                Gerencie API Keys, visualize logs e documentação
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => window.open('/docs-apicrm', '_blank')} className="border-white/30 text-white bg-white/10 hover:bg-white/20">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Documentação Pública
+          <div className="flex items-center gap-2 pl-11 md:pl-0 md:justify-end flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => window.open('/docs-apicrm', '_blank')} className="border-white/30 text-white bg-white/10 hover:bg-white/20 text-xs md:text-sm">
+              <ExternalLink className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+              <span className="hidden sm:inline">Documentação</span>
+              <span className="sm:hidden">Docs</span>
             </Button>
-            <Button size="sm" onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0} className="bg-white text-[#FF4500] hover:bg-white/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova API Key
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} disabled={connectedSessions.length === 0} className="bg-white text-[#FF4500] hover:bg-white/90 text-xs md:text-sm">
+              <Plus className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+              Nova Key
             </Button>
           </div>
         </div>

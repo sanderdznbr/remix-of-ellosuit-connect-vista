@@ -32,7 +32,7 @@ const LinkTrackingDashboard = () => {
   };
 
   const stats = [
-    { label: "Links Ativos", value: links.length, icon: Link, color: "#00E371" },
+    { label: "Links Ativos", value: links.length, icon: Link, color: "#3A9A1C" },
     { label: "Total Cliques", value: totalClicks, icon: MousePointer, color: "#10B981" },
     { label: "Visitantes Únicos", value: totalUniqueVisitors, icon: Globe, color: "#8B5CF6" },
     { label: "Status", value: links.length > 0 ? 'Ativo' : '-', icon: Clock, color: "#F59E0B" },

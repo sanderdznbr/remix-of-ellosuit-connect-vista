@@ -24,7 +24,7 @@ const HelpCenter = () => {
     { id: 'email', label: 'Email Marketing', icon: Mail, color: '#E34800', count: 12 },
     { id: 'calendar', label: 'Agenda & Reuniões', icon: Calendar, color: '#007DE3', count: 10 },
     { id: 'crm', label: 'CRM & Clientes', icon: Users, color: '#8B5CF6', count: 15 },
-    { id: 'tracking', label: 'Rastreamento', icon: Link2, color: '#00E371', count: 9 },
+    { id: 'tracking', label: 'Rastreamento', icon: Link2, color: '#3A9A1C', count: 9 },
     { id: 'ai', label: 'Agentes de IA', icon: Bot, color: '#EC4899', count: 6 },
   ];
 

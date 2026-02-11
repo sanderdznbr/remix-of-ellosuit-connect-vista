@@ -99,7 +99,7 @@ export function PricingSummary({
                       'w-2 h-2 rounded-full',
                       module === 'omni' && 'bg-[#E34800]',
                       module === 'flow' && 'bg-[#007DE3]',
-                      module === 'track' && 'bg-[#00E371]'
+                      module === 'track' && 'bg-[#3A9A1C]'
                     )} />
                     <span>{moduleConfig[module].name}</span>
                   </div>

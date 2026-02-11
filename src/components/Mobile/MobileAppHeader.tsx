@@ -37,7 +37,7 @@ const menuGroups = [
     ]
   },
   {
-    id: "track", label: "Ello Track", color: "#00E371", icon: Eye,
+    id: "track", label: "Ello Track", color: "#3A9A1C", icon: Eye,
     items: [
       { label: "Rastrear Conteúdo", icon: FileText, path: "/dashboard/rastreamento" },
       { label: "Encurtador", icon: Link2, path: "/dashboard/encurtador" },

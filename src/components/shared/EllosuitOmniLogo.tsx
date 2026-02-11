@@ -8,7 +8,7 @@ interface EllosuitOmniLogoProps {
 const COLORS = {
   omni: "#FF4500",
   flow: "#007DE3",
-  track: "#00E371",
+  track: "#3A9A1C",
   suite: "#8B5CF6",
 };
 

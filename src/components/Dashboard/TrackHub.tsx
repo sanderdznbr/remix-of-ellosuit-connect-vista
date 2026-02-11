@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const TRACK_COLOR = "#00E371";
+const TRACK_COLOR = "#3A9A1C";
 
 const trackModules = [
   {

@@ -41,7 +41,7 @@ const hubs = [
   },
   {
     name: 'Track',
-    color: '#00E371',
+    color: '#3A9A1C',
     items: [
       { icon: FileText, label: 'Rastrear Docs', path: '/dashboard/rastreamento-documento' },
       { icon: Link, label: 'Rastrear Links', path: '/dashboard/rastreamento-link' },

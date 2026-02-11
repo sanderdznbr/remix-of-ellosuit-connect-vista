@@ -28,7 +28,7 @@ const quickActions = [
 const hubCards = [
   { label: 'Ello Omni', description: 'Comunicação e CRM', path: '/dashboard/omni', color: '#FF4500', icon: MessageSquare },
   { label: 'Ello Flow', description: 'Produtividade', path: '/dashboard/flows', color: '#007DE3', icon: Zap },
-  { label: 'Ello Track', description: 'Rastreamento', path: '/dashboard/track', color: '#00E371', icon: Eye },
+  { label: 'Ello Track', description: 'Rastreamento', path: '/dashboard/track', color: '#3A9A1C', icon: Eye },
   { label: 'Ello Suite', description: 'Gestão e Dados', path: '/dashboard/suite', color: '#3000E3', icon: Users },
 ];
 

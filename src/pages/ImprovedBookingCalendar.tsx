@@ -279,7 +279,7 @@ const ImprovedBookingCalendar = () => {
             borderRadius: `${parseInt(borderRadius) + 8}px`,
           }}
         >
-          <div className="flex flex-col items-center p-8 gap-4">
+          <div className="flex flex-col items-center p-8 gap-5">
             {/* Logo */}
             <div>
               {bookingLink.logo_url ? (
@@ -369,7 +369,7 @@ const ImprovedBookingCalendar = () => {
             )}
 
             {/* Step Content */}
-            <div className="w-full mt-2">
+            <div className="w-full max-w-sm mt-2">
               <AnimatePresence mode="wait">
                 {/* Step 1: Date */}
                 {step === 'date' && (

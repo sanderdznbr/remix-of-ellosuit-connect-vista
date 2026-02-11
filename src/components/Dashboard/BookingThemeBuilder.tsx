@@ -46,14 +46,31 @@ type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
 type EditableElement = 'title' | 'description' | 'custom_message' | 'duration' | 'success_title' | 'success_message' | 'logo' | null;
 
 const STYLE_THEMES = [
-  { label: 'Moderno', font: 'Inter', radius: '16', button: 'filled' as const, primary: '#007DE3', secondary: '#60A5FA', bg: '#EFF6FF' },
-  { label: 'Elegante', font: 'Playfair Display', radius: '8', button: 'outlined' as const, primary: '#374151', secondary: '#6B7280', bg: '#FFFFFF' },
-  { label: 'Vibrante', font: 'Poppins', radius: '24', button: 'gradient' as const, primary: '#EC4899', secondary: '#F472B6', bg: '#FDF2F8' },
-  { label: 'Dark Pro', font: 'Montserrat', radius: '12', button: 'filled' as const, primary: '#6366F1', secondary: '#818CF8', bg: '#111827' },
-  { label: 'Natural', font: 'Nunito', radius: '16', button: 'filled' as const, primary: '#10B981', secondary: '#34D399', bg: '#F0FDF4' },
-  { label: 'Corporativo', font: 'Roboto', radius: '8', button: 'filled' as const, primary: '#1E40AF', secondary: '#3B82F6', bg: '#F8FAFC' },
-  { label: 'Sunset', font: 'Lato', radius: '20', button: 'gradient' as const, primary: '#FF4500', secondary: '#FB923C', bg: '#FFF7ED' },
-  { label: 'Minimal', font: 'Inter', radius: '0', button: 'outlined' as const, primary: '#000000', secondary: '#6B7280', bg: '#FFFFFF' },
+  // Row 1 - Clássicos
+  { label: 'Moderno', desc: 'Clean e profissional', font: 'Inter', radius: '16', button: 'filled' as const, primary: '#007DE3', secondary: '#60A5FA', bg: '#EFF6FF', emoji: '💎' },
+  { label: 'Elegante', desc: 'Tipografia sofisticada', font: 'Playfair Display', radius: '8', button: 'outlined' as const, primary: '#374151', secondary: '#6B7280', bg: '#FFFFFF', emoji: '🖋️' },
+  { label: 'Vibrante', desc: 'Cores vivas e divertidas', font: 'Poppins', radius: '24', button: 'gradient' as const, primary: '#EC4899', secondary: '#F472B6', bg: '#FDF2F8', emoji: '🎨' },
+  { label: 'Dark Pro', desc: 'Tema escuro premium', font: 'Montserrat', radius: '12', button: 'filled' as const, primary: '#6366F1', secondary: '#818CF8', bg: '#111827', emoji: '🌙' },
+  // Row 2 - Naturais
+  { label: 'Natural', desc: 'Verde e orgânico', font: 'Nunito', radius: '16', button: 'filled' as const, primary: '#10B981', secondary: '#34D399', bg: '#F0FDF4', emoji: '🌿' },
+  { label: 'Corporativo', desc: 'Formal e confiável', font: 'Roboto', radius: '8', button: 'filled' as const, primary: '#1E40AF', secondary: '#3B82F6', bg: '#F8FAFC', emoji: '🏢' },
+  { label: 'Sunset', desc: 'Quente e acolhedor', font: 'Lato', radius: '20', button: 'gradient' as const, primary: '#FF4500', secondary: '#FB923C', bg: '#FFF7ED', emoji: '🌅' },
+  { label: 'Minimal', desc: 'Puro e sem distrações', font: 'Inter', radius: '0', button: 'outlined' as const, primary: '#000000', secondary: '#6B7280', bg: '#FFFFFF', emoji: '⬜' },
+  // Row 3 - Criativos
+  { label: 'Neon Cyber', desc: 'Futurista e ousado', font: 'Montserrat', radius: '4', button: 'gradient' as const, primary: '#00FF88', secondary: '#00D4FF', bg: '#0A0A0A', emoji: '⚡' },
+  { label: 'Lavanda', desc: 'Suave e relaxante', font: 'Nunito', radius: '24', button: 'filled' as const, primary: '#8B5CF6', secondary: '#C4B5FD', bg: '#FAF5FF', emoji: '💜' },
+  { label: 'Terracota', desc: 'Rústico e aconchegante', font: 'Playfair Display', radius: '12', button: 'filled' as const, primary: '#C2410C', secondary: '#EA580C', bg: '#FEF3C7', emoji: '🏺' },
+  { label: 'Oceano', desc: 'Calmo e profundo', font: 'Lato', radius: '16', button: 'gradient' as const, primary: '#0284C7', secondary: '#06B6D4', bg: '#ECFEFF', emoji: '🌊' },
+  // Row 4 - Temáticos
+  { label: 'Cherry Blossom', desc: 'Delicado e feminino', font: 'Nunito', radius: '24', button: 'filled' as const, primary: '#DB2777', secondary: '#F9A8D4', bg: '#FFF1F2', emoji: '🌸' },
+  { label: 'Midnight Gold', desc: 'Luxuoso e exclusivo', font: 'Playfair Display', radius: '4', button: 'outlined' as const, primary: '#D97706', secondary: '#FCD34D', bg: '#18181B', emoji: '✨' },
+  { label: 'Arctic', desc: 'Frio e minimalista', font: 'Inter', radius: '12', button: 'outlined' as const, primary: '#64748B', secondary: '#94A3B8', bg: '#F1F5F9', emoji: '❄️' },
+  { label: 'Tropical', desc: 'Exótico e energético', font: 'Poppins', radius: '20', button: 'gradient' as const, primary: '#059669', secondary: '#FBBF24', bg: '#FFFBEB', emoji: '🌴' },
+  // Row 5 - Ousados
+  { label: 'Brutalist', desc: 'Bold e impactante', font: 'Montserrat', radius: '0', button: 'filled' as const, primary: '#DC2626', secondary: '#000000', bg: '#FAFAFA', emoji: '🔴' },
+  { label: 'Glassmorphism', desc: 'Transparente e moderno', font: 'Inter', radius: '20', button: 'gradient' as const, primary: '#7C3AED', secondary: '#2DD4BF', bg: '#F5F3FF', emoji: '🔮' },
+  { label: 'Retro Wave', desc: 'Nostalgia dos anos 80', font: 'Montserrat', radius: '8', button: 'gradient' as const, primary: '#E11D48', secondary: '#7C3AED', bg: '#1E1B4B', emoji: '🕹️' },
+  { label: 'Sage', desc: 'Tons terrosos e zen', font: 'Lato', radius: '16', button: 'filled' as const, primary: '#4D7C0F', secondary: '#84CC16', bg: '#F7FEE7', emoji: '🍃' },
 ];
 
 const COLOR_PRESETS = [
@@ -296,7 +313,7 @@ const BookingThemeBuilder = () => {
     toast({ title: 'Link copiado!' });
   };
 
-  const isDarkBg = theme.background_color === '#111827' || theme.background_color === '#000000';
+  const isDarkBg = ['#111827', '#000000', '#0A0A0A', '#18181B', '#1E1B4B'].includes(theme.background_color);
 
   if (loading) {
     return (
@@ -576,7 +593,7 @@ const BookingThemeBuilder = () => {
                       <div className="grid grid-cols-2 gap-3">
                         {STYLE_THEMES.map(t => {
                           const isActive = theme.primary_color === t.primary && theme.font_family === t.font && theme.border_radius === t.radius;
-                          const tDark = t.bg === '#111827';
+                          const tDark = t.bg === '#111827' || t.bg === '#0A0A0A' || t.bg === '#18181B' || t.bg === '#1E1B4B';
                           return (
                             <button
                               key={t.label}
@@ -588,9 +605,7 @@ const BookingThemeBuilder = () => {
                             >
                               <div className="p-3" style={{ backgroundColor: t.bg }}>
                                 <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: `${t.primary}20` }}>
-                                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.primary }} />
-                                  </div>
+                                  <span className="text-sm">{t.emoji}</span>
                                   <div className="h-2 flex-1 rounded-full" style={{ backgroundColor: tDark ? '#374151' : '#E5E7EB' }} />
                                 </div>
                                 <div className="space-y-1 mb-2">
@@ -611,7 +626,7 @@ const BookingThemeBuilder = () => {
                               </div>
                               <div className="px-3 py-2 bg-white border-t">
                                 <p className="text-[11px] font-semibold text-gray-800" style={{ fontFamily: t.font }}>{t.label}</p>
-                                <p className="text-[9px] text-gray-500">{t.font} • {t.button === 'filled' ? 'Sólido' : t.button === 'outlined' ? 'Contorno' : 'Gradiente'}</p>
+                                <p className="text-[9px] text-gray-400">{t.desc}</p>
                               </div>
                               {isActive && (
                                 <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: t.primary }}>

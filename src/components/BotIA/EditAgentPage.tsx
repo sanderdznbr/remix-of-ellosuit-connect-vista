@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Bot, Save, Loader2, Trash2, Upload, FileText, X,
   Settings2, MessageSquare, Brain, Zap, Shield, Send, User,
-  Smile, AlertTriangle, Globe, Clock, Hash
+  Smile, AlertTriangle, Globe, Clock, Hash, Sparkles, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,6 +130,7 @@ const EditAgentPage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [aiImprovingField, setAiImprovingField] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -143,6 +144,42 @@ const EditAgentPage: React.FC = () => {
   }, [chatMessages]);
 
   const markChanged = () => { if (!hasChanges) setHasChanges(true); };
+
+  const improveWithAI = async (fieldName: string, currentText: string, setter: (v: string) => void, context: string) => {
+    if (!currentText.trim()) {
+      toast({ title: 'Campo vazio', description: 'Escreva algo primeiro para melhorar com IA', variant: 'destructive' });
+      return;
+    }
+    setAiImprovingField(fieldName);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: [
+            {
+              role: 'system',
+              content: `Você é um especialista em criação de agentes de IA e chatbots. Sua tarefa é melhorar o texto fornecido pelo usuário para o campo "${context}" de um agente de IA. Melhore o texto tornando-o mais claro, profissional, detalhado e eficaz. Mantenha a essência e intenção original. Retorne APENAS o texto melhorado, sem explicações ou comentários adicionais.`
+            },
+            {
+              role: 'user',
+              content: `Melhore este texto para o campo "${context}" de um agente de IA:\n\n${currentText}`
+            }
+          ]
+        }
+      });
+      if (error) throw error;
+      const improved = data?.response || data?.message || '';
+      if (improved.trim()) {
+        setter(improved.trim());
+        markChanged();
+        toast({ title: 'Texto melhorado!', description: 'O texto foi aprimorado pela IA' });
+      }
+    } catch (e: any) {
+      console.error('AI improve error:', e);
+      toast({ title: 'Erro', description: 'Não foi possível melhorar o texto. Tente novamente.', variant: 'destructive' });
+    } finally {
+      setAiImprovingField(null);
+    }
+  };
 
   const loadAgent = async () => {
     try {
@@ -477,8 +514,26 @@ const EditAgentPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Mensagem de Boas-vindas</Label>
-                  <p className="text-xs text-gray-400 mb-1.5">Primeira mensagem que o agente envia ao iniciar uma conversa</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Mensagem de Boas-vindas</Label>
+                      <p className="text-xs text-gray-400">Primeira mensagem que o agente envia ao iniciar uma conversa</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => improveWithAI('welcome', welcomeMessage, setWelcomeMessage, 'Mensagem de Boas-vindas')}
+                      disabled={aiImprovingField === 'welcome' || !welcomeMessage.trim()}
+                      className="gap-1.5 text-xs"
+                    >
+                      {aiImprovingField === 'welcome' ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Melhorando...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5" /> Melhorar com IA</>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea
                     value={welcomeMessage}
                     onChange={(e) => { setWelcomeMessage(e.target.value); markChanged(); }}
@@ -533,8 +588,26 @@ const EditAgentPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Personalidade *</Label>
-                  <p className="text-xs text-gray-400 mb-1.5">Defina o tom e estilo de comunicação em detalhe</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Personalidade *</Label>
+                      <p className="text-xs text-gray-400">Defina o tom e estilo de comunicação em detalhe</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => improveWithAI('personality', personality, setPersonality, 'Personalidade')}
+                      disabled={aiImprovingField === 'personality' || !personality.trim()}
+                      className="gap-1.5 text-xs"
+                    >
+                      {aiImprovingField === 'personality' ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Melhorando...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5" /> Melhorar com IA</>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea
                     value={personality}
                     onChange={(e) => { setPersonality(e.target.value); markChanged(); }}
@@ -544,8 +617,26 @@ const EditAgentPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Prompt / Instruções *</Label>
-                  <p className="text-xs text-gray-400 mb-1.5">Descreva detalhadamente como o agente deve se comportar</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Prompt / Instruções *</Label>
+                      <p className="text-xs text-gray-400">Descreva detalhadamente como o agente deve se comportar</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => improveWithAI('instructions', instructions, setInstructions, 'Instruções/Prompt')}
+                      disabled={aiImprovingField === 'instructions' || !instructions.trim()}
+                      className="gap-1.5 text-xs"
+                    >
+                      {aiImprovingField === 'instructions' ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Melhorando...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5" /> Melhorar com IA</>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea
                     value={instructions}
                     onChange={(e) => { setInstructions(e.target.value); markChanged(); }}
@@ -567,8 +658,26 @@ const EditAgentPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">O que NÃO fazer</Label>
-                  <p className="text-xs text-gray-400 mb-1.5">Defina o que o agente nunca deve fazer ou falar</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">O que NÃO fazer</Label>
+                      <p className="text-xs text-gray-400">Defina o que o agente nunca deve fazer ou falar</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => improveWithAI('doNot', doNot, setDoNot, 'Restrições e Limites')}
+                      disabled={aiImprovingField === 'doNot' || !doNot.trim()}
+                      className="gap-1.5 text-xs"
+                    >
+                      {aiImprovingField === 'doNot' ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Melhorando...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5" /> Melhorar com IA</>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea
                     value={doNot}
                     onChange={(e) => { setDoNot(e.target.value); markChanged(); }}

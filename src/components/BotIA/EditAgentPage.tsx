@@ -33,12 +33,23 @@ const TABS = [
 ];
 
 const AI_MODELS = [
-  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', desc: 'Rápido e eficiente' },
-  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Balanceado' },
-  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Mais avançado' },
-  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini', desc: 'Rápido' },
-  { value: 'openai/gpt-5', label: 'GPT-5', desc: 'Mais poderoso' },
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', desc: 'Rápido e eficiente', tier: 'fast' },
+  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Balanceado', tier: 'balanced' },
+  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Mais avançado', tier: 'advanced' },
+  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini', desc: 'Rápido', tier: 'fast' },
+  { value: 'openai/gpt-5', label: 'GPT-5', desc: 'Mais poderoso', tier: 'advanced' },
 ];
+
+function getRecommendedModel(promptText: string, instructionsText: string): string {
+  const combined = (promptText + ' ' + instructionsText).trim();
+  const len = combined.length;
+  const complexKeywords = ['analis', 'consult', 'diagnóstic', 'relatório', 'estratég', 'jurídic', 'médic', 'técnic', 'financ', 'contábil', 'audit', 'compliance'];
+  const hasComplexity = complexKeywords.some(k => combined.toLowerCase().includes(k));
+  
+  if (len > 1500 || hasComplexity) return 'google/gemini-2.5-pro';
+  if (len > 500) return 'google/gemini-2.5-flash';
+  return 'google/gemini-3-flash-preview';
+}
 
 const HUMOR_OPTIONS = [
   { value: 'profissional', label: 'Profissional', emoji: '💼' },
@@ -495,22 +506,54 @@ const EditAgentPage: React.FC = () => {
 
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Modelo de IA</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1.5">
-                    {AI_MODELS.map(m => (
-                      <button
-                        key={m.value}
-                        onClick={() => { setModel(m.value); markChanged(); }}
-                        className={`p-3 rounded-xl border text-left transition-all ${
-                          model === m.value
-                            ? 'border-2 bg-orange-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        style={model === m.value ? { borderColor: OMNI_COLOR } : {}}
-                      >
-                        <p className="text-sm font-medium text-gray-900">{m.label}</p>
-                        <p className="text-xs text-gray-400">{m.desc}</p>
-                      </button>
-                    ))}
+                  {(() => {
+                    const recommended = getRecommendedModel(personality, instructions);
+                    const recommendedLabel = AI_MODELS.find(m => m.value === recommended)?.label;
+                    return recommended !== model ? (
+                      <div className="mt-1 mb-2 flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-700 text-[10px] gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Recomendado: {recommendedLabel}
+                        </Badge>
+                        <button
+                          onClick={() => { setModel(recommended); markChanged(); }}
+                          className="text-[11px] text-blue-600 hover:underline"
+                        >
+                          Usar recomendado
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-1 mb-2">
+                        <Badge className="bg-green-100 text-green-700 text-[10px] gap-1">
+                          ✓ Modelo ideal para seu prompt
+                        </Badge>
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {AI_MODELS.map(m => {
+                      const isRecommended = m.value === getRecommendedModel(personality, instructions);
+                      return (
+                        <button
+                          key={m.value}
+                          onClick={() => { setModel(m.value); markChanged(); }}
+                          className={`p-3 rounded-xl border text-left transition-all relative ${
+                            model === m.value
+                              ? 'border-2 bg-orange-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          style={model === m.value ? { borderColor: OMNI_COLOR } : {}}
+                        >
+                          <p className="text-sm font-medium text-gray-900">
+                            {m.label}
+                            {isRecommended && model !== m.value && (
+                              <span className="ml-1.5 text-[10px] text-blue-500 font-normal">★ recomendado</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-400">{m.desc}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

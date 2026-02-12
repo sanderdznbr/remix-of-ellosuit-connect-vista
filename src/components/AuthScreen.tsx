@@ -11,6 +11,7 @@ import ellosuitLogo from '@/assets/ellosuit-logo.png';
 import authHero from '@/assets/auth-hero.jpg';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
+import { useAdminMaster } from '@/hooks/useAdminMaster';
 
 const AuthScreen = () => {
   const { isMobile } = useIsMobile();
@@ -26,20 +27,23 @@ const AuthScreen = () => {
   const [companyName, setCompanyName] = useState('');
   
   const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { isAdminMaster, loading: adminLoading } = useAdminMaster();
   const navigate = useNavigate();
   const location = useLocation();
 
   const getReturnPath = () => {
     const urlParams = new URLSearchParams(location.search);
     const returnTo = urlParams.get('returnTo');
-    return returnTo === 'tarefas' ? '/tarefas' : '/dashboard';
+    if (returnTo === 'tarefas') return '/tarefas';
+    if (isAdminMaster) return '/dashboard/admin';
+    return '/dashboard';
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && !adminLoading) {
       navigate(getReturnPath(), { replace: true });
     }
-  }, [user, navigate, location.search]);
+  }, [user, adminLoading, isAdminMaster, navigate, location.search]);
 
   if (isMobile) {
     return <MobileAuthScreen />;

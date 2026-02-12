@@ -91,6 +91,11 @@ export interface SubscriptionData {
   monthlyPrice: number;
   baseUsersIncluded: number;
   
+  // Trial
+  isTrialActive: boolean;
+  isTrialExpired: boolean;
+  trialDaysRemaining: number;
+  
   // Módulos
   modules: SubscriptionModule[];
   hasOmni: boolean;
@@ -108,6 +113,7 @@ export interface SubscriptionData {
   
   // Helpers
   hasModule: (module: ModuleType) => boolean;
+  hasModuleAccess: (module: ModuleType) => boolean;
   checkLimit: (resource: ResourceType) => boolean;
   getUsagePercent: (resource: ResourceType) => number;
   canAddUser: () => boolean;
@@ -281,6 +287,14 @@ export function useSubscription(): SubscriptionData {
     fetchSubscriptionData();
   }, [fetchSubscriptionData]);
 
+  // Trial helpers
+  const now = new Date();
+  const isTrialActive = status === 'trialing' && trialEndsAt !== null && trialEndsAt > now;
+  const isTrialExpired = status === 'trialing' && trialEndsAt !== null && trialEndsAt <= now;
+  const trialDaysRemaining = isTrialActive && trialEndsAt 
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) 
+    : 0;
+
   // Helper functions
   const hasModule = useCallback((module: ModuleType): boolean => {
     // Enterprise has all modules
@@ -292,6 +306,14 @@ export function useSubscription(): SubscriptionData {
     // Check active modules
     return modules.some(m => m.type === module && m.isActive);
   }, [planType, modules]);
+
+  // hasModuleAccess: returns true if user can USE the module (has it OR is in active trial)
+  const hasModuleAccess = useCallback((module: ModuleType): boolean => {
+    // During active trial, all modules are accessible
+    if (isTrialActive) return true;
+    // After trial or with active subscription, check module ownership
+    return hasModule(module);
+  }, [isTrialActive, hasModule]);
 
   const hasOmni = hasModule('omni');
   const hasFlow = hasModule('flow');
@@ -352,13 +374,13 @@ export function useSubscription(): SubscriptionData {
   }, [usage, limits]);
 
   const canAddUser = useCallback(() => checkLimit('users'), [checkLimit]);
-  const canAddWhatsApp = useCallback(() => hasOmni && checkLimit('whatsapp_sessions_active'), [hasOmni, checkLimit]);
-  const canAddBookingLink = useCallback(() => hasFlow && checkLimit('booking_links_active'), [hasFlow, checkLimit]);
-  const canAddAiAgent = useCallback(() => hasOmni && checkLimit('ai_agents_active'), [hasOmni, checkLimit]);
-  const canSendEmail = useCallback(() => hasOmni && checkLimit('emails_sent'), [hasOmni, checkLimit]);
-  const canCreateTrackedDoc = useCallback(() => hasTrack && checkLimit('tracked_docs_created'), [hasTrack, checkLimit]);
+  const canAddWhatsApp = useCallback(() => hasModuleAccess('omni') && checkLimit('whatsapp_sessions_active'), [hasModuleAccess, checkLimit]);
+  const canAddBookingLink = useCallback(() => hasModuleAccess('flow') && checkLimit('booking_links_active'), [hasModuleAccess, checkLimit]);
+  const canAddAiAgent = useCallback(() => hasModuleAccess('omni') && checkLimit('ai_agents_active'), [hasModuleAccess, checkLimit]);
+  const canSendEmail = useCallback(() => hasModuleAccess('omni') && checkLimit('emails_sent'), [hasModuleAccess, checkLimit]);
+  const canCreateTrackedDoc = useCallback(() => hasModuleAccess('track') && checkLimit('tracked_docs_created'), [hasModuleAccess, checkLimit]);
 
-  const isActive = status === 'active' || status === 'trialing';
+  const isActive = status === 'active' || isTrialActive;
 
   return {
     isLoading,
@@ -370,6 +392,9 @@ export function useSubscription(): SubscriptionData {
     currentPeriodEnd,
     monthlyPrice,
     baseUsersIncluded,
+    isTrialActive,
+    isTrialExpired,
+    trialDaysRemaining,
     modules,
     hasOmni,
     hasFlow,
@@ -378,6 +403,7 @@ export function useSubscription(): SubscriptionData {
     limits,
     usage,
     hasModule,
+    hasModuleAccess,
     checkLimit,
     getUsagePercent,
     canAddUser,

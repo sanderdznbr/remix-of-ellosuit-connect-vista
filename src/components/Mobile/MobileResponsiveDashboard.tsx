@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
+import ModuleGate from '@/components/shared/ModuleGate';
 
 // Import components
 import Home from '@/components/Dashboard/Home';
@@ -93,49 +94,51 @@ const MobileResponsiveDashboard = () => {
         <Route path="/" element={<Home onNavigate={handleNavigate} />} />
         
         {/* Hub Pages */}
-        <Route path="/omni" element={<OmniHub />} />
-        <Route path="/flows" element={<FlowsHub />} />
-        <Route path="/track" element={<TrackHub />} />
+        <Route path="/omni" element={<ModuleGate module="omni"><OmniHub /></ModuleGate>} />
+        <Route path="/flows" element={<ModuleGate module="flow"><FlowsHub /></ModuleGate>} />
+        <Route path="/track" element={<ModuleGate module="track"><TrackHub /></ModuleGate>} />
         <Route path="/suite" element={<SuiteHub />} />
         
-        {/* Inteligência Artificial */}
-        <Route path="/bot-ia" element={<BotIADashboard />} />
-        <Route path="/bot-ia/novo" element={<CreateAgentPage />} />
-        <Route path="/bot-ia/editar/:id" element={<EditAgentPage />} />
-        <Route path="/chatbot" element={<ChatbotManagement />} />
-        <Route path="/chatbot-builder" element={<ChatBotBuilder />} />
+        {/* Inteligência Artificial - Omni */}
+        <Route path="/bot-ia" element={<ModuleGate module="omni"><BotIADashboard /></ModuleGate>} />
+        <Route path="/bot-ia/novo" element={<ModuleGate module="omni"><CreateAgentPage /></ModuleGate>} />
+        <Route path="/bot-ia/editar/:id" element={<ModuleGate module="omni"><EditAgentPage /></ModuleGate>} />
+        <Route path="/chatbot" element={<ModuleGate module="omni"><ChatbotManagement /></ModuleGate>} />
+        <Route path="/chatbot-builder" element={<ModuleGate module="omni"><ChatBotBuilder /></ModuleGate>} />
         
-        {/* Comunicação */}
-        <Route path="/crm-whatsapp" element={<WhatsAppCRM />} />
-        <Route path="/api-whatsapp" element={<WhatsAppApiPage />} />
-        <Route path="/disparos" element={<DisparosPage />} />
-        <Route path="/email" element={<CleanEmailMarketing />} />
-        <Route path="/email/builder" element={<EmailTemplateBuilder />} />
-        <Route path="/email-builder" element={<EmailTemplateBuilder />} />
-        <Route path="/email-templates" element={<EmailTemplatesManager />} />
-        <Route path="/email-tracker" element={<SentEmailTracker />} />
+        {/* Comunicação - Omni */}
+        <Route path="/crm-whatsapp" element={<ModuleGate module="omni"><WhatsAppCRM /></ModuleGate>} />
+        <Route path="/api-whatsapp" element={<ModuleGate module="omni"><WhatsAppApiPage /></ModuleGate>} />
+        <Route path="/disparos" element={<ModuleGate module="omni"><DisparosPage /></ModuleGate>} />
+        <Route path="/email" element={<ModuleGate module="omni"><CleanEmailMarketing /></ModuleGate>} />
+        <Route path="/email/builder" element={<ModuleGate module="omni"><EmailTemplateBuilder /></ModuleGate>} />
+        <Route path="/email-builder" element={<ModuleGate module="omni"><EmailTemplateBuilder /></ModuleGate>} />
+        <Route path="/email-templates" element={<ModuleGate module="omni"><EmailTemplatesManager /></ModuleGate>} />
+        <Route path="/email-tracker" element={<ModuleGate module="omni"><SentEmailTracker /></ModuleGate>} />
+        <Route path="/leads" element={<ModuleGate module="omni"><LeadFunnelsManager /></ModuleGate>} />
+        <Route path="/leads/builder" element={<ModuleGate module="omni"><LeadFunnelBuilder /></ModuleGate>} />
+        <Route path="/leads/analytics/:funnelId" element={<ModuleGate module="omni"><LeadFunnelAnalytics /></ModuleGate>} />
         
-        {/* Produtividade */}
-        <Route path="/agenda" element={<MyCalendar />} />
-        <Route path="/agenda-aberta" element={<ImprovedAgendaAberta />} />
-        <Route path="/agenda-aberta/editor" element={<BookingThemeBuilder />} />
-        <Route path="/tasks" element={<TarefasWeb />} />
-        <Route path="/reunioes" element={<MeetingRooms />} />
-        <Route path="/reunioes/gravacoes" element={<MeetingRecordings />} />
-        <Route path="/fluxos" element={<FluxosBoard />} />
-        <Route path="/leads" element={<LeadFunnelsManager />} />
-        <Route path="/leads/builder" element={<LeadFunnelBuilder />} />
-        <Route path="/leads/analytics/:funnelId" element={<LeadFunnelAnalytics />} />
+        {/* Produtividade - Flow */}
+        <Route path="/agenda" element={<ModuleGate module="flow"><MyCalendar /></ModuleGate>} />
+        <Route path="/agenda-aberta" element={<ModuleGate module="flow"><ImprovedAgendaAberta /></ModuleGate>} />
+        <Route path="/agenda-aberta/editor" element={<ModuleGate module="flow"><BookingThemeBuilder /></ModuleGate>} />
+        <Route path="/tasks" element={<ModuleGate module="flow"><TarefasWeb /></ModuleGate>} />
+        <Route path="/reunioes" element={<ModuleGate module="flow"><MeetingRooms /></ModuleGate>} />
+        <Route path="/reunioes/gravacoes" element={<ModuleGate module="flow"><MeetingRecordings /></ModuleGate>} />
+        <Route path="/fluxos" element={<ModuleGate module="flow"><FluxosBoard /></ModuleGate>} />
         
-        {/* Gestão - Unified pages */}
+        {/* Rastreamento - Track */}
+        <Route path="/rastreamento" element={<ModuleGate module="track"><TrackUploadPage /></ModuleGate>} />
+        <Route path="/encurtador" element={<ModuleGate module="track"><LinkShortenerPage /></ModuleGate>} />
+        <Route path="/track/leads" element={<ModuleGate module="track"><LeadTrackingDashboard /></ModuleGate>} />
+        
+        {/* Gestão - Suite (sempre acessível) */}
         <Route path="/cadastros" element={<UnifiedDatabase />} />
         <Route path="/drive" element={<DriveManager />} />
         <Route path="/equipe" element={<TeamManagement />} />
-        <Route path="/rastreamento" element={<TrackUploadPage />} />
-        <Route path="/encurtador" element={<LinkShortenerPage />} />
-        <Route path="/track/leads" element={<LeadTrackingDashboard />} />
         
-        {/* Legacy routes - redirect to unified pages */}
+        {/* Legacy routes */}
         <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />
         <Route path="/fornecedores" element={<Navigate to="/dashboard/cadastros" replace />} />
         <Route path="/prospectos" element={<Navigate to="/dashboard/cadastros" replace />} />
@@ -144,12 +147,12 @@ const MobileResponsiveDashboard = () => {
         <Route path="/rastreamento-link" element={<Navigate to="/dashboard/rastreamento" replace />} />
         <Route path="/rastreamento-video" element={<Navigate to="/dashboard/rastreamento" replace />} />
         
-        {/* Insights */}
+        {/* Insights - Suite (sempre acessível) */}
         <Route path="/analytics" element={<Analytics onNavigate={handleNavigate} />} />
         <Route path="/ello-vision" element={<ElloVisionDashboard />} />
         <Route path="/relatorios" element={<ReportsDashboard />} />
         
-        {/* Configurações */}
+        {/* Configurações - Suite (sempre acessível) */}
         <Route path="/configuracoes" element={<GroupedSidebarEditor />} />
         <Route path="/personalizar" element={<ImprovedDashboardCustomizer />} />
         <Route path="/seguranca" element={<SecuritySettings />} />
@@ -157,7 +160,7 @@ const MobileResponsiveDashboard = () => {
         <Route path="/reportar-problema" element={<ReportProblemForm />} />
         <Route path="/ajuda" element={<HelpCenter />} />
         
-        {/* User Profile & Subscription */}
+        {/* User Profile & Subscription - sempre acessível */}
         <Route path="/perfil" element={<UserProfilePage />} />
         <Route path="/assinatura" element={<SubscriptionPage />} />
         

@@ -4,13 +4,29 @@ import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Building2, Users, Search, LogIn, Eye } from 'lucide-react';
+import { ArrowLeft, Building2, Search, LogIn, Eye, UserCog, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+
+const statusColors: Record<string, string> = {
+  active: 'bg-green-100 text-green-700',
+  trialing: 'bg-blue-100 text-blue-700',
+  canceled: 'bg-red-100 text-red-700',
+  past_due: 'bg-yellow-100 text-yellow-700',
+};
+
+const roleColors: Record<string, string> = {
+  adminmaster: 'bg-red-100 text-red-700',
+  admin: 'bg-purple-100 text-purple-700',
+  manager: 'bg-blue-100 text-blue-700',
+  employee: 'bg-gray-100 text-gray-600',
+};
 
 const AdminUsersPanel = () => {
   const { isAdminMaster, loading: authLoading, callAdminApi } = useAdminMaster();
@@ -24,6 +40,8 @@ const AdminUsersPanel = () => {
   const [impersonateModal, setImpersonateModal] = useState<{ userId: string; email: string } | null>(null);
   const [reason, setReason] = useState('');
   const [impersonating, setImpersonating] = useState(false);
+  const [roleChangeUser, setRoleChangeUser] = useState<any>(null);
+  const [newRole, setNewRole] = useState('');
 
   useEffect(() => {
     if (!isAdminMaster || authLoading) return;
@@ -67,6 +85,23 @@ const AdminUsersPanel = () => {
     }
   };
 
+  const handleChangeRole = async () => {
+    if (!roleChangeUser || !newRole || !selectedCompany) return;
+    try {
+      await callAdminApi('change-role', undefined, {
+        userId: roleChangeUser.user_id,
+        companyId: selectedCompany.id,
+        newRole,
+      });
+      toast.success('Role alterada com sucesso');
+      setRoleChangeUser(null);
+      // Refresh
+      viewCompany(selectedCompany);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   if (authLoading) return <div className="p-6"><Skeleton className="h-64 w-full" /></div>;
   if (!isAdminMaster) return <Navigate to="/dashboard" replace />;
 
@@ -81,7 +116,7 @@ const AdminUsersPanel = () => {
         <Button variant="ghost" size="icon" onClick={() => selectedCompany ? (setSelectedCompany(null), setCompanyDetails(null)) : navigate('/dashboard/admin')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold">{selectedCompany ? selectedCompany.name : 'Empresas & Usuários'}</h1>
+        <h1 className="text-xl font-bold text-foreground">{selectedCompany ? selectedCompany.name : 'Empresas & Usuários'}</h1>
       </div>
 
       {!selectedCompany ? (
@@ -92,13 +127,14 @@ const AdminUsersPanel = () => {
           </div>
 
           {loading ? <Skeleton className="h-64 w-full" /> : (
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
                       <TableHead>Domínio</TableHead>
+                      <TableHead>Plano</TableHead>
                       <TableHead>Usuários</TableHead>
                       <TableHead>Criada em</TableHead>
                       <TableHead></TableHead>
@@ -107,10 +143,13 @@ const AdminUsersPanel = () => {
                   <TableBody>
                     {filtered.map(c => (
                       <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell>{c.domain || '—'}</TableCell>
-                        <TableCell>{c.userCount}</TableCell>
-                        <TableCell>{new Date(c.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="font-medium text-foreground">{c.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{c.domain || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{c.subscription?.plan_type || 'base'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-foreground">{c.userCount}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{new Date(c.created_at).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" onClick={() => viewCompany(c)}>
                             <Eye className="h-4 w-4 mr-1" /> Ver
@@ -127,42 +166,99 @@ const AdminUsersPanel = () => {
       ) : (
         loadingDetails ? <Skeleton className="h-64 w-full" /> : companyDetails && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Company Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { label: 'Usuários', value: companyDetails.users?.length || 0 },
                 { label: 'Clientes', value: companyDetails.clientsCount || 0 },
                 { label: 'Eventos', value: companyDetails.eventsCount || 0 },
                 { label: 'Agentes IA', value: companyDetails.agents?.length || 0 },
+                { label: 'Plano', value: companyDetails.subscription?.plan_type || 'base' },
               ].map(s => (
-                <Card key={s.label}>
+                <Card key={s.label} className="border-0 shadow-sm">
                   <CardContent className="p-4 text-center">
-                    <p className="text-2xl font-bold">{s.value}</p>
+                    <p className="text-2xl font-bold text-foreground capitalize">{s.value}</p>
                     <p className="text-xs text-muted-foreground">{s.label}</p>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Usuários</CardTitle></CardHeader>
+            {/* Subscription info */}
+            {companyDetails.subscription && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-sm font-semibold">Assinatura</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <Badge className={statusColors[companyDetails.subscription.status] || ''}>
+                        {companyDetails.subscription.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Valor</p>
+                      <p className="font-semibold text-foreground">R$ {Number(companyDetails.subscription.monthly_price || 0).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Trial até</p>
+                      <p className="text-foreground">{companyDetails.subscription.trial_ends_at ? new Date(companyDetails.subscription.trial_ends_at).toLocaleDateString('pt-BR') : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Módulos</p>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {(companyDetails.modules || []).filter((m: any) => m.is_active).map((m: any) => (
+                          <Badge key={m.module_type} variant="outline" className="capitalize text-xs">{m.module_type}</Badge>
+                        ))}
+                        {(companyDetails.modules || []).filter((m: any) => m.is_active).length === 0 && (
+                          <span className="text-xs text-muted-foreground">Nenhum</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Users with emails */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold">Usuários</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User ID</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead>Último acesso</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(companyDetails.users || []).map((u: any) => (
                       <TableRow key={u.id}>
-                        <TableCell className="font-mono text-xs">{u.user_id}</TableCell>
-                        <TableCell>{u.role}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => setImpersonateModal({ userId: u.user_id, email: u.user_id })}>
-                            <LogIn className="h-4 w-4 mr-1" /> Logar como
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm text-foreground">{u.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={roleColors[u.role] || ''}>
+                            {u.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Nunca'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => { setRoleChangeUser(u); setNewRole(u.role); }}>
+                              <UserCog className="h-4 w-4 mr-1" /> Role
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => setImpersonateModal({ userId: u.user_id, email: u.email })}>
+                              <LogIn className="h-4 w-4 mr-1" /> Logar como
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -171,17 +267,18 @@ const AdminUsersPanel = () => {
               </CardContent>
             </Card>
 
+            {/* Agents */}
             {companyDetails.agents?.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Agentes IA</CardTitle></CardHeader>
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-sm font-semibold">Agentes IA</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {companyDetails.agents.map((a: any) => (
                       <div key={a.id} className="flex justify-between items-center py-1 border-b last:border-0">
-                        <span className="text-sm">{a.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${a.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className="text-sm text-foreground">{a.name}</span>
+                        <Badge variant="secondary" className={a.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
                           {a.is_active ? 'Ativo' : 'Inativo'}
-                        </span>
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -189,17 +286,18 @@ const AdminUsersPanel = () => {
               </Card>
             )}
 
+            {/* Chatbot Flows */}
             {companyDetails.flows?.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Fluxos de Chatbot</CardTitle></CardHeader>
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-sm font-semibold">Fluxos de Chatbot</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {companyDetails.flows.map((f: any) => (
                       <div key={f.id} className="flex justify-between items-center py-1 border-b last:border-0">
-                        <span className="text-sm">{f.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${f.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className="text-sm text-foreground">{f.name}</span>
+                        <Badge variant="secondary" className={f.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
                           {f.is_active ? 'Ativo' : 'Inativo'}
-                        </span>
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -214,8 +312,8 @@ const AdminUsersPanel = () => {
       <Dialog open={!!impersonateModal} onOpenChange={() => setImpersonateModal(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Logar como usuário</DialogTitle>
-            <DialogDescription>Um link será gerado para acessar a conta. Esta ação será registrada.</DialogDescription>
+            <DialogTitle>Logar como: {impersonateModal?.email}</DialogTitle>
+            <DialogDescription>Um link será gerado para acessar a conta. Esta ação será registrada em log de auditoria.</DialogDescription>
           </DialogHeader>
           <Textarea placeholder="Motivo da impersonação..." value={reason} onChange={e => setReason(e.target.value)} />
           <DialogFooter>
@@ -223,6 +321,31 @@ const AdminUsersPanel = () => {
             <Button onClick={handleImpersonate} disabled={impersonating}>
               {impersonating ? 'Gerando...' : 'Gerar Link'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Modal */}
+      <Dialog open={!!roleChangeUser} onOpenChange={() => setRoleChangeUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Role: {roleChangeUser?.email}</DialogTitle>
+            <DialogDescription>Altere o papel deste usuário na empresa.</DialogDescription>
+          </DialogHeader>
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="adminmaster">Admin Master</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+              <SelectItem value="employee">Employee</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleChangeUser(null)}>Cancelar</Button>
+            <Button onClick={handleChangeRole}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

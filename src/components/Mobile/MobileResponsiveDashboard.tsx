@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminMaster } from '@/hooks/useAdminMaster';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import ModuleGate from '@/components/shared/ModuleGate';
 
@@ -70,15 +71,16 @@ import AdminSupportPanel from '@/components/Admin/AdminSupportPanel';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
+  const { isAdminMaster, loading: adminLoading } = useAdminMaster();
 
   const handleNavigate = (page: string) => {
     console.log('Navigate to:', page);
   };
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -90,8 +92,8 @@ const MobileResponsiveDashboard = () => {
   return (
     <DashboardLayout>
       <Routes>
-        {/* Dashboard */}
-        <Route path="/" element={<Home onNavigate={handleNavigate} />} />
+        {/* Dashboard - adminmaster vai direto para admin */}
+        <Route path="/" element={isAdminMaster ? <Navigate to="/dashboard/admin" replace /> : <Home onNavigate={handleNavigate} />} />
         
         {/* Hub Pages */}
         <Route path="/omni" element={<ModuleGate module="omni"><OmniHub /></ModuleGate>} />

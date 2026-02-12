@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminMaster } from '@/hooks/useAdminMaster';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,6 @@ const AdminMasterDashboard = () => {
   }, [isAdminMaster, authLoading]);
 
   if (authLoading) return <div className="p-6"><Skeleton className="h-64 w-full" /></div>;
-  if (!isAdminMaster) return <Navigate to="/dashboard" replace />;
 
   const kpis = [
     { label: 'Empresas', value: stats?.totalCompanies || 0, icon: Building2, color: 'bg-blue-50 text-blue-600' },
@@ -65,14 +64,9 @@ const AdminMasterDashboard = () => {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-red-50">
-          <Shield className="h-7 w-7 text-red-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Master</h1>
-          <p className="text-sm text-muted-foreground">Painel administrativo da plataforma</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Visão Geral</h1>
+        <p className="text-sm text-muted-foreground">Métricas e indicadores da plataforma</p>
       </div>
 
       {/* KPI Cards */}

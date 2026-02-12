@@ -20,7 +20,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // Verify the requesting user
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } }
     })
@@ -32,8 +31,6 @@ Deno.serve(async (req) => {
     }
 
     const adminUserId = claimsData.claims.sub
-
-    // Use service role to check adminmaster status
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
     const { data: adminCheck } = await serviceClient
@@ -50,20 +47,18 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const action = url.searchParams.get('action') || 'impersonate'
 
+    // ── IMPERSONATE ──
     if (action === 'impersonate') {
       const { targetUserId, reason } = await req.json()
-
       if (!targetUserId) {
         return new Response(JSON.stringify({ error: 'targetUserId required' }), { status: 400, headers: corsHeaders })
       }
 
-      // Generate magic link for impersonation
       const { data: userData, error: userError } = await serviceClient.auth.admin.getUserById(targetUserId)
       if (userError || !userData?.user) {
         return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: corsHeaders })
       }
 
-      // Log the impersonation
       await serviceClient.from('admin_impersonation_logs').insert({
         admin_user_id: adminUserId,
         target_user_id: targetUserId,
@@ -71,7 +66,6 @@ Deno.serve(async (req) => {
         ip_address: req.headers.get('x-forwarded-for') || 'unknown',
       })
 
-      // Generate a session for the target user
       const { data: sessionData, error: sessionError } = await serviceClient.auth.admin.generateLink({
         type: 'magiclink',
         email: userData.user.email!,
@@ -88,74 +82,238 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // ── STATS (enhanced) ──
     if (action === 'stats') {
-      // Get platform-wide stats
-      const [companies, subscriptions, users] = await Promise.all([
+      const [companies, subscriptions, users, tickets, bugs] = await Promise.all([
         serviceClient.from('companies').select('id, name, created_at', { count: 'exact' }),
         serviceClient.from('subscriptions').select('*'),
         serviceClient.from('company_users').select('user_id, role, company_id, created_at', { count: 'exact' }),
+        serviceClient.from('support_tickets').select('id, status', { count: 'exact' }),
+        serviceClient.from('bug_reports').select('id, status', { count: 'exact' }),
       ])
 
-      const activeSubscriptions = (subscriptions.data || []).filter(s => s.status === 'active')
-      const monthlyRevenue = activeSubscriptions.reduce((sum, s) => sum + (s.monthly_price || 0), 0)
+      const allSubs = subscriptions.data || []
+      const activeSubs = allSubs.filter(s => s.status === 'active')
+      const trialingSubs = allSubs.filter(s => s.status === 'trialing')
+      const canceledSubs = allSubs.filter(s => s.status === 'canceled')
+      const pastDueSubs = allSubs.filter(s => s.status === 'past_due')
+      const monthlyRevenue = activeSubs.reduce((sum, s) => sum + Number(s.monthly_price || 0), 0)
+
+      // Plan breakdown
+      const planBreakdown: Record<string, number> = {}
+      allSubs.forEach(s => {
+        planBreakdown[s.plan_type] = (planBreakdown[s.plan_type] || 0) + 1
+      })
+
+      // Recent signups (last 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const recentCompanies = (companies.data || []).filter(c => c.created_at >= thirtyDaysAgo)
+
+      // Open tickets/bugs
+      const openTickets = (tickets.data || []).filter(t => t.status === 'open').length
+      const openBugs = (bugs.data || []).filter(b => b.status === 'open' || b.status === 'in_progress').length
+
+      // Registration trend (last 7 days)
+      const registrationTrend: Record<string, number> = {}
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const key = d.toISOString().split('T')[0]
+        registrationTrend[key] = 0
+      }
+      ;(companies.data || []).forEach(c => {
+        const day = c.created_at.split('T')[0]
+        if (registrationTrend[day] !== undefined) {
+          registrationTrend[day]++
+        }
+      })
 
       return new Response(JSON.stringify({
         totalCompanies: companies.count || 0,
         totalUsers: users.count || 0,
-        activeSubscriptions: activeSubscriptions.length,
+        activeSubscriptions: activeSubs.length,
+        trialingSubscriptions: trialingSubs.length,
+        canceledSubscriptions: canceledSubs.length,
+        pastDueSubscriptions: pastDueSubs.length,
         monthlyRevenue,
-        subscriptions: subscriptions.data || [],
+        planBreakdown,
+        recentSignups: recentCompanies.length,
+        openTickets,
+        openBugs,
+        registrationTrend,
+        subscriptions: allSubs,
         recentCompanies: (companies.data || []).slice(0, 20),
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // ── COMPANY DETAILS (enhanced with user emails) ──
     if (action === 'company-details') {
       const companyId = url.searchParams.get('companyId')
       if (!companyId) {
         return new Response(JSON.stringify({ error: 'companyId required' }), { status: 400, headers: corsHeaders })
       }
 
-      const [company, users, clients, events, agents, flows] = await Promise.all([
+      const [company, companyUsers, clients, events, agents, flows, subscription, modules] = await Promise.all([
         serviceClient.from('companies').select('*').eq('id', companyId).single(),
         serviceClient.from('company_users').select('*').eq('company_id', companyId),
         serviceClient.from('clients').select('id', { count: 'exact' }).eq('company_id', companyId),
         serviceClient.from('calendar_events').select('id', { count: 'exact' }).eq('company_id', companyId),
         serviceClient.from('ai_agents').select('id, name, is_active').eq('company_id', companyId),
         serviceClient.from('chatbot_flows').select('id, name, is_active').eq('company_id', companyId),
+        serviceClient.from('subscriptions').select('*').eq('company_id', companyId).maybeSingle(),
+        serviceClient.from('subscription_modules').select('*').eq('company_id', companyId),
       ])
+
+      // Fetch user emails from auth
+      const usersWithEmail = await Promise.all(
+        (companyUsers.data || []).map(async (cu) => {
+          try {
+            const { data } = await serviceClient.auth.admin.getUserById(cu.user_id)
+            return { ...cu, email: data?.user?.email || 'N/A', last_sign_in: data?.user?.last_sign_in_at }
+          } catch {
+            return { ...cu, email: 'N/A', last_sign_in: null }
+          }
+        })
+      )
 
       return new Response(JSON.stringify({
         company: company.data,
-        users: users.data || [],
+        users: usersWithEmail,
         clientsCount: clients.count || 0,
         eventsCount: events.count || 0,
         agents: agents.data || [],
         flows: flows.data || [],
+        subscription: subscription.data,
+        modules: modules.data || [],
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // ── ALL COMPANIES ──
     if (action === 'all-companies') {
       const { data: allCompanies } = await serviceClient
         .from('companies')
         .select('id, name, domain, created_at')
         .order('created_at', { ascending: false })
 
-      // Get user counts per company
       const { data: userCounts } = await serviceClient
         .from('company_users')
         .select('company_id')
+
+      const { data: allSubs } = await serviceClient
+        .from('subscriptions')
+        .select('company_id, plan_type, status, monthly_price')
 
       const companyCounts: Record<string, number> = {}
       ;(userCounts || []).forEach(u => {
         companyCounts[u.company_id] = (companyCounts[u.company_id] || 0) + 1
       })
 
+      const subMap: Record<string, any> = {}
+      ;(allSubs || []).forEach(s => {
+        subMap[s.company_id] = s
+      })
+
       const enriched = (allCompanies || []).map(c => ({
         ...c,
         userCount: companyCounts[c.id] || 0,
+        subscription: subMap[c.id] || null,
       }))
 
       return new Response(JSON.stringify(enriched), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // ── MODIFY SUBSCRIPTION ──
+    if (action === 'modify-subscription') {
+      const { companyId, planType, status, modules: newModules } = await req.json()
+      if (!companyId) {
+        return new Response(JSON.stringify({ error: 'companyId required' }), { status: 400, headers: corsHeaders })
+      }
+
+      const updates: any = {}
+      if (planType) updates.plan_type = planType
+      if (status) updates.status = status
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await serviceClient
+          .from('subscriptions')
+          .update(updates)
+          .eq('company_id', companyId)
+        
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+        }
+      }
+
+      // Update modules if provided
+      if (newModules && Array.isArray(newModules)) {
+        // Get subscription id
+        const { data: sub } = await serviceClient
+          .from('subscriptions')
+          .select('id')
+          .eq('company_id', companyId)
+          .single()
+        
+        if (sub) {
+          // Deactivate all current modules
+          await serviceClient
+            .from('subscription_modules')
+            .update({ is_active: false })
+            .eq('company_id', companyId)
+
+          // Activate requested modules
+          for (const mod of newModules) {
+            const { data: existing } = await serviceClient
+              .from('subscription_modules')
+              .select('id')
+              .eq('company_id', companyId)
+              .eq('module_type', mod)
+              .maybeSingle()
+
+            if (existing) {
+              await serviceClient
+                .from('subscription_modules')
+                .update({ is_active: true })
+                .eq('id', existing.id)
+            } else {
+              await serviceClient
+                .from('subscription_modules')
+                .insert({
+                  subscription_id: sub.id,
+                  company_id: companyId,
+                  module_type: mod,
+                  is_active: true,
+                  monthly_price: 0,
+                })
+            }
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // ── CHANGE USER ROLE ──
+    if (action === 'change-role') {
+      const { userId, companyId, newRole } = await req.json()
+      if (!userId || !companyId || !newRole) {
+        return new Response(JSON.stringify({ error: 'userId, companyId, and newRole required' }), { status: 400, headers: corsHeaders })
+      }
+
+      const { error } = await serviceClient
+        .from('company_users')
+        .update({ role: newRole })
+        .eq('user_id', userId)
+        .eq('company_id', companyId)
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

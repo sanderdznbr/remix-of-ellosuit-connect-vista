@@ -68,7 +68,7 @@ const ContractPageArea: React.FC<Props> = ({
           <div
             ref={editorRef}
             contentEditable={true}
-            className="outline-none px-16 py-8 text-sm leading-relaxed"
+            className="outline-none px-16 py-8 text-sm leading-relaxed contract-editor-area"
             style={{
               fontFamily: "'Times New Roman', serif",
               fontSize: '12pt',
@@ -76,15 +76,35 @@ const ContractPageArea: React.FC<Props> = ({
               color: pageTextColor,
               minHeight: '240mm',
               cursor: 'text',
-              whiteSpace: 'pre-wrap',
               wordWrap: 'break-word',
             }}
             suppressContentEditableWarning
             onBlur={savePageContent}
             onPaste={e => {
+              // Allow image paste
+              const items = e.clipboardData.items;
+              for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                  e.preventDefault();
+                  const file = items[i].getAsFile();
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const imgHtml = `<img src="${reader.result}" style="max-width:300px;height:auto;display:inline-block;margin:4px;" />`;
+                    document.execCommand('insertHTML', false, imgHtml);
+                  };
+                  reader.readAsDataURL(file);
+                  return;
+                }
+              }
+              // Plain text paste
               e.preventDefault();
-              const text = e.clipboardData.getData('text/plain');
-              document.execCommand('insertText', false, text);
+              const text = e.clipboardData.getData('text/html') || e.clipboardData.getData('text/plain');
+              if (e.clipboardData.getData('text/html')) {
+                document.execCommand('insertHTML', false, text);
+              } else {
+                document.execCommand('insertText', false, text);
+              }
             }}
           />
         </div>

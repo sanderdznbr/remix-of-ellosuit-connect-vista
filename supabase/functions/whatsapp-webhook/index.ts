@@ -693,6 +693,82 @@ serve(async (req) => {
               .single();
             
             conversation = newConv;
+
+            // ==================== AUTO-TRIGGER CHATBOT FOR NEW CONVERSATIONS ====================
+            // When a new conversation is created from an incoming message, check if there's
+            // an active chatbot flow configured to auto-trigger on new WhatsApp conversations
+            if (!fromMe && conversation && !isGroup) {
+              try {
+                console.log(`🤖🆕 [AUTO-TRIGGER] New conversation detected, checking for auto-trigger flows...`);
+                
+                // Find active chatbot flows with whatsapp_channel trigger for this company
+                const { data: autoFlows } = await supabase
+                  .from('chatbot_flows')
+                  .select('id, name, nodes, edges, trigger_config, execution_count')
+                  .eq('company_id', companyId)
+                  .eq('is_active', true)
+                  .order('updated_at', { ascending: false });
+
+                if (autoFlows && autoFlows.length > 0) {
+                  // Find flow with whatsapp_channel trigger (or conversation_start)
+                  const triggerFlow = autoFlows.find((f: any) => {
+                    const tc = f.trigger_config as Record<string, unknown> | null;
+                    if (!tc) return false;
+                    return tc.type === 'whatsapp_channel' || tc.type === 'conversation_start';
+                  });
+
+                  // If no specific trigger found, use the first active flow as default
+                  const flowToTrigger = triggerFlow || autoFlows[0];
+
+                  if (flowToTrigger) {
+                    // Check there's no existing execution for this conversation
+                    const { data: existingExec } = await supabase
+                      .from('chatbot_executions')
+                      .select('id')
+                      .eq('conversation_id', conversation.id)
+                      .eq('status', 'running')
+                      .limit(1);
+
+                    if (!existingExec || existingExec.length === 0) {
+                      console.log(`🤖🆕 [AUTO-TRIGGER] Starting flow "${flowToTrigger.name}" for new conversation ${conversation.id}`);
+
+                      // Create execution record
+                      const { data: newExec } = await supabase
+                        .from('chatbot_executions')
+                        .insert({
+                          flow_id: flowToTrigger.id,
+                          conversation_id: conversation.id,
+                          contact_phone: phoneNumber,
+                          status: 'running',
+                          variables: {
+                            nome: contactName || phoneNumber,
+                            telefone: phoneNumber,
+                          },
+                          execution_path: [],
+                        })
+                        .select()
+                        .single();
+
+                      if (newExec) {
+                        // Increment execution count
+                        await supabase
+                          .from('chatbot_flows')
+                          .update({ execution_count: (flowToTrigger.execution_count || 0) + 1 })
+                          .eq('id', flowToTrigger.id);
+
+                        console.log(`🤖🆕 [AUTO-TRIGGER] Execution created: ${newExec.id}`);
+                      }
+                    } else {
+                      console.log(`🤖🆕 [AUTO-TRIGGER] Execution already exists for conversation ${conversation.id}`);
+                    }
+                  }
+                } else {
+                  console.log(`🤖🆕 [AUTO-TRIGGER] No active chatbot flows found for company ${companyId}`);
+                }
+              } catch (autoTriggerErr) {
+                console.error('🤖🆕 [AUTO-TRIGGER] Error:', autoTriggerErr);
+              }
+            }
           } else {
             // Update conversation with latest info
             const updateData: Record<string, unknown> = {

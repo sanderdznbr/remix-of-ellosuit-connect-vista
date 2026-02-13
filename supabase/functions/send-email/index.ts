@@ -334,6 +334,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`✅ Email sent successfully via ${sendResult.provider}:`, emailData.id);
 
+    // Notify admin about email sent
+    try {
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+      const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+      if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+        fetch(`${SUPABASE_URL}/functions/v1/admin-notify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({
+            event_type: campaign_id ? "email_campaign_sent" : "email_sent",
+            event_title: `E-mail enviado para ${recipient_email}`,
+            event_description: `Assunto: ${subject}`,
+            user_id,
+            company_id,
+            metadata: { recipient_email, subject, provider: sendResult.provider, campaign_id },
+          }),
+        }).catch(() => {});
+      }
+    } catch (e) { /* non-blocking */ }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

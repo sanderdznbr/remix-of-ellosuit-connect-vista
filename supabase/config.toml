@@ -45,5 +45,6 @@ verify_jwt = false
 [functions.form-capture]
 verify_jwt = false
 
-
+[functions.admin-notify]
+verify_jwt = false
 

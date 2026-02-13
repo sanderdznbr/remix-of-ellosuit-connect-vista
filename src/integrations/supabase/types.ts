@@ -2872,6 +2872,51 @@ export type Database = {
           },
         ]
       }
+      system_notifications_log: {
+        Row: {
+          company_id: string | null
+          company_name: string | null
+          created_at: string
+          event_description: string | null
+          event_title: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          notification_error: string | null
+          notification_sent: boolean | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          event_description?: string | null
+          event_title: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          notification_error?: string | null
+          notification_sent?: boolean | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string
+          event_description?: string | null
+          event_title?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          notification_error?: string | null
+          notification_sent?: boolean | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       task_routines: {
         Row: {
           assigned_user_id: string | null

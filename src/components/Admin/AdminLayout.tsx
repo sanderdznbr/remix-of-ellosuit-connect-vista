@@ -6,7 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   LayoutDashboard, Users, CreditCard, Activity, HeadphonesIcon,
-  Shield, ChevronLeft, ChevronRight, LogOut, Menu, X
+  Shield, ChevronLeft, ChevronRight, LogOut, Menu, X, Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/admin' },
   { label: 'Empresas & Usuários', icon: Users, path: '/dashboard/admin/users' },
   { label: 'Assinaturas & Planos', icon: CreditCard, path: '/dashboard/admin/subs' },
+  { label: 'Logs & Notificações', icon: Bell, path: '/dashboard/admin/notifications' },
   { label: 'Saúde do Sistema', icon: Activity, path: '/dashboard/admin/system' },
   { label: 'Suporte & Bugs', icon: HeadphonesIcon, path: '/dashboard/admin/support' },
 ];

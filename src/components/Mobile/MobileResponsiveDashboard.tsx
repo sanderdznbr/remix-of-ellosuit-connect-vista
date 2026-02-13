@@ -99,7 +99,7 @@ const MobileResponsiveDashboard = () => {
   return (
     <Routes>
       {/* Admin Master - layout exclusivo sem MegaMenu */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="admin" element={<AdminLayout />}>
         <Route index element={<AdminMasterDashboard />} />
         <Route path="users" element={<AdminUsersPanel />} />
         <Route path="subs" element={<AdminSubscriptionsPanel />} />

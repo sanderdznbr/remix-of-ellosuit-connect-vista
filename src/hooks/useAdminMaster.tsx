@@ -3,12 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 export const useAdminMaster = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAdminMaster, setIsAdminMaster] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to finish loading before making any decision
+    if (authLoading) {
+      return;
+    }
+
     if (!user?.id) {
+      setIsAdminMaster(false);
       setLoading(false);
       return;
     }
@@ -31,7 +37,7 @@ export const useAdminMaster = () => {
     };
 
     check();
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
 
   const callAdminApi = async (action: string, params?: Record<string, string>, body?: unknown) => {
     const { data: { session } } = await supabase.auth.getSession();

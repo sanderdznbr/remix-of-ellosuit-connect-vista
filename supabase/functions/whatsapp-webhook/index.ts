@@ -1477,6 +1477,15 @@ serve(async (req) => {
                         'Ao usar [HANDOFF], envie uma mensagem gentil dizendo que vai transferir para um atendente. Exemplo: "Vou te transferir para um atendente que poderá te ajudar melhor com isso! [HANDOFF]"',
                         'A tag [HANDOFF] sera removida automaticamente e nao aparecera para o cliente.',
                         '',
+                        'CLASSIFICACAO AUTOMATICA DO ATENDIMENTO:',
+                        'Ao final de CADA resposta, inclua uma tag de classificacao do estagio da conversa. Use EXATAMENTE uma destas tags:',
+                        '- [STAGE:novo] - Contato novo, primeira interacao ou sem contexto suficiente.',
+                        '- [STAGE:em_atendimento] - Conversa ativa, cliente está sendo atendido agora.',
+                        '- [STAGE:aguardando] - Voce fez uma pergunta ou pediu informacao ao cliente e está esperando resposta.',
+                        '- [STAGE:qualificado] - Cliente demonstrou interesse real, pediu preco, quer fechar, ou é um lead quente.',
+                        '- [STAGE:finalizado] - Conversa encerrada, cliente agradeceu, despedida, ou assunto resolvido.',
+                        'SEMPRE inclua a tag [STAGE:xxx] no FINAL da resposta. Ela sera removida automaticamente.',
+                        '',
                         'LINKS E URLs:',
                         'Quando precisar enviar links ou URLs, SEMPRE inclua o link na sua resposta em texto. O sistema automaticamente enviara o texto com o link clicavel e depois o audio separadamente.',
                         '',
@@ -1600,6 +1609,17 @@ serve(async (req) => {
                             aiReply = aiReply.replace('[HANDOFF]', '').trim();
                             console.log('🤖🔄 HANDOFF detected! Will disable AI auto-reply after sending message.');
                           }
+                          
+                          // Check for pipeline stage classification tag
+                          const validStages = ['novo', 'em_atendimento', 'aguardando', 'qualificado', 'finalizado'];
+                          const stageMatch = aiReply.match(/\[STAGE:(\w+)\]/);
+                          let detectedStage: string | null = null;
+                          if (stageMatch && validStages.includes(stageMatch[1])) {
+                            detectedStage = stageMatch[1];
+                            console.log(`📊 AI classified conversation stage: ${detectedStage}`);
+                          }
+                          // Remove ALL stage tags from the reply
+                          aiReply = aiReply.replace(/\[STAGE:\w+\]/g, '').trim();
                           
                           // Split response by separator
                           const messageParts = aiReply.split(MESSAGE_SEPARATOR).map((p: string) => p.trim()).filter((p: string) => p.length > 0);
@@ -1943,7 +1963,14 @@ serve(async (req) => {
                             if (isHandoff) {
                               convUpdate.ai_auto_reply_enabled = false;
                               convUpdate.assigned_agent_id = null;
+                              convUpdate.pipeline_stage = 'aguardando'; // Handoff = awaiting human
                               console.log('🤖🔄 HANDOFF: AI auto-reply DISABLED for conversation:', conversation.id);
+                            }
+                            
+                            // Update pipeline stage if AI classified it
+                            if (detectedStage) {
+                              convUpdate.pipeline_stage = detectedStage;
+                              console.log(`📊 Updating pipeline_stage to: ${detectedStage}`);
                             }
                             
                             await supabase

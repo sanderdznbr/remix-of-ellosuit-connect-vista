@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   GitBranch, Save, Play, ArrowLeft, Plus, BarChart3,
-  Pause, Settings, ChevronDown, Trash2, Sparkles
+  Pause, Settings, ChevronDown, Trash2, Sparkles, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import ChatBotSidebar from './ChatBotSidebar';
 import ChatBotCanvas from './ChatBotCanvas';
 import ChatBotPropertiesPanel from './ChatBotPropertiesPanel';
 import ChatBotAIAssistant from './ChatBotAIAssistant';
+import ChatBotTestSimulator from './ChatBotTestSimulator';
 import { FlowNode, FlowEdge, BlockDefinition, ChatBotFlow } from './types';
 
 const BRAND_COLOR = '#FF4500';
@@ -44,6 +45,7 @@ const ChatBotBuilder: React.FC = () => {
   const [newFlowName, setNewFlowName] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showTestPanel, setShowTestPanel] = useState(false);
 
   // Get company ID
   useEffect(() => {
@@ -331,11 +333,23 @@ const ChatBotBuilder: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Test Button */}
+          <Button
+            variant={showTestPanel ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setShowTestPanel(!showTestPanel); if (!showTestPanel) setShowAIPanel(false); }}
+            className="gap-2 rounded-xl"
+            style={showTestPanel ? { backgroundColor: BRAND_COLOR } : {}}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Testar
+          </Button>
+
           {/* AI Toggle Button */}
           <Button
             variant={showAIPanel ? "default" : "outline"}
             size="sm"
-            onClick={() => setShowAIPanel(!showAIPanel)}
+            onClick={() => { setShowAIPanel(!showAIPanel); if (!showAIPanel) setShowTestPanel(false); }}
             className="gap-2 rounded-xl"
             style={showAIPanel ? { backgroundColor: BRAND_COLOR } : {}}
           >
@@ -449,11 +463,19 @@ const ChatBotBuilder: React.FC = () => {
           />
         )}
 
-        {showAIPanel && !selectedNode && (
+        {showAIPanel && !selectedNode && !showTestPanel && (
           <ChatBotAIAssistant
             onApplyFlow={handleApplyAIFlow}
             currentNodes={nodes}
             currentEdges={edges}
+          />
+        )}
+
+        {showTestPanel && !selectedNode && (
+          <ChatBotTestSimulator
+            nodes={nodes}
+            edges={edges}
+            onClose={() => setShowTestPanel(false)}
           />
         )}
       </div>

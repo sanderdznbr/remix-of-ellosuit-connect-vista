@@ -888,10 +888,11 @@ serve(async (req) => {
                           // Get session server URL
                           const { data: sessionData } = await supabase
                             .from('whatsapp_sessions')
-                            .select('baileys_server_url')
+                            .select('baileys_server_url, instance_name')
                             .eq('id', targetSessionId)
                             .single();
                           const serverUrl = sessionData?.baileys_server_url;
+                          const instanceName2 = sessionData?.instance_name;
                           
                           console.log(`🤖🔄 [CHATBOT] serverUrl=${serverUrl}, nodeType=${currentNode.type}, phoneNumber=${phoneNumber}`);
                           if (serverUrl && currentNode.type === 'message') {
@@ -912,13 +913,13 @@ serve(async (req) => {
                               if (imageUrl) {
                                 const r = await fetch(`${serverUrl}/api/message/send-media`, {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ jid, type: 'image', url: imageUrl, caption: greetMsg }),
+                                  body: JSON.stringify({ instanceName: instanceName2, jid, type: 'image', url: imageUrl, caption: greetMsg }),
                                 });
                                 ok = r.ok;
                               } else {
                                 const r = await fetch(`${serverUrl}/api/message/send`, {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ jid, message: { text: greetMsg } }),
+                                  body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: greetMsg } }),
                                 });
                                 console.log(`🤖🔄 [CHATBOT] Send response: ${r.status} ${r.statusText}`);
                                 if (!r.ok) {
@@ -1000,11 +1001,12 @@ serve(async (req) => {
                             // Get session server URL for sending
                             const { data: sessionData } = await supabase
                               .from('whatsapp_sessions')
-                              .select('baileys_server_url')
+                              .select('baileys_server_url, instance_name')
                               .eq('id', targetSessionId)
                               .single();
 
                             const serverUrl = sessionData?.baileys_server_url;
+                            const instanceName2 = sessionData?.instance_name;
 
                             if (serverUrl && nextNode.type === 'message') {
                               const vars = (activeExec.variables as Record<string, string>) || {};
@@ -1032,6 +1034,7 @@ serve(async (req) => {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
+                                      instanceName: instanceName2,
                                       jid,
                                       type: 'image',
                                       url: imageUrl,
@@ -1044,7 +1047,7 @@ serve(async (req) => {
                                   const sendRes = await fetch(`${serverUrl}/api/message/send`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ jid, message: { text: msgContent } }),
+                                    body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: msgContent } }),
                                   });
                                   sendSuccess = sendRes.ok;
                                 }

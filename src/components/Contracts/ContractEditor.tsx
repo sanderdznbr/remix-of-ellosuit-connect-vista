@@ -70,6 +70,7 @@ const ContractEditor: React.FC = () => {
   // Pagination
   const [pages, setPages] = useState<string[]>(['']);
   const [currentPage, setCurrentPage] = useState(0);
+  const [contentVersion, setContentVersion] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -105,6 +106,7 @@ const ContractEditor: React.FC = () => {
         } else {
           setPages([cleanContent]);
         }
+        setContentVersion(v => v + 1);
       }
       setLoading(false);
     };
@@ -114,11 +116,9 @@ const ContractEditor: React.FC = () => {
   useEffect(() => {
     const ref = pageRefs.current[currentPage];
     if (ref && pages[currentPage] !== undefined) {
-      if (ref.innerHTML !== pages[currentPage]) {
-        ref.innerHTML = pages[currentPage];
-      }
+      ref.innerHTML = pages[currentPage];
     }
-  }, [currentPage, pages]);
+  }, [currentPage, contentVersion]);
 
   const savePageContent = useCallback(() => {
     const ref = pageRefs.current[currentPage];
@@ -298,6 +298,7 @@ const ContractEditor: React.FC = () => {
 
       setPages(newPages.length > 0 ? newPages : ['']);
       setCurrentPage(0);
+      setContentVersion(v => v + 1);
       toast.success(`PDF importado com ${newPages.length} página(s)!`);
     } catch (err: any) {
       console.error(err);
@@ -337,6 +338,7 @@ const ContractEditor: React.FC = () => {
 
       setPages(pagesArr.length > 0 ? pagesArr : ['']);
       setCurrentPage(0);
+      setContentVersion(v => v + 1);
       toast.success(`Documento importado com ${pagesArr.length} página(s)`);
     } catch (err: any) {
       console.error(err);

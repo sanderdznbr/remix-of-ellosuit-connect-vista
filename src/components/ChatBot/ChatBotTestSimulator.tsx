@@ -87,7 +87,6 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
       case 'message': {
         if (node.subType === 'text') {
           const text = node.data.config?.message || node.data.label;
-          // Replace variables
           const resolved = text.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => variables[key] || `{{${key}}}`);
           addMessage('bot', resolved, node.id, node.data.label);
           await delay(800);
@@ -97,14 +96,14 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
           const text = node.data.config?.message || node.data.label;
           const buttons: string[] = node.data.config?.buttons || [];
           const optionsText = buttons.map((b, i) => `  ${i + 1}. ${b}`).join('\n');
-          addMessage('bot', `${text}\n\n${optionsText}`, node.id, node.data.label);
+          const fullText = text ? `${text}\n\n${optionsText}` : optionsText;
+          addMessage('bot', fullText, node.id, node.data.label);
           setWaitingForInput(true);
         } else if (node.subType === 'image') {
-          const imageUrl = node.data.config?.url || node.data.config?.imageUrl || 'imagem.png';
+          const imageUrl = node.data.config?.url || node.data.config?.imageUrl || '';
           const caption = node.data.config?.caption || '';
-          const fileName = imageUrl.split('/').pop() || 'imagem.png';
-          let content = `📷 [Imagem: ${fileName}]`;
-          if (caption) content += `\n\n${caption}`;
+          // Use special marker so we can render actual image in chat
+          const content = `__IMG__${imageUrl}__CAPTION__${caption}`;
           addMessage('bot', content, node.id, node.data.label);
           await delay(600);
           const next = getNextNodes(node.id);
@@ -360,7 +359,32 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
                     <Bot className="h-3.5 w-3.5" style={{ color: BRAND_COLOR }} />
                   </div>
                   <div className="bg-gray-100 rounded-2xl rounded-tl-md px-3.5 py-2.5">
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                    {msg.content.startsWith('__IMG__') ? (() => {
+                      const imgMatch = msg.content.match(/^__IMG__(.*)__CAPTION__(.*)$/);
+                      const imgUrl = imgMatch?.[1] || '';
+                      const caption = imgMatch?.[2] || '';
+                      return (
+                        <div className="space-y-2">
+                          {imgUrl && (
+                            <img 
+                              src={imgUrl} 
+                              alt={caption || 'Imagem'} 
+                              className="rounded-lg max-w-full max-h-48 object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                                if (fallback) (fallback as HTMLElement).style.display = 'block';
+                              }}
+                            />
+                          )}
+                          <p className="text-xs text-gray-500 hidden">📷 Imagem não disponível</p>
+                          {caption && <p className="text-sm text-gray-800">{caption}</p>}
+                          {!imgUrl && !caption && <p className="text-sm text-gray-500">📷 Imagem sem URL configurada</p>}
+                        </div>
+                      );
+                    })() : (
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                    )}
                   </div>
                 </div>
                 {msg.nodeLabel && (

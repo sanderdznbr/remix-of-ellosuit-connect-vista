@@ -741,6 +741,59 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          created_by: string
+          description: string | null
+          fields: Json
+          id: string
+          is_active: boolean | null
+          letterhead_url: string | null
+          logo_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          content?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          letterhead_url?: string | null
+          logo_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          letterhead_url?: string | null
+          logo_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_labels: {
         Row: {
           color: string
@@ -1518,6 +1571,60 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_contracts: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          filled_fields: Json
+          final_content: string
+          id: string
+          status: string
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          filled_fields?: Json
+          final_content?: string
+          id?: string
+          status?: string
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          filled_fields?: Json
+          final_content?: string
+          id?: string
+          status?: string
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]

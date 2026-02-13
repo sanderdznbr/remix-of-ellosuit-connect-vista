@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target
+  Briefcase, Key, Megaphone, Target, FileSignature
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
@@ -146,6 +146,12 @@ const menuGroups: MenuGroup[] = [
         title: "Cultura",
         items: [
           { id: "habitos", label: "Criar Hábitos", description: "Rotinas automáticas diárias", icon: Target, path: "/dashboard/habitos" },
+        ]
+      },
+      {
+        title: "Empresa",
+        items: [
+          { id: "contratos", label: "Criação de Contratos", description: "Modelos e contratos editáveis", icon: FileSignature, path: "/dashboard/contratos" },
         ]
       },
       {

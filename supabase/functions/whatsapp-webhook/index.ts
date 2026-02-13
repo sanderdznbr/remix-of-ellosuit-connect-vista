@@ -841,6 +841,40 @@ serve(async (req) => {
             } else {
               console.log(`Message saved: ${content.substring(0, 50)}...`);
               
+              // ==================== OWNER INTERVENES → STOP AI ====================
+              // If the owner/agent sends a message and AI auto-reply is active, disable it
+              if (fromMe && conversation) {
+                try {
+                  const { data: convCheck } = await supabase
+                    .from('whatsapp_conversations')
+                    .select('id, assigned_agent_id, ai_auto_reply_enabled')
+                    .eq('id', conversation.id)
+                    .single();
+                  
+                  if (convCheck?.ai_auto_reply_enabled && convCheck?.assigned_agent_id) {
+                    console.log(`👤 Owner intervened in conversation ${conversation.id}, stopping AI auto-reply`);
+                    await supabase
+                      .from('whatsapp_conversations')
+                      .update({ ai_auto_reply_enabled: false, assigned_agent_id: null })
+                      .eq('id', conversation.id);
+                    
+                    // Insert system message
+                    await supabase.from('whatsapp_messages').insert({
+                      company_id: companyId,
+                      session_id: targetSessionId,
+                      conversation_id: conversation.id,
+                      content: '👤 Atendente assumiu a conversa. IA desativada.',
+                      from_me: true,
+                      status: 'sent',
+                      message_type: 'system',
+                      sender_name: 'Sistema',
+                    });
+                  }
+                } catch (ownerErr) {
+                  console.error('Owner intervene check error:', ownerErr);
+                }
+              }
+
               // ==================== CHATBOT FLOW ENGINE ====================
               // Check if there's an active chatbot execution for this conversation
               let chatbotHandled = false;
@@ -1016,7 +1050,147 @@ serve(async (req) => {
                             const serverUrl = sessionData?.baileys_server_url;
                             const instanceName2 = sessionData?.instance_name;
 
-                            if (serverUrl && nextNode.type === 'message') {
+                            if (serverUrl && nextNode.type === 'action') {
+                              // ===== HANDLE ACTION NODES =====
+                              const actionSubType = nextNode.subType || nextNode.data?.config?.actionType || '';
+                              console.log(`🤖🔄 [CHATBOT] Processing action node: ${actionSubType}`);
+
+                              if (actionSubType === 'transfer_ai_agent') {
+                                const agentId = nextNode.data?.config?.agentId;
+                                const aiEntryBehavior = nextNode.data?.config?.aiEntryBehavior || 'send_welcome';
+                                console.log(`🤖🔄 [CHATBOT] Transferring to AI agent: ${agentId}, behavior: ${aiEntryBehavior}`);
+
+                                if (agentId) {
+                                  // Enable AI auto-reply on the conversation
+                                  await supabase
+                                    .from('whatsapp_conversations')
+                                    .update({
+                                      assigned_agent_id: agentId,
+                                      ai_auto_reply_enabled: true,
+                                    })
+                                    .eq('id', conversation.id);
+
+                                  // Send system message indicating AI took over
+                                  await supabase.from('whatsapp_messages').insert({
+                                    company_id: companyId,
+                                    session_id: targetSessionId,
+                                    conversation_id: conversation.id,
+                                    content: '🤖 Agente de IA entrou na conversa.',
+                                    from_me: true,
+                                    status: 'sent',
+                                    message_type: 'system',
+                                    sender_name: 'Sistema',
+                                  });
+
+                                  // Complete chatbot execution
+                                  const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                  await supabase
+                                    .from('chatbot_executions')
+                                    .update({
+                                      current_node_id: nextNodeId,
+                                      execution_path: [...execPath, nextNodeId],
+                                      status: 'completed',
+                                      completed_at: new Date().toISOString(),
+                                    })
+                                    .eq('id', activeExec.id);
+
+                                  // If behavior is send_welcome, trigger AI to send first message
+                                  if (aiEntryBehavior === 'send_welcome') {
+                                    console.log(`🤖🔄 [CHATBOT] AI will send welcome message`);
+                                    // Fetch agent to get greeting
+                                    const { data: aiAgent } = await supabase
+                                      .from('ai_agents')
+                                      .select('id, name, personality, instructions, is_active, settings')
+                                      .eq('id', agentId)
+                                      .eq('is_active', true)
+                                      .single();
+
+                                    if (aiAgent) {
+                                      const agentSettings = (aiAgent.settings as Record<string, unknown>) || {};
+                                      const agentHumor = (agentSettings.humor as string) ?? 'profissional';
+                                      const welcomePrompt = `Personalidade: ${aiAgent.personality}\nTom: ${agentHumor}\n\n${aiAgent.instructions}\n\nVocê acabou de entrar na conversa com o cliente. Envie uma saudação breve e natural (1-2 frases). Não faça perguntas complexas, apenas cumprimente.`;
+
+                                      try {
+                                        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+                                        if (LOVABLE_API_KEY) {
+                                          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                                            method: "POST",
+                                            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+                                            body: JSON.stringify({
+                                              model: (agentSettings.model as string) || "google/gemini-3-flash-preview",
+                                              messages: [
+                                                { role: "system", content: welcomePrompt },
+                                                { role: "user", content: "O cliente foi transferido do chatbot para você. Envie sua saudação." },
+                                              ],
+                                            }),
+                                          });
+                                          if (aiResp.ok) {
+                                            const aiData = await aiResp.json();
+                                            const welcomeMsg = aiData.choices?.[0]?.message?.content || '';
+                                            if (welcomeMsg) {
+                                              const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                                              const sendRes = await fetch(`${serverUrl}/api/message/send`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: welcomeMsg } }),
+                                              });
+                                              if (sendRes.ok) {
+                                                await supabase.from('whatsapp_messages').insert({
+                                                  company_id: companyId,
+                                                  session_id: targetSessionId,
+                                                  conversation_id: conversation.id,
+                                                  content: welcomeMsg,
+                                                  from_me: true,
+                                                  status: 'sent',
+                                                  message_type: 'text',
+                                                  sender_name: aiAgent.name,
+                                                });
+                                              }
+                                            }
+                                          }
+                                        }
+                                      } catch (aiErr) {
+                                        console.error('🤖🔄 [CHATBOT] AI welcome error:', aiErr);
+                                      }
+                                    }
+                                  }
+
+                                  chatbotHandled = true;
+                                  console.log(`🤖🔄 [CHATBOT] Transfer to AI completed`);
+                                }
+                              } else if (actionSubType === 'transfer_human') {
+                                console.log(`🤖🔄 [CHATBOT] Transferring to human`);
+                                // Disable any AI, complete chatbot
+                                await supabase
+                                  .from('whatsapp_conversations')
+                                  .update({ assigned_agent_id: null, ai_auto_reply_enabled: false })
+                                  .eq('id', conversation.id);
+
+                                await supabase.from('whatsapp_messages').insert({
+                                  company_id: companyId,
+                                  session_id: targetSessionId,
+                                  conversation_id: conversation.id,
+                                  content: '👤 Conversa transferida para atendimento humano.',
+                                  from_me: true,
+                                  status: 'sent',
+                                  message_type: 'system',
+                                  sender_name: 'Sistema',
+                                });
+
+                                const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                await supabase
+                                  .from('chatbot_executions')
+                                  .update({
+                                    current_node_id: nextNodeId,
+                                    execution_path: [...execPath, nextNodeId],
+                                    status: 'completed',
+                                    completed_at: new Date().toISOString(),
+                                  })
+                                  .eq('id', activeExec.id);
+
+                                chatbotHandled = true;
+                              }
+                            } else if (serverUrl && nextNode.type === 'message') {
                               const vars = (activeExec.variables as Record<string, string>) || {};
                               let msgContent = nextNode.data?.config?.content || '';
                               // Replace variables

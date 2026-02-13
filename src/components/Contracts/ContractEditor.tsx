@@ -197,13 +197,37 @@ const ContractEditor: React.FC = () => {
       const version = pdfjsLib.version;
       console.log('📄 pdfjs version:', version);
       
-      // Use unpkg CDN - most reliable for Vite builds
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+      // Try multiple CDN sources for the worker
+      const cdnUrls = [
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
+        `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`,
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`,
+      ];
+      
+      let workerLoaded = false;
+      for (const url of cdnUrls) {
+        try {
+          const res = await fetch(url, { method: 'HEAD' });
+          if (res.ok) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+            console.log('📄 Worker loaded from:', url);
+            workerLoaded = true;
+            break;
+          }
+        } catch {
+          console.warn('📄 Worker CDN failed:', url);
+        }
+      }
+      
+      if (!workerLoaded) {
+        console.warn('📄 No CDN worker available, using main thread');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      }
 
       const arrayBuffer = await file.arrayBuffer();
       console.log('📄 File loaded, size:', arrayBuffer.byteLength);
       
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
       
       console.log('📄 PDF loaded, pages:', pdf.numPages);
       const newPages: string[] = [];

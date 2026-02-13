@@ -22,9 +22,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   UserPlus, MoreVertical, Shield, Mail, Search, Users, Crown, UserCheck,
-  Trash2, Copy, Check, Clock, RefreshCw, XCircle, Link2, Briefcase,
+  Trash2, Copy, Check, Clock, RefreshCw, XCircle, Link2, Briefcase, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSubscription } from '@/hooks/useSubscription';
+import { UpgradeModal } from '@/components/shared/UpgradeModal';
 
 interface TeamMember {
   id: string;
@@ -98,6 +100,8 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; icon: React.El
 
 const TeamManagement = () => {
   const { user } = useAuth();
+  const subscription = useSubscription();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,10 +181,27 @@ const TeamManagement = () => {
     }
   };
 
+  const remainingSlots = subscription.limits.maxUsers - members.length;
+  const canInvite = remainingSlots > 0;
+
+  const handleOpenInvite = () => {
+    if (!canInvite) {
+      setUpgradeOpen(true);
+      return;
+    }
+    setInviteOpen(true);
+  };
+
   const handleSendInvite = async () => {
     if (!inviteEmail.trim() || !companyId) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inviteEmail)) { toast.error('Email inválido'); return; }
+
+    // Re-check limit before sending
+    if (!canInvite) {
+      setUpgradeOpen(true);
+      return;
+    }
 
     setInviteSending(true);
     try {
@@ -199,6 +220,7 @@ const TeamManagement = () => {
       setGeneratedLink(data.inviteUrl || '');
       toast.success(`Convite enviado para ${inviteEmail}!`);
       loadAll();
+      subscription.refetch();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao enviar convite');
     } finally {
@@ -359,9 +381,20 @@ const TeamManagement = () => {
           <p className="text-muted-foreground">Gerencie membros, permissões e convites</p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setInviteOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" /> Convidar Colaborador
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {remainingSlots > 0 ? (
+                <>{remainingSlots} convite{remainingSlots !== 1 ? 's' : ''} restante{remainingSlots !== 1 ? 's' : ''}</>
+              ) : (
+                <span className="flex items-center gap-1 text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Limite atingido
+                </span>
+              )}
+            </span>
+            <Button onClick={handleOpenInvite} className="gap-2" variant={canInvite ? 'default' : 'outline'}>
+              <UserPlus className="h-4 w-4" /> {canInvite ? 'Convidar Colaborador' : 'Adicionar Vaga'}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -613,6 +646,13 @@ const TeamManagement = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      <UpgradeModal
+        isOpen={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        resource="users"
+        currentUsage={members.length}
+        maxLimit={subscription.limits.maxUsers}
+      />
     </div>
   );
 };

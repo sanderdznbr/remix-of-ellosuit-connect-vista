@@ -921,7 +921,7 @@ serve(async (req) => {
                               if (imageUrl) {
                                 const r = await fetch(`${serverUrl}/api/message/send-media`, {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ instanceName: instanceName2, jid, type: 'image', url: imageUrl, caption: greetMsg }),
+                                  body: JSON.stringify({ instanceName: instanceName2, jid, mediaUrl: imageUrl, mediaType: 'image', caption: greetMsg }),
                                 });
                                 ok = r.ok;
                               } else {
@@ -1049,8 +1049,8 @@ serve(async (req) => {
                                       body: JSON.stringify({
                                         instanceName: instanceName2,
                                         jid,
-                                        type: 'image',
-                                        url: imageUrl,
+                                        mediaUrl: imageUrl,
+                                        mediaType: 'image',
                                         caption: msgContent,
                                       }),
                                     });

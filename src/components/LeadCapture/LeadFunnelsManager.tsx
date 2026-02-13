@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-const FLOW_COLOR = "#007DE3";
+const FLOW_COLOR = "#3A9A1C";
 
 interface LeadFunnel {
   id: string;

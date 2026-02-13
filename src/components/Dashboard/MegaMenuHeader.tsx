@@ -10,6 +10,7 @@ import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { useHubColor } from "@/hooks/useHubColor";
+import { useAdminMaster } from "@/hooks/useAdminMaster";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -190,6 +191,7 @@ export function MegaMenuHeader() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { color: hubColor } = useHubColor();
+  const { isAdminMaster, loading: adminLoading } = useAdminMaster();
 
   const handleMouseEnter = (menuId: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -303,6 +305,16 @@ export function MegaMenuHeader() {
 
         {/* Right Side */}
         <div className="flex items-center gap-3">
+          {/* Admin Panel Button */}
+          {!adminLoading && isAdminMaster && (
+            <button
+              onClick={() => navigate('/dashboard/admin')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-sm font-medium"
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </button>
+          )}
           {/* Notifications Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

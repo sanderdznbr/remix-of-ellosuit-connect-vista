@@ -261,6 +261,16 @@ export default function DisparosPage() {
     const baileysUrl = selectedSession.baileys_server_url;
     const instanceName = selectedSession.instance_name;
 
+    // Notify admin: dispatch started
+    supabase.functions.invoke('admin-notify', {
+      body: {
+        event_type: 'bulk_dispatch_started',
+        event_title: `Disparo de ${pending.length} mensagens iniciado`,
+        event_description: `Tipo: ${mediaType}`,
+        metadata: { total_messages: pending.length, media_type: mediaType },
+      }
+    }).catch(() => {});
+
     for (let i = 0; i < pending.length; i++) {
       const recipient = pending[i];
       
@@ -331,6 +341,19 @@ export default function DisparosPage() {
     }
 
     setIsSending(false);
+    
+    // Notify admin: dispatch completed
+    const finalSent = recipients.filter(r => r.status === 'sent').length;
+    const finalErrors = recipients.filter(r => r.status === 'error').length;
+    supabase.functions.invoke('admin-notify', {
+      body: {
+        event_type: finalErrors > finalSent ? 'bulk_dispatch_failed' : 'bulk_dispatch_completed',
+        event_title: `Disparo concluído: ${finalSent} enviadas, ${finalErrors} falhas`,
+        event_description: `Total: ${pending.length} mensagens | Tipo: ${mediaType}`,
+        metadata: { total_messages: pending.length, sent: finalSent, errors: finalErrors, media_type: mediaType },
+      }
+    }).catch(() => {});
+    
     toast({ title: 'Disparo concluído!' });
   };
 

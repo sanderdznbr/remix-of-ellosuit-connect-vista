@@ -6,6 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-secret',
 };
 
+// ============== HELPER: Send admin notification ==============
+async function notifyAdmin(supabase: any, params: {
+  event_type: string;
+  event_title: string;
+  event_description?: string;
+  user_id?: string;
+  user_email?: string;
+  company_id?: string;
+  company_name?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    
+    await fetch(`${SUPABASE_URL}/functions/v1/admin-notify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(params),
+    });
+    console.log(`[ADMIN-NOTIFY] Sent: ${params.event_type}`);
+  } catch (e) {
+    console.error("[ADMIN-NOTIFY] Failed:", e);
+  }
+}
 // ============== HELPER: Check if JID is a group ==============
 function isGroupJid(jid: string): boolean {
   return jid?.includes('@g.us') || false;
@@ -165,6 +194,36 @@ serve(async (req) => {
               .eq('id', sessionId);
             
             console.log('Connection updated:', updateData);
+            
+            // Notify admin on connection/disconnection
+            if (updateData.status === 'connected' || updateData.status === 'disconnected') {
+              // Get session owner info
+              const { data: sessionInfo } = await supabase
+                .from('whatsapp_sessions')
+                .select('company_id, phone_number, push_name')
+                .eq('id', sessionId)
+                .single();
+              
+              if (sessionInfo) {
+                const { data: companyInfo } = await supabase
+                  .from('companies')
+                  .select('name')
+                  .eq('id', sessionInfo.company_id)
+                  .single();
+                
+                const isConnected = updateData.status === 'connected';
+                notifyAdmin(supabase, {
+                  event_type: isConnected ? 'whatsapp_connected' : 'whatsapp_disconnected',
+                  event_title: isConnected
+                    ? `Parabéns ${companyInfo?.name || sessionInfo.push_name || 'Usuário'}! Seu WhatsApp foi conectado em nosso sistema.`
+                    : `O WhatsApp de ${companyInfo?.name || sessionInfo.push_name || 'Usuário'} foi desconectado.`,
+                  event_description: `Número: ${sessionInfo.phone_number || phoneNumber || 'Desconhecido'}`,
+                  company_id: sessionInfo.company_id,
+                  company_name: companyInfo?.name,
+                  metadata: { phone_number: sessionInfo.phone_number || phoneNumber, push_name: sessionInfo.push_name || pushName },
+                });
+              }
+            }
           }
         }
         break;

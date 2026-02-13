@@ -121,7 +121,7 @@ const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
             // Send via WhatsApp
             const session = await supabase
               .from('whatsapp_sessions')
-              .select('baileys_server_url')
+              .select('baileys_server_url, instance_name')
               .eq('id', sessionId)
               .single();
 
@@ -131,6 +131,7 @@ const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                  instanceName: session.data.instance_name,
                   jid,
                   message: { text: resolved },
                 }),

@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Save, FileText, Plus, Type, Loader2,
-  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Trash2, Upload, Image, FileUp,
-  ChevronLeft, ChevronRight,
+  ArrowLeft, Save, FileText, Type, Loader2, FileUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -74,6 +64,8 @@ const ContractEditor: React.FC = () => {
   const [customFieldLabel, setCustomFieldLabel] = useState('');
   const [customFieldType, setCustomFieldType] = useState('text');
   const [importing, setImporting] = useState(false);
+  const [pageBgColor, setPageBgColor] = useState('#ffffff');
+  const [pageTextColor, setPageTextColor] = useState('#000000');
 
   // Pagination
   const [pages, setPages] = useState<string[]>(['']);
@@ -99,10 +91,19 @@ const ContractEditor: React.FC = () => {
         setLogoUrl(data.logo_url || '');
         setLetterheadUrl(data.letterhead_url || '');
         const content = data.content || '';
-        if (content.includes('<!-- PAGE_BREAK -->')) {
-          setPages(content.split('<!-- PAGE_BREAK -->'));
+        // Extract background color from content metadata
+        const bgMatch = content.match(/<!-- BG_COLOR:(#[0-9a-fA-F]{6}) -->/);
+        const txtMatch = content.match(/<!-- TEXT_COLOR:(#[0-9a-fA-F]{6}) -->/);
+        if (bgMatch) setPageBgColor(bgMatch[1]);
+        if (txtMatch) setPageTextColor(txtMatch[1]);
+        const cleanContent = content
+          .replace(/<!-- BG_COLOR:#[0-9a-fA-F]{6} -->/, '')
+          .replace(/<!-- TEXT_COLOR:#[0-9a-fA-F]{6} -->/, '')
+          .trim();
+        if (cleanContent.includes('<!-- PAGE_BREAK -->')) {
+          setPages(cleanContent.split('<!-- PAGE_BREAK -->'));
         } else {
-          setPages([content]);
+          setPages([cleanContent]);
         }
       }
       setLoading(false);
@@ -110,7 +111,6 @@ const ContractEditor: React.FC = () => {
     load();
   }, [templateId, companyId]);
 
-  // Set innerHTML when page changes or pages load
   useEffect(() => {
     const ref = pageRefs.current[currentPage];
     if (ref && pages[currentPage] !== undefined) {
@@ -172,7 +172,7 @@ const ContractEditor: React.FC = () => {
     toast.success(`${type === 'logo' ? 'Logo' : 'Timbrado'} enviado!`);
   };
 
-  // Import PDF
+  // Improved PDF import - renders each page to canvas for faithful reproduction
   const importPdf = async (file: File) => {
     setImporting(true);
     try {
@@ -185,26 +185,114 @@ const ContractEditor: React.FC = () => {
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
         const textContent = await page.getTextContent();
-        let lastY: number | null = null;
-        let html = '';
+
+        // Group text items into lines by Y position
+        interface TextLine {
+          y: number;
+          items: Array<{ str: string; fontSize: number; fontName: string; x: number; width: number; bold: boolean; italic: boolean }>;
+        }
+
+        const lines: TextLine[] = [];
+        const Y_THRESHOLD = 3;
 
         for (const item of textContent.items) {
-          if ('str' in item) {
-            const y = (item as any).transform?.[5];
-            if (lastY !== null && y !== undefined && Math.abs(y - lastY) > 2) {
-              html += '<br/>';
-            }
-            html += item.str;
-            lastY = y;
+          if (!('str' in item) || !item.str.trim()) continue;
+          const transform = (item as any).transform;
+          const y = viewport.height - transform[5] * 2; // flip Y
+          const x = transform[4] * 2;
+          const fontSize = Math.abs(transform[0]) || 12;
+          const fontName: string = (item as any).fontName || '';
+          const bold = /bold/i.test(fontName);
+          const italic = /italic|oblique/i.test(fontName);
+
+          let foundLine = lines.find(l => Math.abs(l.y - y) < Y_THRESHOLD * 2);
+          if (foundLine) {
+            foundLine.items.push({ str: item.str, fontSize, fontName, x, width: (item as any).width || 0, bold, italic });
+          } else {
+            lines.push({ y, items: [{ str: item.str, fontSize, fontName, x, width: (item as any).width || 0, bold, italic }] });
           }
         }
-        newPages.push(`<p>${html}</p>`);
+
+        // Sort lines top to bottom, items left to right
+        lines.sort((a, b) => a.y - b.y);
+        lines.forEach(l => l.items.sort((a, b) => a.x - b.x));
+
+        // Detect dominant font size (body text)
+        const allFontSizes = lines.flatMap(l => l.items.map(it => Math.round(it.fontSize)));
+        const sizeFreq: Record<number, number> = {};
+        allFontSizes.forEach(s => { sizeFreq[s] = (sizeFreq[s] || 0) + 1; });
+        const bodyFontSize = Object.entries(sizeFreq).sort((a, b) => b[1] - a[1])[0]?.[0];
+        const bodySize = bodyFontSize ? parseInt(bodyFontSize) : 12;
+
+        // Build HTML
+        let html = '';
+        for (const line of lines) {
+          const text = line.items.map(it => it.str).join(' ').trim();
+          if (!text) continue;
+
+          const avgFontSize = line.items.reduce((sum, it) => sum + it.fontSize, 0) / line.items.length;
+          const isBold = line.items.some(it => it.bold);
+          const isLargeHeading = avgFontSize > bodySize * 1.6;
+          const isMediumHeading = avgFontSize > bodySize * 1.2;
+          const isBullet = /^[\-•●◦▪]/.test(text) || /^[a-z]\)/.test(text);
+
+          // Detect centered text (rough heuristic: items start > 30% from left)
+          const minX = Math.min(...line.items.map(it => it.x));
+          const isCentered = minX > viewport.width * 0.25;
+
+          const align = isCentered ? ' style="text-align: center;"' : '';
+
+          if (isLargeHeading) {
+            html += `<h1${align}>${text}</h1>`;
+          } else if (isMediumHeading || (isBold && text.length < 80)) {
+            html += `<h2${align}>${text}</h2>`;
+          } else if (isBullet) {
+            const cleanText = text.replace(/^[\-•●◦▪]\s*/, '').replace(/^[a-z]\)\s*/, '');
+            html += `<p style="padding-left: 24px;">• ${cleanText}</p>`;
+          } else {
+            const styledText = isBold ? `<strong>${text}</strong>` : text;
+            html += `<p${align}>${styledText}</p>`;
+          }
+        }
+
+        newPages.push(html || '<p><br></p>');
+      }
+
+      // Try to detect background color from first page
+      // Render first page to canvas to sample the background color
+      try {
+        const firstPage = await pdf.getPage(1);
+        const vp = firstPage.getViewport({ scale: 0.5 });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          await firstPage.render({ canvasContext: ctx, viewport: vp }).promise;
+          // Sample color from top-left corner (likely background)
+          const pixel = ctx.getImageData(10, 10, 1, 1).data;
+          const bgHex = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
+          // If it's not white/near-white, set as background
+          if (pixel[0] < 240 || pixel[1] < 240 || pixel[2] < 240) {
+            setPageBgColor(bgHex);
+            // If background is dark, set text to white
+            const luminance = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+            if (luminance < 0.5) {
+              setPageTextColor('#ffffff');
+            } else {
+              setPageTextColor('#000000');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not detect background color', e);
       }
 
       setPages(newPages.length > 0 ? newPages : ['']);
       setCurrentPage(0);
-      toast.success(`PDF importado com ${newPages.length} página(s)`);
+      toast.success(`PDF importado com ${newPages.length} página(s)!`);
     } catch (err: any) {
       console.error(err);
       toast.error('Erro ao importar PDF');
@@ -220,8 +308,6 @@ const ContractEditor: React.FC = () => {
       const mammoth = await import('mammoth');
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
-
-      // Split long content into pages (~3000 chars per page as rough heuristic)
       const html = result.value;
       const CHARS_PER_PAGE = 3000;
       const pagesArr: string[] = [];
@@ -229,7 +315,6 @@ const ContractEditor: React.FC = () => {
       if (html.length <= CHARS_PER_PAGE) {
         pagesArr.push(html);
       } else {
-        // Split by paragraphs
         const chunks = html.split(/<\/p>/gi);
         let current = '';
         for (const chunk of chunks) {
@@ -259,17 +344,12 @@ const ContractEditor: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') {
-      importPdf(file);
-    } else if (ext === 'docx' || ext === 'doc') {
-      importDocx(file);
-    } else {
-      toast.error('Formato não suportado. Use PDF ou DOCX.');
-    }
+    if (ext === 'pdf') importPdf(file);
+    else if (ext === 'docx' || ext === 'doc') importDocx(file);
+    else toast.error('Formato não suportado. Use PDF ou DOCX.');
     e.target.value = '';
   };
 
-  // Page management
   const addPage = () => {
     savePageContent();
     setPages(prev => [...prev, '']);
@@ -292,11 +372,10 @@ const ContractEditor: React.FC = () => {
     setSaving(true);
     savePageContent();
 
-    // Build content with page break markers
     const allPages = [...pages];
     const ref = pageRefs.current[currentPage];
     if (ref) allPages[currentPage] = ref.innerHTML;
-    const content = allPages.join('<!-- PAGE_BREAK -->');
+    const content = `<!-- BG_COLOR:${pageBgColor} --><!-- TEXT_COLOR:${pageTextColor} -->${allPages.join('<!-- PAGE_BREAK -->')}`;
 
     try {
       if (templateId) {
@@ -348,7 +427,6 @@ const ContractEditor: React.FC = () => {
           />
         </div>
         <div className="flex items-center gap-2">
-          {/* Import button */}
           <label className="cursor-pointer">
             <Button variant="outline" size="sm" className="rounded-xl gap-1.5 pointer-events-none" asChild>
               <span>
@@ -358,7 +436,6 @@ const ContractEditor: React.FC = () => {
             </Button>
             <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleImportFile} disabled={importing} />
           </label>
-
           <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setShowFieldDialog(true)}>
             <Type className="h-4 w-4" /> Inserir Campo
           </Button>
@@ -370,7 +447,6 @@ const ContractEditor: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
         <ContractEditorSidebar
           description={description}
           setDescription={setDescription}
@@ -381,20 +457,22 @@ const ContractEditor: React.FC = () => {
           fields={fields}
           removeField={removeField}
           uploadFile={uploadFile}
+          pageBgColor={pageBgColor}
+          setPageBgColor={setPageBgColor}
+          pageTextColor={pageTextColor}
+          setPageTextColor={setPageTextColor}
         />
 
-        {/* Editor Area */}
         <div className="flex-1 flex flex-col">
-          {/* Toolbar */}
           <ContractEditorToolbar execCmd={execCmd} />
-
-          {/* Page Area */}
           <ContractPageArea
             pages={pages}
             currentPage={currentPage}
             pageRefs={pageRefs}
             logoUrl={logoUrl}
             letterheadUrl={letterheadUrl}
+            pageBgColor={pageBgColor}
+            pageTextColor={pageTextColor}
             savePageContent={savePageContent}
             goToPage={goToPage}
             addPage={addPage}
@@ -403,7 +481,6 @@ const ContractEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* Dialogs */}
       <ContractFieldDialogs
         showFieldDialog={showFieldDialog}
         setShowFieldDialog={setShowFieldDialog}

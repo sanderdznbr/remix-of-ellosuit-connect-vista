@@ -1096,20 +1096,121 @@ serve(async (req) => {
                         // If current node has buttons (choice node), match user input
                         const buttons: string[] = currentNode.data?.config?.buttons || [];
                         if (buttons.length > 0) {
-                          // Match by number (1, 2, 3...) or exact text
-                          const inputNum = parseInt(userInput);
-                          let matchedIndex = -1;
-
-                          if (!isNaN(inputNum) && inputNum >= 1 && inputNum <= buttons.length) {
-                            matchedIndex = inputNum - 1;
-                          } else {
-                            matchedIndex = buttons.findIndex((b: string) =>
-                              b.toLowerCase().trim() === userInput.toLowerCase()
-                            );
+                          // === MULTI-SELECTION SUPPORT ===
+                          // Parse inputs like "4 e 9", "4, 9", "4 9", "4,9", "1, 3 e 5"
+                          const multiPattern = /[\s,]+e\s+|[,;\s]+/gi;
+                          const parts = userInput.split(multiPattern).map((p: string) => p.trim()).filter(Boolean);
+                          
+                          // Check if it's a multi-selection (2+ valid numbers)
+                          const parsedIndices: number[] = [];
+                          for (const part of parts) {
+                            const num = parseInt(part);
+                            if (!isNaN(num) && num >= 1 && num <= buttons.length) {
+                              parsedIndices.push(num - 1); // 0-based
+                            } else {
+                              // Try exact text match
+                              const idx = buttons.findIndex((b: string) => b.toLowerCase().trim() === part.toLowerCase());
+                              if (idx >= 0) parsedIndices.push(idx);
+                            }
                           }
-
-                          if (matchedIndex >= 0) {
-                            // Find edge with sourceHandle btn_{index}
+                          
+                          // Deduplicate
+                          const uniqueIndices = [...new Set(parsedIndices)];
+                          
+                          if (uniqueIndices.length > 1) {
+                            // *** MULTI-SELECTION: process each choice sequentially ***
+                            console.log(`🤖🔄 [CHATBOT] Multi-selection detected: ${uniqueIndices.map(i => `${i+1}. ${buttons[i]}`).join(', ')}`);
+                            
+                            // Get session data once for all sends
+                            const { data: sessionData } = await supabase
+                              .from('whatsapp_sessions')
+                              .select('baileys_server_url, instance_name')
+                              .eq('id', targetSessionId)
+                              .single();
+                            const serverUrlMulti = sessionData?.baileys_server_url;
+                            const instanceNameMulti = sessionData?.instance_name;
+                            const jidMulti = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                            
+                            if (serverUrlMulti) {
+                              for (const selectedIndex of uniqueIndices) {
+                                const edge = edges.find((e: any) =>
+                                  e.source === currentNode.id && e.sourceHandle === `btn_${selectedIndex}`
+                                );
+                                const targetId = edge?.target;
+                                if (!targetId) continue;
+                                
+                                const targetNode = nodes.find((n: any) => n.id === targetId);
+                                if (!targetNode || targetNode.type !== 'message') continue;
+                                
+                                const vars = (activeExec.variables as Record<string, string>) || {};
+                                let msgContent = targetNode.data?.config?.content || '';
+                                msgContent = msgContent.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
+                                
+                                const targetButtons: string[] = targetNode.data?.config?.buttons || [];
+                                if (targetButtons.length > 0) {
+                                  msgContent += '\n\n' + targetButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                                }
+                                
+                                const imgUrl = targetNode.data?.config?.imageUrl || targetNode.data?.config?.url || '';
+                                
+                                try {
+                                  let sent = false;
+                                  if (imgUrl) {
+                                    const res = await fetch(`${serverUrlMulti}/api/message/send-media`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ instanceName: instanceNameMulti, jid: jidMulti, mediaUrl: imgUrl, mediaType: 'image', caption: msgContent }),
+                                    });
+                                    sent = res.ok;
+                                    if (!res.ok) {
+                                      const fallback = await fetch(`${serverUrlMulti}/api/message/send`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ instanceName: instanceNameMulti, jid: jidMulti, message: { text: msgContent + '\n\n📷 ' + imgUrl } }),
+                                      });
+                                      sent = fallback.ok;
+                                    }
+                                  } else {
+                                    const res = await fetch(`${serverUrlMulti}/api/message/send`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ instanceName: instanceNameMulti, jid: jidMulti, message: { text: msgContent } }),
+                                    });
+                                    sent = res.ok;
+                                  }
+                                  
+                                  if (sent) {
+                                    await supabase.from('whatsapp_messages').insert({
+                                      company_id: companyId, session_id: targetSessionId,
+                                      conversation_id: conversation.id, content: msgContent,
+                                      from_me: true, status: 'sent',
+                                      message_type: imgUrl ? 'image' : 'text',
+                                      media_url: imgUrl || null, sender_name: 'Chatbot',
+                                    });
+                                    console.log(`🤖🔄 [CHATBOT] Multi-select: sent response for option ${selectedIndex + 1}`);
+                                  }
+                                  
+                                  // Small delay between messages to maintain order
+                                  if (uniqueIndices.indexOf(selectedIndex) < uniqueIndices.length - 1) {
+                                    await new Promise(r => setTimeout(r, 1000));
+                                  }
+                                } catch (err) {
+                                  console.error(`🤖🔄 [CHATBOT] Multi-select send error for option ${selectedIndex + 1}:`, err);
+                                }
+                              }
+                              
+                              // After multi-select, stay on current node so user can pick more or continue
+                              const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                              await supabase.from('chatbot_executions').update({
+                                current_node_id: currentNode.id,
+                                execution_path: [...execPath, `multi:${uniqueIndices.map(i => i+1).join(',')}`],
+                              }).eq('id', activeExec.id);
+                              
+                              chatbotHandled = true;
+                            }
+                          } else if (uniqueIndices.length === 1) {
+                            // Single selection (original logic)
+                            const matchedIndex = uniqueIndices[0];
                             const edge = edges.find((e: any) =>
                               e.source === currentNode.id && e.sourceHandle === `btn_${matchedIndex}`
                             );

@@ -1041,24 +1041,48 @@ serve(async (req) => {
 
                                 if (imageUrl) {
                                   // Send image with caption
-                                  console.log(`🤖🔄 [CHATBOT] Sending image: url=${imageUrl.substring(0, 80)}..., caption=${msgContent.substring(0, 50)}`);
-                                  const sendRes = await fetch(`${serverUrl}/api/message/send-media`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      instanceName: instanceName2,
-                                      jid,
-                                      type: 'image',
-                                      url: imageUrl,
-                                      caption: msgContent,
-                                    }),
-                                  });
-                                  console.log(`🤖🔄 [CHATBOT] send-media response: ${sendRes.status} ${sendRes.statusText}`);
-                                  if (!sendRes.ok) {
-                                    const errBody = await sendRes.text();
-                                    console.error(`🤖🔄 [CHATBOT] send-media error body: ${errBody}`);
+                                  console.log(`🤖🔄 [CHATBOT] Sending image: url=${imageUrl.substring(0, 100)}, caption=${msgContent.substring(0, 50)}`);
+                                  try {
+                                    const sendRes = await fetch(`${serverUrl}/api/message/send-media`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        instanceName: instanceName2,
+                                        jid,
+                                        type: 'image',
+                                        url: imageUrl,
+                                        caption: msgContent,
+                                      }),
+                                    });
+                                    console.log(`🤖🔄 [CHATBOT] send-media response: ${sendRes.status} ${sendRes.statusText}`);
+                                    if (!sendRes.ok) {
+                                      const errBody = await sendRes.text();
+                                      console.error(`🤖🔄 [CHATBOT] send-media error: ${errBody}`);
+                                      // Fallback: send as text only
+                                      console.log(`🤖🔄 [CHATBOT] Falling back to text-only send`);
+                                      const fallbackRes = await fetch(`${serverUrl}/api/message/send`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: msgContent + '\n\n📷 ' + imageUrl } }),
+                                      });
+                                      sendSuccess = fallbackRes.ok;
+                                    } else {
+                                      sendSuccess = true;
+                                    }
+                                  } catch (imgErr) {
+                                    console.error(`🤖🔄 [CHATBOT] send-media exception:`, imgErr);
+                                    // Fallback: send as text only
+                                    try {
+                                      const fallbackRes = await fetch(`${serverUrl}/api/message/send`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: msgContent + '\n\n📷 ' + imageUrl } }),
+                                      });
+                                      sendSuccess = fallbackRes.ok;
+                                    } catch (e2) {
+                                      console.error(`🤖🔄 [CHATBOT] Fallback text also failed:`, e2);
+                                    }
                                   }
-                                  sendSuccess = sendRes.ok;
                                 } else {
                                   // Send text
                                   const sendRes = await fetch(`${serverUrl}/api/message/send`, {

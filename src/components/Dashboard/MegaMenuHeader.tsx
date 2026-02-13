@@ -57,7 +57,6 @@ const menuGroups: MenuGroup[] = [
         title: "Comunicação",
         items: [
           { id: "crm", label: "CRM WhatsApp", description: "Gerencie conversas e leads", icon: MessageSquare, path: "/dashboard/crm-whatsapp" },
-          { id: "api-whatsapp", label: "API WhatsApp", description: "API pública para integrações", icon: Key, path: "/dashboard/api-whatsapp" },
           { id: "disparos", label: "Disparos em Massa", description: "Envio em massa via WhatsApp", icon: Megaphone, path: "/dashboard/disparos" },
           { id: "chatbot", label: "ChatBot Builder", description: "Fluxos automatizados", icon: GitBranch, path: "/dashboard/chatbot" },
           { id: "email", label: "Email Marketing", description: "Campanhas e automações", icon: Mail, path: "/dashboard/email" },
@@ -68,6 +67,12 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "email-builder", label: "Templates de Email", description: "Editor visual de emails", icon: FileText, path: "/dashboard/email-templates" },
           { id: "agentes", label: "Agentes de IA", description: "Chatbots inteligentes", icon: Bot, path: "/dashboard/bot-ia" },
+        ]
+      },
+      {
+        title: "Desenvolvedores",
+        items: [
+          { id: "api-whatsapp", label: "API WhatsApp", description: "API pública para integrações", icon: Key, path: "/dashboard/api-whatsapp" },
         ]
       }
     ]

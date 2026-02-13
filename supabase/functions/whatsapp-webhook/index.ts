@@ -893,6 +893,7 @@ serve(async (req) => {
                             .single();
                           const serverUrl = sessionData?.baileys_server_url;
                           
+                          console.log(`🤖🔄 [CHATBOT] serverUrl=${serverUrl}, nodeType=${currentNode.type}, phoneNumber=${phoneNumber}`);
                           if (serverUrl && currentNode.type === 'message') {
                             const vars = (activeExec.variables as Record<string, string>) || {};
                             let greetMsg = currentNode.data?.config?.content || '';
@@ -919,6 +920,11 @@ serve(async (req) => {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ jid, message: { text: greetMsg } }),
                                 });
+                                console.log(`🤖🔄 [CHATBOT] Send response: ${r.status} ${r.statusText}`);
+                                if (!r.ok) {
+                                  const body = await r.text();
+                                  console.error(`🤖🔄 [CHATBOT] Send failed body: ${body}`);
+                                }
                                 ok = r.ok;
                               }
                               

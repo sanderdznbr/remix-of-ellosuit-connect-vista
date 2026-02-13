@@ -913,7 +913,8 @@ serve(async (req) => {
                             // Use remoteJid (already resolved from remoteJidAlt) instead of phoneNumber (which may be a LID)
                             const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
                             console.log(`🤖🔄 [CHATBOT] Using JID for send: ${jid} (remoteJid=${remoteJid}, phoneNumber=${phoneNumber})`);
-                            const imageUrl = currentNode.data?.config?.imageUrl || '';
+                            const imageUrl = currentNode.data?.config?.imageUrl || currentNode.data?.config?.url || '';
+                            console.log(`🤖🔄 [CHATBOT] Initial node subType=${currentNode.subType}, imageUrl=${imageUrl ? 'YES' : 'NO'}`);
                             
                             try {
                               let ok = false;
@@ -1028,7 +1029,8 @@ serve(async (req) => {
                               }
 
                               // Check for image
-                              const imageUrl = nextNode.data?.config?.imageUrl || '';
+                              const imageUrl = nextNode.data?.config?.imageUrl || nextNode.data?.config?.url || '';
+                              console.log(`🤖🔄 [CHATBOT] Next node subType=${nextNode.subType}, imageUrl=${imageUrl ? 'YES' : 'NO'}`);
 
                               // Use remoteJid (already resolved from remoteJidAlt) instead of phoneNumber (which may be a LID)
                               const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;

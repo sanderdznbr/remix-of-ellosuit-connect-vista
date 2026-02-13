@@ -110,8 +110,8 @@ const MobileResponsiveDashboard = () => {
       <Route path="*" element={
         <DashboardLayout>
           <Routes>
-            {/* Dashboard - adminmaster vai direto para admin */}
-            <Route path="/" element={isAdminMaster ? <Navigate to="/dashboard/admin" replace /> : <Home onNavigate={handleNavigate} />} />
+            {/* Dashboard - adminmaster pode ver dashboard normal também */}
+            <Route path="/" element={<Home onNavigate={handleNavigate} />} />
             
             {/* Hub Pages */}
             <Route path="/omni" element={<ModuleGate module="omni"><OmniHub /></ModuleGate>} />

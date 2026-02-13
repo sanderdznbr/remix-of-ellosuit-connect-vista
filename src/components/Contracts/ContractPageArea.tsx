@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -24,13 +24,24 @@ const ContractPageArea: React.FC<Props> = ({
   pageBgColor, pageTextColor,
   savePageContent, goToPage, addPage, deletePage,
 }) => {
-  const initRef = useCallback((el: HTMLDivElement | null) => {
-    pageRefs.current[currentPage] = el;
-    if (el && pages[currentPage] !== undefined && !el.dataset.initialized) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Sync innerHTML when page changes or content is loaded/imported
+  useEffect(() => {
+    const el = editorRef.current;
+    if (el && pages[currentPage] !== undefined) {
       el.innerHTML = pages[currentPage];
-      el.dataset.initialized = 'true';
+      // Set cursor at end after content load
+      requestAnimationFrame(() => {
+        el.focus();
+      });
     }
   }, [currentPage, contentVersion]);
+
+  // Keep parent ref in sync
+  useEffect(() => {
+    pageRefs.current[currentPage] = editorRef.current;
+  }, [currentPage]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -40,7 +51,6 @@ const ContractPageArea: React.FC<Props> = ({
           style={{
             width: '210mm',
             minHeight: '297mm',
-            maxHeight: '297mm',
             backgroundColor: pageBgColor,
             color: pageTextColor,
             backgroundImage: letterheadUrl ? `url(${letterheadUrl})` : undefined,
@@ -56,15 +66,18 @@ const ContractPageArea: React.FC<Props> = ({
           )}
 
           <div
-            key={`page-${currentPage}-${contentVersion}`}
-            ref={initRef}
-            contentEditable
-            className="outline-none px-16 py-8 min-h-[240mm] text-sm leading-relaxed"
+            ref={editorRef}
+            contentEditable={true}
+            className="outline-none px-16 py-8 text-sm leading-relaxed"
             style={{
               fontFamily: "'Times New Roman', serif",
               fontSize: '12pt',
               lineHeight: '1.8',
               color: pageTextColor,
+              minHeight: '240mm',
+              cursor: 'text',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
             }}
             suppressContentEditableWarning
             onBlur={savePageContent}

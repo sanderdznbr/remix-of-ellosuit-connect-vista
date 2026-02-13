@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   MessageSquare, Zap, GitBranch, Clock, Mail, Hash, 
-  UserPlus, Database, Send, Globe, 
+  UserPlus, Database, Send, Globe, Bot,
   Tag, Phone, Image, FileText, List, ToggleLeft, Search, X
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -166,12 +166,20 @@ const BLOCK_CATEGORIES: BlockCategory[] = [
         icon: 'Globe', 
         defaultConfig: { url: '', method: 'POST' } 
       },
+      { 
+        type: 'action', 
+        subType: 'transfer_ai_agent', 
+        label: 'Transferir para IA', 
+        description: 'Encerra o bot e ativa um agente de IA.', 
+        icon: 'Bot', 
+        defaultConfig: { agentId: '' } 
+      },
     ]
   }
 ];
 
 const iconMap: Record<string, React.ComponentType<any>> = {
-  Phone, Mail, Hash, MessageSquare, Clock, Globe, ToggleLeft, 
+  Phone, Mail, Hash, MessageSquare, Clock, Globe, ToggleLeft, Bot,
   List, Image, FileText, GitBranch, Database, Tag, UserPlus, Send, Zap
 };
 

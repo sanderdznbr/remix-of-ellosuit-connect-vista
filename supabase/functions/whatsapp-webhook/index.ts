@@ -443,6 +443,9 @@ serve(async (req) => {
           // This is critical for LID contacts where remoteJid is @lid but remoteJidAlt has the real @s.whatsapp.net JID
           let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
           
+          // Log all available JID fields for debugging LID issues
+          console.log(`[JID-DEBUG] remoteJid=${messageKey.remoteJid}, remoteJidAlt=${messageKey.remoteJidAlt}, msg.from=${msg.from}, msg.remoteJidAlt=${msg.remoteJidAlt}, msg.chatJid=${msg.chatJid}, resolved=${remoteJid}`);
+          
           // Skip WhatsApp Channels/Newsletters (Updates tab)
           if (isNewsletterJid(remoteJid)) {
             console.log(`[FILTER] Skipping newsletter message from: ${remoteJid}`);
@@ -455,6 +458,8 @@ serve(async (req) => {
             if (altJid && !isLidJid(altJid)) {
               console.log(`[LID] Resolved LID ${remoteJid} to real JID ${altJid}`);
               remoteJid = altJid;
+            } else {
+              console.log(`[LID-WARN] Could not resolve LID ${remoteJid}, no alternative JID available`);
             }
           }
 
@@ -905,7 +910,9 @@ serve(async (req) => {
                               greetMsg += '\n\n' + greetButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
                             }
                             
-                            const jid = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+                            // Use remoteJid (already resolved from remoteJidAlt) instead of phoneNumber (which may be a LID)
+                            const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                            console.log(`🤖🔄 [CHATBOT] Using JID for send: ${jid} (remoteJid=${remoteJid}, phoneNumber=${phoneNumber})`);
                             const imageUrl = currentNode.data?.config?.imageUrl || '';
                             
                             try {
@@ -1023,7 +1030,9 @@ serve(async (req) => {
                               // Check for image
                               const imageUrl = nextNode.data?.config?.imageUrl || '';
 
-                              const jid = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+                              // Use remoteJid (already resolved from remoteJidAlt) instead of phoneNumber (which may be a LID)
+                              const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                              console.log(`🤖🔄 [CHATBOT] Using JID for next node send: ${jid}`);
 
                               try {
                                 let sendSuccess = false;

@@ -1413,10 +1413,69 @@ serve(async (req) => {
                         content: m.content || ''
                       }));
                       
+                      // If message is audio/ptt, try to transcribe it before sending to AI
+                      let aiInputContent = content;
+                      if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
+                        console.log('🎙️ Audio message detected, attempting transcription...');
+                        try {
+                          const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+                          if (OPENAI_API_KEY) {
+                            // Download the audio file
+                            const audioResponse = await fetch(mediaUrl);
+                            if (audioResponse.ok) {
+                              const audioBuffer = await audioResponse.arrayBuffer();
+                              console.log(`🎙️ Audio downloaded: ${audioBuffer.byteLength} bytes`);
+                              
+                              // Send to Whisper for transcription
+                              const whisperForm = new FormData();
+                              const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
+                              whisperForm.append('file', audioBlob, 'audio.ogg');
+                              whisperForm.append('model', 'whisper-1');
+                              whisperForm.append('language', 'pt');
+                              
+                              const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                                body: whisperForm,
+                              });
+                              
+                              if (whisperResponse.ok) {
+                                const whisperResult = await whisperResponse.json();
+                                const transcribedText = whisperResult.text?.trim();
+                                if (transcribedText && transcribedText.length > 2) {
+                                  console.log(`🎙️ Transcription: ${transcribedText.substring(0, 100)}`);
+                                  aiInputContent = `[O cliente enviou um áudio dizendo]: ${transcribedText}`;
+                                  
+                                  // Update the stored message content with transcription
+                                  await supabase
+                                    .from('whatsapp_messages')
+                                    .update({ content: `🎙️ ${transcribedText}` })
+                                    .eq('wa_message_id', messageId);
+                                } else {
+                                  console.log('🎙️ Transcription empty or too short');
+                                  aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça para ele repetir ou digitar.]';
+                                }
+                              } else {
+                                console.error('🎙️ Whisper API error:', whisperResponse.status);
+                                aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo. Peça para ele digitar a mensagem.]';
+                              }
+                            } else {
+                              console.error('🎙️ Failed to download audio:', audioResponse.status);
+                              aiInputContent = '[O cliente enviou um áudio mas não foi possível acessá-lo. Peça para ele digitar.]';
+                            }
+                          } else {
+                            aiInputContent = '[O cliente enviou um áudio. Peça para ele digitar a mensagem pois não há serviço de transcrição configurado.]';
+                          }
+                        } catch (transcribeErr) {
+                          console.error('🎙️ Transcription error:', transcribeErr);
+                          aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça para ele digitar.]';
+                        }
+                      }
+                      
                       const apiMessages = [
                         { role: 'system' as const, content: systemPrompt },
                         ...historyMessages,
-                        { role: 'user' as const, content: content }
+                        { role: 'user' as const, content: aiInputContent }
                       ];
                       
                       // Call the ai-chat edge function with full messages array

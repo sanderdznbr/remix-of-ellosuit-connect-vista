@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   MessageSquare, Phone, Mail, Hash, Clock, Globe, GitBranch, 
   Tag, UserPlus, Database, Send, Image, FileText, List, ToggleLeft,
-  X, GripVertical, Check, XCircle
+  X, GripVertical, Check, XCircle, Copy, Trash2, Settings
 } from 'lucide-react';
 import { FlowNode, FlowEdge, BlockDefinition } from './types';
 import { cn } from '@/lib/utils';
@@ -61,6 +61,7 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
   // Connection state
   const [connectingLine, setConnectingLine] = useState<ConnectingLine | null>(null);
   const [hoveredInputNode, setHoveredInputNode] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   // Handle drop from sidebar
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -183,7 +184,7 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     if (!node) return;
     
     const rect = canvasRef.current.getBoundingClientRect();
-    const startX = node.position.x + 240; // Right side of node
+    const startX = node.position.x + 260; // Right side of node
     let startY = node.position.y + 40; // Center vertically
     
     // Adjust Y for condition handles
@@ -204,11 +205,11 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     // Button option handles
     if (node.subType === 'buttons' && handle?.startsWith('btn_')) {
       const btnIndex = parseInt(handle.replace('btn_', ''), 10);
-      startY = node.position.y + 82 + btnIndex * 24 + 12;
+      startY = node.position.y + 96 + btnIndex * 32 + 16;
     }
     if (node.subType === 'buttons' && handle === 'invalid') {
       const btns = node.data.config?.buttons || [];
-      startY = node.position.y + 82 + btns.length * 24 + 12;
+      startY = node.position.y + 96 + btns.length * 32 + 16;
     }
     
     setConnectingLine({
@@ -240,6 +241,31 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
   const handleDeleteEdge = useCallback((edgeId: string) => {
     onEdgesChange(edges.filter(e => e.id !== edgeId));
   }, [edges, onEdgesChange]);
+
+  const handleDuplicateNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const newNode: FlowNode = {
+      ...JSON.parse(JSON.stringify(node)),
+      id: `node-${Date.now()}`,
+      position: { x: node.position.x + 40, y: node.position.y + 60 },
+    };
+    onNodesChange([...nodes, newNode]);
+    setContextMenu(null);
+  }, [nodes, onNodesChange]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, nodeId });
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [contextMenu]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -346,7 +372,7 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     const targetNode = nodes.find(n => n.id === edge.target);
     if (!sourceNode || !targetNode) return null;
 
-    const sourceX = sourceNode.position.x + 240;
+    const sourceX = sourceNode.position.x + 260;
     let sourceY = sourceNode.position.y + 40;
     
     // Adjust source Y for condition handles
@@ -367,11 +393,11 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     // Button option handles
     if (sourceNode.subType === 'buttons' && edge.sourceHandle?.startsWith('btn_')) {
       const btnIndex = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
-      sourceY = sourceNode.position.y + 82 + btnIndex * 24 + 12;
+      sourceY = sourceNode.position.y + 96 + btnIndex * 32 + 16;
     }
     if (sourceNode.subType === 'buttons' && edge.sourceHandle === 'invalid') {
       const btns = sourceNode.data.config?.buttons || [];
-      sourceY = sourceNode.position.y + 82 + btns.length * 24 + 12;
+      sourceY = sourceNode.position.y + 96 + btns.length * 32 + 16;
     }
     
     const targetX = targetNode.position.x;
@@ -523,37 +549,38 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                 position: 'absolute',
                 left: node.position.x,
                 top: node.position.y,
-                width: 240,
+                width: 260,
                 pointerEvents: 'auto'
               }}
               onClick={(e) => {
                 e.stopPropagation();
                 onNodeSelect(node);
               }}
+              onContextMenu={(e) => handleContextMenu(e, node.id)}
               className={cn(
-                "bg-background rounded-xl shadow-lg border-2 transition-all select-none",
-                selectedNodeId === node.id ? "ring-2 ring-primary ring-offset-2" : "hover:shadow-xl",
+                "bg-background rounded-2xl shadow-md border transition-all select-none",
+                selectedNodeId === node.id ? "ring-2 ring-primary ring-offset-2 shadow-lg" : "hover:shadow-lg border-border",
                 draggingNode === node.id ? "opacity-80" : ""
               )}
             >
               {/* Node Header */}
               <div 
-                className="flex items-center gap-2 px-3 py-2 rounded-t-lg"
-                style={{ backgroundColor: `${color}15` }}
+                className="flex items-center gap-2.5 px-4 py-3 rounded-t-2xl"
+                style={{ backgroundColor: `${color}10` }}
               >
                 <div
-                  className="cursor-grab active:cursor-grabbing drag-handle p-1 -ml-1 rounded hover:bg-black/5"
+                  className="cursor-grab active:cursor-grabbing drag-handle p-1 -ml-1.5 rounded-lg hover:bg-black/5"
                   onMouseDown={(e) => handleNodeDragStart(e, node.id, node.position)}
                 >
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  <GripVertical className="h-4 w-4 text-muted-foreground/60" />
                 </div>
                 <div 
-                  className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: color }}
                 >
                   <Icon className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-sm font-medium flex-1 truncate" style={{ color }}>
+                <span className="text-sm font-semibold flex-1 truncate" style={{ color }}>
                   {node.data.label}
                 </span>
                 <button 
@@ -561,41 +588,42 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                     e.stopPropagation();
                     handleDeleteNode(node.id);
                   }}
-                  className="p-1 hover:bg-destructive/10 rounded transition-colors"
+                  className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  style={{ opacity: selectedNodeId === node.id ? 1 : undefined }}
                 >
                   <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                 </button>
               </div>
 
               {/* Node Content */}
-              <div className="px-3 py-2 text-xs text-muted-foreground">
-                <p className="line-clamp-2">{getNodeDescription(node)}</p>
+              <div className="px-4 py-3 text-xs text-muted-foreground">
+                <p className="line-clamp-2 leading-relaxed">{getNodeDescription(node)}</p>
                 {isMultiCondition && multiConditions.length > 0 && (
-                  <div className="mt-1 space-y-0.5">
+                  <div className="mt-2 space-y-1">
                     {multiConditions.map((c: any, i: number) => (
-                      <div key={c.id} className="text-[10px] text-muted-foreground/70">
+                      <div key={c.id} className="text-[11px] text-muted-foreground/70">
                         {i + 1}. {c.label || `Condição ${i + 1}`}
                       </div>
                     ))}
                   </div>
                 )}
                 {isButtonsNode && buttonOptions.length > 0 && (
-                  <div className="mt-2 space-y-1 border-t pt-2">
+                  <div className="mt-3 space-y-1.5 border-t pt-3">
                     {buttonOptions.map((btn: string, i: number) => {
                       const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
                       const handleColor = handleColors[i % handleColors.length];
                       return (
-                        <div key={i} className="flex items-center gap-2 py-0.5">
-                          <span className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-[8px] font-bold" style={{ borderColor: handleColor, color: handleColor }}>
+                        <div key={i} className="flex items-center gap-2.5 py-1 px-2 rounded-lg" style={{ backgroundColor: `${handleColor}08` }}>
+                          <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-[9px] font-bold" style={{ borderColor: handleColor, color: handleColor }}>
                             {i + 1}
                           </span>
-                          <span className="text-[11px] truncate" style={{ color: handleColor }}>{btn}</span>
+                          <span className="text-[12px] font-medium truncate" style={{ color: handleColor }}>{btn}</span>
                         </div>
                       );
                     })}
-                    <div className="flex items-center gap-2 py-0.5 opacity-60">
-                      <span className="w-4 h-4 rounded-full border-2 border-gray-400 flex items-center justify-center flex-shrink-0 text-[8px] font-bold text-gray-400">✕</span>
-                      <span className="text-[11px] text-gray-400">Resposta inválida</span>
+                    <div className="flex items-center gap-2.5 py-1 px-2 rounded-lg opacity-50">
+                      <span className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 flex items-center justify-center flex-shrink-0 text-[9px] font-bold text-muted-foreground/40">✕</span>
+                      <span className="text-[12px] text-muted-foreground/60">Resposta inválida</span>
                     </div>
                   </div>
                 )}
@@ -627,7 +655,7 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                     const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
                     const handleColor = handleColors[i % handleColors.length];
                     const handleId = `btn_${i}`;
-                    const handleTop = 82 + i * 24;
+                    const handleTop = 96 + i * 32 + 10;
                     return (
                       <div 
                         key={handleId}
@@ -635,16 +663,16 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                         style={{ top: handleTop, borderColor: handleColor }}
                         onMouseDown={(e) => handleOutputMouseDown(e, node.id, handleId)}
                       >
-                        <span className="text-[8px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
+                        <span className="text-[9px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
                       </div>
                     );
                   })}
                   <div 
-                    className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 border-gray-400 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
-                    style={{ top: 82 + buttonOptions.length * 24 }}
+                    className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 border-muted-foreground/40 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                    style={{ top: 96 + buttonOptions.length * 32 + 10 }}
                     onMouseDown={(e) => handleOutputMouseDown(e, node.id, 'invalid')}
                   >
-                    <span className="text-[8px] font-bold text-gray-400">✕</span>
+                    <span className="text-[9px] font-bold text-muted-foreground/40">✕</span>
                   </div>
                 </>
               ) : isMultiCondition && multiConditions.length > 0 ? (
@@ -725,6 +753,44 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
               Arraste blocos da barra lateral para começar a construir seu fluxo de automação
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div 
+          className="fixed z-50 bg-background rounded-xl shadow-xl border py-1.5 min-w-[180px] animate-in fade-in zoom-in-95"
+          style={{ left: contextMenu.x, top: contextMenu.y, pointerEvents: 'auto' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+            onClick={() => handleDuplicateNode(contextMenu.nodeId)}
+          >
+            <Copy className="h-4 w-4 text-muted-foreground" />
+            Duplicar
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+            onClick={() => {
+              onNodeSelect(nodes.find(n => n.id === contextMenu.nodeId) || null);
+              setContextMenu(null);
+            }}
+          >
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            Configurar
+          </button>
+          <div className="h-px bg-border my-1" />
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            onClick={() => {
+              handleDeleteNode(contextMenu.nodeId);
+              setContextMenu(null);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Excluir
+          </button>
         </div>
       )}
 

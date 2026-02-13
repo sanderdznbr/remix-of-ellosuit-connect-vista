@@ -24,13 +24,13 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     })
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser()
+    if (userError || !user) {
+      console.error('Auth error:', userError)
       return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: corsHeaders })
     }
 
-    const adminUserId = claimsData.claims.sub
+    const adminUserId = user.id
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
     const { data: adminCheck } = await serviceClient

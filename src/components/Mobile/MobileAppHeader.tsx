@@ -50,6 +50,7 @@ const menuGroups = [
       { label: "Cadastros", icon: Users, path: "/dashboard/cadastros" },
       { label: "Arquivos", icon: FolderOpen, path: "/dashboard/drive" },
       { label: "Equipe", icon: Briefcase, path: "/dashboard/equipe" },
+      { label: "Contratos", icon: FileText, path: "/dashboard/contratos" },
       { label: "Analytics", icon: BarChart3, path: "/dashboard/analytics" },
       { label: "Ello Vision", icon: BarChart3, path: "/dashboard/ello-vision" },
       { label: "Relatórios", icon: FileText, path: "/dashboard/relatorios" },

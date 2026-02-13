@@ -47,6 +47,8 @@ const suiteRoutes = [
   '/dashboard/perfil',
   '/dashboard/assinatura',
   '/dashboard/arquivos',
+  '/dashboard/contratos',
+  '/dashboard/habitos',
 ];
 
 export type HubType = 'omni' | 'flow' | 'track' | 'suite' | null;

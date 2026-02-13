@@ -525,14 +525,21 @@ const DriveManager = () => {
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${companyId}/${fileName}`;
 
+    // Para arquivos grandes, usar upload com upsert e sem limite
     const { error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        duplex: 'half',
+      });
 
     if (uploadError) {
       toast({
         title: 'Erro no upload',
-        description: uploadError.message,
+        description: uploadError.message === 'Payload too large'
+          ? 'Arquivo muito grande. Acesse as configurações do Supabase Storage para aumentar o limite de upload.'
+          : uploadError.message,
         variant: 'destructive'
       });
       return;

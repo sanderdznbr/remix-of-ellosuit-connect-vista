@@ -86,30 +86,30 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
 
       case 'message': {
         if (node.subType === 'text') {
-          const text = node.data.config?.message || node.data.label;
+          const text = node.data.config?.content || node.data.config?.message || node.data.label;
           const resolved = text.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => variables[key] || `{{${key}}}`);
           addMessage('bot', resolved, node.id, node.data.label);
           await delay(800);
           const next = getNextNodes(node.id);
           if (next.length > 0) processNode(next[0]);
         } else if (node.subType === 'buttons') {
-          const text = node.data.config?.message || node.data.label;
+          const text = node.data.config?.content || node.data.config?.message || '';
+          const resolved = text.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => variables[key] || `{{${key}}}`);
           const buttons: string[] = node.data.config?.buttons || [];
           const optionsText = buttons.map((b, i) => `  ${i + 1}. ${b}`).join('\n');
-          const fullText = text ? `${text}\n\n${optionsText}` : optionsText;
+          const fullText = resolved ? `${resolved}\n\n${optionsText}` : optionsText;
           addMessage('bot', fullText, node.id, node.data.label);
           setWaitingForInput(true);
         } else if (node.subType === 'image') {
           const imageUrl = node.data.config?.url || node.data.config?.imageUrl || '';
-          const caption = node.data.config?.caption || '';
-          // Use special marker so we can render actual image in chat
+          const caption = node.data.config?.caption || node.data.config?.content || '';
           const content = `__IMG__${imageUrl}__CAPTION__${caption}`;
           addMessage('bot', content, node.id, node.data.label);
           await delay(600);
           const next = getNextNodes(node.id);
           if (next.length > 0) processNode(next[0]);
         } else {
-          addMessage('bot', node.data.config?.message || node.data.label, node.id, node.data.label);
+          addMessage('bot', node.data.config?.content || node.data.config?.message || node.data.label, node.id, node.data.label);
           await delay(600);
           const next = getNextNodes(node.id);
           if (next.length > 0) processNode(next[0]);

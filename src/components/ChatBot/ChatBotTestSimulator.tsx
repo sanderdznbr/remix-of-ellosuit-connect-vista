@@ -190,9 +190,11 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
       processNode(triggerNode);
     } else {
       // Find nodes that are not targeted by any edge (root nodes)
+      // Pick the one with the smallest x position (leftmost = start of flow)
       const targetIds = new Set(edges.map(e => e.target));
       const rootNodes = nodes.filter(n => !targetIds.has(n.id));
-      const startNode = rootNodes.length > 0 ? rootNodes[0] : (nodes.length > 0 ? nodes[0] : null);
+      const sorted = (rootNodes.length > 0 ? rootNodes : nodes).sort((a, b) => a.position.x - b.position.x);
+      const startNode = sorted.length > 0 ? sorted[0] : null;
       
       if (startNode) {
         addMessage('system', `▶ Fluxo iniciado`, startNode.id, startNode.data.label);

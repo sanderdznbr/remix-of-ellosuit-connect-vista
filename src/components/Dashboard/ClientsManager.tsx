@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   Users, 
   Mail, 
@@ -22,10 +25,17 @@ import {
   Search,
   Eye,
   Package,
-  Building2
+  Building2,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import ClientForm from './ClientForm';
+import { toast } from 'sonner';
 
 interface ClientsManagerProps {
   contactType?: 'cliente' | 'fornecedor' | 'prospecto' | 'all';
@@ -36,8 +46,130 @@ const ClientsManager = ({ contactType = 'all' }: ClientsManagerProps) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showClientForm, setShowClientForm] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx' | 'json'>('csv');
+  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { clients, loading, createClient, updateClient, deleteClient, refetch } = useClients(contactType);
+
+  // --- IMPORT ---
+  const CSV_HEADERS = ['nome', 'email', 'telefone', 'whatsapp', 'empresa', 'cpf_cnpj', 'profissao', 'rua', 'numero', 'cidade', 'estado', 'cep', 'status', 'tags'];
+
+  const generateTemplate = () => {
+    const header = CSV_HEADERS.join(';');
+    const example = 'João Silva;joao@email.com;(11) 99999-0000;(11) 99999-0000;Empresa Ltda;123.456.789-00;Engenheiro;Rua Exemplo;100;São Paulo;SP;01000-000;active;vip,parceiro';
+    const blob = new Blob([`${header}\n${example}\n`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `template_${contactType}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Template baixado!');
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) { toast.error('Arquivo vazio ou sem dados.'); return; }
+
+    const headerLine = lines[0].toLowerCase();
+    const sep = headerLine.includes(';') ? ';' : ',';
+    const headers = headerLine.split(sep).map(h => h.trim());
+
+    const fieldMap: Record<string, string> = {
+      nome: 'name', name: 'name',
+      email: 'email', 'e-mail': 'email',
+      telefone: 'phone', phone: 'phone', tel: 'phone',
+      whatsapp: 'whatsapp',
+      empresa: 'company_name', company: 'company_name', company_name: 'company_name',
+      cpf_cnpj: 'cnpj_cpf', cpf: 'cnpj_cpf', cnpj: 'cnpj_cpf',
+      profissao: 'profession', profession: 'profession',
+      rua: 'address_street', address_street: 'address_street',
+      numero: 'address_number', address_number: 'address_number',
+      cidade: 'address_city', city: 'address_city', address_city: 'address_city',
+      estado: 'address_state', state: 'address_state', address_state: 'address_state', uf: 'address_state',
+      cep: 'address_zip', zip: 'address_zip', address_zip: 'address_zip',
+      status: 'status',
+      tags: 'tags',
+    };
+
+    let success = 0;
+    const errors: string[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(sep).map(v => v.trim());
+      const row: Record<string, any> = {};
+      headers.forEach((h, idx) => {
+        const mapped = fieldMap[h];
+        if (mapped && values[idx]) {
+          row[mapped] = values[idx];
+        }
+      });
+
+      if (!row.name) { errors.push(`Linha ${i + 1}: nome obrigatório`); continue; }
+
+      if (row.tags && typeof row.tags === 'string') {
+        row.tags = row.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+
+      row.client_type = contactType !== 'all' ? contactType : 'cliente';
+
+      try {
+        await createClient(row as any);
+        success++;
+      } catch (err: any) {
+        errors.push(`Linha ${i + 1}: ${err.message || 'erro desconhecido'}`);
+      }
+    }
+
+    setImportResult({ success, errors });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    refetch();
+  };
+
+  // --- EXPORT ---
+  const handleExport = () => {
+    const data = filteredClients.length > 0 ? filteredClients : clients;
+    if (data.length === 0) { toast.error('Nenhum dado para exportar.'); return; }
+
+    if (exportFormat === 'json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, `${contactType}_export.json`);
+    } else {
+      const sep = exportFormat === 'csv' ? ';' : '\t';
+      const headers = ['Nome', 'Email', 'Telefone', 'WhatsApp', 'Empresa', 'CPF/CNPJ', 'Profissão', 'Cidade', 'Estado', 'Status', 'Tags', 'Criado em'];
+      const rows = data.map(c => [
+        c.name, c.email || '', c.phone || '', c.whatsapp || '', c.company_name || '',
+        c.cnpj_cpf || '', c.profession || '', c.address_city || '', c.address_state || '',
+        c.status, (c.tags || []).join(','), new Date(c.created_at).toLocaleDateString('pt-BR'),
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(sep));
+
+      const csvContent = [headers.join(sep), ...rows].join('\n');
+      const bom = '\uFEFF';
+      const ext = exportFormat === 'csv' ? 'csv' : 'xls';
+      const mime = exportFormat === 'csv' ? 'text/csv;charset=utf-8;' : 'application/vnd.ms-excel;charset=utf-8;';
+      const blob = new Blob([bom + csvContent], { type: mime });
+      downloadBlob(blob, `${contactType}_export.${ext}`);
+    }
+
+    setShowExportDialog(false);
+    toast.success('Exportação concluída!');
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Config baseado no tipo de contato
   const typeConfig = {
@@ -209,6 +341,14 @@ const ClientsManager = ({ contactType = 'all' }: ClientsManagerProps) => {
             </SelectContent>
           </Select>
 
+          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="rounded-xl">
+            <Upload className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <Button variant="outline" onClick={() => setShowExportDialog(true)} className="rounded-xl">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
           <Button onClick={handleAddClient} className="rounded-xl">
             <Plus className="h-4 w-4 mr-2" />
             {config.newButtonText}
@@ -398,6 +538,132 @@ const ClientsManager = ({ contactType = 'all' }: ClientsManagerProps) => {
         onOpenChange={setShowClientForm}
         onSave={handleSaveClient}
       />
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={(open) => { setShowImportDialog(open); if (!open) setImportResult(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Importar {config.title}
+            </DialogTitle>
+            <DialogDescription>
+              Importe contatos a partir de um arquivo CSV. Baixe o template para ver o formato correto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Instructions */}
+            <div className="rounded-xl border p-4 space-y-2 bg-muted/50">
+              <h4 className="font-semibold text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Instruções</h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
+                <li>O arquivo deve ser <strong>.csv</strong> separado por <strong>;</strong> (ponto e vírgula) ou <strong>,</strong> (vírgula)</li>
+                <li>A primeira linha deve conter os cabeçalhos</li>
+                <li>O campo <strong>nome</strong> é obrigatório</li>
+                <li>Campos aceitos: nome, email, telefone, whatsapp, empresa, cpf_cnpj, profissao, rua, numero, cidade, estado, cep, status, tags</li>
+                <li>Tags devem ser separadas por vírgula dentro do campo</li>
+              </ul>
+            </div>
+
+            {/* Template button */}
+            <Button variant="outline" onClick={generateTemplate} className="w-full rounded-xl">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Baixar Template CSV
+            </Button>
+
+            {/* File input */}
+            <div>
+              <Label className="text-sm font-medium">Selecionar arquivo</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleFileImport}
+                className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+              />
+            </div>
+
+            {/* Results */}
+            {importResult && (
+              <div className="rounded-xl border p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  {importResult.success} registro(s) importado(s) com sucesso
+                </div>
+                {importResult.errors.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      {importResult.errors.length} erro(s):
+                    </div>
+                    <ul className="text-xs text-muted-foreground space-y-0.5 max-h-32 overflow-y-auto pl-6 list-disc">
+                      {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Exportar {config.title}
+            </DialogTitle>
+            <DialogDescription>
+              {filteredClients.length !== clients.length
+                ? `Exportando ${filteredClients.length} registro(s) filtrado(s) de ${clients.length} total.`
+                : `Exportando todos os ${clients.length} registro(s).`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Label className="text-sm font-medium">Formato do arquivo</Label>
+            <RadioGroup value={exportFormat} onValueChange={(v) => setExportFormat(v as any)} className="space-y-2">
+              <div className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="csv" id="csv" />
+                <Label htmlFor="csv" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="font-medium text-sm">CSV</p>
+                    <p className="text-xs text-muted-foreground">Compatível com Excel, Google Sheets</p>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="xlsx" id="xlsx" />
+                <Label htmlFor="xlsx" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-sm">Excel (XLS)</p>
+                    <p className="text-xs text-muted-foreground">Planilha compatível com Microsoft Excel</p>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="json" id="json" />
+                <Label htmlFor="json" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <FileText className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="font-medium text-sm">JSON</p>
+                    <p className="text-xs text-muted-foreground">Formato para integração com sistemas</p>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            <Button onClick={handleExport} className="w-full rounded-xl">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Agora
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

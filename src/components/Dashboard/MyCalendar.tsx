@@ -4,7 +4,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Video } from 'lucide-react';
+import { Plus, Trash2, Video, Settings } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import CalendarKPIs from './CalendarKPIs';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
@@ -212,35 +213,34 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         </div>
         
         <div className="flex items-center gap-2">
-          {!isConnected && (
-            <Button
-              onClick={() => connectGoogle()}
-              variant="outline"
-              className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50"
-              size="sm"
-              disabled={googleLoading}
-            >
-              <Video className="h-4 w-4 mr-2" />
-              Conectar Google Calendar
-            </Button>
-          )}
-          <Button 
-            onClick={() => setShowBulkDeleteModal(true)}
-            variant="outline"
-            className="rounded-xl text-gray-600 hover:text-red-600"
-            size="sm"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir em Massa
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-xl text-muted-foreground shrink-0">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {!isConnected && (
+                <DropdownMenuItem onClick={() => connectGoogle()} disabled={googleLoading}>
+                  <Video className="h-4 w-4 mr-2 text-blue-500" />
+                  Conectar Google Calendar
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => setShowBulkDeleteModal(true)} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir em Massa
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button 
             onClick={() => setShowTypeSelector(true)}
-            className="rounded-xl"
+            className="rounded-xl shrink-0"
             style={{ backgroundColor: FLOW_COLOR }}
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Novo Evento
+            <span className="hidden sm:inline">Novo Evento</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>

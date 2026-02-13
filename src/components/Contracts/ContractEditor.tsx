@@ -118,7 +118,7 @@ const ContractEditor: React.FC = () => {
         ref.innerHTML = pages[currentPage];
       }
     }
-  }, [currentPage, pages.length]);
+  }, [currentPage, pages]);
 
   const savePageContent = useCallback(() => {
     const ref = pageRefs.current[currentPage];

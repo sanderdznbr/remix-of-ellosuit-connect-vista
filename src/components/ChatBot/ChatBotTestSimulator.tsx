@@ -11,6 +11,37 @@ import { FlowNode, FlowEdge } from './types';
 
 const BRAND_COLOR = '#FF4500';
 
+// Renders text with URLs as clickable links and image URLs as inline images
+const RichText: React.FC<{ text: string }> = ({ text }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return (
+    <p className="text-sm text-gray-800 whitespace-pre-wrap">
+      {parts.map((part, i) => {
+        if (urlRegex.test(part)) {
+          // Reset regex lastIndex
+          urlRegex.lastIndex = 0;
+          const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(part);
+          if (isImage) {
+            return (
+              <span key={i} className="block my-1">
+                <img src={part} alt="Imagem" className="rounded-lg max-w-full max-h-48 object-cover" 
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              </span>
+            );
+          }
+          return (
+            <a key={i} href={part} target="_blank" rel="noopener noreferrer" 
+              className="text-blue-600 underline break-all">{part}</a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </p>
+  );
+};
+
 interface SimMessage {
   id: string;
   role: 'bot' | 'user' | 'system';
@@ -102,8 +133,10 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
           setWaitingForInput(true);
         } else if (node.subType === 'image') {
           const imageUrl = node.data.config?.url || node.data.config?.imageUrl || '';
-          const caption = node.data.config?.caption || node.data.config?.content || '';
-          const content = `__IMG__${imageUrl}__CAPTION__${caption}`;
+          const caption = node.data.config?.caption || '';
+          const textContent = node.data.config?.content || '';
+          const resolvedText = textContent.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => variables[key] || `{{${key}}}`);
+          const content = `__IMG__${imageUrl}__CAPTION__${caption}__TEXT__${resolvedText}`;
           addMessage('bot', content, node.id, node.data.label);
           await delay(600);
           const next = getNextNodes(node.id);
@@ -360,15 +393,21 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
                   </div>
                   <div className="bg-gray-100 rounded-2xl rounded-tl-md px-3.5 py-2.5">
                     {msg.content.startsWith('__IMG__') ? (() => {
-                      const imgMatch = msg.content.match(/^__IMG__(.*)__CAPTION__(.*)$/);
+                      const imgMatch = msg.content.match(/^__IMG__(.*)__CAPTION__(.*)__TEXT__(.*)$/s);
                       const imgUrl = imgMatch?.[1] || '';
                       const caption = imgMatch?.[2] || '';
+                      const textContent = imgMatch?.[3] || '';
+                      // Fallback for old format without __TEXT__
+                      const fallbackMatch = !imgMatch ? msg.content.match(/^__IMG__(.*)__CAPTION__(.*)$/s) : null;
+                      const fImgUrl = fallbackMatch?.[1] || imgUrl;
+                      const fCaption = fallbackMatch?.[2] || caption;
                       return (
                         <div className="space-y-2">
-                          {imgUrl && (
+                          {textContent && <RichText text={textContent} />}
+                          {fImgUrl && (
                             <img 
-                              src={imgUrl} 
-                              alt={caption || 'Imagem'} 
+                              src={fImgUrl} 
+                              alt={fCaption || 'Imagem'} 
                               className="rounded-lg max-w-full max-h-48 object-cover"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
@@ -378,12 +417,12 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
                             />
                           )}
                           <p className="text-xs text-gray-500 hidden">📷 Imagem não disponível</p>
-                          {caption && <p className="text-sm text-gray-800">{caption}</p>}
-                          {!imgUrl && !caption && <p className="text-sm text-gray-500">📷 Imagem sem URL configurada</p>}
+                          {fCaption && <p className="text-xs text-gray-500 italic">{fCaption}</p>}
+                          {!fImgUrl && !fCaption && !textContent && <p className="text-sm text-gray-500">📷 Imagem sem URL configurada</p>}
                         </div>
                       );
                     })() : (
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                      <RichText text={msg.content} />
                     )}
                   </div>
                 </div>

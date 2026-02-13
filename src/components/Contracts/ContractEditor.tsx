@@ -167,7 +167,27 @@ const ContractEditor: React.FC = () => {
     toast.success(`${type === 'logo' ? 'Logo' : 'Timbrado'} enviado!`);
   };
 
-  // Improved PDF import with robust text extraction + canvas fallback
+  // Insert image at cursor position in editor
+  const insertImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const imgHtml = `<img src="${dataUrl}" style="max-width:200px;height:auto;display:inline-block;margin:4px;cursor:move;" alt="imagem" />`;
+        document.execCommand('insertHTML', false, imgHtml);
+        pageRefs.current[currentPage]?.focus();
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  // PDF import - text only, no canvas/image fallback
   const importPdf = async (file: File) => {
     setImporting(true);
     try {
@@ -180,121 +200,84 @@ const ContractEditor: React.FC = () => {
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const scale = 2;
-        const viewport = page.getViewport({ scale });
+        const viewport = page.getViewport({ scale: 1 });
+        const textContent = await page.getTextContent();
+        const items = textContent.items.filter((it: any) => 'str' in it && it.str);
 
-        // Try text extraction first
-        let html = '';
-        try {
-          const textContent = await page.getTextContent();
-          const items = textContent.items.filter((it: any) => 'str' in it && it.str && it.str.trim());
-
-          if (items.length > 3) {
-            // Group text items into lines by Y position
-            interface LineItem { str: string; x: number; fontSize: number; bold: boolean; }
-            interface TextLine { y: number; items: LineItem[]; }
-            const lines: TextLine[] = [];
-
-            for (const item of items) {
-              const t = item as any;
-              const tx = t.transform;
-              const y = Math.round((viewport.height - tx[5] * scale) * 10) / 10;
-              const x = tx[4] * scale;
-              const fontSize = Math.round(Math.abs(tx[0]) * scale);
-              const bold = /bold/i.test(t.fontName || '');
-
-              const existing = lines.find(l => Math.abs(l.y - y) < 8);
-              if (existing) {
-                existing.items.push({ str: t.str, x, fontSize, bold });
-              } else {
-                lines.push({ y, items: [{ str: t.str, x, fontSize, bold }] });
-              }
-            }
-
-            lines.sort((a, b) => a.y - b.y);
-            lines.forEach(l => l.items.sort((a, b) => a.x - b.x));
-
-            // Detect body font size
-            const allSizes = lines.flatMap(l => l.items.map(it => it.fontSize));
-            const freq: Record<number, number> = {};
-            allSizes.forEach(s => { freq[s] = (freq[s] || 0) + 1; });
-            const bodySize = parseInt(Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || '24');
-
-            for (const line of lines) {
-              const text = line.items.map(it => it.str).join(' ').trim();
-              if (!text) continue;
-
-              const avgSize = line.items.reduce((s, it) => s + it.fontSize, 0) / line.items.length;
-              const isBold = line.items.some(it => it.bold);
-              const minX = Math.min(...line.items.map(it => it.x));
-              const isCentered = minX > viewport.width * 0.25;
-              const align = isCentered ? ' style="text-align: center;"' : '';
-              const isBullet = /^[\-•●◦▪]/.test(text) || /^[a-z]\)/.test(text);
-
-              if (avgSize > bodySize * 1.5) {
-                html += `<h1${align}>${text}</h1>`;
-              } else if (avgSize > bodySize * 1.15 || (isBold && text.length < 100)) {
-                html += `<h2${align}>${text}</h2>`;
-              } else if (isBullet) {
-                const clean = text.replace(/^[\-•●◦▪]\s*/, '').replace(/^[a-z]\)\s*/, '');
-                html += `<p style="padding-left: 24px;">• ${clean}</p>`;
-              } else {
-                const styled = isBold ? `<strong>${text}</strong>` : text;
-                html += `<p${align}>${styled}</p>`;
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Text extraction failed for page', i, e);
+        if (items.length === 0) {
+          newPages.push('<p><br></p>');
+          continue;
         }
 
-        // If text extraction failed or got very little, render page as image
-        if (html.replace(/<[^>]*>/g, '').trim().length < 30) {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              await page.render({ canvasContext: ctx, viewport }).promise;
-              const imgDataUrl = canvas.toDataURL('image/png', 0.92);
-              html = `<div style="text-align:center;"><img src="${imgDataUrl}" style="max-width:100%;height:auto;" alt="Página ${i}" /></div>`;
-            }
-          } catch (e) {
-            console.warn('Canvas fallback failed for page', i, e);
-            html = `<p>[Página ${i} - não foi possível importar]</p>`;
+        // Group into lines by Y position
+        interface LineItem { str: string; x: number; fontSize: number; bold: boolean; }
+        interface TextLine { y: number; items: LineItem[]; }
+        const lines: TextLine[] = [];
+
+        for (const item of items) {
+          const t = item as any;
+          const tx = t.transform;
+          const y = Math.round(viewport.height - tx[5]);
+          const x = Math.round(tx[4]);
+          const fontSize = Math.round(Math.abs(tx[0]));
+          const bold = /bold/i.test(t.fontName || '');
+
+          const existing = lines.find(l => Math.abs(l.y - y) < 4);
+          if (existing) {
+            existing.items.push({ str: t.str, x, fontSize, bold });
+          } else {
+            lines.push({ y, items: [{ str: t.str, x, fontSize, bold }] });
+          }
+        }
+
+        lines.sort((a, b) => a.y - b.y);
+        lines.forEach(l => l.items.sort((a, b) => a.x - b.x));
+
+        // Detect body font size
+        const allSizes = lines.flatMap(l => l.items.map(it => it.fontSize));
+        const freq: Record<number, number> = {};
+        allSizes.forEach(s => { freq[s] = (freq[s] || 0) + 1; });
+        const bodySize = parseInt(Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || '12');
+
+        let html = '';
+        for (const line of lines) {
+          const text = line.items.map(it => it.str).join('').trim();
+          if (!text) continue;
+
+          const avgSize = line.items.reduce((s, it) => s + it.fontSize, 0) / line.items.length;
+          const isBold = line.items.some(it => it.bold);
+          const minX = Math.min(...line.items.map(it => it.x));
+          const pageCenter = viewport.width / 2;
+          const textWidth = line.items.reduce((w, it) => w + (it.str.length * avgSize * 0.5), 0);
+          const textCenter = minX + textWidth / 2;
+          const isCentered = Math.abs(textCenter - pageCenter) < pageCenter * 0.15;
+          const align = isCentered ? ' style="text-align: center;"' : '';
+          const isBullet = /^[\-•●◦▪]\s/.test(text) || /^[a-z]\)\s/.test(text);
+
+          if (avgSize > bodySize * 1.8) {
+            html += `<h1${align}>${text}</h1>`;
+          } else if (avgSize > bodySize * 1.2 || (isBold && text.length < 80)) {
+            html += `<h2${align}>${text}</h2>`;
+          } else if (isBullet) {
+            const clean = text.replace(/^[\-•●◦▪]\s*/, '').replace(/^[a-z]\)\s*/, '');
+            html += `<p style="padding-left: 24px;">• ${clean}</p>`;
+          } else {
+            const styled = isBold ? `<strong>${text}</strong>` : text;
+            html += `<p${align}>${styled}</p>`;
           }
         }
 
         newPages.push(html || '<p><br></p>');
       }
 
-      // Detect background color from first page
-      try {
-        const firstPage = await pdf.getPage(1);
-        const vp = firstPage.getViewport({ scale: 0.5 });
-        const canvas = document.createElement('canvas');
-        canvas.width = vp.width;
-        canvas.height = vp.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          await firstPage.render({ canvasContext: ctx, viewport: vp }).promise;
-          const pixel = ctx.getImageData(10, 10, 1, 1).data;
-          const bgHex = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
-          if (pixel[0] < 240 || pixel[1] < 240 || pixel[2] < 240) {
-            setPageBgColor(bgHex);
-            const luminance = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
-            setPageTextColor(luminance < 0.5 ? '#ffffff' : '#000000');
-          }
-        }
-      } catch (e) {
-        console.warn('Could not detect background color', e);
-      }
+      // Reset colors to default (user can set manually)
+      setPageBgColor('#ffffff');
+      setPageTextColor('#000000');
 
       setPages(newPages.length > 0 ? newPages : ['']);
       setCurrentPage(0);
       setContentVersion(v => v + 1);
-      toast.success(`PDF importado com ${newPages.length} página(s)!`);
+      toast.success(`PDF importado com ${newPages.length} página(s) - apenas texto extraído!`);
     } catch (err: any) {
       console.error(err);
       toast.error('Erro ao importar PDF');
@@ -467,7 +450,7 @@ const ContractEditor: React.FC = () => {
         />
 
         <div className="flex-1 flex flex-col">
-          <ContractEditorToolbar execCmd={execCmd} />
+          <ContractEditorToolbar execCmd={execCmd} onInsertImage={insertImage} />
           <ContractPageArea
             pages={pages}
             currentPage={currentPage}

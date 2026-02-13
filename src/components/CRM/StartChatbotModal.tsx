@@ -124,14 +124,29 @@ const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
               .single();
 
             if (session.data?.baileys_server_url) {
-              await fetch(`${session.data.baileys_server_url}/send-message`, {
+              const jid = contactPhone.includes('@') ? contactPhone : `${contactPhone}@s.whatsapp.net`;
+              const sendRes = await fetch(`${session.data.baileys_server_url}/api/message/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  jid: contactPhone.includes('@') ? contactPhone : `${contactPhone}@s.whatsapp.net`,
-                  message: resolved,
+                  jid,
+                  message: { text: resolved },
                 }),
               });
+              
+              if (sendRes.ok) {
+                // Also save the message locally in the conversation
+                await supabase.from('whatsapp_messages').insert({
+                  company_id: companyId,
+                  session_id: sessionId,
+                  conversation_id: conversationId,
+                  content: resolved,
+                  from_me: true,
+                  status: 'sent',
+                  message_type: 'text',
+                  sender_name: 'Chatbot',
+                });
+              }
             }
           }
         }

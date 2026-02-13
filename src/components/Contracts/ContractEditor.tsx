@@ -191,18 +191,30 @@ const ContractEditor: React.FC = () => {
   const importPdf = async (file: File) => {
     setImporting(true);
     try {
+      console.log('📄 Starting PDF import...');
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      
+      const version = pdfjsLib.version;
+      console.log('📄 pdfjs version:', version);
+      
+      // Use unpkg CDN - most reliable for Vite builds
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
 
       const arrayBuffer = await file.arrayBuffer();
+      console.log('📄 File loaded, size:', arrayBuffer.byteLength);
+      
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      console.log('📄 PDF loaded, pages:', pdf.numPages);
       const newPages: string[] = [];
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 1 });
         const textContent = await page.getTextContent();
-        const items = textContent.items.filter((it: any) => 'str' in it && it.str);
+        const items = textContent.items.filter((it: any) => 'str' in it && it.str.trim());
+
+        console.log(`📄 Page ${i}: ${items.length} text items`);
 
         if (items.length === 0) {
           newPages.push('<p><br></p>');
@@ -217,6 +229,7 @@ const ContractEditor: React.FC = () => {
         for (const item of items) {
           const t = item as any;
           const tx = t.transform;
+          if (!tx) continue;
           const y = Math.round(viewport.height - tx[5]);
           const x = Math.round(tx[4]);
           const fontSize = Math.round(Math.abs(tx[0]));
@@ -241,7 +254,7 @@ const ContractEditor: React.FC = () => {
 
         let html = '';
         for (const line of lines) {
-          const text = line.items.map(it => it.str).join('').trim();
+          const text = line.items.map(it => it.str).join(' ').trim();
           if (!text) continue;
 
           const avgSize = line.items.reduce((s, it) => s + it.fontSize, 0) / line.items.length;
@@ -277,10 +290,11 @@ const ContractEditor: React.FC = () => {
       setPages(newPages.length > 0 ? newPages : ['']);
       setCurrentPage(0);
       setContentVersion(v => v + 1);
-      toast.success(`PDF importado com ${newPages.length} página(s) - apenas texto extraído!`);
+      console.log('✅ PDF imported successfully:', newPages.length, 'pages');
+      toast.success(`PDF importado com ${newPages.length} página(s) - texto editável!`);
     } catch (err: any) {
-      console.error(err);
-      toast.error('Erro ao importar PDF');
+      console.error('❌ PDF import error:', err);
+      toast.error(`Erro ao importar PDF: ${err.message || 'erro desconhecido'}`);
     } finally {
       setImporting(false);
     }

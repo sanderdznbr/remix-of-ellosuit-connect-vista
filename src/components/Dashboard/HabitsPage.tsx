@@ -80,7 +80,7 @@ interface Routine {
 const defaultForm = {
   title: '',
   description: '',
-  assigned_user_id: '',
+  assigned_user_id: '_self',
   frequency: 'daily',
   days_of_week: [1, 2, 3, 4, 5] as number[],
   day_of_month: 1,
@@ -138,7 +138,7 @@ const HabitsPage: React.FC = () => {
     setForm({
       title: r.title,
       description: r.description || '',
-      assigned_user_id: r.assigned_user_id || '',
+      assigned_user_id: r.assigned_user_id || '_self',
       frequency: r.frequency,
       days_of_week: r.days_of_week || [1, 2, 3, 4, 5],
       day_of_month: r.day_of_month || 1,
@@ -163,7 +163,7 @@ const HabitsPage: React.FC = () => {
         created_by: user.id,
         title: form.title,
         description: form.description || null,
-        assigned_user_id: form.assigned_user_id || null,
+        assigned_user_id: form.assigned_user_id === '_self' ? null : (form.assigned_user_id || null),
         frequency: form.frequency,
         days_of_week: form.frequency === 'weekly' ? form.days_of_week : null,
         day_of_month: form.frequency === 'monthly' ? form.day_of_month : null,
@@ -507,7 +507,7 @@ const HabitsPage: React.FC = () => {
                     <SelectValue placeholder="Para mim (padrão)" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="" className="rounded-lg">Para mim</SelectItem>
+                    <SelectItem value="_self" className="rounded-lg">Para mim</SelectItem>
                     {employees.filter(e => e.user_id !== user?.id).map(emp => (
                       <SelectItem key={emp.user_id} value={emp.user_id} className="rounded-lg">
                         <div className="flex items-center gap-2">

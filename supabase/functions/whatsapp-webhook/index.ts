@@ -880,6 +880,24 @@ serve(async (req) => {
               let chatbotHandled = false;
               if (!fromMe && conversation) {
                 try {
+                  // First check if AI auto-reply is already active — skip chatbot if so
+                  const { data: convAiCheck } = await supabase
+                    .from('whatsapp_conversations')
+                    .select('ai_auto_reply_enabled')
+                    .eq('id', conversation.id)
+                    .single();
+                  
+                  if (convAiCheck?.ai_auto_reply_enabled) {
+                    console.log(`🤖🔄 [CHATBOT] AI auto-reply is active, skipping chatbot engine`);
+                    // Clean up any stale running executions
+                    await supabase
+                      .from('chatbot_executions')
+                      .update({ status: 'completed', completed_at: new Date().toISOString() })
+                      .eq('conversation_id', conversation.id)
+                      .eq('status', 'running');
+                    chatbotHandled = false; // Let AI auto-reply handle it
+                  }
+
                   // Use limit 1 + order to avoid "multiple rows" error
                   const { data: execRows } = await supabase
                     .from('chatbot_executions')
@@ -889,7 +907,7 @@ serve(async (req) => {
                     .order('started_at', { ascending: false })
                     .limit(1);
 
-                  const activeExec = execRows?.[0] || null;
+                  const activeExec = (!convAiCheck?.ai_auto_reply_enabled) ? (execRows?.[0] || null) : null;
 
                   if (activeExec) {
                     console.log(`🤖🔄 [CHATBOT] Active execution found: ${activeExec.id}, current_node: ${activeExec.current_node_id}`);
@@ -1050,7 +1068,7 @@ serve(async (req) => {
                             const serverUrl = sessionData?.baileys_server_url;
                             const instanceName2 = sessionData?.instance_name;
 
-                            if (serverUrl && nextNode.type === 'action') {
+                            if (nextNode.type === 'action') {
                               // ===== HANDLE ACTION NODES =====
                               const actionSubType = nextNode.subType || nextNode.data?.config?.actionType || '';
                               console.log(`🤖🔄 [CHATBOT] Processing action node: ${actionSubType}`);
@@ -1082,17 +1100,15 @@ serve(async (req) => {
                                     sender_name: 'Sistema',
                                   });
 
-                                  // Complete chatbot execution
-                                  const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                  // Complete ALL running chatbot executions for this conversation (not just current)
                                   await supabase
                                     .from('chatbot_executions')
                                     .update({
-                                      current_node_id: nextNodeId,
-                                      execution_path: [...execPath, nextNodeId],
                                       status: 'completed',
                                       completed_at: new Date().toISOString(),
                                     })
-                                    .eq('id', activeExec.id);
+                                    .eq('conversation_id', conversation.id)
+                                    .eq('status', 'running');
 
                                   // If behavior is send_welcome, trigger AI to send first message
                                   if (aiEntryBehavior === 'send_welcome') {

@@ -275,11 +275,8 @@ const HabitsPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate('/dashboard/habitos/builder')} variant="outline" className="gap-2 rounded-xl" style={{ borderColor: SUITE_COLOR, color: SUITE_COLOR }}>
-            <Zap className="h-4 w-4" /> Flow Builder
-          </Button>
-          <Button onClick={openNew} className="gap-2 rounded-xl" style={{ backgroundColor: SUITE_COLOR }}>
-            <Plus className="h-4 w-4" /> Novo Rápido
+          <Button onClick={() => navigate('/dashboard/habitos/builder')} className="gap-2 rounded-xl text-white" style={{ backgroundColor: SUITE_COLOR }}>
+            <Plus className="h-4 w-4" /> Criar Hábito
           </Button>
         </div>
       </div>
@@ -358,7 +355,7 @@ const HabitsPage: React.FC = () => {
               Automatize rotinas diárias como criar tarefas, agendar reuniões ou enviar mensagens para sua equipe.
             </p>
             {!searchQuery && filterFreq === 'all' && (
-              <Button onClick={openNew} className="rounded-xl gap-2" style={{ backgroundColor: SUITE_COLOR }}>
+              <Button onClick={() => navigate('/dashboard/habitos/builder')} className="rounded-xl gap-2 text-white" style={{ backgroundColor: SUITE_COLOR }}>
                 <Plus className="h-4 w-4" /> Criar Hábito
               </Button>
             )}

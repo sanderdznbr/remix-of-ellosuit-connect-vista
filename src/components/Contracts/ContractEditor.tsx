@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Save, FileText, Plus, Image, Upload, Type, Loader2,
+  ArrowLeft, Save, FileText, Plus, Type, Loader2,
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Trash2,
+  List, ListOrdered, Trash2, Upload, Image, FileUp,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,17 +18,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import ContractEditorToolbar from './ContractEditorToolbar';
+import ContractEditorSidebar from './ContractEditorSidebar';
+import ContractFieldDialogs from './ContractFieldDialogs';
+import ContractPageArea from './ContractPageArea';
 
 const SUITE_COLOR = '#3000E3';
 
-interface ContractField {
+export interface ContractField {
   id: string;
   label: string;
   type: string;
   placeholder?: string;
 }
 
-const AVAILABLE_FIELDS = [
+export const AVAILABLE_FIELDS = [
   { id: 'nome', label: 'Nome Completo', type: 'text' },
   { id: 'cpf', label: 'CPF', type: 'text' },
   { id: 'cnpj', label: 'CNPJ', type: 'text' },
@@ -53,7 +58,7 @@ const ContractEditor: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const editorRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState<string | null>(searchParams.get('id'));
@@ -68,6 +73,11 @@ const ContractEditor: React.FC = () => {
   const [showCustomFieldDialog, setShowCustomFieldDialog] = useState(false);
   const [customFieldLabel, setCustomFieldLabel] = useState('');
   const [customFieldType, setCustomFieldType] = useState('text');
+  const [importing, setImporting] = useState(false);
+
+  // Pagination
+  const [pages, setPages] = useState<string[]>(['']);
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -88,8 +98,11 @@ const ContractEditor: React.FC = () => {
         setFields((data.fields as unknown as ContractField[]) || []);
         setLogoUrl(data.logo_url || '');
         setLetterheadUrl(data.letterhead_url || '');
-        if (editorRef.current) {
-          editorRef.current.innerHTML = data.content || '';
+        const content = data.content || '';
+        if (content.includes('<!-- PAGE_BREAK -->')) {
+          setPages(content.split('<!-- PAGE_BREAK -->'));
+        } else {
+          setPages([content]);
         }
       }
       setLoading(false);
@@ -97,9 +110,30 @@ const ContractEditor: React.FC = () => {
     load();
   }, [templateId, companyId]);
 
+  // Set innerHTML when page changes or pages load
+  useEffect(() => {
+    const ref = pageRefs.current[currentPage];
+    if (ref && pages[currentPage] !== undefined) {
+      if (ref.innerHTML !== pages[currentPage]) {
+        ref.innerHTML = pages[currentPage];
+      }
+    }
+  }, [currentPage, pages.length]);
+
+  const savePageContent = useCallback(() => {
+    const ref = pageRefs.current[currentPage];
+    if (ref) {
+      setPages(prev => {
+        const copy = [...prev];
+        copy[currentPage] = ref.innerHTML;
+        return copy;
+      });
+    }
+  }, [currentPage]);
+
   const execCmd = (cmd: string, value?: string) => {
     document.execCommand(cmd, false, value);
-    editorRef.current?.focus();
+    pageRefs.current[currentPage]?.focus();
   };
 
   const insertField = (field: ContractField) => {
@@ -109,7 +143,7 @@ const ContractEditor: React.FC = () => {
     const tag = `<span class="contract-field" contenteditable="false" style="background: ${SUITE_COLOR}18; border: 1px solid ${SUITE_COLOR}40; border-radius: 4px; padding: 1px 6px; color: ${SUITE_COLOR}; font-weight: 600; font-size: 0.9em; cursor: default;">{{${field.id}}}</span>&nbsp;`;
     document.execCommand('insertHTML', false, tag);
     setShowFieldDialog(false);
-    editorRef.current?.focus();
+    pageRefs.current[currentPage]?.focus();
   };
 
   const addCustomField = () => {
@@ -138,10 +172,131 @@ const ContractEditor: React.FC = () => {
     toast.success(`${type === 'logo' ? 'Logo' : 'Timbrado'} enviado!`);
   };
 
+  // Import PDF
+  const importPdf = async (file: File) => {
+    setImporting(true);
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const newPages: string[] = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        let lastY: number | null = null;
+        let html = '';
+
+        for (const item of textContent.items) {
+          if ('str' in item) {
+            const y = (item as any).transform?.[5];
+            if (lastY !== null && y !== undefined && Math.abs(y - lastY) > 2) {
+              html += '<br/>';
+            }
+            html += item.str;
+            lastY = y;
+          }
+        }
+        newPages.push(`<p>${html}</p>`);
+      }
+
+      setPages(newPages.length > 0 ? newPages : ['']);
+      setCurrentPage(0);
+      toast.success(`PDF importado com ${newPages.length} página(s)`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao importar PDF');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Import DOCX
+  const importDocx = async (file: File) => {
+    setImporting(true);
+    try {
+      const mammoth = await import('mammoth');
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+
+      // Split long content into pages (~3000 chars per page as rough heuristic)
+      const html = result.value;
+      const CHARS_PER_PAGE = 3000;
+      const pagesArr: string[] = [];
+
+      if (html.length <= CHARS_PER_PAGE) {
+        pagesArr.push(html);
+      } else {
+        // Split by paragraphs
+        const chunks = html.split(/<\/p>/gi);
+        let current = '';
+        for (const chunk of chunks) {
+          const piece = chunk + '</p>';
+          if ((current + piece).length > CHARS_PER_PAGE && current.length > 0) {
+            pagesArr.push(current);
+            current = piece;
+          } else {
+            current += piece;
+          }
+        }
+        if (current.trim().length > 0) pagesArr.push(current);
+      }
+
+      setPages(pagesArr.length > 0 ? pagesArr : ['']);
+      setCurrentPage(0);
+      toast.success(`Documento importado com ${pagesArr.length} página(s)`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao importar documento Word');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') {
+      importPdf(file);
+    } else if (ext === 'docx' || ext === 'doc') {
+      importDocx(file);
+    } else {
+      toast.error('Formato não suportado. Use PDF ou DOCX.');
+    }
+    e.target.value = '';
+  };
+
+  // Page management
+  const addPage = () => {
+    savePageContent();
+    setPages(prev => [...prev, '']);
+    setCurrentPage(pages.length);
+  };
+
+  const deletePage = (index: number) => {
+    if (pages.length <= 1) return;
+    setPages(prev => prev.filter((_, i) => i !== index));
+    setCurrentPage(prev => Math.min(prev, pages.length - 2));
+  };
+
+  const goToPage = (index: number) => {
+    savePageContent();
+    setCurrentPage(index);
+  };
+
   const save = async () => {
     if (!companyId || !user?.id) return;
     setSaving(true);
-    const content = editorRef.current?.innerHTML || '';
+    savePageContent();
+
+    // Build content with page break markers
+    const allPages = [...pages];
+    const ref = pageRefs.current[currentPage];
+    if (ref) allPages[currentPage] = ref.innerHTML;
+    const content = allPages.join('<!-- PAGE_BREAK -->');
 
     try {
       if (templateId) {
@@ -193,6 +348,17 @@ const ContractEditor: React.FC = () => {
           />
         </div>
         <div className="flex items-center gap-2">
+          {/* Import button */}
+          <label className="cursor-pointer">
+            <Button variant="outline" size="sm" className="rounded-xl gap-1.5 pointer-events-none" asChild>
+              <span>
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+                {importing ? 'Importando...' : 'Importar PDF/Word'}
+              </span>
+            </Button>
+            <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleImportFile} disabled={importing} />
+          </label>
+
           <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setShowFieldDialog(true)}>
             <Type className="h-4 w-4" /> Inserir Campo
           </Button>
@@ -204,201 +370,52 @@ const ContractEditor: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Settings */}
-        <div className="w-72 bg-background border-r flex flex-col">
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-5">
-              {/* Description */}
-              <div>
-                <Label className="text-xs font-medium">Descrição</Label>
-                <Textarea value={description} onChange={e => setDescription(e.target.value)} className="mt-1 rounded-xl resize-none text-sm" rows={2} placeholder="Descrição do modelo..." />
-              </div>
-
-              <Separator />
-
-              {/* Logo */}
-              <div>
-                <Label className="text-xs font-medium">Logo (topo do contrato)</Label>
-                {logoUrl ? (
-                  <div className="mt-2 relative">
-                    <img src={logoUrl} alt="Logo" className="max-h-16 rounded-lg border" />
-                    <button onClick={() => setLogoUrl('')} className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
-                  </div>
-                ) : (
-                  <label className="mt-2 flex items-center gap-2 p-3 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/40 transition-colors">
-                    <Upload className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Enviar logo</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && uploadFile(e.target.files[0], 'logo')} />
-                  </label>
-                )}
-              </div>
-
-              {/* Letterhead */}
-              <div>
-                <Label className="text-xs font-medium">Timbrado (fundo da página)</Label>
-                {letterheadUrl ? (
-                  <div className="mt-2 relative">
-                    <img src={letterheadUrl} alt="Timbrado" className="max-h-24 rounded-lg border w-full object-cover" />
-                    <button onClick={() => setLetterheadUrl('')} className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
-                  </div>
-                ) : (
-                  <label className="mt-2 flex items-center gap-2 p-3 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/40 transition-colors">
-                    <Image className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Enviar timbrado</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && uploadFile(e.target.files[0], 'letterhead')} />
-                  </label>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Fields list */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs font-medium">Campos editáveis</Label>
-                  <Badge variant="secondary" className="text-[10px]">{fields.length}</Badge>
-                </div>
-                {fields.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nenhum campo adicionado. Use "Inserir Campo" para adicionar.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {fields.map(f => (
-                      <div key={f.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-muted/50 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[10px] px-1 py-0.5 rounded" style={{ backgroundColor: `${SUITE_COLOR}15`, color: SUITE_COLOR }}>
-                            {`{{${f.id}}}`}
-                          </span>
-                          <span>{f.label}</span>
-                        </div>
-                        <button onClick={() => removeField(f.id)} className="text-muted-foreground hover:text-destructive">
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </ScrollArea>
-        </div>
+        {/* Sidebar */}
+        <ContractEditorSidebar
+          description={description}
+          setDescription={setDescription}
+          logoUrl={logoUrl}
+          setLogoUrl={setLogoUrl}
+          letterheadUrl={letterheadUrl}
+          setLetterheadUrl={setLetterheadUrl}
+          fields={fields}
+          removeField={removeField}
+          uploadFile={uploadFile}
+        />
 
         {/* Editor Area */}
         <div className="flex-1 flex flex-col">
           {/* Toolbar */}
-          <div className="h-10 bg-background border-b flex items-center gap-1 px-4">
-            <button onClick={() => execCmd('bold')} className="p-1.5 rounded-lg hover:bg-muted" title="Negrito"><Bold className="h-4 w-4" /></button>
-            <button onClick={() => execCmd('italic')} className="p-1.5 rounded-lg hover:bg-muted" title="Itálico"><Italic className="h-4 w-4" /></button>
-            <button onClick={() => execCmd('underline')} className="p-1.5 rounded-lg hover:bg-muted" title="Sublinhado"><Underline className="h-4 w-4" /></button>
-            <div className="w-px h-5 bg-border mx-1" />
-            <button onClick={() => execCmd('justifyLeft')} className="p-1.5 rounded-lg hover:bg-muted"><AlignLeft className="h-4 w-4" /></button>
-            <button onClick={() => execCmd('justifyCenter')} className="p-1.5 rounded-lg hover:bg-muted"><AlignCenter className="h-4 w-4" /></button>
-            <button onClick={() => execCmd('justifyRight')} className="p-1.5 rounded-lg hover:bg-muted"><AlignRight className="h-4 w-4" /></button>
-            <div className="w-px h-5 bg-border mx-1" />
-            <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 rounded-lg hover:bg-muted"><List className="h-4 w-4" /></button>
-            <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 rounded-lg hover:bg-muted"><ListOrdered className="h-4 w-4" /></button>
-            <div className="w-px h-5 bg-border mx-1" />
-            <select onChange={e => execCmd('fontSize', e.target.value)} className="text-xs border rounded-lg px-2 py-1 bg-background" defaultValue="3">
-              <option value="1">Pequeno</option>
-              <option value="3">Normal</option>
-              <option value="5">Grande</option>
-              <option value="7">Muito Grande</option>
-            </select>
-          </div>
+          <ContractEditorToolbar execCmd={execCmd} />
 
           {/* Page Area */}
-          <div className="flex-1 overflow-auto flex justify-center py-8 bg-muted/50">
-            <div
-              className="bg-white shadow-xl rounded-sm relative"
-              style={{
-                width: '210mm',
-                minHeight: '297mm',
-                backgroundImage: letterheadUrl ? `url(${letterheadUrl})` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
-              {/* Logo */}
-              {logoUrl && (
-                <div className="flex justify-center pt-8 pb-2">
-                  <img src={logoUrl} alt="Logo" className="max-h-20 object-contain" />
-                </div>
-              )}
-
-              {/* Editable Content */}
-              <div
-                ref={editorRef}
-                contentEditable
-                className="outline-none px-16 py-8 min-h-[200mm] text-sm leading-relaxed"
-                style={{ fontFamily: "'Times New Roman', serif", fontSize: '12pt', lineHeight: '1.8' }}
-                suppressContentEditableWarning
-                onPaste={e => {
-                  e.preventDefault();
-                  const text = e.clipboardData.getData('text/plain');
-                  document.execCommand('insertText', false, text);
-                }}
-              />
-            </div>
-          </div>
+          <ContractPageArea
+            pages={pages}
+            currentPage={currentPage}
+            pageRefs={pageRefs}
+            logoUrl={logoUrl}
+            letterheadUrl={letterheadUrl}
+            savePageContent={savePageContent}
+            goToPage={goToPage}
+            addPage={addPage}
+            deletePage={deletePage}
+          />
         </div>
       </div>
 
-      {/* Insert Field Dialog */}
-      <Dialog open={showFieldDialog} onOpenChange={setShowFieldDialog}>
-        <DialogContent className="rounded-2xl max-w-md">
-          <DialogHeader>
-            <DialogTitle>Inserir Campo Editável</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-80">
-            <div className="grid grid-cols-2 gap-2 p-1">
-              {AVAILABLE_FIELDS.map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => insertField(f)}
-                  className="text-left p-3 rounded-xl border hover:border-primary/40 hover:bg-muted/50 transition-all"
-                >
-                  <span className="text-sm font-medium block">{f.label}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">{`{{${f.id}}}`}</span>
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-          <Separator />
-          <Button variant="outline" onClick={() => { setShowFieldDialog(false); setShowCustomFieldDialog(true); }} className="rounded-xl gap-2 w-full">
-            <Plus className="h-4 w-4" /> Campo Personalizado
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Custom Field Dialog */}
-      <Dialog open={showCustomFieldDialog} onOpenChange={setShowCustomFieldDialog}>
-        <DialogContent className="rounded-2xl max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Campo Personalizado</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label className="text-xs">Nome do campo</Label>
-              <Input value={customFieldLabel} onChange={e => setCustomFieldLabel(e.target.value)} className="mt-1 rounded-xl" placeholder="Ex: Número do Contrato" />
-            </div>
-            <div>
-              <Label className="text-xs">Tipo</Label>
-              <Select value={customFieldType} onValueChange={setCustomFieldType}>
-                <SelectTrigger className="mt-1 rounded-xl"><SelectValue /></SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="text">Texto</SelectItem>
-                  <SelectItem value="date">Data</SelectItem>
-                  <SelectItem value="number">Número</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCustomFieldDialog(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={addCustomField} disabled={!customFieldLabel.trim()} className="rounded-xl text-white" style={{ backgroundColor: SUITE_COLOR }}>Adicionar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <ContractFieldDialogs
+        showFieldDialog={showFieldDialog}
+        setShowFieldDialog={setShowFieldDialog}
+        showCustomFieldDialog={showCustomFieldDialog}
+        setShowCustomFieldDialog={setShowCustomFieldDialog}
+        customFieldLabel={customFieldLabel}
+        setCustomFieldLabel={setCustomFieldLabel}
+        customFieldType={customFieldType}
+        setCustomFieldType={setCustomFieldType}
+        insertField={insertField}
+        addCustomField={addCustomField}
+      />
     </div>
   );
 };

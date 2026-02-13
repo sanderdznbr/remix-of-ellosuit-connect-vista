@@ -5,6 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Video } from 'lucide-react';
+import CalendarKPIs from './CalendarKPIs';
 import { useToast } from '@/hooks/use-toast';
 import ImprovedEventModal from './ImprovedEventModal';
 import AppointmentModal from './AppointmentModal';
@@ -243,6 +244,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
           </Button>
         </div>
       </div>
+
+      <CalendarKPIs events={events} />
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6">

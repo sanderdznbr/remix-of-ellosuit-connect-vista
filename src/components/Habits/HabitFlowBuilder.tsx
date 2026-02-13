@@ -112,6 +112,48 @@ const HabitFlowBuilder: React.FC = () => {
     setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, ...updates } : n));
   }, []);
 
+  const computeNextRun = (frequency: string, triggerConfig: any): string => {
+    const now = new Date();
+    const timeStr = triggerConfig.time || '09:00';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+
+    if (frequency === 'daily') {
+      const next = new Date(now);
+      // If time hasn't passed today, schedule for today; otherwise tomorrow
+      next.setHours(hours, minutes, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      return next.toISOString();
+    }
+
+    if (frequency === 'weekly') {
+      const days: number[] = triggerConfig.days || [1];
+      for (let i = 0; i <= 7; i++) {
+        const candidate = new Date(now);
+        candidate.setDate(candidate.getDate() + i);
+        candidate.setHours(hours, minutes, 0, 0);
+        if (days.includes(candidate.getDay()) && candidate > now) {
+          return candidate.toISOString();
+        }
+      }
+      const fallback = new Date(now);
+      fallback.setDate(fallback.getDate() + 7);
+      fallback.setHours(hours, minutes, 0, 0);
+      return fallback.toISOString();
+    }
+
+    if (frequency === 'monthly') {
+      const dom = triggerConfig.dayOfMonth || 1;
+      let next = new Date(now.getFullYear(), now.getMonth(), dom, hours, minutes, 0);
+      if (next <= now) next = new Date(now.getFullYear(), now.getMonth() + 1, dom, hours, minutes, 0);
+      return next.toISOString();
+    }
+
+    const fallback = new Date(now);
+    fallback.setHours(hours, minutes, 0, 0);
+    if (fallback <= now) fallback.setDate(fallback.getDate() + 1);
+    return fallback.toISOString();
+  };
+
   const saveFlow = async () => {
     if (!companyId || !user?.id) return;
     setIsSaving(true);
@@ -122,6 +164,7 @@ const HabitFlowBuilder: React.FC = () => {
     const triggerNode = nodes.find(n => n.type === 'trigger');
     const frequency = triggerNode?.subType || 'daily';
     const triggerConfig = triggerNode?.data.config || {};
+    const nextRunAt = computeNextRun(frequency, triggerConfig);
 
     try {
       if (currentRoutineId) {
@@ -134,6 +177,7 @@ const HabitFlowBuilder: React.FC = () => {
             time_of_day: (triggerConfig.time || '09:00') + ':00',
             days_of_week: triggerConfig.days || null,
             day_of_month: triggerConfig.dayOfMonth || null,
+            next_run_at: isActive ? nextRunAt : null,
           })
           .eq('id', currentRoutineId);
         if (error) throw error;
@@ -151,6 +195,7 @@ const HabitFlowBuilder: React.FC = () => {
             days_of_week: triggerConfig.days || null,
             day_of_month: triggerConfig.dayOfMonth || null,
             is_active: false,
+            next_run_at: null,
           })
           .select()
           .single();
@@ -195,10 +240,34 @@ const HabitFlowBuilder: React.FC = () => {
   const toggleActive = async () => {
     if (!currentRoutineId) return;
     try {
-      await supabase.from('task_routines').update({ is_active: !isActive }).eq('id', currentRoutineId);
-      setIsActive(!isActive);
-      setRoutines(prev => prev.map(r => r.id === currentRoutineId ? { ...r, is_active: !isActive } : r));
+      const newActive = !isActive;
+      let nextRunAt: string | null = null;
+
+      if (newActive) {
+        // Compute next_run_at when activating
+        const triggerNode = nodes.find(n => n.type === 'trigger');
+        const frequency = triggerNode?.subType || 'daily';
+        const triggerConfig = triggerNode?.data.config || {};
+        nextRunAt = computeNextRun(frequency, triggerConfig);
+      }
+
+      await supabase.from('task_routines').update({ 
+        is_active: newActive,
+        next_run_at: nextRunAt,
+      }).eq('id', currentRoutineId);
+      
+      setIsActive(newActive);
+      setRoutines(prev => prev.map(r => r.id === currentRoutineId ? { ...r, is_active: newActive } : r));
       toast.success(isActive ? 'Hábito pausado' : 'Hábito ativado! 🚀');
+
+      // Trigger execution check immediately
+      if (newActive) {
+        try {
+          await supabase.functions.invoke('execute-routines');
+        } catch (e) {
+          console.log('Execute-routines check triggered');
+        }
+      }
     } catch { toast.error('Erro'); }
   };
 

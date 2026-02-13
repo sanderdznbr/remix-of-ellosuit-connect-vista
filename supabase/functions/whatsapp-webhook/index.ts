@@ -1401,6 +1401,9 @@ serve(async (req) => {
                         'Ao usar [HANDOFF], envie uma mensagem gentil dizendo que vai transferir para um atendente. Exemplo: "Vou te transferir para um atendente que poderá te ajudar melhor com isso! [HANDOFF]"',
                         'A tag [HANDOFF] sera removida automaticamente e nao aparecera para o cliente.',
                         '',
+                        'LINKS E URLs:',
+                        'Quando precisar enviar links ou URLs, SEMPRE inclua o link na sua resposta em texto. O sistema automaticamente enviara o texto com o link clicavel e depois o audio separadamente.',
+                        '',
                         'Responda sempre em português brasileiro.'
                       ].join('\n');
                       
@@ -1547,9 +1550,152 @@ serve(async (req) => {
                             const sendJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
                             console.log(`🤖 Send JID: ${sendJid}, remoteJid: ${remoteJid}, phoneNumber: ${phoneNumber}`);
                             
+                            // Detect URLs in the response - if audio mode is on and response contains links,
+                            // extract links to send as text separately, then send audio without the links
+                            const urlRegex = /(https?:\/\/[^\s,)]+)/gi;
+                            
                             // Send each message part
                             for (let partIndex = 0; partIndex < messageParts.length; partIndex++) {
                               const partContent = messageParts[partIndex];
+                              const containsUrl = urlRegex.test(partContent);
+                              urlRegex.lastIndex = 0; // Reset regex
+                              
+                              // If audio mode is on and content has URLs, send text first then audio
+                              if (shouldSendAudio && partIndex === 0 && containsUrl) {
+                                console.log('🔗 Response contains URLs - sending text first, then audio');
+                                
+                                // 1. Send text message with the full content (including links)
+                                const textMsgId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                                await supabase
+                                  .from('whatsapp_messages')
+                                  .insert({
+                                    conversation_id: conversation.id,
+                                    session_id: targetSessionId,
+                                    company_id: companyId,
+                                    wa_message_id: textMsgId,
+                                    from_me: true,
+                                    content: partContent,
+                                    message_type: 'text',
+                                    status: 'sending',
+                                    is_ai_response: true,
+                                    sender_name: agent.name,
+                                    timestamp: new Date().toISOString()
+                                  });
+                                
+                                const textSendResp = await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    instanceName: sessionData.instance_name,
+                                    jid: sendJid,
+                                    message: { text: partContent }
+                                  })
+                                });
+                                
+                                await supabase
+                                  .from('whatsapp_messages')
+                                  .update({ status: textSendResp.ok ? 'sent' : 'failed' })
+                                  .eq('wa_message_id', textMsgId);
+                                
+                                if (textSendResp.ok) {
+                                  console.log('🔗 Text with links sent successfully');
+                                } else {
+                                  console.error('🔗 Failed to send text with links:', await textSendResp.text());
+                                }
+                                
+                                // Small delay before sending audio
+                                await new Promise(r => setTimeout(r, 1000));
+                                
+                                // 2. Now send audio version (without URLs for cleaner speech)
+                                const audioContent = partContent.replace(urlRegex, '').replace(/\s{2,}/g, ' ').trim();
+                                urlRegex.lastIndex = 0;
+                                
+                                if (audioContent.length > 5) {
+                                  const audioMsgId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                                  await supabase
+                                    .from('whatsapp_messages')
+                                    .insert({
+                                      conversation_id: conversation.id,
+                                      session_id: targetSessionId,
+                                      company_id: companyId,
+                                      wa_message_id: audioMsgId,
+                                      from_me: true,
+                                      content: '[Áudio]',
+                                      message_type: 'ptt',
+                                      status: 'sending',
+                                      is_ai_response: true,
+                                      sender_name: agent.name,
+                                      timestamp: new Date(Date.now() + 1000).toISOString()
+                                    });
+                                  
+                                  // Generate TTS for the text without URLs
+                                  const ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                                    },
+                                    body: JSON.stringify({
+                                      text: audioContent,
+                                      voice: ttsVoice,
+                                      speed: 1.0,
+                                      format: 'opus'
+                                    })
+                                  });
+                                  
+                                  let audioSent = false;
+                                  if (ttsResponse.ok) {
+                                    const ttsData = await ttsResponse.json();
+                                    const audioBase64 = ttsData.audio_base64;
+                                    const audioFormat = ttsData.format || 'opus';
+                                    const fileExt = audioFormat === 'mp3' ? 'mp3' : 'ogg';
+                                    const contentType = audioFormat === 'mp3' ? 'audio/mpeg' : 'audio/ogg; codecs=opus';
+                                    const audioFileName = `ai-audio/${audioMsgId}.${fileExt}`;
+                                    
+                                    const binaryString = atob(audioBase64);
+                                    const audioBytes = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) {
+                                      audioBytes[i] = binaryString.charCodeAt(i);
+                                    }
+                                    
+                                    const { error: uploadError } = await supabase.storage
+                                      .from('whatsapp-media')
+                                      .upload(audioFileName, audioBytes, { contentType, upsert: true });
+                                    
+                                    if (!uploadError) {
+                                      const { data: publicUrlData } = supabase.storage
+                                        .from('whatsapp-media')
+                                        .getPublicUrl(audioFileName);
+                                      
+                                      const sendVoiceResp = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          instanceName: sessionData.instance_name,
+                                          jid: sendJid,
+                                          audioUrl: publicUrlData.publicUrl,
+                                          mimetype: contentType
+                                        })
+                                      });
+                                      
+                                      audioSent = sendVoiceResp.ok;
+                                      await supabase
+                                        .from('whatsapp_messages')
+                                        .update({ media_url: publicUrlData.publicUrl, status: audioSent ? 'sent' : 'failed' })
+                                        .eq('wa_message_id', audioMsgId);
+                                    }
+                                  }
+                                  
+                                  if (!audioSent) {
+                                    // Remove failed audio message from DB
+                                    await supabase.from('whatsapp_messages').delete().eq('wa_message_id', audioMsgId);
+                                    console.log('🎙️ Audio generation failed for link message, text already sent');
+                                  }
+                                }
+                                
+                                continue; // Skip the normal send logic below
+                              }
+                              
                               const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
                               
                               // Save to database

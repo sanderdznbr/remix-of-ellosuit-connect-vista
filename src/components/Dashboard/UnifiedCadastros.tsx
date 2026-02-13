@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Users, Building2, UserPlus, Briefcase } from 'lucide-react';
+import { Users, Building2, UserPlus, Briefcase, FolderOpen, Code2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ClientsManager from './ClientsManager';
 import EmployeeManagement from './EmployeeManagement';
+import ContactGroupsManager from './ContactGroupsManager';
+import FormIntegration from './FormIntegration';
 
-type TabValue = 'clientes' | 'fornecedores' | 'prospectos' | 'colaboradores';
+type TabValue = 'clientes' | 'fornecedores' | 'prospectos' | 'colaboradores' | 'grupos' | 'formularios';
 
 interface TabConfig {
   value: TabValue;
@@ -18,6 +20,8 @@ const tabs: TabConfig[] = [
   { value: 'fornecedores', label: 'Fornecedores', icon: Building2, contactType: 'fornecedor' },
   { value: 'prospectos', label: 'Prospectos', icon: UserPlus, contactType: 'prospecto' },
   { value: 'colaboradores', label: 'Colaboradores', icon: Briefcase },
+  { value: 'grupos', label: 'Grupos', icon: FolderOpen },
+  { value: 'formularios', label: 'Captação', icon: Code2 },
 ];
 
 const UnifiedCadastros: React.FC = () => {
@@ -31,7 +35,7 @@ const UnifiedCadastros: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 lg:w-auto lg:inline-flex">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -51,6 +55,10 @@ const UnifiedCadastros: React.FC = () => {
           <TabsContent key={tab.value} value={tab.value} className="mt-6">
             {tab.value === 'colaboradores' ? (
               <EmployeeManagement />
+            ) : tab.value === 'grupos' ? (
+              <ContactGroupsManager />
+            ) : tab.value === 'formularios' ? (
+              <FormIntegration />
             ) : (
               <ClientsManager contactType={tab.contactType!} />
             )}

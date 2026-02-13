@@ -42,5 +42,8 @@ verify_jwt = false
 [functions.tts-openai]
 verify_jwt = false
 
+[functions.form-capture]
+verify_jwt = false
+
 
 

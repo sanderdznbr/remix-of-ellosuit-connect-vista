@@ -663,6 +663,7 @@ export type Database = {
       }
       contact_group_members: {
         Row: {
+          client_id: string | null
           created_at: string
           group_id: string
           id: string
@@ -670,6 +671,7 @@ export type Database = {
           phone: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           group_id: string
           id?: string
@@ -677,6 +679,7 @@ export type Database = {
           phone: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           group_id?: string
           id?: string
@@ -684,6 +687,13 @@ export type Database = {
           phone?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contact_group_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contact_group_members_group_id_fkey"
             columns: ["group_id"]
@@ -1464,6 +1474,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      form_integration_tokens: {
+        Row: {
+          company_id: string
+          contact_type: string
+          created_at: string
+          created_by: string
+          fields_config: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contact_type?: string
+          created_at?: string
+          created_by: string
+          fields_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contact_type?: string
+          created_at?: string
+          created_by?: string
+          fields_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_integration_tokens_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       holidays: {
         Row: {

@@ -856,7 +856,7 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Cada opção criará uma saída separada no bloco para conectar a caminhos diferentes
+              Cada opção criará uma saída separada no bloco para conectar a caminhos diferentes. O usuário pode digitar o <strong>número</strong> (1, 2, 3...) ou o <strong>texto exato</strong> da opção. Respostas inválidas seguem pela saída "Inválida".
             </p>
           </div>
         )}

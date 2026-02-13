@@ -206,6 +206,10 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       const btnIndex = parseInt(handle.replace('btn_', ''), 10);
       startY = node.position.y + 55 + btnIndex * 28;
     }
+    if (node.subType === 'buttons' && handle === 'invalid') {
+      const btns = node.data.config?.buttons || [];
+      startY = node.position.y + 55 + btns.length * 28;
+    }
     
     setConnectingLine({
       sourceId: nodeId,
@@ -365,6 +369,10 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       const btnIndex = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
       sourceY = sourceNode.position.y + 55 + btnIndex * 28;
     }
+    if (sourceNode.subType === 'buttons' && edge.sourceHandle === 'invalid') {
+      const btns = sourceNode.data.config?.buttons || [];
+      sourceY = sourceNode.position.y + 55 + btns.length * 28;
+    }
     
     const targetX = targetNode.position.x;
     const targetY = targetNode.position.y + 40;
@@ -388,6 +396,9 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       const colors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
       const btnIdx = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
       edgeColor = colors[btnIdx % colors.length];
+    }
+    if (sourceNode.subType === 'buttons' && edge.sourceHandle === 'invalid') {
+      edgeColor = '#94A3B8';
     }
 
     return (
@@ -620,6 +631,15 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                       </React.Fragment>
                     );
                   })}
+                  {/* Invalid response output */}
+                  <div 
+                    className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 border-gray-400 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                    style={{ top: 45 + buttonOptions.length * 28 }}
+                    onMouseDown={(e) => handleOutputMouseDown(e, node.id, 'invalid')}
+                  >
+                    <span className="text-[8px] font-bold text-gray-400">✕</span>
+                  </div>
+                  <span className="absolute right-5 text-[9px] text-gray-400 font-medium" style={{ top: 48 + buttonOptions.length * 28 }}>Inválida</span>
                 </>
               ) : isMultiCondition && multiConditions.length > 0 ? (
                 <>

@@ -841,12 +841,16 @@ serve(async (req) => {
               let chatbotHandled = false;
               if (!fromMe && conversation) {
                 try {
-                  const { data: activeExec } = await supabase
+                  // Use limit 1 + order to avoid "multiple rows" error
+                  const { data: execRows } = await supabase
                     .from('chatbot_executions')
                     .select('id, flow_id, current_node_id, variables, execution_path')
                     .eq('conversation_id', conversation.id)
                     .eq('status', 'running')
-                    .maybeSingle();
+                    .order('started_at', { ascending: false })
+                    .limit(1);
+
+                  const activeExec = execRows?.[0] || null;
 
                   if (activeExec) {
                     console.log(`🤖🔄 [CHATBOT] Active execution found: ${activeExec.id}, current_node: ${activeExec.current_node_id}`);
@@ -861,9 +865,88 @@ serve(async (req) => {
                     if (flow) {
                       const nodes = Array.isArray(flow.nodes) ? flow.nodes : [];
                       const edges = Array.isArray(flow.edges) ? flow.edges : [];
-                      const currentNode = nodes.find((n: any) => n.id === activeExec.current_node_id);
 
-                      if (currentNode) {
+                      // If current_node_id is null, find the first message node (after trigger)
+                      let currentNode = nodes.find((n: any) => n.id === activeExec.current_node_id);
+                      if (!currentNode) {
+                        console.log(`🤖🔄 [CHATBOT] current_node_id is null, finding first node...`);
+                        const triggerNode = nodes.find((n: any) => n.type === 'trigger');
+                        if (triggerNode) {
+                          const firstEdge = edges.find((e: any) => e.source === triggerNode.id);
+                          currentNode = firstEdge ? nodes.find((n: any) => n.id === firstEdge.target) : null;
+                        }
+                        if (!currentNode) {
+                          // Fallback: find node with no incoming edges
+                          const targetIds = new Set(edges.map((e: any) => e.target));
+                          currentNode = nodes.find((n: any) => n.type !== 'trigger' && !targetIds.has(n.id));
+                        }
+                        
+                        // If we found a starting node, send its message first (the initial greeting)
+                        if (currentNode) {
+                          console.log(`🤖🔄 [CHATBOT] Resolved to first node: ${currentNode.id}`);
+                          
+                          // Get session server URL
+                          const { data: sessionData } = await supabase
+                            .from('whatsapp_sessions')
+                            .select('baileys_server_url')
+                            .eq('id', targetSessionId)
+                            .single();
+                          const serverUrl = sessionData?.baileys_server_url;
+                          
+                          if (serverUrl && currentNode.type === 'message') {
+                            const vars = (activeExec.variables as Record<string, string>) || {};
+                            let greetMsg = currentNode.data?.config?.content || '';
+                            greetMsg = greetMsg.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
+                            
+                            const greetButtons: string[] = currentNode.data?.config?.buttons || [];
+                            if (greetButtons.length > 0) {
+                              greetMsg += '\n\n' + greetButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                            }
+                            
+                            const jid = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+                            const imageUrl = currentNode.data?.config?.imageUrl || '';
+                            
+                            try {
+                              let ok = false;
+                              if (imageUrl) {
+                                const r = await fetch(`${serverUrl}/api/message/send-media`, {
+                                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ jid, type: 'image', url: imageUrl, caption: greetMsg }),
+                                });
+                                ok = r.ok;
+                              } else {
+                                const r = await fetch(`${serverUrl}/api/message/send`, {
+                                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ jid, message: { text: greetMsg } }),
+                                });
+                                ok = r.ok;
+                              }
+                              
+                              if (ok) {
+                                await supabase.from('whatsapp_messages').insert({
+                                  company_id: companyId, session_id: targetSessionId,
+                                  conversation_id: conversation.id, content: greetMsg,
+                                  from_me: true, status: 'sent',
+                                  message_type: imageUrl ? 'image' : 'text',
+                                  media_url: imageUrl || null, sender_name: 'Chatbot',
+                                });
+                                
+                                await supabase.from('chatbot_executions').update({
+                                  current_node_id: currentNode.id,
+                                  execution_path: [currentNode.id],
+                                }).eq('id', activeExec.id);
+                                
+                                console.log(`🤖🔄 [CHATBOT] Sent initial greeting for node ${currentNode.id}`);
+                                chatbotHandled = true;
+                              }
+                            } catch (e) {
+                              console.error('🤖🔄 [CHATBOT] Initial greeting error:', e);
+                            }
+                          }
+                        }
+                      }
+
+                      if (currentNode && !chatbotHandled) {
                         const userInput = (content || '').trim();
                         let nextNodeId: string | null = null;
 

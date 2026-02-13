@@ -24,6 +24,7 @@ interface StartChatbotModalProps {
   contactPhone: string;
   contactName?: string;
   sessionId?: string;
+  onStarted?: (executionId: string, flowName: string) => void;
 }
 
 const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
@@ -34,6 +35,7 @@ const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
   contactPhone,
   contactName,
   sessionId,
+  onStarted,
 }) => {
   const [flows, setFlows] = useState<ChatbotFlow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,6 +163,7 @@ const StartChatbotModal: React.FC<StartChatbotModalProps> = ({
           .eq('id', execution.id);
       }
 
+      onStarted?.(execution.id, flow.name);
       toast({
         title: '🤖 Chatbot iniciado!',
         description: `Fluxo "${flow.name}" iniciado na conversa`,

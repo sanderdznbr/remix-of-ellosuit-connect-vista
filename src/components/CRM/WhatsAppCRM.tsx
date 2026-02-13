@@ -250,6 +250,7 @@ const WhatsAppCRM: React.FC = () => {
   const [showConversationPopup, setShowConversationPopup] = useState(false);
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
   const [showStartChatbot, setShowStartChatbot] = useState(false);
+  const [activeChatbotFlow, setActiveChatbotFlow] = useState<{ id: string; name: string } | null>(null);
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
   const [showServerDownload, setShowServerDownload] = useState(false);
   
@@ -1174,6 +1175,30 @@ const WhatsAppCRM: React.FC = () => {
       setMessages([]);
     }
   }, [selectedConversation?.contact_phone]);
+
+  // Check for active chatbot execution on selected conversation
+  useEffect(() => {
+    if (!selectedConversation?.id) {
+      setActiveChatbotFlow(null);
+      return;
+    }
+    const checkChatbot = async () => {
+      const { data } = await supabase
+        .from('chatbot_executions')
+        .select('id, flow_id, chatbot_flows(name)')
+        .eq('conversation_id', selectedConversation.id)
+        .eq('status', 'running')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setActiveChatbotFlow({ id: data.id, name: (data as any).chatbot_flows?.name || 'Chatbot' });
+      } else {
+        setActiveChatbotFlow(null);
+      }
+    };
+    checkChatbot();
+  }, [selectedConversation?.id]);
 
   // Handle session success - sync conversations after connection
   const handleSessionSuccess = async (session: WhatsAppSession) => {
@@ -2225,6 +2250,30 @@ const WhatsAppCRM: React.FC = () => {
                     >
                       {selectedConversation.status === 'open' ? 'Aberta' : selectedConversation.status === 'archived' ? 'Arquivada' : 'Fechada'}
                     </Badge>
+                    {activeChatbotFlow && (
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs gap-1 px-2">
+                          <GitBranch className="h-3 w-3" />
+                          {activeChatbotFlow.name}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          onClick={async () => {
+                            await supabase
+                              .from('chatbot_executions')
+                              .update({ status: 'stopped', completed_at: new Date().toISOString() })
+                              .eq('id', activeChatbotFlow.id);
+                            setActiveChatbotFlow(null);
+                            toast({ title: 'Chatbot parado', description: 'O fluxo foi interrompido.' });
+                          }}
+                        >
+                          <Square className="h-3 w-3 mr-1" />
+                          Parar
+                        </Button>
+                      </div>
+                    )}
                     {selectedConversation.assigned_agent_id && selectedConversation.ai_auto_reply_enabled && (() => {
                       const assignedAgent = aiAgents.find(a => a.id === selectedConversation.assigned_agent_id);
                       return assignedAgent ? (
@@ -2770,6 +2819,7 @@ const WhatsAppCRM: React.FC = () => {
           contactPhone={selectedConversation.contact_phone}
           contactName={selectedConversation.contact_name}
           sessionId={selectedConversation.session_id}
+          onStarted={(execId, flowName) => setActiveChatbotFlow({ id: execId, name: flowName })}
         />
       )}
 

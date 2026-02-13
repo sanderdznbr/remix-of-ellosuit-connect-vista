@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyEmployees } from '@/hooks/useCompanyEmployees';
@@ -93,6 +94,7 @@ const defaultForm = {
 
 const HabitsPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { employees, companyId } = useCompanyEmployees();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,9 +274,14 @@ const HabitsPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <Button onClick={openNew} className="gap-2 rounded-xl" style={{ backgroundColor: SUITE_COLOR }}>
-          <Plus className="h-4 w-4" /> Novo Hábito
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate('/dashboard/habitos/builder')} variant="outline" className="gap-2 rounded-xl" style={{ borderColor: SUITE_COLOR, color: SUITE_COLOR }}>
+            <Zap className="h-4 w-4" /> Flow Builder
+          </Button>
+          <Button onClick={openNew} className="gap-2 rounded-xl" style={{ backgroundColor: SUITE_COLOR }}>
+            <Plus className="h-4 w-4" /> Novo Rápido
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -413,8 +420,11 @@ const HabitsPage: React.FC = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
+                          <DropdownMenuItem onClick={() => navigate(`/dashboard/habitos/builder?id=${r.id}`)} className="gap-2 rounded-lg">
+                            <Zap className="h-4 w-4" /> Abrir no Builder
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(r)} className="gap-2 rounded-lg">
-                            <Edit2 className="h-4 w-4" /> Editar
+                            <Edit2 className="h-4 w-4" /> Editar Rápido
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(r.id)} className="gap-2 text-destructive rounded-lg">
                             <Trash2 className="h-4 w-4" /> Excluir

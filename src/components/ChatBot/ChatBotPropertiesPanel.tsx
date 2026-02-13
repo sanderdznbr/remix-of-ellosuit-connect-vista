@@ -803,7 +803,7 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
         
         {node.subType === 'buttons' && (
           <div className="space-y-2">
-            <Label>Botões (máx 3)</Label>
+            <Label>Opções de Escolha</Label>
             <div className="flex flex-wrap gap-2">
               {(node.data.config?.buttons || []).map((btn: string, idx: number) => (
                 <span
@@ -825,40 +825,38 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
                 </span>
               ))}
             </div>
-            {(node.data.config?.buttons || []).length < 3 && (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nome do botão"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const val = (e.target as HTMLInputElement).value.trim();
-                      if (val) {
-                        updateConfig('buttons', [...(node.data.config?.buttons || []), val].slice(0, 3));
-                        (e.target as HTMLInputElement).value = '';
-                      }
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nome da opção"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val) {
+                      updateConfig('buttons', [...(node.data.config?.buttons || []), val]);
+                      (e.target as HTMLInputElement).value = '';
                     }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  onClick={() => {
-                    const input = document.querySelector<HTMLInputElement>('[placeholder="Nome do botão"]');
-                    const val = input?.value.trim();
-                    if (val && input) {
-                      updateConfig('buttons', [...(node.data.config?.buttons || []), val].slice(0, 3));
-                      input.value = '';
-                    }
-                  }}
-                >
-                  +
-                </Button>
-              </div>
-            )}
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => {
+                  const input = document.querySelector<HTMLInputElement>('[placeholder="Nome da opção"]');
+                  const val = input?.value.trim();
+                  if (val && input) {
+                    updateConfig('buttons', [...(node.data.config?.buttons || []), val]);
+                    input.value = '';
+                  }
+                }}
+              >
+                +
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Digite o nome e clique em + ou pressione Enter para adicionar
+              Cada opção criará uma saída separada no bloco para conectar a caminhos diferentes
             </p>
           </div>
         )}

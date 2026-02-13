@@ -201,6 +201,12 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       }
     }
     
+    // Button option handles
+    if (node.subType === 'buttons' && handle?.startsWith('btn_')) {
+      const btnIndex = parseInt(handle.replace('btn_', ''), 10);
+      startY = node.position.y + 55 + btnIndex * 28;
+    }
+    
     setConnectingLine({
       sourceId: nodeId,
       sourceHandle: handle,
@@ -354,6 +360,12 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       }
     }
     
+    // Button option handles
+    if (sourceNode.subType === 'buttons' && edge.sourceHandle?.startsWith('btn_')) {
+      const btnIndex = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
+      sourceY = sourceNode.position.y + 55 + btnIndex * 28;
+    }
+    
     const targetX = targetNode.position.x;
     const targetY = targetNode.position.y + 40;
 
@@ -369,6 +381,13 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
       const conditions = sourceNode.data.config?.conditions || [];
       const idx = conditions.findIndex((c: any) => c.id === edge.sourceHandle);
       if (idx >= 0) edgeColor = colors[idx % colors.length];
+    }
+    
+    // Color for button option handles
+    if (sourceNode.subType === 'buttons' && edge.sourceHandle?.startsWith('btn_')) {
+      const colors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+      const btnIdx = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
+      edgeColor = colors[btnIdx % colors.length];
     }
 
     return (
@@ -482,7 +501,9 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
           const isMultiCondition = node.type === 'condition' && node.subType === 'multi';
           const multiConditions = isMultiCondition ? (node.data.config?.conditions || []) : [];
           const isTimeOrWeekday = node.type === 'condition' && (node.subType === 'time' || node.subType === 'weekday');
-          const hasMultipleOutputs = isCondition || isMultiCondition || isTimeOrWeekday;
+          const isButtonsNode = node.subType === 'buttons';
+          const buttonOptions = isButtonsNode ? (node.data.config?.buttons || []) : [];
+          const hasMultipleOutputs = isCondition || isMultiCondition || isTimeOrWeekday || (isButtonsNode && buttonOptions.length > 0);
           
           return (
             <div
@@ -547,6 +568,15 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                     ))}
                   </div>
                 )}
+                {isButtonsNode && buttonOptions.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {buttonOptions.map((btn: string, i: number) => (
+                      <div key={i} className="text-[10px] text-muted-foreground/70">
+                        {i + 1}. {btn}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Connection Points */}
@@ -569,7 +599,29 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
               </div>
 
               {/* Output (right side) */}
-              {isMultiCondition && multiConditions.length > 0 ? (
+              {isButtonsNode && buttonOptions.length > 0 ? (
+                <>
+                  {buttonOptions.map((btn: string, i: number) => {
+                    const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+                    const handleColor = handleColors[i % handleColors.length];
+                    const handleId = `btn_${i}`;
+                    return (
+                      <React.Fragment key={handleId}>
+                        <div 
+                          className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                          style={{ top: 45 + i * 28, borderColor: handleColor }}
+                          onMouseDown={(e) => handleOutputMouseDown(e, node.id, handleId)}
+                        >
+                          <span className="text-[8px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
+                        </div>
+                        <span className="absolute right-5 text-[9px] font-medium truncate max-w-[80px]" style={{ top: 48 + i * 28, color: handleColor }}>
+                          {btn}
+                        </span>
+                      </React.Fragment>
+                    );
+                  })}
+                </>
+              ) : isMultiCondition && multiConditions.length > 0 ? (
                 <>
                   {multiConditions.map((c: any, i: number) => {
                     const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];

@@ -4,7 +4,7 @@ import { X, Search,
   MessageSquare, Mail, Users, Phone, Key, Megaphone,
   Calendar, Video, CheckSquare, FolderOpen, Zap, CalendarClock, Bot,
   FileText, Link, Play, Eye, BarChart3,
-  Shield, HelpCircle, Settings, CreditCard
+  Shield, HelpCircle, Settings, CreditCard, Target
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -55,6 +55,7 @@ const hubs = [
     color: '#3000E3',
     items: [
       { icon: Users, label: 'Equipe', path: '/dashboard/equipe' },
+      { icon: Target, label: 'Criar Hábitos', path: '/dashboard/habitos' },
       { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes' },
       { icon: CreditCard, label: 'Assinatura', path: '/dashboard/assinatura' },
       { icon: Shield, label: 'Segurança', path: '/dashboard/seguranca' },

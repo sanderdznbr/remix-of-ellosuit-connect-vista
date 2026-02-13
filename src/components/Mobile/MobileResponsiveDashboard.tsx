@@ -35,6 +35,7 @@ import UnifiedTracking from '@/components/Dashboard/UnifiedTracking';
 import TrackUploadPage from '@/components/Dashboard/TrackUploadPage';
 import LinkShortenerPage from '@/components/Dashboard/LinkShortenerPage';
 import TeamManagement from '@/components/Dashboard/TeamManagement';
+import HabitsPage from '@/components/Dashboard/HabitsPage';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -152,6 +153,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/cadastros" element={<UnifiedDatabase />} />
             <Route path="/drive" element={<DriveManager />} />
             <Route path="/equipe" element={<TeamManagement />} />
+            <Route path="/habitos" element={<HabitsPage />} />
             
             {/* Legacy routes */}
             <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />

@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone
+  Briefcase, Key, Megaphone, Target
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
@@ -135,6 +135,12 @@ const menuGroups: MenuGroup[] = [
           { id: "cadastros", label: "Cadastros", description: "Clientes e contatos", icon: Users, path: "/dashboard/cadastros" },
           { id: "arquivos", label: "Arquivos", description: "Drive de documentos", icon: FolderOpen, path: "/dashboard/drive" },
           { id: "equipe", label: "Equipe", description: "Colaboradores e permissões", icon: Briefcase, path: "/dashboard/equipe" },
+        ]
+      },
+      {
+        title: "Cultura",
+        items: [
+          { id: "habitos", label: "Criar Hábitos", description: "Rotinas automáticas diárias", icon: Target, path: "/dashboard/habitos" },
         ]
       },
       {

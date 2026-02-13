@@ -1396,6 +1396,11 @@ serve(async (req) => {
                         `LIMITE: Responda com NO MAXIMO ${agentMaxChars} caracteres. Prefira respostas bem mais curtas.`,
                         `NUNCA use o separador "|||". Envie sempre UMA unica mensagem.`,
                         '',
+                        'TRANSFERENCIA PARA ATENDENTE HUMANO:',
+                        'Se o cliente pedir para falar com um atendente humano, ou se voce perceber que nao consegue resolver a situacao (ex: problemas de pagamento, reclamacoes graves, assuntos que exigem um humano), inclua a tag [HANDOFF] no FINAL da sua resposta.',
+                        'Ao usar [HANDOFF], envie uma mensagem gentil dizendo que vai transferir para um atendente. Exemplo: "Vou te transferir para um atendente que poderá te ajudar melhor com isso! [HANDOFF]"',
+                        'A tag [HANDOFF] sera removida automaticamente e nao aparecera para o cliente.',
+                        '',
                         'Responda sempre em português brasileiro.'
                       ].join('\n');
                       

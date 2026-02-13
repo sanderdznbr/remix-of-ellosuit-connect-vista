@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
   Clock, Calendar, CalendarDays, CheckSquare, Video, MessageCircle,
-  User, Search, X, Zap, Repeat, GitBranch, Bell,
+  User, Search, X, Zap, Repeat, GitBranch, Bell, CalendarPlus,
+  CalendarClock, Mail, FileText, Link, UserPlus, Filter,
+  Send, Target, BarChart3, FileSpreadsheet, Megaphone,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -43,9 +45,19 @@ const BLOCK_CATEGORIES: HabitBlockCategory[] = [
         icon: 'CheckSquare', defaultConfig: { title: '', description: '', priority: 'medium', duration: 60 },
       },
       {
+        type: 'action', subType: 'add_calendar_event',
+        label: 'Adicionar à Agenda', description: 'Cria evento direto na Agenda/Calendário.',
+        icon: 'CalendarPlus', defaultConfig: { title: '', description: '', duration: 60, eventType: 'task', color: '#3000E3' },
+      },
+      {
         type: 'action', subType: 'create_meeting',
         label: 'Criar Reunião', description: 'Gera link de reunião ElloMeeting.',
         icon: 'Video', defaultConfig: { title: '', duration: 30 },
+      },
+      {
+        type: 'action', subType: 'create_booking',
+        label: 'Criar Agendamento', description: 'Gera link de agenda aberta para clientes.',
+        icon: 'CalendarClock', defaultConfig: { title: '', duration: 30, buffer: 15 },
       },
       {
         type: 'action', subType: 'send_whatsapp',
@@ -53,9 +65,39 @@ const BLOCK_CATEGORIES: HabitBlockCategory[] = [
         icon: 'MessageCircle', defaultConfig: { phone: '', message: '' },
       },
       {
+        type: 'action', subType: 'send_email',
+        label: 'Enviar E-mail', description: 'Envia e-mail para contato ou equipe.',
+        icon: 'Mail', defaultConfig: { to: '', subject: '', body: '', templateId: '' },
+      },
+      {
         type: 'action', subType: 'notification',
         label: 'Notificação', description: 'Envia notificação interna.',
         icon: 'Bell', defaultConfig: { message: '' },
+      },
+      {
+        type: 'action', subType: 'create_document',
+        label: 'Criar Documento', description: 'Cria documento no módulo Documentos.',
+        icon: 'FileText', defaultConfig: { name: '', fileType: 'document', description: '' },
+      },
+      {
+        type: 'action', subType: 'create_tracked_link',
+        label: 'Criar Link Rastreável', description: 'Gera link rastreado no módulo Track.',
+        icon: 'Link', defaultConfig: { originalUrl: '', title: '' },
+      },
+      {
+        type: 'action', subType: 'add_crm_contact',
+        label: 'Adicionar Contato CRM', description: 'Cadastra novo contato/lead no CRM.',
+        icon: 'UserPlus', defaultConfig: { name: '', email: '', phone: '', tags: [] },
+      },
+      {
+        type: 'action', subType: 'create_campaign',
+        label: 'Disparo em Massa', description: 'Cria campanha de e-mail ou WhatsApp.',
+        icon: 'Megaphone', defaultConfig: { type: 'email', templateId: '', groupId: '' },
+      },
+      {
+        type: 'action', subType: 'generate_report',
+        label: 'Gerar Relatório', description: 'Gera relatório automático de métricas.',
+        icon: 'BarChart3', defaultConfig: { reportType: 'tasks', period: 'weekly' },
       },
     ],
   },
@@ -74,6 +116,16 @@ const BLOCK_CATEGORIES: HabitBlockCategory[] = [
         label: 'Repetir Ação', description: 'Repete a ação conectada várias vezes.',
         icon: 'Repeat', defaultConfig: { times: 1 },
       },
+      {
+        type: 'config', subType: 'delay',
+        label: 'Aguardar / Delay', description: 'Espera X minutos antes de continuar.',
+        icon: 'Clock', defaultConfig: { delayMinutes: 30 },
+      },
+      {
+        type: 'config', subType: 'filter_contacts',
+        label: 'Filtrar Contatos', description: 'Filtra contatos por tags, status ou grupo.',
+        icon: 'Filter', defaultConfig: { filterType: 'tag', filterValue: '' },
+      },
     ],
   },
   {
@@ -91,13 +143,20 @@ const BLOCK_CATEGORIES: HabitBlockCategory[] = [
         label: 'Se horário', description: 'Executa somente no intervalo.',
         icon: 'Clock', defaultConfig: { startHour: 8, endHour: 18 },
       },
+      {
+        type: 'condition', subType: 'if_contact_exists',
+        label: 'Se contato existe', description: 'Verifica se contato já está no CRM.',
+        icon: 'UserPlus', defaultConfig: { field: 'phone' },
+      },
     ],
   },
 ];
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   Clock, Calendar, CalendarDays, CheckSquare, Video, MessageCircle,
-  User, Zap, Repeat, GitBranch, Bell,
+  User, Zap, Repeat, GitBranch, Bell, CalendarPlus, CalendarClock,
+  Mail, FileText, Link, UserPlus, Filter, Send, Target, BarChart3,
+  FileSpreadsheet, Megaphone,
 };
 
 interface HabitSidebarProps {

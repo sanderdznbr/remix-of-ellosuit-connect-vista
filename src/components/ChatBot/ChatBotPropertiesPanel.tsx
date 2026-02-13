@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Settings, Loader2, Phone, AlertCircle } from 'lucide-react';
+import { X, Settings, Loader2, Phone, AlertCircle, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,8 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
   const [whatsappSessions, setWhatsappSessions] = useState<WhatsAppSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [aiAgents, setAiAgents] = useState<{ id: string; name: string; personality: string; is_active: boolean | null }[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   // Fetch company ID
   useEffect(() => {
@@ -59,6 +61,9 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
     if (node?.subType === 'whatsapp_channel' && companyId) {
       loadWhatsAppSessions();
     }
+    if (node?.subType === 'transfer_ai_agent' && companyId) {
+      loadAiAgents();
+    }
   }, [node?.subType, companyId]);
 
   const loadWhatsAppSessions = async () => {
@@ -78,6 +83,23 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
       console.error('Erro ao carregar sessões WhatsApp:', error);
     } finally {
       setLoadingSessions(false);
+    }
+  };
+
+  const loadAiAgents = async () => {
+    if (!companyId) return;
+    setLoadingAgents(true);
+    try {
+      const { data, error } = await supabase
+        .from('ai_agents')
+        .select('id, name, personality, is_active')
+        .eq('company_id', companyId)
+        .order('name');
+      if (!error) setAiAgents(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar agentes:', error);
+    } finally {
+      setLoadingAgents(false);
     }
   };
 
@@ -1089,6 +1111,71 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
               Variáveis podem ser usadas em outras mensagens e condições
             </p>
           </>
+        );
+
+      case 'transfer_ai_agent':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                Selecionar Agente de IA
+              </Label>
+              {loadingAgents ? (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Carregando agentes...</span>
+                </div>
+              ) : aiAgents.length === 0 ? (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm text-amber-700">Nenhum agente de IA cadastrado. Crie um em Bot IA.</span>
+                </div>
+              ) : (
+                <Select
+                  value={node.data.config?.agentId || ''}
+                  onValueChange={(v) => {
+                    const agent = aiAgents.find(a => a.id === v);
+                    updateMultipleConfig({
+                      agentId: v,
+                      agentName: agent?.name || ''
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um agente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aiAgents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-4 w-4" />
+                          <span className="font-medium">{agent.name}</span>
+                          {!agent.is_active && (
+                            <span className="text-xs text-muted-foreground">(inativo)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Mensagem ao Transferir (opcional)</Label>
+              <Textarea
+                value={node.data.config?.transferMessage || ''}
+                onChange={(e) => updateConfig('transferMessage', e.target.value)}
+                placeholder="Vou transferir você para nosso assistente de IA..."
+                rows={2}
+              />
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                O chatbot será encerrado e o agente de IA assumirá a conversa automaticamente.
+              </p>
+            </div>
+          </div>
         );
 
       default:

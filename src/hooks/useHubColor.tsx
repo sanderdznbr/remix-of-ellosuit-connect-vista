@@ -26,7 +26,6 @@ const flowRoutes = [
   '/dashboard/tasks',
   '/dashboard/reunioes',
   '/dashboard/fluxos',
-  '/dashboard/leads',
 ];
 
 const trackRoutes = [
@@ -34,6 +33,7 @@ const trackRoutes = [
   '/dashboard/rastreamento',
   '/dashboard/encurtador',
   '/dashboard/email-tracker',
+  '/dashboard/leads',
 ];
 
 const suiteRoutes = [

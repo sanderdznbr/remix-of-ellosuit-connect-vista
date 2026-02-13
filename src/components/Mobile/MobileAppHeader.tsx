@@ -31,7 +31,6 @@ const menuGroups = [
       { label: "Agenda Online", icon: Calendar, path: "/dashboard/agenda-aberta" },
       { label: "Tarefas", icon: CheckSquare, path: "/dashboard/tasks" },
       { label: "Fluxos", icon: Zap, path: "/dashboard/fluxos" },
-      { label: "Captura de Leads", icon: Users, path: "/dashboard/leads" },
       { label: "Videoconferência", icon: Video, path: "/dashboard/reunioes" },
       { label: "Gravações", icon: Video, path: "/dashboard/reunioes/gravacoes" },
     ]
@@ -42,6 +41,7 @@ const menuGroups = [
       { label: "Rastrear Conteúdo", icon: FileText, path: "/dashboard/rastreamento" },
       { label: "Encurtador", icon: Link2, path: "/dashboard/encurtador" },
       { label: "Rastrear Emails", icon: Eye, path: "/dashboard/email-tracker" },
+      { label: "Captura de Leads", icon: Users, path: "/dashboard/leads" },
     ]
   },
   {

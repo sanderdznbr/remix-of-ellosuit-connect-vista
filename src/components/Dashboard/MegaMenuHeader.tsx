@@ -95,7 +95,6 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "tasks", label: "Tarefas", description: "Listas e lembretes", icon: CheckSquare, path: "/dashboard/tasks" },
           { id: "fluxos", label: "Fluxos", description: "Kanban e automações", icon: Zap, path: "/dashboard/fluxos" },
-          { id: "leads", label: "Captura de Leads", description: "Funis interativos", icon: Users, path: "/dashboard/leads" },
         ]
       },
       {
@@ -119,6 +118,12 @@ const menuGroups: MenuGroup[] = [
           { id: "docs", label: "Rastrear Conteúdo", description: "Upload e rastreamento de PDFs, vídeos e imagens", icon: FileText, path: "/dashboard/rastreamento" },
           { id: "links", label: "Encurtador Rastreável", description: "Encurte URLs e acompanhe cliques", icon: Link2, path: "/dashboard/encurtador" },
           { id: "emails", label: "Rastrear Emails", description: "Aberturas rastreadas", icon: Eye, path: "/dashboard/email-tracker" },
+        ]
+      },
+      {
+        title: "Captação",
+        items: [
+          { id: "leads", label: "Captura de Leads", description: "Funis interativos", icon: Users, path: "/dashboard/leads" },
         ]
       }
     ]

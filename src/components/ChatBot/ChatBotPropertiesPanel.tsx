@@ -803,15 +803,62 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
         
         {node.subType === 'buttons' && (
           <div className="space-y-2">
-            <Label>Botões (um por linha, máx 3)</Label>
-            <Textarea
-              value={(node.data.config?.buttons || []).join('\n')}
-              onChange={(e) => updateConfig('buttons', e.target.value.split('\n').filter(Boolean).slice(0, 3))}
-              placeholder="Sim&#10;Não&#10;Talvez"
-              rows={3}
-            />
+            <Label>Botões (máx 3)</Label>
+            <div className="flex flex-wrap gap-2">
+              {(node.data.config?.buttons || []).map((btn: string, idx: number) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                >
+                  {btn}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(node.data.config?.buttons || [])];
+                      updated.splice(idx, 1);
+                      updateConfig('buttons', updated);
+                    }}
+                    className="ml-0.5 hover:text-destructive"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            {(node.data.config?.buttons || []).length < 3 && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome do botão"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val) {
+                        updateConfig('buttons', [...(node.data.config?.buttons || []), val].slice(0, 3));
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => {
+                    const input = document.querySelector<HTMLInputElement>('[placeholder="Nome do botão"]');
+                    const val = input?.value.trim();
+                    if (val && input) {
+                      updateConfig('buttons', [...(node.data.config?.buttons || []), val].slice(0, 3));
+                      input.value = '';
+                    }
+                  }}
+                >
+                  +
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              O usuário poderá clicar em um dos botões para responder
+              Digite o nome e clique em + ou pressione Enter para adicionar
             </p>
           </div>
         )}

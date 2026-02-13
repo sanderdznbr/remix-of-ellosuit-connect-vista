@@ -1416,34 +1416,34 @@ serve(async (req) => {
                       // If message is audio/ptt, try to transcribe it before sending to AI
                       let aiInputContent = content;
                       if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
-                        console.log('🎙️ Audio message detected, attempting transcription...');
+                        console.log('🎙️ Audio message detected, attempting transcription via ElevenLabs Scribe...');
                         try {
-                          const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-                          if (OPENAI_API_KEY) {
+                          const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                          if (ELEVENLABS_API_KEY) {
                             // Download the audio file
                             const audioResponse = await fetch(mediaUrl);
                             if (audioResponse.ok) {
                               const audioBuffer = await audioResponse.arrayBuffer();
                               console.log(`🎙️ Audio downloaded: ${audioBuffer.byteLength} bytes`);
                               
-                              // Send to Whisper for transcription
-                              const whisperForm = new FormData();
+                              // Send to ElevenLabs Scribe for transcription
+                              const scribeForm = new FormData();
                               const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
-                              whisperForm.append('file', audioBlob, 'audio.ogg');
-                              whisperForm.append('model', 'whisper-1');
-                              whisperForm.append('language', 'pt');
+                              scribeForm.append('file', audioBlob, 'audio.ogg');
+                              scribeForm.append('model_id', 'scribe_v2');
+                              scribeForm.append('language_code', 'por');
                               
-                              const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                              const scribeResponse = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
                                 method: 'POST',
-                                headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-                                body: whisperForm,
+                                headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+                                body: scribeForm,
                               });
                               
-                              if (whisperResponse.ok) {
-                                const whisperResult = await whisperResponse.json();
-                                const transcribedText = whisperResult.text?.trim();
+                              if (scribeResponse.ok) {
+                                const scribeResult = await scribeResponse.json();
+                                const transcribedText = scribeResult.text?.trim();
                                 if (transcribedText && transcribedText.length > 2) {
-                                  console.log(`🎙️ Transcription: ${transcribedText.substring(0, 100)}`);
+                                  console.log(`🎙️ ElevenLabs Transcription: ${transcribedText.substring(0, 100)}`);
                                   aiInputContent = `[O cliente enviou um áudio dizendo]: ${transcribedText}`;
                                   
                                   // Update the stored message content with transcription
@@ -1456,7 +1456,8 @@ serve(async (req) => {
                                   aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça para ele repetir ou digitar.]';
                                 }
                               } else {
-                                console.error('🎙️ Whisper API error:', whisperResponse.status);
+                                const errText = await scribeResponse.text();
+                                console.error('🎙️ ElevenLabs Scribe API error:', scribeResponse.status, errText);
                                 aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo. Peça para ele digitar a mensagem.]';
                               }
                             } else {

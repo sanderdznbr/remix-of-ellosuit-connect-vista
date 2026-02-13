@@ -1170,6 +1170,34 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
                 rows={2}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Comportamento ao entrar na conversa</Label>
+              <Select
+                value={node.data.config?.aiEntryBehavior || 'send_welcome'}
+                onValueChange={(v) => updateConfig('aiEntryBehavior', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="send_welcome">
+                    <div className="flex flex-col">
+                      <span className="font-medium">Enviar mensagem imediata</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="wait_client">
+                    <div className="flex flex-col">
+                      <span className="font-medium">Aguardar o cliente falar</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {node.data.config?.aiEntryBehavior === 'wait_client'
+                  ? 'O agente de IA aguardará o cliente enviar uma mensagem antes de responder.'
+                  : 'O agente de IA enviará uma saudação assim que assumir a conversa.'}
+              </p>
+            </div>
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-xs text-muted-foreground">
                 O chatbot será encerrado e o agente de IA assumirá a conversa automaticamente.

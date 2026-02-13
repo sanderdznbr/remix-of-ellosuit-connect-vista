@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Bot, MessageCircle, Pencil, BarChart3, Search, MoreVertical, Play, Pause } from 'lucide-react';
+import { Plus, Bot, MessageCircle, Pencil, BarChart3, Search, MoreVertical, Play, Pause, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +90,64 @@ const BotIADashboard: React.FC = () => {
     toast({ title: 'Excluído', description: 'Agente removido' });
   };
 
+  const exportAgent = async (agent: AIAgent) => {
+    const exportData = {
+      _exportVersion: 1,
+      _exportedAt: new Date().toISOString(),
+      name: agent.name,
+      description: agent.description,
+      personality: agent.personality,
+      instructions: agent.instructions,
+      model: agent.model,
+      settings: agent.settings,
+      avatar_url: agent.avatar_url,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agente-ia-${agent.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Exportado!', description: `Agente "${agent.name}" exportado com sucesso` });
+  };
+
+  const importAgent = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file || !companyId || !user?.id) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data._exportVersion || !data.name || !data.instructions || !data.personality) {
+          toast({ title: 'Erro', description: 'Arquivo inválido. Use um arquivo exportado por esta plataforma.', variant: 'destructive' });
+          return;
+        }
+        const { error } = await supabase.from('ai_agents').insert({
+          company_id: companyId,
+          created_by: user.id,
+          name: data.name + ' (importado)',
+          description: data.description || null,
+          personality: data.personality,
+          instructions: data.instructions,
+          model: data.model || 'google/gemini-3-flash-preview',
+          settings: data.settings || {},
+          avatar_url: data.avatar_url || null,
+          is_active: false,
+        });
+        if (error) throw error;
+        await loadAgents(companyId);
+        toast({ title: 'Importado!', description: `Agente "${data.name}" importado com sucesso` });
+      } catch (err: any) {
+        toast({ title: 'Erro na importação', description: err.message || 'Erro ao importar agente', variant: 'destructive' });
+      }
+    };
+    input.click();
+  };
+
   const filteredAgents = agents.filter(a => 
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -148,6 +206,14 @@ const BotIADashboard: React.FC = () => {
               />
             </div>
             <div className="flex-1" />
+            <Button 
+              variant="outline"
+              onClick={importAgent}
+              className="rounded-xl gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Importar
+            </Button>
             <Button 
               onClick={() => navigate('/dashboard/bot-ia/novo')}
               className="rounded-xl gap-2 text-white"
@@ -257,6 +323,10 @@ const BotIADashboard: React.FC = () => {
                         <DropdownMenuItem onClick={() => toggleAgent(agent.id, agent.is_active)}>
                           {agent.is_active ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
                           {agent.is_active ? 'Pausar' : 'Ativar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportAgent(agent)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => deleteAgent(agent.id)} className="text-red-600">
                           Excluir

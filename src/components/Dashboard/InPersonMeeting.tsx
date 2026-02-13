@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useScribe, CommitStrategy } from '@elevenlabs/react';
 import { Mic, Square, Download, FileText, AlertTriangle, Sparkles, BookOpen, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,89 +40,53 @@ const InPersonMeeting = () => {
   const [identifiedSpeakers, setIdentifiedSpeakers] = useState<string[]>([]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const meetingIdRef = useRef<string>('');
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const audioBufferRef = useRef<Int16Array>(new Int16Array(0));
-  const lastSendTimeRef = useRef<number>(0);
   const lastTranscriptRef = useRef<string>('');
-  const lastSpeakerTimeRef = useRef<number>(Date.now());
-  const currentSpeakerRef = useRef<number>(1);
-  const speakerCountRef = useRef<number>(1);
+  const scribeConnectedRef = useRef(false);
+
+  // Check if two texts are similar (for deduplication)
+  const isSimilarText = (text1: string, text2: string): boolean => {
+    if (!text1 || !text2) return false;
+    const clean1 = text1.toLowerCase().trim().replace(/[.,!?]/g, '');
+    const clean2 = text2.toLowerCase().trim().replace(/[.,!?]/g, '');
+    if (clean1 === clean2) return true;
+    const shorter = clean1.length < clean2.length ? clean1 : clean2;
+    const longer = clean1.length < clean2.length ? clean2 : clean1;
+    return longer.includes(shorter) && shorter.length / longer.length > 0.9;
+  };
+
+  // Scribe for real-time transcription
+  const scribe = useScribe({
+    modelId: 'scribe_v2_realtime',
+    commitStrategy: CommitStrategy.VAD,
+    onPartialTranscript: (data) => {
+      if (data.text && data.text.trim().length > 0) {
+        setCurrentText(data.text);
+      }
+    },
+    onCommittedTranscript: (data) => {
+      if (data.text && data.text.trim().length > 3) {
+        const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);
+        if (!isDuplicate) {
+          lastTranscriptRef.current = data.text;
+          setTranscript(prev => [...prev, {
+            text: data.text,
+            timestamp: new Date().toISOString(),
+            speaker: undefined
+          }]);
+          setCurrentText('');
+        }
+      }
+    },
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [transcript, currentText]);
-
-
-  // Convert Float32Array to PCM16 base64
-  const convertToPCM16Base64 = (float32Array: Float32Array): string => {
-    const int16Array = new Int16Array(float32Array.length);
-    for (let i = 0; i < float32Array.length; i++) {
-      const s = Math.max(-1, Math.min(1, float32Array[i]));
-      int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-    
-    const uint8Array = new Uint8Array(int16Array.buffer);
-    let binary = '';
-    const chunkSize = 0x8000;
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-      binary += String.fromCharCode.apply(null, Array.from(chunk));
-    }
-    
-    return btoa(binary);
-  };
-
-  // Accumulate audio buffer and send when threshold is met
-  const accumulateAndSendAudio = (pcm16Data: Int16Array) => {
-    // Accumulate audio in buffer
-    const combined = new Int16Array(audioBufferRef.current.length + pcm16Data.length);
-    combined.set(audioBufferRef.current);
-    combined.set(pcm16Data, audioBufferRef.current.length);
-    audioBufferRef.current = combined;
-
-    const now = Date.now();
-    const timeSinceLastSend = now - lastSendTimeRef.current;
-    const bufferDurationMs = (audioBufferRef.current.length / 24000) * 1000;
-
-    // Send only if:
-    // 1. Buffer has at least 3 seconds of audio
-    // 2. At least 2 seconds passed since last send
-    if (bufferDurationMs >= 3000 && timeSinceLastSend >= 2000) {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log(`🎵 Enviando ${audioBufferRef.current.length} samples (${bufferDurationMs.toFixed(0)}ms)`);
-        
-        // Convert to Uint8Array for base64 encoding
-        const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
-        let binary = '';
-        const chunkSize = 0x8000;
-        
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
-        }
-        
-        const base64Audio = btoa(binary);
-        
-        wsRef.current.send(JSON.stringify({
-          type: 'audio_data',
-          audio: base64Audio
-        }));
-
-        // Clear buffer and update timestamp
-        audioBufferRef.current = new Int16Array(0);
-        lastSendTimeRef.current = now;
-      }
-    }
-  };
 
   const startRecording = async () => {
     if (!meetingTitle.trim()) {
@@ -141,14 +106,12 @@ const InPersonMeeting = () => {
     try {
       console.log('🎤 Iniciando gravação com dispositivo:', selectedDeviceId);
 
-      // Request ONLY the selected microphone with strict constraints
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           deviceId: { exact: selectedDeviceId },
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 24000,
           channelCount: 1,
         },
         video: false
@@ -156,32 +119,16 @@ const InPersonMeeting = () => {
 
       setCurrentStream(stream);
 
-      // Verify the audio track
       const audioTrack = stream.getAudioTracks()[0];
-      const settings = audioTrack.getSettings();
-      
       console.log('✅ Usando dispositivo:', audioTrack.label);
-      console.log('🎤 Configurações completas:', {
-        deviceId: settings.deviceId,
-        groupId: settings.groupId,
-        label: audioTrack.label,
-        sampleRate: settings.sampleRate,
-        channelCount: settings.channelCount,
-        echoCancellation: settings.echoCancellation,
-        noiseSuppression: settings.noiseSuppression,
-        autoGainControl: settings.autoGainControl
-      });
 
-      // Validate it's a real microphone, not a loopback/virtual device
+      // Validate it's a real microphone
       const suspiciousDevices = [
         'stereo mix', 'loopback', 'monitor', 'what u hear', 
         'blackhole', 'soundflower', 'virtual audio', 'voicemeeter'
       ];
-      
       const deviceNameLower = audioTrack.label.toLowerCase();
-      const isSuspicious = suspiciousDevices.some(name => deviceNameLower.includes(name));
-      
-      if (isSuspicious) {
+      if (suspiciousDevices.some(name => deviceNameLower.includes(name))) {
         stream.getTracks().forEach(track => track.stop());
         toast({
           title: "Dispositivo Inválido",
@@ -191,112 +138,39 @@ const InPersonMeeting = () => {
         return;
       }
 
-      // ====== 1. Setup AudioContext for PCM16 transcription ======
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ 
-        sampleRate: 24000,
-        latencyHint: 'interactive'
-      });
-      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-      
-      // Use createScriptProcessor com fallback para compatibilidade
-      const bufferSize = 4096;
-      processorRef.current = audioContextRef.current.createScriptProcessor(bufferSize, 1, 1);
+      // ====== 1. Connect ElevenLabs Scribe for real-time transcription ======
+      try {
+        console.log('🎤 Obtendo token de transcrição...');
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('elevenlabs-scribe-token');
 
-      console.log('🎵 AudioContext criado - Sample Rate:', audioContextRef.current.sampleRate);
-
-      // ====== 2. Connect to transcription WebSocket ======
-      const wsUrl = `wss://jwddiyuezqrpuakazvgg.functions.supabase.co/functions/v1/realtime-transcription`;
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log('✅ Conectado ao serviço de transcrição');
-        setIsRecording(true);
-        
-        // Generate meeting ID
-        meetingIdRef.current = `in-person-${Date.now()}`;
-        
-        // Reset transcript and audio buffer for new meeting
-        setTranscript([]);
-        setCurrentText('');
-        lastTranscriptRef.current = '';
-        audioBufferRef.current = new Int16Array(0);
-        lastSendTimeRef.current = Date.now();
-        
-        ws.send(JSON.stringify({
-          type: 'start_transcription',
-          roomId: meetingIdRef.current
-        }));
-
-        toast({
-          title: "Reunião Iniciada",
-          description: "Gravação e transcrição em andamento",
-        });
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📥 WebSocket:', data.type);
-          
-          if (data.type === 'transcript_update') {
-            console.log('📝 Transcrição:', data.text);
-            if (data.is_final) {
-              // Check for duplicate text
-              const isDuplicate = isSimilarText(data.text, lastTranscriptRef.current);
-              
-              if (!isDuplicate && data.text.trim().length > 0) {
-                lastTranscriptRef.current = data.text;
-                
-                // Durante gravação, NÃO mostramos speakers (será identificado depois)
-                setTranscript(prev => [...prev, {
-                  text: data.text,
-                  timestamp: new Date().toISOString(),
-                  speaker: undefined // Sem speaker durante gravação
-                }]);
-                setCurrentText('');
-              } else {
-                console.log('⏭️ Texto duplicado ignorado:', data.text);
-              }
-            } else {
-              setCurrentText(data.text);
-            }
-          }
-        } catch (err) {
-          console.error('❌ Erro ao processar transcrição:', err);
+        if (tokenError || !tokenData?.token) {
+          console.error('❌ Erro ao obter token:', tokenError);
+          toast({
+            title: 'Aviso',
+            description: 'Transcrição em tempo real indisponível. A gravação continuará normalmente.',
+          });
+        } else {
+          console.log('🔌 Conectando serviço de transcrição...');
+          await scribe.connect({
+            token: tokenData.token,
+            microphone: {
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+          });
+          scribeConnectedRef.current = true;
+          console.log('✅ Serviço de transcrição conectado!');
         }
-      };
+      } catch (scribeErr) {
+        console.error('❌ Erro ao conectar transcrição:', scribeErr);
+      }
 
-      ws.onerror = (error) => {
-        console.error('Erro no WebSocket:', error);
-        toast({
-          title: "Erro na Transcrição",
-          description: "Não foi possível conectar ao serviço de transcrição",
-          variant: "destructive"
-        });
-      };
+      // ====== 2. Setup MediaRecorder for saving file ======
+      meetingIdRef.current = `in-person-${Date.now()}`;
+      setTranscript([]);
+      setCurrentText('');
+      lastTranscriptRef.current = '';
 
-      // ====== 3. Process audio in real-time for transcription ======
-      processorRef.current.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Convert Float32 to Int16 (PCM16)
-        const int16Data = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        
-        // Accumulate audio and send when buffer is large enough
-        accumulateAndSendAudio(int16Data);
-      };
-
-      sourceRef.current.connect(processorRef.current);
-      processorRef.current.connect(audioContextRef.current.destination);
-
-      console.log('✅ Pipeline de áudio PCM16 conectado');
-
-      // ====== 4. Setup MediaRecorder for saving file ======
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       });
@@ -305,13 +179,17 @@ const InPersonMeeting = () => {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('💾 Salvando chunk para arquivo:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.start(1000); // 1 second chunks
-      console.log('✅ MediaRecorder iniciado para salvar arquivo');
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+
+      toast({
+        title: "Reunião Iniciada",
+        description: "Gravação e transcrição em andamento",
+      });
 
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
@@ -324,45 +202,20 @@ const InPersonMeeting = () => {
   };
 
   const stopRecording = async () => {
-    // Send any remaining audio in buffer before stopping
-    if (audioBufferRef.current.length > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log(`🎵 Enviando áudio final: ${audioBufferRef.current.length} samples`);
-      
-      const uint8Array = new Uint8Array(audioBufferRef.current.buffer);
-      let binary = '';
-      const chunkSize = 0x8000;
-      
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      
-      const base64Audio = btoa(binary);
-      
-      wsRef.current.send(JSON.stringify({
-        type: 'audio_data',
-        audio: base64Audio
-      }));
-    }
-
     // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
-    // Clean up AudioContext pipeline
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    // Disconnect Scribe
+    if (scribeConnectedRef.current) {
+      try {
+        scribe.disconnect();
+      } catch (e) {
+        console.error('Erro ao desconectar transcrição:', e);
+      }
+      scribeConnectedRef.current = false;
     }
 
     // Stop stream
@@ -370,20 +223,6 @@ const InPersonMeeting = () => {
       currentStream.getTracks().forEach(track => track.stop());
       setCurrentStream(null);
     }
-
-    // Close WebSocket with a small delay to allow final audio to be processed
-    setTimeout(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'stop_transcription' }));
-        wsRef.current.close();
-      }
-    }, 500);
-
-    // Clear audio buffer and reset speaker tracking
-    audioBufferRef.current = new Int16Array(0);
-    lastSpeakerTimeRef.current = Date.now();
-    currentSpeakerRef.current = 1;
-    speakerCountRef.current = 1;
 
     setIsRecording(false);
     await saveRecording();
@@ -552,22 +391,7 @@ const InPersonMeeting = () => {
     }
   };
 
-  // Check if two texts are similar (for deduplication)
-  const isSimilarText = (text1: string, text2: string): boolean => {
-    if (!text1 || !text2) return false;
-    
-    const clean1 = text1.toLowerCase().trim().replace(/[.,!?]/g, '');
-    const clean2 = text2.toLowerCase().trim().replace(/[.,!?]/g, '');
-    
-    // Exact match
-    if (clean1 === clean2) return true;
-    
-    // Check if one contains the other (90% threshold)
-    const shorter = clean1.length < clean2.length ? clean1 : clean2;
-    const longer = clean1.length < clean2.length ? clean2 : clean1;
-    
-    return longer.includes(shorter) && shorter.length / longer.length > 0.9;
-  };
+  // isSimilarText is defined above (before useScribe hook)
 
   const downloadTranscriptTXT = () => {
     const fullText = transcript.map(msg => {
@@ -1199,8 +1023,7 @@ const InPersonMeeting = () => {
                       setMeetingTitle('');
                       audioChunksRef.current = [];
                       lastTranscriptRef.current = '';
-                      currentSpeakerRef.current = 1;
-                      speakerCountRef.current = 1;
+                      scribeConnectedRef.current = false;
                       setSpeakerMapping({});
                       setIdentifiedSpeakers([]);
                     }}

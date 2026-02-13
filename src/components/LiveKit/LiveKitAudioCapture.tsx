@@ -65,7 +65,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
         console.error('❌ Erro ao obter token:', error);
         toast({
           title: 'Erro na Transcrição',
-          description: 'Não foi possível obter token do ElevenLabs',
+          description: 'Não foi possível obter token de transcrição',
           variant: 'destructive'
         });
         hasConnectedRef.current = false;
@@ -84,7 +84,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
 
       setIsConnected(true);
       console.log('✅ ElevenLabs Scribe conectado!');
-      toast({ title: 'Transcrição ativa', description: 'ElevenLabs Scribe conectado' });
+      toast({ title: 'Transcrição ativa', description: 'Serviço de transcrição conectado' });
 
     } catch (err) {
       console.error('❌ Erro ao conectar Scribe:', err);
@@ -92,7 +92,7 @@ export const LiveKitAudioCapture: React.FC<LiveKitAudioCaptureProps> = ({
       setIsConnected(false);
       toast({
         title: 'Erro na Transcrição',
-        description: 'Falha ao conectar com ElevenLabs Scribe',
+        description: 'Falha ao conectar com o serviço de transcrição',
         variant: 'destructive'
       });
     }

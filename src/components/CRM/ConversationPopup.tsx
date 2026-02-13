@@ -276,8 +276,8 @@ const ConversationPopup: React.FC<ConversationPopupProps> = ({
                         >
                           <Download className="h-4 w-4" />
                         </button>
-                        {message.media_caption && (
-                          <p className="text-sm whitespace-pre-wrap mt-2">{message.media_caption}</p>
+                        {(message.media_caption || message.content) && (
+                          <p className="text-sm whitespace-pre-wrap mt-2">{message.media_caption || message.content}</p>
                         )}
                       </div>
                     ) : message.message_type === 'image' ? (

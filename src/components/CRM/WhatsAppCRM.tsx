@@ -2558,12 +2558,12 @@ const WhatsAppCRM: React.FC = () => {
                                   <line x1="12" y1="15" x2="12" y2="3"/>
                                 </svg>
                               </button>
-                              {message.media_caption && (
+                              {(message.media_caption || message.content) && (
                                 <p className={cn(
                                   "text-sm whitespace-pre-wrap mt-2",
                                   message.from_me ? "text-white" : "text-foreground"
                                 )}>
-                                  {message.media_caption}
+                                  {message.media_caption || message.content}
                                 </p>
                               )}
                             </div>

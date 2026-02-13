@@ -26,17 +26,24 @@ const ContractPageArea: React.FC<Props> = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
 
+  // Track which contentVersion we last applied to avoid re-setting on every render
+  const appliedVersion = useRef<string>('');
+
   // Sync innerHTML when page changes or content is loaded/imported
   useEffect(() => {
+    const key = `${currentPage}-${contentVersion}`;
+    if (appliedVersion.current === key) return;
+    appliedVersion.current = key;
+
     const el = editorRef.current;
-    if (el && pages[currentPage] !== undefined) {
-      el.innerHTML = pages[currentPage];
-      // Set cursor at end after content load
+    if (el) {
+      const content = pages[currentPage] ?? '';
+      el.innerHTML = content;
       requestAnimationFrame(() => {
         el.focus();
       });
     }
-  }, [currentPage, contentVersion]);
+  }, [currentPage, contentVersion, pages]);
 
   // Keep parent ref in sync
   useEffect(() => {

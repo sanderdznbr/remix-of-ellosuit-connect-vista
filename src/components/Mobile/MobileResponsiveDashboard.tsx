@@ -36,6 +36,7 @@ import TrackUploadPage from '@/components/Dashboard/TrackUploadPage';
 import LinkShortenerPage from '@/components/Dashboard/LinkShortenerPage';
 import TeamManagement from '@/components/Dashboard/TeamManagement';
 import HabitsPage from '@/components/Dashboard/HabitsPage';
+import HabitFlowBuilder from '@/components/Habits/HabitFlowBuilder';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -154,6 +155,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/drive" element={<DriveManager />} />
             <Route path="/equipe" element={<TeamManagement />} />
             <Route path="/habitos" element={<HabitsPage />} />
+            <Route path="/habitos/builder" element={<HabitFlowBuilder />} />
             
             {/* Legacy routes */}
             <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />

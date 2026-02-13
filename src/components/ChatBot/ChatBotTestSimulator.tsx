@@ -100,7 +100,12 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
           addMessage('bot', `${text}\n\n${optionsText}`, node.id, node.data.label);
           setWaitingForInput(true);
         } else if (node.subType === 'image') {
-          addMessage('bot', `📷 [Imagem: ${node.data.config?.imageUrl || 'imagem.png'}]`, node.id, node.data.label);
+          const imageUrl = node.data.config?.url || node.data.config?.imageUrl || 'imagem.png';
+          const caption = node.data.config?.caption || '';
+          const fileName = imageUrl.split('/').pop() || 'imagem.png';
+          let content = `📷 [Imagem: ${fileName}]`;
+          if (caption) content += `\n\n${caption}`;
+          addMessage('bot', content, node.id, node.data.label);
           await delay(600);
           const next = getNextNodes(node.id);
           if (next.length > 0) processNode(next[0]);
@@ -179,19 +184,24 @@ const ChatBotTestSimulator: React.FC<ChatBotTestSimulatorProps> = ({
     setIsRunning(true);
     onHighlightNode?.(null);
 
-    // Find trigger node (start)
+    // Find the root node: prefer trigger, otherwise find nodes with no incoming edges
     const triggerNode = nodes.find(n => n.type === 'trigger');
     if (triggerNode) {
       processNode(triggerNode);
     } else {
-      // No trigger: try first node
-      if (nodes.length > 0) {
-        processNode(nodes[0]);
+      // Find nodes that are not targeted by any edge (root nodes)
+      const targetIds = new Set(edges.map(e => e.target));
+      const rootNodes = nodes.filter(n => !targetIds.has(n.id));
+      const startNode = rootNodes.length > 0 ? rootNodes[0] : (nodes.length > 0 ? nodes[0] : null);
+      
+      if (startNode) {
+        addMessage('system', `▶ Fluxo iniciado`, startNode.id, startNode.data.label);
+        setTimeout(() => processNode(startNode), 300);
       } else {
         addMessage('system', '⚠️ Nenhum bloco encontrado no fluxo.');
       }
     }
-  }, [nodes, processNode, addMessage, onHighlightNode]);
+  }, [nodes, edges, processNode, addMessage, onHighlightNode]);
 
   const handleUserInput = useCallback(() => {
     if (!inputValue.trim() || !waitingForInput) return;

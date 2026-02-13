@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, GitBranch, Search, Pencil, BarChart3, Copy, Trash2, MoreVertical, Loader2 } from 'lucide-react';
+import { Plus, GitBranch, Search, Pencil, BarChart3, Copy, Trash2, MoreVertical, Loader2, Power, X, MessageSquare, Users, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,6 +50,12 @@ const ChatbotManagement: React.FC = () => {
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [statsFlow, setStatsFlow] = useState<ChatbotFlow | null>(null);
+  const [statsData, setStatsData] = useState<{
+    executions: any[];
+    loading: boolean;
+  }>({ executions: [], loading: false });
   const [newFlow, setNewFlow] = useState({
     name: '',
     description: '',
@@ -161,7 +168,56 @@ const ChatbotManagement: React.FC = () => {
     toast({ title: 'Excluído', description: 'Chatbot removido' });
   };
 
-  const filteredFlows = flows.filter(flow => 
+  const handleToggleActive = async (flow: ChatbotFlow) => {
+    const newState = !flow.is_active;
+    const { error } = await supabase
+      .from('chatbot_flows')
+      .update({ is_active: newState })
+      .eq('id', flow.id);
+    if (!error) {
+      setFlows(prev => prev.map(f => f.id === flow.id ? { ...f, is_active: newState } : f));
+      toast({ title: newState ? 'Ativado' : 'Desativado', description: `Chatbot "${flow.name}" ${newState ? 'ativado' : 'desativado'}` });
+    }
+  };
+
+  const handleDuplicateFlow = async (flow: ChatbotFlow) => {
+    if (!companyId || !user?.id) return;
+    const { data, error } = await supabase
+      .from('chatbot_flows')
+      .insert({
+        name: `${flow.name} (cópia)`,
+        description: flow.description,
+        company_id: companyId,
+        created_by: user.id,
+        is_active: false,
+        nodes: flow.nodes as any,
+        edges: flow.edges as any,
+        trigger_config: flow.trigger_config,
+      })
+      .select()
+      .single();
+    if (!error && data) {
+      setFlows(prev => [{ ...data, nodes: data.nodes as any[] || [], edges: data.edges as any[] || [], execution_count: 0, trigger_config: data.trigger_config } as ChatbotFlow, ...prev]);
+      toast({ title: 'Duplicado!', description: `Chatbot "${flow.name}" duplicado com sucesso` });
+    }
+  };
+
+  const handleOpenStats = async (flow: ChatbotFlow) => {
+    setStatsFlow(flow);
+    setShowStatsModal(true);
+    setStatsData({ executions: [], loading: true });
+
+    const { data } = await supabase
+      .from('chatbot_executions')
+      .select('*')
+      .eq('flow_id', flow.id)
+      .order('started_at', { ascending: false })
+      .limit(50);
+
+    setStatsData({ executions: data || [], loading: false });
+  };
+
+  const filteredFlows = flows.filter(flow =>
     flow.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     flow.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -343,6 +399,8 @@ const ChatbotManagement: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      title="Estatísticas"
+                      onClick={() => handleOpenStats(flow)}
                     >
                       <BarChart3 className="h-4 w-4" />
                     </Button>
@@ -350,6 +408,7 @@ const ChatbotManagement: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      title="Editar"
                       onClick={() => navigate(`/dashboard/chatbot-builder?flowId=${flow.id}`)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -357,14 +416,18 @@ const ChatbotManagement: React.FC = () => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      className={`h-8 w-8 p-0 ${flow.is_active ? 'text-green-600 hover:text-red-600' : 'text-gray-500 hover:text-green-600'}`}
+                      title={flow.is_active ? 'Desativar' : 'Ativar'}
+                      onClick={() => handleToggleActive(flow)}
                     >
-                      <GitBranch className="h-4 w-4" />
+                      <Power className="h-4 w-4" />
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      title="Duplicar"
+                      onClick={() => handleDuplicateFlow(flow)}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -372,6 +435,7 @@ const ChatbotManagement: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                      title="Excluir"
                       onClick={() => handleDeleteFlow(flow.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -464,6 +528,143 @@ const ChatbotManagement: React.FC = () => {
               Criar e Editar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stats Modal */}
+      <Dialog open={showStatsModal} onOpenChange={setShowStatsModal}>
+        <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" style={{ color: OMNI_COLOR }} />
+              Estatísticas: {statsFlow?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-orange-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold" style={{ color: OMNI_COLOR }}>{statsData.executions.length}</p>
+              <p className="text-xs text-gray-600">Execuções</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-blue-600">
+                {new Set(statsData.executions.map(e => e.conversation_id).filter(Boolean)).size}
+              </p>
+              <p className="text-xs text-gray-600">Conversas</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-green-600">
+                {statsData.executions.filter(e => e.status === 'completed').length}
+              </p>
+              <p className="text-xs text-gray-600">Concluídas</p>
+            </div>
+          </div>
+
+          {/* Executions Log */}
+          <div className="flex-1 overflow-hidden">
+            <p className="text-sm font-medium text-gray-700 mb-2">Log de Execuções</p>
+            <ScrollArea className="h-[340px]">
+              {statsData.loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin" style={{ color: OMNI_COLOR }} />
+                </div>
+              ) : statsData.executions.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <BarChart3 className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Nenhuma execução registrada</p>
+                </div>
+              ) : (
+                <div className="space-y-2 pr-4">
+                  {statsData.executions.map((exec: any) => {
+                    const startedAt = new Date(exec.started_at);
+                    const completedAt = exec.completed_at ? new Date(exec.completed_at) : null;
+                    const duration = completedAt ? Math.round((completedAt.getTime() - startedAt.getTime()) / 1000) : null;
+                    const pathLength = Array.isArray(exec.execution_path) ? exec.execution_path.length : 0;
+                    const variables = exec.variables || {};
+
+                    return (
+                      <div key={exec.id} className="border rounded-xl p-3 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={exec.status === 'completed' ? 'default' : exec.status === 'running' ? 'secondary' : 'outline'}
+                              className={
+                                exec.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                                exec.status === 'running' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                exec.status === 'stopped' ? 'bg-red-100 text-red-700 border-red-200' :
+                                'bg-gray-100 text-gray-600'
+                              }
+                            >
+                              {exec.status === 'completed' ? '✓ Concluído' : 
+                               exec.status === 'running' ? '● Em execução' : 
+                               exec.status === 'stopped' ? '■ Parado' : exec.status}
+                            </Badge>
+                            {exec.contact_phone && (
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <MessageSquare className="h-3 w-3" />
+                                {exec.contact_phone}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-gray-400">
+                            {startedAt.toLocaleDateString('pt-BR')} {startedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {duration !== null && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {duration < 60 ? `${duration}s` : `${Math.floor(duration / 60)}m ${duration % 60}s`}
+                            </span>
+                          )}
+                          {pathLength > 0 && (
+                            <span className="flex items-center gap-1">
+                              <ArrowRight className="h-3 w-3" />
+                              {pathLength} nós percorridos
+                            </span>
+                          )}
+                          {Object.keys(variables).length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {variables.nome || 'Sem nome'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Variables detail */}
+                        {Object.keys(variables).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {Object.entries(variables).map(([k, v]) => (
+                              <Badge key={k} variant="secondary" className="text-[10px] rounded-md">
+                                {k}: {String(v).substring(0, 30)}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Execution path */}
+                        {pathLength > 0 && (
+                          <div className="mt-2 flex items-center gap-1 overflow-x-auto">
+                            {(exec.execution_path as string[]).slice(0, 8).map((nodeId: string, i: number) => (
+                              <React.Fragment key={i}>
+                                {i > 0 && <ArrowRight className="h-3 w-3 text-gray-300 flex-shrink-0" />}
+                                <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                  {nodeId.substring(0, 12)}
+                                </span>
+                              </React.Fragment>
+                            ))}
+                            {pathLength > 8 && <span className="text-[10px] text-gray-400">+{pathLength - 8}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

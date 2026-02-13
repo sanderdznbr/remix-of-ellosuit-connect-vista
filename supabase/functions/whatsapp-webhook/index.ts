@@ -836,9 +836,186 @@ serve(async (req) => {
             } else {
               console.log(`Message saved: ${content.substring(0, 50)}...`);
               
+              // ==================== CHATBOT FLOW ENGINE ====================
+              // Check if there's an active chatbot execution for this conversation
+              let chatbotHandled = false;
+              if (!fromMe && conversation) {
+                try {
+                  const { data: activeExec } = await supabase
+                    .from('chatbot_executions')
+                    .select('id, flow_id, current_node_id, variables, execution_path')
+                    .eq('conversation_id', conversation.id)
+                    .eq('status', 'running')
+                    .maybeSingle();
+
+                  if (activeExec) {
+                    console.log(`🤖🔄 [CHATBOT] Active execution found: ${activeExec.id}, current_node: ${activeExec.current_node_id}`);
+
+                    // Load flow
+                    const { data: flow } = await supabase
+                      .from('chatbot_flows')
+                      .select('nodes, edges')
+                      .eq('id', activeExec.flow_id)
+                      .single();
+
+                    if (flow) {
+                      const nodes = Array.isArray(flow.nodes) ? flow.nodes : [];
+                      const edges = Array.isArray(flow.edges) ? flow.edges : [];
+                      const currentNode = nodes.find((n: any) => n.id === activeExec.current_node_id);
+
+                      if (currentNode) {
+                        const userInput = (content || '').trim();
+                        let nextNodeId: string | null = null;
+
+                        // If current node has buttons (choice node), match user input
+                        const buttons: string[] = currentNode.data?.config?.buttons || [];
+                        if (buttons.length > 0) {
+                          // Match by number (1, 2, 3...) or exact text
+                          const inputNum = parseInt(userInput);
+                          let matchedIndex = -1;
+
+                          if (!isNaN(inputNum) && inputNum >= 1 && inputNum <= buttons.length) {
+                            matchedIndex = inputNum - 1;
+                          } else {
+                            matchedIndex = buttons.findIndex((b: string) =>
+                              b.toLowerCase().trim() === userInput.toLowerCase()
+                            );
+                          }
+
+                          if (matchedIndex >= 0) {
+                            // Find edge with sourceHandle btn_{index}
+                            const edge = edges.find((e: any) =>
+                              e.source === currentNode.id && e.sourceHandle === `btn_${matchedIndex}`
+                            );
+                            nextNodeId = edge?.target || null;
+                            console.log(`🤖🔄 [CHATBOT] Matched button ${matchedIndex}: "${buttons[matchedIndex]}" -> ${nextNodeId}`);
+                          } else {
+                            // Invalid response - follow "invalid" handle
+                            const invalidEdge = edges.find((e: any) =>
+                              e.source === currentNode.id && e.sourceHandle === 'invalid'
+                            );
+                            nextNodeId = invalidEdge?.target || null;
+                            console.log(`🤖🔄 [CHATBOT] Invalid input "${userInput}", following invalid edge -> ${nextNodeId}`);
+                          }
+                        } else {
+                          // Non-choice node: follow default edge (no sourceHandle or first edge)
+                          const edge = edges.find((e: any) => e.source === currentNode.id && !e.sourceHandle) ||
+                                       edges.find((e: any) => e.source === currentNode.id);
+                          nextNodeId = edge?.target || null;
+                        }
+
+                        if (nextNodeId) {
+                          const nextNode = nodes.find((n: any) => n.id === nextNodeId);
+
+                          if (nextNode) {
+                            // Get session server URL for sending
+                            const { data: sessionData } = await supabase
+                              .from('whatsapp_sessions')
+                              .select('baileys_server_url')
+                              .eq('id', targetSessionId)
+                              .single();
+
+                            const serverUrl = sessionData?.baileys_server_url;
+
+                            if (serverUrl && nextNode.type === 'message') {
+                              const vars = (activeExec.variables as Record<string, string>) || {};
+                              let msgContent = nextNode.data?.config?.content || '';
+                              // Replace variables
+                              msgContent = msgContent.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
+
+                              const nextButtons: string[] = nextNode.data?.config?.buttons || [];
+                              // If it has buttons, append numbered list
+                              if (nextButtons.length > 0) {
+                                msgContent += '\n\n' + nextButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                              }
+
+                              // Check for image
+                              const imageUrl = nextNode.data?.config?.imageUrl || '';
+
+                              const jid = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+
+                              try {
+                                let sendSuccess = false;
+
+                                if (imageUrl) {
+                                  // Send image with caption
+                                  const sendRes = await fetch(`${serverUrl}/api/message/send-media`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      jid,
+                                      type: 'image',
+                                      url: imageUrl,
+                                      caption: msgContent,
+                                    }),
+                                  });
+                                  sendSuccess = sendRes.ok;
+                                } else {
+                                  // Send text
+                                  const sendRes = await fetch(`${serverUrl}/api/message/send`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ jid, message: { text: msgContent } }),
+                                  });
+                                  sendSuccess = sendRes.ok;
+                                }
+
+                                if (sendSuccess) {
+                                  console.log(`🤖🔄 [CHATBOT] Sent message for node ${nextNodeId}`);
+
+                                  // Save the bot message
+                                  await supabase.from('whatsapp_messages').insert({
+                                    company_id: companyId,
+                                    session_id: targetSessionId,
+                                    conversation_id: conversation.id,
+                                    content: msgContent,
+                                    from_me: true,
+                                    status: 'sent',
+                                    message_type: imageUrl ? 'image' : 'text',
+                                    media_url: imageUrl || null,
+                                    sender_name: 'Chatbot',
+                                  });
+
+                                  // Update execution state
+                                  const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                  const hasMoreEdges = edges.some((e: any) => e.source === nextNodeId);
+
+                                  await supabase
+                                    .from('chatbot_executions')
+                                    .update({
+                                      current_node_id: nextNodeId,
+                                      execution_path: [...execPath, nextNodeId],
+                                      ...(hasMoreEdges ? {} : { status: 'completed', completed_at: new Date().toISOString() }),
+                                    })
+                                    .eq('id', activeExec.id);
+
+                                  chatbotHandled = true;
+                                }
+                              } catch (sendErr) {
+                                console.error('🤖🔄 [CHATBOT] Send error:', sendErr);
+                              }
+                            }
+                          }
+                        } else {
+                          // No next node - flow completed
+                          console.log(`🤖🔄 [CHATBOT] Flow completed, no next node`);
+                          await supabase
+                            .from('chatbot_executions')
+                            .update({ status: 'completed', completed_at: new Date().toISOString() })
+                            .eq('id', activeExec.id);
+                          chatbotHandled = true;
+                        }
+                      }
+                    }
+                  }
+                } catch (chatbotErr) {
+                  console.error('🤖🔄 [CHATBOT] Engine error:', chatbotErr);
+                }
+              }
+
               // ==================== AI AUTO-RESPONSE ====================
               // Check if conversation has an AI agent assigned and auto-reply is enabled
-              if (!fromMe && conversation) {
+              if (!fromMe && conversation && !chatbotHandled) {
                 try {
                   console.log(`🤖 Checking AI auto-reply for conversation: ${conversation.id}`);
                   

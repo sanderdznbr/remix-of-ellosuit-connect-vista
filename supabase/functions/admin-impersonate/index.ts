@@ -20,11 +20,12 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
+    const token = authHeader.replace('Bearer ', '')
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } }
     })
 
-    const { data: { user }, error: userError } = await userClient.auth.getUser()
+    const { data: { user }, error: userError } = await userClient.auth.getUser(token)
     if (userError || !user) {
       console.error('Auth error:', userError)
       return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: corsHeaders })

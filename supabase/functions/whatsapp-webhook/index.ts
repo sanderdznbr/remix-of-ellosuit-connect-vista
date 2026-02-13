@@ -1041,6 +1041,7 @@ serve(async (req) => {
 
                                 if (imageUrl) {
                                   // Send image with caption
+                                  console.log(`🤖🔄 [CHATBOT] Sending image: url=${imageUrl.substring(0, 80)}..., caption=${msgContent.substring(0, 50)}`);
                                   const sendRes = await fetch(`${serverUrl}/api/message/send-media`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -1052,6 +1053,11 @@ serve(async (req) => {
                                       caption: msgContent,
                                     }),
                                   });
+                                  console.log(`🤖🔄 [CHATBOT] send-media response: ${sendRes.status} ${sendRes.statusText}`);
+                                  if (!sendRes.ok) {
+                                    const errBody = await sendRes.text();
+                                    console.error(`🤖🔄 [CHATBOT] send-media error body: ${errBody}`);
+                                  }
                                   sendSuccess = sendRes.ok;
                                 } else {
                                   // Send text

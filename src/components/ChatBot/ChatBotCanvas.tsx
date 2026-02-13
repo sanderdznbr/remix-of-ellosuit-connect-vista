@@ -204,11 +204,11 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     // Button option handles
     if (node.subType === 'buttons' && handle?.startsWith('btn_')) {
       const btnIndex = parseInt(handle.replace('btn_', ''), 10);
-      startY = node.position.y + 55 + btnIndex * 28;
+      startY = node.position.y + 82 + btnIndex * 24 + 12;
     }
     if (node.subType === 'buttons' && handle === 'invalid') {
       const btns = node.data.config?.buttons || [];
-      startY = node.position.y + 55 + btns.length * 28;
+      startY = node.position.y + 82 + btns.length * 24 + 12;
     }
     
     setConnectingLine({
@@ -367,11 +367,11 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
     // Button option handles
     if (sourceNode.subType === 'buttons' && edge.sourceHandle?.startsWith('btn_')) {
       const btnIndex = parseInt(edge.sourceHandle.replace('btn_', ''), 10);
-      sourceY = sourceNode.position.y + 55 + btnIndex * 28;
+      sourceY = sourceNode.position.y + 82 + btnIndex * 24 + 12;
     }
     if (sourceNode.subType === 'buttons' && edge.sourceHandle === 'invalid') {
       const btns = sourceNode.data.config?.buttons || [];
-      sourceY = sourceNode.position.y + 55 + btns.length * 28;
+      sourceY = sourceNode.position.y + 82 + btns.length * 24 + 12;
     }
     
     const targetX = targetNode.position.x;
@@ -568,7 +568,7 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
               </div>
 
               {/* Node Content */}
-              <div className="px-3 py-2 text-xs text-muted-foreground min-h-[40px]">
+              <div className="px-3 py-2 text-xs text-muted-foreground">
                 <p className="line-clamp-2">{getNodeDescription(node)}</p>
                 {isMultiCondition && multiConditions.length > 0 && (
                   <div className="mt-1 space-y-0.5">
@@ -580,12 +580,23 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
                   </div>
                 )}
                 {isButtonsNode && buttonOptions.length > 0 && (
-                  <div className="mt-1 space-y-0.5">
-                    {buttonOptions.map((btn: string, i: number) => (
-                      <div key={i} className="text-[10px] text-muted-foreground/70">
-                        {i + 1}. {btn}
-                      </div>
-                    ))}
+                  <div className="mt-2 space-y-1 border-t pt-2">
+                    {buttonOptions.map((btn: string, i: number) => {
+                      const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+                      const handleColor = handleColors[i % handleColors.length];
+                      return (
+                        <div key={i} className="flex items-center gap-2 py-0.5">
+                          <span className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-[8px] font-bold" style={{ borderColor: handleColor, color: handleColor }}>
+                            {i + 1}
+                          </span>
+                          <span className="text-[11px] truncate" style={{ color: handleColor }}>{btn}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="flex items-center gap-2 py-0.5 opacity-60">
+                      <span className="w-4 h-4 rounded-full border-2 border-gray-400 flex items-center justify-center flex-shrink-0 text-[8px] font-bold text-gray-400">✕</span>
+                      <span className="text-[11px] text-gray-400">Resposta inválida</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -612,34 +623,29 @@ const ChatBotCanvas: React.FC<ChatBotCanvasProps> = ({
               {/* Output (right side) */}
               {isButtonsNode && buttonOptions.length > 0 ? (
                 <>
-                  {buttonOptions.map((btn: string, i: number) => {
+                  {buttonOptions.map((_btn: string, i: number) => {
                     const handleColors = ['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
                     const handleColor = handleColors[i % handleColors.length];
                     const handleId = `btn_${i}`;
+                    const handleTop = 82 + i * 24;
                     return (
-                      <React.Fragment key={handleId}>
-                        <div 
-                          className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
-                          style={{ top: 45 + i * 28, borderColor: handleColor }}
-                          onMouseDown={(e) => handleOutputMouseDown(e, node.id, handleId)}
-                        >
-                          <span className="text-[8px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
-                        </div>
-                        <span className="absolute right-5 text-[9px] font-medium truncate max-w-[80px]" style={{ top: 48 + i * 28, color: handleColor }}>
-                          {btn}
-                        </span>
-                      </React.Fragment>
+                      <div 
+                        key={handleId}
+                        className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
+                        style={{ top: handleTop, borderColor: handleColor }}
+                        onMouseDown={(e) => handleOutputMouseDown(e, node.id, handleId)}
+                      >
+                        <span className="text-[8px] font-bold" style={{ color: handleColor }}>{i + 1}</span>
+                      </div>
                     );
                   })}
-                  {/* Invalid response output */}
                   <div 
                     className="absolute -right-3 w-6 h-6 rounded-full bg-background border-2 border-gray-400 flex items-center justify-center cursor-crosshair hover:scale-110 transition-all"
-                    style={{ top: 45 + buttonOptions.length * 28 }}
+                    style={{ top: 82 + buttonOptions.length * 24 }}
                     onMouseDown={(e) => handleOutputMouseDown(e, node.id, 'invalid')}
                   >
                     <span className="text-[8px] font-bold text-gray-400">✕</span>
                   </div>
-                  <span className="absolute right-5 text-[9px] text-gray-400 font-medium" style={{ top: 48 + buttonOptions.length * 28 }}>Inválida</span>
                 </>
               ) : isMultiCondition && multiConditions.length > 0 ? (
                 <>

@@ -26,6 +26,7 @@ import PublicVideoPlayer from './pages/PublicVideoPlayer';
 import PublicLeadFunnel from './pages/PublicLeadFunnel';
 import LeadFunnelAnalytics from './pages/LeadFunnelAnalytics';
 import DocsApiCrm from './pages/DocsApiCrm';
+import AcceptInvite from './pages/AcceptInvite';
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/l/:code" element={<LinkRedirect />} />
             <Route path="/video/:videoId" element={<PublicVideoPlayer />} />
             <Route path="/f/:slug" element={<PublicLeadFunnel />} />
+            <Route path="/convite/:token" element={<AcceptInvite />} />
             <Route path="/docs-apicrm" element={<DocsApiCrm />} />
             <Route path="/team" element={<Team />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

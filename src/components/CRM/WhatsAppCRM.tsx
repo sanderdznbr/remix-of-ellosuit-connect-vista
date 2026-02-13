@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import MessageContextMenu from './MessageContextMenu';
 import AudioRecorderButton from './AudioRecorderButton';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ChannelSelector } from './ChannelSelector';
+import StartChatbotModal from './StartChatbotModal';
 import { cn } from '@/lib/utils';
 
 interface WhatsAppSession {
@@ -248,6 +249,7 @@ const WhatsAppCRM: React.FC = () => {
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [showConversationPopup, setShowConversationPopup] = useState(false);
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
+  const [showStartChatbot, setShowStartChatbot] = useState(false);
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
   const [showServerDownload, setShowServerDownload] = useState(false);
   
@@ -2336,6 +2338,10 @@ const WhatsAppCRM: React.FC = () => {
                             <DropdownMenuSeparator />
                           </>
                         )}
+                        <DropdownMenuItem onClick={() => setShowStartChatbot(true)}>
+                          <GitBranch className="h-4 w-4 mr-2 text-[#FF4500]" />
+                          Iniciar Chatbot
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openLabelsManager(selectedConversation)}>
                           <Tag className="h-4 w-4 mr-2" />
                           Gerenciar Etiquetas
@@ -2754,7 +2760,19 @@ const WhatsAppCRM: React.FC = () => {
         onSuccess={() => toast({ title: 'Lead salvo!', description: 'Contato adicionado ao banco de dados' })}
       />
 
-      {/* Conversation Popup (for Kanban view) */}
+      {/* Start Chatbot Modal */}
+      {selectedConversation && (
+        <StartChatbotModal
+          isOpen={showStartChatbot}
+          onClose={() => setShowStartChatbot(false)}
+          companyId={companyId}
+          conversationId={selectedConversation.id}
+          contactPhone={selectedConversation.contact_phone}
+          contactName={selectedConversation.contact_name}
+          sessionId={selectedConversation.session_id}
+        />
+      )}
+
       <ConversationPopup
         open={showConversationPopup}
         onOpenChange={(open) => {

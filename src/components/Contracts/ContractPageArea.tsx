@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,7 @@ interface Props {
   pages: string[];
   currentPage: number;
   pageRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+  contentVersion: number;
   logoUrl: string;
   letterheadUrl: string;
   pageBgColor: string;
@@ -19,10 +20,18 @@ interface Props {
 }
 
 const ContractPageArea: React.FC<Props> = ({
-  pages, currentPage, pageRefs, logoUrl, letterheadUrl,
+  pages, currentPage, pageRefs, contentVersion, logoUrl, letterheadUrl,
   pageBgColor, pageTextColor,
   savePageContent, goToPage, addPage, deletePage,
 }) => {
+  const initRef = useCallback((el: HTMLDivElement | null) => {
+    pageRefs.current[currentPage] = el;
+    if (el && pages[currentPage] !== undefined && !el.dataset.initialized) {
+      el.innerHTML = pages[currentPage];
+      el.dataset.initialized = 'true';
+    }
+  }, [currentPage, contentVersion]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto flex justify-center py-8 bg-muted/50">
@@ -47,9 +56,10 @@ const ContractPageArea: React.FC<Props> = ({
           )}
 
           <div
-            ref={el => { pageRefs.current[currentPage] = el; }}
+            key={`page-${currentPage}-${contentVersion}`}
+            ref={initRef}
             contentEditable
-            className="outline-none px-16 py-8 min-h-[240mm] text-sm leading-relaxed overflow-hidden"
+            className="outline-none px-16 py-8 min-h-[240mm] text-sm leading-relaxed"
             style={{
               fontFamily: "'Times New Roman', serif",
               fontSize: '12pt',

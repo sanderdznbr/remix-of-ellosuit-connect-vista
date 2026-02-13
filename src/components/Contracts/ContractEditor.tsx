@@ -113,12 +113,7 @@ const ContractEditor: React.FC = () => {
     load();
   }, [templateId, companyId]);
 
-  useEffect(() => {
-    const ref = pageRefs.current[currentPage];
-    if (ref && pages[currentPage] !== undefined) {
-      ref.innerHTML = pages[currentPage];
-    }
-  }, [currentPage, contentVersion]);
+  // No useEffect for syncing - we use key-based remounting instead
 
   const savePageContent = useCallback(() => {
     const ref = pageRefs.current[currentPage];
@@ -477,6 +472,7 @@ const ContractEditor: React.FC = () => {
             pages={pages}
             currentPage={currentPage}
             pageRefs={pageRefs}
+            contentVersion={contentVersion}
             logoUrl={logoUrl}
             letterheadUrl={letterheadUrl}
             pageBgColor={pageBgColor}

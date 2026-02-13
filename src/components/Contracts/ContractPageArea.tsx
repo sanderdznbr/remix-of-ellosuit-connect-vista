@@ -10,6 +10,8 @@ interface Props {
   pageRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   logoUrl: string;
   letterheadUrl: string;
+  pageBgColor: string;
+  pageTextColor: string;
   savePageContent: () => void;
   goToPage: (index: number) => void;
   addPage: () => void;
@@ -18,25 +20,26 @@ interface Props {
 
 const ContractPageArea: React.FC<Props> = ({
   pages, currentPage, pageRefs, logoUrl, letterheadUrl,
+  pageBgColor, pageTextColor,
   savePageContent, goToPage, addPage, deletePage,
 }) => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Page content */}
       <div className="flex-1 overflow-auto flex justify-center py-8 bg-muted/50">
         <div
-          className="bg-white shadow-xl rounded-sm relative"
+          className="shadow-xl rounded-sm relative"
           style={{
             width: '210mm',
             minHeight: '297mm',
             maxHeight: '297mm',
+            backgroundColor: pageBgColor,
+            color: pageTextColor,
             backgroundImage: letterheadUrl ? `url(${letterheadUrl})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
           }}
         >
-          {/* Logo - only on first page */}
           {logoUrl && currentPage === 0 && (
             <div className="flex justify-center pt-8 pb-2">
               <img src={logoUrl} alt="Logo" className="max-h-20 object-contain" />
@@ -47,7 +50,12 @@ const ContractPageArea: React.FC<Props> = ({
             ref={el => { pageRefs.current[currentPage] = el; }}
             contentEditable
             className="outline-none px-16 py-8 min-h-[240mm] text-sm leading-relaxed overflow-hidden"
-            style={{ fontFamily: "'Times New Roman', serif", fontSize: '12pt', lineHeight: '1.8' }}
+            style={{
+              fontFamily: "'Times New Roman', serif",
+              fontSize: '12pt',
+              lineHeight: '1.8',
+              color: pageTextColor,
+            }}
             suppressContentEditableWarning
             onBlur={savePageContent}
             onPaste={e => {
@@ -71,12 +79,12 @@ const ContractPageArea: React.FC<Props> = ({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto max-w-[400px]">
           {pages.map((_, i) => (
             <button
               key={i}
               onClick={() => goToPage(i)}
-              className="h-8 min-w-[2rem] px-2 rounded-lg text-xs font-medium transition-all"
+              className="h-8 min-w-[2rem] px-2 rounded-lg text-xs font-medium transition-all flex-shrink-0"
               style={
                 i === currentPage
                   ? { backgroundColor: SUITE_COLOR, color: 'white' }

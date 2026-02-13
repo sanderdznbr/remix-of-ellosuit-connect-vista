@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Loader2, Phone, MoreVertical, ArrowLeft } from 'lucide-react';
+import { Send, User, Bot, Loader2, Phone, MoreVertical, ArrowLeft, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,6 +50,27 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const getScrollViewport = () =>
+    scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+
+  const scrollToBottom = () => {
+    const el = getScrollViewport();
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  // Track scroll position to show/hide button
+  useEffect(() => {
+    const el = getScrollViewport();
+    if (!el) return;
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollButton(distanceFromBottom > 150);
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loading]);
 
   // Load messages
   useEffect(() => {
@@ -156,10 +177,7 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
 
   // Auto-scroll to bottom
   useEffect(() => {
-    const scrollElement = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (scrollElement) {
-      scrollElement.scrollTop = scrollElement.scrollHeight;
-    }
+    if (!showScrollButton) scrollToBottom();
   }, [messages]);
 
   const sendMessage = async () => {
@@ -259,8 +277,9 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
         </DropdownMenu>
       </div>
 
-      {/* Messages */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-[#e5ddd5]">
+      {/* Messages area wrapper */}
+      <div className="relative flex-1">
+        <ScrollArea ref={scrollAreaRef} className="h-full p-4 bg-[#e5ddd5]">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -328,9 +347,19 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
             })}
           </div>
         )}
-      </ScrollArea>
+        </ScrollArea>
 
-      {/* Input */}
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <Button
+            onClick={scrollToBottom}
+            size="icon"
+            className="absolute bottom-4 right-4 z-10 rounded-full bg-card shadow-lg hover:bg-accent h-9 w-9"
+          >
+            <ChevronDown className="h-5 w-5 text-foreground" />
+          </Button>
+        )}
+      </div>
       <div className="p-4 border-t bg-card">
         <div className="flex gap-2">
           <Input

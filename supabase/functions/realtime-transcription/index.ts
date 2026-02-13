@@ -1,5 +1,4 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Realtime Transcription
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,7 +33,7 @@ const pcmToWav = (pcmData: Uint8Array, sampleRate: number = 48000): Uint8Array =
   return wavFile;
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

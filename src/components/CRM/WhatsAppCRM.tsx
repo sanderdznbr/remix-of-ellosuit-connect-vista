@@ -251,6 +251,7 @@ const WhatsAppCRM: React.FC = () => {
   const [popupConversation, setPopupConversation] = useState<WhatsAppConversationData | null>(null);
   const [showStartChatbot, setShowStartChatbot] = useState(false);
   const [activeChatbotFlow, setActiveChatbotFlow] = useState<{ id: string; name: string } | null>(null);
+  const [chatbotActiveConvIds, setChatbotActiveConvIds] = useState<Set<string>>(new Set());
   const [popupMessages, setPopupMessages] = useState<WhatsAppMessage[]>([]);
   const [showServerDownload, setShowServerDownload] = useState(false);
   
@@ -1175,6 +1176,22 @@ const WhatsAppCRM: React.FC = () => {
       setMessages([]);
     }
   }, [selectedConversation?.contact_phone]);
+
+  // Fetch conversation IDs with active chatbot executions
+  useEffect(() => {
+    const fetchChatbotConvs = async () => {
+      const { data } = await supabase
+        .from('chatbot_executions')
+        .select('conversation_id')
+        .eq('status', 'running');
+      if (data) {
+        setChatbotActiveConvIds(new Set(data.map(d => d.conversation_id).filter(Boolean) as string[]));
+      }
+    };
+    fetchChatbotConvs();
+    const interval = setInterval(fetchChatbotConvs, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Check for active chatbot execution on selected conversation
   useEffect(() => {
@@ -2120,6 +2137,12 @@ const WhatsAppCRM: React.FC = () => {
                           <Bot className="h-3 w-3 text-white" />
                         </div>
                       )}
+                      {/* Chatbot indicator */}
+                      {!(conversation.assigned_agent_id && conversation.ai_auto_reply_enabled) && chatbotActiveConvIds.has(conversation.id) && (
+                        <div className="absolute -bottom-1 -right-1 p-1 bg-gradient-to-br from-orange-500 to-red-500 rounded-full shadow-lg">
+                          <GitBranch className="h-3 w-3 text-white" />
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -2136,6 +2159,13 @@ const WhatsAppCRM: React.FC = () => {
                             <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900/30 dark:text-orange-300 text-[10px] px-1.5 py-0 gap-1">
                               <Sparkles className="h-2.5 w-2.5" />
                               IA
+                            </Badge>
+                          )}
+                          {/* Chatbot Badge */}
+                          {chatbotActiveConvIds.has(conversation.id) && !(conversation.assigned_agent_id && conversation.ai_auto_reply_enabled) && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0 gap-1">
+                              <GitBranch className="h-2.5 w-2.5" />
+                              Bot
                             </Badge>
                           )}
                           {/* Labels next to name */}

@@ -1171,6 +1171,62 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
           </div>
         );
 
+      case 'wait_interval':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Valor do intervalo</Label>
+              <Input
+                type="number"
+                value={node.data.config?.intervalValue || 1}
+                onChange={(e) => updateConfig('intervalValue', parseInt(e.target.value))}
+                min={1}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unidade</Label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={node.data.config?.intervalUnit || 'minutes'}
+                onChange={(e) => updateConfig('intervalUnit', e.target.value)}
+              >
+                <option value="seconds">Segundos</option>
+                <option value="minutes">Minutos</option>
+                <option value="hours">Horas</option>
+                <option value="days">Dias</option>
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O fluxo pausará pelo intervalo configurado antes de continuar
+            </p>
+          </div>
+        );
+
+      case 'wait_until':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={node.data.config?.waitDate || ''}
+                onChange={(e) => updateConfig('waitDate', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Hora</Label>
+              <Input
+                type="time"
+                value={node.data.config?.waitTime || '09:00'}
+                onChange={(e) => updateConfig('waitTime', e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O fluxo pausará até a data e hora especificadas
+            </p>
+          </div>
+        );
+
       default:
         return null;
     }

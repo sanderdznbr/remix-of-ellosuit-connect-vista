@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, Eye, PanelRightClose, PanelRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, Eye, PanelRightClose, PanelRight, ChevronDown, ChevronUp, Upload, UserPlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,8 +55,14 @@ export default function ProposalEditor() {
   const [showPreview, setShowPreview] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showServicePicker, setShowServicePicker] = useState(false);
+  const [showNewClientForm, setShowNewClientForm] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [expandedItemIndex, setExpandedItemIndex] = useState<number | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // New client form
+  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', company_name: '' });
 
   // Theme state
   const [theme, setTheme] = useState({
@@ -67,6 +73,10 @@ export default function ProposalEditor() {
     showFooter: true,
     logoUrl: '',
   });
+
+  // Preview container ref for A4 scaling
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
 
   // Queries
   const { data: companyId } = useQuery({
@@ -89,7 +99,7 @@ export default function ProposalEditor() {
     enabled: !!companyId,
   });
 
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [], refetch: refetchClients } = useQuery({
     queryKey: ['all-clients', companyId],
     queryFn: async () => {
       if (!companyId) return [];
@@ -109,6 +119,41 @@ export default function ProposalEditor() {
     enabled: !!companyId,
   });
 
+  // Create new client mutation
+  const createClientMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyId || !user || !newClient.name.trim()) throw new Error('Nome obrigatório');
+      const { data, error } = await supabase.from('clients').insert({
+        company_id: companyId,
+        created_by: user.id,
+        name: newClient.name.trim(),
+        email: newClient.email || null,
+        phone: newClient.phone || null,
+        company_name: newClient.company_name || null,
+      }).select('id').single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setClientId(data.id);
+      setShowNewClientForm(false);
+      setShowClientPicker(false);
+      setNewClient({ name: '', email: '', phone: '', company_name: '' });
+      refetchClients();
+      toast({ title: 'Cliente cadastrado e selecionado!' });
+    },
+    onError: () => toast({ title: 'Erro ao cadastrar cliente', variant: 'destructive' }),
+  });
+
+  // Apply template from query params
+  useEffect(() => {
+    if (proposalId) return;
+    const pc = searchParams.get('pc');
+    const sc = searchParams.get('sc');
+    const font = searchParams.get('font');
+    if (pc) setTheme(t => ({ ...t, primaryColor: pc, secondaryColor: sc || t.secondaryColor, fontFamily: font || t.fontFamily }));
+  }, []);
+
   // Load existing proposal
   useEffect(() => {
     if (!proposalId) return;
@@ -125,6 +170,7 @@ export default function ProposalEditor() {
       setStatus(p.status);
       const colors = p.custom_colors as any;
       if (colors?.primary) setTheme(t => ({ ...t, primaryColor: colors.primary, secondaryColor: colors.secondary || '#007DE3' }));
+      if (colors?.logoUrl) setTheme(t => ({ ...t, logoUrl: colors.logoUrl }));
 
       const { data: itemsData } = await supabase.from('proposal_items').select('*').eq('proposal_id', proposalId).order('position');
       if (itemsData) setItems(itemsData.map((it: any) => ({
@@ -133,6 +179,21 @@ export default function ProposalEditor() {
     };
     load();
   }, [proposalId]);
+
+  // A4 scaling
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const cw = entry.contentRect.width - 48; // padding
+        const A4_W = 595;
+        setPreviewScale(Math.min(1, cw / A4_W));
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [showPreview]);
 
   const selectedClient = clients.find((c: any) => c.id === clientId);
   const subtotal = items.reduce((s, it) => s + it.total_price, 0);
@@ -165,6 +226,27 @@ export default function ProposalEditor() {
 
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
+  // Logo upload
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !companyId) return;
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${companyId}/proposal-logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('logos').getPublicUrl(path);
+      setTheme(t => ({ ...t, logoUrl: urlData.publicUrl }));
+      toast({ title: 'Logo enviado com sucesso!' });
+    } catch {
+      toast({ title: 'Erro ao enviar logo', variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
     if (!companyId || !user || !title.trim()) {
       toast({ title: 'Preencha o título da proposta', variant: 'destructive' });
@@ -176,7 +258,7 @@ export default function ProposalEditor() {
         company_id: companyId, created_by: user.id, title, client_id: clientId,
         valid_until: validUntil || null, notes: notes || null, custom_terms: customTerms || null,
         discount_type: discountType, discount_value: discountValue, subtotal, total, status,
-        custom_colors: { primary: theme.primaryColor, secondary: theme.secondaryColor },
+        custom_colors: { primary: theme.primaryColor, secondary: theme.secondaryColor, logoUrl: theme.logoUrl },
       };
       let savedId = proposalId;
       if (proposalId) {
@@ -291,9 +373,11 @@ export default function ProposalEditor() {
 
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-  // ---- RENDER ----
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
+      {/* Hidden logo input */}
+      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+
       {/* Top Bar */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="flex items-center justify-between px-4 h-14 max-w-[1600px] mx-auto">
@@ -309,7 +393,6 @@ export default function ProposalEditor() {
               {showPreview ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRight className="h-3.5 w-3.5" />}
               <span className="text-xs">Preview</span>
             </Button>
-            {/* Mobile preview toggle */}
             <Button variant="outline" size="sm" className="rounded-xl h-9 md:hidden" onClick={() => setShowPreview(p => !p)}>
               <Eye className="h-3.5 w-3.5" />
             </Button>
@@ -343,24 +426,14 @@ export default function ProposalEditor() {
 
             {activeTab === 'theme' ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                <ProposalThemePanel theme={theme} onChange={setTheme} />
+                <ProposalThemePanel theme={theme} onChange={setTheme} onUploadLogo={() => logoInputRef.current?.click()} uploadingLogo={uploadingLogo} />
               </div>
             ) : (
               <>
-                {/* Status & Date */}
+                {/* Validade only - no status selector */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                  <div className="flex flex-wrap gap-3">
-                    <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger className="w-36 rounded-xl h-9 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rascunho">Rascunho</SelectItem>
-                        <SelectItem value="enviada">Enviada</SelectItem>
-                        <SelectItem value="aprovada">Aprovada</SelectItem>
-                        <SelectItem value="recusada">Recusada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="rounded-xl h-9 text-sm w-40" />
-                  </div>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase mb-2 block">Validade da Proposta</label>
+                  <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="rounded-xl h-9 text-sm w-full max-w-[200px]" />
                 </div>
 
                 {/* Client */}
@@ -375,9 +448,16 @@ export default function ProposalEditor() {
                       <Button variant="ghost" size="sm" onClick={() => setShowClientPicker(true)} className="rounded-xl text-xs">Alterar</Button>
                     </div>
                   ) : (
-                    <button onClick={() => setShowClientPicker(true)} className="w-full flex items-center gap-2 p-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-gray-300 transition-colors">
-                      <Users className="h-4 w-4" /> Selecionar cliente
-                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowClientPicker(true)} className="flex-1 flex items-center gap-2 p-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-gray-300 transition-colors">
+                        <Users className="h-4 w-4" /> Selecionar cliente
+                      </button>
+                      <button onClick={() => { setShowNewClientForm(true); setShowClientPicker(true); }}
+                        className="flex items-center gap-1.5 px-3 rounded-xl border border-dashed text-xs font-medium transition-colors hover:bg-gray-50"
+                        style={{ borderColor: SUITE_COLOR + '40', color: SUITE_COLOR }}>
+                        <UserPlus className="h-3.5 w-3.5" /> Novo
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -410,7 +490,6 @@ export default function ProposalEditor() {
                         const expanded = expandedItemIndex === i;
                         return (
                           <div key={i} className="rounded-xl border border-gray-100 overflow-hidden">
-                            {/* Summary row */}
                             <div className="flex items-center gap-2 p-2.5 cursor-pointer hover:bg-gray-50/50" onClick={() => setExpandedItemIndex(expanded ? null : i)}>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-gray-800 truncate">{item.name || 'Item sem nome'}</p>
@@ -421,7 +500,6 @@ export default function ProposalEditor() {
                               </button>
                               {expanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
                             </div>
-                            {/* Expanded form */}
                             {expanded && (
                               <div className="p-3 pt-0 space-y-2 border-t border-gray-50">
                                 <Input value={item.name} onChange={e => updateItem(i, 'name', e.target.value)} placeholder="Nome do item" className="rounded-lg h-8 text-xs" />
@@ -490,54 +568,105 @@ export default function ProposalEditor() {
           </div>
         </div>
 
-        {/* RIGHT: Live Preview */}
-        <div className={`border-l border-gray-100 bg-gray-100/50 overflow-y-auto ${showPreview ? 'flex-1' : 'hidden lg:block lg:flex-1'}`}>
+        {/* RIGHT: Live Preview - A4 proportional */}
+        <div ref={previewContainerRef} className={`border-l border-gray-100 bg-gray-100/50 overflow-y-auto ${showPreview ? 'flex-1' : 'hidden lg:block lg:flex-1'}`}>
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-gray-400 uppercase">Preview em tempo real</span>
+              <span className="text-xs font-semibold text-gray-400 uppercase">Preview A4</span>
               <Button variant="ghost" size="sm" className="rounded-xl h-7 text-xs lg:hidden" onClick={() => setShowPreview(false)}>
                 <ArrowLeft className="h-3 w-3 mr-1" /> Voltar
               </Button>
             </div>
             <div className="flex justify-center">
-              <ProposalPreview
-                companyName={company?.name || ''}
-                title={title}
-                client={selectedClient || null}
-                items={items}
-                subtotal={subtotal}
-                discountAmount={discountAmount}
-                total={total}
-                notes={notes}
-                customTerms={customTerms}
-                validUntil={validUntil}
-                primaryColor={theme.primaryColor}
-                secondaryColor={theme.secondaryColor}
-                fontFamily={theme.fontFamily}
-                showHeader={theme.showHeader}
-                showFooter={theme.showFooter}
-                logoUrl={theme.logoUrl}
-              />
+              <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: 595, minHeight: 842 }}
+                className="bg-white shadow-2xl border border-gray-200 rounded-lg overflow-hidden">
+                <ProposalPreview
+                  companyName={company?.name || ''}
+                  title={title}
+                  client={selectedClient || null}
+                  items={items}
+                  subtotal={subtotal}
+                  discountAmount={discountAmount}
+                  total={total}
+                  notes={notes}
+                  customTerms={customTerms}
+                  validUntil={validUntil}
+                  primaryColor={theme.primaryColor}
+                  secondaryColor={theme.secondaryColor}
+                  fontFamily={theme.fontFamily}
+                  showHeader={theme.showHeader}
+                  showFooter={theme.showFooter}
+                  logoUrl={theme.logoUrl}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Client Picker */}
-      <Dialog open={showClientPicker} onOpenChange={setShowClientPicker}>
+      {/* Client Picker + New Client Form */}
+      <Dialog open={showClientPicker} onOpenChange={v => { setShowClientPicker(v); if (!v) setShowNewClientForm(false); }}>
         <DialogContent className="max-w-md rounded-2xl max-h-[80vh]">
-          <DialogHeader><DialogTitle>Selecionar Cliente</DialogTitle></DialogHeader>
-          <Input value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..." className="rounded-xl mb-3" />
-          <div className="max-h-60 overflow-y-auto space-y-1">
-            {filteredClients.map((c: any) => (
-              <button key={c.id} onClick={() => { setClientId(c.id); setShowClientPicker(false); }}
-                className={`w-full text-left p-3 rounded-xl transition-colors ${clientId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <p className="font-medium text-sm text-gray-900">{c.name}</p>
-                <p className="text-xs text-gray-500">{c.company_name || c.email || c.phone}</p>
-              </button>
-            ))}
-            {filteredClients.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Nenhum cliente encontrado</p>}
-          </div>
+          <DialogHeader>
+            <DialogTitle>{showNewClientForm ? 'Cadastrar Novo Cliente' : 'Selecionar Cliente'}</DialogTitle>
+          </DialogHeader>
+
+          {showNewClientForm ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Nome *</label>
+                <Input value={newClient.name} onChange={e => setNewClient(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="rounded-xl" required />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Email</label>
+                <Input type="email" value={newClient.email} onChange={e => setNewClient(p => ({ ...p, email: e.target.value }))} placeholder="email@exemplo.com" className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Telefone</label>
+                <Input value={newClient.phone} onChange={e => setNewClient(p => ({ ...p, phone: e.target.value }))} placeholder="(00) 00000-0000" className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Empresa</label>
+                <Input value={newClient.company_name} onChange={e => setNewClient(p => ({ ...p, company_name: e.target.value }))} placeholder="Nome da empresa (opcional)" className="rounded-xl" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setShowNewClientForm(false)} className="flex-1 rounded-xl">Voltar</Button>
+                <Button type="button" className="flex-1 rounded-xl text-white" style={{ background: SUITE_COLOR }}
+                  onClick={() => createClientMutation.mutate()} disabled={!newClient.name.trim() || createClientMutation.isPending}>
+                  {createClientMutation.isPending ? 'Salvando...' : 'Cadastrar e Selecionar'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-3">
+                <Input value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Buscar cliente..." className="rounded-xl flex-1" />
+                <Button variant="outline" size="sm" className="rounded-xl h-10 gap-1.5 shrink-0" style={{ color: SUITE_COLOR, borderColor: SUITE_COLOR + '40' }}
+                  onClick={() => setShowNewClientForm(true)}>
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline text-xs">Novo Cliente</span>
+                </Button>
+              </div>
+              <div className="max-h-60 overflow-y-auto space-y-1">
+                {filteredClients.map((c: any) => (
+                  <button key={c.id} onClick={() => { setClientId(c.id); setShowClientPicker(false); }}
+                    className={`w-full text-left p-3 rounded-xl transition-colors ${clientId === c.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                    <p className="font-medium text-sm text-gray-900">{c.name}</p>
+                    <p className="text-xs text-gray-500">{c.company_name || c.email || c.phone}</p>
+                  </button>
+                ))}
+                {filteredClients.length === 0 && (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-gray-400 mb-3">Nenhum cliente encontrado</p>
+                    <Button variant="outline" size="sm" className="rounded-xl gap-1.5" style={{ color: SUITE_COLOR }}
+                      onClick={() => setShowNewClientForm(true)}>
+                      <UserPlus className="h-3.5 w-3.5" /> Cadastrar Novo Cliente
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

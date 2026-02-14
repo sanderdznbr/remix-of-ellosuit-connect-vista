@@ -82,9 +82,8 @@ export default function AutomationBuilder() {
         if (editId) {
           const target = typed.find(a => a.id === editId);
           if (target) selectAutomation(target);
-        } else if (typed.length > 0 && !current) {
-          selectAutomation(typed[0]);
         }
+        // If no editId, start with a blank canvas for a new automation
       }
       setLoading(false);
     };

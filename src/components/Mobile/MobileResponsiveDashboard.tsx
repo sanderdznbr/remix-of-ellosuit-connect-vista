@@ -40,6 +40,8 @@ import HabitFlowBuilder from '@/components/Habits/HabitFlowBuilder';
 import ContractsPage from '@/components/Contracts/ContractsPage';
 import ContractEditor from '@/components/Contracts/ContractEditor';
 import ContractViewer from '@/components/Contracts/ContractViewer';
+import ProposalsPage from '@/components/Proposals/ProposalsPage';
+import ProposalEditor from '@/components/Proposals/ProposalEditor';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -164,6 +166,8 @@ const MobileResponsiveDashboard = () => {
             <Route path="/contratos" element={<ContractsPage />} />
             <Route path="/contratos/editor" element={<ContractEditor />} />
             <Route path="/contratos/visualizar" element={<ContractViewer />} />
+            <Route path="/propostas" element={<ProposalsPage />} />
+            <Route path="/propostas/editor" element={<ProposalEditor />} />
             
             {/* Legacy routes */}
             <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />

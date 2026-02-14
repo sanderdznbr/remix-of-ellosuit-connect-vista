@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,6 +104,7 @@ const MainDashboard = () => {
   });
   const [conversationsCount, setConversationsCount] = useState(0);
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const dateRange = useMemo(() => ({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) }), []);
 
   useEffect(() => {
     if (user) loadDashboardData();
@@ -508,8 +509,8 @@ const MainDashboard = () => {
         {companyId && (
           <WhatsAppDashboardWidget
             companyId={companyId}
-            startDate={startOfMonth(new Date())}
-            endDate={endOfMonth(new Date())}
+            startDate={dateRange.start}
+            endDate={dateRange.end}
             onStatsLoaded={handleWhatsAppStats}
             showChart={sections.whatsappChart}
           />

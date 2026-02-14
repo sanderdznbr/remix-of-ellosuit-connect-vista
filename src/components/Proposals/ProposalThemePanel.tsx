@@ -1,5 +1,5 @@
 
-import { Palette, Type, Eye, EyeOff, Image, RotateCcw } from 'lucide-react';
+import { Palette, Type, Image as ImageIcon, RotateCcw, Upload, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ interface ThemeSettings {
 interface Props {
   theme: ThemeSettings;
   onChange: (t: ThemeSettings) => void;
+  onUploadLogo?: () => void;
+  uploadingLogo?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -41,7 +43,7 @@ const PRESETS = [
   { name: 'Oceano', primary: '#0891B2', secondary: '#007DE3', font: 'system-ui, sans-serif' },
 ];
 
-export default function ProposalThemePanel({ theme, onChange }: Props) {
+export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uploadingLogo }: Props) {
   const set = (partial: Partial<ThemeSettings>) => onChange({ ...theme, ...partial });
 
   return (
@@ -128,9 +130,33 @@ export default function ProposalThemePanel({ theme, onChange }: Props) {
       {/* Logo */}
       <div>
         <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block flex items-center gap-1.5">
-          <Image className="h-3 w-3" /> Logo
+          <ImageIcon className="h-3 w-3" /> Logo da Empresa
         </label>
-        <Input value={theme.logoUrl} onChange={e => set({ logoUrl: e.target.value })} placeholder="URL do logo (opcional)" className="rounded-lg h-8 text-xs" />
+        {theme.logoUrl ? (
+          <div className="space-y-2">
+            <div className="rounded-xl border border-gray-200 p-3 bg-gray-50 flex items-center gap-3">
+              <img src={theme.logoUrl} alt="Logo" className="h-10 w-auto object-contain rounded" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-gray-500 truncate">{theme.logoUrl.split('/').pop()}</p>
+              </div>
+              <Button type="button" variant="ghost" size="sm" className="text-red-500 text-xs h-7 px-2 rounded-lg"
+                onClick={() => set({ logoUrl: '' })}>
+                Remover
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={onUploadLogo}
+            disabled={uploadingLogo}
+            className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50">
+            {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {uploadingLogo ? 'Enviando...' : 'Enviar logo da empresa'}
+          </button>
+        )}
+        <div className="mt-2">
+          <span className="text-[9px] text-gray-400">ou cole a URL:</span>
+          <Input value={theme.logoUrl} onChange={e => set({ logoUrl: e.target.value })} placeholder="https://..." className="rounded-lg h-7 text-[10px] mt-1" />
+        </div>
       </div>
 
       {/* Reset */}

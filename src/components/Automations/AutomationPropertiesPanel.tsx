@@ -34,9 +34,11 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
   const [generatingUrl, setGeneratingUrl] = useState(false);
   const [generatedWebhookId, setGeneratedWebhookId] = useState<string | null>(automationId || null);
   const [newTag, setNewTag] = useState('');
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   // Fetch contact groups for the company
-  const { data: contactGroups } = useQuery({
+  const { data: contactGroups, refetch: refetchGroups } = useQuery({
     queryKey: ['contact-groups-automation'],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -47,6 +49,29 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
     },
     enabled: !!user?.id,
   });
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || !user?.id) return;
+    setCreatingGroup(true);
+    try {
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).single();
+      if (!cu?.company_id) throw new Error('Empresa não encontrada');
+      const { data, error } = await supabase.from('contact_groups').insert({
+        company_id: cu.company_id,
+        created_by: user.id,
+        name: newGroupName.trim(),
+      }).select('id').single();
+      if (error) throw error;
+      await refetchGroups();
+      updateConfig('addToGroupId', data.id);
+      setNewGroupName('');
+      toast({ title: 'Grupo criado!', description: `"${newGroupName.trim()}" foi criado e selecionado.` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao criar grupo', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
 
   useEffect(() => {
     setExternalUrl(node.config?.externalWebhookUrl || '');
@@ -498,7 +523,10 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
             {/* Add to group */}
             <div>
               <label className="text-xs font-semibold text-gray-600 mb-1 block">Adicionar a grupo/lista</label>
-              <Select value={node.config?.addToGroupId || 'none'} onValueChange={v => updateConfig('addToGroupId', v === 'none' ? '' : v)}>
+              <Select value={node.config?.addToGroupId || 'none'} onValueChange={v => {
+                if (v === '__create__') return;
+                updateConfig('addToGroupId', v === 'none' ? '' : v);
+              }}>
                 <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue placeholder="Nenhum grupo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum grupo</SelectItem>
@@ -507,6 +535,26 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
                   ))}
                 </SelectContent>
               </Select>
+              {/* Inline create group */}
+              <div className="mt-2 flex gap-1.5">
+                <Input
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  placeholder="Nome do novo grupo..."
+                  className="rounded-xl h-8 text-xs flex-1"
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateGroup(); }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl h-8 px-2.5 text-xs gap-1"
+                  disabled={creatingGroup || !newGroupName.trim()}
+                  onClick={handleCreateGroup}
+                >
+                  {creatingGroup ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                  Criar
+                </Button>
+              </div>
               <p className="text-[9px] text-gray-400 mt-1">O contato será adicionado automaticamente ao grupo selecionado</p>
             </div>
 

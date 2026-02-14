@@ -192,7 +192,7 @@ const WhatsAppDashboardWidget: React.FC<Props> = ({ companyId, startDate, endDat
   const hasData = stats.totalMessages > 0;
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card className="border-0 shadow-sm mb-8">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

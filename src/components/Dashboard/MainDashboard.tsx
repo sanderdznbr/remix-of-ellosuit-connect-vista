@@ -52,6 +52,8 @@ interface ChartData {
   leads: number;
   emails: number;
   tracking: number;
+  mensagens: number;
+  respostas: number;
 }
 
 type KPIMode = 'geral' | 'whatsapp';
@@ -100,6 +102,7 @@ const MainDashboard = () => {
     emailsOpened: 0, openRate: 0, documentsTracked: 0, docsChange: 0,
     meetings: 0, meetingsChange: 0, aiAgents: 0, agentsChange: 0
   });
+  const [conversationsCount, setConversationsCount] = useState(0);
   const [chartData, setChartData] = useState<ChartData[]>([]);
 
   useEffect(() => {
@@ -148,7 +151,9 @@ const MainDashboard = () => {
         emailEventsRes,
         docsRes, prevDocsRes,
         meetingsRes, prevMeetingsRes,
-        agentsRes
+        agentsRes,
+        conversationsRes,
+        whatsappMsgsRes
       ] = await Promise.all([
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('company_id', cId).gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('company_id', cId).gte('created_at', prevStartDate.toISOString()).lte('created_at', prevEndDate.toISOString()),
@@ -159,7 +164,9 @@ const MainDashboard = () => {
         supabase.from('trackable_documents').select('*', { count: 'exact', head: true }).eq('company_id', cId).lt('created_at', startDate.toISOString()),
         supabase.from('meeting_rooms').select('*', { count: 'exact', head: true }).eq('company_id', cId).gte('created_at', startDate.toISOString()),
         supabase.from('meeting_rooms').select('*', { count: 'exact', head: true }).eq('company_id', cId).gte('created_at', prevStartDate.toISOString()).lt('created_at', startDate.toISOString()),
-        supabase.from('ai_agents').select('*', { count: 'exact', head: true }).eq('company_id', cId).eq('is_active', true)
+        supabase.from('ai_agents').select('*', { count: 'exact', head: true }).eq('company_id', cId).eq('is_active', true),
+        supabase.from('whatsapp_conversations').select('*', { count: 'exact', head: true }).eq('company_id', cId),
+        supabase.from('whatsapp_messages').select('from_me, is_ai_response, timestamp', { count: 'exact' }).eq('company_id', cId).gte('timestamp', subDays(now, 30).toISOString()).neq('message_type', 'system').order('timestamp', { ascending: true })
       ]);
 
       const currentClients = clientsRes.count || 0;
@@ -177,6 +184,8 @@ const MainDashboard = () => {
       const prevMeetings = prevMeetingsRes.count || 0;
       const meetingsChange = prevMeetings > 0 ? ((currentMeetings - prevMeetings) / prevMeetings) * 100 : 0;
 
+      setConversationsCount(conversationsRes.count || 0);
+
       setKpis({
         clients: currentClients, clientsChange,
         emailsSent: totalEmails, emailsChange,
@@ -186,16 +195,30 @@ const MainDashboard = () => {
         aiAgents: agentsRes.count || 0, agentsChange: 0
       });
 
-      const hasData = (clientsRes.count || 0) > 0 || totalEmails > 0 || currentDocs > 0;
+      // Build chart data with real WhatsApp messages
+      const whatsappMessages = whatsappMsgsRes.data || [];
+      const msgByDay: Record<string, { mensagens: number; respostas: number }> = {};
+      for (const msg of whatsappMessages) {
+        const day = format(new Date(msg.timestamp), 'dd/MM');
+        if (!msgByDay[day]) msgByDay[day] = { mensagens: 0, respostas: 0 };
+        msgByDay[day].mensagens++;
+        if (msg.is_ai_response) msgByDay[day].respostas++;
+      }
+
+      const hasData = (clientsRes.count || 0) > 0 || totalEmails > 0 || currentDocs > 0 || whatsappMessages.length > 0;
       const chartDataArray: ChartData[] = [];
       for (let i = 29; i >= 0; i--) {
         const date = subDays(now, i);
         const seed = date.getDate();
+        const dayKey = format(date, 'dd/MM');
+        const dayWa = msgByDay[dayKey] || { mensagens: 0, respostas: 0 };
         chartDataArray.push({
-          date: format(date, 'dd/MM'),
+          date: dayKey,
           leads: hasData ? Math.round(Math.abs(Math.sin(seed * 1.3)) * 8 + 1) : 0,
           emails: hasData ? Math.round(Math.abs(Math.cos(seed * 0.7)) * 12 + 2) : 0,
           tracking: hasData ? Math.round(Math.abs(Math.sin(seed * 2.1 + 1)) * 6 + 1) : 0,
+          mensagens: dayWa.mensagens,
+          respostas: dayWa.respostas,
         });
       }
       setChartData(chartDataArray);
@@ -289,8 +312,9 @@ const MainDashboard = () => {
   const hasWhatsApp = whatsappStats?.hasWhatsApp ?? false;
 
   const renderGeneralKPIs = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <KPICard label="Clientes" value={kpis.clients} change={kpis.clientsChange} badge={`${Math.abs(kpis.clientsChange).toFixed(0)}%`} isHighlighted color="#3000E3" />
+      <KPICard label="Conversas" value={conversationsCount} change={0} subtitle="WhatsApp CRM" />
       <KPICard label="Emails Enviados" value={kpis.emailsSent} change={kpis.emailsChange} badge={`${kpis.openRate.toFixed(0)}%`} />
       <KPICard label="Emails Abertos" value={kpis.emailsOpened} change={kpis.openRate} badge={`${kpis.openRate.toFixed(0)}%`} />
       <KPICard label="Docs Rastreados" value={kpis.documentsTracked} change={kpis.docsChange} />
@@ -430,13 +454,15 @@ const MainDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Visão Geral do Período</h3>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#3000E3]" /><span className="text-sm text-gray-600">Leads</span></div>
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#8B5CF6]" /><span className="text-sm text-gray-600">Emails</span></div>
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#10B981]" /><span className="text-sm text-gray-600">Tracking</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#007DE3]" /><span className="text-sm text-gray-600">Mensagens WA</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#F59E0B]" /><span className="text-sm text-gray-600">Respostas IA</span></div>
                 </div>
               </div>
-              {kpis.clients === 0 && kpis.emailsSent === 0 && kpis.documentsTracked === 0 ? (
+              {kpis.clients === 0 && kpis.emailsSent === 0 && kpis.documentsTracked === 0 && chartData.every(d => d.mensagens === 0) ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <TrendingUp className="h-10 w-10 text-gray-300 mb-3" />
                   <p className="text-gray-500 font-medium">Ainda não capturamos dados para atualizar seu gráfico</p>
@@ -455,6 +481,12 @@ const MainDashboard = () => {
                       <linearGradient id="colorTracking" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                       </linearGradient>
+                      <linearGradient id="colorMensagens" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#007DE3" stopOpacity={0.3}/><stop offset="95%" stopColor="#007DE3" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorRespostas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/><stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
+                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
@@ -463,6 +495,8 @@ const MainDashboard = () => {
                     <Area type="monotone" dataKey="leads" name="Leads" stroke="#3000E3" strokeWidth={2} fillOpacity={1} fill="url(#colorLeads)" />
                     <Area type="monotone" dataKey="emails" name="Emails" stroke="#8B5CF6" strokeWidth={2} fillOpacity={1} fill="url(#colorEmails)" />
                     <Area type="monotone" dataKey="tracking" name="Tracking" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorTracking)" />
+                    <Area type="monotone" dataKey="mensagens" name="Mensagens WA" stroke="#007DE3" strokeWidth={2} fillOpacity={1} fill="url(#colorMensagens)" />
+                    <Area type="monotone" dataKey="respostas" name="Respostas IA" stroke="#F59E0B" strokeWidth={2} fillOpacity={1} fill="url(#colorRespostas)" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -472,15 +506,13 @@ const MainDashboard = () => {
 
         {/* WhatsApp Chart (hidden loader for stats + visible chart) */}
         {companyId && (
-          <div className={sections.whatsappChart ? 'mb-8' : ''}>
-            <WhatsAppDashboardWidget
-              companyId={companyId}
-              startDate={startOfMonth(new Date())}
-              endDate={endOfMonth(new Date())}
-              onStatsLoaded={handleWhatsAppStats}
-              showChart={sections.whatsappChart}
-            />
-          </div>
+          <WhatsAppDashboardWidget
+            companyId={companyId}
+            startDate={startOfMonth(new Date())}
+            endDate={endOfMonth(new Date())}
+            onStatsLoaded={handleWhatsAppStats}
+            showChart={sections.whatsappChart}
+          />
         )}
 
         {/* Secondary Stats Grid */}

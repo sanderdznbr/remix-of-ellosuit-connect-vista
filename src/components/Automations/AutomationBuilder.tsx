@@ -238,21 +238,15 @@ export default function AutomationBuilder() {
   }
 
   return (
-    <div className={`h-[calc(100vh-64px)] flex flex-col transition-colors duration-500 ${
-      isActive ? 'bg-[#0f1117]' : 'bg-gradient-to-br from-gray-50 to-gray-100'
-    }`}>
+    <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <div className={`h-16 border-b shadow-sm flex items-center justify-between px-4 flex-shrink-0 transition-colors duration-500 ${
-        isActive ? 'bg-[#161822] border-gray-800' : 'bg-white'
-      }`}>
+      <div className="h-16 border-b shadow-sm flex items-center justify-between px-4 flex-shrink-0 bg-white">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/automacoes')} className={`rounded-xl ${isActive ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100'}`}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/automacoes')} className="rounded-xl hover:bg-gray-100">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
-              isActive ? 'animate-pulse' : ''
-            }`}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isActive ? 'animate-pulse' : ''}`}
               style={{ background: isActive ? 'linear-gradient(135deg, #22C55E, #16A34A)' : `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR}dd)` }}>
               <Workflow className="h-5 w-5 text-white" />
             </div>
@@ -260,7 +254,7 @@ export default function AutomationBuilder() {
               <Input
                 value={flowName}
                 onChange={e => setFlowName(e.target.value)}
-                className={`h-7 text-sm font-semibold border-0 p-0 focus-visible:ring-0 bg-transparent ${isActive ? 'text-gray-100' : ''}`}
+                className="h-7 text-sm font-semibold border-0 p-0 focus-visible:ring-0 bg-transparent"
                 placeholder="Nome da automação"
               />
               <div className="flex items-center gap-2 mt-0.5">
@@ -272,7 +266,7 @@ export default function AutomationBuilder() {
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 rounded-full">Inativa</Badge>
                 )}
                 {current && (
-                  <span className={`text-[10px] ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span className="text-[10px] text-gray-400">
                     {current.execution_count || 0} execuções
                   </span>
                 )}
@@ -282,23 +276,12 @@ export default function AutomationBuilder() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Edit sidebar toggle */}
-          <Button 
-            variant={sidebarExpanded ? "default" : "outline"} 
-            size="sm" 
-            onClick={() => setSidebarExpanded(!sidebarExpanded)} 
-            className={`gap-2 rounded-xl ${isActive ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : ''} ${sidebarExpanded ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}`}
-          >
-            <Edit className="h-4 w-4" />
-            Editar
-          </Button>
-
           {/* Logs toggle */}
           <Button 
             variant={showLogs ? "default" : "outline"} 
             size="sm" 
             onClick={() => setShowLogs(!showLogs)} 
-            className={`gap-2 rounded-xl ${isActive ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : ''} ${showLogs ? 'bg-orange-600 text-white hover:bg-orange-700' : ''}`}
+            className={`gap-2 rounded-xl ${showLogs ? 'bg-orange-600 text-white hover:bg-orange-700' : ''}`}
           >
             <Activity className="h-4 w-4" />
             Logs
@@ -307,7 +290,7 @@ export default function AutomationBuilder() {
           {/* Flow Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={`gap-2 rounded-xl ${isActive ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : ''}`}>
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl">
                 <span className="max-w-[100px] truncate">{current?.name || 'Selecionar'}</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -331,12 +314,12 @@ export default function AutomationBuilder() {
 
           {current && (
             <>
-              <Button variant="outline" size="sm" onClick={toggleActive} className={`gap-2 rounded-xl ${isActive ? 'border-green-800 text-green-400 hover:bg-green-900/30' : ''}`}>
+              <Button variant="outline" size="sm" onClick={toggleActive} className={`gap-2 rounded-xl ${isActive ? 'border-green-600 text-green-600 hover:bg-green-50' : ''}`}>
                 {isActive ? <><Pause className="h-4 w-4" />Pausar</> : <><Play className="h-4 w-4" />Ativar</>}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className={`h-9 w-9 rounded-xl ${isActive ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : ''}`}>
+                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl">
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -364,7 +347,7 @@ export default function AutomationBuilder() {
 
       {/* Main */}
       <div className="flex-1 flex overflow-hidden">
-        <AutomationSidebar onDragStart={handleDragStart} isExpanded={sidebarExpanded} isActive={isActive} />
+        <AutomationSidebar onDragStart={handleDragStart} isExpanded={sidebarExpanded} onToggle={() => setSidebarExpanded(!sidebarExpanded)} />
         <AutomationCanvas
           nodes={nodes}
           edges={edges}
@@ -375,7 +358,7 @@ export default function AutomationBuilder() {
           isActive={isActive}
         />
         {showLogs && current && (
-          <AutomationLogsPanel automationId={current.id} isActive={isActive} onClose={() => setShowLogs(false)} />
+          <AutomationLogsPanel automationId={current.id} onClose={() => setShowLogs(false)} />
         )}
         {selectedNode && !showLogs && (
           <AutomationPropertiesPanel

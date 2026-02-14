@@ -17,7 +17,7 @@ interface ExecutionLog {
 
 interface Props {
   automationId: string;
-  isActive: boolean;
+  isActive?: boolean;
   onClose: () => void;
 }
 

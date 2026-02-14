@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import ProposalPreview from './ProposalPreview';
+import ProposalEditablePreview from './ProposalEditablePreview';
 import ProposalThemePanel from './ProposalThemePanel';
 
 const SUITE_COLOR = '#3000E3';
@@ -553,7 +554,7 @@ export default function ProposalEditor() {
             <div className="flex justify-center">
               <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: 595, minHeight: 842 }}
                 className="bg-white shadow-2xl border border-gray-200 rounded-lg overflow-hidden">
-                <ProposalPreview
+                <ProposalEditablePreview
                   companyName={company?.name || ''}
                   title={title}
                   client={selectedClient || null}
@@ -570,6 +571,10 @@ export default function ProposalEditor() {
                   showHeader={theme.showHeader}
                   showFooter={theme.showFooter}
                   logoUrl={theme.logoUrl}
+                  onTitleChange={setTitle}
+                  onNotesChange={setNotes}
+                  onTermsChange={setCustomTerms}
+                  onItemChange={(i, field, val) => updateItem(i, field, val)}
                 />
               </div>
             </div>

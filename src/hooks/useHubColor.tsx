@@ -17,6 +17,7 @@ const omniRoutes = [
   '/dashboard/email-builder',
   '/dashboard/bot-ia',
   '/dashboard/disparos',
+  '/dashboard/automacoes',
 ];
 
 const flowRoutes = [

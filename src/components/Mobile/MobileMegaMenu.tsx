@@ -24,6 +24,7 @@ const hubs = [
       { icon: Mail, label: 'Email', path: '/dashboard/email' },
       { icon: Users, label: 'Clientes', path: '/dashboard/cadastros' },
       { icon: Phone, label: 'Contatos', path: '/dashboard/contatos' },
+      { icon: Zap, label: 'Automações', path: '/dashboard/automacoes' },
     ],
   },
   {

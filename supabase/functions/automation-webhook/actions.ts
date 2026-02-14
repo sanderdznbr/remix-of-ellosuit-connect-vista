@@ -26,9 +26,10 @@ export const FIELD_LABEL_TO_COLUMN: Record<string, string> = {
   "Facebook": "facebook",
   "Anotações": "notes",
   "Tags": "tags",
-  "Item Comprado (lista)": "purchased_items",
-  "Data da Compra": "purchase_date",
-  "Valor Total da Compra": "purchase_total",
+  // Purchase fields are stored in notes, not as separate columns
+  "Item Comprado (lista)": "_purchase_items",
+  "Data da Compra": "_purchase_date",
+  "Valor Total da Compra": "_purchase_total",
 };
 
 export interface ExecutionContext {
@@ -55,22 +56,27 @@ export async function executeCreateClient(
     status: config.defaultStatus || "lead",
   };
 
+  const purchaseInfo: string[] = [];
+
   for (const edge of edges) {
     if (edge.sourceField && edge.targetField) {
       const dbColumn = FIELD_LABEL_TO_COLUMN[edge.targetField];
       if (dbColumn) {
         const value = resolveValue(edge.sourceField);
         if (value !== null && value !== undefined) {
-          if (dbColumn === "tags" && typeof value === "string") {
-            clientData[dbColumn] = value.split(",").map((t: string) => t.trim());
-          } else if (dbColumn === "annual_revenue" || dbColumn === "purchase_total") {
-            clientData[dbColumn] = typeof value === "number" ? value : parseFloat(String(value)) || null;
-          } else if (dbColumn === "purchased_items") {
-            if (Array.isArray(value)) {
-              clientData[dbColumn] = value;
-            } else if (typeof value === "string") {
-              clientData[dbColumn] = value.split(",").map((i: string) => i.trim());
+          // Handle virtual purchase fields -> store in notes
+          if (dbColumn.startsWith("_purchase")) {
+            if (dbColumn === "_purchase_items") {
+              purchaseInfo.push(`Itens: ${String(value)}`);
+            } else if (dbColumn === "_purchase_date") {
+              purchaseInfo.push(`Data da Compra: ${String(value)}`);
+            } else if (dbColumn === "_purchase_total") {
+              purchaseInfo.push(`Valor Total: ${String(value)}`);
             }
+          } else if (dbColumn === "tags" && typeof value === "string") {
+            clientData[dbColumn] = value.split(",").map((t: string) => t.trim());
+          } else if (dbColumn === "annual_revenue") {
+            clientData[dbColumn] = typeof value === "number" ? value : parseFloat(String(value)) || null;
           } else {
             clientData[dbColumn] = String(value);
           }
@@ -86,6 +92,11 @@ export async function executeCreateClient(
         if ((lk.includes("whatsapp") || lk === "wpp") && !clientData.whatsapp) clientData.whatsapp = String(val);
       }
     }
+  }
+
+  // Append purchase info to notes if present
+  if (purchaseInfo.length > 0) {
+    clientData.notes = `${clientData.notes || ""}${clientData.notes ? "\n" : ""}📦 Compra:\n${purchaseInfo.join("\n")}`.trim();
   }
 
   if (!clientData.name) {

@@ -737,14 +737,59 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
         {node.type === 'create_proposal' && (
           <>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Título da Proposta</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Título da Ordem de Serviço</label>
               <Input value={node.config?.proposalTitle || ''} onChange={e => updateConfig('proposalTitle', e.target.value)}
-                placeholder="Proposta para {{client.name}}" className="rounded-xl h-9 text-xs" />
+                placeholder="OS para {{client.name}}" className="rounded-xl h-9 text-xs" />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 mb-1 block">Template ID</label>
               <Input value={node.config?.templateId || ''} onChange={e => updateConfig('templateId', e.target.value)}
                 placeholder="ID do template" className="rounded-xl h-9 text-xs" />
+            </div>
+          </>
+        )}
+
+        {node.type === 'create_receipt' && (
+          <>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Título do Recibo</label>
+              <Input value={node.config?.title || ''} onChange={e => updateConfig('title', e.target.value)}
+                placeholder="Serviço prestado - {{data.service}}" className="rounded-xl h-9 text-xs" />
+              <p className="text-[9px] text-gray-400 mt-0.5">Use {'{{data.campo}}'} para dados do webhook</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Valor (R$)</label>
+              <Input value={node.config?.amount || ''} onChange={e => updateConfig('amount', e.target.value)}
+                placeholder="{{data.valor}} ou valor fixo" className="rounded-xl h-9 text-xs" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Forma de Pagamento</label>
+              <Select value={node.config?.payment_method || 'PIX'} onValueChange={v => updateConfig('payment_method', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['PIX', 'Dinheiro', 'Cartão de Crédito', 'Cartão de Débito', 'Transferência Bancária', 'Boleto'].map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Descrição</label>
+              <Textarea value={node.config?.description || ''} onChange={e => updateConfig('description', e.target.value)}
+                placeholder="Descrição do serviço..." className="rounded-xl text-xs min-h-[60px]" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Enviar Automaticamente</label>
+              <Select value={node.config?.send_method || 'none'} onValueChange={v => updateConfig('send_method', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não enviar (apenas salvar)</SelectItem>
+                  <SelectItem value="email">Enviar por Email</SelectItem>
+                  <SelectItem value="whatsapp">Enviar por WhatsApp</SelectItem>
+                  <SelectItem value="both">Enviar por Email e WhatsApp</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[9px] text-gray-400 mt-0.5">Usa os dados do cliente criado no fluxo</p>
             </div>
           </>
         )}

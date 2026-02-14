@@ -1,8 +1,8 @@
 
-import { useCallback, useRef, useState } from 'react';
-import { AutomationNode, AutomationEdge, AUTOMATION_BLOCKS } from './types';
+import { useCallback, useRef, useState, useEffect } from 'react';
+import { AutomationNode, AutomationEdge, AUTOMATION_BLOCKS, AutomationBlockDefinition } from './types';
 import * as Icons from 'lucide-react';
-import { Trash2, GripVertical, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Trash2, GripVertical, ZoomIn, ZoomOut, Maximize, Plus, Zap, Play, GitBranch, RefreshCw, MousePointer, Clipboard } from 'lucide-react';
 
 interface Props {
   nodes: AutomationNode[];
@@ -69,6 +69,18 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   const [zoom, setZoom] = useState(1);
   const MIN_ZOOM = 0.3;
   const MAX_ZOOM = 2;
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; canvasX: number; canvasY: number } | null>(null);
+
+  // Close context menu on click anywhere
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', close);
+      return () => window.removeEventListener('click', close);
+    }
+  }, [contextMenu]);
 
   const getBlockDef = (type: string) => AUTOMATION_BLOCKS.find(b => b.type === type);
 
@@ -387,7 +399,20 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
-        onClick={() => { if (!panning) onNodeSelect(null); }}
+        onClick={() => { if (!panning) { onNodeSelect(null); setContextMenu(null); } }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const scrollLeft = canvasRef.current?.scrollLeft || 0;
+          const scrollTop = canvasRef.current?.scrollTop || 0;
+          setContextMenu({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            canvasX: Math.round(((e.clientX - rect.left + scrollLeft) / zoom) / GRID_SIZE) * GRID_SIZE,
+            canvasY: Math.round(((e.clientY - rect.top + scrollTop) / zoom) / GRID_SIZE) * GRID_SIZE,
+          });
+        }}
       >
         <div
           style={{
@@ -634,6 +659,81 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
           )}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="absolute z-[100] bg-card border border-border rounded-xl shadow-2xl py-1.5 min-w-[200px] animate-in fade-in zoom-in-95 duration-100"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+            Adicionar bloco
+          </div>
+          {[
+            { key: 'trigger', label: 'Gatilhos', Icon: Zap },
+            { key: 'action', label: 'Ações', Icon: Play },
+            { key: 'condition', label: 'Condições', Icon: GitBranch },
+            { key: 'transform', label: 'Transformação', Icon: RefreshCw },
+          ].map(cat => {
+            const catBlocks = AUTOMATION_BLOCKS.filter(b => b.category === cat.key);
+            return (
+              <div key={cat.key}>
+                <div className="px-3 py-1 flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/70 mt-1">
+                  <cat.Icon className="h-3 w-3" />
+                  {cat.label}
+                </div>
+                {catBlocks.map(block => {
+                  const BlockIcon = (Icons as any)[block.icon];
+                  return (
+                    <button
+                      key={block.type}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground/80 hover:bg-muted/60 hover:text-foreground transition-colors"
+                      onClick={() => {
+                        const newNode: AutomationNode = {
+                          id: `node-${Date.now()}`,
+                          type: block.type,
+                          label: block.label,
+                          position: { x: contextMenu.canvasX, y: contextMenu.canvasY },
+                          data: {},
+                          config: { ...block.defaultConfig },
+                        };
+                        onNodesChange([...nodes, newNode]);
+                        onNodeSelect(newNode);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-md flex items-center justify-center text-white flex-shrink-0"
+                        style={{ backgroundColor: block.color }}
+                      >
+                        {BlockIcon && <BlockIcon className="h-3 w-3" />}
+                      </div>
+                      {block.label}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+          <div className="border-t border-border/40 mt-1.5 pt-1">
+            <button
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+              onClick={() => { setZoom(1); setContextMenu(null); }}
+            >
+              <Maximize className="h-4 w-4" />
+              Resetar zoom
+            </button>
+            <button
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+              onClick={() => { onNodeSelect(null); setContextMenu(null); }}
+            >
+              <MousePointer className="h-4 w-4" />
+              Deselecionar tudo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

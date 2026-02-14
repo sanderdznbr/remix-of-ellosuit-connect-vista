@@ -133,8 +133,11 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   };
 
   const getNodeHeight = (node: AutomationNode) => {
-    const fields = node.config?.detectedFields || node.config?.externalDetectedFields || [];
-    return NODE_HEIGHT + (fields.length > 0 ? 20 + fields.length * 22 : 0);
+    const webhookFields = node.config?.detectedFields || node.config?.externalDetectedFields || [];
+    const hasWebhookFields = node.type === 'webhook' && webhookFields.length > 0;
+    const hasClientFields = node.type === 'create_client';
+    const fieldCount = hasWebhookFields ? webhookFields.length : hasClientFields ? 4 : 0;
+    return NODE_HEIGHT + (fieldCount > 0 ? 24 + fieldCount * 22 : 0);
   };
 
   const renderEdge = (edge: AutomationEdge) => {
@@ -285,29 +288,28 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 {node.type === 'delay' && <span>⏳ {node.config?.duration || 5} {node.config?.unit || 'min'}</span>}
               </div>
 
-              {/* Detected fields with individual output ports */}
+              {/* Detected fields (webhook) with individual output ports */}
               {(() => {
                 const fields: string[] = node.config?.detectedFields || node.config?.externalDetectedFields || [];
-                if (fields.length === 0) return null;
+                if (node.type !== 'webhook' || fields.length === 0) return null;
                 return (
-                  <div className="border-t border-gray-100 px-2 py-1.5 space-y-0.5">
-                    <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
-                      Campos ({fields.length})
+                  <div className="border-t border-gray-100 px-2 py-2">
+                    <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1.5">
+                      Saídas ({fields.length})
                     </div>
-                    {fields.map((field, idx) => (
-                      <div key={field} className="flex items-center justify-between group/field relative">
-                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md hover:bg-gray-50 flex-1 min-w-0">
-                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                          <span className="text-[10px] font-mono text-gray-600 truncate">{field}</span>
+                    {fields.map((field) => (
+                      <div key={field} className="flex items-center relative py-[3px]">
+                        <div className="flex items-center gap-1.5 px-1.5 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-[10px] font-mono text-gray-700 truncate">{field}</span>
                         </div>
-                        {/* Per-field output port */}
                         <div
-                          className="absolute -right-[19px] w-4 h-4 rounded-full bg-white border-2 cursor-crosshair hover:scale-150 transition-transform z-30 flex items-center justify-center"
-                          style={{ borderColor: color, top: '50%', transform: 'translateY(-50%)' }}
+                          className="absolute -right-[22px] w-5 h-5 rounded-full bg-white border-2 cursor-crosshair hover:scale-150 transition-transform z-30 flex items-center justify-center shadow-sm"
+                          style={{ borderColor: color }}
                           onMouseDown={e => handlePortMouseDown(e, node.id)}
-                          title={`Conectar campo: ${field}`}
+                          title={`Conectar: ${field}`}
                         >
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                         </div>
                       </div>
                     ))}
@@ -315,8 +317,33 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 );
               })()}
 
-              {/* RIGHT port (output) - main */}
-              {!(node.config?.detectedFields?.length > 0 || node.config?.externalDetectedFields?.length > 0) && (
+              {/* Input fields for create_client with individual input ports */}
+              {node.type === 'create_client' && (
+                <div className="border-t border-gray-100 px-2 py-2">
+                  <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1.5">
+                    Entradas
+                  </div>
+                  {['Nome', 'Email', 'Telefone', 'Status'].map((field) => (
+                    <div key={field} className="flex items-center relative py-[3px]">
+                      <div
+                        className="absolute -left-[22px] w-5 h-5 rounded-full bg-white border-2 cursor-pointer hover:scale-150 transition-transform z-30 flex items-center justify-center shadow-sm"
+                        style={{ borderColor: color }}
+                        onMouseUp={e => handlePortMouseUp(e, node.id)}
+                        title={`Receber: ${field}`}
+                      >
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                      </div>
+                      <div className="flex items-center gap-1.5 px-1.5 flex-1 min-w-0">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="text-[10px] font-mono text-gray-700">{field}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* RIGHT port (output) - main, only when no field ports */}
+              {!(node.type === 'webhook' && ((node.config?.detectedFields?.length || 0) > 0 || (node.config?.externalDetectedFields?.length || 0) > 0)) && node.type !== 'create_client' && (
                 <div
                   className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
                   style={{ borderColor: color }}
@@ -327,15 +354,29 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 </div>
               )}
 
-              {/* LEFT port (input) */}
-              <div
-                className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-pointer hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
-                style={{ borderColor: color }}
-                onMouseUp={e => handlePortMouseUp(e, node.id)}
-                title="Solte aqui para conectar"
-              >
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-              </div>
+              {/* Also show main output for create_client (to chain further) */}
+              {node.type === 'create_client' && (
+                <div
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
+                  style={{ borderColor: color }}
+                  onMouseDown={e => handlePortMouseDown(e, node.id)}
+                  title="Arraste para conectar"
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                </div>
+              )}
+
+              {/* LEFT port (input) - only for non-create_client (they have per-field inputs) */}
+              {node.type !== 'create_client' && (
+                <div
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-pointer hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
+                  style={{ borderColor: color }}
+                  onMouseUp={e => handlePortMouseUp(e, node.id)}
+                  title="Solte aqui para conectar"
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                </div>
+              )}
             </div>
           </div>
         );

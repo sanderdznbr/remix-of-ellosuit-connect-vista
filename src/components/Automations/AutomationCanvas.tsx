@@ -20,6 +20,7 @@ const NODE_HEIGHT = 80;
 
 // All client fields from the DB schema
 const ALL_CLIENT_FIELDS = [
+  { key: 'avatar_url', label: 'Foto de Perfil' },
   { key: 'name', label: 'Nome' },
   { key: 'email', label: 'Email' },
   { key: 'phone', label: 'Telefone' },
@@ -42,6 +43,7 @@ const ALL_CLIENT_FIELDS = [
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'instagram', label: 'Instagram' },
   { key: 'facebook', label: 'Facebook' },
+  { key: 'whatsapp_business', label: 'WhatsApp Business' },
   { key: 'notes', label: 'Anotações' },
   { key: 'tags', label: 'Tags' },
 ];
@@ -349,17 +351,19 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   return (
     <div className="flex-1 relative flex flex-col overflow-hidden">
       {/* Zoom controls */}
-      <div className="absolute top-3 right-3 z-50 flex items-center gap-1 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200 px-1.5 py-1">
-        <button onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - 0.1))} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Diminuir zoom">
-          <ZoomOut className="h-4 w-4 text-gray-600" />
+      <div className={`absolute top-3 right-3 z-50 flex items-center gap-1 backdrop-blur rounded-xl shadow-lg border px-1.5 py-1 transition-colors duration-500 ${
+        isActive ? 'bg-gray-900/90 border-gray-700' : 'bg-white/90 border-gray-200'
+      }`}>
+        <button onClick={() => setZoom(z => Math.max(MIN_ZOOM, z - 0.1))} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Diminuir zoom">
+          <ZoomOut className={`h-4 w-4 ${isActive ? 'text-gray-400' : 'text-gray-600'}`} />
         </button>
-        <span className="text-xs font-medium text-gray-500 min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + 0.1))} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Aumentar zoom">
-          <ZoomIn className="h-4 w-4 text-gray-600" />
+        <span className={`text-xs font-medium min-w-[40px] text-center ${isActive ? 'text-gray-400' : 'text-gray-500'}`}>{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + 0.1))} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Aumentar zoom">
+          <ZoomIn className={`h-4 w-4 ${isActive ? 'text-gray-400' : 'text-gray-600'}`} />
         </button>
-        <div className="w-px h-5 bg-gray-200 mx-0.5" />
-        <button onClick={() => setZoom(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Resetar zoom">
-          <Maximize className="h-4 w-4 text-gray-600" />
+        <div className={`w-px h-5 mx-0.5 ${isActive ? 'bg-gray-700' : 'bg-gray-200'}`} />
+        <button onClick={() => setZoom(1)} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Resetar zoom">
+          <Maximize className={`h-4 w-4 ${isActive ? 'text-gray-400' : 'text-gray-600'}`} />
         </button>
       </div>
 
@@ -385,9 +389,12 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
             transform: `scale(${zoom})`,
             transformOrigin: '0 0',
             position: 'relative',
-            backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
+            backgroundImage: isActive 
+              ? 'radial-gradient(circle, rgba(34,197,94,0.15) 1px, transparent 1px)'
+              : 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-            backgroundColor: 'hsl(var(--muted) / 0.3)',
+            backgroundColor: isActive ? '#0f1117' : 'hsl(var(--muted) / 0.3)',
+            transition: 'background-color 0.5s',
           }}
         >
           {/* Edges SVG */}
@@ -421,30 +428,33 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 onClick={e => handleNodeClick(e, node)}
               >
                 <div
-                  className={`bg-white rounded-2xl border-2 transition-all duration-150 overflow-visible ${
+                  className={`rounded-2xl border-2 transition-all duration-300 overflow-visible ${
+                    isActive ? 'bg-[#1a1d2e]' : 'bg-white'
+                  } ${
                     isSelected ? 'shadow-xl ring-2 ring-offset-1' : 'shadow-md hover:shadow-lg'
-                  }`}
+                  } ${isActive && isSelected ? 'ring-offset-[#0f1117]' : ''}`}
                   style={{
-                    borderColor: isSelected ? color : 'hsl(var(--border))',
+                    borderColor: isSelected ? color : (isActive ? '#2a2d3e' : 'hsl(var(--border))'),
                     ...(isSelected ? { boxShadow: `0 0 0 3px ${color}40` } : {}),
+                    ...(isActive && !isSelected ? { boxShadow: `0 0 12px ${color}15` } : {}),
                   }}
                 >
                   {/* Header */}
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-t-2xl" style={{ backgroundColor: color + '12' }}>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-t-2xl" style={{ backgroundColor: isActive ? color + '18' : color + '12' }}>
                     <div
-                      className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-black/5 transition-colors flex-shrink-0"
+                      className={`cursor-grab active:cursor-grabbing p-0.5 rounded transition-colors flex-shrink-0 ${isActive ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}
                       onMouseDown={e => handleGripMouseDown(e, node)}
                       title="Arrastar bloco"
                     >
-                      <GripVertical className="h-4 w-4 text-gray-400" />
+                      <GripVertical className={`h-4 w-4 ${isActive ? 'text-gray-600' : 'text-gray-400'}`} />
                     </div>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: color }}>
                       {block && getIcon(block.icon)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-800 truncate">{node.label}</div>
-                      <div className="text-[10px] text-gray-400 truncate">{block?.description || node.type}</div>
+                      <div className={`text-xs font-semibold truncate ${isActive ? 'text-gray-200' : 'text-gray-800'}`}>{node.label}</div>
+                      <div className={`text-[10px] truncate ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>{block?.description || node.type}</div>
                     </div>
                     <button
                       onClick={e => deleteNode(e, node.id)}
@@ -456,7 +466,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                   </div>
 
                   {/* Config preview */}
-                  <div className="px-3 py-2 text-[10px] text-gray-500 border-t border-gray-50">
+                  <div className={`px-3 py-2 text-[10px] border-t ${isActive ? 'text-gray-500 border-gray-800' : 'text-gray-500 border-gray-50'}`}>
                     {node.type === 'webhook' && <span>{node.config?.webhookMode === 'fetch' ? '🌐 Puxar dados externos' : '⚡ Receber POST'}</span>}
                     {node.type === 'new_client' && <span>Gatilho: novo {node.config?.clientType === 'any' ? 'contato' : node.config?.clientType}</span>}
                     {node.type === 'client_updated' && <span>Gatilho: cliente atualizado</span>}
@@ -480,7 +490,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     const fields = getWebhookFields(node);
                     if (node.type !== 'webhook' || fields.length === 0) return null;
                     return (
-                      <div className="border-t-2 border-blue-100 px-3 py-3 bg-blue-50/30">
+                      <div className={`border-t-2 px-3 py-3 ${isActive ? 'border-blue-800/50 bg-blue-950/30' : 'border-blue-100 bg-blue-50/30'}`}>
                         <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                           Saídas ({fields.length})
@@ -488,12 +498,14 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                         <div className="space-y-1">
                           {fields.map((field) => (
                             <div key={field} className="flex items-center relative group/field" style={{ height: FIELD_ROW_HEIGHT }}>
-                              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-blue-100 flex-1 min-w-0 shadow-sm hover:border-blue-300 hover:shadow transition-all">
+                              <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border flex-1 min-w-0 shadow-sm transition-all ${
+                                isActive ? 'bg-gray-900 border-blue-800/40 hover:border-blue-600' : 'bg-white border-blue-100 hover:border-blue-300 hover:shadow'
+                              }`}>
                                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-blue-400" />
-                                <span className="text-[11px] font-mono font-medium text-gray-700 truncate">{field}</span>
+                                <span className={`text-[11px] font-mono font-medium truncate ${isActive ? 'text-gray-300' : 'text-gray-700'}`}>{field}</span>
                               </div>
                               <div
-                                className="absolute -right-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-blue-400 cursor-crosshair hover:scale-[1.3] hover:border-blue-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
+                                className={`absolute -right-[26px] w-7 h-7 rounded-full border-[2.5px] border-blue-400 cursor-crosshair hover:scale-[1.3] hover:border-blue-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md ${isActive ? 'bg-gray-900' : 'bg-white'}`}
                                 onMouseDown={e => handlePortMouseDown(e, node.id, field)}
                                 title={`Conectar: ${field}`}
                               >

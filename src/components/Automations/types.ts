@@ -12,6 +12,8 @@ export interface AutomationEdge {
   id: string;
   source: string;
   target: string;
+  sourceField?: string;
+  targetField?: string;
   label?: string;
 }
 

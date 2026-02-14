@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, Eye, PanelRightClose, PanelRight, ChevronDown, ChevronUp, Upload, UserPlus } from 'lucide-react';
+import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, ChevronDown, ChevronUp, Upload, UserPlus, ZoomIn, ZoomOut, Maximize, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,7 +54,7 @@ export default function ProposalEditor() {
 
   // UI state
   const [activeTab, setActiveTab] = useState<EditorTab>('form');
-  const [showPreview, setShowPreview] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
@@ -77,9 +77,8 @@ export default function ProposalEditor() {
     logoUrl: '',
   });
 
-  // Preview container ref for A4 scaling
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [previewScale, setPreviewScale] = useState(1);
+  // Zoom
+  const [zoom, setZoom] = useState(0.75);
 
   // Queries
   const { data: companyId } = useQuery({
@@ -127,12 +126,8 @@ export default function ProposalEditor() {
     mutationFn: async () => {
       if (!companyId || !user || !newClient.name.trim()) throw new Error('Nome obrigatório');
       const { data, error } = await supabase.from('clients').insert({
-        company_id: companyId,
-        created_by: user.id,
-        name: newClient.name.trim(),
-        email: newClient.email || null,
-        phone: newClient.phone || null,
-        company_name: newClient.company_name || null,
+        company_id: companyId, created_by: user.id, name: newClient.name.trim(),
+        email: newClient.email || null, phone: newClient.phone || null, company_name: newClient.company_name || null,
       }).select('id').single();
       if (error) throw error;
       return data;
@@ -182,21 +177,6 @@ export default function ProposalEditor() {
     };
     load();
   }, [proposalId]);
-
-  // A4 scaling
-  useEffect(() => {
-    const container = previewContainerRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const cw = entry.contentRect.width - 48; // padding
-        const A4_W = 595;
-        setPreviewScale(Math.min(1, cw / A4_W));
-      }
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [showPreview]);
 
   const selectedClient = clients.find((c: any) => c.id === clientId);
   const subtotal = items.reduce((s, it) => s + it.total_price, 0);
@@ -291,48 +271,31 @@ export default function ProposalEditor() {
     if (!el) return;
     toast({ title: 'Gerando PDF…' });
     try {
-      // Make hidden container visible for rendering
       el.style.position = 'fixed';
       el.style.left = '-9999px';
       el.style.top = '0';
       el.style.width = '595px';
       el.style.display = 'block';
       el.style.zIndex = '-1';
-
-      // Wait a tick for render
       await new Promise(r => setTimeout(r, 100));
-
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: 595,
-        windowWidth: 595,
-      });
-
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 595, windowWidth: 595 });
       el.style.display = 'none';
-
       const imgData = canvas.toDataURL('image/png');
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const imgW = pageW;
       const imgH = (canvas.height * pageW) / canvas.width;
-
-      // Handle multi-page if content is taller than one A4 page
       let heightLeft = imgH;
       let position = 0;
-
       doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
       heightLeft -= pageH;
-
       while (heightLeft > 0) {
         position -= pageH;
         doc.addPage();
         doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
         heightLeft -= pageH;
       }
-
       doc.save(`${title || 'proposta'}.pdf`);
       toast({ title: 'PDF gerado com sucesso!' });
     } catch {
@@ -347,236 +310,239 @@ export default function ProposalEditor() {
 
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
+  const zoomIn = () => setZoom(z => Math.min(2, z + 0.1));
+  const zoomOut = () => setZoom(z => Math.max(0.3, z - 0.1));
+  const zoomFit = () => setZoom(0.75);
+
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
       {/* Hidden logo input */}
       <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
       {/* Top Bar */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="flex items-center justify-between px-4 h-14 max-w-[1600px] mx-auto">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => navigate('/dashboard/propostas')} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-              <ArrowLeft className="h-5 w-5 text-gray-500" />
+      <div className="bg-white border-b border-gray-200 shrink-0 z-30">
+        <div className="flex items-center justify-between px-3 h-12">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => navigate('/dashboard/propostas')} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+              <ArrowLeft className="h-4 w-4 text-gray-500" />
             </button>
+            <button onClick={() => setSidebarOpen(s => !s)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={sidebarOpen ? 'Fechar painel' : 'Abrir painel'}>
+              {sidebarOpen ? <PanelLeftClose className="h-4 w-4 text-gray-500" /> : <PanelLeft className="h-4 w-4 text-gray-500" />}
+            </button>
+            <div className="h-5 w-px bg-gray-200" />
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título da proposta..."
-              className="text-base font-semibold text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-300 w-full max-w-xs md:max-w-md" />
+              className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-300 w-full max-w-xs" />
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl h-9 gap-1.5 hidden md:flex" onClick={() => setShowPreview(p => !p)}>
-              {showPreview ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRight className="h-3.5 w-3.5" />}
-              <span className="text-xs">Preview</span>
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-xl h-9 md:hidden" onClick={() => setShowPreview(p => !p)}>
-              <Eye className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-xl h-9" onClick={generatePDF} disabled={items.length === 0}>
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-1 py-0.5">
+            <button onClick={zoomOut} className="p-1 rounded hover:bg-gray-200 transition-colors"><ZoomOut className="h-3.5 w-3.5 text-gray-500" /></button>
+            <span className="text-[10px] font-medium text-gray-500 w-10 text-center select-none">{Math.round(zoom * 100)}%</span>
+            <button onClick={zoomIn} className="p-1 rounded hover:bg-gray-200 transition-colors"><ZoomIn className="h-3.5 w-3.5 text-gray-500" /></button>
+            <button onClick={zoomFit} className="p-1 rounded hover:bg-gray-200 transition-colors" title="Ajustar"><Maximize className="h-3.5 w-3.5 text-gray-500" /></button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="rounded-lg h-8 text-xs" onClick={generatePDF} disabled={items.length === 0}>
               <Download className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" className="rounded-xl h-9 text-white gap-1.5" style={{ background: SUITE_COLOR }} onClick={handleSave} disabled={saving}>
+            <Button size="sm" className="rounded-lg h-8 text-white gap-1.5 text-xs" style={{ background: SUITE_COLOR }} onClick={handleSave} disabled={saving}>
               <Save className="h-3.5 w-3.5" />
-              <span className="hidden md:inline text-xs">{saving ? 'Salvando...' : 'Salvar'}</span>
+              <span className="hidden sm:inline">{saving ? 'Salvando...' : 'Salvar'}</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col lg:flex-row max-w-[1600px] mx-auto w-full">
+      {/* Main area */}
+      <div className="flex-1 flex min-h-0">
 
-        {/* LEFT: Form */}
-        <div className={`flex-1 overflow-y-auto ${showPreview ? 'hidden lg:block lg:max-w-[520px]' : ''}`}>
-          <div className="p-4 md:p-6 space-y-4">
-
-            {/* Editor tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-              <button onClick={() => setActiveTab('form')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'form' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-                <FileText className="h-3.5 w-3.5 inline mr-1" />Dados
-              </button>
-              <button onClick={() => setActiveTab('theme')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'theme' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-                <Palette className="h-3.5 w-3.5 inline mr-1" />Tema
-              </button>
-            </div>
-
-            {activeTab === 'theme' ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                <ProposalThemePanel theme={theme} onChange={setTheme} onUploadLogo={() => logoInputRef.current?.click()} uploadingLogo={uploadingLogo} />
+        {/* LEFT SIDEBAR */}
+        <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${sidebarOpen ? 'w-80 xl:w-96' : 'w-0'} overflow-hidden shrink-0`}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-3 space-y-3">
+              {/* Editor tabs */}
+              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                <button onClick={() => setActiveTab('form')} className={`flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${activeTab === 'form' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+                  <FileText className="h-3 w-3 inline mr-1" />Dados
+                </button>
+                <button onClick={() => setActiveTab('theme')} className={`flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all ${activeTab === 'theme' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+                  <Palette className="h-3 w-3 inline mr-1" />Tema
+                </button>
               </div>
-            ) : (
-              <>
-                {/* Validade only - no status selector */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase mb-2 block">Validade da Proposta</label>
-                  <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="rounded-xl h-9 text-sm w-full max-w-[200px]" />
-                </div>
 
-                {/* Client */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase mb-2 block">Cliente</label>
-                  {selectedClient ? (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">{selectedClient.name}</p>
-                        <p className="text-xs text-gray-500">{selectedClient.company_name || selectedClient.email}</p>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => setShowClientPicker(true)} className="rounded-xl text-xs">Alterar</Button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowClientPicker(true)} className="flex-1 flex items-center gap-2 p-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-gray-300 transition-colors">
-                        <Users className="h-4 w-4" /> Selecionar cliente
-                      </button>
-                      <button onClick={() => { setShowNewClientForm(true); setShowClientPicker(true); }}
-                        className="flex items-center gap-1.5 px-3 rounded-xl border border-dashed text-xs font-medium transition-colors hover:bg-gray-50"
-                        style={{ borderColor: SUITE_COLOR + '40', color: SUITE_COLOR }}>
-                        <UserPlus className="h-3.5 w-3.5" /> Novo
-                      </button>
-                    </div>
-                  )}
+              {activeTab === 'theme' ? (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <ProposalThemePanel theme={theme} onChange={setTheme} onUploadLogo={() => logoInputRef.current?.click()} uploadingLogo={uploadingLogo} />
                 </div>
-
-                {/* Items */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-[10px] font-semibold text-gray-400 uppercase">Itens da Proposta</label>
-                    <div className="flex gap-1">
-                      {services.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={() => setShowServicePicker(true)} className="rounded-xl text-[10px] h-7 gap-1 px-2" style={{ color: SUITE_COLOR }}>
-                          <FileText className="h-3 w-3" /> Catálogo
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => addItem()} className="rounded-xl text-[10px] h-7 gap-1 px-2" style={{ color: SUITE_COLOR }}>
-                        <Plus className="h-3 w-3" /> Manual
-                      </Button>
-                    </div>
+              ) : (
+                <>
+                  {/* Validade */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block">Validade</label>
+                    <Input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="rounded-lg h-8 text-xs" />
                   </div>
 
-                  {items.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="w-12 h-12 rounded-2xl mx-auto mb-2 flex items-center justify-center" style={{ background: SUITE_COLOR + '10' }}>
-                        <FileText className="h-5 w-5" style={{ color: SUITE_COLOR }} />
+                  {/* Client */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block">Cliente</label>
+                    {selectedClient ? (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900 text-xs">{selectedClient.name}</p>
+                          <p className="text-[10px] text-gray-500">{selectedClient.company_name || selectedClient.email}</p>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setShowClientPicker(true)} className="rounded-lg text-[10px] h-7">Alterar</Button>
                       </div>
-                      <p className="text-xs text-gray-400">Adicione itens à proposta</p>
+                    ) : (
+                      <div className="flex gap-1.5">
+                        <button onClick={() => setShowClientPicker(true)} className="flex-1 flex items-center gap-1.5 p-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-400 hover:border-gray-300 transition-colors">
+                          <Users className="h-3.5 w-3.5" /> Selecionar
+                        </button>
+                        <button onClick={() => { setShowNewClientForm(true); setShowClientPicker(true); }}
+                          className="flex items-center gap-1 px-2.5 rounded-lg border border-dashed text-[10px] font-medium transition-colors hover:bg-gray-50"
+                          style={{ borderColor: SUITE_COLOR + '40', color: SUITE_COLOR }}>
+                          <UserPlus className="h-3 w-3" /> Novo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Items */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase">Itens</label>
+                      <div className="flex gap-0.5">
+                        {services.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={() => setShowServicePicker(true)} className="rounded-lg text-[10px] h-6 gap-0.5 px-1.5" style={{ color: SUITE_COLOR }}>
+                            <FileText className="h-2.5 w-2.5" /> Catálogo
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => addItem()} className="rounded-lg text-[10px] h-6 gap-0.5 px-1.5" style={{ color: SUITE_COLOR }}>
+                          <Plus className="h-2.5 w-2.5" /> Manual
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {items.map((item, i) => {
-                        const expanded = expandedItemIndex === i;
-                        return (
-                          <div key={i} className="rounded-xl border border-gray-100 overflow-hidden">
-                            <div className="flex items-center gap-2 p-2.5 cursor-pointer hover:bg-gray-50/50" onClick={() => setExpandedItemIndex(expanded ? null : i)}>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-gray-800 truncate">{item.name || 'Item sem nome'}</p>
-                                <p className="text-[10px] text-gray-400">{item.quantity}x {fmtBRL(item.unit_price)} = <span className="font-semibold text-gray-600">{fmtBRL(item.total_price)}</span></p>
+
+                    {items.length === 0 ? (
+                      <div className="text-center py-6">
+                        <div className="w-10 h-10 rounded-xl mx-auto mb-1.5 flex items-center justify-center" style={{ background: SUITE_COLOR + '10' }}>
+                          <FileText className="h-4 w-4" style={{ color: SUITE_COLOR }} />
+                        </div>
+                        <p className="text-[10px] text-gray-400">Adicione itens</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {items.map((item, i) => {
+                          const expanded = expandedItemIndex === i;
+                          return (
+                            <div key={i} className="rounded-lg border border-gray-100 bg-white overflow-hidden">
+                              <div className="flex items-center gap-1.5 p-2 cursor-pointer hover:bg-gray-50/50" onClick={() => setExpandedItemIndex(expanded ? null : i)}>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] font-medium text-gray-800 truncate">{item.name || 'Item sem nome'}</p>
+                                  <p className="text-[9px] text-gray-400">{item.quantity}x {fmtBRL(item.unit_price)} = <span className="font-semibold text-gray-600">{fmtBRL(item.total_price)}</span></p>
+                                </div>
+                                <button onClick={e => { e.stopPropagation(); removeItem(i); }} className="p-0.5 rounded hover:bg-red-50">
+                                  <Trash2 className="h-2.5 w-2.5 text-red-400" />
+                                </button>
+                                {expanded ? <ChevronUp className="h-3 w-3 text-gray-400" /> : <ChevronDown className="h-3 w-3 text-gray-400" />}
                               </div>
-                              <button onClick={e => { e.stopPropagation(); removeItem(i); }} className="p-1 rounded hover:bg-red-50">
-                                <Trash2 className="h-3 w-3 text-red-400" />
-                              </button>
-                              {expanded ? <ChevronUp className="h-3.5 w-3.5 text-gray-400" /> : <ChevronDown className="h-3.5 w-3.5 text-gray-400" />}
-                            </div>
-                            {expanded && (
-                              <div className="p-3 pt-0 space-y-2 border-t border-gray-50">
-                                <Input value={item.name} onChange={e => updateItem(i, 'name', e.target.value)} placeholder="Nome do item" className="rounded-lg h-8 text-xs" />
-                                <Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} placeholder="Descrição (opcional)" className="rounded-lg h-8 text-xs" />
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div>
-                                    <label className="text-[9px] text-gray-400 block mb-0.5">Qtd</label>
-                                    <Input type="number" min="1" value={item.quantity} onChange={e => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)} className="rounded-lg h-8 text-xs" />
-                                  </div>
-                                  <div>
-                                    <label className="text-[9px] text-gray-400 block mb-0.5">Preço Un. (R$)</label>
-                                    <Input type="number" step="0.01" value={item.unit_price} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)} className="rounded-lg h-8 text-xs" />
-                                  </div>
-                                  <div>
-                                    <label className="text-[9px] text-gray-400 block mb-0.5">Total</label>
-                                    <div className="h-8 flex items-center text-xs font-semibold" style={{ color: SUITE_COLOR }}>{fmtBRL(item.total_price)}</div>
+                              {expanded && (
+                                <div className="p-2 pt-0 space-y-1.5 border-t border-gray-50">
+                                  <Input value={item.name} onChange={e => updateItem(i, 'name', e.target.value)} placeholder="Nome" className="rounded-md h-7 text-[11px]" />
+                                  <Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} placeholder="Descrição" className="rounded-md h-7 text-[11px]" />
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    <div>
+                                      <label className="text-[8px] text-gray-400 block">Qtd</label>
+                                      <Input type="number" min="1" value={item.quantity} onChange={e => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)} className="rounded-md h-7 text-[11px]" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[8px] text-gray-400 block">Preço (R$)</label>
+                                      <Input type="number" step="0.01" value={item.unit_price} onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)} className="rounded-md h-7 text-[11px]" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[8px] text-gray-400 block">Total</label>
+                                      <div className="h-7 flex items-center text-[11px] font-semibold" style={{ color: SUITE_COLOR }}>{fmtBRL(item.total_price)}</div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Discount & Totals */}
+                  {items.length > 0 && (
+                    <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase">Desconto</label>
+                      <div className="flex gap-1.5">
+                        <Select value={discountType} onValueChange={setDiscountType}>
+                          <SelectTrigger className="w-28 rounded-lg h-8 text-[11px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhum</SelectItem>
+                            <SelectItem value="percent">% Percentual</SelectItem>
+                            <SelectItem value="fixed">R$ Fixo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {discountType !== 'none' && (
+                          <Input type="number" step="0.01" value={discountValue} onChange={e => setDiscountValue(parseFloat(e.target.value) || 0)} className="w-20 rounded-lg h-8 text-[11px]" />
+                        )}
+                      </div>
+                      <div className="border-t border-gray-100 pt-2 space-y-0.5">
+                        <div className="flex justify-between text-[11px] text-gray-500"><span>Subtotal</span><span>{fmtBRL(subtotal)}</span></div>
+                        {discountAmount > 0 && <div className="flex justify-between text-[11px] text-red-500"><span>Desconto</span><span>- {fmtBRL(discountAmount)}</span></div>}
+                        <div className="flex justify-between text-sm font-bold pt-1"><span className="text-gray-900">Total</span><span style={{ color: theme.primaryColor }}>{fmtBRL(total)}</span></div>
+                      </div>
                     </div>
                   )}
-                </div>
 
-                {/* Discount & Totals */}
-                {items.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-                    <label className="text-[10px] font-semibold text-gray-400 uppercase">Desconto</label>
-                    <div className="flex gap-2">
-                      <Select value={discountType} onValueChange={setDiscountType}>
-                        <SelectTrigger className="w-32 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sem desconto</SelectItem>
-                          <SelectItem value="percent">Percentual (%)</SelectItem>
-                          <SelectItem value="fixed">Valor fixo (R$)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {discountType !== 'none' && (
-                        <Input type="number" step="0.01" value={discountValue} onChange={e => setDiscountValue(parseFloat(e.target.value) || 0)} className="w-28 rounded-xl h-9 text-xs" />
-                      )}
+                  {/* Notes & Terms */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Observações</label>
+                      <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações..." className="rounded-lg min-h-[40px] text-[11px]" />
                     </div>
-                    <div className="border-t border-gray-100 pt-3 space-y-1">
-                      <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmtBRL(subtotal)}</span></div>
-                      {discountAmount > 0 && <div className="flex justify-between text-xs text-red-500"><span>Desconto</span><span>- {fmtBRL(discountAmount)}</span></div>}
-                      <div className="flex justify-between text-base font-bold pt-1"><span className="text-gray-900">Total</span><span style={{ color: theme.primaryColor }}>{fmtBRL(total)}</span></div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Termos e Condições</label>
+                      <Textarea value={customTerms} onChange={e => setCustomTerms(e.target.value)} placeholder="Termos..." className="rounded-lg min-h-[40px] text-[11px]" />
                     </div>
                   </div>
-                )}
-
-                {/* Notes & Terms */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-                  <div>
-                    <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Observações</label>
-                    <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações gerais..." className="rounded-xl min-h-[50px] text-xs" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Termos e Condições</label>
-                    <Textarea value={customTerms} onChange={e => setCustomTerms(e.target.value)} placeholder="Termos e condições..." className="rounded-xl min-h-[50px] text-xs" />
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* RIGHT: Live Preview - A4 proportional */}
-        <div ref={previewContainerRef} className={`border-l border-gray-100 bg-gray-100/50 overflow-y-auto ${showPreview ? 'flex-1' : 'hidden lg:block lg:flex-1'}`}>
-          <div className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-gray-400 uppercase">Preview A4</span>
-              <Button variant="ghost" size="sm" className="rounded-xl h-7 text-xs lg:hidden" onClick={() => setShowPreview(false)}>
-                <ArrowLeft className="h-3 w-3 mr-1" /> Voltar
-              </Button>
-            </div>
-            <div className="flex justify-center">
-              <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: 595, minHeight: 842 }}
-                className="bg-white shadow-2xl border border-gray-200 rounded-lg overflow-hidden">
-                <ProposalEditablePreview
-                  companyName={company?.name || ''}
-                  title={title}
-                  client={selectedClient || null}
-                  items={items}
-                  subtotal={subtotal}
-                  discountAmount={discountAmount}
-                  total={total}
-                  notes={notes}
-                  customTerms={customTerms}
-                  validUntil={validUntil}
-                  primaryColor={theme.primaryColor}
-                  secondaryColor={theme.secondaryColor}
-                  fontFamily={theme.fontFamily}
-                  showHeader={theme.showHeader}
-                  showFooter={theme.showFooter}
-                  logoUrl={theme.logoUrl}
-                  onTitleChange={setTitle}
-                  onNotesChange={setNotes}
-                  onTermsChange={setCustomTerms}
-                  onItemChange={(i, field, val) => updateItem(i, field, val)}
-                />
-              </div>
+        {/* CENTER: Canvas area with zoom */}
+        <div className="flex-1 overflow-auto bg-gray-200/60 relative" style={{ backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+          <div className="flex items-start justify-center p-8 min-h-full">
+            <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', width: 595, minHeight: 842 }}
+              className="bg-white shadow-2xl rounded-sm overflow-hidden">
+              <ProposalEditablePreview
+                companyName={company?.name || ''}
+                title={title}
+                client={selectedClient || null}
+                items={items}
+                subtotal={subtotal}
+                discountAmount={discountAmount}
+                total={total}
+                notes={notes}
+                customTerms={customTerms}
+                validUntil={validUntil}
+                primaryColor={theme.primaryColor}
+                secondaryColor={theme.secondaryColor}
+                fontFamily={theme.fontFamily}
+                showHeader={theme.showHeader}
+                showFooter={theme.showFooter}
+                logoUrl={theme.logoUrl}
+                onTitleChange={setTitle}
+                onNotesChange={setNotes}
+                onTermsChange={setCustomTerms}
+                onItemChange={(i, field, val) => updateItem(i, field, val)}
+              />
             </div>
           </div>
         </div>
@@ -588,7 +554,6 @@ export default function ProposalEditor() {
           <DialogHeader>
             <DialogTitle>{showNewClientForm ? 'Cadastrar Novo Cliente' : 'Selecionar Cliente'}</DialogTitle>
           </DialogHeader>
-
           {showNewClientForm ? (
             <div className="space-y-3">
               <div>
@@ -622,7 +587,7 @@ export default function ProposalEditor() {
                 <Button variant="outline" size="sm" className="rounded-xl h-10 gap-1.5 shrink-0" style={{ color: SUITE_COLOR, borderColor: SUITE_COLOR + '40' }}
                   onClick={() => setShowNewClientForm(true)}>
                   <UserPlus className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline text-xs">Novo Cliente</span>
+                  <span className="hidden sm:inline text-xs">Novo</span>
                 </Button>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-1">
@@ -638,7 +603,7 @@ export default function ProposalEditor() {
                     <p className="text-sm text-gray-400 mb-3">Nenhum cliente encontrado</p>
                     <Button variant="outline" size="sm" className="rounded-xl gap-1.5" style={{ color: SUITE_COLOR }}
                       onClick={() => setShowNewClientForm(true)}>
-                      <UserPlus className="h-3.5 w-3.5" /> Cadastrar Novo Cliente
+                      <UserPlus className="h-3.5 w-3.5" /> Cadastrar
                     </Button>
                   </div>
                 )}
@@ -666,7 +631,7 @@ export default function ProposalEditor() {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden container for PDF rendering - exact copy of preview */}
+      {/* Hidden container for PDF rendering */}
       <div ref={pdfRenderRef} style={{ display: 'none', width: 595 }}>
         <ProposalPreview
           companyName={company?.name || ''}

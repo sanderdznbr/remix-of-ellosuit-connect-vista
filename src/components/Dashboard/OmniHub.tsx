@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Mail, Users, Bot, Send, ArrowRight, GitBranch, Key, Megaphone } from "lucide-react";
+import { MessageSquare, Mail, Users, Bot, Send, ArrowRight, GitBranch, Key, Megaphone, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +55,13 @@ const omniModules = [
     description: "Configure chatbots inteligentes para atendimento",
     icon: Bot,
     path: "/dashboard/bot-ia",
+  },
+  {
+    id: "automacoes",
+    title: "Automações",
+    description: "Crie fluxos automatizados com webhooks, e-mails e ações inteligentes",
+    icon: Zap,
+    path: "/dashboard/automacoes",
   }
 ];
 

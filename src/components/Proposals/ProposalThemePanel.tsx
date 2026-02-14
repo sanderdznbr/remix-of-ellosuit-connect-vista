@@ -1,8 +1,9 @@
 
-import { Palette, Type, Image as ImageIcon, RotateCcw, Upload, Loader2 } from 'lucide-react';
+import { Palette, Type, Image as ImageIcon, RotateCcw, Upload, Loader2, FileText, PenLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ThemeSettings {
   primaryColor: string;
@@ -11,6 +12,8 @@ interface ThemeSettings {
   showHeader: boolean;
   showFooter: boolean;
   logoUrl: string;
+  headerText: string;
+  footerText: string;
 }
 
 interface Props {
@@ -50,13 +53,13 @@ export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uplo
     <div className="space-y-4">
       {/* Presets */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Temas Prontos</label>
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block">Temas Prontos</label>
         <div className="grid grid-cols-3 gap-1.5">
           {PRESETS.map(p => (
             <button key={p.name} type="button"
               onClick={() => set({ primaryColor: p.primary, secondaryColor: p.secondary, fontFamily: p.font })}
-              className={`text-[10px] font-medium py-2 px-2 rounded-lg border transition-all ${theme.primaryColor === p.primary && theme.secondaryColor === p.secondary ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
-              <div className="flex gap-1 mb-1 justify-center">
+              className={`text-[10px] font-medium py-1.5 px-2 rounded-lg border transition-all ${theme.primaryColor === p.primary && theme.secondaryColor === p.secondary ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <div className="flex gap-1 mb-0.5 justify-center">
                 <div className="w-3 h-3 rounded-full" style={{ background: p.primary }} />
                 <div className="w-3 h-3 rounded-full" style={{ background: p.secondary }} />
               </div>
@@ -68,29 +71,29 @@ export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uplo
 
       {/* Colors */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block flex items-center gap-1.5">
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block flex items-center gap-1">
           <Palette className="h-3 w-3" /> Cores
         </label>
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           <div>
-            <span className="text-[10px] text-gray-500 mb-1 block">Cor Principal</span>
-            <div className="flex gap-1.5 flex-wrap">
+            <span className="text-[9px] text-gray-500 mb-1 block">Cor Principal</span>
+            <div className="flex gap-1 flex-wrap">
               {PRESET_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => set({ primaryColor: c })}
-                  className={`w-7 h-7 rounded-lg transition-all hover:scale-110 ${theme.primaryColor === c ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
+                  className={`w-6 h-6 rounded-md transition-all hover:scale-110 ${theme.primaryColor === c ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
                   style={{ background: c }} />
               ))}
             </div>
-            <div className="flex gap-2 mt-2 items-center">
-              <div className="w-7 h-7 rounded-lg border border-gray-200" style={{ background: theme.primaryColor }} />
-              <Input value={theme.primaryColor} onChange={e => set({ primaryColor: e.target.value })} className="rounded-lg h-8 text-xs flex-1 font-mono" />
+            <div className="flex gap-1.5 mt-1.5 items-center">
+              <div className="w-6 h-6 rounded-md border border-gray-200" style={{ background: theme.primaryColor }} />
+              <Input value={theme.primaryColor} onChange={e => set({ primaryColor: e.target.value })} className="rounded-md h-7 text-[10px] flex-1 font-mono" />
             </div>
           </div>
           <div>
-            <span className="text-[10px] text-gray-500 mb-1 block">Cor Secundária</span>
-            <div className="flex gap-2 items-center">
-              <div className="w-7 h-7 rounded-lg border border-gray-200" style={{ background: theme.secondaryColor }} />
-              <Input value={theme.secondaryColor} onChange={e => set({ secondaryColor: e.target.value })} className="rounded-lg h-8 text-xs flex-1 font-mono" />
+            <span className="text-[9px] text-gray-500 mb-1 block">Cor Secundária</span>
+            <div className="flex gap-1.5 items-center">
+              <div className="w-6 h-6 rounded-md border border-gray-200" style={{ background: theme.secondaryColor }} />
+              <Input value={theme.secondaryColor} onChange={e => set({ secondaryColor: e.target.value })} className="rounded-md h-7 text-[10px] flex-1 font-mono" />
             </div>
           </div>
         </div>
@@ -98,13 +101,13 @@ export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uplo
 
       {/* Font */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block flex items-center gap-1.5">
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block flex items-center gap-1">
           <Type className="h-3 w-3" /> Fonte
         </label>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1">
           {FONTS.map(f => (
             <button key={f.value} type="button" onClick={() => set({ fontFamily: f.value })}
-              className={`text-xs py-2 rounded-lg border transition-all ${theme.fontFamily === f.value ? 'border-gray-400 bg-gray-50 font-medium' : 'border-gray-200 hover:border-gray-300'}`}
+              className={`text-[10px] py-1.5 rounded-md border transition-all ${theme.fontFamily === f.value ? 'border-gray-400 bg-gray-50 font-medium' : 'border-gray-200 hover:border-gray-300'}`}
               style={{ fontFamily: f.value }}>
               {f.label}
             </button>
@@ -112,16 +115,37 @@ export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uplo
         </div>
       </div>
 
+      {/* Header & Footer text */}
+      <div>
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block flex items-center gap-1">
+          <PenLine className="h-3 w-3" /> Textos
+        </label>
+        <div className="space-y-2">
+          <div>
+            <span className="text-[9px] text-gray-500 mb-0.5 block">Subtítulo do Cabeçalho</span>
+            <Input value={theme.headerText || ''} onChange={e => set({ headerText: e.target.value })}
+              placeholder="Proposta Comercial" className="rounded-md h-7 text-[10px]" />
+          </div>
+          <div>
+            <span className="text-[9px] text-gray-500 mb-0.5 block">Texto do Rodapé</span>
+            <Input value={theme.footerText || ''} onChange={e => set({ footerText: e.target.value })}
+              placeholder="Gerado por Ellosuit • Empresa" className="rounded-md h-7 text-[10px]" />
+          </div>
+        </div>
+      </div>
+
       {/* Sections visibility */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Seções</label>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-            <span className="text-xs text-gray-700">Cabeçalho</span>
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block flex items-center gap-1">
+          <FileText className="h-3 w-3" /> Seções
+        </label>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between bg-gray-50 rounded-md px-2.5 py-1.5">
+            <span className="text-[11px] text-gray-700">Cabeçalho</span>
             <Switch checked={theme.showHeader} onCheckedChange={v => set({ showHeader: v })} />
           </div>
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-            <span className="text-xs text-gray-700">Rodapé</span>
+          <div className="flex items-center justify-between bg-gray-50 rounded-md px-2.5 py-1.5">
+            <span className="text-[11px] text-gray-700">Rodapé</span>
             <Switch checked={theme.showFooter} onCheckedChange={v => set({ showFooter: v })} />
           </div>
         </div>
@@ -129,39 +153,37 @@ export default function ProposalThemePanel({ theme, onChange, onUploadLogo, uplo
 
       {/* Logo */}
       <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block flex items-center gap-1.5">
-          <ImageIcon className="h-3 w-3" /> Logo da Empresa
+        <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5 block flex items-center gap-1">
+          <ImageIcon className="h-3 w-3" /> Logo
         </label>
         {theme.logoUrl ? (
-          <div className="space-y-2">
-            <div className="rounded-xl border border-gray-200 p-3 bg-gray-50 flex items-center gap-3">
-              <img src={theme.logoUrl} alt="Logo" className="h-10 w-auto object-contain rounded" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-gray-500 truncate">{theme.logoUrl.split('/').pop()}</p>
-              </div>
-              <Button type="button" variant="ghost" size="sm" className="text-red-500 text-xs h-7 px-2 rounded-lg"
-                onClick={() => set({ logoUrl: '' })}>
-                Remover
-              </Button>
+          <div className="rounded-lg border border-gray-200 p-2 bg-gray-50 flex items-center gap-2">
+            <img src={theme.logoUrl} alt="Logo" className="h-8 w-auto object-contain rounded" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] text-gray-400 truncate">{theme.logoUrl.split('/').pop()}</p>
             </div>
+            <Button type="button" variant="ghost" size="sm" className="text-red-500 text-[10px] h-6 px-1.5 rounded-md"
+              onClick={() => set({ logoUrl: '' })}>
+              Remover
+            </Button>
           </div>
         ) : (
           <button type="button" onClick={onUploadLogo}
             disabled={uploadingLogo}
-            className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50">
-            {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploadingLogo ? 'Enviando...' : 'Enviar logo da empresa'}
+            className="w-full flex items-center justify-center gap-1.5 p-3 rounded-lg border-2 border-dashed border-gray-200 text-[10px] text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50">
+            {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploadingLogo ? 'Enviando...' : 'Enviar logo'}
           </button>
         )}
-        <div className="mt-2">
-          <span className="text-[9px] text-gray-400">ou cole a URL:</span>
-          <Input value={theme.logoUrl} onChange={e => set({ logoUrl: e.target.value })} placeholder="https://..." className="rounded-lg h-7 text-[10px] mt-1" />
+        <div className="mt-1.5">
+          <span className="text-[8px] text-gray-400">ou cole a URL:</span>
+          <Input value={theme.logoUrl} onChange={e => set({ logoUrl: e.target.value })} placeholder="https://..." className="rounded-md h-6 text-[9px] mt-0.5" />
         </div>
       </div>
 
       {/* Reset */}
-      <Button type="button" variant="ghost" size="sm" className="w-full rounded-lg text-xs gap-1.5 text-gray-500"
-        onClick={() => set({ primaryColor: '#3000E3', secondaryColor: '#007DE3', fontFamily: 'Inter, sans-serif', showHeader: true, showFooter: true, logoUrl: '' })}>
+      <Button type="button" variant="ghost" size="sm" className="w-full rounded-md text-[10px] gap-1 text-gray-400 h-7"
+        onClick={() => set({ primaryColor: '#3000E3', secondaryColor: '#007DE3', fontFamily: 'Inter, sans-serif', showHeader: true, showFooter: true, logoUrl: '', headerText: '', footerText: '' })}>
         <RotateCcw className="h-3 w-3" /> Restaurar padrão
       </Button>
     </div>

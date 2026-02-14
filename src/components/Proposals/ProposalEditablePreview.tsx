@@ -1,13 +1,14 @@
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Bold, Italic, AlignLeft, AlignCenter, AlignRight,
-  Type, Square, Move, Trash2, Plus, GripVertical
+  Bold, AlignLeft, AlignCenter, AlignRight,
+  Type, Square, Trash2, Plus, GripVertical, Image as ImageIcon
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { HexColorPicker } from 'react-colorful';
+import { Input } from '@/components/ui/input';
 
 interface ProposalItem {
   name: string;
@@ -19,7 +20,7 @@ interface ProposalItem {
 
 interface EditableSection {
   id: string;
-  type: 'header' | 'title' | 'client' | 'items' | 'totals' | 'notes' | 'terms' | 'footer' | 'custom-text' | 'custom-divider';
+  type: 'header' | 'title' | 'client' | 'items' | 'totals' | 'notes' | 'terms' | 'footer' | 'custom-text' | 'custom-divider' | 'custom-image';
   visible: boolean;
   styles: {
     borderRadius?: number;
@@ -51,14 +52,18 @@ interface PreviewProps {
   showHeader: boolean;
   showFooter: boolean;
   logoUrl?: string;
+  headerText?: string;
+  footerText?: string;
   onTitleChange?: (title: string) => void;
   onNotesChange?: (notes: string) => void;
   onTermsChange?: (terms: string) => void;
   onItemChange?: (index: number, field: string, value: any) => void;
+  onHeaderTextChange?: (text: string) => void;
+  onFooterTextChange?: (text: string) => void;
 }
 
 const DEFAULT_SECTIONS: EditableSection[] = [
-  { id: 'header', type: 'header', visible: true, styles: { borderRadius: 0, padding: 24 } },
+  { id: 'header', type: 'header', visible: true, styles: { borderRadius: 0, padding: 20 } },
   { id: 'title', type: 'title', visible: true, styles: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 } },
   { id: 'client', type: 'client', visible: true, styles: { borderRadius: 8, padding: 12, marginBottom: 8 } },
   { id: 'items', type: 'items', visible: true, styles: { borderRadius: 0, marginBottom: 8 } },
@@ -71,8 +76,9 @@ const DEFAULT_SECTIONS: EditableSection[] = [
 export default function ProposalEditablePreview({
   companyName, title, client, items, subtotal, discountAmount, total,
   notes, customTerms, validUntil, primaryColor, secondaryColor, fontFamily,
-  showHeader, showFooter, logoUrl,
+  showHeader, showFooter, logoUrl, headerText, footerText,
   onTitleChange, onNotesChange, onTermsChange, onItemChange,
+  onHeaderTextChange, onFooterTextChange,
 }: PreviewProps) {
   const [sections, setSections] = useState<EditableSection[]>(DEFAULT_SECTIONS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -87,10 +93,6 @@ export default function ProposalEditablePreview({
     setSections(prev => prev.map(s => s.id === id ? { ...s, styles: { ...s.styles, ...patch } } : s));
   };
 
-  const toggleVisibility = (id: string) => {
-    setSections(prev => prev.map(s => s.id === id ? { ...s, visible: !s.visible } : s));
-  };
-
   const moveSection = (fromIdx: number, toIdx: number) => {
     setSections(prev => {
       const arr = [...prev];
@@ -100,15 +102,24 @@ export default function ProposalEditablePreview({
     });
   };
 
-  const addCustomSection = (type: 'custom-text' | 'custom-divider') => {
+  const addCustomSection = (type: 'custom-text' | 'custom-divider' | 'custom-image') => {
     const newSection: EditableSection = {
       id: `custom-${Date.now()}`,
       type,
       visible: true,
-      styles: { borderRadius: 0, padding: 8, marginBottom: 8 },
-      customContent: type === 'custom-text' ? 'Clique para editar...' : '',
+      styles: { borderRadius: 0, padding: type === 'custom-image' ? 0 : 8, marginBottom: 8 },
+      customContent: type === 'custom-text' ? 'Clique para editar...' : type === 'custom-image' ? '' : '',
     };
-    setSections(prev => [...prev, newSection]);
+    // Insert before footer
+    setSections(prev => {
+      const footerIdx = prev.findIndex(s => s.type === 'footer');
+      if (footerIdx >= 0) {
+        const arr = [...prev];
+        arr.splice(footerIdx, 0, newSection);
+        return arr;
+      }
+      return [...prev, newSection];
+    });
   };
 
   const removeSection = (id: string) => {
@@ -125,18 +136,29 @@ export default function ProposalEditablePreview({
   };
   const handleDragEnd = () => setDragIndex(null);
 
+  // Separate footer from content sections
+  const contentSections = sections.filter(s => s.type !== 'footer');
+  const footerSection = sections.find(s => s.type === 'footer');
+
   const renderSection = (section: EditableSection, index: number) => {
     if (!section.visible) return null;
     const isSelected = selectedId === section.id;
     const sectionStyle: React.CSSProperties = {
       borderRadius: section.styles.borderRadius,
       marginBottom: section.styles.marginBottom,
-      transition: 'box-shadow 0.15s, border-color 0.15s',
+      transition: 'box-shadow 0.15s',
     };
 
     const wrapperClass = `relative group cursor-pointer ${
-      isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-1 hover:ring-blue-300'
+      isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-1 hover:ring-blue-200'
     }`;
+
+    const dragProps = {
+      draggable: true,
+      onDragStart: () => handleDragStart(index),
+      onDragOver: (e: React.DragEvent) => handleDragOver(e, index),
+      onDragEnd: handleDragEnd,
+    };
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -148,20 +170,20 @@ export default function ProposalEditablePreview({
         if (!showHeader) return null;
         return (
           <div key={section.id} className={wrapperClass} style={{ ...sectionStyle, background: primaryColor, padding: section.styles.padding }}
-            onClick={handleClick} draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
-            <DragHandle />
+            onClick={handleClick} {...dragProps}>
+            <DragHandle light />
             <div className="flex items-center justify-between">
               <div>
                 {logoUrl ? (
                   <img src={logoUrl} alt="Logo" className="h-10 object-contain mb-1" />
                 ) : (
-                  <div className="text-white font-bold text-lg tracking-wide"
-                    contentEditable suppressContentEditableWarning
-                    onBlur={e => {/* company name not editable from here */}}>
-                    {companyName || 'Sua Empresa'}
-                  </div>
+                  <div className="text-white font-bold text-lg tracking-wide">{companyName || 'Sua Empresa'}</div>
                 )}
-                <div className="text-white/70 text-[10px] mt-0.5 uppercase tracking-widest">Proposta Comercial</div>
+                <div className="text-white/70 text-[10px] mt-0.5 uppercase tracking-widest outline-none"
+                  contentEditable suppressContentEditableWarning
+                  onBlur={e => onHeaderTextChange?.(e.currentTarget.textContent || '')}>
+                  {headerText || 'Proposta Comercial'}
+                </div>
               </div>
               <div className="text-right text-white/80 text-[10px] space-y-0.5">
                 <div>Data: {today}</div>
@@ -173,10 +195,9 @@ export default function ProposalEditablePreview({
 
       case 'title':
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
-            <h2 className="font-bold text-gray-900 outline-none"
+            <h2 className="font-bold outline-none"
               style={{ color: primaryColor, fontSize: section.styles.fontSize, fontWeight: section.styles.fontWeight, textAlign: section.styles.textAlign }}
               contentEditable suppressContentEditableWarning
               onBlur={e => onTitleChange?.(e.currentTarget.textContent || '')}>
@@ -188,9 +209,8 @@ export default function ProposalEditablePreview({
       case 'client':
         if (!client) return null;
         return (
-          <div key={section.id} className={wrapperClass} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}
-            style={{ ...sectionStyle, backgroundColor: secondaryColor + '15', padding: section.styles.padding, borderRadius: section.styles.borderRadius }}>
+          <div key={section.id} className={wrapperClass} onClick={handleClick} {...dragProps}
+            style={{ ...sectionStyle, backgroundColor: secondaryColor + '12', padding: section.styles.padding, borderRadius: section.styles.borderRadius }}>
             <DragHandle />
             <div className="text-[9px] uppercase tracking-wider font-semibold mb-1.5" style={{ color: primaryColor }}>Cliente</div>
             <div className="text-gray-800 font-medium text-xs">{client.name}</div>
@@ -205,17 +225,16 @@ export default function ProposalEditablePreview({
       case 'items':
         if (items.length === 0) return null;
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
             <div className="text-[9px] uppercase tracking-wider font-semibold mb-2" style={{ color: primaryColor }}>Itens</div>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ backgroundColor: primaryColor + '10' }}>
-                  <th className="text-left text-[9px] font-semibold px-2 py-1.5 text-gray-600 uppercase">Item</th>
-                  <th className="text-center text-[9px] font-semibold px-2 py-1.5 text-gray-600 uppercase w-12">Qtd</th>
-                  <th className="text-right text-[9px] font-semibold px-2 py-1.5 text-gray-600 uppercase w-20">Valor Un.</th>
-                  <th className="text-right text-[9px] font-semibold px-2 py-1.5 text-gray-600 uppercase w-20">Total</th>
+                <tr style={{ backgroundColor: primaryColor + '08' }}>
+                  <th className="text-left text-[9px] font-semibold px-2 py-1.5 text-gray-500 uppercase">Item</th>
+                  <th className="text-center text-[9px] font-semibold px-2 py-1.5 text-gray-500 uppercase w-12">Qtd</th>
+                  <th className="text-right text-[9px] font-semibold px-2 py-1.5 text-gray-500 uppercase w-20">Valor Un.</th>
+                  <th className="text-right text-[9px] font-semibold px-2 py-1.5 text-gray-500 uppercase w-20">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,8 +248,8 @@ export default function ProposalEditablePreview({
                       </div>
                       {it.description && <div className="text-gray-400 text-[9px] mt-0.5">{it.description}</div>}
                     </td>
-                    <td className="text-center text-gray-700 px-2 py-2 text-[11px]">{it.quantity}</td>
-                    <td className="text-right text-gray-700 px-2 py-2 text-[11px]">{fmtBRL(it.unit_price)}</td>
+                    <td className="text-center text-gray-600 px-2 py-2 text-[11px]">{it.quantity}</td>
+                    <td className="text-right text-gray-600 px-2 py-2 text-[11px]">{fmtBRL(it.unit_price)}</td>
                     <td className="text-right font-medium text-gray-800 px-2 py-2 text-[11px]">{fmtBRL(it.total_price)}</td>
                   </tr>
                 ))}
@@ -242,8 +261,7 @@ export default function ProposalEditablePreview({
       case 'totals':
         if (items.length === 0) return null;
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
             <div className="border-t border-gray-200 pt-3 space-y-1">
               <div className="flex justify-between text-gray-500 text-[10px] px-2">
@@ -264,8 +282,7 @@ export default function ProposalEditablePreview({
       case 'notes':
         if (!notes) return null;
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
             <div className="text-[9px] uppercase tracking-wider font-semibold mb-1" style={{ color: primaryColor }}>Observações</div>
             <p className="text-gray-600 text-[10px] whitespace-pre-line outline-none"
@@ -279,8 +296,7 @@ export default function ProposalEditablePreview({
       case 'terms':
         if (!customTerms) return null;
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
             <div className="text-[9px] uppercase tracking-wider font-semibold mb-1" style={{ color: primaryColor }}>Termos e Condições</div>
             <p className="text-gray-500 text-[10px] whitespace-pre-line outline-none"
@@ -291,24 +307,13 @@ export default function ProposalEditablePreview({
           </div>
         );
 
-      case 'footer':
-        if (!showFooter) return null;
-        return (
-          <div key={section.id} className={`${wrapperClass} text-center text-[8px] text-white`} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}
-            style={{ ...sectionStyle, background: primaryColor, padding: section.styles.padding, borderRadius: section.styles.borderRadius }}>
-            <DragHandle light />
-            Gerado por Ellosuit • {companyName}
-          </div>
-        );
-
       case 'custom-text':
         return (
-          <div key={section.id} className={wrapperClass} style={{ ...sectionStyle, padding: section.styles.padding, borderRadius: section.styles.borderRadius }}
-            onClick={handleClick} draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={{ ...sectionStyle, padding: section.styles.padding, borderRadius: section.styles.borderRadius, backgroundColor: section.styles.backgroundColor }}
+            onClick={handleClick} {...dragProps}>
             <DragHandle />
-            <p className="text-gray-700 text-[11px] outline-none"
-              style={{ fontSize: section.styles.fontSize, fontWeight: section.styles.fontWeight, textAlign: section.styles.textAlign, color: section.styles.textColor }}
+            <p className="outline-none"
+              style={{ fontSize: section.styles.fontSize || 11, fontWeight: section.styles.fontWeight, textAlign: section.styles.textAlign, color: section.styles.textColor || '#374151' }}
               contentEditable suppressContentEditableWarning
               onBlur={e => setSections(prev => prev.map(s => s.id === section.id ? { ...s, customContent: e.currentTarget.textContent || '' } : s))}>
               {section.customContent}
@@ -318,10 +323,26 @@ export default function ProposalEditablePreview({
 
       case 'custom-divider':
         return (
-          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick}
-            draggable onDragStart={() => handleDragStart(index)} onDragOver={e => handleDragOver(e, index)} onDragEnd={handleDragEnd}>
+          <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
             <DragHandle />
             <hr className="border-gray-200" style={{ borderRadius: section.styles.borderRadius }} />
+          </div>
+        );
+
+      case 'custom-image':
+        return (
+          <div key={section.id} className={wrapperClass} style={{ ...sectionStyle, borderRadius: section.styles.borderRadius }}
+            onClick={handleClick} {...dragProps}>
+            <DragHandle />
+            {section.customContent ? (
+              <img src={section.customContent} alt="" className="w-full object-contain" style={{ borderRadius: section.styles.borderRadius }} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 bg-gray-50 border-2 border-dashed border-gray-200 text-gray-400 text-[10px]"
+                style={{ borderRadius: section.styles.borderRadius || 4 }}>
+                <ImageIcon className="h-5 w-5 mb-1" />
+                <span>Cole a URL da imagem na toolbar</span>
+              </div>
+            )}
           </div>
         );
 
@@ -336,18 +357,14 @@ export default function ProposalEditablePreview({
       {selectedSection && (
         <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-2 text-[10px]"
           onClick={e => e.stopPropagation()}>
-          <span className="text-gray-400 font-semibold uppercase tracking-wider text-[9px] mr-1">{selectedSection.type}</span>
+          <span className="text-gray-400 font-semibold uppercase tracking-wider text-[9px] mr-1">{selectedSection.type.replace('custom-', '')}</span>
           
           <div className="h-4 w-px bg-gray-200" />
 
           {/* Border Radius */}
           <div className="flex items-center gap-1.5">
             <Square className="h-3 w-3 text-gray-400" />
-            <Slider
-              value={[selectedSection.styles.borderRadius || 0]}
-              onValueChange={v => updateSectionStyle(selectedSection.id, { borderRadius: v[0] })}
-              max={24} step={1} className="w-16"
-            />
+            <Slider value={[selectedSection.styles.borderRadius || 0]} onValueChange={v => updateSectionStyle(selectedSection.id, { borderRadius: v[0] })} max={24} step={1} className="w-16" />
             <span className="text-gray-500 w-5 text-right">{selectedSection.styles.borderRadius || 0}</span>
           </div>
 
@@ -358,11 +375,7 @@ export default function ProposalEditablePreview({
             <>
               <div className="flex items-center gap-1.5">
                 <Type className="h-3 w-3 text-gray-400" />
-                <Slider
-                  value={[selectedSection.styles.fontSize || 14]}
-                  onValueChange={v => updateSectionStyle(selectedSection.id, { fontSize: v[0] })}
-                  min={8} max={32} step={1} className="w-16"
-                />
+                <Slider value={[selectedSection.styles.fontSize || 14]} onValueChange={v => updateSectionStyle(selectedSection.id, { fontSize: v[0] })} min={8} max={32} step={1} className="w-16" />
                 <span className="text-gray-500 w-5 text-right">{selectedSection.styles.fontSize || 14}</span>
               </div>
               <div className="h-4 w-px bg-gray-200" />
@@ -386,7 +399,7 @@ export default function ProposalEditablePreview({
             </>
           )}
 
-          {/* Bold toggle */}
+          {/* Bold */}
           {['title', 'custom-text'].includes(selectedSection.type) && (
             <button onClick={() => updateSectionStyle(selectedSection.id, { fontWeight: selectedSection.styles.fontWeight === 'bold' ? 'normal' : 'bold' })}
               className={`p-1 rounded ${selectedSection.styles.fontWeight === 'bold' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}>
@@ -394,8 +407,8 @@ export default function ProposalEditablePreview({
             </button>
           )}
 
-          {/* Color */}
-          {['custom-text'].includes(selectedSection.type) && (
+          {/* Text Color */}
+          {['custom-text', 'footer'].includes(selectedSection.type) && (
             <Popover>
               <PopoverTrigger asChild>
                 <button className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: selectedSection.styles.textColor || '#333' }} />
@@ -407,7 +420,7 @@ export default function ProposalEditablePreview({
           )}
 
           {/* Background Color */}
-          {['client', 'custom-text'].includes(selectedSection.type) && (
+          {['client', 'custom-text', 'header', 'footer'].includes(selectedSection.type) && (
             <Popover>
               <PopoverTrigger asChild>
                 <button className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50">
@@ -421,6 +434,16 @@ export default function ProposalEditablePreview({
             </Popover>
           )}
 
+          {/* Image URL input */}
+          {selectedSection.type === 'custom-image' && (
+            <Input
+              placeholder="URL da imagem..."
+              className="h-6 text-[10px] rounded w-40"
+              defaultValue={selectedSection.customContent || ''}
+              onBlur={e => setSections(prev => prev.map(s => s.id === selectedSection.id ? { ...s, customContent: e.target.value } : s))}
+            />
+          )}
+
           <div className="flex-1" />
 
           {/* Delete custom sections */}
@@ -430,19 +453,32 @@ export default function ProposalEditablePreview({
             </button>
           )}
 
-          {/* Deselect */}
-          <button onClick={() => setSelectedId(null)} className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 text-[9px]">
-            ✕
-          </button>
+          <button onClick={() => setSelectedId(null)} className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 text-[9px]">✕</button>
         </div>
       )}
 
-      {/* Canvas */}
-      <div className="bg-white text-[11px] leading-relaxed" style={{ maxWidth: 595, minHeight: 842 }}
+      {/* Document - flex column for footer at bottom */}
+      <div className="bg-white text-[11px] leading-relaxed flex flex-col" style={{ width: 595, minHeight: 842 }}
         onClick={() => setSelectedId(null)}>
-        <div className="px-8 py-6 space-y-1">
-          {sections.map((s, i) => renderSection(s, i))}
+        
+        {/* Content area */}
+        <div className="px-8 py-6 space-y-2 flex-1">
+          {contentSections.map((s, i) => renderSection(s, i))}
         </div>
+
+        {/* Footer - always at bottom */}
+        {footerSection && showFooter && (
+          <div
+            className={`relative group cursor-pointer text-center text-[8px] text-white ${selectedId === footerSection.id ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-1 hover:ring-blue-200'}`}
+            onClick={e => { e.stopPropagation(); setSelectedId(footerSection.id); }}
+            style={{ background: primaryColor, padding: footerSection.styles.padding, borderRadius: footerSection.styles.borderRadius }}>
+            <DragHandle light />
+            <span className="outline-none" contentEditable suppressContentEditableWarning
+              onBlur={e => onFooterTextChange?.(e.currentTarget.textContent || '')}>
+              {footerText || `Gerado por Ellosuit • ${companyName}`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Add Element Bar */}
@@ -454,6 +490,10 @@ export default function ProposalEditablePreview({
         <button onClick={() => addCustomSection('custom-divider')}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
           <Plus className="h-3 w-3" /> Divisor
+        </button>
+        <button onClick={() => addCustomSection('custom-image')}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
+          <ImageIcon className="h-3 w-3" /> Imagem
         </button>
       </div>
     </div>

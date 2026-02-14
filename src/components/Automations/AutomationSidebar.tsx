@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import { AUTOMATION_BLOCKS, AutomationBlockDefinition } from './types';
 import * as Icons from 'lucide-react';
 
-const BRAND_COLOR = '#3000E3';
-
 const CATEGORIES = [
   { key: 'trigger', label: 'Gatilhos', emoji: '⚡' },
   { key: 'action', label: 'Ações', emoji: '▶️' },
@@ -16,12 +14,13 @@ const CATEGORIES = [
 
 interface Props {
   onDragStart: (block: AutomationBlockDefinition) => void;
+  isExpanded?: boolean;
+  isActive?: boolean;
 }
 
-export default function AutomationSidebar({ onDragStart }: Props) {
+export default function AutomationSidebar({ onDragStart, isExpanded = false, isActive = false }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [isOpen, setIsOpen] = useState(true);
 
   const filtered = AUTOMATION_BLOCKS.filter(b =>
     b.label.toLowerCase().includes(search.toLowerCase()) ||
@@ -37,24 +36,30 @@ export default function AutomationSidebar({ onDragStart }: Props) {
     return IconComp ? <IconComp className="h-4 w-4" /> : null;
   };
 
-  if (!isOpen) {
+  // Collapsed state - show thin bar with icon hints
+  if (!isExpanded) {
     return (
-      <div className="w-12 bg-white border-r flex flex-col items-center py-4">
-        <button onClick={() => setIsOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
-          <ChevronRight className="h-4 w-4 text-gray-500" />
-        </button>
+      <div className={`w-12 border-r flex flex-col items-center py-4 gap-2 transition-colors duration-500 ${
+        isActive ? 'bg-[#161822] border-gray-800' : 'bg-white'
+      }`}>
+        {CATEGORIES.map(cat => (
+          <div key={cat.key} className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
+            isActive ? 'text-gray-500' : 'text-gray-400'
+          }`} title={cat.label}>
+            {cat.emoji}
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="w-64 bg-white border-r flex flex-col flex-shrink-0 overflow-hidden">
-      <div className="p-3 border-b">
+    <div className={`w-64 border-r flex flex-col flex-shrink-0 overflow-hidden transition-colors duration-500 ${
+      isActive ? 'bg-[#161822] border-gray-800' : 'bg-white'
+    }`}>
+      <div className={`p-3 border-b ${isActive ? 'border-gray-800' : ''}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Blocos</span>
-          <button onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-gray-100">
-            <ChevronDown className="h-3.5 w-3.5 text-gray-400 rotate-90" />
-          </button>
+          <span className={`text-xs font-semibold uppercase tracking-wider ${isActive ? 'text-gray-500' : 'text-gray-500'}`}>Blocos</span>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -62,7 +67,7 @@ export default function AutomationSidebar({ onDragStart }: Props) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar blocos..."
-            className="h-8 pl-8 text-xs rounded-lg"
+            className={`h-8 pl-8 text-xs rounded-lg ${isActive ? 'bg-gray-800/50 border-gray-700 text-gray-300 placeholder:text-gray-600' : ''}`}
           />
         </div>
       </div>
@@ -77,7 +82,9 @@ export default function AutomationSidebar({ onDragStart }: Props) {
             <div key={cat.key}>
               <button
                 onClick={() => toggleCategory(cat.key)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:bg-gray-50 rounded-lg"
+                className={`w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-lg ${
+                  isActive ? 'text-gray-500 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-50'
+                }`}
               >
                 <span>{cat.emoji}</span>
                 <span className="flex-1 text-left">{cat.label}</span>
@@ -90,7 +97,11 @@ export default function AutomationSidebar({ onDragStart }: Props) {
                       key={block.type}
                       draggable
                       onDragStart={() => onDragStart(block)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all group"
+                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-grab active:cursor-grabbing border border-transparent transition-all group ${
+                        isActive 
+                          ? 'hover:bg-gray-800/60 hover:border-gray-700' 
+                          : 'hover:bg-gray-50 hover:border-gray-200'
+                      }`}
                     >
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow-sm"
@@ -99,8 +110,8 @@ export default function AutomationSidebar({ onDragStart }: Props) {
                         {getIcon(block.icon)}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-medium text-gray-800 truncate">{block.label}</div>
-                        <div className="text-[10px] text-gray-400 truncate">{block.description}</div>
+                        <div className={`text-xs font-medium truncate ${isActive ? 'text-gray-200' : 'text-gray-800'}`}>{block.label}</div>
+                        <div className={`text-[10px] truncate ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>{block.description}</div>
                       </div>
                     </div>
                   ))}

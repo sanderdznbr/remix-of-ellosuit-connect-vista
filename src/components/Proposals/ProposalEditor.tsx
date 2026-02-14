@@ -77,6 +77,7 @@ export default function ProposalEditor() {
     logoUrl: '',
     headerText: '',
     footerText: '',
+    templateId: 'ellosuit',
   });
 
   // Zoom
@@ -292,7 +293,7 @@ export default function ProposalEditor() {
       let position = 0;
       doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
       heightLeft -= pageH;
-      while (heightLeft > 0) {
+      while (heightLeft > 2) {
         position -= pageH;
         doc.addPage();
         doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
@@ -542,6 +543,7 @@ export default function ProposalEditor() {
                 logoUrl={theme.logoUrl}
                 headerText={theme.headerText}
                 footerText={theme.footerText}
+                templateId={theme.templateId}
                 onTitleChange={setTitle}
                 onNotesChange={setNotes}
                 onTermsChange={setCustomTerms}
@@ -658,6 +660,7 @@ export default function ProposalEditor() {
           logoUrl={theme.logoUrl}
           headerText={theme.headerText}
           footerText={theme.footerText}
+          templateId={theme.templateId}
         />
       </div>
     </div>

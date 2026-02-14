@@ -48,6 +48,7 @@ const ALL_CLIENT_FIELDS = [
   { key: 'tags', label: 'Tags' },
   { key: 'purchased_items', label: 'Item Comprado (lista)' },
   { key: 'purchase_date', label: 'Data da Compra' },
+  { key: 'purchase_total', label: 'Valor Total da Compra' },
 ];
 
 const DEFAULT_CLIENT_FIELDS = [
@@ -55,7 +56,7 @@ const DEFAULT_CLIENT_FIELDS = [
   'cnpj_cpf', 'company_name', 'client_type', 'profession',
   'birth_date', 'address_street', 'address_number', 'address_city',
   'address_state', 'address_zip', 'notes', 'tags',
-  'purchased_items', 'purchase_date',
+  'purchased_items', 'purchase_date', 'purchase_total',
 ];
 
 export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId, isActive }: Props) {

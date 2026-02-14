@@ -23,6 +23,7 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [fullscreenType, setFullscreenType] = useState<'image' | 'video' | 'document'>('image');
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -125,6 +126,39 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
 
   const { icon: Icon, label } = getMediaInfo();
 
+  const fullscreenModal = showFullscreen && mediaUrl ? (
+    <div 
+      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+      onClick={() => setShowFullscreen(false)}
+    >
+      <button
+        onClick={() => setShowFullscreen(false)}
+        className="absolute top-4 right-4 p-2 text-white/80 hover:text-white transition-colors z-10"
+      >
+        <X className="h-8 w-8" />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDownload(mediaUrl, fullscreenType === 'video' ? 'video.mp4' : 'arquivo');
+        }}
+        className="absolute top-4 left-4 p-2 text-white/80 hover:text-white transition-colors flex items-center gap-2 z-10"
+      >
+        <Download className="h-6 w-6" />
+        <span className="text-sm">Baixar</span>
+      </button>
+      {fullscreenType === 'image' && (
+        <img src={mediaUrl} alt="Imagem em tela cheia" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+      )}
+      {fullscreenType === 'video' && (
+        <video src={mediaUrl} controls autoPlay className="max-w-full max-h-full" onClick={(e) => e.stopPropagation()} />
+      )}
+      {fullscreenType === 'document' && (
+        <iframe src={mediaUrl} className="w-full h-full max-w-4xl rounded-lg bg-white" title="Documento" onClick={(e) => e.stopPropagation()} />
+      )}
+    </div>
+  ) : null;
+
   // === IMAGE ===
   if (messageType === 'image' && mediaUrl && !imageError) {
     return (
@@ -136,13 +170,13 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
               alt="Imagem"
               className="w-full h-auto rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
               onError={() => setImageError(true)}
-              onClick={() => setShowFullscreen(true)}
+              onClick={() => { setFullscreenType('image'); setShowFullscreen(true); }}
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
               <ZoomIn className="h-8 w-8 text-white drop-shadow-lg" />
             </div>
             <button
-              onClick={() => handleDownload(mediaUrl, 'imagem.jpg')}
+              onClick={(e) => { e.stopPropagation(); handleDownload(mediaUrl, 'imagem.jpg'); }}
               className="absolute bottom-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
             >
               <Download className="h-4 w-4 text-white" />
@@ -152,37 +186,7 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
             <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
           )}
         </div>
-
-        {/* Fullscreen Modal */}
-        {showFullscreen && (
-          <div 
-            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
-            onClick={() => setShowFullscreen(false)}
-          >
-            <button
-              onClick={() => setShowFullscreen(false)}
-              className="absolute top-4 right-4 p-2 text-white/80 hover:text-white transition-colors"
-            >
-              <X className="h-8 w-8" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDownload(mediaUrl, 'imagem.jpg');
-              }}
-              className="absolute top-4 left-4 p-2 text-white/80 hover:text-white transition-colors flex items-center gap-2"
-            >
-              <Download className="h-6 w-6" />
-              <span className="text-sm">Baixar</span>
-            </button>
-            <img
-              src={mediaUrl}
-              alt="Imagem em tela cheia"
-              className="max-w-full max-h-full object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        )}
+        {fullscreenModal}
       </>
     );
   }
@@ -279,50 +283,74 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
   // === VIDEO ===
   if (messageType === 'video' && mediaUrl) {
     return (
-      <div className="space-y-1">
-        <div className="relative rounded-lg overflow-hidden max-w-[240px] bg-black">
-          <video
-            src={mediaUrl}
-            controls
-            className="w-full h-auto rounded-lg"
-            preload="metadata"
-          />
-          <button
-            onClick={() => handleDownload(mediaUrl, 'video.mp4')}
-            className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
+      <>
+        <div className="space-y-1">
+          <div 
+            className="relative rounded-lg overflow-hidden max-w-[240px] bg-black cursor-pointer group"
+            onClick={() => { setFullscreenType('video'); setShowFullscreen(true); }}
           >
-            <Download className="h-4 w-4 text-white" />
-          </button>
+            <video
+              src={mediaUrl}
+              className="w-full h-auto rounded-lg"
+              preload="metadata"
+            />
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+              <Play className="h-10 w-10 text-white drop-shadow-lg" fill="white" />
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownload(mediaUrl, 'video.mp4'); }}
+              className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
+            >
+              <Download className="h-4 w-4 text-white" />
+            </button>
+          </div>
+          {mediaCaption && (
+            <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
+          )}
         </div>
-        {mediaCaption && (
-          <p className="text-sm whitespace-pre-wrap">{mediaCaption}</p>
-        )}
-      </div>
+        {fullscreenModal}
+      </>
     );
   }
 
   // === DOCUMENT ===
   if (messageType === 'document' && mediaUrl) {
     const fileName = mediaCaption || content || 'Documento';
+    const isPreviewable = mediaUrl.match(/\.(pdf|png|jpg|jpeg|gif|webp|svg)$/i);
     return (
-      <div 
-        className={cn(
-          "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors min-w-[200px] max-w-[280px]",
-          fromMe 
-            ? "bg-[#005c4b]/30 hover:bg-[#005c4b]/40" 
-            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-        )}
-        onClick={() => handleDownload(mediaUrl, fileName)}
-      >
-        <div className="w-10 h-12 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
-          <FileText className="h-5 w-5 text-white" />
+      <>
+        <div 
+          className={cn(
+            "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors min-w-[200px] max-w-[280px]",
+            fromMe 
+              ? "bg-[#005c4b]/30 hover:bg-[#005c4b]/40" 
+              : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+          )}
+          onClick={() => {
+            if (isPreviewable) {
+              setFullscreenType('document');
+              setShowFullscreen(true);
+            } else {
+              window.open(mediaUrl, '_blank');
+            }
+          }}
+        >
+          <div className="w-10 h-12 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
+            <FileText className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{fileName}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Toque para visualizar</p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDownload(mediaUrl, fileName); }}
+            className="p-1"
+          >
+            <Download className="h-5 w-5 text-gray-500 flex-shrink-0" />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{fileName}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">PDF • Toque para baixar</p>
-        </div>
-        <Download className="h-5 w-5 text-gray-500 flex-shrink-0" />
-      </div>
+        {fullscreenModal}
+      </>
     );
   }
 

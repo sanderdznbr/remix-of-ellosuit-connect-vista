@@ -46,9 +46,17 @@ const ALL_CLIENT_FIELDS = [
   { key: 'whatsapp_business', label: 'WhatsApp Business' },
   { key: 'notes', label: 'Anotações' },
   { key: 'tags', label: 'Tags' },
+  { key: 'purchased_items', label: 'Item Comprado (lista)' },
+  { key: 'purchase_date', label: 'Data da Compra' },
 ];
 
-const DEFAULT_CLIENT_FIELDS = ['name', 'email', 'phone', 'status'];
+const DEFAULT_CLIENT_FIELDS = [
+  'name', 'email', 'phone', 'whatsapp', 'status',
+  'cnpj_cpf', 'company_name', 'client_type', 'profession',
+  'birth_date', 'address_street', 'address_number', 'address_city',
+  'address_state', 'address_zip', 'notes', 'tags',
+  'purchased_items', 'purchase_date',
+];
 
 export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId, isActive }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);

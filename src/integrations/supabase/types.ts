@@ -627,41 +627,62 @@ export type Database = {
         Row: {
           category: string | null
           company_id: string
+          cost_items: Json | null
+          cost_price: number | null
           created_at: string
           created_by: string
           description: string | null
+          duration_estimate: string | null
           id: string
+          included_items: string[] | null
           is_active: boolean | null
           name: string
+          service_type: string | null
+          show_cost_to_client: boolean | null
           unit_label: string | null
           unit_price: number
           updated_at: string
+          warranty_info: string | null
         }
         Insert: {
           category?: string | null
           company_id: string
+          cost_items?: Json | null
+          cost_price?: number | null
           created_at?: string
           created_by: string
           description?: string | null
+          duration_estimate?: string | null
           id?: string
+          included_items?: string[] | null
           is_active?: boolean | null
           name: string
+          service_type?: string | null
+          show_cost_to_client?: boolean | null
           unit_label?: string | null
           unit_price?: number
           updated_at?: string
+          warranty_info?: string | null
         }
         Update: {
           category?: string | null
           company_id?: string
+          cost_items?: Json | null
+          cost_price?: number | null
           created_at?: string
           created_by?: string
           description?: string | null
+          duration_estimate?: string | null
           id?: string
+          included_items?: string[] | null
           is_active?: boolean | null
           name?: string
+          service_type?: string | null
+          show_cost_to_client?: boolean | null
           unit_label?: string | null
           unit_price?: number
           updated_at?: string
+          warranty_info?: string | null
         }
         Relationships: [
           {

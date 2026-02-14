@@ -183,14 +183,22 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
 
               {/* Config preview */}
               <div className="px-3 py-2 text-[10px] text-gray-500">
-                {node.type === 'webhook' && <span>POST endpoint</span>}
-                {node.type === 'new_client' && <span>Gatilho: novo cliente</span>}
-                {node.type === 'send_email' && <span>Template: {node.config?.templateId || 'não selecionado'}</span>}
-                {node.type === 'create_client' && <span>Mapear campos do webhook</span>}
+                {node.type === 'webhook' && <span>{node.config?.webhookMode === 'fetch' ? '🌐 Puxar dados externos' : '⚡ Receber POST'}</span>}
+                {node.type === 'new_client' && <span>Gatilho: novo {node.config?.clientType === 'any' ? 'contato' : node.config?.clientType}</span>}
+                {node.type === 'client_updated' && <span>Gatilho: cliente atualizado</span>}
+                {node.type === 'proposal_status' && <span>Status: {node.config?.status || 'aprovada'}</span>}
+                {node.type === 'schedule' && <span>Cron: {node.config?.cron || '0 9 * * *'}</span>}
+                {node.type === 'send_email' && <span>Para: {node.config?.to || 'configurar'}</span>}
+                {node.type === 'send_whatsapp' && <span>Para: {node.config?.to || 'configurar'}</span>}
+                {node.type === 'create_client' && <span>Mapear campos do gatilho</span>}
+                {node.type === 'update_client' && <span>Atualizar: {node.config?.clientIdentifier || 'configurar'}</span>}
+                {node.type === 'create_task' && <span>Tarefa: {node.config?.title || 'configurar'}</span>}
+                {node.type === 'create_proposal' && <span>Proposta automática</span>}
+                {node.type === 'http_request' && <span>{node.config?.method || 'POST'} {node.config?.url ? '✓' : '...'}</span>}
                 {node.type === 'condition' && <span>{node.config?.field || 'Configurar condição'}</span>}
-                {!['webhook', 'new_client', 'send_email', 'create_client', 'condition'].includes(node.type) && (
-                  <span>Clique para configurar</span>
-                )}
+                {node.type === 'filter' && <span>Filtro: {node.config?.filterField || 'configurar'}</span>}
+                {node.type === 'transform_data' && <span>Mapear campos</span>}
+                {node.type === 'delay' && <span>{node.config?.duration || 5} {node.config?.unit || 'min'}</span>}
               </div>
 
               {/* Connection points */}

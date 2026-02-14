@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow
 } from "lucide-react";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
@@ -68,6 +68,7 @@ const menuGroups: MenuGroup[] = [
         items: [
           { id: "email-builder", label: "Templates de Email", description: "Editor visual de emails", icon: FileText, path: "/dashboard/email-templates" },
           { id: "agentes", label: "Agentes de IA", description: "Chatbots inteligentes", icon: Bot, path: "/dashboard/bot-ia" },
+          { id: "automacoes", label: "Automações", description: "Fluxos automatizados", icon: Workflow, path: "/dashboard/automacoes" },
         ]
       },
       {

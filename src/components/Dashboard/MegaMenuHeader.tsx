@@ -153,6 +153,7 @@ const menuGroups: MenuGroup[] = [
         title: "Empresa",
         items: [
           { id: "contratos", label: "Criação de Contratos", description: "Modelos e contratos editáveis", icon: FileSignature, path: "/dashboard/contratos" },
+          { id: "propostas", label: "Criar Propostas", description: "Orçamentos e propostas comerciais", icon: FileText, path: "/dashboard/propostas" },
         ]
       },
       {

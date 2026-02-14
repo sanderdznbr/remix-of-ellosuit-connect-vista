@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight } from "lucide-react";
+import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight, FileSignature } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,13 @@ const suiteModules = [
     description: "Métricas gerais e indicadores de performance da empresa",
     icon: BarChart3,
     path: "/dashboard/analytics",
+  },
+  {
+    id: "propostas",
+    title: "Criar Propostas",
+    description: "Gere orçamentos e propostas comerciais personalizadas em PDF",
+    icon: FileSignature,
+    path: "/dashboard/propostas",
   },
   {
     id: "ello-vision",

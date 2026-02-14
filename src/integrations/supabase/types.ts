@@ -106,6 +106,109 @@ export type Database = {
           },
         ]
       }
+      automation_executions: {
+        Row: {
+          automation_id: string
+          completed_at: string | null
+          error_message: string | null
+          execution_log: Json | null
+          id: string
+          started_at: string
+          status: string
+          trigger_data: Json | null
+        }
+        Insert: {
+          automation_id: string
+          completed_at?: string | null
+          error_message?: string | null
+          execution_log?: Json | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger_data?: Json | null
+        }
+        Update: {
+          automation_id?: string
+          completed_at?: string | null
+          error_message?: string | null
+          execution_log?: Json | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          actions: Json | null
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          edges: Json | null
+          execution_count: number | null
+          id: string
+          is_active: boolean | null
+          last_executed_at: string | null
+          name: string
+          nodes: Json | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          edges?: Json | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          name: string
+          nodes?: Json | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          edges?: Json | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          name?: string
+          nodes?: Json | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       availability_schedules: {
         Row: {
           company_id: string

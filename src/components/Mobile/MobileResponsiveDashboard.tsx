@@ -42,6 +42,7 @@ import ContractEditor from '@/components/Contracts/ContractEditor';
 import ContractViewer from '@/components/Contracts/ContractViewer';
 import ProposalsPage from '@/components/Proposals/ProposalsPage';
 import ProposalEditor from '@/components/Proposals/ProposalEditor';
+import AutomationBuilder from '@/components/Automations/AutomationBuilder';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -129,6 +130,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/bot-ia/editar/:id" element={<ModuleGate module="omni"><EditAgentPage /></ModuleGate>} />
             <Route path="/chatbot" element={<ModuleGate module="omni"><ChatbotManagement /></ModuleGate>} />
             <Route path="/chatbot-builder" element={<ModuleGate module="omni"><ChatBotBuilder /></ModuleGate>} />
+            <Route path="/automacoes" element={<AutomationBuilder />} />
             
             {/* Comunicação - Omni */}
             <Route path="/crm-whatsapp" element={<ModuleGate module="omni"><WhatsAppCRM /></ModuleGate>} />

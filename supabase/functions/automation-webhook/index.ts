@@ -8,6 +8,7 @@ import {
   executeCreateTask,
   executeHttpRequest,
   executeCreateProposal,
+  executeCreateReceipt,
   evaluateCondition,
   evaluateFilter,
 } from "./actions.ts";
@@ -194,6 +195,11 @@ Deno.serve(async (req) => {
           case "create_proposal":
             result = await executeCreateProposal(ctx, node);
             executionLog.push({ node: nodeId, type: "create_proposal", status: "success", result });
+            break;
+
+          case "create_receipt":
+            result = await executeCreateReceipt(ctx, node);
+            executionLog.push({ node: nodeId, type: "create_receipt", status: "success", result });
             break;
 
           case "condition":

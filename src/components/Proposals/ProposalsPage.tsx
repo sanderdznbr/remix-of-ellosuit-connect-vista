@@ -117,8 +117,8 @@ export default function ProposalsPage() {
               <ArrowLeft className="h-5 w-5 text-gray-500" />
             </button>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Propostas & Orçamentos</h1>
-              <p className="text-sm text-gray-500">Crie propostas profissionais para seus clientes</p>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Ordens de Serviço</h1>
+              <p className="text-sm text-gray-500">Crie ordens de serviço profissionais para seus clientes</p>
             </div>
           </div>
           <Button
@@ -127,7 +127,7 @@ export default function ProposalsPage() {
             style={{ background: '#3000E3' }}
           >
             <Plus className="h-4 w-4" />
-            Nova Proposta
+            Nova Ordem de Serviço
           </Button>
         </div>
 
@@ -138,9 +138,9 @@ export default function ProposalsPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === 'propostas' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
             }`}
-          >
+           >
             <FileText className="h-4 w-4 inline mr-1.5" />
-            Propostas
+            Ordens de Serviço
           </button>
           <button
             onClick={() => setActiveTab('servicos')}
@@ -274,10 +274,10 @@ export default function ProposalsPage() {
                 <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#3000E312' }}>
                   <FileText className="h-7 w-7" style={{ color: '#3000E3' }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Nenhuma proposta ainda</h3>
-                <p className="text-sm text-gray-500 mb-4">Crie sua primeira proposta profissional</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Nenhuma ordem de serviço ainda</h3>
+                <p className="text-sm text-gray-500 mb-4">Crie sua primeira ordem de serviço</p>
                 <Button onClick={() => navigate('/dashboard/propostas/editor')} className="rounded-xl text-white" style={{ background: '#3000E3' }}>
-                  <Plus className="h-4 w-4 mr-1.5" /> Criar Proposta
+                  <Plus className="h-4 w-4 mr-1.5" /> Criar Ordem de Serviço
                 </Button>
               </div>
             ) : (

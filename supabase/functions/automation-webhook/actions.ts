@@ -368,6 +368,108 @@ export async function executeCreateProposal(ctx: ExecutionContext, node: any) {
   return { proposalId: data?.id, proposalNumber: data?.proposal_number, title };
 }
 
+
+// ==================== CREATE RECEIPT ====================
+export async function executeCreateReceipt(ctx: ExecutionContext, node: any) {
+  const { supabase, automation, resolveTemplate } = ctx;
+  const config = node.config || {};
+
+  const title = resolveTemplate(config.title || "Recibo automático");
+  const amount = parseFloat(resolveTemplate(config.amount || "0")) || 0;
+  const description = resolveTemplate(config.description || "");
+  const paymentMethod = config.payment_method || "PIX";
+  const sendMethod = config.send_method || "none";
+
+  // Find client
+  let clientId = null;
+  let clientName = null;
+  let clientDocument = null;
+  if (ctx.createdClientData?.id) {
+    clientId = ctx.createdClientData.id as string;
+    clientName = ctx.createdClientData.name as string;
+    clientDocument = ctx.createdClientData.cnpj_cpf as string;
+  }
+
+  const { data, error } = await supabase
+    .from("receipts")
+    .insert({
+      company_id: automation.company_id,
+      created_by: automation.created_by,
+      title,
+      amount,
+      description: description || null,
+      payment_method: paymentMethod,
+      client_id: clientId,
+      client_name: clientName,
+      client_document: clientDocument,
+      notes: resolveTemplate(config.notes || "") || null,
+      status: sendMethod !== "none" ? "enviado" : "rascunho",
+    })
+    .select("id, receipt_number")
+    .single();
+
+  if (error) throw new Error(`Falha ao criar recibo: ${error.message}`);
+
+  console.log("Receipt created:", data?.id);
+
+  // Send if configured
+  if (sendMethod !== "none" && clientId) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+
+    // Get client details
+    const { data: client } = await supabase
+      .from("clients")
+      .select("name, email, phone, whatsapp")
+      .eq("id", clientId)
+      .single();
+
+    if (client) {
+      const fmtBRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+      const receiptText = `🧾 *Recibo ${data.receipt_number}*\n\n📋 ${title}\n💰 Valor: ${fmtBRL(amount)}\n💳 Pagamento: ${paymentMethod}${description ? `\n📝 ${description}` : ""}`;
+
+      if ((sendMethod === "email" || sendMethod === "both") && client.email) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
+            body: JSON.stringify({
+              recipient_email: client.email,
+              recipient_name: client.name,
+              subject: `Recibo: ${title}`,
+              content_html: `<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:20px"><div style="background:#059669;padding:20px;border-radius:12px 12px 0 0;color:white"><h2 style="margin:0">Recibo ${data.receipt_number}</h2></div><div style="background:white;border:1px solid #eee;border-top:0;padding:20px"><h3>${title}</h3><p style="font-size:24px;font-weight:bold;color:#059669">${fmtBRL(amount)}</p><p>Forma de pagamento: ${paymentMethod}</p>${description ? `<p>${description}</p>` : ""}</div></div>`,
+            }),
+          });
+        } catch (e) { console.error("Email receipt error:", e); }
+      }
+
+      if ((sendMethod === "whatsapp" || sendMethod === "both") && (client.whatsapp || client.phone)) {
+        try {
+          const { data: sessions } = await supabase
+            .from("whatsapp_sessions")
+            .select("id, baileys_server_url, instance_name")
+            .eq("company_id", automation.company_id)
+            .eq("status", "connected")
+            .limit(1);
+
+          const session = sessions?.[0];
+          if (session?.baileys_server_url) {
+            let cleanPhone = (client.whatsapp || client.phone).replace(/\D/g, "");
+            if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = "55" + cleanPhone;
+            await fetch(`${session.baileys_server_url}/api/message/send`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jid: `${cleanPhone}@s.whatsapp.net`, message: receiptText, instanceName: session.instance_name }),
+            });
+          }
+        } catch (e) { console.error("WhatsApp receipt error:", e); }
+      }
+    }
+  }
+
+  return { receiptId: data?.id, receiptNumber: data?.receipt_number, title, amount };
+}
+
 // ==================== CONDITION ====================
 export function evaluateCondition(ctx: ExecutionContext, node: any): boolean {
   const config = node.config || {};

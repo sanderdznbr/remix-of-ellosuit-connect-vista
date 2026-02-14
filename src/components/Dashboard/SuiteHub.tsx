@@ -37,10 +37,17 @@ const suiteModules = [
   },
   {
     id: "propostas",
-    title: "Criar Propostas",
-    description: "Gere orçamentos e propostas comerciais personalizadas em PDF",
+    title: "Ordem de Serviço",
+    description: "Crie ordens de serviço e orçamentos profissionais em PDF",
     icon: FileSignature,
     path: "/dashboard/propostas",
+  },
+  {
+    id: "recibos",
+    title: "Criar Recibos",
+    description: "Gere recibos de pagamento para seus clientes",
+    icon: FileText,
+    path: "/dashboard/recibos",
   },
   {
     id: "ello-vision",

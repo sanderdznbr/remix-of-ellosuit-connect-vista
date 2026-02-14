@@ -478,7 +478,8 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     {node.type === 'create_client' && <span>👤 Mapear campos do gatilho</span>}
                     {node.type === 'update_client' && <span>✏️ Atualizar: {node.config?.clientIdentifier || 'configurar'}</span>}
                     {node.type === 'create_task' && <span>📋 Tarefa: {node.config?.title || 'configurar'}</span>}
-                    {node.type === 'create_proposal' && <span>📄 Proposta automática</span>}
+                    {node.type === 'create_proposal' && <span>📄 Ordem de serviço automática</span>}
+                    {node.type === 'create_receipt' && <span>🧾 Recibo: {node.config?.title || 'configurar'}</span>}
                     {node.type === 'http_request' && <span>🔗 {node.config?.method || 'POST'} {node.config?.url ? '✓' : '...'}</span>}
                     {node.type === 'condition' && <span>🔀 {node.config?.field || 'Configurar condição'}</span>}
                     {node.type === 'filter' && <span>🔍 Filtro: {node.config?.filterField || 'configurar'}</span>}

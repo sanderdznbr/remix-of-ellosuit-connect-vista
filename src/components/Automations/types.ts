@@ -150,12 +150,21 @@ export const AUTOMATION_BLOCKS: AutomationBlockDefinition[] = [
   },
   {
     type: 'create_proposal',
-    label: 'Criar Proposta',
-    description: 'Gera proposta automaticamente',
+    label: 'Criar Ordem de Serviço',
+    description: 'Gera ordem de serviço automaticamente',
     category: 'action',
     icon: 'FileText',
     color: '#3000E3',
     defaultConfig: { templateId: '' },
+  },
+  {
+    type: 'create_receipt',
+    label: 'Criar Recibo',
+    description: 'Gera recibo e envia ao cliente',
+    category: 'action',
+    icon: 'Receipt',
+    color: '#059669',
+    defaultConfig: { title: '', amount: '', payment_method: 'PIX', send_method: 'none', description: '' },
   },
 
   // Conditions

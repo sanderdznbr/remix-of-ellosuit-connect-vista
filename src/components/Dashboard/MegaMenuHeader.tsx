@@ -154,7 +154,8 @@ const menuGroups: MenuGroup[] = [
         title: "Empresa",
         items: [
           { id: "contratos", label: "Criação de Contratos", description: "Modelos e contratos editáveis", icon: FileSignature, path: "/dashboard/contratos" },
-          { id: "propostas", label: "Criar Propostas", description: "Orçamentos e propostas comerciais", icon: FileText, path: "/dashboard/propostas" },
+          { id: "propostas", label: "Ordem de Serviço", description: "Ordens de serviço e orçamentos", icon: FileText, path: "/dashboard/propostas" },
+          { id: "recibos", label: "Criar Recibos", description: "Recibos de pagamento", icon: FileText, path: "/dashboard/recibos" },
         ]
       },
       {

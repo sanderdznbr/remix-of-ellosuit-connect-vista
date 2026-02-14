@@ -2678,6 +2678,84 @@ export type Database = {
           },
         ]
       }
+      receipts: {
+        Row: {
+          amount: number
+          client_document: string | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          custom_colors: Json | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          notes: string | null
+          payment_method: string | null
+          receipt_number: string | null
+          sent_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_document?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          custom_colors?: Json | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          receipt_number?: string | null
+          sent_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_document?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          custom_colors?: Json | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          receipt_number?: string | null
+          sent_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recording_consents: {
         Row: {
           consented: boolean

@@ -132,15 +132,20 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     setConnecting(null);
   };
 
+  const getNodeHeight = (node: AutomationNode) => {
+    const fields = node.config?.detectedFields || node.config?.externalDetectedFields || [];
+    return NODE_HEIGHT + (fields.length > 0 ? 20 + fields.length * 22 : 0);
+  };
+
   const renderEdge = (edge: AutomationEdge) => {
     const source = nodes.find(n => n.id === edge.source);
     const target = nodes.find(n => n.id === edge.target);
     if (!source || !target) return null;
 
     const sx = source.position.x + NODE_WIDTH;
-    const sy = source.position.y + NODE_HEIGHT / 2;
+    const sy = source.position.y + getNodeHeight(source) / 2;
     const tx = target.position.x;
-    const ty = target.position.y + NODE_HEIGHT / 2;
+    const ty = target.position.y + getNodeHeight(target) / 2;
     const mx = (sx + tx) / 2;
 
     return (
@@ -168,7 +173,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     const source = nodes.find(n => n.id === connecting.sourceId);
     if (!source) return null;
     const sx = source.position.x + NODE_WIDTH;
-    const sy = source.position.y + NODE_HEIGHT / 2;
+    const sy = source.position.y + getNodeHeight(source) / 2;
     const mx = (sx + connecting.mouseX) / 2;
     return (
       <path
@@ -280,15 +285,47 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 {node.type === 'delay' && <span>⏳ {node.config?.duration || 5} {node.config?.unit || 'min'}</span>}
               </div>
 
-              {/* RIGHT port (output) */}
-              <div
-                className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
-                style={{ borderColor: color }}
-                onMouseDown={e => handlePortMouseDown(e, node.id)}
-                title="Arraste para conectar"
-              >
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-              </div>
+              {/* Detected fields with individual output ports */}
+              {(() => {
+                const fields: string[] = node.config?.detectedFields || node.config?.externalDetectedFields || [];
+                if (fields.length === 0) return null;
+                return (
+                  <div className="border-t border-gray-100 px-2 py-1.5 space-y-0.5">
+                    <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
+                      Campos ({fields.length})
+                    </div>
+                    {fields.map((field, idx) => (
+                      <div key={field} className="flex items-center justify-between group/field relative">
+                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md hover:bg-gray-50 flex-1 min-w-0">
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-[10px] font-mono text-gray-600 truncate">{field}</span>
+                        </div>
+                        {/* Per-field output port */}
+                        <div
+                          className="absolute -right-[19px] w-4 h-4 rounded-full bg-white border-2 cursor-crosshair hover:scale-150 transition-transform z-30 flex items-center justify-center"
+                          style={{ borderColor: color, top: '50%', transform: 'translateY(-50%)' }}
+                          onMouseDown={e => handlePortMouseDown(e, node.id)}
+                          title={`Conectar campo: ${field}`}
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* RIGHT port (output) - main */}
+              {!(node.config?.detectedFields?.length > 0 || node.config?.externalDetectedFields?.length > 0) && (
+                <div
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
+                  style={{ borderColor: color }}
+                  onMouseDown={e => handlePortMouseDown(e, node.id)}
+                  title="Arraste para conectar"
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                </div>
+              )}
 
               {/* LEFT port (input) */}
               <div

@@ -340,6 +340,7 @@ export default function AutomationBuilder() {
         {selectedNode && (
           <AutomationPropertiesPanel
             node={selectedNode}
+            automationId={current?.id || null}
             onClose={() => setSelectedNodeId(null)}
             onUpdate={handleNodeUpdate}
           />

@@ -47,6 +47,10 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
     onUpdate(node.id, { config: { ...node.config, [key]: value } });
   };
 
+  const updateConfigBatch = (updates: Record<string, any>) => {
+    onUpdate(node.id, { config: { ...node.config, ...updates } });
+  };
+
   const webhookUrl = generatedWebhookId
     ? `${SUPABASE_URL}/functions/v1/automation-webhook/${generatedWebhookId}`
     : '';
@@ -115,8 +119,10 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
       const data = await res.json();
       if (data.success) {
         const fields = data.fields_detected || [];
-        updateConfig('detectedFields', fields);
-        updateConfig('lastReceivedAt', new Date().toISOString());
+        updateConfigBatch({
+          detectedFields: fields,
+          lastReceivedAt: new Date().toISOString(),
+        });
         setTestResult({ success: true, message: `${fields.length} campos detectados`, fields });
       } else {
         setTestResult({ success: false, message: data.error || 'Falha no teste' });
@@ -135,9 +141,11 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
       const res = await fetch(externalUrl);
       const data = await res.json();
       const fields = typeof data === 'object' && data !== null ? extractFieldPaths(data) : [];
-      updateConfig('externalWebhookUrl', externalUrl);
-      updateConfig('externalDetectedFields', fields);
-      updateConfig('externalSampleData', data);
+      updateConfigBatch({
+        externalWebhookUrl: externalUrl,
+        externalDetectedFields: fields,
+        externalSampleData: data,
+      });
       toast({ title: 'Campos detectados!', description: `${fields.length} campos encontrados` });
     } catch (err: any) {
       toast({ title: 'Erro ao buscar dados', description: err.message, variant: 'destructive' });

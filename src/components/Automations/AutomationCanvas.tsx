@@ -228,7 +228,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
             onClick={e => handleNodeClick(e, node)}
           >
             <div
-              className={`bg-white rounded-2xl border-2 transition-all duration-150 ${
+              className={`bg-white rounded-2xl border-2 transition-all duration-150 overflow-visible ${
                 isSelected
                   ? 'shadow-xl ring-2 ring-offset-1'
                   : 'shadow-md hover:shadow-lg'

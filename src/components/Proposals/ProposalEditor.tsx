@@ -75,6 +75,8 @@ export default function ProposalEditor() {
     showHeader: true,
     showFooter: true,
     logoUrl: '',
+    headerText: '',
+    footerText: '',
   });
 
   // Zoom
@@ -538,10 +540,14 @@ export default function ProposalEditor() {
                 showHeader={theme.showHeader}
                 showFooter={theme.showFooter}
                 logoUrl={theme.logoUrl}
+                headerText={theme.headerText}
+                footerText={theme.footerText}
                 onTitleChange={setTitle}
                 onNotesChange={setNotes}
                 onTermsChange={setCustomTerms}
                 onItemChange={(i, field, val) => updateItem(i, field, val)}
+                onHeaderTextChange={t => setTheme(prev => ({ ...prev, headerText: t }))}
+                onFooterTextChange={t => setTheme(prev => ({ ...prev, footerText: t }))}
               />
             </div>
           </div>
@@ -650,6 +656,8 @@ export default function ProposalEditor() {
           showHeader={theme.showHeader}
           showFooter={theme.showFooter}
           logoUrl={theme.logoUrl}
+          headerText={theme.headerText}
+          footerText={theme.footerText}
         />
       </div>
     </div>

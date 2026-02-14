@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Package, LayoutTemplate } from 'lucide-react';
+import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Package, LayoutTemplate, Send, CheckCircle, Clock, XCircle, Filter } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,9 +21,10 @@ import ServicesManager from './ServicesManager';
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   rascunho: { label: 'Rascunho', color: '#6B7280', bg: '#F3F4F6' },
   enviada: { label: 'Enviada', color: '#2563EB', bg: '#DBEAFE' },
-  aprovada: { label: 'Aprovada', color: '#16A34A', bg: '#DCFCE7' },
-  recusada: { label: 'Recusada', color: '#DC2626', bg: '#FEE2E2' },
-  expirada: { label: 'Expirada', color: '#D97706', bg: '#FEF3C7' },
+  aprovada: { label: 'Fechado', color: '#16A34A', bg: '#DCFCE7' },
+  pensando: { label: 'Pensando', color: '#D97706', bg: '#FEF3C7' },
+  recusada: { label: 'Negado', color: '#DC2626', bg: '#FEE2E2' },
+  expirada: { label: 'Expirada', color: '#9CA3AF', bg: '#F3F4F6' },
 };
 
 const DEFAULT_TEMPLATES = [
@@ -42,6 +43,7 @@ export default function ProposalsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'propostas' | 'servicos' | 'templates'>('propostas');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: companyId } = useQuery({
     queryKey: ['user-company', user?.id],
@@ -79,11 +81,24 @@ export default function ProposalsPage() {
     },
   });
 
-  const filtered = proposals.filter((p: any) =>
-    p.title?.toLowerCase().includes(search.toLowerCase()) ||
-    p.proposal_number?.toLowerCase().includes(search.toLowerCase()) ||
-    (p.clients as any)?.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('proposals').update({ status }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      toast({ title: 'Status atualizado!' });
+    },
+  });
+
+  const filtered = proposals.filter((p: any) => {
+    const matchesSearch = p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      p.proposal_number?.toLowerCase().includes(search.toLowerCase()) ||
+      (p.clients as any)?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const stats = {
     total: proposals.length,
@@ -211,10 +226,37 @@ export default function ProposalsPage() {
               ))}
             </div>
 
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar proposta..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-11 rounded-xl border-gray-200" />
+            {/* Search + Filter */}
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Buscar proposta..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-11 rounded-xl border-gray-200" />
+              </div>
+            </div>
+            <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+              {[
+                { key: 'all', label: 'Todas' },
+                { key: 'rascunho', label: 'Rascunho' },
+                { key: 'enviada', label: 'Enviadas' },
+                { key: 'aprovada', label: 'Fechado' },
+                { key: 'pensando', label: 'Pensando' },
+                { key: 'recusada', label: 'Negado' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setStatusFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                    statusFilter === f.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {f.label}
+                  {f.key !== 'all' && (
+                    <span className="ml-1 opacity-60">
+                      {proposals.filter((p: any) => p.status === f.key).length}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
 
             {/* List */}
@@ -271,6 +313,21 @@ export default function ProposalsPage() {
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/propostas/editor?id=${p.id}`); }}>
                                 <Eye className="h-4 w-4 mr-2" /> Editar
                               </DropdownMenuItem>
+                              <div className="px-2 py-1.5">
+                                <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Alterar Status</p>
+                                <div className="flex flex-col gap-0.5">
+                                  {Object.entries(STATUS_MAP).filter(([k]) => k !== 'expirada').map(([key, val]) => (
+                                    <button
+                                      key={key}
+                                      onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: p.id, status: key }); }}
+                                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left transition-colors ${p.status === key ? 'bg-gray-100 font-semibold' : 'hover:bg-gray-50'}`}
+                                    >
+                                      <span className="w-2 h-2 rounded-full" style={{ background: val.color }} />
+                                      {val.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id); }} className="text-red-600">
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
                               </DropdownMenuItem>

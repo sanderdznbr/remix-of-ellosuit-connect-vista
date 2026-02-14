@@ -51,3 +51,6 @@ verify_jwt = false
 [functions.automation-webhook]
 verify_jwt = false
 
+[functions.send-proposal]
+verify_jwt = false
+

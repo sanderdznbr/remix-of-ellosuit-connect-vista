@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Image, Music, FileText, Play, Pause, Download, MapPin, User, 
   Sticker, Video, Mic, X, ZoomIn 
@@ -126,9 +127,9 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
 
   const { icon: Icon, label } = getMediaInfo();
 
-  const fullscreenModal = showFullscreen && mediaUrl ? (
+  const fullscreenModal = showFullscreen && mediaUrl ? createPortal(
     <div 
-      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
       onClick={() => setShowFullscreen(false)}
     >
       <button
@@ -156,7 +157,8 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
       {fullscreenType === 'document' && (
         <iframe src={mediaUrl} className="w-full h-full max-w-4xl rounded-lg bg-white" title="Documento" onClick={(e) => e.stopPropagation()} />
       )}
-    </div>
+    </div>,
+    document.body
   ) : null;
 
   // === IMAGE ===

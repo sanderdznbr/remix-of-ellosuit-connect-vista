@@ -7,6 +7,7 @@ import {
   FileText, Video, Bot, Eye, MousePointer, Radio,
   ChevronDown, RefreshCw, Bell, HelpCircle, MessageSquare
 } from 'lucide-react';
+import WhatsAppDashboardWidget from './WhatsAppDashboardWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
@@ -52,6 +53,7 @@ const MainDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState('Este mês');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [kpis, setKpis] = useState<KPIData>({
@@ -92,7 +94,8 @@ const MainDashboard = () => {
         return;
       }
 
-      const companyId = companyUsers[0].company_id;
+      const cId = companyUsers[0].company_id;
+      setCompanyId(cId);
       const now = new Date();
       const startDate = startOfMonth(now);
       const endDate = endOfMonth(now);
@@ -110,42 +113,42 @@ const MainDashboard = () => {
       ] = await Promise.all([
         // Current period clients
         supabase.from('clients').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .gte('created_at', startDate.toISOString())
           .lte('created_at', endDate.toISOString()),
         // Previous period clients
         supabase.from('clients').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .gte('created_at', prevStartDate.toISOString())
           .lte('created_at', prevEndDate.toISOString()),
         // Current emails (now with company_id column)
         supabase.from('emails').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId),
+          .eq('company_id', cId),
         // Previous emails
         supabase.from('emails').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .lt('sent_at', startDate.toISOString()),
         // Email events for open rate
         supabase.from('email_events').select('email_id, event_type'),
         // Current tracked docs
         supabase.from('trackable_documents').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId),
+          .eq('company_id', cId),
         // Previous tracked docs
         supabase.from('trackable_documents').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .lt('created_at', startDate.toISOString()),
         // Current meetings
         supabase.from('meeting_rooms').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .gte('created_at', startDate.toISOString()),
         // Previous meetings
         supabase.from('meeting_rooms').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .gte('created_at', prevStartDate.toISOString())
           .lt('created_at', startDate.toISOString()),
         // AI Agents
         supabase.from('ai_agents').select('*', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+          .eq('company_id', cId)
           .eq('is_active', true)
       ]);
 
@@ -500,6 +503,15 @@ const MainDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* WhatsApp Widget */}
+        {companyId && (
+          <WhatsAppDashboardWidget
+            companyId={companyId}
+            startDate={startOfMonth(new Date())}
+            endDate={endOfMonth(new Date())}
+          />
+        )}
 
         {/* Secondary Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

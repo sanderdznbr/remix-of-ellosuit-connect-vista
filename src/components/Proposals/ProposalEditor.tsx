@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import ProposalPreview from './ProposalPreview';
 import ProposalThemePanel from './ProposalThemePanel';
 
@@ -60,6 +61,7 @@ export default function ProposalEditor() {
   const [expandedItemIndex, setExpandedItemIndex] = useState<number | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const pdfRenderRef = useRef<HTMLDivElement>(null);
 
   // New client form
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', company_name: '' });
@@ -283,87 +285,58 @@ export default function ProposalEditor() {
     }
   };
 
-  const generatePDF = () => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const w = doc.internal.pageSize.getWidth();
-    let y = 0;
+  const generatePDF = async () => {
+    const el = pdfRenderRef.current;
+    if (!el) return;
+    toast({ title: 'Gerando PDF…' });
+    try {
+      // Make hidden container visible for rendering
+      el.style.position = 'fixed';
+      el.style.left = '-9999px';
+      el.style.top = '0';
+      el.style.width = '595px';
+      el.style.display = 'block';
+      el.style.zIndex = '-1';
 
-    if (theme.showHeader) {
-      doc.setFillColor(theme.primaryColor);
-      doc.rect(0, 0, w, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
-      doc.text(company?.name || 'Minha Empresa', 20, 22);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('PROPOSTA COMERCIAL', 20, 32);
-      y = 55;
-    } else {
-      y = 20;
-    }
+      // Wait a tick for render
+      await new Promise(r => setTimeout(r, 100));
 
-    doc.setTextColor(100); doc.setFontSize(9);
-    doc.text(`Data: ${format(new Date(), 'dd/MM/yyyy')}`, w - 70, y);
-    if (validUntil) doc.text(`Validade: ${format(new Date(validUntil), 'dd/MM/yyyy')}`, w - 70, y + 5);
-    doc.setTextColor(30, 30, 30); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text(title, 20, y); y += 12;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: 595,
+        windowWidth: 595,
+      });
 
-    if (selectedClient) {
-      doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(100); doc.text('CLIENTE', 20, y); y += 6;
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(30); doc.setFontSize(11); doc.text(selectedClient.name, 20, y); y += 5;
-      if (selectedClient.company_name) { doc.setFontSize(9); doc.text(selectedClient.company_name, 20, y); y += 5; }
-      if (selectedClient.email) { doc.setFontSize(9); doc.text(selectedClient.email, 20, y); y += 5; }
-      if (selectedClient.phone) { doc.setFontSize(9); doc.text(selectedClient.phone, 20, y); y += 5; }
-    }
-    y += 8;
+      el.style.display = 'none';
 
-    doc.setFillColor(245, 245, 245); doc.rect(20, y, w - 40, 8, 'F');
-    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(100);
-    doc.text('ITEM', 22, y + 5.5); doc.text('QTD', w - 90, y + 5.5); doc.text('PREÇO UN.', w - 70, y + 5.5); doc.text('TOTAL', w - 40, y + 5.5); y += 12;
+      const imgData = canvas.toDataURL('image/png');
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * pageW) / canvas.width;
 
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(30);
-    items.forEach(it => {
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFontSize(10); doc.text(it.name, 22, y);
-      if (it.description) { doc.setFontSize(8); doc.setTextColor(130); doc.text(it.description.substring(0, 60), 22, y + 4); doc.setTextColor(30); }
-      doc.setFontSize(9);
-      doc.text(String(it.quantity), w - 88, y);
-      doc.text(`R$ ${it.unit_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, w - 70, y);
-      doc.text(`R$ ${it.total_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, w - 40, y);
-      y += it.description ? 10 : 7;
-      doc.setDrawColor(230); doc.line(22, y - 2, w - 22, y - 2);
-    });
-    y += 5;
-    doc.setFontSize(10); doc.text('Subtotal:', w - 75, y); doc.text(`R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, w - 40, y); y += 6;
-    if (discountAmount > 0) { doc.setTextColor(200, 50, 50); doc.text('Desconto:', w - 75, y); doc.text(`- R$ ${discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, w - 40, y); y += 6; }
-    doc.setTextColor(30); doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
-    doc.text('TOTAL:', w - 75, y); doc.text(`R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, w - 40, y); y += 15;
+      // Handle multi-page if content is taller than one A4 page
+      let heightLeft = imgH;
+      let position = 0;
 
-    if (notes) {
-      if (y > 240) { doc.addPage(); y = 20; }
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(100); doc.text('OBSERVAÇÕES', 20, y); y += 5;
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
-      const lines = doc.splitTextToSize(notes, w - 40); doc.text(lines, 20, y); y += lines.length * 4 + 5;
-    }
-    if (customTerms) {
-      if (y > 240) { doc.addPage(); y = 20; }
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(100); doc.text('TERMOS E CONDIÇÕES', 20, y); y += 5;
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
-      const lines = doc.splitTextToSize(customTerms, w - 40); doc.text(lines, 20, y);
-    }
+      doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
+      heightLeft -= pageH;
 
-    if (theme.showFooter) {
-      const pageCount = doc.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i); doc.setFillColor(theme.primaryColor); doc.rect(0, 287, w, 10, 'F');
-        doc.setFontSize(7); doc.setTextColor(255);
-        doc.text(`Página ${i}/${pageCount}  •  Gerado por Ellosuit`, w / 2, 293, { align: 'center' });
+      while (heightLeft > 0) {
+        position -= pageH;
+        doc.addPage();
+        doc.addImage(imgData, 'PNG', 0, position, imgW, imgH);
+        heightLeft -= pageH;
       }
-    }
 
-    doc.save(`${title || 'proposta'}.pdf`);
-    toast({ title: 'PDF gerado com sucesso!' });
+      doc.save(`${title || 'proposta'}.pdf`);
+      toast({ title: 'PDF gerado com sucesso!' });
+    } catch {
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' });
+    }
   };
 
   const filteredClients = clients.filter((c: any) =>
@@ -687,6 +660,28 @@ export default function ProposalEditor() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden container for PDF rendering - exact copy of preview */}
+      <div ref={pdfRenderRef} style={{ display: 'none', width: 595 }}>
+        <ProposalPreview
+          companyName={company?.name || ''}
+          title={title}
+          client={selectedClient || null}
+          items={items}
+          subtotal={subtotal}
+          discountAmount={discountAmount}
+          total={total}
+          notes={notes}
+          customTerms={customTerms}
+          validUntil={validUntil}
+          primaryColor={theme.primaryColor}
+          secondaryColor={theme.secondaryColor}
+          fontFamily={theme.fontFamily}
+          showHeader={theme.showHeader}
+          showFooter={theme.showFooter}
+          logoUrl={theme.logoUrl}
+        />
+      </div>
     </div>
   );
 }

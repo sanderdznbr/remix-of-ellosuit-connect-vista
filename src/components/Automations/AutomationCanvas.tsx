@@ -137,7 +137,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     const hasWebhookFields = node.type === 'webhook' && webhookFields.length > 0;
     const hasClientFields = node.type === 'create_client';
     const fieldCount = hasWebhookFields ? webhookFields.length : hasClientFields ? 4 : 0;
-    return NODE_HEIGHT + (fieldCount > 0 ? 24 + fieldCount * 22 : 0);
+    return NODE_HEIGHT + (fieldCount > 0 ? 44 + fieldCount * 34 : 0);
   };
 
   const renderEdge = (edge: AutomationEdge) => {
@@ -293,52 +293,56 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                 const fields: string[] = node.config?.detectedFields || node.config?.externalDetectedFields || [];
                 if (node.type !== 'webhook' || fields.length === 0) return null;
                 return (
-                  <div className="border-t border-gray-100 px-2 py-2">
-                    <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1.5">
+                  <div className="border-t-2 border-blue-100 px-3 py-3 bg-blue-50/30">
+                    <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                       Saídas ({fields.length})
                     </div>
-                    {fields.map((field) => (
-                      <div key={field} className="flex items-center relative py-[3px]">
-                        <div className="flex items-center gap-1.5 px-1.5 flex-1 min-w-0">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                          <span className="text-[10px] font-mono text-gray-700 truncate">{field}</span>
+                    <div className="space-y-2">
+                      {fields.map((field) => (
+                        <div key={field} className="flex items-center relative group/field">
+                          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-blue-100 flex-1 min-w-0 shadow-sm hover:border-blue-300 hover:shadow transition-all">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-blue-400" />
+                            <span className="text-[11px] font-mono font-medium text-gray-700 truncate">{field}</span>
+                          </div>
+                          <div
+                            className="absolute -right-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-blue-400 cursor-crosshair hover:scale-[1.3] hover:border-blue-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
+                            onMouseDown={e => handlePortMouseDown(e, node.id)}
+                            title={`Conectar: ${field}`}
+                          >
+                            <div className="w-3 h-3 rounded-full bg-blue-400 group-hover/field:bg-blue-600 transition-colors" />
+                          </div>
                         </div>
-                        <div
-                          className="absolute -right-[22px] w-5 h-5 rounded-full bg-white border-2 cursor-crosshair hover:scale-150 transition-transform z-30 flex items-center justify-center shadow-sm"
-                          style={{ borderColor: color }}
-                          onMouseDown={e => handlePortMouseDown(e, node.id)}
-                          title={`Conectar: ${field}`}
-                        >
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
 
               {/* Input fields for create_client with individual input ports */}
               {node.type === 'create_client' && (
-                <div className="border-t border-gray-100 px-2 py-2">
-                  <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1.5">
+                <div className="border-t-2 border-emerald-100 px-3 py-3 bg-emerald-50/30">
+                  <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     Entradas
                   </div>
-                  {['Nome', 'Email', 'Telefone', 'Status'].map((field) => (
-                    <div key={field} className="flex items-center relative py-[3px]">
-                      <div
-                        className="absolute -left-[22px] w-5 h-5 rounded-full bg-white border-2 cursor-pointer hover:scale-150 transition-transform z-30 flex items-center justify-center shadow-sm"
-                        style={{ borderColor: color }}
-                        onMouseUp={e => handlePortMouseUp(e, node.id)}
-                        title={`Receber: ${field}`}
-                      >
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="space-y-2">
+                    {['Nome', 'Email', 'Telefone', 'Status'].map((field) => (
+                      <div key={field} className="flex items-center relative group/field">
+                        <div
+                          className="absolute -left-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-emerald-400 cursor-pointer hover:scale-[1.3] hover:border-emerald-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
+                          onMouseUp={e => handlePortMouseUp(e, node.id)}
+                          title={`Receber: ${field}`}
+                        >
+                          <div className="w-3 h-3 rounded-full bg-emerald-400 group-hover/field:bg-emerald-600 transition-colors" />
+                        </div>
+                        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-emerald-100 flex-1 min-w-0 shadow-sm hover:border-emerald-300 hover:shadow transition-all">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-emerald-400" />
+                          <span className="text-[11px] font-mono font-medium text-gray-700">{field}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 px-1.5 flex-1 min-w-0">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-[10px] font-mono text-gray-700">{field}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 

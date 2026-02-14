@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Workflow, Save, Play, ArrowLeft, Plus, BarChart3,
   Pause, Settings, ChevronDown, Trash2
@@ -28,6 +28,8 @@ const BRAND_COLOR = '#3000E3';
 
 export default function AutomationBuilder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -73,7 +75,12 @@ export default function AutomationBuilder() {
           actions: (Array.isArray(a.actions) ? a.actions : []) as Record<string, any>[],
         })) as Automation[];
         setAutomations(typed);
-        if (typed.length > 0 && !current) selectAutomation(typed[0]);
+        if (editId) {
+          const target = typed.find(a => a.id === editId);
+          if (target) selectAutomation(target);
+        } else if (typed.length > 0 && !current) {
+          selectAutomation(typed[0]);
+        }
       }
       setLoading(false);
     };
@@ -231,7 +238,7 @@ export default function AutomationBuilder() {
       {/* Header */}
       <div className="h-16 bg-white border-b shadow-sm flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="rounded-xl hover:bg-gray-100">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/automacoes')} className="rounded-xl hover:bg-gray-100">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3">

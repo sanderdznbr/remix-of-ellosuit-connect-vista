@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle, Plus, Tag } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle, Plus, Tag, ScrollText, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,10 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
   const [newTag, setNewTag] = useState('');
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [showWebhookLogs, setShowWebhookLogs] = useState(false);
+  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   // Fetch contact groups for the company
   const { data: contactGroups, refetch: refetchGroups } = useQuery({
@@ -207,6 +211,26 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
     return paths;
   };
 
+  const loadWebhookLogs = async () => {
+    if (!automationId) return;
+    setLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('automation_executions')
+        .select('id, started_at, status, trigger_data, execution_log')
+        .eq('automation_id', automationId)
+        .order('started_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      setWebhookLogs(data || []);
+      setShowWebhookLogs(true);
+    } catch (err: any) {
+      toast({ title: 'Erro ao carregar logs', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
   const detectedFields: string[] = node.config?.detectedFields || [];
   const externalFields: string[] = node.config?.externalDetectedFields || [];
   const webhookMode = node.config?.webhookMode || 'receive';
@@ -347,6 +371,65 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
                     )}
                   </div>
                 )}
+
+                {/* Webhook Logs */}
+                <div className="border-t pt-3">
+                  <button
+                    onClick={loadWebhookLogs}
+                    disabled={loadingLogs || !automationId}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold border-2 border-gray-200 hover:bg-gray-50 transition-all text-gray-700"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {loadingLogs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScrollText className="h-3.5 w-3.5" />}
+                      Logs do Webhook
+                    </span>
+                    {showWebhookLogs ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+
+                  {showWebhookLogs && (
+                    <div className="mt-2 space-y-2 max-h-80 overflow-y-auto">
+                      {webhookLogs.length === 0 ? (
+                        <p className="text-[10px] text-gray-400 text-center py-3">Nenhum log encontrado</p>
+                      ) : (
+                        webhookLogs.map((log) => (
+                          <div key={log.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                            <button
+                              onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                              className="w-full flex items-center justify-between p-2.5 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 text-left">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.status === 'completed' ? 'bg-green-500' : log.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                                <div>
+                                  <p className="text-[10px] font-medium text-gray-700">
+                                    {new Date(log.started_at).toLocaleString('pt-BR')}
+                                  </p>
+                                  <p className="text-[9px] text-gray-400">{log.status}</p>
+                                </div>
+                              </div>
+                              {expandedLogId === log.id ? <ChevronUp className="h-3 w-3 text-gray-400" /> : <ChevronDown className="h-3 w-3 text-gray-400" />}
+                            </button>
+                            {expandedLogId === log.id && (
+                              <div className="border-t border-gray-100 p-2.5 bg-gray-50">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Dados recebidos</label>
+                                <pre className="text-[9px] font-mono text-gray-700 bg-white border border-gray-200 rounded-lg p-2 overflow-x-auto whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                                  {JSON.stringify(log.trigger_data, null, 2)}
+                                </pre>
+                                {log.execution_log && (
+                                  <>
+                                    <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-1 mt-2">Resultado</label>
+                                    <pre className="text-[9px] font-mono text-gray-700 bg-white border border-gray-200 rounded-lg p-2 overflow-x-auto whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+                                      {JSON.stringify(log.execution_log, null, 2)}
+                                    </pre>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>

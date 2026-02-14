@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { PROPOSAL_TEMPLATES } from './ProposalThemePanel';
 import {
   Bold, AlignLeft, AlignCenter, AlignRight,
   Type, Square, Trash2, Plus, GripVertical, Image as ImageIcon
@@ -54,6 +55,7 @@ interface PreviewProps {
   logoUrl?: string;
   headerText?: string;
   footerText?: string;
+  templateId?: string;
   onTitleChange?: (title: string) => void;
   onNotesChange?: (notes: string) => void;
   onTermsChange?: (terms: string) => void;
@@ -76,7 +78,7 @@ const DEFAULT_SECTIONS: EditableSection[] = [
 export default function ProposalEditablePreview({
   companyName, title, client, items, subtotal, discountAmount, total,
   notes, customTerms, validUntil, primaryColor, secondaryColor, fontFamily,
-  showHeader, showFooter, logoUrl, headerText, footerText,
+  showHeader, showFooter, logoUrl, headerText, footerText, templateId,
   onTitleChange, onNotesChange, onTermsChange, onItemChange,
   onHeaderTextChange, onFooterTextChange,
 }: PreviewProps) {
@@ -86,7 +88,8 @@ export default function ProposalEditablePreview({
 
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   const today = format(new Date(), 'dd/MM/yyyy');
-
+  const template = PROPOSAL_TEMPLATES.find(t => t.id === templateId) || PROPOSAL_TEMPLATES.find(t => t.id === 'ellosuit')!;
+  const tStyle = template.preview;
   const selectedSection = sections.find(s => s.id === selectedId);
 
   const updateSectionStyle = (id: string, patch: Partial<EditableSection['styles']>) => {
@@ -166,32 +169,72 @@ export default function ProposalEditablePreview({
     };
 
     switch (section.type) {
-      case 'header':
+      case 'header': {
         if (!showHeader) return null;
-        return (
-          <div key={section.id} className={wrapperClass} style={{ ...sectionStyle, background: primaryColor, padding: section.styles.padding }}
-            onClick={handleClick} {...dragProps}>
-            <DragHandle light />
-            <div className="flex items-center justify-between">
-              <div>
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-10 object-contain mb-1" />
-                ) : (
-                  <div className="text-white font-bold text-lg tracking-wide">{companyName || 'Sua Empresa'}</div>
-                )}
-                <div className="text-white/70 text-[10px] mt-0.5 uppercase tracking-widest outline-none"
-                  contentEditable suppressContentEditableWarning
-                  onBlur={e => onHeaderTextChange?.(e.currentTarget.textContent || '')}>
-                  {headerText || 'Proposta Comercial'}
+        const isGradient = tStyle.headerStyle === 'gradient';
+        const isSolid = tStyle.headerStyle === 'solid';
+        const isLine = tStyle.headerStyle === 'line';
+        const isSoft = tStyle.headerStyle === 'soft';
+        const isNone = tStyle.headerStyle === 'none';
+        const lightText = isGradient || isSolid;
+
+        if (isNone) {
+          return (
+            <div key={section.id} className={wrapperClass} style={sectionStyle} onClick={handleClick} {...dragProps}>
+              <DragHandle />
+              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: primaryColor + '30' }}>
+                <div className="flex items-center gap-3">
+                  {logoUrl && <img src={logoUrl} alt="Logo" className="h-8 object-contain" />}
+                  <div className="text-sm font-semibold" style={{ color: primaryColor }}>{companyName || 'Sua Empresa'}</div>
+                </div>
+                <div className="text-right text-[10px] text-gray-400 space-y-0.5">
+                  <div>{today}</div>
+                  {validUntil && <div>Válida até: {format(new Date(validUntil + 'T12:00:00'), 'dd/MM/yyyy')}</div>}
                 </div>
               </div>
-              <div className="text-right text-white/80 text-[10px] space-y-0.5">
-                <div>Data: {today}</div>
-                {validUntil && <div>Válida até: {format(new Date(validUntil + 'T12:00:00'), 'dd/MM/yyyy')}</div>}
+            </div>
+          );
+        }
+
+        const headerBg = isGradient
+          ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+          : isSoft ? primaryColor + '10'
+          : isLine ? 'transparent'
+          : primaryColor;
+
+        return (
+          <div key={section.id}>
+            {isLine && <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})` }} />}
+            <div className={wrapperClass}
+              style={{ ...sectionStyle, background: headerBg, padding: section.styles.padding }}
+              onClick={handleClick} {...dragProps}>
+              <DragHandle light={lightText} />
+              <div className="flex items-center justify-between">
+                <div>
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Logo" className="h-10 object-contain mb-1" />
+                  ) : (
+                    <div className={`font-bold text-lg tracking-wide ${lightText ? 'text-white' : ''}`}
+                      style={!lightText ? { color: primaryColor } : undefined}>
+                      {companyName || 'Sua Empresa'}
+                    </div>
+                  )}
+                  <div className={`text-[10px] mt-0.5 uppercase tracking-widest outline-none ${lightText ? 'text-white/70' : ''}`}
+                    style={!lightText ? { color: primaryColor + '90' } : undefined}
+                    contentEditable suppressContentEditableWarning
+                    onBlur={e => onHeaderTextChange?.(e.currentTarget.textContent || '')}>
+                    {headerText || 'Proposta Comercial'}
+                  </div>
+                </div>
+                <div className={`text-right text-[10px] space-y-0.5 ${lightText ? 'text-white/80' : 'text-gray-400'}`}>
+                  <div>Data: {today}</div>
+                  {validUntil && <div>Válida até: {format(new Date(validUntil + 'T12:00:00'), 'dd/MM/yyyy')}</div>}
+                </div>
               </div>
             </div>
           </div>
         );
+      }
 
       case 'title':
         return (
@@ -467,18 +510,34 @@ export default function ProposalEditablePreview({
         </div>
 
         {/* Footer - always at bottom */}
-        {footerSection && showFooter && (
-          <div
-            className={`relative group cursor-pointer text-center text-[8px] text-white ${selectedId === footerSection.id ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-1 hover:ring-blue-200'}`}
-            onClick={e => { e.stopPropagation(); setSelectedId(footerSection.id); }}
-            style={{ background: primaryColor, padding: footerSection.styles.padding, borderRadius: footerSection.styles.borderRadius }}>
-            <DragHandle light />
-            <span className="outline-none" contentEditable suppressContentEditableWarning
-              onBlur={e => onFooterTextChange?.(e.currentTarget.textContent || '')}>
-              {footerText || `Gerado por Ellosuit • ${companyName}`}
-            </span>
-          </div>
-        )}
+        {footerSection && showFooter && (() => {
+          const isGradient = tStyle.headerStyle === 'gradient';
+          const isSolid = tStyle.headerStyle === 'solid';
+          const lightFooter = isGradient || isSolid;
+          const footerBg = isGradient
+            ? `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+            : tStyle.headerStyle === 'soft' ? primaryColor + '08'
+            : tStyle.headerStyle === 'line' || tStyle.headerStyle === 'none' ? 'transparent'
+            : primaryColor;
+
+          return (
+            <div
+              className={`relative group cursor-pointer text-center text-[8px] ${lightFooter ? 'text-white' : 'text-gray-400'} ${selectedId === footerSection.id ? 'ring-2 ring-blue-500 ring-offset-1' : 'hover:ring-1 hover:ring-blue-200'}`}
+              onClick={e => { e.stopPropagation(); setSelectedId(footerSection.id); }}
+              style={{
+                background: footerBg,
+                padding: footerSection.styles.padding,
+                borderRadius: footerSection.styles.borderRadius,
+                borderTop: !lightFooter ? `1px solid ${primaryColor}20` : 'none',
+              }}>
+              <DragHandle light={lightFooter} />
+              <span className="outline-none" contentEditable suppressContentEditableWarning
+                onBlur={e => onFooterTextChange?.(e.currentTarget.textContent || '')}>
+                {footerText || `Gerado por Ellosuit • ${companyName}`}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Add Element Bar */}

@@ -20,7 +20,7 @@ const NODE_HEIGHT = 72;
 export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
-  const [connecting, setConnecting] = useState<{ sourceId: string; mouseX: number; mouseY: number } | null>(null);
+  const [connecting, setConnecting] = useState<{ sourceId: string; sourceField?: string; mouseX: number; mouseY: number } | null>(null);
 
   const getBlockDef = (type: string) => AUTOMATION_BLOCKS.find(b => b.type === type);
 
@@ -91,10 +91,10 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     setConnecting(null);
   };
 
-  const handleConnect = (sourceId: string, targetId: string) => {
+  const handleConnect = (sourceId: string, targetId: string, sourceField?: string, targetField?: string) => {
     if (sourceId === targetId) return;
-    if (edges.some(e => e.source === sourceId && e.target === targetId)) return;
-    onEdgesChange([...edges, { id: `edge-${Date.now()}`, source: sourceId, target: targetId }]);
+    if (edges.some(e => e.source === sourceId && e.target === targetId && e.sourceField === sourceField && e.targetField === targetField)) return;
+    onEdgesChange([...edges, { id: `edge-${Date.now()}`, source: sourceId, target: targetId, sourceField, targetField }]);
   };
 
   const deleteNode = (e: React.MouseEvent, nodeId: string) => {
@@ -109,25 +109,24 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   };
 
   // Connection point: start from right port
-  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string, fieldName?: string) => {
     e.stopPropagation();
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
     setConnecting({
       sourceId: nodeId,
+      sourceField: fieldName,
       mouseX: e.clientX - rect.left,
       mouseY: e.clientY - rect.top,
     });
   };
 
   // Drop on left port to complete connection
-  const handlePortMouseUp = (e: React.MouseEvent, nodeId: string) => {
+  const handlePortMouseUp = (e: React.MouseEvent, nodeId: string, fieldName?: string) => {
     e.stopPropagation();
     if (connecting && connecting.sourceId !== nodeId) {
-      handleConnect(connecting.sourceId, nodeId);
+      handleConnect(connecting.sourceId, nodeId, connecting.sourceField, fieldName);
     }
     setConnecting(null);
   };
@@ -140,15 +139,42 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     return NODE_HEIGHT + (fieldCount > 0 ? 44 + fieldCount * 34 : 0);
   };
 
+  // Header height (icon row + config preview + field section header)
+  const HEADER_HEIGHT = 72; // header + config preview
+  const FIELD_SECTION_HEADER = 36; // "Saídas" / "Entradas" label + padding
+  const FIELD_ROW_HEIGHT = 34; // each field row height (matches space-y-2 + py-1.5)
+
+  const getFieldPortY = (node: AutomationNode, fieldName: string, fieldList: string[]) => {
+    const fieldIndex = fieldList.indexOf(fieldName);
+    if (fieldIndex === -1) return node.position.y + getNodeHeight(node) / 2;
+    return node.position.y + HEADER_HEIGHT + FIELD_SECTION_HEADER + fieldIndex * FIELD_ROW_HEIGHT + FIELD_ROW_HEIGHT / 2;
+  };
+
   const renderEdge = (edge: AutomationEdge) => {
     const source = nodes.find(n => n.id === edge.source);
     const target = nodes.find(n => n.id === edge.target);
     if (!source || !target) return null;
 
+    // Calculate source Y
+    let sy: number;
+    if (edge.sourceField && source.type === 'webhook') {
+      const sourceFields = source.config?.detectedFields || source.config?.externalDetectedFields || [];
+      sy = getFieldPortY(source, edge.sourceField, sourceFields);
+    } else {
+      sy = source.position.y + getNodeHeight(source) / 2;
+    }
     const sx = source.position.x + NODE_WIDTH;
-    const sy = source.position.y + getNodeHeight(source) / 2;
+
+    // Calculate target Y
+    let ty: number;
+    if (edge.targetField && target.type === 'create_client') {
+      const targetFields = ['Nome', 'Email', 'Telefone', 'Status'];
+      ty = getFieldPortY(target, edge.targetField, targetFields);
+    } else {
+      ty = target.position.y + getNodeHeight(target) / 2;
+    }
     const tx = target.position.x;
-    const ty = target.position.y + getNodeHeight(target) / 2;
+
     const mx = (sx + tx) / 2;
 
     return (
@@ -158,10 +184,8 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
           fill="none"
           stroke="#94A3B8"
           strokeWidth={2.5}
-          strokeDasharray="none"
           className="group-hover:stroke-red-400 transition-colors"
         />
-        {/* Delete button on edge midpoint */}
         <circle cx={mx} cy={(sy + ty) / 2} r={8} fill="white" stroke="#CBD5E1" strokeWidth={1.5}
           className="group-hover:stroke-red-400 group-hover:fill-red-50 transition-colors" />
         <text x={mx} y={(sy + ty) / 2 + 4} textAnchor="middle" fontSize={11} fill="#94A3B8"
@@ -176,7 +200,13 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     const source = nodes.find(n => n.id === connecting.sourceId);
     if (!source) return null;
     const sx = source.position.x + NODE_WIDTH;
-    const sy = source.position.y + getNodeHeight(source) / 2;
+    let sy: number;
+    if (connecting.sourceField && source.type === 'webhook') {
+      const sourceFields = source.config?.detectedFields || source.config?.externalDetectedFields || [];
+      sy = getFieldPortY(source, connecting.sourceField, sourceFields);
+    } else {
+      sy = source.position.y + getNodeHeight(source) / 2;
+    }
     const mx = (sx + connecting.mouseX) / 2;
     return (
       <path
@@ -307,7 +337,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                           </div>
                           <div
                             className="absolute -right-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-blue-400 cursor-crosshair hover:scale-[1.3] hover:border-blue-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
-                            onMouseDown={e => handlePortMouseDown(e, node.id)}
+                            onMouseDown={e => handlePortMouseDown(e, node.id, field)}
                             title={`Conectar: ${field}`}
                           >
                             <div className="w-3 h-3 rounded-full bg-blue-400 group-hover/field:bg-blue-600 transition-colors" />
@@ -331,7 +361,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                       <div key={field} className="flex items-center relative group/field">
                         <div
                           className="absolute -left-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-emerald-400 cursor-pointer hover:scale-[1.3] hover:border-emerald-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
-                          onMouseUp={e => handlePortMouseUp(e, node.id)}
+                          onMouseUp={e => handlePortMouseUp(e, node.id, field)}
                           title={`Receber: ${field}`}
                         >
                           <div className="w-3 h-3 rounded-full bg-emerald-400 group-hover/field:bg-emerald-600 transition-colors" />

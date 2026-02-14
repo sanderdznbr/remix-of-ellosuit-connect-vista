@@ -2,7 +2,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { AutomationNode, AutomationEdge, AutomationBlockDefinition, AUTOMATION_BLOCKS } from './types';
 import * as Icons from 'lucide-react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, GripVertical } from 'lucide-react';
 
 interface Props {
   nodes: AutomationNode[];
@@ -14,11 +14,13 @@ interface Props {
 }
 
 const GRID_SIZE = 20;
+const NODE_WIDTH = 260;
+const NODE_HEIGHT = 72;
 
 export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState<{ sourceId: string; mouseX: number; mouseY: number } | null>(null);
 
   const getBlockDef = (type: string) => AUTOMATION_BLOCKS.find(b => b.type === type);
 
@@ -31,11 +33,8 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-
     const x = Math.round((e.clientX - rect.left) / GRID_SIZE) * GRID_SIZE;
     const y = Math.round((e.clientY - rect.top) / GRID_SIZE) * GRID_SIZE;
-
-    // Get the dragged block type from the last drag event
     const newNode: AutomationNode = {
       id: `node-${Date.now()}`,
       type: 'unknown',
@@ -44,7 +43,6 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
       data: {},
       config: {},
     };
-
     onNodesChange([...nodes, newNode]);
     onNodeSelect(newNode);
   }, [nodes, onNodesChange, onNodeSelect]);
@@ -54,8 +52,10 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const handleNodeMouseDown = (e: React.MouseEvent, node: AutomationNode) => {
+  // Drag handle starts drag (for moving the node)
+  const handleGripMouseDown = (e: React.MouseEvent, node: AutomationNode) => {
     e.stopPropagation();
+    e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     setDragging({
@@ -63,31 +63,42 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
       offsetX: e.clientX - rect.left - node.position.x,
       offsetY: e.clientY - rect.top - node.position.y,
     });
+  };
+
+  // Click on card body opens config
+  const handleNodeClick = (e: React.MouseEvent, node: AutomationNode) => {
+    e.stopPropagation();
     onNodeSelect(node);
   };
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging || !canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left - dragging.offsetX) / GRID_SIZE) * GRID_SIZE;
-    const y = Math.round((e.clientY - rect.top - dragging.offsetY) / GRID_SIZE) * GRID_SIZE;
-    onNodesChange(nodes.map(n => n.id === dragging.id ? { ...n, position: { x, y } } : n));
-  }, [dragging, nodes, onNodesChange]);
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-  const handleMouseUp = () => setDragging(null);
+    if (dragging) {
+      const x = Math.round((e.clientX - rect.left - dragging.offsetX) / GRID_SIZE) * GRID_SIZE;
+      const y = Math.round((e.clientY - rect.top - dragging.offsetY) / GRID_SIZE) * GRID_SIZE;
+      onNodesChange(nodes.map(n => n.id === dragging.id ? { ...n, position: { x, y } } : n));
+    }
+
+    if (connecting) {
+      setConnecting(prev => prev ? { ...prev, mouseX: e.clientX - rect.left, mouseY: e.clientY - rect.top } : null);
+    }
+  }, [dragging, connecting, nodes, onNodesChange]);
+
+  const handleMouseUp = () => {
+    setDragging(null);
+    setConnecting(null);
+  };
 
   const handleConnect = (sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
     if (edges.some(e => e.source === sourceId && e.target === targetId)) return;
-    const newEdge: AutomationEdge = {
-      id: `edge-${Date.now()}`,
-      source: sourceId,
-      target: targetId,
-    };
-    onEdgesChange([...edges, newEdge]);
+    onEdgesChange([...edges, { id: `edge-${Date.now()}`, source: sourceId, target: targetId }]);
   };
 
-  const deleteNode = (nodeId: string) => {
+  const deleteNode = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
     onNodesChange(nodes.filter(n => n.id !== nodeId));
     onEdgesChange(edges.filter(e => e.source !== nodeId && e.target !== nodeId));
     if (selectedNodeId === nodeId) onNodeSelect(null);
@@ -97,16 +108,39 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     onEdgesChange(edges.filter(e => e.id !== edgeId));
   };
 
-  // SVG edge rendering
+  // Connection point: start from right port
+  const handlePortMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    setConnecting({
+      sourceId: nodeId,
+      mouseX: e.clientX - rect.left,
+      mouseY: e.clientY - rect.top,
+    });
+  };
+
+  // Drop on left port to complete connection
+  const handlePortMouseUp = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    if (connecting && connecting.sourceId !== nodeId) {
+      handleConnect(connecting.sourceId, nodeId);
+    }
+    setConnecting(null);
+  };
+
   const renderEdge = (edge: AutomationEdge) => {
     const source = nodes.find(n => n.id === edge.source);
     const target = nodes.find(n => n.id === edge.target);
     if (!source || !target) return null;
 
-    const sx = source.position.x + 120;
-    const sy = source.position.y + 30;
+    const sx = source.position.x + NODE_WIDTH;
+    const sy = source.position.y + NODE_HEIGHT / 2;
     const tx = target.position.x;
-    const ty = target.position.y + 30;
+    const ty = target.position.y + NODE_HEIGHT / 2;
     const mx = (sx + tx) / 2;
 
     return (
@@ -114,38 +148,62 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
         <path
           d={`M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`}
           fill="none"
-          stroke="#CBD5E1"
-          strokeWidth={2}
+          stroke="#94A3B8"
+          strokeWidth={2.5}
+          strokeDasharray="none"
           className="group-hover:stroke-red-400 transition-colors"
         />
-        <circle cx={mx} cy={(sy + ty) / 2} r={6} fill="white" stroke="#CBD5E1" strokeWidth={1.5}
-          className="group-hover:stroke-red-400 group-hover:fill-red-50" />
-        <text x={mx} y={(sy + ty) / 2 + 3.5} textAnchor="middle" fontSize={8} fill="#94A3B8"
-          className="group-hover:fill-red-400 select-none">×</text>
+        {/* Delete button on edge midpoint */}
+        <circle cx={mx} cy={(sy + ty) / 2} r={8} fill="white" stroke="#CBD5E1" strokeWidth={1.5}
+          className="group-hover:stroke-red-400 group-hover:fill-red-50 transition-colors" />
+        <text x={mx} y={(sy + ty) / 2 + 4} textAnchor="middle" fontSize={11} fill="#94A3B8"
+          className="group-hover:fill-red-400 select-none pointer-events-none">×</text>
       </g>
+    );
+  };
+
+  // Temporary connecting line
+  const renderConnectingLine = () => {
+    if (!connecting) return null;
+    const source = nodes.find(n => n.id === connecting.sourceId);
+    if (!source) return null;
+    const sx = source.position.x + NODE_WIDTH;
+    const sy = source.position.y + NODE_HEIGHT / 2;
+    const mx = (sx + connecting.mouseX) / 2;
+    return (
+      <path
+        d={`M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${connecting.mouseY}, ${connecting.mouseX} ${connecting.mouseY}`}
+        fill="none"
+        stroke="#3B82F6"
+        strokeWidth={2}
+        strokeDasharray="6 3"
+        className="pointer-events-none"
+      />
     );
   };
 
   return (
     <div
       ref={canvasRef}
-      className="flex-1 relative overflow-auto cursor-crosshair"
+      className="flex-1 relative overflow-auto"
       style={{
-        backgroundImage: 'radial-gradient(circle, #e2e8f0 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
         backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-        backgroundColor: '#f8fafc',
+        backgroundColor: 'hsl(var(--muted) / 0.3)',
+        cursor: connecting ? 'crosshair' : dragging ? 'grabbing' : 'default',
       }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onClick={() => onNodeSelect(null)}
+      onClick={() => { onNodeSelect(null); }}
     >
       {/* Edges SVG */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
         <g className="pointer-events-auto">
           {edges.map(renderEdge)}
         </g>
+        {renderConnectingLine()}
       </svg>
 
       {/* Nodes */}
@@ -157,74 +215,90 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
         return (
           <div
             key={node.id}
-            className={`absolute select-none transition-shadow ${isSelected ? 'z-20' : 'z-10'}`}
-            style={{ left: node.position.x, top: node.position.y, width: 240 }}
-            onMouseDown={e => handleNodeMouseDown(e, node)}
+            className={`absolute select-none group ${isSelected ? 'z-20' : 'z-10'}`}
+            style={{ left: node.position.x, top: node.position.y, width: NODE_WIDTH }}
+            onClick={e => handleNodeClick(e, node)}
           >
-            <div className={`bg-white rounded-xl shadow-md border-2 transition-all ${isSelected ? 'shadow-lg' : 'hover:shadow-lg'}`}
-              style={{ borderColor: isSelected ? color : 'transparent' }}>
-              {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-t-xl" style={{ backgroundColor: color + '10' }}>
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+            <div
+              className={`bg-white rounded-2xl border-2 transition-all duration-150 ${
+                isSelected
+                  ? 'shadow-xl ring-2 ring-offset-1'
+                  : 'shadow-md hover:shadow-lg'
+              }`}
+              style={{
+                borderColor: isSelected ? color : 'hsl(var(--border))',
+                ...(isSelected ? { boxShadow: `0 0 0 3px ${color}40` } : {}),
+              }}
+            >
+              {/* Header with grip handle */}
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-t-2xl" style={{ backgroundColor: color + '12' }}>
+                {/* 6-dot grip handle */}
+                <div
+                  className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-black/5 transition-colors flex-shrink-0"
+                  onMouseDown={e => handleGripMouseDown(e, node)}
+                  title="Arrastar bloco"
+                >
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm"
                   style={{ backgroundColor: color }}>
                   {block && getIcon(block.icon)}
                 </div>
+
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-gray-800 truncate">{node.label}</div>
-                  <div className="text-[10px] text-gray-400">{block?.description || node.type}</div>
+                  <div className="text-[10px] text-gray-400 truncate">{block?.description || node.type}</div>
                 </div>
+
                 <button
-                  onClick={e => { e.stopPropagation(); deleteNode(node.id); }}
-                  className="p-1 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={e => deleteNode(e, node.id)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Excluir bloco"
                 >
-                  <Trash2 className="h-3 w-3 text-red-400" />
+                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
                 </button>
               </div>
 
               {/* Config preview */}
-              <div className="px-3 py-2 text-[10px] text-gray-500">
+              <div className="px-3 py-2 text-[10px] text-gray-500 border-t border-gray-50">
                 {node.type === 'webhook' && <span>{node.config?.webhookMode === 'fetch' ? '🌐 Puxar dados externos' : '⚡ Receber POST'}</span>}
                 {node.type === 'new_client' && <span>Gatilho: novo {node.config?.clientType === 'any' ? 'contato' : node.config?.clientType}</span>}
                 {node.type === 'client_updated' && <span>Gatilho: cliente atualizado</span>}
                 {node.type === 'proposal_status' && <span>Status: {node.config?.status || 'aprovada'}</span>}
-                {node.type === 'schedule' && <span>Cron: {node.config?.cron || '0 9 * * *'}</span>}
-                {node.type === 'send_email' && <span>Para: {node.config?.to || 'configurar'}</span>}
-                {node.type === 'send_whatsapp' && <span>Para: {node.config?.to || 'configurar'}</span>}
-                {node.type === 'create_client' && <span>Mapear campos do gatilho</span>}
-                {node.type === 'update_client' && <span>Atualizar: {node.config?.clientIdentifier || 'configurar'}</span>}
-                {node.type === 'create_task' && <span>Tarefa: {node.config?.title || 'configurar'}</span>}
-                {node.type === 'create_proposal' && <span>Proposta automática</span>}
-                {node.type === 'http_request' && <span>{node.config?.method || 'POST'} {node.config?.url ? '✓' : '...'}</span>}
-                {node.type === 'condition' && <span>{node.config?.field || 'Configurar condição'}</span>}
-                {node.type === 'filter' && <span>Filtro: {node.config?.filterField || 'configurar'}</span>}
-                {node.type === 'transform_data' && <span>Mapear campos</span>}
-                {node.type === 'delay' && <span>{node.config?.duration || 5} {node.config?.unit || 'min'}</span>}
+                {node.type === 'schedule' && <span>⏰ Cron: {node.config?.cron || '0 9 * * *'}</span>}
+                {node.type === 'send_email' && <span>📧 Para: {node.config?.to || 'configurar'}</span>}
+                {node.type === 'send_whatsapp' && <span>💬 Para: {node.config?.to || 'configurar'}</span>}
+                {node.type === 'create_client' && <span>👤 Mapear campos do gatilho</span>}
+                {node.type === 'update_client' && <span>✏️ Atualizar: {node.config?.clientIdentifier || 'configurar'}</span>}
+                {node.type === 'create_task' && <span>📋 Tarefa: {node.config?.title || 'configurar'}</span>}
+                {node.type === 'create_proposal' && <span>📄 Proposta automática</span>}
+                {node.type === 'http_request' && <span>🔗 {node.config?.method || 'POST'} {node.config?.url ? '✓' : '...'}</span>}
+                {node.type === 'condition' && <span>🔀 {node.config?.field || 'Configurar condição'}</span>}
+                {node.type === 'filter' && <span>🔍 Filtro: {node.config?.filterField || 'configurar'}</span>}
+                {node.type === 'transform_data' && <span>🔄 Mapear campos</span>}
+                {node.type === 'delay' && <span>⏳ {node.config?.duration || 5} {node.config?.unit || 'min'}</span>}
               </div>
 
-              {/* Connection points */}
+              {/* RIGHT port (output) */}
               <div
-                className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 cursor-pointer hover:scale-125 transition-transform z-30"
+                className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
                 style={{ borderColor: color }}
-                onMouseDown={e => { e.stopPropagation(); setConnecting(node.id); }}
-                onMouseUp={e => {
-                  e.stopPropagation();
-                  if (connecting && connecting !== node.id) {
-                    handleConnect(connecting, node.id);
-                  }
-                  setConnecting(null);
-                }}
-              />
+                onMouseDown={e => handlePortMouseDown(e, node.id)}
+                title="Arraste para conectar"
+              >
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              </div>
+
+              {/* LEFT port (input) */}
               <div
-                className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 cursor-pointer hover:scale-125 transition-transform z-30"
+                className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 cursor-pointer hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-sm"
                 style={{ borderColor: color }}
-                onMouseUp={e => {
-                  e.stopPropagation();
-                  if (connecting && connecting !== node.id) {
-                    handleConnect(connecting, node.id);
-                  }
-                  setConnecting(null);
-                }}
-              />
+                onMouseUp={e => handlePortMouseUp(e, node.id)}
+                title="Solte aqui para conectar"
+              >
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              </div>
             </div>
           </div>
         );
@@ -234,10 +308,10 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Icons.Workflow className="h-8 w-8 text-gray-300" />
+            <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <Icons.Workflow className="h-10 w-10 text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-gray-400">Arraste blocos para criar sua automação</p>
+            <p className="text-sm font-semibold text-gray-400">Arraste blocos para criar sua automação</p>
             <p className="text-xs text-gray-300 mt-1">Conecte gatilhos a ações para automatizar processos</p>
           </div>
         </div>

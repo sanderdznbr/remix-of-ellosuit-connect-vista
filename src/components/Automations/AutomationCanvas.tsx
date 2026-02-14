@@ -11,6 +11,7 @@ interface Props {
   onEdgesChange: (edges: AutomationEdge[]) => void;
   onNodeSelect: (node: AutomationNode | null) => void;
   selectedNodeId: string | null;
+  isActive?: boolean;
 }
 
 const GRID_SIZE = 20;
@@ -47,7 +48,7 @@ const ALL_CLIENT_FIELDS = [
 
 const DEFAULT_CLIENT_FIELDS = ['name', 'email', 'phone', 'status'];
 
-export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId }: Props) {
+export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId, isActive }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [connecting, setConnecting] = useState<{ sourceId: string; sourceField?: string; mouseX: number; mouseY: number } | null>(null);
@@ -271,19 +272,36 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     const tx = target.position.x;
     const ty = getEdgeTargetY(edge, target);
     const mx = (sx + tx) / 2;
+    const pathD = `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`;
 
     return (
       <g key={edge.id} className="cursor-pointer group" onClick={() => deleteEdge(edge.id)}>
+        {/* Base path */}
         <path
-          d={`M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`}
+          d={pathD}
           fill="none"
-          stroke="#94A3B8"
-          strokeWidth={2.5}
-          className="group-hover:stroke-red-400 transition-colors"
+          stroke={isActive ? '#22C55E' : '#94A3B8'}
+          strokeWidth={isActive ? 3 : 2.5}
+          className={`group-hover:stroke-red-400 transition-colors ${isActive ? 'drop-shadow-[0_0_4px_rgba(34,197,94,0.4)]' : ''}`}
         />
-        <circle cx={mx} cy={(sy + ty) / 2} r={8} fill="white" stroke="#CBD5E1" strokeWidth={1.5}
+        {/* Energy flow particles when active */}
+        {isActive && (
+          <>
+            <circle r={4} fill="#4ADE80" filter="url(#energyGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={pathD} />
+            </circle>
+            <circle r={3} fill="#86EFAC" filter="url(#energyGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={pathD} begin="0.5s" />
+            </circle>
+            <circle r={2.5} fill="#BBF7D0" filter="url(#energyGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={pathD} begin="1s" />
+            </circle>
+          </>
+        )}
+        {/* Delete indicator */}
+        <circle cx={mx} cy={(sy + ty) / 2} r={8} fill="white" stroke={isActive ? '#86EFAC' : '#CBD5E1'} strokeWidth={1.5}
           className="group-hover:stroke-red-400 group-hover:fill-red-50 transition-colors" />
-        <text x={mx} y={(sy + ty) / 2 + 4} textAnchor="middle" fontSize={11} fill="#94A3B8"
+        <text x={mx} y={(sy + ty) / 2 + 4} textAnchor="middle" fontSize={11} fill={isActive ? '#22C55E' : '#94A3B8'}
           className="group-hover:fill-red-400 select-none pointer-events-none">×</text>
       </g>
     );
@@ -374,6 +392,15 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
         >
           {/* Edges SVG */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+            <defs>
+              <filter id="energyGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             <g className="pointer-events-auto">
               {edges.map(renderEdge)}
             </g>

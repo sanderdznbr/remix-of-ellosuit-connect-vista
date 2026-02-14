@@ -336,6 +336,7 @@ export default function AutomationBuilder() {
           onEdgesChange={setEdges}
           onNodeSelect={handleNodeSelect}
           selectedNodeId={selectedNodeId}
+          isActive={current?.is_active || false}
         />
         {selectedNode && (
           <AutomationPropertiesPanel

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle, Plus, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import * as Icons from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -32,6 +33,20 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
   const [fetchingFields, setFetchingFields] = useState(false);
   const [generatingUrl, setGeneratingUrl] = useState(false);
   const [generatedWebhookId, setGeneratedWebhookId] = useState<string | null>(automationId || null);
+  const [newTag, setNewTag] = useState('');
+
+  // Fetch contact groups for the company
+  const { data: contactGroups } = useQuery({
+    queryKey: ['contact-groups-automation'],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).single();
+      if (!cu?.company_id) return [];
+      const { data } = await supabase.from('contact_groups').select('id, name').eq('company_id', cu.company_id).order('name');
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
   useEffect(() => {
     setExternalUrl(node.config?.externalWebhookUrl || '');
@@ -393,18 +408,128 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
         {node.type === 'create_client' && (
           <>
             <p className="text-[10px] text-gray-400 bg-blue-50 p-2.5 rounded-xl border border-blue-100">
-              Use <code className="font-mono text-blue-600">{'{{data.campo}}'}</code> para mapear campos do gatilho
+              Os campos ativos no card do canvas receberão dados via conexão. Configure abaixo opções extras.
             </p>
-            {['nameField:Nome', 'emailField:Email', 'phoneField:Telefone', 'statusField:Status'].map(pair => {
-              const [key, label] = pair.split(':');
-              return (
-                <div key={key}>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">{label}</label>
-                  <Input value={node.config?.[key] || ''} onChange={e => updateConfig(key, e.target.value)}
-                    placeholder={`{{data.${label.toLowerCase()}}}`} className="rounded-xl h-9 text-xs" />
-                </div>
-              );
-            })}
+
+            {/* Origin / Source */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Origem do contato</label>
+              <Select value={node.config?.clientOrigin || ''} onValueChange={v => updateConfig('clientOrigin', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue placeholder="Selecionar origem" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="webhook">Webhook</SelectItem>
+                  <SelectItem value="landing_page">Landing Page</SelectItem>
+                  <SelectItem value="formulario">Formulário</SelectItem>
+                  <SelectItem value="indicacao">Indicação</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="google_ads">Google Ads</SelectItem>
+                  <SelectItem value="email_marketing">Email Marketing</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {node.config?.clientOrigin === 'outro' && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">Origem personalizada</label>
+                <Input value={node.config?.clientOriginCustom || ''} onChange={e => updateConfig('clientOriginCustom', e.target.value)}
+                  placeholder="Ex: parceiro X" className="rounded-xl h-9 text-xs" />
+              </div>
+            )}
+
+            {/* Default status */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Status inicial</label>
+              <Select value={node.config?.defaultStatus || 'lead'} onValueChange={v => updateConfig('defaultStatus', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="prospect">Prospecto</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5 block flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" /> Tags automáticas
+              </label>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(node.config?.autoTags || []).map((tag: string) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px] rounded-full px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 gap-1">
+                    {tag}
+                    <button onClick={() => updateConfig('autoTags', (node.config?.autoTags || []).filter((t: string) => t !== tag))}
+                      className="hover:text-red-500 ml-0.5">×</button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-1.5">
+                <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag..."
+                  className="rounded-xl h-8 text-xs flex-1"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newTag.trim()) {
+                      const current = node.config?.autoTags || [];
+                      if (!current.includes(newTag.trim())) {
+                        updateConfig('autoTags', [...current, newTag.trim()]);
+                      }
+                      setNewTag('');
+                    }
+                  }}
+                />
+                <Button size="sm" variant="outline" className="rounded-xl h-8 px-2"
+                  onClick={() => {
+                    if (newTag.trim()) {
+                      const current = node.config?.autoTags || [];
+                      if (!current.includes(newTag.trim())) {
+                        updateConfig('autoTags', [...current, newTag.trim()]);
+                      }
+                      setNewTag('');
+                    }
+                  }}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Add to group */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Adicionar a grupo/lista</label>
+              <Select value={node.config?.addToGroupId || 'none'} onValueChange={v => updateConfig('addToGroupId', v === 'none' ? '' : v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue placeholder="Nenhum grupo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum grupo</SelectItem>
+                  {(contactGroups || []).map((g: any) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[9px] text-gray-400 mt-1">O contato será adicionado automaticamente ao grupo selecionado</p>
+            </div>
+
+            {/* Client type */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Tipo de contato</label>
+              <Select value={node.config?.clientType || 'lead'} onValueChange={v => updateConfig('clientType', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="prospect">Prospecto</SelectItem>
+                  <SelectItem value="partner">Parceiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes template */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Anotação automática</label>
+              <Textarea value={node.config?.autoNotes || ''} onChange={e => updateConfig('autoNotes', e.target.value)}
+                placeholder="Ex: Lead captado via webhook em {{data.data_pedido}}" className="rounded-xl text-xs min-h-[60px]" />
+            </div>
           </>
         )}
 

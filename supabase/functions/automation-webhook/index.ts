@@ -1,4 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  ExecutionContext,
+  executeCreateClient,
+  executeSendEmail,
+  executeSendWhatsApp,
+  executeUpdateClient,
+  executeCreateTask,
+  executeHttpRequest,
+  executeCreateProposal,
+  evaluateCondition,
+  evaluateFilter,
+} from "./actions.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,7 +48,7 @@ Deno.serve(async (req) => {
   try {
     const { data: automation, error: autoErr } = await supabase
       .from("automations")
-      .select("id, name, is_active, nodes, edges, company_id, created_by")
+      .select("id, name, is_active, nodes, edges, company_id, created_by, execution_count")
       .eq("id", automationId)
       .single();
 
@@ -94,16 +106,13 @@ Deno.serve(async (req) => {
 
     // === EXECUTION ENGINE ===
     const edges = Array.isArray(automation.edges) ? automation.edges : [];
-    const webhookNode = updatedNodes.find((n: any) => n.type === "webhook");
     const executionLog: any[] = [];
 
-    // Helper: resolve a value from incoming data using nested path (e.g. "user.name")
+    // Helper: resolve a value from incoming data using nested path
     const resolveValue = (path: string): unknown => {
       if (!path) return null;
-      // Handle template syntax {{data.field}}
       const templateMatch = path.match(/\{\{data\.(.+?)\}\}/);
       const fieldPath = templateMatch ? templateMatch[1] : path;
-      
       const parts = fieldPath.split(".");
       let current: any = incomingData;
       for (const part of parts) {
@@ -113,42 +122,132 @@ Deno.serve(async (req) => {
       return current;
     };
 
-    if (webhookNode) {
-      // Find all edges from webhook (including per-field edges)
-      const connectedEdges = edges.filter((e: any) => e.source === webhookNode.id);
-      
-      // Group edges by target node
-      const edgesByTarget: Record<string, any[]> = {};
-      for (const edge of connectedEdges) {
-        if (!edgesByTarget[edge.target]) edgesByTarget[edge.target] = [];
-        edgesByTarget[edge.target].push(edge);
-      }
+    // Helper: resolve template strings like "Hello {{data.name}}"
+    const resolveTemplate = (text: string): string => {
+      if (!text) return "";
+      return text.replace(/\{\{data\.(.+?)\}\}/g, (_: string, field: string) => {
+        return String(resolveValue(field) ?? "");
+      }).replace(/\{\{client\.(.+?)\}\}/g, (_: string, field: string) => {
+        // Resolve from created client data if available
+        return String(ctx.createdClientData?.[field] ?? resolveValue(field) ?? "");
+      });
+    };
 
-      for (const [targetId, targetEdges] of Object.entries(edgesByTarget)) {
-        const targetNode = updatedNodes.find((n: any) => n.id === targetId);
-        if (!targetNode) continue;
+    const ctx: ExecutionContext = {
+      supabase,
+      automation,
+      incomingData,
+      resolveValue,
+      resolveTemplate,
+    };
 
-        try {
-          if (targetNode.type === "create_client") {
-            await executeCreateClient(supabase, targetNode, targetEdges, incomingData, automation, resolveValue);
-            executionLog.push({ node: targetNode.id, type: "create_client", status: "success" });
-          } else if (targetNode.type === "send_email") {
-            executionLog.push({ node: targetNode.id, type: "send_email", status: "pending", message: "Email action queued" });
-          } else if (targetNode.type === "send_whatsapp") {
-            executionLog.push({ node: targetNode.id, type: "send_whatsapp", status: "pending", message: "WhatsApp action queued" });
-          } else {
-            executionLog.push({ node: targetNode.id, type: targetNode.type, status: "skipped" });
-          }
-        } catch (err: any) {
-          executionLog.push({ node: targetNode.id, type: targetNode.type, status: "error", error: err.message });
+    // Recursive graph traversal - execute node and all its downstream nodes
+    const executedNodes = new Set<string>();
+
+    async function executeNode(nodeId: string, incomingEdges: any[]) {
+      if (executedNodes.has(nodeId)) return; // prevent cycles
+      executedNodes.add(nodeId);
+
+      const node = updatedNodes.find((n: any) => n.id === nodeId);
+      if (!node) return;
+
+      try {
+        let result: any = null;
+        let shouldContinue = true;
+
+        switch (node.type) {
+          case "webhook":
+            // Trigger node - just pass through
+            result = { fields_detected: detectedFields };
+            break;
+
+          case "create_client":
+            result = await executeCreateClient(ctx, node, incomingEdges);
+            executionLog.push({ node: nodeId, type: "create_client", status: "success", result });
+            break;
+
+          case "send_email":
+            result = await executeSendEmail(ctx, node);
+            executionLog.push({ node: nodeId, type: "send_email", status: "success", result });
+            break;
+
+          case "send_whatsapp":
+            result = await executeSendWhatsApp(ctx, node);
+            executionLog.push({ node: nodeId, type: "send_whatsapp", status: "success", result });
+            break;
+
+          case "update_client":
+            result = await executeUpdateClient(ctx, node);
+            executionLog.push({ node: nodeId, type: "update_client", status: "success", result });
+            break;
+
+          case "create_task":
+            result = await executeCreateTask(ctx, node);
+            executionLog.push({ node: nodeId, type: "create_task", status: "success", result });
+            break;
+
+          case "http_request":
+            result = await executeHttpRequest(ctx, node);
+            executionLog.push({ node: nodeId, type: "http_request", status: "success", result });
+            break;
+
+          case "create_proposal":
+            result = await executeCreateProposal(ctx, node);
+            executionLog.push({ node: nodeId, type: "create_proposal", status: "success", result });
+            break;
+
+          case "condition":
+            shouldContinue = evaluateCondition(ctx, node);
+            executionLog.push({ node: nodeId, type: "condition", status: shouldContinue ? "passed" : "blocked", result: { condition: shouldContinue } });
+            break;
+
+          case "filter":
+            shouldContinue = evaluateFilter(ctx, node);
+            executionLog.push({ node: nodeId, type: "filter", status: shouldContinue ? "passed" : "blocked", result: { filter: shouldContinue } });
+            break;
+
+          case "delay":
+            // In webhook context, we can't truly delay, just log it
+            executionLog.push({ node: nodeId, type: "delay", status: "skipped", message: "Delay não aplicável em webhook síncrono" });
+            break;
+
+          case "transform_data":
+            executionLog.push({ node: nodeId, type: "transform_data", status: "success" });
+            break;
+
+          default:
+            executionLog.push({ node: nodeId, type: node.type, status: "skipped" });
         }
+
+        // If condition/filter blocked, don't continue downstream
+        if (!shouldContinue) return;
+
+        // Find downstream nodes and execute them
+        const outEdges = edges.filter((e: any) => e.source === nodeId);
+        const targetIds = [...new Set(outEdges.map((e: any) => e.target))];
+
+        for (const targetId of targetIds) {
+          const targetEdges = outEdges.filter((e: any) => e.target === targetId);
+          await executeNode(targetId, targetEdges);
+        }
+      } catch (err: any) {
+        console.error(`Error executing node ${nodeId} (${node.type}):`, err.message);
+        executionLog.push({ node: nodeId, type: node.type, status: "error", error: err.message });
       }
+    }
+
+    // Start from trigger nodes (webhook, new_client, etc.)
+    const triggerTypes = ["webhook", "new_client", "client_updated", "schedule", "proposal_status"];
+    const triggerNodes = updatedNodes.filter((n: any) => triggerTypes.includes(n.type));
+
+    for (const trigger of triggerNodes) {
+      await executeNode(trigger.id, []);
     }
 
     // Log execution
     await supabase.from("automation_executions").insert({
       automation_id: automationId,
-      status: "completed",
+      status: executionLog.some((l: any) => l.status === "error") ? "error" : "completed",
       trigger_data: incomingData,
       execution_log: { trigger: "webhook", fields_detected: detectedFields, actions: executionLog, timestamp: new Date().toISOString() },
       completed_at: new Date().toISOString(),
@@ -156,7 +255,7 @@ Deno.serve(async (req) => {
 
     // Update execution count
     await supabase.from("automations").update({
-      execution_count: (automation as any).execution_count ? (automation as any).execution_count + 1 : 1,
+      execution_count: (automation.execution_count || 0) + 1,
       last_executed_at: new Date().toISOString(),
     }).eq("id", automationId);
 
@@ -172,138 +271,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-// Field label -> DB column mapping
-const FIELD_LABEL_TO_COLUMN: Record<string, string> = {
-  "Nome": "name",
-  "Email": "email",
-  "Telefone": "phone",
-  "WhatsApp": "whatsapp",
-  "Status": "status",
-  "CPF/CNPJ": "cnpj_cpf",
-  "Empresa": "company_name",
-  "Tipo": "client_type",
-  "Profissão": "profession",
-  "Nascimento": "birth_date",
-  "Rua": "address_street",
-  "Número": "address_number",
-  "Cidade": "address_city",
-  "Estado": "address_state",
-  "CEP": "address_zip",
-  "Indústria": "industry",
-  "Porte": "company_size",
-  "Faturamento": "annual_revenue",
-  "Website": "website",
-  "LinkedIn": "linkedin",
-  "Instagram": "instagram",
-  "Facebook": "facebook",
-  "Anotações": "notes",
-  "Tags": "tags",
-};
-
-async function executeCreateClient(
-  supabase: any,
-  node: any,
-  edges: any[],
-  incomingData: Record<string, unknown>,
-  automation: any,
-  resolveValue: (path: string) => unknown,
-) {
-  const config = node.config || {};
-  
-  // Build client data from field-to-field edge connections
-  const clientData: Record<string, unknown> = {
-    company_id: automation.company_id,
-    created_by: automation.created_by,
-    status: config.defaultStatus || "lead",
-  };
-
-  // Process per-field connections (sourceField -> targetField)
-  for (const edge of edges) {
-    if (edge.sourceField && edge.targetField) {
-      const dbColumn = FIELD_LABEL_TO_COLUMN[edge.targetField];
-      if (dbColumn) {
-        const value = resolveValue(edge.sourceField);
-        if (value !== null && value !== undefined) {
-          if (dbColumn === "tags" && typeof value === "string") {
-            clientData[dbColumn] = value.split(",").map((t: string) => t.trim());
-          } else if (dbColumn === "annual_revenue") {
-            clientData[dbColumn] = typeof value === "number" ? value : parseFloat(String(value)) || null;
-          } else {
-            clientData[dbColumn] = String(value);
-          }
-        }
-      }
-    } else if (!edge.sourceField && !edge.targetField) {
-      // Generic connection: try to auto-map all incoming fields
-      for (const [key, val] of Object.entries(incomingData)) {
-        const lowerKey = key.toLowerCase();
-        if ((lowerKey.includes("nome") || lowerKey === "name") && !clientData.name) clientData.name = String(val);
-        if ((lowerKey.includes("email") || lowerKey === "email") && !clientData.email) clientData.email = String(val);
-        if ((lowerKey.includes("telefone") || lowerKey.includes("phone") || lowerKey.includes("celular")) && !clientData.phone) clientData.phone = String(val);
-        if ((lowerKey.includes("cpf") || lowerKey.includes("cnpj")) && !clientData.cnpj_cpf) clientData.cnpj_cpf = String(val);
-        if ((lowerKey.includes("whatsapp") || lowerKey === "wpp") && !clientData.whatsapp) clientData.whatsapp = String(val);
-      }
-    }
-  }
-
-  // Fallback: ensure name exists
-  if (!clientData.name) {
-    clientData.name = (incomingData["name"] || incomingData["nome"] || incomingData["nome_completo"] || "Contato via Webhook") as string;
-  }
-
-  // Apply origin
-  if (config.clientOrigin) {
-    const origin = config.clientOrigin === "outro" ? (config.clientOriginCustom || "outro") : config.clientOrigin;
-    clientData.notes = `${clientData.notes || ""}${clientData.notes ? "\n" : ""}Origem: ${origin}`.trim();
-  }
-
-  // Apply auto notes
-  if (config.autoNotes) {
-    let notes = config.autoNotes as string;
-    // Replace {{data.field}} templates
-    notes = notes.replace(/\{\{data\.(.+?)\}\}/g, (_: string, field: string) => {
-      return String(resolveValue(field) || "");
-    });
-    clientData.notes = `${clientData.notes || ""}${clientData.notes ? "\n" : ""}${notes}`.trim();
-  }
-
-  // Apply auto tags
-  if (config.autoTags && Array.isArray(config.autoTags) && config.autoTags.length > 0) {
-    const existingTags = Array.isArray(clientData.tags) ? clientData.tags : [];
-    clientData.tags = [...new Set([...existingTags, ...config.autoTags])];
-  }
-
-  // Apply client type
-  if (config.clientType) {
-    clientData.client_type = config.clientType;
-  }
-
-  // Insert the client
-  const { data: newClient, error } = await supabase
-    .from("clients")
-    .insert(clientData)
-    .select("id")
-    .single();
-
-  if (error) {
-    console.error("Error creating client:", error);
-    throw new Error(`Failed to create client: ${error.message}`);
-  }
-
-  // Add to group if configured
-  if (config.addToGroupId && newClient?.id) {
-    const phone = (clientData.phone || clientData.whatsapp || "") as string;
-    if (phone) {
-      await supabase.from("contact_group_members").insert({
-        group_id: config.addToGroupId,
-        client_id: newClient.id,
-        phone: phone,
-        name: clientData.name as string,
-      });
-    }
-  }
-
-  console.log("Client created successfully:", newClient?.id);
-  return newClient;
-}

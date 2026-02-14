@@ -41,6 +41,19 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
+  // Fetch email templates for the company
+  const { data: emailTemplates } = useQuery({
+    queryKey: ['email-templates-automation'],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).single();
+      if (!cu?.company_id) return [];
+      const { data } = await supabase.from('email_templates').select('id, name, html_content, category').eq('company_id', cu.company_id).eq('is_active', true).order('name');
+      return data || [];
+    },
+    enabled: !!user?.id && node.type === 'send_email',
+  });
+
   // Fetch contact groups for the company
   const { data: contactGroups, refetch: refetchGroups } = useQuery({
     queryKey: ['contact-groups-automation'],
@@ -682,6 +695,36 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
         {node.type === 'send_email' && (
           <>
             <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Template de Email</label>
+              <Select
+                value={node.config?.templateId || '_none'}
+                onValueChange={(val) => {
+                  if (val === '_none') {
+                    updateConfig('templateId', '');
+                    return;
+                  }
+                  updateConfig('templateId', val);
+                  const tpl = emailTemplates?.find(t => t.id === val);
+                  if (tpl) {
+                    updateConfig('body', tpl.html_content);
+                  }
+                }}
+              >
+                <SelectTrigger className="rounded-xl h-9 text-xs">
+                  <SelectValue placeholder="Selecione um template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Sem template (HTML manual)</SelectItem>
+                  {emailTemplates?.map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} {t.category ? `(${t.category})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Ao selecionar, o conteúdo será preenchido automaticamente</p>
+            </div>
+            <div>
               <label className="text-xs font-semibold text-gray-600 mb-1 block">Destinatário</label>
               <Input value={node.config?.to || ''} onChange={e => updateConfig('to', e.target.value)}
                 placeholder="{{client.email}}" className="rounded-xl h-9 text-xs" />
@@ -695,6 +738,37 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
               <label className="text-xs font-semibold text-gray-600 mb-1 block">Conteúdo HTML</label>
               <Textarea value={node.config?.body || ''} onChange={e => updateConfig('body', e.target.value)}
                 placeholder="<h1>Olá</h1>..." className="rounded-xl text-xs min-h-[100px]" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Campos Dinâmicos</label>
+              <p className="text-[9px] text-muted-foreground mb-1.5">Clique para copiar e cole no assunto ou conteúdo</p>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { label: 'Nome', value: '{{client.name}}' },
+                  { label: 'Email', value: '{{client.email}}' },
+                  { label: 'Telefone', value: '{{client.phone}}' },
+                  { label: 'WhatsApp', value: '{{client.whatsapp}}' },
+                  { label: 'Endereço', value: '{{client.address_street}}, {{client.address_number}} - {{client.address_city}}/{{client.address_state}}' },
+                  { label: 'CPF/CNPJ', value: '{{client.cnpj_cpf}}' },
+                  { label: 'Empresa', value: '{{client.company_name}}' },
+                  { label: 'Observações', value: '{{client.notes}}' },
+                  { label: 'Itens Comprados', value: '{{data.purchase_items}}' },
+                  { label: 'Valor Pago', value: '{{data.purchase_total}}' },
+                  { label: 'Data Compra', value: '{{data.purchase_date}}' },
+                ].map(f => (
+                  <Badge
+                    key={f.label}
+                    variant="outline"
+                    className="text-[10px] cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(f.value);
+                      toast({ title: "Copiado!", description: f.value });
+                    }}
+                  >
+                    {f.label}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </>
         )}

@@ -155,7 +155,20 @@ export async function executeSendEmail(ctx: ExecutionContext, node: any) {
 
   const to = resolveTemplate(config.to || "");
   const subject = resolveTemplate(config.subject || "");
-  const body = resolveTemplate(config.body || "");
+  let body = resolveTemplate(config.body || "");
+
+  // If a template ID is provided, fetch the template content from DB
+  if (config.templateId && config.templateId !== '_none') {
+    const { data: tpl } = await supabase
+      .from("email_templates")
+      .select("html_content")
+      .eq("id", config.templateId)
+      .single();
+
+    if (tpl?.html_content) {
+      body = resolveTemplate(tpl.html_content);
+    }
+  }
 
   if (!to) throw new Error("Destinatário de email não configurado");
 

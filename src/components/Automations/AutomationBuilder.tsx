@@ -345,7 +345,7 @@ export default function AutomationBuilder() {
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <AutomationSidebar onDragStart={handleDragStart} isExpanded={sidebarExpanded} onToggle={() => setSidebarExpanded(!sidebarExpanded)} />
         <AutomationCanvas
           nodes={nodes}

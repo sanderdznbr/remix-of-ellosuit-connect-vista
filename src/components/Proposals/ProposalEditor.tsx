@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, ChevronDown, ChevronUp, Upload, UserPlus, ZoomIn, ZoomOut, Maximize, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { ArrowLeft, Save, Download, Plus, Trash2, Users, Palette, FileText, ChevronDown, ChevronUp, Upload, UserPlus, ZoomIn, ZoomOut, Maximize, PanelLeft, PanelLeftClose, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ import html2canvas from 'html2canvas';
 import ProposalPreview from './ProposalPreview';
 import ProposalEditablePreview from './ProposalEditablePreview';
 import ProposalThemePanel from './ProposalThemePanel';
+import SendProposalDialog from './SendProposalDialog';
 
 const SUITE_COLOR = '#3000E3';
 
@@ -61,6 +62,7 @@ export default function ProposalEditor() {
   const [clientSearch, setClientSearch] = useState('');
   const [expandedItemIndex, setExpandedItemIndex] = useState<number | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const pdfRenderRef = useRef<HTMLDivElement>(null);
 
@@ -349,6 +351,13 @@ export default function ProposalEditor() {
             <Button variant="outline" size="sm" className="rounded-lg h-8 text-xs" onClick={generatePDF} disabled={items.length === 0}>
               <Download className="h-3.5 w-3.5" />
             </Button>
+            {proposalId && selectedClient && (
+              <Button size="sm" className="rounded-lg h-8 text-white gap-1.5 text-xs" style={{ background: '#16A34A' }}
+                onClick={() => setShowSendDialog(true)}>
+                <Send className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Enviar</span>
+              </Button>
+            )}
             <Button size="sm" className="rounded-lg h-8 text-white gap-1.5 text-xs" style={{ background: SUITE_COLOR }} onClick={handleSave} disabled={saving}>
               <Save className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{saving ? 'Salvando...' : 'Salvar'}</span>
@@ -663,6 +672,23 @@ export default function ProposalEditor() {
           templateId={theme.templateId}
         />
       </div>
+
+      {/* Send Dialog */}
+      {proposalId && selectedClient && (
+        <SendProposalDialog
+          open={showSendDialog}
+          onOpenChange={setShowSendDialog}
+          proposalId={proposalId}
+          proposalTitle={title}
+          clientName={selectedClient.name}
+          clientEmail={selectedClient.email}
+          clientPhone={selectedClient.phone}
+          onSent={() => {
+            setStatus('enviada');
+            queryClient.invalidateQueries({ queryKey: ['proposals'] });
+          }}
+        />
+      )}
     </div>
   );
 }

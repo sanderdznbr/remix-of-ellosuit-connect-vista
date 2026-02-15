@@ -177,11 +177,17 @@
   .dark .to-blue-50\/20 { --tw-gradient-to: hsl(var(--background)) !important; }
   .dark .to-gray-50 { --tw-gradient-to: hsl(var(--background)) !important; }
 
-  /* Fix gradient page backgrounds */
+  /* Fix gradient page backgrounds - force solid dark background */
+  .dark [class*="bg-gradient"][class*="from-gray"],
+  .dark [class*="bg-gradient"][class*="from-white"],
+  .dark [class*="bg-gradient"][class*="via-white"],
   .dark .bg-gradient-to-br.from-gray-50,
-  .dark .bg-gradient-to-b.from-gray-50,
-  .dark [class*="bg-gradient"][class*="from-gray-50"] {
+  .dark .bg-gradient-to-b.from-gray-50 {
     background: hsl(var(--background)) !important;
+  }
+  /* Ensure all min-h-screen containers use background in dark */
+  .dark .min-h-screen {
+    background-color: hsl(var(--background));
   }
 
   /* Fix hardcoded text colors */

@@ -23,6 +23,7 @@ REGRAS:
 - Se o usuário anexou um CSV/XLSX com contatos, use import_contacts
 - Se o usuário quer navegar para algum módulo, use navigate
 - Se o usuário quer criar pasta no drive, use create_folder
+- Se o usuário pede para salvar/anexar/enviar um arquivo MAS NÃO ANEXOU nenhum arquivo (não há "[Arquivo anexado:" na mensagem), use OBRIGATORIAMENTE a ação request_file para pedir que ele anexe o arquivo
 - Sempre confirme o que foi feito e pergunte se precisa de mais algo
 - Seja conciso mas informativo`;
 
@@ -96,6 +97,22 @@ const TOOLS = [
           message: { type: "string", description: "Mensagem de resposta ao usuário" }
         },
         required: ["message"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "request_file",
+      description: "Solicitar que o usuário anexe um arquivo quando ele pede para salvar/enviar/importar algo mas não anexou nenhum arquivo",
+      parameters: {
+        type: "object",
+        properties: {
+          message: { type: "string", description: "Mensagem pedindo para o usuário anexar o arquivo" },
+          purpose: { type: "string", enum: ["save_to_drive", "import_contacts", "general"], description: "Para que o arquivo será usado" },
+          folder_name: { type: "string", description: "Nome da pasta destino se mencionada (opcional)" }
+        },
+        required: ["message", "purpose"]
       }
     }
   }
@@ -246,6 +263,14 @@ async function executeAction(
 
     case 'general_response': {
       return { success: true, data: { action: 'message' }, message: args.message };
+    }
+
+    case 'request_file': {
+      return {
+        success: true,
+        data: { action: 'request_file', purpose: args.purpose, folder_name: args.folder_name },
+        message: args.message
+      };
     }
 
     default:

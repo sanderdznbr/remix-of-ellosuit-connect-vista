@@ -615,6 +615,16 @@ const AIAssistantHome: React.FC = () => {
                         Abrir Drive →
                       </button>
                     )}
+                    {msg.action?.action === 'request_file' && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                        style={{ backgroundColor: bgColor, color: 'white' }}
+                      >
+                        <UploadCloud className="h-3.5 w-3.5" />
+                        Anexar arquivo
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}

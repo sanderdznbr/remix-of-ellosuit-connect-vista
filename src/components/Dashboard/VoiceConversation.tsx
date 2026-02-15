@@ -224,19 +224,19 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ open, onClose, bg
         className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
         style={{ background: `linear-gradient(135deg, ${bgColor}, ${bgColor}dd, ${bgColor}bb)` }}
       >
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 pt-5 safe-top">
+        {/* Header - high z-index and safe padding for mobile */}
+        <div className="absolute top-0 left-0 right-0 z-[110] flex items-center justify-between px-5 pt-[env(safe-area-inset-top,20px)] pb-2">
           <button
             onClick={() => setMuted(!muted)}
-            className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="p-3.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all"
           >
-            {muted ? <VolumeX className="h-5 w-5 text-white/70" /> : <Volume2 className="h-5 w-5 text-white/70" />}
+            {muted ? <VolumeX className="h-6 w-6 text-white/80" /> : <Volume2 className="h-6 w-6 text-white/80" />}
           </button>
           <button
             onClick={() => { stopEverything(); onClose(); }}
-            className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="p-3.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all"
           >
-            <X className="h-5 w-5 text-white" />
+            <X className="h-6 w-6 text-white" />
           </button>
         </div>
 

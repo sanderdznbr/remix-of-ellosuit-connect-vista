@@ -156,23 +156,30 @@ async function executeTool(
     }
 
     case 'create_task': {
+      // Tasks are stored as calendar_events with event_type 'reminder'
+      const dueDate = (args.due_date as string) || new Date().toISOString().split('T')[0];
+      const startDate = `${dueDate}T08:00:00`;
+      const endDate = `${dueDate}T08:30:00`;
+
       const { data, error } = await supabase
-        .from('tasks')
+        .from('calendar_events')
         .insert({
           title: args.title as string,
           description: (args.description as string) || null,
-          priority: (args.priority as string) || 'medium',
-          due_date: (args.due_date as string) || null,
+          start_date: startDate,
+          end_date: endDate,
+          event_type: 'reminder',
           status: 'pending',
+          source: 'whatsapp',
           company_id: companyId,
           created_by: userId,
-          assigned_to: userId,
         })
         .select('id, title')
         .single();
 
+      console.log('🔧 create_task result:', { data, error });
       if (error) return `Erro ao criar tarefa: ${error.message}`;
-      return `Tarefa "${data.title}" criada com sucesso!`;
+      return `Tarefa "${data.title}" criada com sucesso para ${dueDate}!`;
     }
 
     case 'list_contacts': {

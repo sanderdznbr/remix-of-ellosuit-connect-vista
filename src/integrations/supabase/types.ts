@@ -606,6 +606,7 @@ export type Database = {
           company_size: string | null
           created_at: string
           created_by: string
+          custom_fields: Json | null
           email: string | null
           facebook: string | null
           id: string
@@ -639,6 +640,7 @@ export type Database = {
           company_size?: string | null
           created_at?: string
           created_by: string
+          custom_fields?: Json | null
           email?: string | null
           facebook?: string | null
           id?: string
@@ -672,6 +674,7 @@ export type Database = {
           company_size?: string | null
           created_at?: string
           created_by?: string
+          custom_fields?: Json | null
           email?: string | null
           facebook?: string | null
           id?: string

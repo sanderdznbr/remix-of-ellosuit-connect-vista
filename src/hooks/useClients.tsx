@@ -34,6 +34,7 @@ interface Client {
   company_size?: string;
   industry?: string;
   annual_revenue?: number;
+  custom_fields?: any;
 }
 
 export const useClients = (contactType: 'cliente' | 'fornecedor' | 'prospecto' | 'all' = 'all') => {

@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Upload, User, Building2, MapPin, Globe, Phone, Mail, 
   Briefcase, Calendar, Hash, Instagram, Linkedin, Facebook,
-  MessageCircle, FileText, Tag, X, Plus, CheckCircle2
+  MessageCircle, FileText, Tag, X, Plus, CheckCircle2,
+  ShoppingCart, DollarSign, Package, CreditCard, Truck, Receipt, Clock, Link2
 } from 'lucide-react';
 
 interface ClientFormProps {
@@ -69,34 +70,74 @@ const ClientForm = ({ client, open, onOpenChange, onSave }: ClientFormProps) => 
   const [activeTab, setActiveTab] = useState('personal');
   const [tagInput, setTagInput] = useState('');
 
-  const getInitialData = useCallback(() => ({
-    name: client?.name || '',
-    email: client?.email || '',
-    phone: client?.phone || '',
-    whatsapp: client?.whatsapp || '',
-    whatsapp_business: client?.whatsapp_business || '',
-    birth_date: client?.birth_date || '',
-    profession: client?.profession || '',
-    avatar_url: client?.avatar_url || '',
-    company_name: client?.company_name || '',
-    cnpj_cpf: client?.cnpj_cpf || '',
-    client_type: client?.client_type || 'individual',
-    company_size: client?.company_size || '',
-    industry: client?.industry || '',
-    annual_revenue: client?.annual_revenue ? maskCurrency(String(Math.round(client.annual_revenue * 100))) : '',
-    website: client?.website || '',
-    address_street: client?.address_street || '',
-    address_number: client?.address_number || '',
-    address_city: client?.address_city || '',
-    address_state: client?.address_state || '',
-    address_zip: client?.address_zip || '',
-    linkedin: client?.linkedin || '',
-    instagram: client?.instagram || '',
-    facebook: client?.facebook || '',
-    status: client?.status || 'active',
-    notes: client?.notes || '',
-    tags: client?.tags || [],
-  }), [client]);
+  const getInitialData = useCallback(() => {
+    const cf = client?.custom_fields || {};
+    return {
+      name: client?.name || '',
+      email: client?.email || '',
+      phone: client?.phone || '',
+      whatsapp: client?.whatsapp || '',
+      whatsapp_business: client?.whatsapp_business || '',
+      birth_date: client?.birth_date || '',
+      profession: client?.profession || '',
+      avatar_url: client?.avatar_url || '',
+      company_name: client?.company_name || '',
+      cnpj_cpf: client?.cnpj_cpf || '',
+      client_type: client?.client_type || 'individual',
+      company_size: client?.company_size || '',
+      industry: client?.industry || '',
+      annual_revenue: client?.annual_revenue ? maskCurrency(String(Math.round(client.annual_revenue * 100))) : '',
+      website: client?.website || '',
+      address_street: client?.address_street || '',
+      address_number: client?.address_number || '',
+      address_city: client?.address_city || '',
+      address_state: client?.address_state || '',
+      address_zip: client?.address_zip || '',
+      linkedin: client?.linkedin || '',
+      instagram: client?.instagram || '',
+      facebook: client?.facebook || '',
+      status: client?.status || 'active',
+      notes: client?.notes || '',
+      tags: client?.tags || [],
+      // Custom fields
+      custom_fields: {
+        // Produto / Compra
+        nome_produto: cf.nome_produto || '',
+        valor_produto: cf.valor_produto || '',
+        quantidade_produto: cf.quantidade_produto || '',
+        valor_total: cf.valor_total || '',
+        data_compra: cf.data_compra || '',
+        numero_pedido: cf.numero_pedido || '',
+        status_pedido: cf.status_pedido || '',
+        metodo_pagamento: cf.metodo_pagamento || '',
+        codigo_rastreio: cf.codigo_rastreio || '',
+        link_boleto: cf.link_boleto || '',
+        link_nota_fiscal: cf.link_nota_fiscal || '',
+        cupom_desconto: cf.cupom_desconto || '',
+        valor_desconto: cf.valor_desconto || '',
+        // Serviço / Agendamento
+        nome_servico: cf.nome_servico || '',
+        valor_servico: cf.valor_servico || '',
+        data_agendamento: cf.data_agendamento || '',
+        hora_agendamento: cf.hora_agendamento || '',
+        duracao_servico: cf.duracao_servico || '',
+        local_servico: cf.local_servico || '',
+        link_reuniao: cf.link_reuniao || '',
+        profissional_responsavel: cf.profissional_responsavel || '',
+        numero_os: cf.numero_os || '',
+        status_servico: cf.status_servico || '',
+        // Financeiro
+        valor_fatura: cf.valor_fatura || '',
+        data_vencimento: cf.data_vencimento || '',
+        numero_fatura: cf.numero_fatura || '',
+        status_pagamento: cf.status_pagamento || '',
+        link_pagamento: cf.link_pagamento || '',
+        saldo_devedor: cf.saldo_devedor || '',
+        proxima_parcela: cf.proxima_parcela || '',
+        valor_parcela: cf.valor_parcela || '',
+      },
+    };
+  }, [client]);
 
   const [formData, setFormData] = useState(getInitialData());
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -114,6 +155,13 @@ const ClientForm = ({ client, open, onOpenChange, onSave }: ClientFormProps) => 
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCustomFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      custom_fields: { ...prev.custom_fields, [field]: value },
+    }));
   };
 
   const handleMaskedChange = (field: string, value: string, maskFn: (v: string) => string) => {
@@ -167,6 +215,7 @@ const ClientForm = ({ client, open, onOpenChange, onSave }: ClientFormProps) => 
     company: <Building2 className="h-4 w-4" />,
     address: <MapPin className="h-4 w-4" />,
     social: <Globe className="h-4 w-4" />,
+    extras: <Package className="h-4 w-4" />,
   };
 
   return (
@@ -184,12 +233,12 @@ const ClientForm = ({ client, open, onOpenChange, onSave }: ClientFormProps) => 
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-4 h-11">
-              {(['personal', 'company', 'address', 'social'] as const).map(tab => (
-                <TabsTrigger key={tab} value={tab} className="flex items-center gap-2 text-xs sm:text-sm">
+            <TabsList className="grid w-full grid-cols-5 h-11">
+              {(['personal', 'company', 'address', 'social', 'extras'] as const).map(tab => (
+                <TabsTrigger key={tab} value={tab} className="flex items-center gap-1.5 text-xs sm:text-sm">
                   {tabIcons[tab]}
                   <span className="hidden sm:inline">
-                    {tab === 'personal' ? 'Pessoal' : tab === 'company' ? 'Empresa' : tab === 'address' ? 'Endereço' : 'Social'}
+                    {tab === 'personal' ? 'Pessoal' : tab === 'company' ? 'Empresa' : tab === 'address' ? 'Endereço' : tab === 'social' ? 'Social' : 'Adicionais'}
                   </span>
                 </TabsTrigger>
               ))}
@@ -562,6 +611,195 @@ const ClientForm = ({ client, open, onOpenChange, onSave }: ClientFormProps) => 
                   placeholder="Informações adicionais sobre o contato, preferências, anotações..."
                   className="rounded-xl resize-none"
                 />
+              </div>
+            </TabsContent>
+
+            {/* ====== EXTRAS (Adicionais) ====== */}
+            <TabsContent value="extras" className="space-y-6 mt-4">
+              {/* Produto / Compra */}
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3 text-foreground">
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground" /> Produto / Compra
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Nome do Produto</Label>
+                    <Input value={formData.custom_fields.nome_produto} onChange={e => handleCustomFieldChange('nome_produto', e.target.value)} placeholder="Ex: Plano Premium" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor do Produto (R$)</Label>
+                    <Input value={formData.custom_fields.valor_produto} onChange={e => handleCustomFieldChange('valor_produto', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Quantidade</Label>
+                    <Input value={formData.custom_fields.quantidade_produto} onChange={e => handleCustomFieldChange('quantidade_produto', e.target.value)} placeholder="1" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor Total (R$)</Label>
+                    <Input value={formData.custom_fields.valor_total} onChange={e => handleCustomFieldChange('valor_total', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Data da Compra</Label>
+                    <Input type="date" value={formData.custom_fields.data_compra} onChange={e => handleCustomFieldChange('data_compra', e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Nº do Pedido</Label>
+                    <Input value={formData.custom_fields.numero_pedido} onChange={e => handleCustomFieldChange('numero_pedido', e.target.value)} placeholder="#12345" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Status do Pedido</Label>
+                    <Select value={formData.custom_fields.status_pedido} onValueChange={v => handleCustomFieldChange('status_pedido', v)}>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="aprovado">Aprovado</SelectItem>
+                        <SelectItem value="enviado">Enviado</SelectItem>
+                        <SelectItem value="entregue">Entregue</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Método de Pagamento</Label>
+                    <Select value={formData.custom_fields.metodo_pagamento} onValueChange={v => handleCustomFieldChange('metodo_pagamento', v)}>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                        <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="transferencia">Transferência</SelectItem>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Código de Rastreio</Label>
+                    <Input value={formData.custom_fields.codigo_rastreio} onChange={e => handleCustomFieldChange('codigo_rastreio', e.target.value)} placeholder="BR123456789" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Cupom de Desconto</Label>
+                    <Input value={formData.custom_fields.cupom_desconto} onChange={e => handleCustomFieldChange('cupom_desconto', e.target.value)} placeholder="PROMO10" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor do Desconto (R$)</Label>
+                    <Input value={formData.custom_fields.valor_desconto} onChange={e => handleCustomFieldChange('valor_desconto', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Link do Boleto</Label>
+                    <Input value={formData.custom_fields.link_boleto} onChange={e => handleCustomFieldChange('link_boleto', e.target.value)} placeholder="https://..." className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Link da Nota Fiscal</Label>
+                    <Input value={formData.custom_fields.link_nota_fiscal} onChange={e => handleCustomFieldChange('link_nota_fiscal', e.target.value)} placeholder="https://..." className="rounded-xl" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Serviço / Agendamento */}
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3 text-foreground">
+                  <Calendar className="h-4 w-4 text-muted-foreground" /> Serviço / Agendamento
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Nome do Serviço</Label>
+                    <Input value={formData.custom_fields.nome_servico} onChange={e => handleCustomFieldChange('nome_servico', e.target.value)} placeholder="Ex: Consultoria Premium" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor do Serviço (R$)</Label>
+                    <Input value={formData.custom_fields.valor_servico} onChange={e => handleCustomFieldChange('valor_servico', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Data do Agendamento</Label>
+                    <Input type="date" value={formData.custom_fields.data_agendamento} onChange={e => handleCustomFieldChange('data_agendamento', e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Hora do Agendamento</Label>
+                    <Input type="time" value={formData.custom_fields.hora_agendamento} onChange={e => handleCustomFieldChange('hora_agendamento', e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Duração</Label>
+                    <Input value={formData.custom_fields.duracao_servico} onChange={e => handleCustomFieldChange('duracao_servico', e.target.value)} placeholder="Ex: 1 hora" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Local</Label>
+                    <Input value={formData.custom_fields.local_servico} onChange={e => handleCustomFieldChange('local_servico', e.target.value)} placeholder="Online - Zoom" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Link da Reunião</Label>
+                    <Input value={formData.custom_fields.link_reuniao} onChange={e => handleCustomFieldChange('link_reuniao', e.target.value)} placeholder="https://zoom.us/..." className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Profissional Responsável</Label>
+                    <Input value={formData.custom_fields.profissional_responsavel} onChange={e => handleCustomFieldChange('profissional_responsavel', e.target.value)} placeholder="Ex: Dr. Carlos" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Nº da OS</Label>
+                    <Input value={formData.custom_fields.numero_os} onChange={e => handleCustomFieldChange('numero_os', e.target.value)} placeholder="OS-2026-001" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Status do Serviço</Label>
+                    <Select value={formData.custom_fields.status_servico} onValueChange={v => handleCustomFieldChange('status_servico', v)}>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="agendado">Agendado</SelectItem>
+                        <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financeiro */}
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3 text-foreground">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" /> Financeiro
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor da Fatura (R$)</Label>
+                    <Input value={formData.custom_fields.valor_fatura} onChange={e => handleCustomFieldChange('valor_fatura', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Data de Vencimento</Label>
+                    <Input type="date" value={formData.custom_fields.data_vencimento} onChange={e => handleCustomFieldChange('data_vencimento', e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Nº da Fatura</Label>
+                    <Input value={formData.custom_fields.numero_fatura} onChange={e => handleCustomFieldChange('numero_fatura', e.target.value)} placeholder="FAT-001" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Status do Pagamento</Label>
+                    <Select value={formData.custom_fields.status_pagamento} onValueChange={v => handleCustomFieldChange('status_pagamento', v)}>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="pago">Pago</SelectItem>
+                        <SelectItem value="atrasado">Atrasado</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Link de Pagamento</Label>
+                    <Input value={formData.custom_fields.link_pagamento} onChange={e => handleCustomFieldChange('link_pagamento', e.target.value)} placeholder="https://..." className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Saldo Devedor (R$)</Label>
+                    <Input value={formData.custom_fields.saldo_devedor} onChange={e => handleCustomFieldChange('saldo_devedor', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Próxima Parcela</Label>
+                    <Input value={formData.custom_fields.proxima_parcela} onChange={e => handleCustomFieldChange('proxima_parcela', e.target.value)} placeholder="3/12" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Valor da Parcela (R$)</Label>
+                    <Input value={formData.custom_fields.valor_parcela} onChange={e => handleCustomFieldChange('valor_parcela', maskCurrency(e.target.value))} placeholder="0,00" className="rounded-xl" />
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

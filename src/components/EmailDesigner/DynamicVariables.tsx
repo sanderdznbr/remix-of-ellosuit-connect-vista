@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Braces, Search, User, Building2, Phone, Mail, MapPin, Tag, Calendar, Globe, Copy, ChevronDown } from 'lucide-react';
+import { Braces, Search, User, Building2, Phone, Mail, MapPin, Tag, Calendar, Globe, Copy, ChevronDown, ShoppingCart, DollarSign } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Variable {
@@ -32,27 +32,79 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: 'cpf_cnpj', label: 'CPF/CNPJ', example: '123.456.789-00' },
       { key: 'data_nascimento', label: 'Data de Nascimento', example: '15/03/1990' },
       { key: 'profissao', label: 'Profissão', example: 'Engenheiro' },
+      { key: 'avatar_url', label: 'Foto do Cliente', example: 'https://...' },
     ],
   },
   {
-    name: 'Empresa',
+    name: 'Empresa do Cliente',
     icon: <Building2 className="h-4 w-4" />,
     variables: [
       { key: 'empresa_cliente', label: 'Nome da Empresa', example: 'Tech Corp' },
       { key: 'setor_empresa', label: 'Setor/Indústria', example: 'Tecnologia' },
       { key: 'porte_empresa', label: 'Porte', example: 'Médio' },
       { key: 'website_cliente', label: 'Website', example: 'www.techcorp.com' },
+      { key: 'receita_anual', label: 'Receita Anual', example: 'R$ 500.000,00' },
     ],
   },
   {
     name: 'Endereço',
     icon: <MapPin className="h-4 w-4" />,
     variables: [
+      { key: 'endereco_completo', label: 'Endereço Completo', example: 'Rua das Flores, 123 - SP' },
       { key: 'rua_cliente', label: 'Rua', example: 'Rua das Flores' },
       { key: 'numero_cliente', label: 'Número', example: '123' },
       { key: 'cidade_cliente', label: 'Cidade', example: 'São Paulo' },
       { key: 'estado_cliente', label: 'Estado', example: 'SP' },
       { key: 'cep_cliente', label: 'CEP', example: '01234-567' },
+    ],
+  },
+  {
+    name: 'Produto / Compra',
+    icon: <ShoppingCart className="h-4 w-4" />,
+    variables: [
+      { key: 'nome_produto', label: 'Nome do Produto', example: 'Plano Premium' },
+      { key: 'valor_produto', label: 'Valor do Produto', example: 'R$ 199,90' },
+      { key: 'quantidade_produto', label: 'Quantidade', example: '2' },
+      { key: 'valor_total', label: 'Valor Total', example: 'R$ 399,80' },
+      { key: 'data_compra', label: 'Data da Compra', example: '15/02/2026' },
+      { key: 'numero_pedido', label: 'Número do Pedido', example: '#12345' },
+      { key: 'status_pedido', label: 'Status do Pedido', example: 'Aprovado' },
+      { key: 'metodo_pagamento', label: 'Método de Pagamento', example: 'Cartão de Crédito' },
+      { key: 'codigo_rastreio', label: 'Código de Rastreio', example: 'BR123456789' },
+      { key: 'link_boleto', label: 'Link do Boleto', example: 'https://...' },
+      { key: 'link_nota_fiscal', label: 'Link da Nota Fiscal', example: 'https://...' },
+      { key: 'cupom_desconto', label: 'Cupom de Desconto', example: 'PROMO10' },
+      { key: 'valor_desconto', label: 'Valor do Desconto', example: 'R$ 20,00' },
+    ],
+  },
+  {
+    name: 'Serviço / Agendamento',
+    icon: <Calendar className="h-4 w-4" />,
+    variables: [
+      { key: 'nome_servico', label: 'Nome do Serviço', example: 'Consultoria Premium' },
+      { key: 'valor_servico', label: 'Valor do Serviço', example: 'R$ 350,00' },
+      { key: 'data_agendamento', label: 'Data do Agendamento', example: '20/02/2026' },
+      { key: 'hora_agendamento', label: 'Hora do Agendamento', example: '14:00' },
+      { key: 'duracao_servico', label: 'Duração', example: '1 hora' },
+      { key: 'local_servico', label: 'Local', example: 'Online - Zoom' },
+      { key: 'link_reuniao', label: 'Link da Reunião', example: 'https://zoom.us/...' },
+      { key: 'profissional_responsavel', label: 'Profissional Responsável', example: 'Dr. Carlos' },
+      { key: 'numero_os', label: 'Número da OS', example: 'OS-2026-001' },
+      { key: 'status_servico', label: 'Status do Serviço', example: 'Em andamento' },
+    ],
+  },
+  {
+    name: 'Financeiro',
+    icon: <DollarSign className="h-4 w-4" />,
+    variables: [
+      { key: 'valor_fatura', label: 'Valor da Fatura', example: 'R$ 1.500,00' },
+      { key: 'data_vencimento', label: 'Data de Vencimento', example: '28/02/2026' },
+      { key: 'numero_fatura', label: 'Número da Fatura', example: 'FAT-001' },
+      { key: 'status_pagamento', label: 'Status do Pagamento', example: 'Pendente' },
+      { key: 'link_pagamento', label: 'Link de Pagamento', example: 'https://...' },
+      { key: 'saldo_devedor', label: 'Saldo Devedor', example: 'R$ 500,00' },
+      { key: 'proxima_parcela', label: 'Próxima Parcela', example: '3/12' },
+      { key: 'valor_parcela', label: 'Valor da Parcela', example: 'R$ 125,00' },
     ],
   },
   {
@@ -65,13 +117,28 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
     ],
   },
   {
+    name: 'Sua Empresa',
+    icon: <Building2 className="h-4 w-4" />,
+    variables: [
+      { key: 'nome_empresa', label: 'Nome da Sua Empresa', example: 'Minha Empresa LTDA' },
+      { key: 'email_empresa', label: 'E-mail da Empresa', example: 'contato@empresa.com' },
+      { key: 'telefone_empresa', label: 'Telefone da Empresa', example: '(11) 3333-4444' },
+      { key: 'site_empresa', label: 'Site da Empresa', example: 'www.empresa.com' },
+      { key: 'endereco_empresa', label: 'Endereço da Empresa', example: 'Av. Paulista, 1000' },
+      { key: 'cnpj_empresa', label: 'CNPJ da Empresa', example: '12.345.678/0001-90' },
+    ],
+  },
+  {
     name: 'Outros',
     icon: <Tag className="h-4 w-4" />,
     variables: [
-      { key: 'status_cliente', label: 'Status', example: 'Ativo' },
+      { key: 'status_cliente', label: 'Status do Cliente', example: 'Ativo' },
       { key: 'tags_cliente', label: 'Tags', example: 'VIP, Premium' },
       { key: 'notas_cliente', label: 'Observações', example: 'Cliente preferencial' },
       { key: 'data_cadastro', label: 'Data de Cadastro', example: '01/01/2025' },
+      { key: 'data_atual', label: 'Data Atual', example: '15/02/2026' },
+      { key: 'link_descadastro', label: 'Link de Descadastro', example: 'https://...' },
+      { key: 'link_preferencias', label: 'Link de Preferências', example: 'https://...' },
     ],
   },
 ];

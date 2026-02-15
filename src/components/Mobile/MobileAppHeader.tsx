@@ -4,8 +4,9 @@ import {
   Menu, Bell, X, ChevronDown,
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, Eye, BarChart3, FolderOpen, Settings, Shield, HelpCircle,
-  GitBranch, Briefcase, Home, LogOut, User, CreditCard
+  GitBranch, Briefcase, Home, LogOut, User, CreditCard, Moon, Sun
 } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -73,6 +74,7 @@ const MobileAppHeader = () => {
   const { color: hubColor } = useHubColor();
   const [open, setOpen] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const { theme, toggleTheme } = useTheme();
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || 'US';
@@ -206,10 +208,18 @@ const MobileAppHeader = () => {
             <img src={logoEllo} alt="ElloSuit" className="h-7 w-auto brightness-0 invert" />
           </button>
 
-          <button className="p-2 -mr-2 rounded-lg text-white active:bg-white/10 transition-colors relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">3</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-white active:bg-white/10 transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <button className="p-2 -mr-2 rounded-lg text-white active:bg-white/10 transition-colors relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">3</span>
+            </button>
+          </div>
         </div>
       </header>
     </>

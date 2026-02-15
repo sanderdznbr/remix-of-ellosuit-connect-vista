@@ -278,10 +278,10 @@ const AIAssistantHome: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] transition-colors duration-500" style={{ backgroundColor: bgColor }}>
+    <div className="flex flex-col h-full transition-colors duration-500" style={{ backgroundColor: bgColor }}>
       {!hasChat ? (
         /* Empty state - greeting + suggestions + input inline */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 overflow-y-auto py-6">
           <div className="w-full max-w-2xl text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}

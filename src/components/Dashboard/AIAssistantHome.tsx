@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Volume2, Phone } from 'lucide-react';
+import VoiceConversation from './VoiceConversation';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +65,7 @@ const AIAssistantHome: React.FC = () => {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSpeakRef = useRef<string | null>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const bgColor = hubColor || DEFAULT_COLOR;
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
@@ -452,6 +454,13 @@ const AIAssistantHome: React.FC = () => {
         {/* Voice controls bar */}
         <div className="flex items-center justify-center gap-3 mt-2">
           <button
+            onClick={() => setVoiceOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all bg-white/20 text-white border border-white/20 hover:bg-white/30"
+          >
+            <Phone className="h-3 w-3" />
+            Conversar por voz
+          </button>
+          <button
             onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
               voiceEnabled
@@ -619,6 +628,14 @@ const AIAssistantHome: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Voice Conversation Overlay */}
+      <VoiceConversation
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        bgColor={bgColor}
+        companyId={companyId}
+      />
     </div>
   );
 };

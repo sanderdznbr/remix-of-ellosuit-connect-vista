@@ -1,5 +1,63 @@
 
 /* Mobile-First Design System */
+
+/* Dark mode overrides for mobile utility classes */
+.dark .mobile-card {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-header-blur {
+  background-color: hsl(var(--background) / 0.95) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-list-item {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-list-item:active {
+  background-color: hsl(var(--accent)) !important;
+}
+.dark .mobile-modal-content,
+.dark .mobile-modal {
+  background-color: hsl(var(--card)) !important;
+}
+.dark .mobile-section-header {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+.dark .mobile-button-secondary {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+.dark .mobile-input {
+  background-color: hsl(var(--muted)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-meeting-layout {
+  background: hsl(var(--background)) !important;
+}
+.dark .mobile-meeting-header {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-participant-card {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+.dark .mobile-controls {
+  background: hsl(var(--card) / 0.95) !important;
+}
+.dark .mobile-divider {
+  background-color: hsl(var(--border)) !important;
+}
+.dark .modal-header,
+.dark .modal-footer {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .participant-item-mobile {
+  border-color: hsl(var(--border)) !important;
+}
+
 :root {
   /* iOS-like Typography Scale */
   --mobile-text-xs: 0.75rem;    /* 12px */

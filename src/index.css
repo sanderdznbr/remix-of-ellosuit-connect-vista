@@ -153,7 +153,8 @@
   .dark .bg-red-50,
   .dark .bg-orange-50,
   .dark .bg-yellow-50,
-  .dark .bg-indigo-50 {
+  .dark .bg-indigo-50,
+  .dark .bg-amber-50 {
     background-color: hsl(var(--accent)) !important;
   }
   .dark .bg-blue-100,
@@ -162,8 +163,53 @@
   .dark .bg-red-100,
   .dark .bg-orange-100,
   .dark .bg-yellow-100,
-  .dark .bg-indigo-100 {
+  .dark .bg-indigo-100,
+  .dark .bg-amber-100 {
     background-color: hsl(var(--accent)) !important;
+  }
+
+  /* Fix gradient backgrounds for dark mode */
+  .dark .from-gray-50 { --tw-gradient-from: hsl(var(--background)) !important; }
+  .dark .from-white { --tw-gradient-from: hsl(var(--background)) !important; }
+  .dark .via-white { --tw-gradient-via: hsl(var(--background)) !important; }
+  .dark .to-white { --tw-gradient-to: hsl(var(--background)) !important; }
+  .dark .to-blue-50\/20 { --tw-gradient-to: hsl(var(--background)) !important; }
+  .dark .to-gray-50 { --tw-gradient-to: hsl(var(--background)) !important; }
+
+  /* Fix gradient page backgrounds */
+  .dark .bg-gradient-to-br.from-gray-50,
+  .dark .bg-gradient-to-b.from-gray-50,
+  .dark [class*="bg-gradient"][class*="from-gray-50"] {
+    background: hsl(var(--background)) !important;
+  }
+
+  /* Fix hardcoded text colors */
+  .dark .text-black { color: hsl(var(--foreground)) !important; }
+  
+  /* Fix bg-gray-900 text-white buttons in dark mode (inverted buttons) */
+  .dark .bg-gray-900 {
+    background-color: hsl(var(--foreground)) !important;
+  }
+  
+  /* Fix inline onMouseEnter/Leave white backgrounds */
+  .dark [style*="background-color: white"],
+  .dark [style*="backgroundColor: white"],
+  .dark [style*="background-color:white"] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Fix border-gray-100/80 opacity variant */
+  .dark [class*="border-gray-100"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Fix CartesianGrid and chart axis text */
+  .dark .recharts-cartesian-grid line {
+    stroke: hsl(var(--border)) !important;
+  }
+  .dark .recharts-xAxis .recharts-cartesian-axis-tick text,
+  .dark .recharts-yAxis .recharts-cartesian-axis-tick text {
+    fill: hsl(var(--muted-foreground)) !important;
   }
 
   /* FullCalendar dark mode */

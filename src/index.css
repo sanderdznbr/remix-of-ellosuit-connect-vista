@@ -83,7 +83,8 @@
     background-color: hsl(var(--card)) !important;
   }
   .dark .bg-gray-50,
-  .dark .bg-gray-100 {
+  .dark .bg-gray-100,
+  .dark [class*="bg-gray-100\/"] {
     background-color: hsl(var(--muted)) !important;
   }
   .dark .bg-gray-50\/30 {

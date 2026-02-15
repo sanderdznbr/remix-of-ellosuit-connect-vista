@@ -30,10 +30,12 @@ export type ConditionType =
 export type ActionType = 
   | 'assign_tag'
   | 'transfer_human'
+  | 'transfer_ai_agent'
   | 'save_crm'
   | 'send_email'
   | 'call_api'
-  | 'set_variable';
+  | 'set_variable'
+  | 'lookup_account';
 
 export type DelayType = 
   | 'wait_seconds'

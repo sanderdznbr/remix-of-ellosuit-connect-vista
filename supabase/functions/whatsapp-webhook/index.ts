@@ -1440,6 +1440,198 @@ Deno.serve(async (req) => {
                                   .eq('id', activeExec.id);
 
                                 chatbotHandled = true;
+                              // ===== LOOKUP ACCOUNT ACTION =====
+                              } else if (actionSubType === 'lookup_account') {
+                                console.log(`🤖🔄 [CHATBOT] Lookup account action`);
+                                // The user's last message should contain their email
+                                const emailInput = (content || '').trim().toLowerCase();
+                                const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+                                const emailMatch = emailInput.match(emailRegex);
+                                
+                                const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                const vars = (activeExec.variables as Record<string, unknown>) || {};
+                                
+                                if (emailMatch) {
+                                  const email = emailMatch[0];
+                                  console.log(`🤖🔄 [CHATBOT] Looking up account for: ${email}`);
+                                  
+                                  // Search for user by email using service role
+                                  const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+                                  const foundUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === email);
+                                  
+                                  if (foundUser) {
+                                    // Get company info
+                                    const { data: compUser } = await supabase
+                                      .from('company_users')
+                                      .select('company_id, role')
+                                      .eq('user_id', foundUser.id)
+                                      .limit(1)
+                                      .single();
+                                    
+                                    if (compUser) {
+                                      const { data: comp } = await supabase
+                                        .from('companies')
+                                        .select('name')
+                                        .eq('id', compUser.company_id)
+                                        .single();
+                                      
+                                      const userName = foundUser.user_metadata?.username || foundUser.email?.split('@')[0] || 'Usuário';
+                                      const companyName = comp?.name || 'N/A';
+                                      
+                                      // Store in execution variables
+                                      await supabase.from('chatbot_executions').update({
+                                        current_node_id: nextNodeId,
+                                        execution_path: [...execPath, nextNodeId],
+                                        variables: {
+                                          ...vars,
+                                          email,
+                                          authenticated_user_id: foundUser.id,
+                                          authenticated_company_id: compUser.company_id,
+                                          authenticated_user_name: userName,
+                                          authenticated_company_name: companyName,
+                                          account_found: 'true',
+                                        },
+                                      }).eq('id', activeExec.id);
+                                      
+                                      console.log(`🤖🔄 [CHATBOT] Account found: ${userName} (${companyName})`);
+                                    } else {
+                                      await supabase.from('chatbot_executions').update({
+                                        current_node_id: nextNodeId,
+                                        execution_path: [...execPath, nextNodeId],
+                                        variables: { ...vars, email, account_found: 'false' },
+                                      }).eq('id', activeExec.id);
+                                    }
+                                  } else {
+                                    await supabase.from('chatbot_executions').update({
+                                      current_node_id: nextNodeId,
+                                      execution_path: [...execPath, nextNodeId],
+                                      variables: { ...vars, email, account_found: 'false' },
+                                    }).eq('id', activeExec.id);
+                                  }
+                                } else {
+                                  // Not an email - store as not found
+                                  await supabase.from('chatbot_executions').update({
+                                    current_node_id: nextNodeId,
+                                    execution_path: [...execPath, nextNodeId],
+                                    variables: { ...vars, account_found: 'false' },
+                                  }).eq('id', activeExec.id);
+                                }
+                                
+                                // Now follow the edge from this action node to the next node (condition checking account_found)
+                                const afterActionEdge = edges.find((e: any) => e.source === nextNodeId);
+                                if (afterActionEdge) {
+                                  const afterNode = nodes.find((n: any) => n.id === afterActionEdge.target);
+                                  if (afterNode && afterNode.type === 'condition') {
+                                    // Re-read updated variables
+                                    const { data: updatedExec } = await supabase
+                                      .from('chatbot_executions')
+                                      .select('variables')
+                                      .eq('id', activeExec.id)
+                                      .single();
+                                    const updVars = (updatedExec?.variables as Record<string, string>) || {};
+                                    const checkVar = afterNode.data?.config?.variable || 'account_found';
+                                    const checkValue = afterNode.data?.config?.value || 'true';
+                                    const varValue = updVars[checkVar] || '';
+                                    
+                                    // Find correct edge based on condition result
+                                    const condResult = varValue === checkValue;
+                                    const condEdge = edges.find((e: any) => 
+                                      e.source === afterNode.id && e.sourceHandle === (condResult ? 'true' : 'false')
+                                    ) || edges.find((e: any) => 
+                                      e.source === afterNode.id && e.sourceHandle === (condResult ? 'yes' : 'no')
+                                    );
+                                    
+                                    if (condEdge) {
+                                      const responseNode = nodes.find((n: any) => n.id === condEdge.target);
+                                      if (responseNode && responseNode.type === 'message' && serverUrl) {
+                                        let rMsg = responseNode.data?.config?.content || '';
+                                        rMsg = rMsg.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => updVars[key] || `{{${key}}}`);
+                                        
+                                        const rButtons: string[] = responseNode.data?.config?.buttons || [];
+                                        if (rButtons.length > 0) {
+                                          rMsg += '\n\n' + rButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                                        }
+                                        
+                                        const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                                        const sendRes = await fetch(`${serverUrl}/api/message/send`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ instanceName: instanceName2, jid, message: { text: rMsg } }),
+                                        });
+                                        
+                                        if (sendRes.ok) {
+                                          await supabase.from('whatsapp_messages').insert({
+                                            company_id: companyId, session_id: targetSessionId,
+                                            conversation_id: conversation.id, content: rMsg,
+                                            from_me: true, status: 'sent', message_type: 'text', sender_name: 'Chatbot',
+                                          });
+                                          
+                                          const updPath = [...execPath, nextNodeId, afterNode.id, responseNode.id];
+                                          const hasMore = edges.some((e: any) => e.source === responseNode.id);
+                                          await supabase.from('chatbot_executions').update({
+                                            current_node_id: responseNode.id,
+                                            execution_path: updPath,
+                                            ...(hasMore ? {} : { status: 'completed', completed_at: new Date().toISOString() }),
+                                          }).eq('id', activeExec.id);
+                                        }
+                                      } else if (responseNode && responseNode.type === 'action') {
+                                        // The condition leads to another action (e.g., transfer_ai_agent)
+                                        // Update execution to point to this action node so next message triggers it
+                                        const updPath2 = [...execPath, nextNodeId, afterNode.id, responseNode.id];
+                                        await supabase.from('chatbot_executions').update({
+                                          current_node_id: afterNode.id,
+                                          execution_path: updPath2,
+                                        }).eq('id', activeExec.id);
+                                        
+                                        // If it's transfer_ai_agent, execute it immediately
+                                        const actionSub = responseNode.subType || responseNode.data?.config?.actionType || '';
+                                        if (actionSub === 'transfer_ai_agent') {
+                                          const agentIdLookup = responseNode.data?.config?.agentId;
+                                          if (agentIdLookup) {
+                                            await supabase.from('whatsapp_conversations').update({
+                                              assigned_agent_id: agentIdLookup,
+                                              ai_auto_reply_enabled: true,
+                                            }).eq('id', conversation.id);
+                                            
+                                            await supabase.from('whatsapp_messages').insert({
+                                              company_id: companyId, session_id: targetSessionId,
+                                              conversation_id: conversation.id,
+                                              content: '🤖 Agente de IA entrou na conversa.',
+                                              from_me: true, status: 'sent', message_type: 'system', sender_name: 'Sistema',
+                                            });
+                                            
+                                            await supabase.from('chatbot_executions').update({
+                                              status: 'completed', completed_at: new Date().toISOString(),
+                                            }).eq('conversation_id', conversation.id).eq('status', 'running');
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                                
+                                chatbotHandled = true;
+                              // ===== SET VARIABLE ACTION =====
+                              } else if (actionSubType === 'set_variable') {
+                                const varName = nextNode.data?.config?.variableName || '';
+                                const varValue = nextNode.data?.config?.variableValue || content || '';
+                                console.log(`🤖🔄 [CHATBOT] Set variable: ${varName} = ${varValue}`);
+                                
+                                const execPath = Array.isArray(activeExec.execution_path) ? activeExec.execution_path : [];
+                                const vars = (activeExec.variables as Record<string, unknown>) || {};
+                                
+                                await supabase.from('chatbot_executions').update({
+                                  current_node_id: nextNodeId,
+                                  execution_path: [...execPath, nextNodeId],
+                                  variables: { ...vars, [varName]: varValue },
+                                }).eq('id', activeExec.id);
+                                
+                                // Auto-follow to next node
+                                const nextEdge = edges.find((e: any) => e.source === nextNodeId);
+                                if (nextEdge) {
+                                  // Will be processed on next message
+                                }
+                                chatbotHandled = true;
                               }
                             } else if (serverUrl && nextNode.type === 'message') {
                               const vars = (activeExec.variables as Record<string, string>) || {};
@@ -1606,6 +1798,233 @@ Deno.serve(async (req) => {
                       const agentMaxChars = (agentSettings.maxResponseChars as number) ?? 500;
                       const agentHumor = (agentSettings.humor as string) ?? 'profissional';
                       const MESSAGE_SEPARATOR = '|||';
+                      
+                      // ============== PLATFORM AGENT: Route to ellosuit-whatsapp-agent ==============
+                      const isPlatformAgent = !!(agentSettings.is_platform_agent);
+                      if (isPlatformAgent) {
+                        console.log('🤖🌐 [PLATFORM-AGENT] Detected platform agent, routing to ellosuit-whatsapp-agent');
+                        
+                        // Get authenticated user context from chatbot execution variables
+                        let authenticatedUserId = '';
+                        let authenticatedCompanyId = '';
+                        
+                        // Look for the most recent completed chatbot execution for this conversation
+                        const { data: recentExec } = await supabase
+                          .from('chatbot_executions')
+                          .select('variables')
+                          .eq('conversation_id', conversation.id)
+                          .order('started_at', { ascending: false })
+                          .limit(1)
+                          .single();
+                        
+                        if (recentExec?.variables) {
+                          const vars = recentExec.variables as Record<string, string>;
+                          authenticatedUserId = vars.authenticated_user_id || '';
+                          authenticatedCompanyId = vars.authenticated_company_id || '';
+                          console.log(`🤖🌐 [PLATFORM-AGENT] Auth context: userId=${authenticatedUserId}, companyId=${authenticatedCompanyId}`);
+                        }
+                        
+                        if (!authenticatedUserId || !authenticatedCompanyId) {
+                          console.log('🤖🌐 [PLATFORM-AGENT] No auth context found, sending error message');
+                          // Send message asking to re-authenticate
+                          const { data: sessionData } = await supabase
+                            .from('whatsapp_sessions')
+                            .select('baileys_server_url, instance_name')
+                            .eq('id', targetSessionId)
+                            .single();
+                          if (sessionData?.baileys_server_url) {
+                            const jid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
+                            await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                instanceName: sessionData.instance_name,
+                                jid,
+                                message: { text: 'Sua sessão expirou. Por favor, envie "oi" para iniciar uma nova autenticação.' }
+                              }),
+                            });
+                          }
+                          // Disable AI and let chatbot re-trigger
+                          await supabase
+                            .from('whatsapp_conversations')
+                            .update({ ai_auto_reply_enabled: false, assigned_agent_id: null })
+                            .eq('id', conversation.id);
+                          break;
+                        }
+                        
+                        // Transcribe audio if needed
+                        let platformInputContent = content;
+                        if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
+                          try {
+                            const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                            if (ELEVENLABS_API_KEY) {
+                              const audioResp = await fetch(mediaUrl);
+                              if (audioResp.ok) {
+                                const audioBuffer = await audioResp.arrayBuffer();
+                                const scribeForm = new FormData();
+                                scribeForm.append('file', new Blob([audioBuffer], { type: 'audio/ogg' }), 'audio.ogg');
+                                scribeForm.append('model_id', 'scribe_v2');
+                                scribeForm.append('language_code', 'por');
+                                const scribeResp = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+                                  method: 'POST',
+                                  headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+                                  body: scribeForm,
+                                });
+                                if (scribeResp.ok) {
+                                  const scribeResult = await scribeResp.json();
+                                  if (scribeResult.text?.trim()?.length > 2) {
+                                    platformInputContent = scribeResult.text.trim();
+                                    await supabase.from('whatsapp_messages').update({ content: `🎙️ ${platformInputContent}` }).eq('wa_message_id', messageId);
+                                  }
+                                }
+                              }
+                            }
+                          } catch (sttErr) {
+                            console.error('🤖🌐 [PLATFORM-AGENT] STT error:', sttErr);
+                          }
+                        }
+                        
+                        // Load conversation history
+                        const { data: histMsgs } = await supabase
+                          .from('whatsapp_messages')
+                          .select('from_me, content, is_ai_response')
+                          .eq('conversation_id', conversation.id)
+                          .neq('wa_message_id', messageId)
+                          .order('timestamp', { ascending: false })
+                          .limit(10);
+                        
+                        const history = (histMsgs || []).reverse().map((m: any) => ({
+                          role: m.from_me ? 'assistant' : 'user',
+                          content: m.content || ''
+                        }));
+                        
+                        // Call ellosuit-whatsapp-agent
+                        const agentResp = await fetch(`${SUPABASE_URL}/functions/v1/ellosuit-whatsapp-agent`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                          },
+                          body: JSON.stringify({
+                            messages: [...history, { role: 'user', content: platformInputContent }],
+                            userId: authenticatedUserId,
+                            companyId: authenticatedCompanyId,
+                            contactPhone: phoneNumber,
+                            agentInstructions: agent.instructions,
+                            agentPersonality: agent.personality,
+                            agentSettings: agentSettings,
+                          }),
+                        });
+                        
+                        if (agentResp.ok) {
+                          const agentData = await agentResp.json();
+                          let aiReply = agentData.response || '';
+                          
+                          if (aiReply) {
+                            // Clean markdown
+                            aiReply = aiReply
+                              .replace(/\*\*(.*?)\*\*/g, '$1')
+                              .replace(/\*(.*?)\*/g, '$1')
+                              .replace(/#{1,6}\s?/g, '')
+                              .replace(/`{1,3}(.*?)`{1,3}/gs, '$1')
+                              .replace(/\[(.*?)\]\((.*?)\)/g, '$2')
+                              .trim();
+                            
+                            // Check for handoff
+                            const isHandoff = aiReply.includes('[HANDOFF]');
+                            if (isHandoff) aiReply = aiReply.replace('[HANDOFF]', '').trim();
+                            
+                            // Remove stage tags
+                            aiReply = aiReply.replace(/\[STAGE:\w+\]/g, '').trim();
+                            
+                            // Send response
+                            const { data: sessionData } = await supabase
+                              .from('whatsapp_sessions')
+                              .select('baileys_server_url, instance_name')
+                              .eq('id', targetSessionId)
+                              .single();
+                            
+                            if (sessionData?.baileys_server_url) {
+                              const sendJid = remoteJid.includes('@') ? remoteJid : `${phoneNumber}@s.whatsapp.net`;
+                              const aiMsgId = `ai-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                              
+                              // Determine audio mode
+                              const audioResponseMode = (agentSettings.audioResponseMode as string) || 'disabled';
+                              const ttsVoice = (agentSettings.ttsVoice as string) || 'nova';
+                              const shouldSendAudio = audioResponseMode === 'always' || 
+                                (audioResponseMode === 'when_audio' && (messageType === 'audio' || messageType === 'ptt'));
+                              
+                              let sendSuccess = false;
+                              
+                              if (shouldSendAudio) {
+                                // Generate TTS
+                                const ttsResp = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+                                  body: JSON.stringify({ text: aiReply, voice: ttsVoice, speed: 1.0, format: 'opus' }),
+                                });
+                                if (ttsResp.ok) {
+                                  const ttsData = await ttsResp.json();
+                                  const audioFileName = `ai-audio/${aiMsgId}.ogg`;
+                                  const binaryStr = atob(ttsData.audio_base64);
+                                  const bytes = new Uint8Array(binaryStr.length);
+                                  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+                                  
+                                  const { error: uploadErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, bytes, { contentType: 'audio/ogg; codecs=opus', upsert: true });
+                                  if (!uploadErr) {
+                                    const { data: pubUrl } = supabase.storage.from('whatsapp-media').getPublicUrl(audioFileName);
+                                    const voiceResp = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ instanceName: sessionData.instance_name, jid: sendJid, audioUrl: pubUrl.publicUrl, mimetype: 'audio/ogg; codecs=opus' }),
+                                    });
+                                    sendSuccess = voiceResp.ok;
+                                    if (sendSuccess) {
+                                      await supabase.from('whatsapp_messages').insert({
+                                        conversation_id: conversation.id, session_id: targetSessionId, company_id: companyId,
+                                        wa_message_id: aiMsgId, from_me: true, content: '[Áudio]', message_type: 'ptt',
+                                        media_url: pubUrl.publicUrl, status: 'sent', is_ai_response: true, sender_name: agent.name,
+                                      });
+                                    }
+                                  }
+                                }
+                              }
+                              
+                              if (!sendSuccess) {
+                                // Send as text
+                                const sendResp = await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ instanceName: sessionData.instance_name, jid: sendJid, message: { text: aiReply } }),
+                                });
+                                sendSuccess = sendResp.ok;
+                                await supabase.from('whatsapp_messages').insert({
+                                  conversation_id: conversation.id, session_id: targetSessionId, company_id: companyId,
+                                  wa_message_id: aiMsgId, from_me: true, content: aiReply, message_type: 'text',
+                                  status: sendSuccess ? 'sent' : 'failed', is_ai_response: true, sender_name: agent.name,
+                                });
+                              }
+                              
+                              // Update conversation
+                              const convUpd: Record<string, unknown> = {
+                                last_message: shouldSendAudio && sendSuccess ? '🎙️ Áudio' : aiReply.substring(0, 100),
+                                last_message_at: new Date().toISOString(),
+                              };
+                              if (isHandoff) {
+                                convUpd.ai_auto_reply_enabled = false;
+                                convUpd.assigned_agent_id = null;
+                              }
+                              await supabase.from('whatsapp_conversations').update(convUpd).eq('id', conversation.id);
+                            }
+                          }
+                        } else {
+                          console.error('🤖🌐 [PLATFORM-AGENT] Agent call failed:', await agentResp.text());
+                        }
+                        
+                        // Skip normal AI flow - platform agent handled it
+                        break;
+                      }
+                      // ============== END PLATFORM AGENT ==============
                       
                       // Build proper system prompt - concise, one message at a time
                       const systemPrompt = [

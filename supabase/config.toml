@@ -63,3 +63,6 @@ verify_jwt = false
 [functions.elevenlabs-stt]
 verify_jwt = false
 
+[functions.ellosuit-whatsapp-agent]
+verify_jwt = false
+

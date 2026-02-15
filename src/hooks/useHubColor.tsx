@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export const OMNI_COLOR = '#FF4500';
 export const FLOW_COLOR = '#007DE3';
@@ -58,18 +59,24 @@ export function useHubColor() {
   const location = useLocation();
   const path = location.pathname;
   
+  let color = DEFAULT_COLOR;
+  let hub: HubType = null;
+
   if (trackRoutes.some(route => path.startsWith(route))) {
-    return { color: TRACK_COLOR, hub: 'track' as const };
+    color = TRACK_COLOR; hub = 'track';
+  } else if (omniRoutes.some(route => path.startsWith(route))) {
+    color = OMNI_COLOR; hub = 'omni';
+  } else if (flowRoutes.some(route => path.startsWith(route))) {
+    color = FLOW_COLOR; hub = 'flow';
+  } else if (suiteRoutes.some(route => path.startsWith(route))) {
+    color = SUITE_COLOR; hub = 'suite';
   }
-  if (omniRoutes.some(route => path.startsWith(route))) {
-    return { color: OMNI_COLOR, hub: 'omni' as const };
-  }
-  if (flowRoutes.some(route => path.startsWith(route))) {
-    return { color: FLOW_COLOR, hub: 'flow' as const };
-  }
-  if (suiteRoutes.some(route => path.startsWith(route))) {
-    return { color: SUITE_COLOR, hub: 'suite' as const };
-  }
-  
-  return { color: DEFAULT_COLOR, hub: null };
+
+  // Sync PWA theme-color meta tag with current hub
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
+  }, [color]);
+
+  return { color, hub };
 }

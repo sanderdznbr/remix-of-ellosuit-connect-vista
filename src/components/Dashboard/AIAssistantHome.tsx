@@ -284,8 +284,8 @@ const AIAssistantHome: React.FC = () => {
               >
                 <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                   msg.role === 'user'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/95 text-gray-800 shadow-lg'
+                    ? 'bg-white/25 text-white backdrop-blur-sm border border-white/20'
+                    : 'bg-white text-gray-900 shadow-xl border border-gray-100'
                 }`}>
                   {/* File attachment preview */}
                   {msg.fileUrl && msg.fileName && (

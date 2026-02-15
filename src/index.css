@@ -169,6 +169,22 @@
     background-color: hsl(var(--accent)) !important;
   }
 
+  /* Preserve original colors inside the mega menu header */
+  .dark [data-mega-header] .bg-orange-100 { background-color: rgb(255 237 213) !important; }
+  .dark [data-mega-header] .bg-green-100 { background-color: rgb(220 252 231) !important; }
+  .dark [data-mega-header] .bg-blue-100 { background-color: rgb(219 234 254) !important; }
+  .dark [data-mega-header] .bg-purple-100 { background-color: rgb(243 232 255) !important; }
+  .dark [data-mega-header] .bg-red-100 { background-color: rgb(254 226 226) !important; }
+  .dark [data-mega-header] .text-gray-900,
+  .dark [data-mega-header] .text-gray-800,
+  .dark [data-mega-header] .text-gray-700,
+  .dark [data-mega-header] .text-gray-600 {
+    color: inherit !important;
+  }
+  .dark [data-mega-header] .shadow-xl {
+    --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
+  }
+
   /* Fix gradient backgrounds for dark mode */
   .dark .from-gray-50 { --tw-gradient-from: hsl(var(--background)) !important; }
   .dark .from-white { --tw-gradient-from: hsl(var(--background)) !important; }
@@ -188,12 +204,11 @@
   /* Ensure ALL containers use dark background */
   .dark .min-h-screen,
   .dark .min-h-\[100vh\],
-  .dark .h-screen,
-  .dark .h-full {
+  .dark .h-screen {
     background-color: hsl(var(--background));
   }
-  /* Catch-all: any direct child of #root in dark mode */
-  .dark #root > div,
+  /* Catch-all: any direct child of #root in dark mode (exclude header) */
+  .dark #root > div:not([data-mega-header]),
   .dark #root > main {
     background-color: hsl(var(--background));
   }

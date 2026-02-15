@@ -193,7 +193,7 @@ export const DynamicVariables: React.FC<DynamicVariablesProps> = ({ onInsertVari
             />
           </div>
         </div>
-        <ScrollArea className="max-h-[320px]">
+        <ScrollArea className="h-[400px]">
           <div className="p-2 space-y-1">
             {filteredCategories.map(category => (
               <Collapsible

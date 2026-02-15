@@ -54,3 +54,6 @@ verify_jwt = false
 [functions.send-proposal]
 verify_jwt = false
 
+[functions.ai-assistant]
+verify_jwt = false
+

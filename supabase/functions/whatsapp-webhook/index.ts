@@ -803,6 +803,7 @@ Deno.serve(async (req) => {
                             telefone: phoneNumber,
                           },
                           execution_path: [],
+                          last_activity_at: new Date().toISOString(),
                         })
                         .select()
                         .single();
@@ -1035,13 +1036,114 @@ Deno.serve(async (req) => {
                   // Use limit 1 + order to avoid "multiple rows" error
                   const { data: execRows } = await supabase
                     .from('chatbot_executions')
-                    .select('id, flow_id, current_node_id, variables, execution_path')
+                    .select('id, flow_id, current_node_id, variables, execution_path, last_activity_at')
                     .eq('conversation_id', conversation.id)
                     .eq('status', 'running')
                     .order('started_at', { ascending: false })
                     .limit(1);
 
-                  const activeExec = (!convAiCheck?.ai_auto_reply_enabled) ? (execRows?.[0] || null) : null;
+                  let activeExec = (!convAiCheck?.ai_auto_reply_enabled) ? (execRows?.[0] || null) : null;
+
+                  // ===== INACTIVITY TIMEOUT: 10 minutes =====
+                  const CHATBOT_TIMEOUT_MS = 10 * 60 * 1000;
+                  if (activeExec && activeExec.last_activity_at) {
+                    const lastActivity = new Date(activeExec.last_activity_at).getTime();
+                    const elapsed = Date.now() - lastActivity;
+                    if (elapsed > CHATBOT_TIMEOUT_MS) {
+                      console.log(`🤖⏰ [CHATBOT] Execution ${activeExec.id} timed out (${Math.round(elapsed/1000/60)}min inactive). Restarting flow...`);
+                      
+                      // Complete the stale execution
+                      await supabase.from('chatbot_executions')
+                        .update({ status: 'timeout', completed_at: new Date().toISOString() })
+                        .eq('id', activeExec.id);
+                      
+                      // Find the same flow to restart
+                      const { data: flowToRestart } = await supabase
+                        .from('chatbot_flows')
+                        .select('id, name, nodes, edges, trigger_config, execution_count')
+                        .eq('id', activeExec.flow_id)
+                        .single();
+                      
+                      if (flowToRestart) {
+                        const { data: restartedExec } = await supabase
+                          .from('chatbot_executions')
+                          .insert({
+                            flow_id: flowToRestart.id,
+                            conversation_id: conversation.id,
+                            contact_phone: phoneNumber,
+                            status: 'running',
+                            variables: { nome: contactName || phoneNumber, telefone: phoneNumber },
+                            execution_path: [],
+                            last_activity_at: new Date().toISOString(),
+                          })
+                          .select()
+                          .single();
+                        
+                        if (restartedExec) {
+                          console.log(`🤖🔄 [CHATBOT] Flow restarted: ${flowToRestart.name}`);
+                          const restartNodes = (flowToRestart.nodes || []) as any[];
+                          const restartEdges = (flowToRestart.edges || []) as any[];
+                          const rootNode = restartNodes.find((n: any) => n.type === 'trigger') || restartNodes[0];
+                          
+                          if (rootNode) {
+                            const firstEdge = restartEdges.find((e: any) => e.source === rootNode.id);
+                            const firstNode = firstEdge ? restartNodes.find((n: any) => n.id === firstEdge.target) : null;
+                            
+                            if (firstNode && firstNode.type === 'message') {
+                              let finalMsg = firstNode.data?.config?.message || firstNode.data?.label || '';
+                              const msgButtons: string[] = firstNode.data?.config?.buttons || [];
+                              const imgUrl = firstNode.data?.config?.imageUrl || null;
+                              const vars = restartedExec.variables as Record<string, unknown> || {};
+                              Object.entries(vars).forEach(([k, v]) => {
+                                finalMsg = finalMsg.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'gi'), String(v || ''));
+                              });
+                              if (msgButtons.length > 0) {
+                                finalMsg += '\n\n' + msgButtons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                              }
+                              
+                              const { data: sess } = await supabase
+                                .from('whatsapp_sessions')
+                                .select('baileys_server_url, instance_name')
+                                .eq('id', targetSessionId)
+                                .single();
+                              
+                              if (sess?.baileys_server_url) {
+                                const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                                await fetch(`${sess.baileys_server_url}/api/message/send`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ instanceName: sess.instance_name, jid, message: finalMsg }),
+                                });
+                                await supabase.from('whatsapp_messages').insert({
+                                  session_id: targetSessionId, conversation_id: conversation.id,
+                                  remote_jid: remoteJid, from_me: true, content: finalMsg,
+                                  message_type: 'text', status: 'sent',
+                                  media_url: imgUrl || null, sender_name: 'Chatbot',
+                                });
+                              }
+                              
+                              await supabase.from('chatbot_executions').update({
+                                current_node_id: firstNode.id,
+                                execution_path: [firstNode.id],
+                                last_activity_at: new Date().toISOString(),
+                              }).eq('id', restartedExec.id);
+                            }
+                          }
+                          chatbotHandled = true;
+                          activeExec = null;
+                        }
+                      } else {
+                        activeExec = null;
+                      }
+                    }
+                  }
+
+                  // Update last_activity_at for active execution
+                  if (activeExec) {
+                    await supabase.from('chatbot_executions').update({
+                      last_activity_at: new Date().toISOString(),
+                    }).eq('id', activeExec.id);
+                  }
 
                   if (activeExec) {
                     console.log(`🤖🔄 [CHATBOT] Active execution found: ${activeExec.id}, current_node: ${activeExec.current_node_id}`);

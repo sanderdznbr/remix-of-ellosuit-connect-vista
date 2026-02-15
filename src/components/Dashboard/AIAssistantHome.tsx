@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,12 +34,12 @@ function getFileCategory(name: string): string {
 }
 
 const SUGGESTIONS = [
-  { icon: '💬', text: 'Abrir meu CRM WhatsApp' },
-  { icon: '📁', text: 'Criar uma pasta no Drive' },
-  { icon: '📅', text: 'Ver minha agenda de hoje' },
-  { icon: '📧', text: 'Enviar email marketing' },
-  { icon: '📎', text: 'Envie um arquivo e peça para salvar' },
-  { icon: '📊', text: 'Importar planilha de contatos' },
+  { icon: MessageSquare, text: 'Abrir meu CRM WhatsApp' },
+  { icon: FolderPlus, text: 'Criar uma pasta no Drive' },
+  { icon: CalendarDays, text: 'Ver minha agenda de hoje' },
+  { icon: Mail, text: 'Enviar email marketing' },
+  { icon: UploadCloud, text: 'Envie um arquivo e peça para salvar' },
+  { icon: TableProperties, text: 'Importar planilha de contatos' },
 ];
 
 const AIAssistantHome: React.FC = () => {
@@ -324,7 +324,7 @@ const AIAssistantHome: React.FC = () => {
                   }}
                   className="flex items-center gap-2 md:gap-2.5 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white/85 hover:text-white text-xs md:text-sm font-medium transition-all duration-200 border border-white/10 hover:border-white/25 active:scale-95 text-left"
                 >
-                  <span className="text-base md:text-lg shrink-0">{item.icon}</span>
+                  <item.icon className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-white/70" />
                   <span className="leading-tight">{item.text}</span>
                 </motion.button>
               ))}

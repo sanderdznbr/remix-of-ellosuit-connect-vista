@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square, GitBranch } from 'lucide-react';
+import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square, GitBranch, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -209,6 +209,8 @@ const WhatsAppCRM: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   
   // State
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
@@ -306,8 +308,27 @@ const WhatsAppCRM: React.FC = () => {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!showScrollToBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, agentChatMessages]);
+
+  // Detect scroll position to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const viewport = messagesScrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+    if (!viewport) return;
+    const onScroll = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      setShowScrollToBottom(distanceFromBottom > 150);
+    };
+    viewport.addEventListener('scroll', onScroll);
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [selectedConversation, selectedAgent]);
+
+  const handleScrollToBottom = () => {
+    const viewport = messagesScrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  };
 
   // Polling for popup messages when popup is open
   useEffect(() => {
@@ -2452,7 +2473,8 @@ const WhatsAppCRM: React.FC = () => {
             </div>
             
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4 bg-gradient-to-b from-orange-50/50 to-red-50/50 dark:from-orange-950/10 dark:to-red-950/10">
+            <div className="flex-1 relative overflow-hidden">
+              <ScrollArea ref={messagesScrollAreaRef} className="h-full p-4 bg-gradient-to-b from-orange-50/50 to-red-50/50 dark:from-orange-950/10 dark:to-red-950/10">
               <div className="space-y-2 max-w-3xl mx-auto">
                 {currentMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full py-20">
@@ -2681,7 +2703,19 @@ const WhatsAppCRM: React.FC = () => {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+              </ScrollArea>
+
+              {/* Scroll to bottom button - WhatsApp Web style */}
+              {showScrollToBottom && (
+                <Button
+                  onClick={handleScrollToBottom}
+                  size="icon"
+                  className="absolute bottom-4 right-6 z-10 rounded-full bg-card shadow-lg hover:bg-accent h-10 w-10 border"
+                >
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
             
             {/* Input Area */}
             <div className="p-4 border-t bg-card">

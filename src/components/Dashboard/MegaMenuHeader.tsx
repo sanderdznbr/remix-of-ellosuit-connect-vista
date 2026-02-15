@@ -243,6 +243,7 @@ export function MegaMenuHeader() {
   return (
     <header 
       className="sticky top-0 z-50"
+      data-mega-header
       style={{ 
         backgroundColor: hubColor,
         transition: 'background-color 0.5s ease-in-out',

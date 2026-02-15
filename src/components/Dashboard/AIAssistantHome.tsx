@@ -34,12 +34,12 @@ function getFileCategory(name: string): string {
 }
 
 const SUGGESTIONS = [
-  'Abrir meu CRM WhatsApp',
-  'Salvar arquivo no Drive',
-  'Ver minha agenda',
-  'Enviar email marketing',
-  'Criar uma pasta no Drive',
-  'Importar contatos',
+  { icon: '💬', text: 'Abrir meu CRM WhatsApp' },
+  { icon: '📁', text: 'Criar uma pasta no Drive' },
+  { icon: '📅', text: 'Ver minha agenda de hoje' },
+  { icon: '📧', text: 'Enviar email marketing' },
+  { icon: '📎', text: 'Envie um arquivo e peça para salvar' },
+  { icon: '📊', text: 'Importar planilha de contatos' },
 ];
 
 const AIAssistantHome: React.FC = () => {
@@ -237,21 +237,38 @@ const AIAssistantHome: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.8 }}
-                className="flex flex-wrap items-center justify-center gap-2 mt-4"
+                className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-6 max-w-xl mx-auto"
               >
-                {SUGGESTIONS.map((text, i) => (
+                {SUGGESTIONS.map((item, i) => (
                   <motion.button
-                    key={text}
-                    initial={{ opacity: 0, y: 10 }}
+                    key={item.text}
+                    initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.8 + i * 0.08 }}
-                    onClick={() => { setInput(text); setTimeout(() => handleSubmit(text), 100); }}
-                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-sm font-medium transition-all duration-200 border border-white/10 hover:border-white/25 active:scale-95"
+                    transition={{ duration: 0.45, delay: 0.8 + i * 0.07 }}
+                    onClick={() => {
+                      if (item.text.includes('arquivo')) {
+                        fileInputRef.current?.click();
+                      } else {
+                        setInput(item.text);
+                        setTimeout(() => handleSubmit(item.text), 100);
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white/85 hover:text-white text-sm font-medium transition-all duration-200 border border-white/10 hover:border-white/25 active:scale-95 text-left"
                   >
-                    {text}
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="leading-tight">{item.text}</span>
                   </motion.button>
                 ))}
               </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                transition={{ duration: 0.5, delay: 1.3 }}
+                className="text-white/40 text-xs mt-6"
+              >
+                💡 Dica: Anexe arquivos (planilhas, vídeos, imagens) e peça para a IA organizar, salvar ou processar.
+              </motion.p>
             </div>
           </div>
         ) : (

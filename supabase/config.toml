@@ -57,3 +57,9 @@ verify_jwt = false
 [functions.ai-assistant]
 verify_jwt = false
 
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.elevenlabs-stt]
+verify_jwt = false
+

@@ -126,19 +126,19 @@ const AIAssistantHome: React.FC = () => {
       <div className="w-full max-w-2xl text-center">
         {/* Greeting */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
+          initial={{ opacity: 0, scale: 0.9, y: 40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
-            {getGreeting()}, {firstName} 👋
+            {getGreeting()}, {firstName}
           </h1>
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
           className="text-white/70 text-lg md:text-xl mb-10"
         >
           O que gostaria de fazer hoje?
@@ -146,14 +146,14 @@ const AIAssistantHome: React.FC = () => {
 
         {/* Input */}
         <motion.form
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          initial={{ opacity: 0, y: 30, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.6, ease: 'easeOut' }}
+          transition={{ duration: 0.7, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
           onSubmit={handleSubmit}
           className="relative"
         >
-          <div className="relative flex items-center bg-white/15 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/10 overflow-hidden transition-all duration-300 focus-within:bg-white/20 focus-within:border-white/40 focus-within:shadow-3xl">
-            <Sparkles className="absolute left-5 h-5 w-5 text-white/50" />
+          <div className="relative flex items-center bg-white rounded-full shadow-xl shadow-black/10 overflow-hidden transition-all duration-300 focus-within:shadow-2xl">
+            <Sparkles className="absolute left-5 h-5 w-5 text-gray-400" />
             <input
               ref={inputRef}
               type="text"
@@ -161,14 +161,14 @@ const AIAssistantHome: React.FC = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               placeholder="Digite o que deseja fazer..."
-              className="flex-1 bg-transparent text-white placeholder:text-white/40 text-lg px-5 pl-14 py-5 outline-none"
+              className="flex-1 bg-transparent text-gray-800 placeholder:text-gray-400 text-lg px-5 pl-14 py-5 outline-none"
               autoFocus
             />
             <button
               type="submit"
-              className="mr-3 p-3 rounded-xl bg-white/20 hover:bg-white/30 transition-all duration-200 active:scale-90"
+              className="mr-3 p-3 rounded-full bg-white/80 hover:bg-gray-100 transition-all duration-200 active:scale-90"
             >
-              <Send className="h-5 w-5 text-white" />
+              <Send className="h-5 w-5 text-gray-500" />
             </button>
           </div>
 

@@ -281,6 +281,7 @@ async function executeTool(
     }
 
     case 'create_calendar_event': {
+      console.log('🔧 create_calendar_event args:', args);
       const { data, error } = await supabase
         .from('calendar_events')
         .insert({
@@ -288,13 +289,16 @@ async function executeTool(
           start_date: args.start_date as string,
           end_date: args.end_date as string,
           description: (args.description as string) || null,
-          event_type: 'event',
+          event_type: 'reminder',
+          status: 'pending',
+          source: 'whatsapp',
           company_id: companyId,
           created_by: userId,
         })
         .select('id, title')
         .single();
 
+      console.log('🔧 create_calendar_event result:', { data, error });
       if (error) return `Erro ao criar evento: ${error.message}`;
       return `Evento "${data.title}" criado com sucesso na agenda!`;
     }

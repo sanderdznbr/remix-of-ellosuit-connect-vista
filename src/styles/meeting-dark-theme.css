@@ -1,27 +1,9 @@
-/* Garantir fundo escuro SEMPRE desde o primeiro frame */
-
-/* Alta prioridade - sobrescreve qualquer outro estilo */
-html, body, #root {
-  background-color: #101010 !important;
-}
+/* Garantir fundo escuro APENAS em páginas de reunião */
 
 /* Sobrescrever especificamente para rotas de reunião */
-body:has([data-route*="livekit"]),
-body:has([data-route*="meeting"]) {
+[data-meeting-page],
+body:has([data-meeting-page]) {
   background-color: #101010 !important;
-}
-
-/* Prevenir qualquer flash branco durante carregamento */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #101010;
-  z-index: -1;
-  pointer-events: none;
 }
 
 /* Garantir que LiveKit nunca mostre fundo branco */
@@ -32,14 +14,8 @@ body::before {
   background-color: #101010 !important;
 }
 
-/* Prevenir flash durante transições de rota */
-[data-reach-router-wrapper] {
-  background-color: #101010 !important;
-}
-
 /* Sobrescrever bg-background do Tailwind em rotas de reunião */
-[data-route*="livekit"] *,
-[data-route*="meeting"] * {
+[data-meeting-page] * {
   --tw-bg-opacity: 1 !important;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -56,6 +56,14 @@ const AIAssistantHome: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingSpeakRef = useRef<string | null>(null);
 
   const bgColor = hubColor || DEFAULT_COLOR;
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
@@ -154,15 +162,19 @@ const AIAssistantHome: React.FC = () => {
       if (error) throw error;
 
       // Remove loading, add real response
+      const responseText = data.response || data.error || 'Desculpe, ocorreu um erro.';
       setMessages(prev => {
         const filtered = prev.filter(m => m.id !== loadingId);
         return [...filtered, {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content: data.response || data.error || 'Desculpe, ocorreu um erro.',
+          content: responseText,
           action: data.action,
         }];
       });
+
+      // Store text to speak after render
+      pendingSpeakRef.current = responseText;
 
       // Handle action
       if (data.action) {
@@ -184,7 +196,7 @@ const AIAssistantHome: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [input, attachedFile, isProcessing, user?.id, companyId, messages, navigate, toast]);
+  }, [input, attachedFile, isProcessing, user?.id, companyId, messages, navigate, toast, voiceEnabled]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -203,6 +215,151 @@ const AIAssistantHome: React.FC = () => {
     setAttachedFile(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // === VOICE: Start recording ===
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size < 1000) return; // Too short
+        await transcribeAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      toast({ title: 'Microfone', description: 'Não foi possível acessar o microfone.', variant: 'destructive' });
+    }
+  }, [toast]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  }, []);
+
+  // === VOICE: Transcribe audio via ElevenLabs Scribe ===
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-stt`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) throw new Error('Transcription failed');
+      const data = await response.json();
+
+      if (data.text && data.text.trim()) {
+        setInput(data.text.trim());
+        // Auto-submit the transcribed text
+        setTimeout(() => handleSubmit(data.text.trim()), 200);
+      } else {
+        toast({ title: 'Voz', description: 'Não consegui entender. Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      toast({ title: 'Erro', description: 'Falha na transcrição do áudio.', variant: 'destructive' });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // === VOICE: Speak AI response via ElevenLabs TTS ===
+  const speakText = useCallback(async (text: string) => {
+    if (!voiceEnabled || !text.trim()) return;
+
+    // Stop any current audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    setIsSpeaking(true);
+    try {
+      // Clean text for TTS (remove emojis, markdown, etc.)
+      const cleanText = text
+        .replace(/[→←↑↓]/g, '')
+        .replace(/[*_~`#]/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .trim();
+
+      if (!cleanText) { setIsSpeaking(false); return; }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: cleanText }),
+        }
+      );
+
+      if (!response.ok) throw new Error('TTS failed');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        currentAudioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        currentAudioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.error('TTS error:', err);
+      setIsSpeaking(false);
+    }
+  }, [voiceEnabled]);
+
+  const stopSpeaking = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  // Auto-speak new AI responses
+  useEffect(() => {
+    if (pendingSpeakRef.current && voiceEnabled) {
+      speakText(pendingSpeakRef.current);
+      pendingSpeakRef.current = null;
+    }
+  }, [messages, voiceEnabled, speakText]);
 
   const hasChat = messages.length > 0;
 
@@ -267,11 +424,53 @@ const AIAssistantHome: React.FC = () => {
           <button
             onClick={() => handleSubmit()}
             disabled={isProcessing || (!input.trim() && !attachedFile)}
-            className="mr-3 p-2.5 md:p-3 rounded-full hover:bg-gray-100 transition-all duration-200 active:scale-90 disabled:opacity-40"
+            className="p-2.5 md:p-3 rounded-full hover:bg-gray-100 transition-all duration-200 active:scale-90 disabled:opacity-40"
             style={{ backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? undefined : `${bgColor}15` }}
           >
             <Send className="h-5 w-5" style={{ color: isProcessing || (!input.trim() && !attachedFile) ? '#9ca3af' : bgColor }} />
           </button>
+
+          {/* Mic button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isProcessing || isTranscribing}
+            className={`mr-3 p-2.5 md:p-3 rounded-full transition-all duration-200 active:scale-90 disabled:opacity-40 ${
+              isRecording ? 'bg-red-500 animate-pulse' : 'hover:bg-gray-100'
+            }`}
+            title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+          >
+            {isTranscribing ? (
+              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+            ) : isRecording ? (
+              <MicOff className="h-5 w-5 text-white" />
+            ) : (
+              <Mic className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Voice controls bar */}
+        <div className="flex items-center justify-center gap-3 mt-2">
+          <button
+            onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              voiceEnabled
+                ? 'bg-white/20 text-white border border-white/20'
+                : 'bg-white/10 text-white/50 border border-white/10'
+            }`}
+          >
+            <Volume2 className="h-3 w-3" />
+            {voiceEnabled ? 'Voz ativada' : 'Voz desativada'}
+          </button>
+
+          {isSpeaking && (
+            <button
+              onClick={stopSpeaking}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white border border-white/20 animate-pulse"
+            >
+              Parar áudio
+            </button>
+          )}
         </div>
       </motion.div>
     </div>

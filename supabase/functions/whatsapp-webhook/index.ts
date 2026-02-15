@@ -2022,6 +2022,12 @@ Deno.serve(async (req) => {
                             agentInstructions: agent.instructions,
                             agentPersonality: agent.personality,
                             agentSettings: agentSettings,
+                            lastMedia: mediaUrl ? {
+                              url: mediaUrl,
+                              fileName: (messageType === 'document' && content && content !== '[Documento]') ? content : (mediaCaption || `whatsapp-${Date.now()}.${messageType === 'image' ? 'jpg' : messageType === 'video' ? 'mp4' : 'bin'}`),
+                              type: messageType,
+                              mimeType: messageType === 'image' ? 'image/jpeg' : messageType === 'video' ? 'video/mp4' : messageType === 'document' ? 'application/octet-stream' : 'application/octet-stream',
+                            } : undefined,
                           }),
                         });
                         

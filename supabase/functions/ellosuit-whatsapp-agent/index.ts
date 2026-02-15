@@ -111,6 +111,20 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "upload_to_drive",
+      description: "Salvar um arquivo enviado pelo usuário no Drive da Ellosuit. Use quando o usuário enviar um arquivo (imagem, documento, etc.) e pedir para salvar.",
+      parameters: {
+        type: "object",
+        properties: {
+          folder_name: { type: "string", description: "Nome da pasta onde salvar (opcional, padrão: pasta principal)" }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "general_info",
       description: "Responder perguntas gerais sobre a plataforma Ellosuit ou sobre a conta do usuário",
       parameters: {
@@ -128,7 +142,7 @@ const TOOLS = [
 async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
-  context: { supabase: ReturnType<typeof createClient>; userId: string; companyId: string }
+  context: { supabase: ReturnType<typeof createClient>; userId: string; companyId: string; lastMedia?: { url: string; fileName?: string; type?: string; mimeType?: string } }
 ): Promise<string> {
   const { supabase, userId, companyId } = context;
 
@@ -303,6 +317,92 @@ async function executeTool(
       return `Evento "${data.title}" criado com sucesso na agenda!`;
     }
 
+    case 'upload_to_drive': {
+      const mediaInfo = context.lastMedia;
+      if (!mediaInfo || !mediaInfo.url) {
+        return 'Nenhum arquivo foi recebido na mensagem. Peça ao usuário para enviar o arquivo primeiro.';
+      }
+
+      try {
+        console.log('🔧 upload_to_drive: downloading from', mediaInfo.url);
+        const mediaResp = await fetch(mediaInfo.url);
+        if (!mediaResp.ok) return `Erro ao baixar o arquivo: HTTP ${mediaResp.status}`;
+        const fileBuffer = await mediaResp.arrayBuffer();
+        const fileBytes = new Uint8Array(fileBuffer);
+
+        const fileName = mediaInfo.fileName || `whatsapp-${Date.now()}.${mediaInfo.type || 'bin'}`;
+        const storagePath = `${companyId}/${Date.now()}-${fileName}`;
+        const mimeType = mediaInfo.mimeType || 'application/octet-stream';
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(storagePath, fileBytes, { contentType: mimeType, upsert: false });
+
+        if (uploadError) {
+          console.error('🔧 upload_to_drive storage error:', uploadError);
+          return `Erro ao fazer upload: ${uploadError.message}`;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
+
+        // Find folder if specified
+        let folderId: string | null = null;
+        const folderName = args.folder_name as string;
+        if (folderName) {
+          const { data: folder } = await supabase
+            .from('document_folders')
+            .select('id')
+            .eq('company_id', companyId)
+            .ilike('name', folderName)
+            .maybeSingle();
+          if (folder) folderId = folder.id;
+        }
+
+        // Detect file type
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
+        const fileTypeMap: Record<string, string> = {
+          pdf: 'pdf', doc: 'word', docx: 'word', xls: 'excel', xlsx: 'excel',
+          ppt: 'powerpoint', pptx: 'powerpoint', png: 'image', jpg: 'image',
+          jpeg: 'image', gif: 'image', webp: 'image', mp4: 'video', mp3: 'audio',
+        };
+        const fileType = fileTypeMap[ext] || 'other';
+
+        // Create document record
+        const { error: docError } = await supabase
+          .from('documents')
+          .insert({
+            name: fileName,
+            file_type: fileType,
+            file_url: publicUrlData.publicUrl,
+            file_size: fileBytes.length,
+            company_id: companyId,
+            created_by: userId,
+            folder_id: folderId,
+          });
+
+        if (docError) {
+          console.error('🔧 upload_to_drive doc error:', docError);
+          return `Arquivo enviado ao storage mas erro ao registrar: ${docError.message}`;
+        }
+
+        // Also create document_files record
+        await supabase.from('document_files').insert({
+          document_id: (await supabase.from('documents').select('id').eq('file_url', publicUrlData.publicUrl).single()).data?.id,
+          file_path: storagePath,
+          file_size: fileBytes.length,
+          mime_type: mimeType,
+          original_filename: fileName,
+        });
+
+        console.log('🔧 upload_to_drive success:', fileName);
+        return `Arquivo "${fileName}" salvo com sucesso no Drive${folderId ? ` na pasta "${folderName}"` : ' na pasta principal'}!`;
+      } catch (err) {
+        console.error('🔧 upload_to_drive error:', err);
+        return `Erro ao processar arquivo: ${err instanceof Error ? err.message : 'erro desconhecido'}`;
+      }
+    }
+
     case 'general_info': {
       return `A Ellosuit é uma plataforma completa de gestão empresarial com módulos de CRM WhatsApp, Email Marketing, Agenda, Tarefas, Drive, Contratos, Propostas, Videoconferência, Chatbots, Agentes de IA, Automações e muito mais. Para qualquer dúvida específica, posso verificar diretamente na conta do usuário.`;
     }
@@ -319,7 +419,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, userId, companyId, contactPhone, agentInstructions, agentPersonality, agentSettings } = await req.json();
+    const { messages, userId, companyId, contactPhone, agentInstructions, agentPersonality, agentSettings, lastMedia } = await req.json();
 
     if (!userId || !companyId) {
       return new Response(JSON.stringify({ error: 'userId e companyId são obrigatórios' }), {
@@ -372,10 +472,13 @@ Deno.serve(async (req) => {
       '5. Escreva como uma pessoa digitando no WhatsApp.',
       `6. Limite: ${maxChars} caracteres no máximo.`,
       '7. Responda sempre em português brasileiro.',
+      '8. Quando o usuário enviar um arquivo e pedir para salvar, use a ferramenta upload_to_drive.',
+      '',
+      lastMedia ? `ARQUIVO RECEBIDO: O usuário enviou um arquivo (${lastMedia.fileName || 'arquivo'}). Use upload_to_drive para salvá-lo se solicitado.` : '',
       '',
       'TRANSFERENCIA PARA ATENDENTE:',
       'Se o cliente pedir para falar com um humano, inclua [HANDOFF] no final.',
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     // Build messages array
     const apiMessages = [
@@ -422,7 +525,7 @@ Deno.serve(async (req) => {
         const toolArgs = JSON.parse(toolCall.function.arguments);
         console.log(`🔧 Executing: ${toolName}`, toolArgs);
 
-        const result = await executeTool(toolName, toolArgs, { supabase, userId, companyId });
+        const result = await executeTool(toolName, toolArgs, { supabase, userId, companyId, lastMedia });
         toolResults.push({
           role: 'tool',
           tool_call_id: toolCall.id,

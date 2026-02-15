@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Volume2, Phone } from 'lucide-react';
-import VoiceConversation from './VoiceConversation';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,10 +61,8 @@ const AIAssistantHome: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSpeakRef = useRef<string | null>(null);
-  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const bgColor = hubColor || DEFAULT_COLOR;
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
@@ -198,7 +195,7 @@ const AIAssistantHome: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [input, attachedFile, isProcessing, user?.id, companyId, messages, navigate, toast, voiceEnabled]);
+  }, [input, attachedFile, isProcessing, user?.id, companyId, messages, navigate, toast]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -290,7 +287,7 @@ const AIAssistantHome: React.FC = () => {
 
   // === VOICE: Speak AI response via ElevenLabs TTS ===
   const speakText = useCallback(async (text: string) => {
-    if (!voiceEnabled || !text.trim()) return;
+    if (!text.trim()) return;
 
     // Stop any current audio
     if (currentAudioRef.current) {
@@ -345,7 +342,7 @@ const AIAssistantHome: React.FC = () => {
       console.error('TTS error:', err);
       setIsSpeaking(false);
     }
-  }, [voiceEnabled]);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
@@ -357,11 +354,11 @@ const AIAssistantHome: React.FC = () => {
 
   // Auto-speak new AI responses
   useEffect(() => {
-    if (pendingSpeakRef.current && voiceEnabled) {
+    if (pendingSpeakRef.current) {
       speakText(pendingSpeakRef.current);
       pendingSpeakRef.current = null;
     }
-  }, [messages, voiceEnabled, speakText]);
+  }, [messages, speakText]);
 
   const hasChat = messages.length > 0;
 
@@ -451,36 +448,17 @@ const AIAssistantHome: React.FC = () => {
           </button>
         </div>
 
-        {/* Voice controls bar */}
-        <div className="flex items-center justify-center gap-3 mt-2">
-          <button
-            onClick={() => setVoiceOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all bg-white/20 text-white border border-white/20 hover:bg-white/30"
-          >
-            <Phone className="h-3 w-3" />
-            Conversar por voz
-          </button>
-          <button
-            onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              voiceEnabled
-                ? 'bg-white/20 text-white border border-white/20'
-                : 'bg-white/10 text-white/50 border border-white/10'
-            }`}
-          >
-            <Volume2 className="h-3 w-3" />
-            {voiceEnabled ? 'Voz ativada' : 'Voz desativada'}
-          </button>
-
-          {isSpeaking && (
+        {/* Stop audio button - only when speaking */}
+        {isSpeaking && (
+          <div className="flex items-center justify-center mt-2">
             <button
               onClick={stopSpeaking}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white border border-white/20 animate-pulse"
             >
               Parar áudio
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
@@ -638,14 +616,6 @@ const AIAssistantHome: React.FC = () => {
           </div>
         </>
       )}
-
-      {/* Voice Conversation Overlay */}
-      <VoiceConversation
-        open={voiceOpen}
-        onClose={() => setVoiceOpen(false)}
-        bgColor={bgColor}
-        companyId={companyId}
-      />
     </div>
   );
 };

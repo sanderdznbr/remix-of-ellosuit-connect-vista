@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { DynamicVariables } from '@/components/EmailDesigner/DynamicVariables';
 import { DndContext, closestCenter, DragEndEvent, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -984,6 +985,12 @@ const EmailTemplateBuilder: React.FC = () => {
                 onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: e.target.value }})}
                 className="mt-1.5"
               />
+              <DynamicVariables
+                onInsertVariable={(variable) => {
+                  const current = selectedElementData.content.text || '';
+                  updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: current + variable }});
+                }}
+              />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Nível</Label>
@@ -1056,6 +1063,12 @@ const EmailTemplateBuilder: React.FC = () => {
                 rows={4}
                 className="mt-1.5"
               />
+              <DynamicVariables
+                onInsertVariable={(variable) => {
+                  const current = selectedElementData.content.text || '';
+                  updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: current + variable }});
+                }}
+              />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Alinhamento</Label>
@@ -1101,6 +1114,12 @@ const EmailTemplateBuilder: React.FC = () => {
                 value={selectedElementData.content.text}
                 onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: e.target.value }})}
                 className="mt-1.5"
+              />
+              <DynamicVariables
+                onInsertVariable={(variable) => {
+                  const current = selectedElementData.content.text || '';
+                  updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: current + variable }});
+                }}
               />
             </div>
             <div>

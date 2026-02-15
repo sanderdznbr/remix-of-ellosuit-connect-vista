@@ -450,6 +450,7 @@ export type Database = {
           execution_path: Json | null
           flow_id: string
           id: string
+          last_activity_at: string | null
           started_at: string
           status: string
           variables: Json | null
@@ -462,6 +463,7 @@ export type Database = {
           execution_path?: Json | null
           flow_id: string
           id?: string
+          last_activity_at?: string | null
           started_at?: string
           status?: string
           variables?: Json | null
@@ -474,6 +476,7 @@ export type Database = {
           execution_path?: Json | null
           flow_id?: string
           id?: string
+          last_activity_at?: string | null
           started_at?: string
           status?: string
           variables?: Json | null

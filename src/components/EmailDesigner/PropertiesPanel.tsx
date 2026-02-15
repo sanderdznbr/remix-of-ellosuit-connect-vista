@@ -9,6 +9,7 @@ import { HexColorPicker } from 'react-colorful';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { DesignElement } from './EmailDesigner';
+import { DynamicVariables } from './DynamicVariables';
 
 interface PropertiesPanelProps {
   selectedElement: DesignElement | null;
@@ -77,6 +78,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               value={selectedElement.content || ''}
               onChange={(e) => onUpdateContent(selectedElement.id, e.target.value)}
               rows={3}
+            />
+            <DynamicVariables
+              onInsertVariable={(variable) => {
+                const currentContent = selectedElement.content || '';
+                onUpdateContent(selectedElement.id, currentContent + variable);
+              }}
             />
           </div>
         )}

@@ -335,11 +335,18 @@ Deno.serve(async (req) => {
     const maxChars = (settings.maxResponseChars as number) ?? 500;
     const humor = (settings.humor as string) ?? 'profissional';
 
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const isoToday = now.toISOString().split('T')[0];
+
     const systemPrompt = [
       `Personalidade: ${agentPersonality || 'Assistente profissional e amigável da plataforma Ellosuit'}`,
       `Tom/Humor: ${humor}`,
       '',
       agentInstructions || 'Você é o assistente da Ellosuit via WhatsApp. Ajude o cliente a gerenciar sua conta.',
+      '',
+      `DATA E HORA ATUAL: ${todayStr}, ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+      `DATA ISO HOJE: ${isoToday}`,
       '',
       `CONTEXTO DO USUARIO:`,
       `- Empresa: ${companyData?.name || 'N/A'}`,

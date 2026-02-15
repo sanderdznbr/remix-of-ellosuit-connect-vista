@@ -1,84 +1,157 @@
 
-# Correção: Validação de Número WhatsApp Antes do Envio
 
-## Problema
+# Assistente Ellosuit via WhatsApp -- Plano de Implementacao
 
-A API constrói o JID (identificador WhatsApp) diretamente a partir do telefone recebido, sem verificar se aquele número existe no WhatsApp. Isso causa falha silenciosa quando:
+## Visao Geral
 
-- O número tem o 9o dígito brasileiro extra (ex: 5541**9**96875461 vs 554196875461)
-- O número está no formato diferente do registrado no WhatsApp
+Criar um sistema completo onde clientes da Ellosuit possam interagir com a plataforma via WhatsApp da conta admin (554189015612). O fluxo funciona assim:
 
-A mensagem retorna "sent" mas nunca chega ao destinatário real.
+1. Cliente manda mensagem para o WhatsApp da Ellosuit
+2. Um chatbot pergunta o e-mail do cliente
+3. O sistema busca a conta no banco de dados e pede confirmacao
+4. Apos confirmado, um Agente de IA especializado assume a conversa
+5. O agente consegue executar acoes na conta do usuario (criar tarefas, agendar, verificar dados, etc.)
 
-## Solução em 2 partes
-
-### Parte 1: Novo endpoint no servidor Baileys (instrução para deploy)
-
-Adicionar endpoint `/api/number/check` no servidor Baileys que usa a função `onWhatsApp()` do Baileys para resolver o JID correto de um número.
-
-O usuário precisará atualizar o `index.js` do Baileys no Railway com este novo endpoint.
-
-### Parte 2: Atualizar a Edge Function
-
-Antes de enviar mensagem (texto ou mídia), a Edge Function vai:
-
-1. Chamar `/api/number/check` no Baileys com o número fornecido
-2. Se o número existir no WhatsApp, usar o JID retornado (que é o correto)
-3. Se não existir, tentar variações do número brasileiro (com/sem 9o dígito)
-4. Se nenhum funcionar, retornar erro claro ao chamador
-
-## Detalhes Técnicos
-
-### Novo endpoint no Baileys (`index.js`)
-
-Adicionar antes dos endpoints de mensagem:
+## Arquitetura do Fluxo
 
 ```text
-POST /api/number/check
-Body: { "instanceName": "xxx", "phone": "5541996875461" }
-Response: { "exists": true, "jid": "554196875461@s.whatsapp.net" }
+Cliente WhatsApp
+      |
+      v
+[Chatbot Flow: "Ellosuit Support"]
+      |
+      +--> Mensagem de boas-vindas
+      |
+      +--> Pergunta e-mail
+      |
+      +--> Busca conta (variavel: email)
+      |         |
+      |    Nao encontrou --> "Conta nao encontrada, tente novamente"
+      |         |
+      |    Encontrou --> "Confirmacao: Voce e [Nome] da [Empresa]?"
+      |                       |
+      |                  Sim --> Transfere para Agente IA
+      |                  Nao --> "Por favor, digite o e-mail correto"
+      |
+      v
+[Agente IA: "Ellosuit Assistant"]
+      |
+      +--> Tem acesso ao company_id e user_id do cliente
+      +--> Recebe mensagens de texto e audio (STT via ElevenLabs)
+      +--> Executa acoes na conta via tool calls
+      +--> Responde por texto (e opcionalmente audio)
 ```
 
-Internamente usa `socket.onWhatsApp(phone)` que retorna o JID real.
+## Etapas de Implementacao
 
-### Alterações na Edge Function (`whatsapp-public-api/index.ts`)
+### Etapa 1: Criar o Agente de IA "Ellosuit WhatsApp Assistant"
 
-1. Criar função auxiliar `resolveWhatsAppJid()` que:
-   - Chama o endpoint `/api/number/check` no Baileys
-   - Se o número não for encontrado e for brasileiro (começa com 55), tenta remover ou adicionar o 9o dígito
-   - Retorna o JID correto ou erro
+Inserir um registro na tabela `ai_agents` vinculado a conta admin (company_id: `60008c43-e536-482d-a090-91904de57534`) com:
 
-2. Nos cases `send_text` e `send_media`:
-   - Substituir a construção manual do JID pelo resultado de `resolveWhatsAppJid()`
-   - Logar o JID resolvido para debug
+- **Nome**: "Ellosuit Assistant"
+- **Personalidade**: Assistente profissional e amigavel da plataforma Ellosuit
+- **Instrucoes**: Prompt detalhado com capacidade de executar acoes na conta do usuario autenticado
+- **Settings**: Configuracoes de temperatura, limite de caracteres, modo de audio
 
-### Fluxo corrigido
+### Etapa 2: Criar Edge Function "ellosuit-whatsapp-agent"
+
+Uma Edge Function dedicada que estende o `ai-chat` com **tool calling** para executar acoes reais na conta do usuario:
+
+**Tools disponiveis:**
+- `list_tasks` -- Listar tarefas do usuario
+- `create_task` -- Criar nova tarefa
+- `list_contacts` -- Listar cadastros/contatos
+- `check_subscription` -- Ver status da assinatura
+- `list_documents` -- Listar arquivos no Drive
+- `list_calendar_events` -- Ver agenda
+- `create_calendar_event` -- Criar evento na agenda
+- `send_email` -- Enviar e-mail
+- `general_info` -- Informacoes sobre a plataforma
+
+Cada tool recebe o `company_id` e `user_id` do cliente autenticado (armazenados nas variaveis da execucao do chatbot) e opera diretamente nas tabelas do Supabase.
+
+### Etapa 3: Criar o Chatbot Flow via Banco de Dados
+
+Inserir um registro na tabela `chatbot_flows` com os nodes e edges que representam:
+
+1. **Trigger Node**: `whatsapp_channel` -- ativa para novas conversas
+2. **Message Node**: Boas-vindas -- "Ola! Sou o assistente da Ellosuit. Para acessar sua conta, por favor me informe seu e-mail cadastrado."
+3. **Condition Node**: Aguarda resposta com e-mail
+4. **Action Node**: Busca conta no banco (`auth.users` via service role + `company_users`)
+5. **Condition Node**: Conta encontrada?
+   - Sim: Message "Encontrei! Voce e [Nome] da empresa [Empresa]. Correto?"
+   - Nao: Message "Nao encontrei uma conta com esse e-mail. Tente novamente."
+6. **Condition Node**: Confirmacao (Sim/Nao)
+   - Sim: Action `transfer_ai_agent` com o agente criado na Etapa 1
+   - Nao: Volta para perguntar o e-mail
+
+### Etapa 4: Atualizar o Webhook para Suportar o Agente Ellosuit
+
+Modificar a secao de **AI Auto-Response** no `whatsapp-webhook/index.ts` para:
+
+- Quando o agente ativo for o "Ellosuit Assistant", chamar a Edge Function `ellosuit-whatsapp-agent` em vez da `ai-chat` padrao
+- Passar o `company_id` e `user_id` do cliente (extraidos das variaveis do chatbot) no payload
+- O agente processa tool calls e retorna respostas contextualizadas
+
+### Etapa 5: Logica de Lookup de Conta no Chatbot Engine
+
+Adicionar um novo tipo de bloco de acao no processamento do chatbot (`whatsapp-webhook`) que:
+
+- Recebe o e-mail digitado pelo usuario
+- Busca em `auth.users` (via service role) o usuario com aquele e-mail
+- Busca o `company_id` em `company_users`
+- Armazena `user_id`, `company_id` e `user_name` nas variaveis da execucao
+- Esses dados sao passados ao agente de IA quando a transferencia acontece
+
+## Detalhes Tecnicos
+
+### Tabela de Contexto (nova coluna ou uso de `variables` existente)
+
+A tabela `chatbot_executions` ja tem uma coluna `variables` (jsonb) que sera usada para armazenar:
+```text
+{
+  "authenticated_user_id": "uuid",
+  "authenticated_company_id": "uuid",
+  "authenticated_user_name": "Nome",
+  "authenticated_company_name": "Empresa",
+  "email": "user@email.com"
+}
+```
+
+Quando o chatbot transfere para o agente IA, esses dados sao lidos e passados para a Edge Function.
+
+### Edge Function: ellosuit-whatsapp-agent
+
+Utilizara o Lovable AI Gateway com tool calling (mesmo padrao do `ai-assistant`), mas com tools focados em operacoes de conta:
 
 ```text
-Site externo envia: phone "5541996875461"
-    |
-    v
-Edge Function chama: /api/number/check com "5541996875461"
-    |
-    v
-Baileys onWhatsApp() retorna: jid "554196875461@s.whatsapp.net"
-    |
-    v
-Edge Function envia para o JID correto
-    |
-    v
-Mensagem chega ao contato real (Amor)
+POST /functions/v1/ellosuit-whatsapp-agent
+Body: {
+  messages: [...],
+  userId: "uuid do cliente",
+  companyId: "uuid da empresa do cliente",
+  contactPhone: "numero whatsapp"
+}
 ```
 
-### Arquivo criado
-- `docs/baileys-server-template/baileys-server-v4.6.0/number-check-endpoint.js` -- snippet para o usuário adicionar ao Baileys
+### Modificacoes no whatsapp-webhook
 
-### Arquivo modificado
-- `supabase/functions/whatsapp-public-api/index.ts` -- adicionar resolução de JID antes do envio
+Na secao de AI Auto-Response (linha ~1574), adicionar verificacao:
+- Se o agente tem um campo especial (ex: `settings.is_platform_agent: true`), usar a Edge Function `ellosuit-whatsapp-agent` passando as variaveis de autenticacao da conversa
 
-## Instruções para o servidor Baileys (Railway)
+### Seguranca
 
-O usuário precisará adicionar o endpoint `/api/number/check` ao `index.js` do Baileys no Railway. Será fornecido o código pronto para copiar e colar.
+- A busca de conta e feita com `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor (Edge Function)
+- O `user_id` e `company_id` autenticados sao validados antes de qualquer operacao
+- Cada tool verifica se o recurso pertence ao `company_id` do usuario
+- Nenhum dado de outros clientes e exposto
 
-Vou implementar e atualizar o arquivo em crm-whatsapp servidor para bayleys 4.7.0
+## Resumo dos Arquivos
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase/functions/ellosuit-whatsapp-agent/index.ts` | **Novo** -- Edge Function com tool calling para acoes na conta |
+| `supabase/functions/whatsapp-webhook/index.ts` | **Modificar** -- Adicionar logica de lookup de conta no chatbot e roteamento para o agente especial |
+| `supabase/config.toml` | **Modificar** -- Registrar nova Edge Function |
+| Banco de dados | **Insert** -- Criar registro do agente IA e do chatbot flow |
 

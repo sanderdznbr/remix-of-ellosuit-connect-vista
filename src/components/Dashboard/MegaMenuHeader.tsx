@@ -4,8 +4,9 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature, Workflow
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun
 } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 import { ElloLogo } from "@/components/shared/ElloLogo";
 import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
 import { useAuth } from "@/hooks/useAuth";
@@ -195,6 +196,7 @@ export function MegaMenuHeader() {
   const { user, signOut } = useAuth();
   const { color: hubColor } = useHubColor();
   const { isAdminMaster, loading: adminLoading } = useAdminMaster();
+  const { theme, toggleTheme } = useTheme();
 
   const handleMouseEnter = (menuId: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -318,6 +320,14 @@ export function MegaMenuHeader() {
               Admin
             </button>
           )}
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5 text-white" /> : <Moon className="h-5 w-5 text-white" />}
+          </button>
           {/* Notifications Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -336,34 +346,34 @@ export function MegaMenuHeader() {
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto">
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full" />
                     <span className="font-medium text-sm">Novo cliente cadastrado</span>
                   </div>
-                  <p className="text-xs text-gray-500 pl-4">Maria Silva foi adicionada à sua base</p>
-                  <span className="text-[10px] text-gray-400 pl-4">Há 5 minutos</span>
+                  <p className="text-xs text-muted-foreground pl-4">Maria Silva foi adicionada à sua base</p>
+                  <span className="text-[10px] text-muted-foreground pl-4">Há 5 minutos</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full" />
                     <span className="font-medium text-sm">Email aberto</span>
                   </div>
-                  <p className="text-xs text-gray-500 pl-4">João Pereira abriu seu email de proposta</p>
-                  <span className="text-[10px] text-gray-400 pl-4">Há 15 minutos</span>
+                  <p className="text-xs text-muted-foreground pl-4">João Pereira abriu seu email de proposta</p>
+                  <span className="text-[10px] text-muted-foreground pl-4">Há 15 minutos</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-gray-50">
+                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full" />
                     <span className="font-medium text-sm">Reunião agendada</span>
                   </div>
-                  <p className="text-xs text-gray-500 pl-4">Nova reunião com Empresa ABC às 14h</p>
-                  <span className="text-[10px] text-gray-400 pl-4">Há 1 hora</span>
+                  <p className="text-xs text-muted-foreground pl-4">Nova reunião com Empresa ABC às 14h</p>
+                  <span className="text-[10px] text-muted-foreground pl-4">Há 1 hora</span>
                 </DropdownMenuItem>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                className="justify-center text-blue-600 cursor-pointer font-medium"
+                className="justify-center text-primary cursor-pointer font-medium"
                 onClick={() => navigate('/dashboard/notificacoes')}
               >
                 Ver todas as notificações
@@ -397,7 +407,7 @@ export function MegaMenuHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-3 py-2">
                 <p className="text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-gray-500">Conta pessoal</p>
+                <p className="text-xs text-muted-foreground">Conta pessoal</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
@@ -425,7 +435,7 @@ export function MegaMenuHeader() {
       {/* Mega Menu Dropdown */}
       {activeMenu && (
         <div 
-          className="absolute left-0 right-0 bg-white shadow-xl overflow-hidden"
+          className="absolute left-0 right-0 bg-popover shadow-xl overflow-hidden"
           style={{
             borderRadius: '0 0 16px 16px',
             top: '100%',
@@ -447,7 +457,7 @@ export function MegaMenuHeader() {
                   <div className="flex gap-10 flex-1">
                     {currentGroup.columns.map((column, idx) => (
                       <div key={idx} className="min-w-[200px]">
-                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                           {column.title}
                         </h4>
                         <div className="space-y-1">
@@ -459,7 +469,7 @@ export function MegaMenuHeader() {
                                 key={item.id}
                                 to={item.path}
                                 onClick={() => setActiveMenu(null)}
-                                className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-gray-50/80 group"
+                                className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-muted group"
                                 style={{
                                   backgroundColor: active ? `${currentGroup.color}10` : 'transparent',
                                 }}
@@ -475,12 +485,12 @@ export function MegaMenuHeader() {
                                 </div>
                                 <div>
                                   <span 
-                                    className="text-sm font-medium block text-gray-800 group-hover:text-gray-900"
+                                    className="text-sm font-medium block text-foreground"
                                     style={{ color: active ? currentGroup.color : undefined }}
                                   >
                                     {item.label}
                                   </span>
-                                  <span className="text-xs text-gray-500 block mt-0.5">
+                                  <span className="text-xs text-muted-foreground block mt-0.5">
                                     {item.description}
                                   </span>
                                 </div>

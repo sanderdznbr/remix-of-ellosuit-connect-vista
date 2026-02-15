@@ -99,34 +99,34 @@
   
   /* Padronização global de fontes e estilos */
   h1 {
-    @apply text-2xl font-bold text-gray-900;
+    @apply text-2xl font-bold text-foreground;
   }
   
   h2 {
-    @apply text-xl font-semibold text-gray-900;
+    @apply text-xl font-semibold text-foreground;
   }
   
   h3 {
-    @apply text-lg font-medium text-gray-900;
+    @apply text-lg font-medium text-foreground;
   }
   
   p {
-    @apply text-sm text-gray-600;
+    @apply text-sm text-muted-foreground;
   }
   
   /* Remove cores azuis das páginas, mantém apenas na sidebar */
   .page-content {
-    @apply text-gray-900;
+    @apply text-foreground;
   }
   
   .page-content h1, 
   .page-content h2, 
   .page-content h3 {
-    @apply text-gray-900;
+    @apply text-foreground;
   }
   
   .page-content .text-blue-600 {
-    @apply text-gray-900;
+    @apply text-foreground;
   }
 }
 

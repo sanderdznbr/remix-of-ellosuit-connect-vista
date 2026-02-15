@@ -1166,8 +1166,15 @@ Deno.serve(async (req) => {
                             if (!isNaN(num) && num >= 1 && num <= buttons.length) {
                               parsedIndices.push(num - 1); // 0-based
                             } else {
-                              // Try exact text match
-                              const idx = buttons.findIndex((b: string) => b.toLowerCase().trim() === part.toLowerCase());
+                              const partLower = part.toLowerCase().trim();
+                              // 1) Exact match
+                              let idx = buttons.findIndex((b: string) => b.toLowerCase().trim() === partLower);
+                              // 2) Button starts with user input (e.g. "Sim" matches "Sim, sou eu!")
+                              if (idx < 0) idx = buttons.findIndex((b: string) => b.toLowerCase().trim().startsWith(partLower));
+                              // 3) User input starts with button text
+                              if (idx < 0) idx = buttons.findIndex((b: string) => partLower.startsWith(b.toLowerCase().trim()));
+                              // 4) Keyword contained in button text
+                              if (idx < 0 && partLower.length >= 3) idx = buttons.findIndex((b: string) => b.toLowerCase().includes(partLower));
                               if (idx >= 0) parsedIndices.push(idx);
                             }
                           }

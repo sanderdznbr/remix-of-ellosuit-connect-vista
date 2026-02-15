@@ -185,9 +185,21 @@
   .dark .bg-gradient-to-b.from-gray-50 {
     background: hsl(var(--background)) !important;
   }
-  /* Ensure all min-h-screen containers use background in dark */
-  .dark .min-h-screen {
+  /* Ensure ALL containers use dark background */
+  .dark .min-h-screen,
+  .dark .min-h-\[100vh\],
+  .dark .h-screen,
+  .dark .h-full {
     background-color: hsl(var(--background));
+  }
+  /* Catch-all: any direct child of #root in dark mode */
+  .dark #root > div,
+  .dark #root > main {
+    background-color: hsl(var(--background));
+  }
+  /* Override bg-gray-50 on page wrappers */
+  .dark .bg-gray-50 {
+    background-color: hsl(var(--background)) !important;
   }
 
   /* Fix hardcoded text colors */

@@ -43,6 +43,7 @@ import ContractViewer from '@/components/Contracts/ContractViewer';
 import ProposalsPage from '@/components/Proposals/ProposalsPage';
 import ProposalEditor from '@/components/Proposals/ProposalEditor';
 import ReceiptsPage from '@/components/Receipts/ReceiptsPage';
+import ReceiptThemeBuilder from '@/components/Receipts/ReceiptThemeBuilder';
 import AutomationBuilder from '@/components/Automations/AutomationBuilder';
 import AutomationManagement from '@/components/Automations/AutomationManagement';
 
@@ -175,6 +176,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/propostas" element={<ProposalsPage />} />
             <Route path="/propostas/editor" element={<ProposalEditor />} />
             <Route path="/recibos" element={<ReceiptsPage />} />
+            <Route path="/recibos/design" element={<ReceiptThemeBuilder />} />
             
             {/* Legacy routes */}
             <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />

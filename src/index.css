@@ -195,10 +195,19 @@
     color: #1f2937 !important;
   }
   .dark [data-dashboard-home] .text-gray-400,
+  .dark [data-dashboard-home] .text-gray-500,
+  .dark [data-dashboard-home] .text-gray-300,
   .dark [data-dashboard-home] .placeholder\:text-gray-400\/70::placeholder {
     color: #9ca3af !important;
   }
-  .dark [data-dashboard-home] .text-gray-600 {
+  .dark [data-dashboard-home] .text-gray-600,
+  .dark [data-dashboard-home] .text-gray-700 {
+    color: #4b5563 !important;
+  }
+  .dark [data-dashboard-home] svg.text-gray-400 {
+    color: #9ca3af !important;
+  }
+  .dark [data-dashboard-home] .group-hover\:text-gray-600:hover {
     color: #4b5563 !important;
   }
   .dark [data-dashboard-home] .border-white\/60 {

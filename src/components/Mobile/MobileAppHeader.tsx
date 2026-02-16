@@ -191,7 +191,7 @@ const MobileAppHeader = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="justify-center text-primary cursor-pointer font-medium text-xs"
-                    onClick={() => navigate('/dashboard/suporte')}
+                    onClick={() => navigate('/dashboard/notificacoes')}
                   >
                     Ver todas
                   </DropdownMenuItem>

@@ -25,8 +25,6 @@ import logoEllo from '@/assets/logoellosuit.png';
 const settingsItems = [
   { icon: User, label: 'Meu Perfil', path: '/dashboard/perfil' },
   { icon: CreditCard, label: 'Assinatura', path: '/dashboard/assinatura' },
-  { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes' },
-  { icon: Palette, label: 'Personalizar', path: '/dashboard/personalizar' },
   { icon: Shield, label: 'Privacidade e Segurança', path: '/dashboard/seguranca' },
   { icon: HelpCircle, label: 'Central de Ajuda', path: '/dashboard/ajuda' },
   { icon: Bug, label: 'Reportar Problema', path: '/dashboard/reportar-problema' },

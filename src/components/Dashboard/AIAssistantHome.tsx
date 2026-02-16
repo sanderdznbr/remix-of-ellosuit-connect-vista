@@ -175,14 +175,8 @@ const AIAssistantHome: React.FC = () => {
       // Store text to speak after render
       pendingSpeakRef.current = responseText;
 
-      // Handle action
-      if (data.action) {
-        if (data.action.action === 'navigate') {
-          setTimeout(() => navigate(data.action.path), 1500);
-        } else if (data.action.action === 'import_contacts' && data.action.path) {
-          setTimeout(() => navigate(data.action.path), 2000);
-        }
-      }
+      // Don't auto-navigate — let user click the action button instead
+      // This prevents the component from unmounting and losing chat state
     } catch (err: any) {
       setMessages(prev => {
         const filtered = prev.filter(m => m.id !== loadingId);
@@ -593,6 +587,15 @@ const AIAssistantHome: React.FC = () => {
                         style={{ backgroundColor: bgColor, color: 'white' }}
                       >
                         Ir para {msg.action.label} →
+                      </button>
+                    )}
+                    {msg.action?.action === 'import_contacts' && msg.action?.path && (
+                      <button
+                        onClick={() => navigate(msg.action.path)}
+                        className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                        style={{ backgroundColor: bgColor, color: 'white' }}
+                      >
+                        Importar Contatos →
                       </button>
                     )}
                     {msg.action?.action === 'saved_to_drive' && (

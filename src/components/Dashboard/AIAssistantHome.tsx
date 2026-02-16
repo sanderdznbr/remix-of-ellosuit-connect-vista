@@ -384,7 +384,7 @@ const AIAssistantHome: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, delay: hasChat ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div data-dashboard-input className="relative flex items-center backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] overflow-hidden transition-all duration-300 border border-white/60 focus-within:border-white/80 focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)]" style={{ backgroundColor: '#ffffff' }}>
+        <div data-keep-light className="relative flex items-center backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] overflow-hidden transition-all duration-300 border border-gray-200 focus-within:border-gray-300 focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)]" style={{ backgroundColor: '#ffffff' }}>
           <input
             ref={fileInputRef}
             type="file"

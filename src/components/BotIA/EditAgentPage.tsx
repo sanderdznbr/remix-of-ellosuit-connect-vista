@@ -6,6 +6,7 @@ import {
   Smile, AlertTriangle, Globe, Clock, Hash, Sparkles, RefreshCw, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AgentMediaManager from './AgentMediaManager';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -111,6 +112,7 @@ const EditAgentPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [agentCompanyId, setAgentCompanyId] = useState('');
 
   // Form state
   const [name, setName] = useState('');
@@ -208,6 +210,7 @@ const EditAgentPage: React.FC = () => {
       if (error || !data) throw error || new Error('Agente não encontrado');
 
       const settings = data.settings as any;
+      setAgentCompanyId(data.company_id);
       setName(data.name);
       setDescription(data.description || '');
       setPersonality(data.personality);
@@ -745,6 +748,11 @@ const EditAgentPage: React.FC = () => {
         {/* ARQUIVOS TAB */}
         {activeTab === 'arquivos' && (
           <div className="space-y-6">
+            {/* Mídia do Agente - fotos para enviar no WhatsApp */}
+            {id && agentCompanyId && (
+              <AgentMediaManager agentId={id} companyId={agentCompanyId} />
+            )}
+
             <Card className="rounded-2xl border-gray-200">
               <CardContent className="p-6 space-y-5">
                 <div>

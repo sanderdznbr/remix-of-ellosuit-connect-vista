@@ -1939,6 +1939,16 @@ Deno.serve(async (req) => {
                       const agentHumor = (agentSettings.humor as string) ?? 'profissional';
                       const MESSAGE_SEPARATOR = '|||';
                       
+                      // Load agent media files
+                      const { data: agentMedia } = await supabase
+                        .from('ai_agent_media')
+                        .select('id, file_url, file_name, file_type, description, context_keywords')
+                        .eq('agent_id', agent.id)
+                        .eq('is_active', true);
+                      
+                      const mediaList = agentMedia || [];
+                      console.log(`🤖📸 Agent has ${mediaList.length} active media files`);
+                      
                       // ============== PLATFORM AGENT: Route to ellosuit-whatsapp-agent ==============
                       const isPlatformAgent = !!(agentSettings.is_platform_agent);
                       if (isPlatformAgent) {
@@ -2213,6 +2223,16 @@ Deno.serve(async (req) => {
                         'LINKS E URLs:',
                         'Quando precisar enviar links ou URLs, SEMPRE inclua o link na sua resposta em texto. O sistema automaticamente enviara o texto com o link clicavel e depois o audio separadamente.',
                         '',
+                        ...(mediaList.length > 0 ? [
+                          'MIDIAS DISPONIVEIS PARA ENVIO:',
+                          'Voce tem acesso a estes arquivos que pode enviar ao cliente quando for relevante.',
+                          'Para enviar uma midia, inclua a tag [MEDIA:ID] na sua resposta (o ID sera substituido pelo sistema).',
+                          'Envie a midia JUNTO com uma mensagem de texto contextual.',
+                          'NAO envie midia se o cliente nao pediu algo relacionado. So envie quando fizer sentido.',
+                          '',
+                          ...mediaList.map((m: any) => `- ID: ${m.id} | Arquivo: ${m.file_name} | Quando enviar: ${m.description}${m.context_keywords?.length > 0 ? ` | Palavras-chave: ${m.context_keywords.join(', ')}` : ''}`),
+                          '',
+                        ] : []),
                         'Responda sempre em português brasileiro.'
                       ].join('\n');
                       
@@ -2344,6 +2364,17 @@ Deno.serve(async (req) => {
                           }
                           // Remove ALL stage tags from the reply
                           aiReply = aiReply.replace(/\[STAGE:\w+\]/g, '').trim();
+                          
+                          // ============== DETECT AND EXTRACT MEDIA TAGS ==============
+                          const mediaTagRegex = /\[MEDIA:([a-f0-9-]+)\]/gi;
+                          const detectedMediaIds: string[] = [];
+                          let mediaMatch;
+                          while ((mediaMatch = mediaTagRegex.exec(aiReply)) !== null) {
+                            detectedMediaIds.push(mediaMatch[1]);
+                          }
+                          // Remove media tags from the text reply
+                          aiReply = aiReply.replace(/\[MEDIA:[a-f0-9-]+\]/gi, '').trim();
+                          console.log(`🤖📸 Detected ${detectedMediaIds.length} media tags in response`);
                           
                           // Split response by separator
                           const messageParts = aiReply.split(MESSAGE_SEPARATOR).map((p: string) => p.trim()).filter((p: string) => p.length > 0);
@@ -2676,6 +2707,75 @@ Deno.serve(async (req) => {
                                 await new Promise(r => setTimeout(r, 1500));
                               }
                             }
+                            
+                            // ============== SEND DETECTED MEDIA FILES ==============
+                            if (detectedMediaIds.length > 0 && sessionData?.baileys_server_url) {
+                              for (const mediaId of detectedMediaIds) {
+                                const mediaItem = mediaList.find((m: any) => m.id === mediaId);
+                                if (!mediaItem) {
+                                  console.log(`🤖📸 Media ID ${mediaId} not found in agent media list`);
+                                  continue;
+                                }
+                                
+                                console.log(`🤖📸 Sending media: ${mediaItem.file_name} (${mediaItem.file_type})`);
+                                const mediaMsgId = `ai-media-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                                
+                                try {
+                                  const mediaType = mediaItem.file_type === 'image' ? 'image' : 
+                                                    mediaItem.file_type === 'video' ? 'video' : 'document';
+                                  
+                                  const sendMediaResp = await fetch(`${sessionData.baileys_server_url}/api/message/send-media`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      instanceName: sessionData.instance_name,
+                                      jid: sendJid,
+                                      mediaUrl: mediaItem.file_url,
+                                      mediaType: mediaType,
+                                      caption: '',
+                                    }),
+                                  });
+                                  
+                                  const mediaSent = sendMediaResp.ok;
+                                  console.log(`🤖📸 Media send result: ${mediaSent ? 'success' : 'failed'}`);
+                                  
+                                  // Save media message to DB
+                                  await supabase.from('whatsapp_messages').insert({
+                                    conversation_id: conversation.id,
+                                    session_id: targetSessionId,
+                                    company_id: companyId,
+                                    wa_message_id: mediaMsgId,
+                                    from_me: true,
+                                    content: `[${mediaType === 'image' ? 'Imagem' : mediaType === 'video' ? 'Vídeo' : 'Documento'}]`,
+                                    message_type: mediaType,
+                                    media_url: mediaItem.file_url,
+                                    status: mediaSent ? 'sent' : 'failed',
+                                    is_ai_response: true,
+                                    sender_name: agent.name,
+                                    timestamp: new Date().toISOString(),
+                                  });
+                                  
+                                  if (!mediaSent) {
+                                    // Fallback: send URL as text
+                                    await fetch(`${sessionData.baileys_server_url}/api/message/send`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        instanceName: sessionData.instance_name,
+                                        jid: sendJid,
+                                        message: { text: mediaItem.file_url }
+                                      }),
+                                    });
+                                  }
+                                  
+                                  // Small delay between media sends
+                                  await new Promise(r => setTimeout(r, 1000));
+                                } catch (mediaErr) {
+                                  console.error(`🤖📸 Error sending media ${mediaId}:`, mediaErr);
+                                }
+                              }
+                            }
+                            // ============== END SEND MEDIA ==============
                             
                             // Update conversation last message
                             const convUpdate: Record<string, unknown> = {

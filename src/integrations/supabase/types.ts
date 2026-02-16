@@ -44,6 +44,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agent_media: {
+        Row: {
+          agent_id: string
+          company_id: string
+          context_keywords: string[] | null
+          created_at: string
+          description: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          company_id: string
+          context_keywords?: string[] | null
+          created_at?: string
+          description: string
+          file_name: string
+          file_type?: string
+          file_url: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          company_id?: string
+          context_keywords?: string[] | null
+          created_at?: string
+          description?: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_media_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_media_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agents: {
         Row: {
           avatar_url: string | null

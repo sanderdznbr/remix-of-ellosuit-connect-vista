@@ -204,7 +204,7 @@ const AutomationManagement: React.FC = () => {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_140px_140px_140px_100px_120px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_160px] gap-3 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
             <div className="flex items-center justify-center">
               <Checkbox
                 checked={selectedIds.length === filtered.length && filtered.length > 0}
@@ -214,7 +214,7 @@ const AutomationManagement: React.FC = () => {
             <div>Nome</div>
             <div>Gatilho</div>
             <div>Criado em</div>
-            <div>Atualizado em</div>
+            <div>Atualizado</div>
             <div>Execuções</div>
             <div className="text-right">Ações</div>
           </div>
@@ -243,7 +243,7 @@ const AutomationManagement: React.FC = () => {
               {filtered.map(item => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[40px_1fr_140px_140px_140px_100px_120px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
+                  className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_160px] gap-3 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-center justify-center">
                     <Checkbox
@@ -254,7 +254,6 @@ const AutomationManagement: React.FC = () => {
 
                   <div>
                     <div className="font-medium text-gray-900 truncate">{item.name}</div>
-                    {item.description && <div className="text-xs text-gray-400 truncate">{item.description}</div>}
                   </div>
 
                   <div>

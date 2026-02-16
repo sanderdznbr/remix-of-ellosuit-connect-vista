@@ -10,9 +10,20 @@ export function useOneSignal() {
   const initialized = useRef(false);
   const [permission, setPermission] = useState<'default' | 'granted' | 'denied'>('default');
   const [ready, setReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialized.current) return;
+
+    // Check if Notification API is available
+    if (typeof Notification === 'undefined') {
+      setInitError('Notificações não suportadas neste navegador/contexto.');
+      console.warn('[OneSignal] Notification API not available');
+      return;
+    }
+
+    // Update permission from browser immediately
+    setPermission(Notification.permission as any);
 
     OneSignal.init({
       appId: ONESIGNAL_APP_ID,
@@ -22,13 +33,12 @@ export function useOneSignal() {
     } as any).then(() => {
       initialized.current = true;
       setReady(true);
+      setInitError(null);
       console.log('[OneSignal] Initialized');
-
-      // Check current permission
-      const perm = (Notification as any)?.permission || 'default';
-      setPermission(perm);
+      setPermission(Notification.permission as any);
     }).catch((err: any) => {
       console.error('[OneSignal] Init error:', err);
+      setInitError(err?.message || 'Falha ao inicializar OneSignal');
     });
   }, []);
 
@@ -56,5 +66,18 @@ export function useOneSignal() {
     }
   }, [ready]);
 
-  return { permission, ready, requestPermission };
+  const requestNativePermission = useCallback(async () => {
+    if (typeof Notification === 'undefined') {
+      setInitError('Notificações não suportadas neste navegador.');
+      return;
+    }
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result as any);
+    } catch (err) {
+      console.error('[OneSignal] Native permission error:', err);
+    }
+  }, []);
+
+  return { permission, ready, requestPermission, requestNativePermission, initError };
 }

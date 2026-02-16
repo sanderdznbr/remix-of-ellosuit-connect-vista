@@ -67,7 +67,7 @@ const AIAssistantHome: React.FC = () => {
   const pendingSpeakRef = useRef<string | null>(null);
 
   const isDark = theme === 'dark';
-  const bgColor = isDark ? '#0f1923' : (hubColor || DEFAULT_COLOR);
+  const bgColor = isDark ? 'hsl(222, 47%, 6%)' : (hubColor || DEFAULT_COLOR);
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
   const firstName = userName.split(' ')[0];
 

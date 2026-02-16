@@ -271,6 +271,21 @@ export default function DisparosPage() {
       }
     }).catch(() => {});
 
+    // Notify user via WhatsApp: dispatch started
+    supabase.functions.invoke('send-user-notification', {
+      body: {
+        user_id: user?.id,
+        company_id: companyId,
+        title: '📤🚀 Disparo iniciado',
+        message: `Enviando ${pending.length} mensagens (${mediaType})`,
+        notification_type: 'dispatch_progress',
+        category: 'crm',
+        icon: 'Send',
+        action_url: '/dashboard/disparos',
+        metadata: { total_messages: pending.length, media_type: mediaType },
+      }
+    }).catch(() => {});
+
     for (let i = 0; i < pending.length; i++) {
       const recipient = pending[i];
       
@@ -351,6 +366,21 @@ export default function DisparosPage() {
         event_title: `Disparo concluído: ${finalSent} enviadas, ${finalErrors} falhas`,
         event_description: `Total: ${pending.length} mensagens | Tipo: ${mediaType}`,
         metadata: { total_messages: pending.length, sent: finalSent, errors: finalErrors, media_type: mediaType },
+      }
+    }).catch(() => {});
+
+    // Notify user via WhatsApp: dispatch completed
+    supabase.functions.invoke('send-user-notification', {
+      body: {
+        user_id: user?.id,
+        company_id: companyId,
+        title: finalErrors > finalSent ? '📤❌ Disparo com falhas' : '📤✅ Disparo concluído',
+        message: `${finalSent} enviadas, ${finalErrors} falhas de ${pending.length} mensagens`,
+        notification_type: 'dispatch_progress',
+        category: 'crm',
+        icon: 'Send',
+        action_url: '/dashboard/disparos',
+        metadata: { total_messages: pending.length, sent: finalSent, errors: finalErrors },
       }
     }).catch(() => {});
     

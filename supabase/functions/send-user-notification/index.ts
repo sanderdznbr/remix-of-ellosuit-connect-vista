@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
       message,
       type = "info",
       category = "system",
+      notification_type, // e.g. 'event_created', 'event_upcoming', 'event_deleted', 'task_due', 'email_sent', 'dispatch_progress'
       icon,
       action_url,
       metadata = {},
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[USER-NOTIFY] Creating notification for user ${user_id}: ${title}`);
+    console.log(`[USER-NOTIFY] Creating notification for user ${user_id}: ${title} (type: ${notification_type})`);
 
     // 1. Insert notification into DB
     const { data: notification, error: insertError } = await supabase
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
         category,
         icon,
         action_url,
-        metadata,
+        metadata: { ...metadata, notification_type },
         whatsapp_sent: false,
       })
       .select()
@@ -67,15 +68,35 @@ Deno.serve(async (req) => {
 
     if (send_whatsapp) {
       try {
-        // Check user preferences
+        // Check user's notification_settings for specific WhatsApp toggles
+        const { data: notifSettings } = await supabase
+          .from("notification_settings")
+          .select("*")
+          .eq("user_id", user_id)
+          .maybeSingle();
+
+        // Map notification_type to the column name in notification_settings
+        const typeToColumn: Record<string, string> = {
+          event_created: "whatsapp_event_created",
+          event_upcoming: "whatsapp_event_upcoming",
+          event_deleted: "whatsapp_event_deleted",
+          task_due: "whatsapp_task_due",
+          email_sent: "whatsapp_email_sent",
+          dispatch_progress: "whatsapp_dispatch_progress",
+        };
+
+        const whatsappGlobalEnabled = notifSettings?.whatsapp_enabled !== false;
+        const specificColumn = typeToColumn[notification_type || ""];
+        const specificEnabled = specificColumn
+          ? (notifSettings as any)?.[specificColumn] !== false
+          : true;
+
+        // Also check notification_preferences for quiet hours and whatsapp number
         const { data: prefs } = await supabase
           .from("notification_preferences")
           .select("*")
           .eq("user_id", user_id)
-          .single();
-
-        const whatsappEnabled = prefs?.whatsapp_enabled !== false;
-        const categoryEnabled = prefs?.categories?.[category] !== false;
+          .maybeSingle();
 
         // Check quiet hours
         let inQuietHours = false;
@@ -84,16 +105,17 @@ Deno.serve(async (req) => {
           const brTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
           const hours = brTime.getHours();
           const minutes = brTime.getMinutes();
-          const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          const currentTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
           inQuietHours = currentTime >= prefs.quiet_hours_start && currentTime <= prefs.quiet_hours_end;
         }
 
-        if (whatsappEnabled && categoryEnabled && !inQuietHours) {
-          // Get user's WhatsApp number from preferences or from clients table
+        console.log(`[USER-NOTIFY] WhatsApp global=${whatsappGlobalEnabled}, specific=${specificEnabled}, quietHours=${inQuietHours}`);
+
+        if (whatsappGlobalEnabled && specificEnabled && !inQuietHours) {
+          // Get user's WhatsApp number
           let userPhone = prefs?.whatsapp_number;
 
           if (!userPhone) {
-            // Try to get from auth user metadata
             const { data: userData } = await supabase.auth.admin.getUserById(user_id);
             userPhone = userData?.user?.phone || userData?.user?.user_metadata?.whatsapp;
           }
@@ -117,11 +139,9 @@ Deno.serve(async (req) => {
                 .single();
 
               if (session?.baileys_server_url) {
-                // Clean phone number
                 const cleanPhone = userPhone.replace(/\D/g, "");
                 const jid = `${cleanPhone}@s.whatsapp.net`;
-
-                const whatsappMessage = formatWhatsAppMessage(title, message, category, action_url);
+                const whatsappMessage = formatWhatsAppMessage(title, message, category, notification_type, action_url);
 
                 const sendRes = await fetch(`${session.baileys_server_url}/api/message/send`, {
                   method: "POST",
@@ -151,7 +171,6 @@ Deno.serve(async (req) => {
         console.error("[USER-NOTIFY] WhatsApp error:", whatsappErr);
       }
 
-      // Update notification with WhatsApp status
       if (whatsappSent) {
         await supabase
           .from("notifications")
@@ -177,9 +196,19 @@ function formatWhatsAppMessage(
   title: string,
   message: string,
   category: string,
+  notificationType?: string,
   actionUrl?: string
 ): string {
-  const icons: Record<string, string> = {
+  const typeIcons: Record<string, string> = {
+    event_created: "📅✅",
+    event_upcoming: "⏰📅",
+    event_deleted: "📅❌",
+    task_due: "✅⏰",
+    email_sent: "📧✅",
+    dispatch_progress: "📤🚀",
+  };
+
+  const categoryIcons: Record<string, string> = {
     system: "🔔",
     calendar: "📅",
     crm: "💬",
@@ -189,7 +218,7 @@ function formatWhatsAppMessage(
     drive: "📁",
   };
 
-  const icon = icons[category] || "🔔";
+  const icon = typeIcons[notificationType || ""] || categoryIcons[category] || "🔔";
   const timestamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   let msg = `${icon} *ELLOSUIT*\n\n`;

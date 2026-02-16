@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { addDays, addWeeks, addMonths, isBefore, parseISO } from 'date-fns';
+import { addDays, addWeeks, addMonths, isBefore, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface CalendarEvent {
   id: string;
@@ -215,6 +216,25 @@ export const useCalendarData = () => {
           : "Evento criado com sucesso!"
       });
 
+      // Send WhatsApp notification for event creation
+      try {
+        const eventDate = format(new Date(eventData.start_date), "dd/MM 'às' HH:mm", { locale: ptBR });
+        await supabase.functions.invoke('send-user-notification', {
+          body: {
+            user_id: user.id,
+            company_id: companyData.company_id,
+            title: '📅 Novo evento agendado',
+            message: `"${eventData.title}" agendado para ${eventDate}`,
+            notification_type: 'event_created',
+            category: 'calendar',
+            icon: 'Calendar',
+            action_url: '/dashboard/agenda',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Notification error:', notifErr);
+      }
+
       return data[0];
     } catch (error: any) {
       console.error('💥 Erro ao criar evento:', error);
@@ -300,6 +320,13 @@ export const useCalendarData = () => {
     try {
       console.log('🗑️ Deletando evento:', eventId);
 
+      // Fetch event info before deleting for notification
+      const { data: eventInfo } = await supabase
+        .from('calendar_events')
+        .select('title, start_date, company_id')
+        .eq('id', eventId)
+        .single();
+
       const { error } = await supabase
         .from('calendar_events')
         .delete()
@@ -316,6 +343,26 @@ export const useCalendarData = () => {
       // Invalidar e refetch dos eventos
       await queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       
+      // Send WhatsApp notification for event deletion
+      if (eventInfo) {
+        try {
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              user_id: user.id,
+              company_id: eventInfo.company_id,
+              title: '📅❌ Evento removido',
+              message: `O evento "${eventInfo.title}" foi excluído da sua agenda`,
+              notification_type: 'event_deleted',
+              category: 'calendar',
+              icon: 'Calendar',
+              action_url: '/dashboard/agenda',
+            },
+          });
+        } catch (notifErr) {
+          console.error('Notification error:', notifErr);
+        }
+      }
+
       toast({
         title: "Sucesso",
         description: "Evento deletado com sucesso!"

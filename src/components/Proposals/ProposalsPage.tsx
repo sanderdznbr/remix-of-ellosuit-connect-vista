@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Package, LayoutTemplate, Download, Mail, MessageCircle, Loader2 } from 'lucide-react';
+import ProposalGenerateDialog from './ProposalGenerateDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,7 @@ export default function ProposalsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'propostas' | 'servicos' | 'templates'>('propostas');
+  const [generateDialog, setGenerateDialog] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: companyId } = useQuery({
@@ -265,7 +267,7 @@ export default function ProposalsPage() {
               </div>
 
               {/* Table Header (desktop) */}
-              <div className="hidden md:grid grid-cols-[1fr_120px_100px_120px_200px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <div className="hidden md:grid grid-cols-[1fr_120px_100px_120px_280px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div>Ordem de Serviço</div>
                 <div>Valor</div>
                 <div>Status</div>
@@ -297,7 +299,7 @@ export default function ProposalsPage() {
                     const status = STATUS_MAP[p.status] || STATUS_MAP.rascunho;
                     const clientName = (p.clients as any)?.name || 'Sem cliente';
                     return (
-                      <div key={p.id} className="grid grid-cols-1 md:grid-cols-[1fr_120px_100px_120px_200px] gap-2 md:gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors">
+                      <div key={p.id} className="grid grid-cols-1 md:grid-cols-[1fr_120px_100px_120px_280px] gap-2 md:gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors">
                         {/* Info */}
                         <div className="flex items-center gap-3 min-w-0 cursor-pointer" onClick={() => navigate(`/dashboard/propostas/editor?id=${p.id}`)}>
                           <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: PROPOSAL_COLOR + '12' }}>
@@ -340,6 +342,15 @@ export default function ProposalsPage() {
                             <Eye className="h-3.5 w-3.5" />
                             Editar
                           </Button>
+                          <Button
+                            size="sm"
+                            className="h-8 rounded-lg gap-1.5 text-xs font-medium text-white"
+                            style={{ background: PROPOSAL_COLOR }}
+                            onClick={() => setGenerateDialog(p)}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Gerar PDF
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -377,6 +388,13 @@ export default function ProposalsPage() {
           </>
         )}
       </div>
+
+      <ProposalGenerateDialog
+        open={!!generateDialog}
+        onOpenChange={(open) => !open && setGenerateDialog(null)}
+        proposal={generateDialog}
+        companyId={companyId}
+      />
     </div>
   );
 }

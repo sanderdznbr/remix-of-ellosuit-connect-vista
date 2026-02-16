@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Receipt, Send, Download } from 'lucide-react';
+import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Receipt, Send, Download, Palette } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { useReceiptSettings } from '@/hooks/useReceiptSettings';
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   rascunho: { label: 'Rascunho', color: '#6B7280', bg: '#F3F4F6' },
@@ -62,6 +63,8 @@ export default function ReceiptsPage() {
     },
     enabled: !!user?.id,
   });
+
+  const { settings: themeSettings } = useReceiptSettings(companyId);
 
   const { data: receipts = [], isLoading } = useQuery({
     queryKey: ['receipts', companyId],
@@ -179,30 +182,94 @@ export default function ReceiptsPage() {
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
     const clientName = r.client_name || (r.clients as any)?.name || 'N/A';
+    const ts = themeSettings;
     let y = 20;
 
-    // Header
-    doc.setFillColor(30, 0, 200);
-    doc.rect(0, 0, pw, 38, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RECIBO', 14, y + 4);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(r.receipt_number || '', pw - 14, y + 4, { align: 'right' });
-    y = 50;
+    // Helper: parse hex to RGB
+    const hexToRgb = (hex: string) => {
+      const h = hex.replace('#', '');
+      return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+    };
+    const pc = hexToRgb(ts.primary_color);
+    const sc = hexToRgb(ts.secondary_color);
+    const tc = hexToRgb(ts.text_color);
+    const ac = hexToRgb(ts.accent_color);
 
-    // Date
-    doc.setTextColor(100, 100, 100);
+    // Border
+    if (ts.show_border) {
+      doc.setDrawColor(pc.r, pc.g, pc.b);
+      doc.setLineWidth(0.5);
+      doc.rect(10, 10, pw - 20, doc.internal.pageSize.getHeight() - 20);
+    }
+
+    // Header with company info
+    if (ts.layout_style === 'modern') {
+      doc.setFillColor(pc.r, pc.g, pc.b);
+      doc.rect(0, 0, pw, 42, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECIBO', 14, y + 4);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(r.receipt_number || '', pw - 14, y + 4, { align: 'right' });
+      if (ts.company_name) { doc.setFontSize(9); doc.text(ts.company_name, 14, y + 12); }
+      if (ts.company_cnpj) { doc.setFontSize(8); doc.text(`CNPJ: ${ts.company_cnpj}`, 14, y + 17); }
+      y = 52;
+    } else if (ts.layout_style === 'corporate') {
+      doc.setTextColor(pc.r, pc.g, pc.b);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECIBO', pw - 14, y, { align: 'right' });
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(ac.r, ac.g, ac.b);
+      doc.text(r.receipt_number || '', pw - 14, y + 6, { align: 'right' });
+      if (ts.company_name) { doc.setTextColor(tc.r, tc.g, tc.b); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(ts.company_name, 14, y); }
+      let infoY = y + 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(ac.r, ac.g, ac.b);
+      if (ts.company_cnpj) { doc.text(`CNPJ: ${ts.company_cnpj}`, 14, infoY); infoY += 4; }
+      if (ts.company_address) { doc.text(ts.company_address, 14, infoY); infoY += 4; }
+      if (ts.company_phone) { doc.text(`Tel: ${ts.company_phone}`, 14, infoY); infoY += 4; }
+      if (ts.company_email) { doc.text(ts.company_email, 14, infoY); infoY += 4; }
+      y = Math.max(infoY + 4, 40);
+      doc.setDrawColor(pc.r, pc.g, pc.b);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, pw - 14, y);
+      y += 8;
+    } else {
+      // classic / minimal
+      doc.setTextColor(pc.r, pc.g, pc.b);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECIBO', ts.layout_style === 'classic' ? pw / 2 : 14, y, ts.layout_style === 'classic' ? { align: 'center' } : undefined);
+      y += 8;
+      if (ts.company_name) {
+        doc.setFontSize(10); doc.setTextColor(tc.r, tc.g, tc.b);
+        doc.text(ts.company_name, ts.layout_style === 'classic' ? pw / 2 : 14, y, ts.layout_style === 'classic' ? { align: 'center' } : undefined);
+        y += 5;
+      }
+      if (ts.company_cnpj) {
+        doc.setFontSize(8); doc.setTextColor(ac.r, ac.g, ac.b);
+        doc.text(`CNPJ: ${ts.company_cnpj}`, ts.layout_style === 'classic' ? pw / 2 : 14, y, ts.layout_style === 'classic' ? { align: 'center' } : undefined);
+        y += 5;
+      }
+      doc.setDrawColor(200, 200, 200); doc.line(14, y, pw - 14, y); y += 8;
+    }
+
+    // Date and Number
+    doc.setTextColor(ac.r, ac.g, ac.b);
     doc.setFontSize(9);
-    doc.text(`Data: ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, 14, y);
-    y += 14;
+    doc.text(`Nº ${r.receipt_number || ''}`, 14, y);
+    doc.text(`Data: ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, pw - 14, y, { align: 'right' });
+    y += 12;
 
     // Amount box
-    doc.setFillColor(245, 245, 255);
+    doc.setFillColor(sc.r, sc.g, sc.b);
     doc.roundedRect(14, y - 6, pw - 28, 24, 4, 4, 'F');
-    doc.setTextColor(30, 0, 200);
+    doc.setTextColor(pc.r, pc.g, pc.b);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('VALOR', 20, y + 2);
@@ -215,11 +282,11 @@ export default function ReceiptsPage() {
       if (!value || value === 'N/A') return;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
+      doc.setTextColor(ac.r, ac.g, ac.b);
       doc.text(label, 14, y);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.setTextColor(30, 30, 30);
+      doc.setTextColor(tc.r, tc.g, tc.b);
       const lines = doc.splitTextToSize(value, pw - 28);
       doc.text(lines, 14, y + 5);
       y += 5 + lines.length * 5 + 6;
@@ -232,14 +299,38 @@ export default function ReceiptsPage() {
     if (r.description) addField('DESCRIÇÃO', r.description);
     if (r.notes) addField('OBSERVAÇÕES', r.notes);
 
-    // Footer line
-    y = Math.max(y + 10, 220);
+    // Watermark
+    if (ts.show_watermark && ts.watermark_text) {
+      doc.setTextColor(pc.r, pc.g, pc.b);
+      doc.setFontSize(50);
+      doc.setFont('helvetica', 'bold');
+      doc.setGState(doc.GState({ opacity: 0.06 }));
+      doc.text(ts.watermark_text, pw / 2, 160, { align: 'center', angle: 30 });
+      doc.setGState(doc.GState({ opacity: 1 }));
+    }
+
+    // Signature line
+    if (ts.show_signature_line) {
+      y = Math.max(y + 15, 220);
+      doc.setDrawColor(ac.r, ac.g, ac.b);
+      doc.setLineWidth(0.3);
+      doc.line(pw / 2 - 40, y, pw / 2 + 40, y);
+      doc.setFontSize(8);
+      doc.setTextColor(ac.r, ac.g, ac.b);
+      doc.text(ts.signature_label || 'Assinatura', pw / 2, y + 5, { align: 'center' });
+      y += 15;
+    }
+
+    // Footer
+    y = Math.max(y + 5, 250);
     doc.setDrawColor(200, 200, 200);
     doc.line(14, y, pw - 14, y);
-    y += 10;
+    y += 8;
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Documento gerado eletronicamente', pw / 2, y, { align: 'center' });
+    doc.setTextColor(ac.r, ac.g, ac.b);
+    doc.text(ts.footer_text || 'Documento gerado eletronicamente', pw / 2, y, { align: 'center' });
+    if (ts.company_email) { y += 4; doc.text(ts.company_email, pw / 2, y, { align: 'center' }); }
+    if (ts.company_website) { y += 4; doc.text(ts.company_website, pw / 2, y, { align: 'center' }); }
 
     doc.save(`${r.receipt_number || 'recibo'}.pdf`);
   };
@@ -258,14 +349,24 @@ export default function ReceiptsPage() {
               <p className="text-sm text-gray-500">Gere e gerencie recibos de pagamento</p>
             </div>
           </div>
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            className="rounded-xl h-11 gap-2 text-white shadow-lg"
-            style={{ background: RECEIPT_COLOR }}
-          >
-            <Plus className="h-4 w-4" />
-            Novo Recibo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard/recibos/design')}
+              className="rounded-xl h-11 gap-2"
+            >
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">Design</span>
+            </Button>
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              className="rounded-xl h-11 gap-2 text-white shadow-lg"
+              style={{ background: RECEIPT_COLOR }}
+            >
+              <Plus className="h-4 w-4" />
+              Novo Recibo
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}

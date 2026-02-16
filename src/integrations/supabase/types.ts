@@ -2871,6 +2871,95 @@ export type Database = {
           },
         ]
       }
+      receipt_settings: {
+        Row: {
+          accent_color: string | null
+          company_address: string | null
+          company_cnpj: string | null
+          company_email: string | null
+          company_id: string
+          company_name: string | null
+          company_phone: string | null
+          company_website: string | null
+          created_at: string
+          created_by: string
+          footer_text: string | null
+          id: string
+          layout_style: string | null
+          logo_position: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          show_border: boolean | null
+          show_signature_line: boolean | null
+          show_watermark: boolean | null
+          signature_label: string | null
+          text_color: string | null
+          updated_at: string
+          watermark_text: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          company_address?: string | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_id: string
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string
+          created_by: string
+          footer_text?: string | null
+          id?: string
+          layout_style?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          show_border?: boolean | null
+          show_signature_line?: boolean | null
+          show_watermark?: boolean | null
+          signature_label?: string | null
+          text_color?: string | null
+          updated_at?: string
+          watermark_text?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          company_address?: string | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_id?: string
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string
+          created_by?: string
+          footer_text?: string | null
+          id?: string
+          layout_style?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          show_border?: boolean | null
+          show_signature_line?: boolean | null
+          show_watermark?: boolean | null
+          signature_label?: string | null
+          text_color?: string | null
+          updated_at?: string
+          watermark_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipts: {
         Row: {
           amount: number

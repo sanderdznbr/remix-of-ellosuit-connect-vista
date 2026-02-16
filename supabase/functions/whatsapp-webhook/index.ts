@@ -175,6 +175,53 @@ Deno.serve(async (req) => {
             updateData.status = 'connected';
             updateData.connected_at = new Date().toISOString();
             updateData.last_seen_at = new Date().toISOString();
+            
+            // MIGRATE: When reconnecting, update all conversations from old sessions of same company+phone
+            try {
+              const { data: currentSession } = await supabase
+                .from('whatsapp_sessions')
+                .select('company_id, phone_number')
+                .eq('id', sessionId)
+                .single();
+              
+              if (currentSession?.company_id && currentSession?.phone_number) {
+                // Find all OTHER sessions with same phone number in same company
+                const { data: oldSessions } = await supabase
+                  .from('whatsapp_sessions')
+                  .select('id')
+                  .eq('company_id', currentSession.company_id)
+                  .eq('phone_number', currentSession.phone_number)
+                  .neq('id', sessionId);
+                
+                if (oldSessions && oldSessions.length > 0) {
+                  const oldSessionIds = oldSessions.map(s => s.id);
+                  
+                  // Migrate conversations to new session
+                  const { data: migratedConvs } = await supabase
+                    .from('whatsapp_conversations')
+                    .update({ session_id: sessionId })
+                    .in('session_id', oldSessionIds)
+                    .select('id');
+                  
+                  // Migrate messages to new session
+                  await supabase
+                    .from('whatsapp_messages')
+                    .update({ session_id: sessionId })
+                    .in('session_id', oldSessionIds);
+                  
+                  console.log(`[SESSION-MIGRATE] Migrated ${migratedConvs?.length || 0} conversations from ${oldSessionIds.length} old sessions to ${sessionId}`);
+                  
+                  // Also migrate conversations that belong to the same company but have no session
+                  await supabase
+                    .from('whatsapp_conversations')
+                    .update({ session_id: sessionId })
+                    .eq('company_id', currentSession.company_id)
+                    .is('session_id', null);
+                }
+              }
+            } catch (migrationErr) {
+              console.error('[SESSION-MIGRATE] Error migrating sessions:', migrationErr);
+            }
           } else if (connection === 'close') {
             updateData.status = 'disconnected';
           } else if (connection === 'connecting') {
@@ -403,6 +450,7 @@ Deno.serve(async (req) => {
               const shouldUpdateName = hasValidNewName && (isGroup || existingNameEmpty);
               
               const updatePayload: Record<string, unknown> = {
+                session_id: targetSessionId, // ALWAYS update to current active session
                 status: chat.archive ? 'archived' : 'open',
                 last_message: lastMessageContent || chat.lastMessage?.conversation || '',
                 last_message_at: lastMessageAt,
@@ -831,6 +879,7 @@ Deno.serve(async (req) => {
           } else {
             // Update conversation with latest info
             const updateData: Record<string, unknown> = {
+              session_id: targetSessionId, // ALWAYS keep session_id current
               last_message: content,
               last_message_at: new Date().toISOString(),
               unread_count: fromMe ? conversation.unread_count : (conversation.unread_count || 0) + 1,

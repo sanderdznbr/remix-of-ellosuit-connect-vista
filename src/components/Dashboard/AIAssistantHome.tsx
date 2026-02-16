@@ -387,7 +387,7 @@ const AIAssistantHome: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, delay: hasChat ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="relative flex items-center bg-white rounded-full shadow-xl shadow-black/10 overflow-hidden transition-all duration-300 focus-within:shadow-2xl">
+        <div className="relative flex items-center bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] border border-white/60 overflow-hidden transition-all duration-300 focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)] focus-within:border-white/80 focus-within:bg-white">
           <input
             ref={fileInputRef}
             type="file"
@@ -398,16 +398,16 @@ const AIAssistantHome: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile || isProcessing}
-            className="ml-3 p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+            className="ml-3 p-2.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 disabled:opacity-50 group"
           >
             {uploadingFile ? (
               <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
             ) : (
-              <Paperclip className="h-5 w-5 text-gray-400" />
+              <Paperclip className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
             )}
           </button>
 
-          <Sparkles className="ml-1 h-5 w-5 text-gray-300 shrink-0" />
+          <div className="mx-1 h-6 w-px bg-gray-200/60" />
 
           <input
             ref={inputRef}
@@ -415,37 +415,48 @@ const AIAssistantHome: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={attachedFile ? "Descreva o que fazer com o arquivo..." : "Digite o que deseja fazer..."}
-            className="flex-1 bg-transparent text-gray-800 placeholder:text-gray-400 text-base md:text-lg px-3 py-4 md:py-5 outline-none"
+            placeholder={attachedFile ? "Descreva o que fazer com o arquivo..." : "Pergunte qualquer coisa..."}
+            className="flex-1 bg-transparent text-gray-800 placeholder:text-gray-400/70 text-base md:text-[17px] px-3 py-4 md:py-[18px] outline-none font-medium tracking-[-0.01em]"
             autoFocus
             disabled={isProcessing}
           />
-          <button
-            onClick={() => handleSubmit()}
-            disabled={isProcessing || (!input.trim() && !attachedFile)}
-            className="p-2.5 md:p-3 rounded-full hover:bg-gray-100 transition-all duration-200 active:scale-90 disabled:opacity-40"
-            style={{ backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? undefined : `${bgColor}15` }}
-          >
-            <Send className="h-5 w-5" style={{ color: isProcessing || (!input.trim() && !attachedFile) ? '#9ca3af' : bgColor }} />
-          </button>
 
-          {/* Mic button */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isProcessing || isTranscribing}
-            className={`mr-3 p-2.5 md:p-3 rounded-full transition-all duration-200 active:scale-90 disabled:opacity-40 ${
-              isRecording ? 'bg-red-500 animate-pulse' : 'hover:bg-gray-100'
-            }`}
-            title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
-          >
-            {isTranscribing ? (
-              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-            ) : isRecording ? (
-              <MicOff className="h-5 w-5 text-white" />
-            ) : (
-              <Mic className="h-5 w-5 text-gray-400" />
-            )}
-          </button>
+          <div className="flex items-center gap-1 mr-2">
+            {/* Mic button */}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isProcessing || isTranscribing}
+              className={`p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-40 ${
+                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : 'hover:bg-gray-100/80 group'
+              }`}
+              title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+            >
+              {isTranscribing ? (
+                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+              ) : isRecording ? (
+                <MicOff className="h-5 w-5 text-white" />
+              ) : (
+                <Mic className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              )}
+            </button>
+
+            {/* Send button */}
+            <button
+              onClick={() => handleSubmit()}
+              disabled={isProcessing || (!input.trim() && !attachedFile)}
+              className="p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-30"
+              style={{
+                backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? 'transparent' : bgColor,
+              }}
+            >
+              <Send
+                className="h-5 w-5 transition-colors"
+                style={{
+                  color: isProcessing || (!input.trim() && !attachedFile) ? '#d1d5db' : '#ffffff',
+                }}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Stop audio button - only when speaking */}

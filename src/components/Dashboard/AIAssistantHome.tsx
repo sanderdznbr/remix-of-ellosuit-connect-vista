@@ -475,7 +475,7 @@ const AIAssistantHome: React.FC = () => {
   );
 
   return (
-    <div data-dashboard-home className="flex flex-col min-h-[100dvh] md:min-h-full md:h-full transition-colors duration-500 -mt-[calc(3.5rem+env(safe-area-inset-top))] pt-[calc(3.5rem+env(safe-area-inset-top))] -mb-[calc(6rem+env(safe-area-inset-bottom)+20px)] pb-[calc(6rem+env(safe-area-inset-bottom)+20px)] md:mt-0 md:pt-0 md:mb-0 md:pb-0" style={{ backgroundColor: bgColor }}>
+    <div data-dashboard-home className="flex flex-col h-full transition-colors duration-500 -mt-[calc(3.5rem+env(safe-area-inset-top))] pt-[calc(3.5rem+env(safe-area-inset-top))] -mb-[calc(4rem+env(safe-area-inset-bottom))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:mt-0 md:pt-0 md:mb-0 md:pb-0" style={{ backgroundColor: bgColor }}>
       {!hasChat ? (
         /* Empty state - greeting + input + most used tools */
         <div className="flex-1 flex flex-col items-center px-4 md:px-6 overflow-y-auto py-6">

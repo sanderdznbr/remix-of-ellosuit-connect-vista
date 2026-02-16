@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +37,9 @@ const AutomationManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState('all');
+  const [editItem, setEditItem] = useState<AutomationRow | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -60,6 +66,22 @@ const AutomationManagement: React.FC = () => {
     };
     load();
   }, [companyId]);
+
+  const openEdit = (item: AutomationRow) => {
+    setEditItem(item);
+    setEditName(item.name);
+    setEditDesc(item.description || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItem) return;
+    const { error } = await supabase.from('automations').update({ name: editName, description: editDesc || null }).eq('id', editItem.id);
+    if (!error) {
+      setItems(prev => prev.map(a => a.id === editItem.id ? { ...a, name: editName, description: editDesc || null } : a));
+      toast({ title: 'Salvo', description: 'Automação atualizada' });
+      setEditItem(null);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta automação?')) return;
@@ -247,9 +269,14 @@ const AutomationManagement: React.FC = () => {
 
                   <div className="flex items-center justify-end gap-1">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      title="Editar"
-                      onClick={() => navigate(`/dashboard/automacoes/builder?id=${item.id}`)}>
+                      title="Editar nome/descrição"
+                      onClick={() => openEdit(item)}>
                       <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                      title="Abrir no builder"
+                      onClick={() => navigate(`/dashboard/automacoes/builder?id=${item.id}`)}>
+                      <Workflow className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm"
                       className={`h-8 w-8 p-0 ${item.is_active ? 'text-green-600 hover:text-red-600' : 'text-gray-500 hover:text-green-600'}`}
@@ -273,6 +300,31 @@ const AutomationManagement: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={!!editItem} onOpenChange={open => !open && setEditItem(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Automação</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome da automação" />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Descrição (opcional)" rows={3} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditItem(null)}>Cancelar</Button>
+              <Button onClick={handleSaveEdit} disabled={!editName.trim()} style={{ backgroundColor: BRAND_COLOR }} className="text-white">
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

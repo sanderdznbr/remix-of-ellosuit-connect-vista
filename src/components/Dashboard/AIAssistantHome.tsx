@@ -436,40 +436,40 @@ const AIAssistantHome: React.FC = () => {
           />
 
           <div className="flex items-center gap-1 mr-2">
-            {/* Mic button */}
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isProcessing || isTranscribing}
-              className={`p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-40 ${
-                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : 'hover:bg-gray-100/80 group'
-              }`}
-              title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
-            >
-              {isTranscribing ? (
-                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-              ) : isRecording ? (
-                <MicOff className="h-5 w-5 text-white" />
-              ) : (
-                <Mic className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-              )}
-            </button>
-
-            {/* Send button */}
-            <button
-              onClick={() => handleSubmit()}
-              disabled={isProcessing || (!input.trim() && !attachedFile)}
-              className="p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-30"
-              style={{
-                backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? 'transparent' : (hubColor || DEFAULT_COLOR),
-              }}
-            >
-              <Send
-                className="h-5 w-5 transition-colors"
+            {input.trim() || attachedFile ? (
+              /* Send button - shown when there's text or file */
+              <button
+                onClick={() => handleSubmit()}
+                disabled={isProcessing}
+                className="p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-30"
                 style={{
-                  color: isProcessing || (!input.trim() && !attachedFile) ? '#d1d5db' : '#ffffff',
+                  backgroundColor: isProcessing ? 'transparent' : (hubColor || DEFAULT_COLOR),
                 }}
-              />
-            </button>
+              >
+                <Send
+                  className="h-5 w-5 transition-colors"
+                  style={{ color: isProcessing ? '#d1d5db' : '#ffffff' }}
+                />
+              </button>
+            ) : (
+              /* Mic button - shown when input is empty */
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isProcessing || isTranscribing}
+                className={`p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-40 ${
+                  isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : 'hover:bg-gray-100/80 group'
+                }`}
+                title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+              >
+                {isTranscribing ? (
+                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                ) : isRecording ? (
+                  <MicOff className="h-5 w-5 text-white" />
+                ) : (
+                  <Mic className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                )}
+              </button>
+            )}
           </div>
         </div>
 

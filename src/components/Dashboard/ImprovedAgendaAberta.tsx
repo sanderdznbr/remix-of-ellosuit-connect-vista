@@ -155,8 +155,8 @@ const ImprovedAgendaAberta = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="text-gray-500">Carregando...</div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-muted-foreground">Carregando...</div>
       </div>
     );
   }
@@ -173,12 +173,12 @@ const ImprovedAgendaAberta = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Agenda Online</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Agenda Online</h1>
+          <p className="text-muted-foreground mt-1">
             Gerencie seus links de agendamento e compromissos marcados.
           </p>
         </div>
@@ -193,7 +193,7 @@ const ImprovedAgendaAberta = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === tab.id ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
+                activeTab === tab.id ? 'text-white shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted bg-card border border-border'
               }`}
               style={activeTab === tab.id ? { backgroundColor: FLOW_COLOR } : {}}
             >
@@ -205,14 +205,14 @@ const ImprovedAgendaAberta = () => {
 
         {/* Links Tab */}
         {activeTab === 'links' && (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
             {/* Search + Actions */}
             <div className="p-4 flex items-center gap-3">
               <div className="relative flex-1 max-w-sm">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Pesquisar links..."
-                  className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white"
+                  className="pl-9 border-border bg-muted rounded-xl focus:bg-card"
                 />
               </div>
               <div className="flex-1" />
@@ -275,7 +275,7 @@ const ImprovedAgendaAberta = () => {
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div className="grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-3 border-t border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <div>Nome</div>
               <div>Duração</div>
               <div>Status</div>
@@ -287,22 +287,22 @@ const ImprovedAgendaAberta = () => {
             {/* List */}
             {bookingLinks.length === 0 ? (
               <div className="text-center py-16">
-                <LinkIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum link criado</h3>
-                <p className="text-gray-500 mb-6">Crie seu primeiro link para permitir agendamentos</p>
+                <LinkIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhum link criado</h3>
+                <p className="text-muted-foreground mb-6">Crie seu primeiro link para permitir agendamentos</p>
                 <Button onClick={() => setShowCreateDialog(true)} className="text-white rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
                   <Plus className="h-4 w-4 mr-2" />Criar Link
                 </Button>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {bookingLinks.map((link) => {
                   const stats = getLinkStats(link.id);
                   return (
                     <div
                       key={link.id}
                       className={cn(
-                        "grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors",
+                        "grid grid-cols-[1fr_100px_100px_120px_140px_160px] gap-4 px-4 py-4 items-center hover:bg-muted/50 transition-colors",
                         !link.is_active && "opacity-60"
                       )}
                     >
@@ -319,13 +319,13 @@ const ImprovedAgendaAberta = () => {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <span className="font-medium text-gray-900 truncate block">{link.title}</span>
-                          {link.description && <p className="text-xs text-gray-500 truncate">{link.description}</p>}
+                          <span className="font-medium text-foreground truncate block">{link.title}</span>
+                          {link.description && <p className="text-xs text-muted-foreground truncate">{link.description}</p>}
                         </div>
                       </div>
 
                       {/* Duration */}
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {link.duration_minutes} min
                       </div>
 
@@ -339,30 +339,30 @@ const ImprovedAgendaAberta = () => {
                       </div>
 
                       {/* Bookings count */}
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {stats.total} total
                       </div>
 
                       {/* Created */}
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted-foreground">
                         {formatRelativeDate(link.created_at)}
                       </div>
 
                       {/* Actions */}
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)} title="Personalizar">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => navigate(`/dashboard/agenda-aberta/editor?linkId=${link.id}`)} title="Personalizar">
                           <Palette className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => copyLinkToClipboard(link.link_slug)} title="Copiar link">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => copyLinkToClipboard(link.link_slug)} title="Copiar link">
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => openBookingPage(link.link_slug)} title="Abrir">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => openBookingPage(link.link_slug)} title="Abrir">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" onClick={() => toggleLinkStatus(link.id, link.is_active)} title={link.is_active ? 'Desativar' : 'Ativar'}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => toggleLinkStatus(link.id, link.is_active)} title={link.is_active ? 'Desativar' : 'Ativar'}>
                           {link.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600" onClick={() => deleteLink(link.id)} title="Excluir">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600" onClick={() => deleteLink(link.id)} title="Excluir">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -376,7 +376,7 @@ const ImprovedAgendaAberta = () => {
 
         {/* Bookings Tab */}
         {activeTab === 'bookings' && (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
             {/* Filters */}
             <div className="p-4 flex items-center gap-3">
               <div className="flex gap-2">
@@ -385,7 +385,7 @@ const ImprovedAgendaAberta = () => {
                     key={filter}
                     onClick={() => setBookingFilter(filter)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      bookingFilter === filter ? 'text-white' : 'text-gray-600 hover:bg-gray-100'
+                      bookingFilter === filter ? 'text-white' : 'text-muted-foreground hover:bg-muted'
                     }`}
                     style={bookingFilter === filter ? { backgroundColor: FLOW_COLOR } : {}}
                   >
@@ -398,7 +398,7 @@ const ImprovedAgendaAberta = () => {
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div className="grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-3 border-t border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <div>Cliente</div>
               <div>Data</div>
               <div>Horário</div>
@@ -409,21 +409,21 @@ const ImprovedAgendaAberta = () => {
             {/* List */}
             {filteredBookings.length === 0 ? (
               <div className="text-center py-16">
-                <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum agendamento</h3>
-                <p className="text-gray-500">
+                <CalendarDays className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Nenhum agendamento</h3>
+                <p className="text-muted-foreground">
                   {bookingFilter === 'upcoming' ? 'Sem agendamentos futuros' : bookingFilter === 'past' ? 'Sem agendamentos passados' : 'Aguardando agendamentos'}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {filteredBookings.map((booking) => {
                   const isPast = isBefore(parseISO(booking.booking_date), startOfDay(new Date()));
                   return (
                     <div
                       key={booking.id}
                       className={cn(
-                        "grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors",
+                        "grid grid-cols-[1fr_140px_100px_120px_100px] gap-4 px-4 py-4 items-center hover:bg-muted/50 transition-colors",
                         isPast && "opacity-60"
                       )}
                     >
@@ -433,18 +433,18 @@ const ImprovedAgendaAberta = () => {
                           <Users className="h-4 w-4" style={{ color: FLOW_COLOR }} />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-medium text-gray-900 truncate block">{booking.client_name}</span>
-                          <span className="text-xs text-gray-500 truncate block">{booking.client_email}</span>
+                          <span className="font-medium text-foreground truncate block">{booking.client_name}</span>
+                          <span className="text-xs text-muted-foreground truncate block">{booking.client_email}</span>
                         </div>
                       </div>
 
                       {/* Date */}
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {format(parseISO(booking.booking_date), "dd 'de' MMM", { locale: ptBR })}
                       </div>
 
                       {/* Time */}
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {booking.booking_time}
                       </div>
 

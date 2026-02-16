@@ -1,12 +1,14 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Package, LayoutTemplate, Send, CheckCircle, Clock, XCircle, Filter } from 'lucide-react';
+import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Package, LayoutTemplate, Download, Mail, MessageCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -17,6 +19,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import ServicesManager from './ServicesManager';
+
+const PROPOSAL_COLOR = '#3000E3';
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   rascunho: { label: 'Rascunho', color: '#6B7280', bg: '#F3F4F6' },
@@ -61,7 +65,7 @@ export default function ProposalsPage() {
       if (!companyId) return [];
       const { data, error } = await supabase
         .from('proposals')
-        .select('*, clients(name, company_name)')
+        .select('*, clients(name, company_name, email, phone, whatsapp)')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -107,6 +111,19 @@ export default function ProposalsPage() {
     valorTotal: proposals.filter((p: any) => p.status === 'aprovada').reduce((s: number, p: any) => s + (p.total || 0), 0),
   };
 
+  const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+  const formatRelativeDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} sem. atrás`;
+    return `${Math.floor(diffDays / 30)} meses atrás`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -117,14 +134,14 @@ export default function ProposalsPage() {
               <ArrowLeft className="h-5 w-5 text-gray-500" />
             </button>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Ordens de Serviço</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Ordens de Serviço</h1>
               <p className="text-sm text-gray-500">Crie ordens de serviço profissionais para seus clientes</p>
             </div>
           </div>
           <Button
             onClick={() => navigate('/dashboard/propostas/editor')}
             className="rounded-xl h-11 gap-2 text-white shadow-lg"
-            style={{ background: '#3000E3' }}
+            style={{ background: PROPOSAL_COLOR }}
           >
             <Plus className="h-4 w-4" />
             Nova Ordem de Serviço
@@ -138,7 +155,7 @@ export default function ProposalsPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === 'propostas' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
             }`}
-           >
+          >
             <FileText className="h-4 w-4 inline mr-1.5" />
             Ordens de Serviço
           </button>
@@ -165,7 +182,6 @@ export default function ProposalsPage() {
         {activeTab === 'servicos' ? (
           <ServicesManager companyId={companyId} />
         ) : activeTab === 'templates' ? (
-          /* Templates Section */
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -185,7 +201,6 @@ export default function ProposalsPage() {
                   }}
                   className="bg-white rounded-2xl border border-gray-100 p-4 text-left hover:border-gray-200 hover:shadow-md transition-all group"
                 >
-                  {/* Mini preview */}
                   <div className="rounded-xl overflow-hidden border border-gray-100 mb-3 aspect-[210/297]">
                     <div className="h-8" style={{ background: t.colors.primary }} />
                     <div className="p-3 space-y-2">
@@ -214,10 +229,10 @@ export default function ProposalsPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {[
-                { label: 'Total', value: stats.total, color: '#3000E3' },
+                { label: 'Total', value: stats.total, color: PROPOSAL_COLOR },
                 { label: 'Aprovadas', value: stats.aprovadas, color: '#16A34A' },
                 { label: 'Pendentes', value: stats.pendentes, color: '#2563EB' },
-                { label: 'Valor Aprovado', value: `R$ ${stats.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, color: '#D97706' },
+                { label: 'Valor Aprovado', value: fmtBRL(stats.valorTotal), color: '#D97706' },
               ].map((s, i) => (
                 <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4">
                   <p className="text-xs text-gray-500 mb-1">{s.label}</p>
@@ -226,100 +241,119 @@ export default function ProposalsPage() {
               ))}
             </div>
 
-            {/* Search + Filter */}
-            <div className="flex gap-2 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Buscar proposta..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-11 rounded-xl border-gray-200" />
-              </div>
-            </div>
-            <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-              {[
-                { key: 'all', label: 'Todas' },
-                { key: 'rascunho', label: 'Rascunho' },
-                { key: 'enviada', label: 'Enviadas' },
-                { key: 'aprovada', label: 'Fechado' },
-                { key: 'pensando', label: 'Pensando' },
-                { key: 'recusada', label: 'Negado' },
-              ].map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setStatusFilter(f.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                    statusFilter === f.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {f.label}
-                  {f.key !== 'all' && (
-                    <span className="ml-1 opacity-60">
-                      {proposals.filter((p: any) => p.status === f.key).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* List */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-gray-100 rounded w-1/4" />
-                  </div>
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#3000E312' }}>
-                  <FileText className="h-7 w-7" style={{ color: '#3000E3' }} />
+            {/* Main Card */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              {/* Search + Filter */}
+              <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 max-w-sm w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Pesquisar ordem..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Nenhuma ordem de serviço ainda</h3>
-                <p className="text-sm text-gray-500 mb-4">Crie sua primeira ordem de serviço</p>
-                <Button onClick={() => navigate('/dashboard/propostas/editor')} className="rounded-xl text-white" style={{ background: '#3000E3' }}>
-                  <Plus className="h-4 w-4 mr-1.5" /> Criar Ordem de Serviço
-                </Button>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px] rounded-xl border-gray-200">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="rascunho">Rascunho</SelectItem>
+                    <SelectItem value="enviada">Enviadas</SelectItem>
+                    <SelectItem value="aprovada">Fechado</SelectItem>
+                    <SelectItem value="pensando">Pensando</SelectItem>
+                    <SelectItem value="recusada">Negado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {filtered.map((p: any) => {
-                  const status = STATUS_MAP[p.status] || STATUS_MAP.rascunho;
-                  return (
-                    <div key={p.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
-                      onClick={() => navigate(`/dashboard/propostas/editor?id=${p.id}`)}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-mono text-gray-400">{p.proposal_number}</span>
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ color: status.color, backgroundColor: status.bg }}>{status.label}</span>
+
+              {/* Table Header (desktop) */}
+              <div className="hidden md:grid grid-cols-[1fr_120px_100px_120px_200px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div>Ordem de Serviço</div>
+                <div>Valor</div>
+                <div>Status</div>
+                <div>Data</div>
+                <div className="text-right">Ações</div>
+              </div>
+
+              {/* List */}
+              {isLoading ? (
+                <div className="p-8 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin" style={{ color: PROPOSAL_COLOR }} />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: PROPOSAL_COLOR + '12' }}>
+                    <FileText className="h-7 w-7" style={{ color: PROPOSAL_COLOR }} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Nenhuma ordem de serviço encontrada</h3>
+                  <p className="text-sm text-gray-500 mb-4">{search ? 'Tente uma busca diferente' : 'Crie sua primeira ordem de serviço'}</p>
+                  {!search && (
+                    <Button onClick={() => navigate('/dashboard/propostas/editor')} className="rounded-xl text-white" style={{ background: PROPOSAL_COLOR }}>
+                      <Plus className="h-4 w-4 mr-1.5" /> Criar Ordem de Serviço
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {filtered.map((p: any) => {
+                    const status = STATUS_MAP[p.status] || STATUS_MAP.rascunho;
+                    const clientName = (p.clients as any)?.name || 'Sem cliente';
+                    return (
+                      <div key={p.id} className="grid grid-cols-1 md:grid-cols-[1fr_120px_100px_120px_200px] gap-2 md:gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors">
+                        {/* Info */}
+                        <div className="flex items-center gap-3 min-w-0 cursor-pointer" onClick={() => navigate(`/dashboard/propostas/editor?id=${p.id}`)}>
+                          <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: PROPOSAL_COLOR + '12' }}>
+                            <FileText className="h-4 w-4" style={{ color: PROPOSAL_COLOR }} />
                           </div>
-                          <h3 className="font-semibold text-gray-900 truncate">{p.title}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-gray-500">{(p.clients as any)?.name || 'Sem cliente'}</span>
-                            <span className="text-xs text-gray-400">{format(new Date(p.created_at), "dd MMM yyyy", { locale: ptBR })}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 truncate">{p.title}</span>
+                              <span className="text-[10px] font-mono text-gray-400">{p.proposal_number}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">{clientName}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-gray-900 hidden md:block">
-                            R$ {(p.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
+
+                        {/* Value */}
+                        <div className="hidden md:block">
+                          <span className="text-sm font-bold" style={{ color: PROPOSAL_COLOR }}>{fmtBRL(p.total || 0)}</span>
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                          <Badge className="text-[10px] px-2 py-0.5 border-0" style={{ color: status.color, backgroundColor: status.bg }}>
+                            {status.label}
+                          </Badge>
+                        </div>
+
+                        {/* Date */}
+                        <div className="hidden md:block text-sm text-gray-500">
+                          {formatRelativeDate(p.created_at)}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-lg gap-1.5 text-xs font-medium"
+                            onClick={() => navigate(`/dashboard/propostas/editor?id=${p.id}`)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Editar
+                          </Button>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                            <DropdownMenuTrigger asChild>
                               <button className="p-1.5 rounded-lg hover:bg-gray-100">
                                 <MoreVertical className="h-4 w-4 text-gray-400" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/propostas/editor?id=${p.id}`); }}>
-                                <Eye className="h-4 w-4 mr-2" /> Editar
-                              </DropdownMenuItem>
                               <div className="px-2 py-1.5">
                                 <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Alterar Status</p>
                                 <div className="flex flex-col gap-0.5">
                                   {Object.entries(STATUS_MAP).filter(([k]) => k !== 'expirada').map(([key, val]) => (
                                     <button
                                       key={key}
-                                      onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: p.id, status: key }); }}
+                                      onClick={() => updateStatusMutation.mutate({ id: p.id, status: key })}
                                       className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left transition-colors ${p.status === key ? 'bg-gray-100 font-semibold' : 'hover:bg-gray-50'}`}
                                     >
                                       <span className="w-2 h-2 rounded-full" style={{ background: val.color }} />
@@ -328,18 +362,18 @@ export default function ProposalsPage() {
                                   ))}
                                 </div>
                               </div>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id); }} className="text-red-600">
+                              <DropdownMenuItem onClick={() => deleteMutation.mutate(p.id)} className="text-red-600">
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

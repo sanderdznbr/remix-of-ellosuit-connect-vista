@@ -11,15 +11,15 @@ const HUB_COLORS = {
 };
 
 const navItems = [
-  { id: 'omni', icon: MessageSquare, label: 'Omni', path: '/dashboard/crm-whatsapp', prefix: '/dashboard/omni', color: HUB_COLORS.omni,
-    paths: ['/dashboard/crm-whatsapp', '/dashboard/disparos', '/dashboard/chatbot', '/dashboard/email', '/dashboard/email-templates', '/dashboard/bot-ia', '/dashboard/automacoes', '/dashboard/api-whatsapp'] },
-  { id: 'flow', icon: Zap, label: 'Flow', path: '/dashboard/agenda', prefix: '/dashboard/flow',  color: HUB_COLORS.flow,
-    paths: ['/dashboard/agenda', '/dashboard/agenda-aberta', '/dashboard/tasks', '/dashboard/fluxos', '/dashboard/reunioes'] },
+  { id: 'omni', icon: MessageSquare, label: 'Omni', path: '/dashboard/omni', prefix: '/dashboard/omni', color: HUB_COLORS.omni,
+    paths: ['/dashboard/omni', '/dashboard/crm-whatsapp', '/dashboard/disparos', '/dashboard/chatbot', '/dashboard/email', '/dashboard/email-templates', '/dashboard/bot-ia', '/dashboard/automacoes', '/dashboard/api-whatsapp'] },
+  { id: 'flow', icon: Zap, label: 'Flow', path: '/dashboard/flows', prefix: '/dashboard/flow',  color: HUB_COLORS.flow,
+    paths: ['/dashboard/flows', '/dashboard/agenda', '/dashboard/agenda-aberta', '/dashboard/tasks', '/dashboard/fluxos', '/dashboard/reunioes'] },
   { id: 'menu', icon: LayoutGrid, label: 'Menu', path: '', prefix: '', color: '', paths: [] },
-  { id: 'track', icon: Crosshair, label: 'Track', path: '/dashboard/rastreamento', prefix: '/dashboard/track', color: HUB_COLORS.track,
-    paths: ['/dashboard/rastreamento', '/dashboard/encurtador', '/dashboard/email-tracker', '/dashboard/leads', '/dashboard/ello-vision', '/dashboard/analytics'] },
-  { id: 'suite', icon: Briefcase, label: 'Suite', path: '/dashboard/cadastros', prefix: '/dashboard/suite', color: HUB_COLORS.suite,
-    paths: ['/dashboard/cadastros', '/dashboard/drive', '/dashboard/equipe', '/dashboard/habitos', '/dashboard/contratos', '/dashboard/configuracoes', '/dashboard/assinatura', '/dashboard/seguranca', '/dashboard/suporte'] },
+  { id: 'track', icon: Crosshair, label: 'Track', path: '/dashboard/track', prefix: '/dashboard/track', color: HUB_COLORS.track,
+    paths: ['/dashboard/track', '/dashboard/rastreamento', '/dashboard/encurtador', '/dashboard/email-tracker', '/dashboard/leads', '/dashboard/ello-vision', '/dashboard/analytics'] },
+  { id: 'suite', icon: Briefcase, label: 'Suite', path: '/dashboard/suite', prefix: '/dashboard/suite', color: HUB_COLORS.suite,
+    paths: ['/dashboard/suite', '/dashboard/cadastros', '/dashboard/drive', '/dashboard/equipe', '/dashboard/habitos', '/dashboard/contratos', '/dashboard/configuracoes', '/dashboard/assinatura', '/dashboard/seguranca', '/dashboard/suporte'] },
 ];
 
 const MobileBottomNav = () => {

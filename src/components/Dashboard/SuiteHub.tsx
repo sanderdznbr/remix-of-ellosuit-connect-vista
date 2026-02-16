@@ -1,68 +1,22 @@
 import { Link } from "react-router-dom";
-import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight, FileSignature } from "lucide-react";
+import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight, FileSignature, Target, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import HubKPIChart from "./HubKPIChart";
 
 const SUITE_COLOR = "#3000E3";
 
 const suiteModules = [
-  {
-    id: "cadastros",
-    title: "Cadastros",
-    description: "Gerencie clientes, leads, fornecedores e todos os contatos da empresa",
-    icon: Users,
-    path: "/dashboard/cadastros",
-  },
-  {
-    id: "drive",
-    title: "Arquivos",
-    description: "Drive de documentos e arquivos da empresa organizados por pastas",
-    icon: FolderOpen,
-    path: "/dashboard/drive",
-  },
-  {
-    id: "equipe",
-    title: "Equipe",
-    description: "Gerencie colaboradores, permissões e papéis da equipe",
-    icon: Briefcase,
-    path: "/dashboard/equipe",
-  },
-  {
-    id: "analytics",
-    title: "Analytics",
-    description: "Métricas gerais e indicadores de performance da empresa",
-    icon: BarChart3,
-    path: "/dashboard/analytics",
-  },
-  {
-    id: "propostas",
-    title: "Ordem de Serviço",
-    description: "Crie ordens de serviço e orçamentos profissionais em PDF",
-    icon: FileSignature,
-    path: "/dashboard/propostas",
-  },
-  {
-    id: "recibos",
-    title: "Criar Recibos",
-    description: "Gere recibos de pagamento para seus clientes",
-    icon: FileText,
-    path: "/dashboard/recibos",
-  },
-  {
-    id: "ello-vision",
-    title: "Ello Vision",
-    description: "Insights avançados com inteligência artificial",
-    icon: BarChart3,
-    path: "/dashboard/ello-vision",
-  },
-  {
-    id: "relatorios",
-    title: "Relatórios",
-    description: "Exporte e visualize relatórios detalhados",
-    icon: FileText,
-    path: "/dashboard/relatorios",
-  },
+  { id: "cadastros", title: "Cadastros", description: "Clientes, leads e contatos", icon: Users, path: "/dashboard/cadastros" },
+  { id: "drive", title: "Arquivos", description: "Drive de documentos da empresa", icon: FolderOpen, path: "/dashboard/drive" },
+  { id: "equipe", title: "Equipe", description: "Colaboradores e permissões", icon: Briefcase, path: "/dashboard/equipe" },
+  { id: "habitos", title: "Hábitos", description: "Metas e rotinas diárias", icon: Target, path: "/dashboard/habitos" },
+  { id: "contratos", title: "Contratos", description: "Templates e contratos gerados", icon: FileText, path: "/dashboard/contratos" },
+  { id: "propostas", title: "Ordem de Serviço", description: "Orçamentos profissionais em PDF", icon: FileSignature, path: "/dashboard/propostas" },
+  { id: "recibos", title: "Recibos", description: "Recibos de pagamento", icon: FileText, path: "/dashboard/recibos" },
+  { id: "analytics", title: "Analytics", description: "Métricas e indicadores", icon: BarChart3, path: "/dashboard/analytics" },
+  { id: "configuracoes", title: "Configurações", description: "Personalize sua conta", icon: Settings, path: "/dashboard/configuracoes" },
 ];
 
 export default function SuiteHub() {
@@ -72,11 +26,7 @@ export default function SuiteHub() {
     queryKey: ['user-company', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
+      const { data } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).single();
       return data?.company_id || null;
     },
     enabled: !!user?.id,
@@ -86,10 +36,7 @@ export default function SuiteHub() {
     queryKey: ['suite-clients-count', companyId],
     queryFn: async () => {
       if (!companyId) return 0;
-      const { count } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId);
+      const { count } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('company_id', companyId);
       return count || 0;
     },
     enabled: !!companyId,
@@ -99,14 +46,13 @@ export default function SuiteHub() {
     queryKey: ['suite-docs-count', companyId],
     queryFn: async () => {
       if (!companyId) return 0;
-      const { count } = await supabase
-        .from('documents')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId);
+      const { count } = await supabase.from('documents').select('*', { count: 'exact', head: true }).eq('company_id', companyId);
       return count || 0;
     },
     enabled: !!companyId,
   });
+
+  const totalKPI = clientsCount + docsCount;
 
   const stats = [
     { label: "Contatos", value: clientsCount, icon: Users },
@@ -116,67 +62,49 @@ export default function SuiteHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 rounded-2xl" style={{ backgroundColor: `${SUITE_COLOR}12` }}>
-            <Users className="h-7 w-7" style={{ color: SUITE_COLOR }} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ellosuit Suite</h1>
-            <p className="text-sm text-gray-500">Central de Gestão e Análises</p>
-          </div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-foreground">Suite</h1>
+          <p className="text-xs text-muted-foreground">Central de Gestão e Análises</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${SUITE_COLOR}12` }}
-                >
-                  <Icon className="h-5 w-5" style={{ color: SUITE_COLOR }} />
+              <div key={i} className="rounded-2xl border border-border/60 bg-card p-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${SUITE_COLOR}14` }}>
+                  <Icon className="h-4.5 w-4.5" style={{ color: SUITE_COLOR }} />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
+                  <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                  <div className="text-[10px] text-muted-foreground">{stat.label}</div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Modules */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Módulos</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {suiteModules.map((module) => {
-              const Icon = module.icon;
-              return (
-                <Link
-                  key={module.id}
-                  to={module.path}
-                  className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-gray-200 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: SUITE_COLOR }}
-                    >
-                      <Icon className="h-6 w-6 text-white" />
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all mt-1" />
+        <HubKPIChart color={SUITE_COLOR} seed={4} totalValue={totalKPI} label="Atividade Suite" />
+
+        <h2 className="text-sm font-semibold text-foreground mb-3">Acesso Rápido</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {suiteModules.map((module) => {
+            const Icon = module.icon;
+            return (
+              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card p-4 hover:shadow-md hover:border-border transition-all">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: SUITE_COLOR }}>
+                    <Icon className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">{module.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{module.description}</p>
-                </Link>
-              );
-            })}
-          </div>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">{module.title}</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{module.description}</p>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -7,10 +7,19 @@ export const ScrollToTop = () => {
 
   useEffect(() => {
     if (navType !== "POP") {
+      // Immediate scroll
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      document.querySelectorAll("main").forEach((el) =>
+        el.scrollTo({ top: 0, left: 0, behavior: "instant" })
+      );
 
-      // Also scroll any main content container (for fixed-layout dashboards)
-      document.querySelector("main")?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      // Also after next paint (for content that renders async)
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        document.querySelectorAll("main").forEach((el) =>
+          el.scrollTo({ top: 0, left: 0, behavior: "instant" })
+        );
+      });
     }
   }, [pathname, navType]);
 

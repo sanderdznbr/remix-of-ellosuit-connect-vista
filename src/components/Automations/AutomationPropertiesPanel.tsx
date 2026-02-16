@@ -834,9 +834,9 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
                   { label: 'CPF/CNPJ', value: '{{client.cnpj_cpf}}' },
                   { label: 'Empresa', value: '{{client.company_name}}' },
                   { label: 'Observações', value: '{{client.notes}}' },
-                  { label: 'Itens Comprados', value: '{{data.purchase_items}}' },
-                  { label: 'Valor Pago', value: '{{data.purchase_total}}' },
-                  { label: 'Data Compra', value: '{{data.purchase_date}}' },
+                  { label: 'Itens Comprados', value: '{{client.purchased_items}}' },
+                  { label: 'Valor Pago', value: '{{client.purchase_total}}' },
+                  { label: 'Data Compra', value: '{{client.purchase_date}}' },
                 ].map(f => (
                   <Badge
                     key={f.label}

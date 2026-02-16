@@ -104,6 +104,12 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     return ALL_CLIENT_FIELDS.filter(f => activeKeys.includes(f.key));
   };
 
+  // Email input fields - always show "Email" as a connectable input
+  const EMAIL_INPUT_FIELDS = [
+    { key: 'email', label: 'Email' },
+  ];
+  const getEmailInputFields = (_node: AutomationNode) => EMAIL_INPUT_FIELDS;
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -263,6 +269,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     if (node.type === 'webhook') return getWebhookFields(node).length;
     if (node.type === 'create_client') return getClientFields(node).length;
     if (node.type === 'new_client') return getNewClientOutputFields(node).length;
+    if (node.type === 'send_email') return getEmailInputFields(node).length;
     return 0;
   };
 
@@ -294,6 +301,10 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   const getEdgeTargetY = (edge: AutomationEdge, target: AutomationNode) => {
     if (edge.targetField && target.type === 'create_client') {
       const fieldLabels = getClientFields(target).map(f => f.label);
+      return getFieldPortY(target, edge.targetField, fieldLabels);
+    }
+    if (edge.targetField && target.type === 'send_email') {
+      const fieldLabels = getEmailInputFields(target).map(f => f.label);
       return getFieldPortY(target, edge.targetField, fieldLabels);
     }
     return target.position.y + getNodeHeight(target) / 2;
@@ -693,8 +704,36 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     </div>
                   )}
 
+                  {/* Send email input fields */}
+                  {node.type === 'send_email' && (
+                    <div className="border-t-2 border-red-100 px-3 py-3 bg-red-50/30">
+                      <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        Entradas ({getEmailInputFields(node).length})
+                      </div>
+                      <div className="space-y-1">
+                        {getEmailInputFields(node).map(({ key, label }) => (
+                          <div key={key} className="flex items-center relative group/field" style={{ height: FIELD_ROW_HEIGHT }}>
+                            <div
+                              className="absolute -left-[26px] w-7 h-7 rounded-full bg-white border-[2.5px] border-red-400 cursor-pointer hover:scale-[1.3] hover:border-red-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md"
+                              onMouseUp={e => handlePortMouseUp(e, node.id, label)}
+                              title={`Receber: ${label}`}
+                            >
+                              <div className="w-3 h-3 rounded-full bg-red-400 group-hover/field:bg-red-600 transition-colors" />
+                            </div>
+                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-red-100 flex-1 min-w-0 shadow-sm hover:border-red-300 hover:shadow transition-all">
+                              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-red-400" />
+                              <span className="text-[11px] font-mono font-medium text-gray-700">{label}</span>
+                              <span className="text-[9px] text-gray-400 ml-auto">{key}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* RIGHT port (output) - main, only when no field ports */}
-                  {!(node.type === 'webhook' && getWebhookFields(node).length > 0) && !(node.type === 'new_client' && getNewClientOutputFields(node).length > 0) && node.type !== 'create_client' && (
+                  {!(node.type === 'webhook' && getWebhookFields(node).length > 0) && !(node.type === 'new_client' && getNewClientOutputFields(node).length > 0) && node.type !== 'create_client' && node.type !== 'send_email' && (
                     <div
                       className="absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border-[2.5px] cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-md"
                       style={{ borderColor: color }}
@@ -705,8 +744,8 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     </div>
                   )}
 
-                  {/* Also show main output for create_client */}
-                  {node.type === 'create_client' && (
+                  {/* Also show main output for create_client and send_email */}
+                  {(node.type === 'create_client' || node.type === 'send_email') && (
                     <div
                       className="absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border-[2.5px] cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-md"
                       style={{ borderColor: color }}
@@ -717,8 +756,8 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     </div>
                   )}
 
-                  {/* LEFT port (input) - only for non-create_client */}
-                  {node.type !== 'create_client' && (
+                  {/* LEFT port (input) - only for non-create_client and non-send_email (they have field inputs) */}
+                  {node.type !== 'create_client' && node.type !== 'send_email' && (
                     <div
                       className="absolute -left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border-[2.5px] cursor-pointer hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-md"
                       style={{ borderColor: color }}

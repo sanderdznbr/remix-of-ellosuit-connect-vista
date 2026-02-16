@@ -76,6 +76,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
   };
 
   const handleMoreClick = (info: any) => {
+    info.jsEvent?.preventDefault?.();
     const dayEvents = info.allSegs.map((seg: any) => ({
       id: seg.event.id, title: seg.event.title,
       start: seg.event.start, end: seg.event.end,
@@ -84,6 +85,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
     setClusterEvents(dayEvents);
     setSelectedDate(info.date.toISOString().split('T')[0]);
     setShowClusterModal(true);
+    return 'popover';
   };
 
   const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {

@@ -69,6 +69,3 @@ verify_jwt = false
 [functions.send-user-notification]
 verify_jwt = false
 
-[functions.onesignal-config]
-verify_jwt = false
-

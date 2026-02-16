@@ -618,7 +618,7 @@ const AIAssistantHome: React.FC = () => {
                         <span className="text-sm text-gray-400">Pensando...</span>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap"
+                      <p className={`text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : ''}`}
                          dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
                       />
                     )}

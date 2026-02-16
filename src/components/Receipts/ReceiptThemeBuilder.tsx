@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Palette, Building2, Layout, Type, Save, Upload, Eye, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,9 +52,11 @@ export default function ReceiptThemeBuilder() {
   const [form, setForm] = useState<ReceiptSettings>({ ...DEFAULT_RECEIPT_SETTINGS, company_id: '' });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (settings && companyId) {
+    if (settings && companyId && !initializedRef.current) {
+      initializedRef.current = true;
       setForm({ ...settings, company_id: companyId });
       if (settings.logo_url) setLogoPreview(settings.logo_url);
     }

@@ -15,14 +15,12 @@ export function useOneSignal() {
   useEffect(() => {
     if (initialized.current) return;
 
-    // Check if Notification API is available
     if (typeof Notification === 'undefined') {
       setInitError('Notificações não suportadas neste navegador/contexto.');
       console.warn('[OneSignal] Notification API not available');
       return;
     }
 
-    // Update permission from browser immediately
     setPermission(Notification.permission as any);
 
     OneSignal.init({
@@ -34,7 +32,7 @@ export function useOneSignal() {
       initialized.current = true;
       setReady(true);
       setInitError(null);
-      console.log('[OneSignal] Initialized');
+      console.log('[OneSignal] Initialized successfully');
       setPermission(Notification.permission as any);
     }).catch((err: any) => {
       console.error('[OneSignal] Init error:', err);
@@ -46,28 +44,41 @@ export function useOneSignal() {
   useEffect(() => {
     if (!ready || !user?.id) return;
 
-    try {
-      OneSignal.login(user.id);
-      console.log('[OneSignal] Logged in user:', user.id);
-    } catch (err) {
-      console.error('[OneSignal] Login error:', err);
-    }
+    const loginUser = async () => {
+      try {
+        await OneSignal.login(user.id);
+        console.log('[OneSignal] Logged in user:', user.id);
+      } catch (err) {
+        console.error('[OneSignal] Login error:', err);
+      }
+    };
+    loginUser();
   }, [user?.id, ready]);
 
   const requestPermission = useCallback(async () => {
-    // Try OneSignal first, fallback to native
     if (ready) {
       try {
         await (OneSignal as any).Notifications.requestPermission();
-        setPermission(Notification.permission as any);
-        console.log('[OneSignal] Permission granted via SDK');
+        const perm = Notification.permission as any;
+        setPermission(perm);
+        console.log('[OneSignal] Permission granted via SDK:', perm);
+        
+        // Re-login after permission granted to ensure device is registered
+        if (perm === 'granted' && user?.id) {
+          try {
+            await OneSignal.login(user.id);
+            console.log('[OneSignal] Re-logged in after permission grant:', user.id);
+          } catch (e) {
+            console.warn('[OneSignal] Re-login error:', e);
+          }
+        }
         return;
       } catch (err) {
         console.warn('[OneSignal] SDK permission failed, trying native:', err);
       }
     }
 
-    // Native fallback - always works if Notification API exists
+    // Native fallback
     if (typeof Notification !== 'undefined') {
       try {
         const result = await Notification.requestPermission();
@@ -80,7 +91,7 @@ export function useOneSignal() {
     } else {
       setInitError('Notificações não suportadas neste navegador/contexto (iframe).');
     }
-  }, [ready]);
+  }, [ready, user?.id]);
 
   return { permission, ready, requestPermission, initError };
 }

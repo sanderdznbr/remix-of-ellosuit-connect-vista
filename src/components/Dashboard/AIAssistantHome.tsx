@@ -66,7 +66,16 @@ const AIAssistantHome: React.FC = () => {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSpeakRef = useRef<string | null>(null);
 
-  const isDark = theme === 'dark';
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const bgColor = isDark ? 'hsl(222, 47%, 6%)' : (hubColor || DEFAULT_COLOR);
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
   const firstName = userName.split(' ')[0];

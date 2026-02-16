@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import OneSignal from 'react-onesignal';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,6 +8,8 @@ const SAFARI_WEB_ID = "web.onesignal.auto.4cc30974-98f9-47ba-8e02-4635d2d477f2";
 export function useOneSignal() {
   const { user } = useAuth();
   const initialized = useRef(false);
+  const [permission, setPermission] = useState<'default' | 'granted' | 'denied'>('default');
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -19,7 +21,12 @@ export function useOneSignal() {
       serviceWorkerPath: '/OneSignalSDKWorker.js',
     } as any).then(() => {
       initialized.current = true;
+      setReady(true);
       console.log('[OneSignal] Initialized');
+
+      // Check current permission
+      const perm = (Notification as any)?.permission || 'default';
+      setPermission(perm);
     }).catch((err: any) => {
       console.error('[OneSignal] Init error:', err);
     });
@@ -27,7 +34,7 @@ export function useOneSignal() {
 
   // Associate Supabase user with OneSignal external ID
   useEffect(() => {
-    if (!initialized.current || !user?.id) return;
+    if (!ready || !user?.id) return;
 
     try {
       OneSignal.login(user.id);
@@ -35,5 +42,19 @@ export function useOneSignal() {
     } catch (err) {
       console.error('[OneSignal] Login error:', err);
     }
-  }, [user?.id]);
+  }, [user?.id, ready]);
+
+  const requestPermission = useCallback(async () => {
+    if (!ready) return;
+    try {
+      await (OneSignal as any).Notifications.requestPermission();
+      const perm = (Notification as any)?.permission || 'default';
+      setPermission(perm);
+      console.log('[OneSignal] Permission after request:', perm);
+    } catch (err) {
+      console.error('[OneSignal] Permission request error:', err);
+    }
+  }, [ready]);
+
+  return { permission, ready, requestPermission };
 }

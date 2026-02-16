@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, notification_id: notification.id, whatsapp_sent: whatsappSent }),
+      JSON.stringify({ success: true, notification_id: notification.id, whatsapp_sent: whatsappSent, push_sent: pushSent }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {

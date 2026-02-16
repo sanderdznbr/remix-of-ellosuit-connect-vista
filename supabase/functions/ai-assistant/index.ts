@@ -551,7 +551,7 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       const now = new Date();
       const end = new Date(now.getTime() + daysAhead * 86400000);
       const { data, error } = await supabase.from('calendar_events')
-        .select('id, title, start_date, end_date, description, event_type')
+        .select('id, title, start_date, end_date, description, event_type, meeting_link, meeting_provider')
         .eq('company_id', companyId)
         .gte('start_date', now.toISOString()).lte('start_date', end.toISOString())
         .order('start_date', { ascending: true }).limit(20);
@@ -560,7 +560,9 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       return {
         result: `Eventos (${data.length}):\n` + data.map((e: any, i: number) => {
           const s = new Date(e.start_date);
-          return `${i + 1}. "${e.title}" - ${s.toLocaleDateString('pt-BR')} às ${s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          let line = `${i + 1}. "${e.title}" - ${s.toLocaleDateString('pt-BR')} às ${s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          if (e.meeting_link) line += `\n   🔗 Link: ${e.meeting_link}`;
+          return line;
         }).join('\n'),
         action: { action: 'list_events', data }
       };

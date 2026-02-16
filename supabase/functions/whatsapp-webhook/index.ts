@@ -1005,6 +1005,37 @@ Deno.serve(async (req) => {
                       sender_name: 'Sistema',
                     });
                   }
+
+                  // ==================== OWNER INTERVENES → STOP CHATBOT ====================
+                  // Also stop any active chatbot execution when the owner sends a message
+                  const { data: activeChatbotExecs } = await supabase
+                    .from('chatbot_executions')
+                    .select('id')
+                    .eq('conversation_id', conversation.id)
+                    .eq('status', 'running');
+                  
+                  if (activeChatbotExecs && activeChatbotExecs.length > 0) {
+                    console.log(`👤 Owner intervened - stopping ${activeChatbotExecs.length} active chatbot execution(s)`);
+                    await supabase
+                      .from('chatbot_executions')
+                      .update({ status: 'completed', completed_at: new Date().toISOString() })
+                      .eq('conversation_id', conversation.id)
+                      .eq('status', 'running');
+                    
+                    // Insert system message only if no AI message was already inserted
+                    if (!convCheck?.ai_auto_reply_enabled) {
+                      await supabase.from('whatsapp_messages').insert({
+                        company_id: companyId,
+                        session_id: targetSessionId,
+                        conversation_id: conversation.id,
+                        content: '👤 Atendente assumiu a conversa. Chatbot encerrado.',
+                        from_me: true,
+                        status: 'sent',
+                        message_type: 'system',
+                        sender_name: 'Sistema',
+                      });
+                    }
+                  }
                 } catch (ownerErr) {
                   console.error('Owner intervene check error:', ownerErr);
                 }

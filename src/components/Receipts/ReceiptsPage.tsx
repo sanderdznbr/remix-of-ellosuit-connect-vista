@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Receipt, Send } from 'lucide-react';
+import { Plus, FileText, Search, MoreVertical, Trash2, Eye, ArrowLeft, Receipt, Send, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,6 +175,75 @@ export default function ReceiptsPage() {
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   const selectedClient = clients.find((c: any) => c.id === clientId);
 
+  const downloadPDF = (r: any) => {
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const clientName = r.client_name || (r.clients as any)?.name || 'N/A';
+    let y = 20;
+
+    // Header
+    doc.setFillColor(30, 0, 200);
+    doc.rect(0, 0, pw, 38, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECIBO', 14, y + 4);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(r.receipt_number || '', pw - 14, y + 4, { align: 'right' });
+    y = 50;
+
+    // Date
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    doc.text(`Data: ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, 14, y);
+    y += 14;
+
+    // Amount box
+    doc.setFillColor(245, 245, 255);
+    doc.roundedRect(14, y - 6, pw - 28, 24, 4, 4, 'F');
+    doc.setTextColor(30, 0, 200);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALOR', 20, y + 2);
+    doc.setFontSize(18);
+    doc.text(fmtBRL(Number(r.amount) || 0), 20, y + 14);
+    y += 32;
+
+    // Details
+    const addField = (label: string, value: string) => {
+      if (!value || value === 'N/A') return;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(label, 14, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(30, 30, 30);
+      const lines = doc.splitTextToSize(value, pw - 28);
+      doc.text(lines, 14, y + 5);
+      y += 5 + lines.length * 5 + 6;
+    };
+
+    addField('TÍTULO', r.title);
+    addField('CLIENTE', clientName);
+    if (r.client_document) addField('DOCUMENTO', r.client_document);
+    addField('FORMA DE PAGAMENTO', r.payment_method || 'N/A');
+    if (r.description) addField('DESCRIÇÃO', r.description);
+    if (r.notes) addField('OBSERVAÇÕES', r.notes);
+
+    // Footer line
+    y = Math.max(y + 10, 220);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, y, pw - 14, y);
+    y += 10;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Documento gerado eletronicamente', pw / 2, y, { align: 'center' });
+
+    doc.save(`${r.receipt_number || 'recibo'}.pdf`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
@@ -310,6 +380,9 @@ export default function ReceiptsPage() {
                               ))}
                             </div>
                           </div>
+                          <DropdownMenuItem onClick={() => downloadPDF(r)} className="text-gray-700">
+                            <Download className="h-4 w-4 mr-2" /> Baixar PDF
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => deleteMutation.mutate(r.id)} className="text-red-600">
                             <Trash2 className="h-4 w-4 mr-2" /> Excluir
                           </DropdownMenuItem>

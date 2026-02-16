@@ -49,7 +49,7 @@ const SettingRow = ({ label, description, children }: {
 
 export default function GeneralSettingsPage() {
   const { theme, toggleTheme } = useTheme();
-  const { permission, ready: pushReady, requestPermission } = useOneSignal();
+  const { permission, ready: pushReady, requestPermission, requestNativePermission, initError: pushError } = useOneSignal();
   const { settings: notifSettings, updateNotificationSettings } = useNotificationSettings();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -113,7 +113,7 @@ export default function GeneralSettingsPage() {
           </SettingRow>
 
           {pushStatus !== 'active' && pushStatus !== 'blocked' && (
-            <Button size="sm" onClick={requestPermission} disabled={!pushReady} className="w-full">
+            <Button size="sm" onClick={() => { pushReady ? requestPermission() : requestNativePermission(); }} className="w-full">
               <BellRing className="h-4 w-4 mr-2" />
               Ativar Notificações Push
             </Button>
@@ -121,6 +121,10 @@ export default function GeneralSettingsPage() {
 
           {pushStatus === 'blocked' && (
             <p className="text-xs text-destructive">As notificações foram bloqueadas no navegador. Acesse as configurações do navegador para reativá-las.</p>
+          )}
+
+          {pushError && (
+            <p className="text-xs text-muted-foreground">⚠️ {pushError} — Usando permissão nativa do navegador.</p>
           )}
 
           {permission === 'granted' && (

@@ -72,10 +72,20 @@ export function useHubColor() {
     color = SUITE_COLOR; hub = 'suite';
   }
 
-  // Sync PWA theme-color meta tag with current hub
+  // Sync PWA theme-color meta tag and body background with current hub
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', color);
+    
+    const navMeta = document.querySelector('meta[name="msapplication-navbutton-color"]');
+    if (navMeta) navMeta.setAttribute('content', color);
+    
+    const tileMeta = document.querySelector('meta[name="msapplication-TileColor"]');
+    if (tileMeta) tileMeta.setAttribute('content', color);
+    
+    // Sync html/body bg for PWA status bar area
+    document.documentElement.style.backgroundColor = color;
+    document.body.style.backgroundColor = color;
   }, [color]);
 
   return { color, hub };

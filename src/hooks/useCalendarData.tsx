@@ -15,7 +15,7 @@ interface CalendarEvent {
   end_date: string;
   event_type: 'meeting' | 'appointment' | 'reminder';
   meeting_link?: string;
-  meeting_provider?: 'google_meet' | 'zoom' | 'teams';
+  meeting_provider?: 'google_meet' | 'zoom' | 'teams' | 'ellosuit';
   attendees?: string[];
   is_all_day?: boolean;
   color?: string;

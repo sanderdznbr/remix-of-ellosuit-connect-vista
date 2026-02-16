@@ -4960,7 +4960,7 @@ export type Database = {
       company_role: "admin" | "manager" | "employee" | "adminmaster"
       email_provider: "gmail" | "outlook" | "yahoo"
       event_type: "meeting" | "appointment" | "reminder"
-      meeting_provider: "google_meet" | "zoom" | "teams"
+      meeting_provider: "google_meet" | "zoom" | "teams" | "ellosuit"
       module_type: "omni" | "flow" | "track"
       permission_type:
         | "view_calendar"
@@ -5138,7 +5138,7 @@ export const Constants = {
       company_role: ["admin", "manager", "employee", "adminmaster"],
       email_provider: ["gmail", "outlook", "yahoo"],
       event_type: ["meeting", "appointment", "reminder"],
-      meeting_provider: ["google_meet", "zoom", "teams"],
+      meeting_provider: ["google_meet", "zoom", "teams", "ellosuit"],
       module_type: ["omni", "flow", "track"],
       permission_type: [
         "view_calendar",

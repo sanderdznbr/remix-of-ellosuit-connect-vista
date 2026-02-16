@@ -469,7 +469,7 @@ const AIAssistantHome: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full transition-colors duration-500" style={{ backgroundColor: bgColor }}>
+    <div data-dashboard-home className="flex flex-col h-full transition-colors duration-500" style={{ backgroundColor: bgColor }}>
       {!hasChat ? (
         /* Empty state - greeting + suggestions + input inline */
         <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 overflow-y-auto py-6">

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import OneSignal from 'react-onesignal';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+
+const ONESIGNAL_APP_ID = "61ba07fc-0952-40dc-baa3-1a5783ac0b61";
+const SAFARI_WEB_ID = "web.onesignal.auto.4cc30974-98f9-47ba-8e02-4635d2d477f2";
 
 export function useOneSignal() {
   const { user } = useAuth();
@@ -10,23 +12,16 @@ export function useOneSignal() {
   useEffect(() => {
     if (initialized.current) return;
 
-    // Fetch app ID from edge function
-    supabase.functions.invoke('onesignal-config').then(({ data }) => {
-      if (!data?.appId) {
-        console.log('[OneSignal] No app ID configured');
-        return;
-      }
-
-      OneSignal.init({
-        appId: data.appId,
-        allowLocalhostAsSecureOrigin: true,
-        serviceWorkerPath: '/OneSignalSDKWorker.js',
-      }).then(() => {
-        initialized.current = true;
-        console.log('[OneSignal] Initialized');
-      }).catch((err: any) => {
-        console.error('[OneSignal] Init error:', err);
-      });
+    OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      safari_web_id: SAFARI_WEB_ID,
+      allowLocalhostAsSecureOrigin: true,
+      serviceWorkerPath: '/OneSignalSDKWorker.js',
+    } as any).then(() => {
+      initialized.current = true;
+      console.log('[OneSignal] Initialized');
+    }).catch((err: any) => {
+      console.error('[OneSignal] Init error:', err);
     });
   }, []);
 

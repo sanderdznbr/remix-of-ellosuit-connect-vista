@@ -505,8 +505,8 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
               </Button>
 
               {node.config?.showDynamicFields && (
-                <div className="mt-2 rounded-xl border border-border bg-muted/40 p-2.5 space-y-1 max-h-64 overflow-y-auto">
-                  <p className="text-[10px] text-muted-foreground mb-1.5">Clique para copiar a tag e usar em outros blocos:</p>
+                <div className="mt-2 rounded-xl border border-border bg-muted/40 p-2.5 space-y-1 max-h-72 overflow-y-auto">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">Selecione os campos que deseja como saída (bolinhas de conexão). Clique na tag para copiar:</p>
                   {[
                     { key: 'name', label: 'Nome' },
                     { key: 'email', label: 'Email' },
@@ -532,20 +532,43 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
                     { key: 'annual_revenue', label: 'Receita anual' },
                     { key: 'tags', label: 'Tags' },
                     { key: 'notes', label: 'Observações' },
-                  ].map(f => (
-                    <button
-                      key={f.key}
-                      type="button"
-                      className="flex items-center justify-between w-full text-left px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors group"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`{{client.${f.key}}}`);
-                        toast({ title: 'Copiado!', description: `{{client.${f.key}}}` });
-                      }}
-                    >
-                      <span className="text-[11px] text-foreground">{f.label}</span>
-                      <code className="text-[10px] font-mono text-muted-foreground group-hover:text-primary">{'{{client.' + f.key + '}}'}</code>
-                    </button>
-                  ))}
+                    { key: 'custom_fields', label: 'Campos Personalizados' },
+                    { key: 'purchased_items', label: 'Item Comprado' },
+                    { key: 'purchase_date', label: 'Data da Compra' },
+                    { key: 'purchase_total', label: 'Valor Total' },
+                  ].map(f => {
+                    const activeOutputs: string[] = node.config?.activeOutputFields || ['name', 'email', 'phone', 'whatsapp'];
+                    const isActive = activeOutputs.includes(f.key);
+                    return (
+                      <div key={f.key} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">
+                        <button
+                          type="button"
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            isActive ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30 hover:border-primary/50'
+                          }`}
+                          onClick={() => {
+                            const updated = isActive
+                              ? activeOutputs.filter((k: string) => k !== f.key)
+                              : [...activeOutputs, f.key];
+                            updateConfig('activeOutputFields', updated);
+                          }}
+                        >
+                          {isActive && <Check className="h-3 w-3" />}
+                        </button>
+                        <span className="text-[11px] text-foreground flex-1">{f.label}</span>
+                        <button
+                          type="button"
+                          className="text-[10px] font-mono text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`{{client.${f.key}}}`);
+                            toast({ title: 'Copiado!', description: `{{client.${f.key}}}` });
+                          }}
+                        >
+                          {'{{client.' + f.key + '}}'}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

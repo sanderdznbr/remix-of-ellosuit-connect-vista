@@ -5,14 +5,20 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import HubKPIChart from "./HubKPIChart";
 
+import previewAgenda from "@/assets/previews/flow-agenda.jpg";
+import previewAgendaOnline from "@/assets/previews/flow-agenda-online.jpg";
+import previewTasks from "@/assets/previews/flow-tasks.jpg";
+import previewReunioes from "@/assets/previews/flow-reunioes.jpg";
+import previewFluxos from "@/assets/previews/flow-fluxos.jpg";
+
 const FLOW_COLOR = "#007DE3";
 
 const flowModules = [
-  { id: "agenda", title: "Minha Agenda", description: "Compromissos e eventos", icon: Calendar, path: "/dashboard/agenda" },
-  { id: "agenda-online", title: "Agenda Online", description: "Links de agendamento para clientes", icon: CalendarCheck, path: "/dashboard/agenda-aberta" },
-  { id: "tasks", title: "Tarefas", description: "Listas, prioridades e lembretes", icon: CheckSquare, path: "/dashboard/tasks" },
-  { id: "reunioes", title: "Videoconferência", description: "Reuniões com vídeo e gravação", icon: Video, path: "/dashboard/reunioes" },
-  { id: "fluxos", title: "Fluxos de Trabalho", description: "Kanban e automações de projetos", icon: Zap, path: "/dashboard/fluxos" },
+  { id: "agenda", title: "Minha Agenda", description: "Compromissos e eventos", icon: Calendar, path: "/dashboard/agenda", preview: previewAgenda },
+  { id: "agenda-online", title: "Agenda Online", description: "Links de agendamento para clientes", icon: CalendarCheck, path: "/dashboard/agenda-aberta", preview: previewAgendaOnline },
+  { id: "tasks", title: "Tarefas", description: "Listas, prioridades e lembretes", icon: CheckSquare, path: "/dashboard/tasks", preview: previewTasks },
+  { id: "reunioes", title: "Videoconferência", description: "Reuniões com vídeo e gravação", icon: Video, path: "/dashboard/reunioes", preview: previewReunioes },
+  { id: "fluxos", title: "Fluxos de Trabalho", description: "Kanban e automações de projetos", icon: Zap, path: "/dashboard/fluxos", preview: previewFluxos },
 ];
 
 export default function FlowsHub() {
@@ -89,15 +95,26 @@ export default function FlowsHub() {
           {flowModules.map((module) => {
             const Icon = module.icon;
             return (
-              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card p-4 hover:shadow-md hover:border-border transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: FLOW_COLOR }}>
-                    <Icon className="h-5 w-5 text-white" />
+              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card overflow-hidden hover:shadow-md hover:border-border transition-all">
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted">
+                  <img
+                    src={module.preview}
+                    alt={`Preview ${module.title}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: FLOW_COLOR }}>
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">{module.title}</h3>
-                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{module.description}</p>
+                <div className="p-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">{module.title}</h3>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">{module.description}</p>
+                </div>
               </Link>
             );
           })}

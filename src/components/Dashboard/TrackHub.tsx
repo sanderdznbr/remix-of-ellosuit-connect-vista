@@ -5,12 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import HubKPIChart from "./HubKPIChart";
 
+import previewRastreamento from "@/assets/previews/track-rastreamento.jpg";
+import previewEncurtador from "@/assets/previews/track-encurtador.jpg";
+import previewEmailTracker from "@/assets/previews/track-email-tracker.jpg";
+
 const TRACK_COLOR = "#3A9A1C";
 
 const trackModules = [
-  { id: "rastreamento", title: "Rastrear Conteúdo", description: "PDFs, vídeos e imagens com links rastreáveis", icon: FileText, path: "/dashboard/rastreamento" },
-  { id: "encurtador", title: "Encurtador Rastreável", description: "Encurte URLs e acompanhe cliques", icon: Link2, path: "/dashboard/encurtador" },
-  { id: "email-tracker", title: "Rastrear Emails", description: "Saiba quando seus emails foram abertos", icon: Mail, path: "/dashboard/email-tracker" },
+  { id: "rastreamento", title: "Rastrear Conteúdo", description: "PDFs, vídeos e imagens com links rastreáveis", icon: FileText, path: "/dashboard/rastreamento", preview: previewRastreamento },
+  { id: "encurtador", title: "Encurtador Rastreável", description: "Encurte URLs e acompanhe cliques", icon: Link2, path: "/dashboard/encurtador", preview: previewEncurtador },
+  { id: "email-tracker", title: "Rastrear Emails", description: "Saiba quando seus emails foram abertos", icon: Mail, path: "/dashboard/email-tracker", preview: previewEmailTracker },
 ];
 
 export default function TrackHub() {
@@ -95,15 +99,26 @@ export default function TrackHub() {
           {trackModules.map((module) => {
             const Icon = module.icon;
             return (
-              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card p-4 hover:shadow-md hover:border-border transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: TRACK_COLOR }}>
-                    <Icon className="h-5 w-5 text-white" />
+              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card overflow-hidden hover:shadow-md hover:border-border transition-all">
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted">
+                  <img
+                    src={module.preview}
+                    alt={`Preview ${module.title}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: TRACK_COLOR }}>
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">{module.title}</h3>
-                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{module.description}</p>
+                <div className="p-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">{module.title}</h3>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">{module.description}</p>
+                </div>
               </Link>
             );
           })}

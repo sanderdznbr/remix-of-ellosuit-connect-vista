@@ -614,7 +614,7 @@ const InPersonMeeting = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Title Dialog */}
       <Dialog open={showTitleDialog} onOpenChange={setShowTitleDialog}>
         <DialogContent className="rounded-2xl">
@@ -871,7 +871,7 @@ const InPersonMeeting = () => {
 
       {/* Main Recording Interface */}
       <Card className="border-none shadow-lg rounded-2xl">
-        <CardContent className="pt-8 pb-8">
+        <CardContent className="pt-6 pb-6 md:pt-8 md:pb-8">
           {!isRecording ? (
             <div className="space-y-8">
               {/* Device Selector */}
@@ -883,19 +883,19 @@ const InPersonMeeting = () => {
               </div>
               
               {/* Central Record Button */}
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="mb-8 relative">
+              <div className="flex flex-col items-center justify-center py-6 md:py-12">
+                <div className="mb-6 md:mb-8 relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
                   <Button 
                     onClick={() => setShowTitleDialog(true)} 
                     size="lg"
                     disabled={!selectedDeviceId}
-                    className="relative h-32 w-32 rounded-full text-lg font-semibold shadow-2xl hover:scale-105 transition-transform bg-gradient-to-br from-primary to-primary/80"
+                    className="relative h-24 w-24 md:h-32 md:w-32 rounded-full text-lg font-semibold shadow-2xl hover:scale-105 transition-transform bg-gradient-to-br from-primary to-primary/80"
                   >
-                    <Mic className="h-12 w-12" />
+                    <Mic className="h-10 w-10 md:h-12 md:w-12" />
                   </Button>
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Pronto para Gravar</h3>
+                <h3 className="text-xl md:text-2xl font-bold mb-2">Pronto para Gravar</h3>
                 <p className="text-muted-foreground text-center max-w-sm">
                   {selectedDeviceId 
                     ? 'Clique no botão acima para iniciar a gravação'
@@ -978,7 +978,7 @@ const InPersonMeeting = () => {
         <>
           {/* Loading state para processamento de speakers */}
           {isProcessingSpeakers && (
-            <Card className="mt-6 border-2 border-blue-500/50 bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/20 dark:to-sky-950/20 animate-pulse rounded-2xl">
+            <Card className="border-2 border-blue-500/50 bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/20 dark:to-sky-950/20 animate-pulse rounded-2xl">
               <CardContent className="py-12">
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
@@ -996,7 +996,7 @@ const InPersonMeeting = () => {
           )}
 
           {!isProcessingSpeakers && !showSpeakerMapping && showDownloadOptions && (
-            <Card className="mt-6 border-2 border-green-500/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-2xl">
+            <Card className="border-2 border-green-500/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-green-700 dark:text-green-400 flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

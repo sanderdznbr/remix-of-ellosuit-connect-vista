@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Video, Plus, Mic, FileText, Users, Bot } from 'lucide-react';
+import { Video, Plus, Mic, FileText, Users, Bot, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -64,20 +64,20 @@ const SimplifiedMeetingRooms = () => {
   const quickActions = [
     {
       icon: Video,
-      title: 'Nova Reunião Online',
-      description: 'Criar sala de videoconferência',
+      title: 'Nova Reunião',
+      description: 'Criar videoconferência',
       action: () => setShowCreateDialog(true)
     },
     {
       icon: Users,
-      title: 'Entrar em Reunião',
-      description: 'Use um código para participar',
+      title: 'Entrar',
+      description: 'Usar código para participar',
       action: () => setShowJoinDialog(true)
     },
     {
       icon: Mic,
-      title: 'Reunião Presencial',
-      description: 'Gravar e transcrever ao vivo',
+      title: 'Presencial',
+      description: 'Gravar e transcrever',
       action: () => setShowInPersonDialog(true)
     },
   ];
@@ -89,57 +89,58 @@ const SimplifiedMeetingRooms = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Clean Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Videoconferência</h1>
-          <p className="text-sm text-gray-500">Gerencie suas reuniões de forma simples e rápida</p>
+    <div className="h-full bg-background px-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="pt-2 md:pt-0">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Videoconferência</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Gerencie suas reuniões</p>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-4">
+        {/* Quick Actions - mobile: horizontal scroll cards */}
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4">
           {quickActions.map((action, index) => (
             <button 
               key={index}
-              className="group text-left bg-white rounded-3xl border border-gray-100 p-6 hover:shadow-lg hover:border-gray-200 transition-all"
+              className="group text-left bg-card rounded-2xl md:rounded-3xl border border-border p-3 md:p-6 hover:shadow-lg hover:border-primary/20 transition-all active:scale-[0.98]"
               onClick={action.action}
             >
               <div 
-                className="rounded-2xl p-3 w-fit mb-4 transition-transform group-hover:scale-105"
+                className="rounded-xl md:rounded-2xl p-2 md:p-3 w-fit mb-2 md:mb-4 transition-transform group-hover:scale-105"
                 style={{ backgroundColor: `${FLOW_COLOR}12` }}
               >
-                <action.icon className="h-7 w-7" style={{ color: FLOW_COLOR }} />
+                <action.icon className="h-5 w-5 md:h-7 md:w-7" style={{ color: FLOW_COLOR }} />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{action.title}</h3>
-              <p className="text-sm text-gray-500">{action.description}</p>
+              <h3 className="text-sm md:text-lg font-bold text-foreground mb-0.5 md:mb-1">{action.title}</h3>
+              <p className="text-[10px] md:text-sm text-muted-foreground leading-tight">{action.description}</p>
             </button>
           ))}
         </div>
 
         {/* Manage Section */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Gerenciar</h2>
-          <div className="grid md:grid-cols-3 gap-3">
+          <h2 className="text-sm md:text-lg font-semibold text-foreground mb-3">Gerenciar</h2>
+          <div className="space-y-2 md:grid md:grid-cols-3 md:gap-3 md:space-y-0">
             {manageActions.map((action, index) => (
               <button 
                 key={index}
-                className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-gray-200 transition-all text-left"
+                className="w-full flex items-center gap-3 bg-card rounded-xl md:rounded-2xl border border-border p-3 md:p-4 hover:shadow-md hover:border-primary/20 transition-all text-left active:scale-[0.98]"
                 onClick={action.action}
               >
                 <div 
-                  className="rounded-xl p-2.5"
+                  className="rounded-lg md:rounded-xl p-2 md:p-2.5"
                   style={{ backgroundColor: `${FLOW_COLOR}10` }}
                 >
-                  <action.icon className="h-5 w-5" style={{ color: FLOW_COLOR }} />
+                  <action.icon className="h-4 w-4 md:h-5 md:w-5" style={{ color: FLOW_COLOR }} />
                 </div>
-                <span className="font-semibold text-gray-900">{action.title}</span>
+                <span className="flex-1 text-sm font-semibold text-foreground">{action.title}</span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40 md:hidden" />
               </button>
             ))}
           </div>
         </div>
 
-        {/* Dialogs - keep existing */}
+        {/* Dialogs */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogContent className="sm:max-w-md rounded-2xl">
             <DialogHeader>
@@ -196,7 +197,7 @@ const SimplifiedMeetingRooms = () => {
         </Dialog>
 
         <Dialog open={showInPersonDialog} onOpenChange={setShowInPersonDialog}>
-          <DialogContent className="max-w-4xl max-h-[90vh] bg-background rounded-2xl">
+          <DialogContent className="max-w-4xl max-h-[90dvh] overflow-y-auto bg-background rounded-2xl p-4 md:p-6">
             <InPersonMeeting />
           </DialogContent>
         </Dialog>

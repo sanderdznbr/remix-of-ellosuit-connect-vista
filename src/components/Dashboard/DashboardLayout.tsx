@@ -4,6 +4,7 @@ import { MegaMenuHeader } from './MegaMenuHeader';
 import MobileAppHeader from '@/components/Mobile/MobileAppHeader';
 import MobileBottomNav from '@/components/Mobile/MobileBottomNav';
 import { useRoutineExecutor } from '@/hooks/useRoutineExecutor';
+import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { isMobile } = useIsMobile();
@@ -19,6 +20,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
 
       {/* Mobile Bottom Nav */}
       {isMobile && <MobileBottomNav />}
+
+      {/* Push Notification Permission Prompt */}
+      <PushNotificationPrompt />
     </div>
   );
 }

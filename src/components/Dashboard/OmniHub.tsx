@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import HubKPIChart from "./HubKPIChart";
+import HubModuleCard from "./HubModuleCard";
 
 import previewCrmWhatsapp from "@/assets/previews/omni-crm-whatsapp.jpg";
 import previewApiWhatsapp from "@/assets/previews/omni-api-whatsapp.jpg";
@@ -108,32 +109,9 @@ export default function OmniHub() {
         {/* Quick access modules */}
         <h2 className="text-sm font-semibold text-foreground mb-3">Acesso Rápido</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {omniModules.map((module) => {
-            const Icon = module.icon;
-            return (
-              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card overflow-hidden hover:shadow-md hover:border-border transition-all">
-                <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted">
-                  <img
-                    src={module.preview}
-                    alt={`Preview ${module.title}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute bottom-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: OMNI_COLOR }}>
-                    <Icon className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">{module.title}</h3>
-                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">{module.description}</p>
-                </div>
-              </Link>
-            );
-          })}
+          {omniModules.map((module) => (
+            <HubModuleCard key={module.id} {...module} color={OMNI_COLOR} />
+          ))}
         </div>
       </div>
     </div>

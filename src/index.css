@@ -79,9 +79,13 @@
   }
 
   /* Protect [data-keep-light] elements from dark mode overrides */
-  .dark [data-keep-light],
-  .dark [data-keep-light] * {
+  .dark [data-keep-light] {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+  .dark [data-keep-light] *:not(.bg-red-500) {
     color: inherit;
+    background-color: transparent;
   }
   .dark [data-keep-light] .text-gray-800 { color: #1f2937 !important; }
   .dark [data-keep-light] .text-gray-400 { color: #9ca3af !important; }

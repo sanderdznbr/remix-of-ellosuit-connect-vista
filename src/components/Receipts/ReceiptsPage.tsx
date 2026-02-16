@@ -287,8 +287,9 @@ export default function ReceiptsPage() {
       if (ts.company_cnpj) { doc.setFontSize(8); doc.text(`CNPJ: ${ts.company_cnpj}`, titleX, y + 17); }
       y = 52;
     } else if (ts.layout_style === 'corporate') {
-      if (logoImg) addLogo(14, 14, 14);
-      const textStartX = logoImg ? 52 : 14;
+      const logoH = 18;
+      if (logoImg) addLogo(14, 14, logoH);
+      const textStartX = logoImg ? 14 + (logoH * (logoImg.width / logoImg.height)) + 8 : 14;
       doc.setTextColor(pc.r, pc.g, pc.b);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
@@ -300,11 +301,11 @@ export default function ReceiptsPage() {
       if (ts.company_name) { doc.setTextColor(tc.r, tc.g, tc.b); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(ts.company_name, textStartX, y); }
       let infoY = y + 6;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(ac.r, ac.g, ac.b);
-      if (ts.company_cnpj) { doc.text(`CNPJ: ${ts.company_cnpj}`, textStartX, infoY); infoY += 4; }
-      if (ts.company_address) { doc.text(ts.company_address, textStartX, infoY); infoY += 4; }
-      if (ts.company_phone) { doc.text(`Tel: ${ts.company_phone}`, textStartX, infoY); infoY += 4; }
-      if (ts.company_email) { doc.text(ts.company_email, textStartX, infoY); infoY += 4; }
-      y = Math.max(infoY + 4, 40);
+      if (ts.company_cnpj) { doc.text(`CNPJ: ${ts.company_cnpj}`, textStartX, infoY); infoY += 5; }
+      if (ts.company_address) { doc.text(ts.company_address, textStartX, infoY); infoY += 5; }
+      if (ts.company_phone) { doc.text(`Tel: ${ts.company_phone}`, textStartX, infoY); infoY += 5; }
+      if (ts.company_email) { doc.text(ts.company_email, textStartX, infoY); infoY += 5; }
+      y = Math.max(infoY + 6, logoImg ? 14 + logoH + 8 : 40);
       doc.setDrawColor(pc.r, pc.g, pc.b); doc.setLineWidth(0.5); doc.line(14, y, pw - 14, y); y += 8;
     } else {
       if (logoImg) {
@@ -357,16 +358,7 @@ export default function ReceiptsPage() {
       doc.setGState(doc.GState({ opacity: 1 }));
     }
 
-    if (ts.show_signature_line) {
-      y = Math.max(y + 15, 220);
-      doc.setDrawColor(ac.r, ac.g, ac.b); doc.setLineWidth(0.3);
-      doc.line(pw / 2 - 40, y, pw / 2 + 40, y);
-      doc.setFontSize(8); doc.setTextColor(ac.r, ac.g, ac.b);
-      doc.text(ts.signature_label || 'Assinatura', pw / 2, y + 5, { align: 'center' });
-      y += 15;
-    }
-
-    y = Math.max(y + 5, ts.show_signature_line ? 250 : 220);
+    y = Math.max(y + 5, 220);
     doc.setDrawColor(200, 200, 200); doc.line(14, y, pw - 14, y); y += 8;
     doc.setFontSize(8); doc.setTextColor(ac.r, ac.g, ac.b);
     doc.text(ts.footer_text || 'Documento gerado eletronicamente', pw / 2, y, { align: 'center' });

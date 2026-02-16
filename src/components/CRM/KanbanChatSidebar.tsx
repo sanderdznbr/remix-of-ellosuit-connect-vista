@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Bot, Check, CheckCheck, Circle, Loader2 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { X, Send, Bot, Check, CheckCheck, Circle, Loader2, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import WhatsAppMediaMessage from './WhatsAppMediaMessage';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface WhatsAppConversationData {
   id: string;
@@ -49,6 +48,8 @@ interface KanbanChatSidebarProps {
   companyId: string | null;
 }
 
+const OMNI_COLOR = '#FF4500';
+
 const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
   isOpen,
   onClose,
@@ -61,46 +62,41 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Track last message timestamp for incremental polling
   const lastMessageTsRef = useRef<string | null>(null);
   const initialLoadDoneRef = useRef(false);
 
-  // Load messages when conversation changes
+  // Load messages
   useEffect(() => {
     if (!conversation || !companyId || !isOpen) return;
 
-    // Reset on conversation change
     initialLoadDoneRef.current = false;
     lastMessageTsRef.current = null;
     setMessages([]);
-    
+
     const loadMessages = async (isInitial: boolean) => {
       if (isInitial) setLoading(true);
-      
-      // Get all conversation IDs for this phone
+
       const { data: convs } = await supabase
         .from('whatsapp_conversations')
         .select('id')
         .eq('company_id', companyId)
         .eq('contact_phone', conversation.contact_phone);
-      
+
       if (!convs || convs.length === 0) {
         if (isInitial) setLoading(false);
         return;
       }
-      
+
       const conversationIds = convs.map(c => c.id);
 
       if (isInitial) {
-        // Full load on first render
         const { data, error } = await supabase
           .from('whatsapp_messages')
           .select('*')
           .in('conversation_id', conversationIds)
           .order('timestamp', { ascending: true })
           .limit(200);
-        
+
         if (!error && data) {
           const deduped = deduplicateMessages(data);
           setMessages(deduped);
@@ -111,7 +107,6 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
         setLoading(false);
         initialLoadDoneRef.current = true;
       } else {
-        // Incremental: only fetch messages newer than last known
         const since = lastMessageTsRef.current || new Date(0).toISOString();
         const { data, error } = await supabase
           .from('whatsapp_messages')
@@ -120,16 +115,16 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
           .gt('timestamp', since)
           .order('timestamp', { ascending: true })
           .limit(50);
-        
+
         if (!error && data && data.length > 0) {
           setMessages(prev => {
             const existingIds = new Set(prev.map(m => m.wa_message_id || m.id));
             const newMsgs = data
               .filter(m => !existingIds.has(m.wa_message_id || m.id))
               .map(m => ({ ...m, created_at: m.timestamp || m.created_at } as WhatsAppMessage));
-            
-            if (newMsgs.length === 0) return prev; // No change → no re-render
-            
+
+            if (newMsgs.length === 0) return prev;
+
             const merged = [...prev, ...newMsgs];
             lastMessageTsRef.current = merged[merged.length - 1].created_at;
             return merged;
@@ -137,10 +132,8 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
         }
       }
     };
-    
+
     loadMessages(true);
-    
-    // Poll for NEW messages only every 2s
     const interval = setInterval(() => loadMessages(false), 2000);
     return () => clearInterval(interval);
   }, [conversation?.contact_phone, companyId, isOpen]);
@@ -163,12 +156,12 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
       });
   };
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark as read when opening
+  // Mark as read
   useEffect(() => {
     if (conversation && isOpen && (conversation.unread_count || 0) > 0) {
       supabase
@@ -180,12 +173,11 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !conversation || sendingMessage) return;
-    
+
     setSendingMessage(true);
     const messageContent = newMessage.trim();
     setNewMessage('');
-    
-    // Optimistic update
+
     const tempId = `temp-${Date.now()}`;
     const tempMessage: WhatsAppMessage = {
       id: tempId,
@@ -196,30 +188,24 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
       created_at: new Date().toISOString()
     };
     setMessages(prev => [...prev, tempMessage]);
-    
+
     try {
-      // Get session info
       const { data: conv } = await supabase
         .from('whatsapp_conversations')
         .select('session_id')
         .eq('id', conversation.id)
         .single();
-      
-      if (!conv?.session_id) {
-        throw new Error('Sessão não encontrada');
-      }
-      
+
+      if (!conv?.session_id) throw new Error('Sessão não encontrada');
+
       const { data: session } = await supabase
         .from('whatsapp_sessions')
         .select('baileys_server_url')
         .eq('id', conv.session_id)
         .single();
-      
-      if (!session?.baileys_server_url) {
-        throw new Error('Servidor não configurado');
-      }
-      
-      // Send via Baileys
+
+      if (!session?.baileys_server_url) throw new Error('Servidor não configurado');
+
       const response = await fetch(`${session.baileys_server_url}/api/message/send-text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -229,17 +215,13 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
           message: messageContent
         })
       });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao enviar');
-      }
-      
-      // Update temp message status
-      setMessages(prev => prev.map(m => 
+
+      if (!response.ok) throw new Error('Falha ao enviar');
+
+      setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, status: 'sent' } : m
       ));
-      
-      // Update conversation
+
       await supabase
         .from('whatsapp_conversations')
         .update({
@@ -247,14 +229,10 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
           last_message_at: new Date().toISOString()
         })
         .eq('id', conversation.id);
-        
+
     } catch (error: any) {
-      toast({
-        title: 'Erro ao enviar',
-        description: error.message,
-        variant: 'destructive'
-      });
-      setMessages(prev => prev.map(m => 
+      toast({ title: 'Erro ao enviar', description: error.message, variant: 'destructive' });
+      setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, status: 'failed' } : m
       ));
     } finally {
@@ -263,148 +241,176 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'sent':
-        return <Check className="h-3 w-3" />;
-      case 'delivered':
-        return <CheckCheck className="h-3 w-3" />;
-      case 'read':
-        return <CheckCheck className="h-3 w-3 text-blue-500" />;
-      case 'sending':
-        return <Circle className="h-3 w-3 animate-pulse" />;
-      case 'failed':
-        return <Circle className="h-3 w-3 text-red-500" />;
-      default:
-        return <Circle className="h-3 w-3" />;
+      case 'sent': return <Check className="h-3 w-3" />;
+      case 'delivered': return <CheckCheck className="h-3 w-3" />;
+      case 'read': return <CheckCheck className="h-3 w-3 text-blue-500" />;
+      case 'sending': return <Circle className="h-3 w-3 animate-pulse" />;
+      case 'failed': return <Circle className="h-3 w-3 text-red-500" />;
+      default: return <Circle className="h-3 w-3" />;
     }
   };
 
   if (!conversation) return null;
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:w-[480px] p-0 flex flex-col">
-        {/* Header */}
-        <SheetHeader className="p-4 border-b bg-card">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={conversation.profile_picture} />
-              <AvatarFallback className="bg-primary/10 text-primary">
-                {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <SheetTitle className="text-base font-semibold truncate">
-                {conversation.contact_name || conversation.contact_phone}
-              </SheetTitle>
-              <p className="text-xs text-muted-foreground">{conversation.contact_phone}</p>
-            </div>
-            {conversation.ai_auto_reply_enabled && (
-              <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/20">
-                <Bot className="h-3 w-3 mr-1" />
-                IA Ativa
-              </Badge>
-            )}
-          </div>
-        </SheetHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-              <p className="text-sm">Nenhuma mensagem ainda</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex",
-                    message.from_me ? "justify-end" : "justify-start"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-2",
-                      message.from_me
-                        ? message.is_ai_response
-                          ? "bg-gradient-to-r from-purple-500/90 to-violet-500/90 text-white"
-                          : "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    )}
-                  >
-                    {message.is_ai_response && (
-                      <div className="flex items-center gap-1 text-[10px] opacity-80 mb-1">
-                        <Bot className="h-3 w-3" />
-                        <span>{message.sender_name || 'IA'}</span>
-                      </div>
-                    )}
-                    {message.message_type && message.message_type !== 'text' ? (
-                      <WhatsAppMediaMessage
-                        messageType={message.message_type}
-                        content={message.content}
-                        mediaUrl={message.media_url}
-                        mediaCaption={message.media_caption}
-                        fromMe={message.from_me}
-                      />
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.content}
-                      </p>
-                    )}
-                    <div className={cn(
-                      "flex items-center justify-end gap-1 mt-1 text-[10px]",
-                      message.from_me ? "opacity-70" : "text-muted-foreground"
-                    )}>
-                      <span>{formatTime(message.created_at)}</span>
-                      {message.from_me && getStatusIcon(message.status)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </ScrollArea>
-
-        {/* Input */}
-        <div className="p-4 border-t bg-card">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Digite uma mensagem..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input"
-              disabled={sendingMessage}
-            />
-            <Button
-              size="icon"
-              onClick={sendMessage}
-              disabled={sendingMessage || !newMessage.trim()}
+          {/* Popup */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
+            className="relative w-full max-w-lg h-[80vh] max-h-[700px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div
+              className="px-5 py-4 flex items-center gap-3"
+              style={{ background: `linear-gradient(135deg, ${OMNI_COLOR}, #FF6B35)` }}
             >
-              {sendingMessage ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <Avatar className="h-11 w-11 ring-2 ring-white/30">
+                <AvatarImage src={conversation.profile_picture} />
+                <AvatarFallback className="bg-white/20 text-white font-bold text-sm">
+                  {(conversation.contact_name || conversation.contact_phone).substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-semibold text-base truncate">
+                  {conversation.contact_name || conversation.contact_phone}
+                </h3>
+                <p className="text-white/70 text-xs flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {conversation.contact_phone}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {conversation.ai_auto_reply_enabled && (
+                  <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
+                    <Bot className="h-3 w-3 mr-1" />
+                    IA
+                  </Badge>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-5 w-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-orange-50/50 to-white">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-7 w-7 animate-spin" style={{ color: OMNI_COLOR }} />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <p className="text-sm">Nenhuma mensagem ainda</p>
+                </div>
               ) : (
-                <Send className="h-4 w-4" />
+                <div className="space-y-2.5">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={cn("flex", message.from_me ? "justify-end" : "justify-start")}
+                    >
+                      <div
+                        className={cn(
+                          "max-w-[80%] rounded-2xl px-3.5 py-2 shadow-sm",
+                          message.from_me
+                            ? message.is_ai_response
+                              ? "bg-gradient-to-r from-purple-500 to-violet-500 text-white"
+                              : "text-white"
+                            : "bg-white border border-gray-100 text-gray-800"
+                        )}
+                        style={
+                          message.from_me && !message.is_ai_response
+                            ? { background: `linear-gradient(135deg, ${OMNI_COLOR}, #FF6B35)` }
+                            : undefined
+                        }
+                      >
+                        {message.is_ai_response && (
+                          <div className="flex items-center gap-1 text-[10px] opacity-80 mb-1">
+                            <Bot className="h-3 w-3" />
+                            <span>{message.sender_name || 'IA'}</span>
+                          </div>
+                        )}
+                        {message.message_type && message.message_type !== 'text' ? (
+                          <WhatsAppMediaMessage
+                            messageType={message.message_type}
+                            content={message.content}
+                            mediaUrl={message.media_url}
+                            mediaCaption={message.media_caption}
+                            fromMe={message.from_me}
+                          />
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.content}
+                          </p>
+                        )}
+                        <div className={cn(
+                          "flex items-center justify-end gap-1 mt-1 text-[10px]",
+                          message.from_me ? "opacity-70" : "text-muted-foreground"
+                        )}>
+                          <span>{formatTime(message.created_at)}</span>
+                          {message.from_me && getStatusIcon(message.status)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
               )}
-            </Button>
-          </div>
+            </div>
+
+            {/* Input */}
+            <div className="px-4 py-3 border-t border-gray-100 bg-white">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Digite uma mensagem..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                  className="flex-1 rounded-xl border-gray-200 focus-visible:ring-1 focus-visible:ring-offset-0 h-11"
+                  style={{ '--tw-ring-color': OMNI_COLOR } as React.CSSProperties}
+                  disabled={sendingMessage}
+                />
+                <Button
+                  size="icon"
+                  onClick={sendMessage}
+                  disabled={sendingMessage || !newMessage.trim()}
+                  className="h-11 w-11 rounded-xl shrink-0 text-white border-0"
+                  style={{ backgroundColor: OMNI_COLOR }}
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </SheetContent>
-    </Sheet>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { ElloLogo } from "@/components/shared/ElloLogo";
@@ -12,6 +12,9 @@ import { EllosuitOmniLogo } from "@/components/shared/EllosuitOmniLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { useHubColor } from "@/hooks/useHubColor";
 import { useAdminMaster } from "@/hooks/useAdminMaster";
+import { useNotifications } from "@/hooks/useNotifications";
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -197,6 +200,7 @@ export function MegaMenuHeader() {
   const { color: hubColor } = useHubColor();
   const { isAdminMaster, loading: adminLoading } = useAdminMaster();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   const handleMouseEnter = (menuId: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -334,55 +338,81 @@ export function MegaMenuHeader() {
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded-lg hover:bg-white/10 transition-colors relative">
                 <Bell className="h-5 w-5 text-white" />
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
-                  3
-                </span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-0.5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <div className="px-3 py-2 border-b">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">Notificações</p>
-                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">3 novas</span>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <>
+                        <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full dark:bg-red-500/20 dark:text-red-400">
+                          {unreadCount} {unreadCount === 1 ? 'nova' : 'novas'}
+                        </span>
+                        <button onClick={() => markAllAsRead()} className="text-muted-foreground hover:text-foreground">
+                          <CheckCheck className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto">
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    <span className="font-medium text-sm">Novo cliente cadastrado</span>
+              <div className="max-h-72 overflow-y-auto">
+                {notifications.slice(0, 10).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
                   </div>
-                  <p className="text-xs text-muted-foreground pl-4">Maria Silva foi adicionada à sua base</p>
-                  <span className="text-[10px] text-muted-foreground pl-4">Há 5 minutos</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <span className="font-medium text-sm">Email aberto</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-4">João Pereira abriu seu email de proposta</p>
-                  <span className="text-[10px] text-muted-foreground pl-4">Há 15 minutos</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                    <span className="font-medium text-sm">Reunião agendada</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground pl-4">Nova reunião com Empresa ABC às 14h</p>
-                  <span className="text-[10px] text-muted-foreground pl-4">Há 1 hora</span>
-                </DropdownMenuItem>
+                ) : (
+                  notifications.slice(0, 10).map((notif) => {
+                    const CAT_COLORS: Record<string, string> = {
+                      system: '#6366f1', calendar: '#007DE3', crm: '#FF4500',
+                      task: '#22c55e', meeting: '#8b5cf6', email: '#f59e0b', drive: '#3000E3',
+                    };
+                    const dotColor = CAT_COLORS[notif.category] || '#6366f1';
+                    return (
+                      <DropdownMenuItem
+                        key={notif.id}
+                        onClick={() => {
+                          if (!notif.is_read) markAsRead(notif.id);
+                          if (notif.action_url) navigate(notif.action_url);
+                        }}
+                        className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted ${!notif.is_read ? 'bg-primary/5' : ''}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {!notif.is_read && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />}
+                            <span className="font-medium text-sm">{notif.title}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 pl-3">{notif.message}</p>
+                          <span className="text-[10px] text-muted-foreground/70 pl-3 block mt-0.5">
+                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
               </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="justify-center text-primary cursor-pointer font-medium"
-                onClick={() => navigate('/dashboard/notificacoes')}
-              >
-                Ver todas as notificações
-              </DropdownMenuItem>
+              {notifications.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="justify-center text-primary cursor-pointer font-medium"
+                    onClick={() => navigate('/dashboard/suporte')}
+                  >
+                    Ver todas as notificações
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Settings Dropdown */}
           <div
             className="relative"
             onMouseEnter={() => handleMouseEnter('config')}

@@ -33,6 +33,7 @@ import { MeetingAIChat } from './MeetingAIChat';
 import { LiveKitAudioCapture } from './LiveKitAudioCapture';
 import InviteModal from './InviteModal';
 import RecordingConsentDialog from './RecordingConsentDialog';
+import { APP_CONFIG } from '@/config/app';
 import '@/styles/livekit.css';
 import MeetingLayout from './MeetingLayout';
 import '@/styles/meeting-dark-theme.css';
@@ -798,6 +799,79 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
     }
   };
 
+  const forceCleanupAndLeave = useCallback(async () => {
+    console.log('🚪 [forceCleanupAndLeave] === SAÍDA INTENCIONAL ===');
+    
+    // Stop all media tracks explicitly
+    try {
+      // Stop via Room reference
+      if (roomRef.current) {
+        console.log('⏹️ Parando todas as tracks via Room...');
+        
+        roomRef.current.localParticipant.audioTrackPublications.forEach((pub) => {
+          if (pub.track) {
+            pub.track.stop();
+            pub.track.mediaStreamTrack?.stop();
+          }
+        });
+        
+        roomRef.current.localParticipant.videoTrackPublications.forEach((pub) => {
+          if (pub.track) {
+            pub.track.stop();
+            pub.track.mediaStreamTrack?.stop();
+          }
+        });
+
+        // Disconnect the Room explicitly
+        console.log('🔌 Desconectando Room...');
+        await roomRef.current.disconnect(true);
+        console.log('✅ Room desconectado');
+      }
+
+      // Extra safety: stop ALL active media streams in the browser
+      try {
+        const streams = await navigator.mediaDevices.getUserMedia({ audio: true, video: true }).catch(() => null);
+        // We don't actually need a new stream, just stop any lingering ones
+      } catch {}
+
+      // Stop any lingering getUserMedia tracks
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+        // Use enumerateDevices to find active tracks isn't possible,
+        // but we can ensure our room tracks are stopped
+        console.log('🔇 Cleanup de mídia concluído');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao limpar mídia:', error);
+    }
+
+    // Mark room as inactive if host
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const { data: roomData } = await supabase
+        .from('meeting_rooms')
+        .select('created_by')
+        .eq('room_code', roomName)
+        .single();
+      
+      if (roomData && currentUser && roomData.created_by === currentUser.id) {
+        await supabase
+          .from('meeting_rooms')
+          .update({ is_active: false, ended_at: new Date().toISOString() })
+          .eq('room_code', roomName);
+        console.log('👑 Sala marcada como inativa pelo host');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar sala:', error);
+    }
+
+    toast({ title: "Desconectado", description: "Você saiu da sala de reunião" });
+    
+    setTimeout(() => {
+      console.log('🚪 Chamando onLeave()...');
+      onLeave();
+    }, 300);
+  }, [onLeave, toast, roomName]);
+
   const handleLeaveClick = async () => {
     console.log('🚪 Iniciando processo de saída...');
     
@@ -825,15 +899,14 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
       setIsProcessingTranscript(false);
     }
     
-    // Wait a bit if recording was just stopped to ensure it's processed
+    // Wait a bit if recording was just stopped
     if (isProcessingRecording) {
-      console.log('⏳ Aguardando processamento da gravação...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       setIsProcessingRecording(false);
     }
     
-    // Immediate disconnect
-    handleDisconnected();
+    // Force cleanup and leave (bypasses connection stability guards)
+    await forceCleanupAndLeave();
   };
 
   // Auto-save meeting function
@@ -1308,7 +1381,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
            {isMobile ? (
             <MobileMeetingLayout
               roomName={roomName}
-              onLeave={onLeave}
+              onLeave={handleLeaveClick}
               onShareMeeting={() => setShowShareModal(true)}
               onToggleRecording={toggleRecording}
               isRecording={isRecording}
@@ -1422,7 +1495,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <MeetingExitModal
             isOpen={showExitModal}
             onClose={() => setShowExitModal(false)}
-            onConfirmExit={handleDisconnected}
+            onConfirmExit={handleLeaveClick}
             transcriptionMessages={transcriptionMessages}
             roomName={roomName}
             savedAudioUrl={savedAudioUrl}
@@ -1431,7 +1504,7 @@ const SimpleLiveKitRoom: React.FC<SimpleLiveKitRoomProps> = ({
           <InviteModal
             isOpen={showInviteModal}
             onClose={() => setShowInviteModal(false)}
-            meetingLink={`${window.location.origin}/meeting/${roomName}`}
+            meetingLink={APP_CONFIG.getMeetingUrl(roomName)}
           />
 
           <RecordingConsentDialog

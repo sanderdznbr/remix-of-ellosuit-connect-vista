@@ -38,9 +38,16 @@ const MobileBottomNav = () => {
 
   const activeHub = getActiveHub();
 
+  const isOnHome = activeHub === 'home';
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
-      <div className="bg-background/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
+      <div
+        className={`backdrop-blur-xl border-t pb-[env(safe-area-inset-bottom)] ${
+          isOnHome ? 'bg-[#3000E3] border-white/10' : 'bg-background/95 border-border'
+        }`}
+        style={isOnHome ? { borderColor: 'rgba(255,255,255,0.1)' } : undefined}
+      >
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -68,16 +75,16 @@ const MobileBottomNav = () => {
               >
                 <div
                   className="flex items-center justify-center w-9 h-9 rounded-xl transition-all"
-                  style={isActive ? { backgroundColor: item.color + '18' } : {}}
+                  style={isActive ? { backgroundColor: (isOnHome ? 'rgba(255,255,255,0.15)' : item.color + '18') } : {}}
                 >
                   <Icon
-                    className={`h-5 w-5 transition-colors ${!isActive ? 'text-muted-foreground' : ''}`}
-                    style={isActive ? { color: item.color } : undefined}
+                    className={`h-5 w-5 transition-colors ${!isActive ? (isOnHome ? 'text-white/60' : 'text-muted-foreground') : ''}`}
+                    style={isActive ? { color: isOnHome ? '#fff' : item.color } : undefined}
                   />
                 </div>
                 <span
-                  className={`text-[10px] transition-colors ${isActive ? 'font-semibold' : 'font-medium text-muted-foreground'}`}
-                  style={isActive ? { color: item.color } : undefined}
+                  className={`text-[10px] transition-colors ${isActive ? 'font-semibold' : (isOnHome ? 'font-medium text-white/60' : 'font-medium text-muted-foreground')}`}
+                  style={isActive ? { color: isOnHome ? '#fff' : item.color } : undefined}
                 >
                   {item.label}
                 </span>

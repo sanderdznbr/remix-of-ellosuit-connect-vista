@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FileText, Link2, Mail, ArrowRight, MousePointer } from "lucide-react";
+import { FileText, Link2, Mail, ArrowRight, MousePointer, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import HubKPIChart from "./HubKPIChart";
 import previewRastreamento from "@/assets/previews/track-rastreamento.jpg";
 import previewEncurtador from "@/assets/previews/track-encurtador.jpg";
 import previewEmailTracker from "@/assets/previews/track-email-tracker.jpg";
+import previewLeads from "@/assets/previews/track-leads.jpg";
 
 const TRACK_COLOR = "#3A9A1C";
 
@@ -15,6 +16,7 @@ const trackModules = [
   { id: "rastreamento", title: "Rastrear Conteúdo", description: "PDFs, vídeos e imagens com links rastreáveis", icon: FileText, path: "/dashboard/rastreamento", preview: previewRastreamento },
   { id: "encurtador", title: "Encurtador Rastreável", description: "Encurte URLs e acompanhe cliques", icon: Link2, path: "/dashboard/encurtador", preview: previewEncurtador },
   { id: "email-tracker", title: "Rastrear Emails", description: "Saiba quando seus emails foram abertos", icon: Mail, path: "/dashboard/email-tracker", preview: previewEmailTracker },
+  { id: "leads", title: "Captura de Leads", description: "Funis interativos para capturar e qualificar leads", icon: Users, path: "/dashboard/leads", preview: previewLeads },
 ];
 
 export default function TrackHub() {

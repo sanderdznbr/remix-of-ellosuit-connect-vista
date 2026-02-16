@@ -130,19 +130,19 @@ const LeadFunnelsManager: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white min-h-screen">
+      <div className="h-full flex items-center justify-center bg-background min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" style={{ color: FLOW_COLOR }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Captura de Leads</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Captura de Leads</h1>
+          <p className="text-muted-foreground mt-1">
             Crie funis interativos para capturar e qualificar leads
           </p>
         </div>
@@ -155,29 +155,29 @@ const LeadFunnelsManager: React.FC = () => {
             { icon: Users, label: 'Acessos', value: stats.submissions, color: '#3B82F6' },
             { icon: TrendingUp, label: 'Conversão', value: stats.submissions > 0 ? `${Math.round((stats.conversions / stats.submissions) * 100)}%` : '0%', color: '#8B5CF6' },
           ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3">
+            <div key={i} className="bg-card rounded-2xl border border-border/60 p-4 flex items-center gap-3">
               <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${stat.color}12` }}>
                 <stat.icon className="h-5 w-5" style={{ color: stat.color }} />
               </div>
               <div>
-                <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                <p className="text-xs text-gray-500">{stat.label}</p>
+                <p className="text-lg font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border/60 overflow-hidden">
           {/* Search + Actions */}
           <div className="p-4 flex items-center gap-3">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Pesquisar funis..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 border-gray-200 bg-gray-50 rounded-xl focus:bg-white"
+                className="pl-9 border-border bg-muted/50 rounded-xl focus:bg-background"
               />
             </div>
             <div className="flex-1" />
@@ -195,7 +195,7 @@ const LeadFunnelsManager: React.FC = () => {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-3 border-t border-b border-border/40 bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <div />
             <div>Nome</div>
             <div>Status</div>
@@ -209,9 +209,9 @@ const LeadFunnelsManager: React.FC = () => {
           {/* List */}
           {filteredFunnels.length === 0 ? (
             <div className="text-center py-16">
-              <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-700 mb-2">Nenhum funil encontrado</h3>
-              <p className="text-gray-500 mb-6">
+              <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Nenhum funil encontrado</h3>
+              <p className="text-muted-foreground mb-6">
                 {searchQuery ? 'Tente uma busca diferente' : 'Crie seu primeiro funil para capturar leads'}
               </p>
               {!searchQuery && (
@@ -226,35 +226,35 @@ const LeadFunnelsManager: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border/40">
               {filteredFunnels.map(funnel => {
                 const fStats = funnelStats[funnel.id] || { views: 0, completions: 0 };
                 const convRate = fStats.views > 0 ? Math.round((fStats.completions / fStats.views) * 100) : 0;
                 return (
                   <div
                     key={funnel.id}
-                    className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="grid grid-cols-[40px_1fr_100px_120px_100px_100px_100px_140px] gap-4 px-4 py-4 items-center hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => navigate(`/dashboard/leads/builder?id=${funnel.id}`)}
                   >
                     <div className="flex items-center justify-center">
                       <div
                         className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: funnel.is_active ? `${FLOW_COLOR}12` : '#f3f4f6' }}
+                        style={{ backgroundColor: funnel.is_active ? `${FLOW_COLOR}12` : 'hsl(var(--muted))' }}
                       >
-                        <Target className="h-4 w-4" style={{ color: funnel.is_active ? FLOW_COLOR : '#9ca3af' }} />
+                        <Target className="h-4 w-4" style={{ color: funnel.is_active ? FLOW_COLOR : 'hsl(var(--muted-foreground))' }} />
                       </div>
                     </div>
 
                     <div className="min-w-0">
-                      <span className="font-medium text-gray-900 truncate block">{funnel.name}</span>
+                      <span className="font-medium text-foreground truncate block">{funnel.name}</span>
                       {funnel.description && (
-                        <span className="text-xs text-gray-400 truncate block">{funnel.description}</span>
+                        <span className="text-xs text-muted-foreground truncate block">{funnel.description}</span>
                       )}
                     </div>
 
                     <div>
                       {funnel.is_active ? (
-                        <Badge className="bg-green-50 text-green-700 border-0 text-[10px] px-2 py-0.5">
+                        <Badge className="bg-green-500/10 text-green-500 border-0 text-[10px] px-2 py-0.5">
                           Ativo
                         </Badge>
                       ) : (
@@ -265,18 +265,18 @@ const LeadFunnelsManager: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-xs text-gray-500 font-mono truncate">/f/{funnel.slug.slice(0, 8)}...</span>
+                      <span className="text-xs text-muted-foreground font-mono truncate">/f/{funnel.slug.slice(0, 8)}...</span>
                       <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={(e) => copyFunnelLink(funnel.slug, e)}>
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
 
-                    <div className="text-sm text-gray-500 flex items-center gap-1">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">
                       <Eye className="h-3 w-3" />
                       {fStats.views}
                     </div>
 
-                    <div className="text-sm text-green-600 flex items-center gap-1">
+                    <div className="text-sm text-green-500 flex items-center gap-1">
                       <Users className="h-3 w-3" />
                       {fStats.completions}
                     </div>
@@ -289,7 +289,7 @@ const LeadFunnelsManager: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => handleToggleFunnel(funnel.id, funnel.is_active)}
                         title={funnel.is_active ? 'Pausar' : 'Ativar'}
                       >
@@ -298,7 +298,7 @@ const LeadFunnelsManager: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => navigate(`/dashboard/leads/analytics/${funnel.id}`)}
                         title="Analytics"
                       >
@@ -307,7 +307,7 @@ const LeadFunnelsManager: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => handleDeleteFunnel(funnel.id)}
                         title="Excluir"
                       >
@@ -338,20 +338,20 @@ const LeadFunnelsManager: React.FC = () => {
               <Label>Descrição (opcional)</Label>
               <Textarea placeholder="Descreva o objetivo..." value={newFunnel.description} onChange={(e) => setNewFunnel(prev => ({ ...prev, description: e.target.value }))} rows={2} className="rounded-xl" />
             </div>
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t border-border">
               <h4 className="text-sm font-medium mb-3">Personalização</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Cor dos Botões</Label>
                   <div className="flex items-center gap-2">
-                    <input type="color" value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
+                    <input type="color" value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="w-10 h-10 rounded-lg border border-border cursor-pointer" />
                     <Input value={newFunnel.buttonColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, buttonColor: e.target.value }))} className="flex-1 rounded-xl" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Cor de Fundo</Label>
                   <div className="flex items-center gap-2">
-                    <input type="color" value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="w-10 h-10 rounded-lg border cursor-pointer" />
+                    <input type="color" value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="w-10 h-10 rounded-lg border border-border cursor-pointer" />
                     <Input value={newFunnel.backgroundColor} onChange={(e) => setNewFunnel(prev => ({ ...prev, backgroundColor: e.target.value }))} className="flex-1 rounded-xl" />
                   </div>
                 </div>

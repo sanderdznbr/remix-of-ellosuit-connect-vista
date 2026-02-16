@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
+import { useTheme } from '@/hooks/useTheme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,7 @@ const AIAssistantHome: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { color: hubColor } = useHubColor();
+  const { theme } = useTheme();
   const { toast } = useToast();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -64,7 +66,8 @@ const AIAssistantHome: React.FC = () => {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSpeakRef = useRef<string | null>(null);
 
-  const bgColor = hubColor || DEFAULT_COLOR;
+  const isDark = theme === 'dark';
+  const bgColor = isDark ? '#0a0a0a' : (hubColor || DEFAULT_COLOR);
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
   const firstName = userName.split(' ')[0];
 
@@ -381,7 +384,7 @@ const AIAssistantHome: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, delay: hasChat ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="relative flex items-center bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] border border-white/60 overflow-hidden transition-all duration-300 focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)] focus-within:border-white/80 focus-within:bg-white">
+        <div className={`relative flex items-center backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] overflow-hidden transition-all duration-300 ${isDark ? 'bg-white/10 border border-white/15 focus-within:bg-white/15 focus-within:border-white/25' : 'bg-white/95 border border-white/60 focus-within:bg-white focus-within:border-white/80'} focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)]`}>
           <input
             ref={fileInputRef}
             type="file"
@@ -392,16 +395,16 @@ const AIAssistantHome: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile || isProcessing}
-            className="ml-3 p-2.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 disabled:opacity-50 group"
+            className={`ml-3 p-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 group ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100/80'}`}
           >
             {uploadingFile ? (
-              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+              <Loader2 className={`h-5 w-5 animate-spin ${isDark ? 'text-white/50' : 'text-gray-400'}`} />
             ) : (
-              <Paperclip className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              <Paperclip className={`h-5 w-5 transition-colors ${isDark ? 'text-white/50 group-hover:text-white/80' : 'text-gray-400 group-hover:text-gray-600'}`} />
             )}
           </button>
 
-          <div className="mx-1 h-6 w-px bg-gray-200/60" />
+          <div className={`mx-1 h-6 w-px ${isDark ? 'bg-white/15' : 'bg-gray-200/60'}`} />
 
           <input
             ref={inputRef}
@@ -410,7 +413,7 @@ const AIAssistantHome: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={attachedFile ? "Descreva o que fazer com o arquivo..." : "Pergunte qualquer coisa..."}
-            className="flex-1 bg-transparent text-gray-800 placeholder:text-gray-400/70 text-base md:text-[17px] px-3 py-4 md:py-[18px] outline-none font-medium tracking-[-0.01em]"
+            className={`flex-1 bg-transparent text-base md:text-[17px] px-3 py-4 md:py-[18px] outline-none font-medium tracking-[-0.01em] ${isDark ? 'text-white placeholder:text-white/40' : 'text-gray-800 placeholder:text-gray-400/70'}`}
             autoFocus
             disabled={isProcessing}
           />
@@ -421,16 +424,16 @@ const AIAssistantHome: React.FC = () => {
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isProcessing || isTranscribing}
               className={`p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-40 ${
-                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : 'hover:bg-gray-100/80 group'
+                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : isDark ? 'hover:bg-white/10 group' : 'hover:bg-gray-100/80 group'
               }`}
               title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
             >
               {isTranscribing ? (
-                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                <Loader2 className={`h-5 w-5 animate-spin ${isDark ? 'text-white/50' : 'text-gray-400'}`} />
               ) : isRecording ? (
                 <MicOff className="h-5 w-5 text-white" />
               ) : (
-                <Mic className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <Mic className={`h-5 w-5 transition-colors ${isDark ? 'text-white/50 group-hover:text-white/80' : 'text-gray-400 group-hover:text-gray-600'}`} />
               )}
             </button>
 
@@ -440,7 +443,7 @@ const AIAssistantHome: React.FC = () => {
               disabled={isProcessing || (!input.trim() && !attachedFile)}
               className="p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-30"
               style={{
-                backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? 'transparent' : bgColor,
+                backgroundColor: isProcessing || (!input.trim() && !attachedFile) ? 'transparent' : (hubColor || DEFAULT_COLOR),
               }}
             >
               <Send
@@ -551,8 +554,8 @@ const AIAssistantHome: React.FC = () => {
                 >
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user'
-                      ? 'bg-white/25 text-white backdrop-blur-sm border border-white/20'
-                      : 'bg-white text-gray-900 shadow-xl border border-gray-100'
+                      ? isDark ? 'bg-white/15 text-white backdrop-blur-sm border border-white/10' : 'bg-white/25 text-white backdrop-blur-sm border border-white/20'
+                      : isDark ? 'bg-neutral-800 text-white shadow-xl border border-neutral-700' : 'bg-white text-gray-900 shadow-xl border border-gray-100'
                   }`}>
                     {msg.fileUrl && msg.fileName && (
                       <div className={`flex items-center gap-2 mb-2 p-2 rounded-lg ${
@@ -584,7 +587,7 @@ const AIAssistantHome: React.FC = () => {
                       <button
                         onClick={() => navigate(msg.action.path)}
                         className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                        style={{ backgroundColor: bgColor, color: 'white' }}
+                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
                       >
                         Ir para {msg.action.label} →
                       </button>
@@ -593,7 +596,7 @@ const AIAssistantHome: React.FC = () => {
                       <button
                         onClick={() => navigate(msg.action.path)}
                         className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                        style={{ backgroundColor: bgColor, color: 'white' }}
+                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
                       >
                         Importar Contatos →
                       </button>
@@ -602,7 +605,7 @@ const AIAssistantHome: React.FC = () => {
                       <button
                         onClick={() => navigate('/dashboard/drive')}
                         className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                        style={{ backgroundColor: bgColor, color: 'white' }}
+                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
                       >
                         Abrir Drive →
                       </button>
@@ -611,7 +614,7 @@ const AIAssistantHome: React.FC = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="mt-2 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                        style={{ backgroundColor: bgColor, color: 'white' }}
+                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
                       >
                         <UploadCloud className="h-3.5 w-3.5" />
                         Anexar arquivo

@@ -332,7 +332,7 @@ const UnifiedDatabase: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn("font-normal", tagConfig.color)}>
+                        <Badge variant="outline" className="font-normal bg-primary text-primary-foreground border-primary">
                           {tagConfig.label}
                         </Badge>
                       </TableCell>

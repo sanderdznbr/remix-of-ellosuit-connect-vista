@@ -94,9 +94,9 @@ Deno.serve(async (req) => {
         const pushData = await pushRes.json();
         if (pushRes.ok) {
           pushSent = true;
-          console.log(`[USER-NOTIFY] Push sent via OneSignal:`, pushData.id);
+          console.log(`[USER-NOTIFY] Push sent via OneSignal: id=${pushData.id}, recipients=${pushData.recipients}, errors=${JSON.stringify(pushData.errors || [])}`);
         } else {
-          console.error(`[USER-NOTIFY] OneSignal push failed:`, pushData);
+          console.error(`[USER-NOTIFY] OneSignal push failed:`, JSON.stringify(pushData));
         }
       } else {
         console.log("[USER-NOTIFY] OneSignal not configured, skipping push");

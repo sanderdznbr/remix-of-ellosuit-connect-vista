@@ -49,6 +49,7 @@ const ALL_CLIENT_FIELDS = [
   { key: 'purchased_items', label: 'Item Comprado (lista)' },
   { key: 'purchase_date', label: 'Data da Compra' },
   { key: 'purchase_total', label: 'Valor Total da Compra' },
+  { key: 'custom_fields', label: 'Campos Personalizados' },
 ];
 
 const DEFAULT_CLIENT_FIELDS = [
@@ -58,6 +59,8 @@ const DEFAULT_CLIENT_FIELDS = [
   'address_state', 'address_zip', 'notes', 'tags',
   'purchased_items', 'purchase_date', 'purchase_total',
 ];
+
+const DEFAULT_NEW_CLIENT_OUTPUT_FIELDS = ['name', 'email', 'phone', 'whatsapp'];
 
 export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeSelect, selectedNodeId, isActive }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,12 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   // Get active client fields for a node
   const getClientFields = (node: AutomationNode) => {
     const activeKeys: string[] = node.config?.activeClientFields || DEFAULT_CLIENT_FIELDS;
+    return ALL_CLIENT_FIELDS.filter(f => activeKeys.includes(f.key));
+  };
+
+  // Get active output fields for new_client trigger
+  const getNewClientOutputFields = (node: AutomationNode) => {
+    const activeKeys: string[] = node.config?.activeOutputFields || DEFAULT_NEW_CLIENT_OUTPUT_FIELDS;
     return ALL_CLIENT_FIELDS.filter(f => activeKeys.includes(f.key));
   };
 
@@ -253,6 +262,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   const getNodeFieldCount = (node: AutomationNode): number => {
     if (node.type === 'webhook') return getWebhookFields(node).length;
     if (node.type === 'create_client') return getClientFields(node).length;
+    if (node.type === 'new_client') return getNewClientOutputFields(node).length;
     return 0;
   };
 
@@ -273,6 +283,10 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
   const getEdgeSourceY = (edge: AutomationEdge, source: AutomationNode) => {
     if (edge.sourceField && source.type === 'webhook') {
       return getFieldPortY(source, edge.sourceField, getWebhookFields(source));
+    }
+    if (edge.sourceField && source.type === 'new_client') {
+      const fieldLabels = getNewClientOutputFields(source).map(f => f.label);
+      return getFieldPortY(source, edge.sourceField, fieldLabels);
     }
     return source.position.y + getNodeHeight(source) / 2;
   };
@@ -338,6 +352,9 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     let sy: number;
     if (connecting.sourceField && source.type === 'webhook') {
       sy = getFieldPortY(source, connecting.sourceField, getWebhookFields(source));
+    } else if (connecting.sourceField && source.type === 'new_client') {
+      const fieldLabels = getNewClientOutputFields(source).map(f => f.label);
+      sy = getFieldPortY(source, connecting.sourceField, fieldLabels);
     } else {
       sy = source.position.y + getNodeHeight(source) / 2;
     }
@@ -363,7 +380,17 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
     onNodesChange(nodes.map(n => n.id === node.id ? { ...n, config: { ...n.config, activeClientFields: updated } } : n));
   };
 
+  // Toggle new_client output field on/off
+  const toggleNewClientOutputField = (node: AutomationNode, fieldKey: string) => {
+    const current: string[] = node.config?.activeOutputFields || DEFAULT_NEW_CLIENT_OUTPUT_FIELDS;
+    const updated = current.includes(fieldKey)
+      ? current.filter(k => k !== fieldKey)
+      : [...current, fieldKey];
+    onNodesChange(nodes.map(n => n.id === node.id ? { ...n, config: { ...n.config, activeOutputFields: updated } } : n));
+  };
+
   const [showFieldSelector, setShowFieldSelector] = useState<string | null>(null);
+  const [showNewClientFieldSelector, setShowNewClientFieldSelector] = useState<string | null>(null);
 
   // Canvas size for infinite scroll
   const canvasW = 5000;
@@ -543,6 +570,67 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                     );
                   })()}
 
+                  {/* New client output fields */}
+                  {node.type === 'new_client' && getNewClientOutputFields(node).length > 0 && (
+                    <div className="border-t-2 px-3 py-3 border-emerald-100 bg-emerald-50/30">
+                      <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Saídas ({getNewClientOutputFields(node).length})
+                        </div>
+                        <button
+                          className="text-[9px] font-semibold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-full transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setShowNewClientFieldSelector(showNewClientFieldSelector === node.id ? null : node.id); }}
+                        >
+                          {showNewClientFieldSelector === node.id ? '✓ Fechar' : '+ Campos'}
+                        </button>
+                      </div>
+
+                      {showNewClientFieldSelector === node.id && (
+                        <div className="mb-3 p-2 bg-white rounded-lg border border-emerald-200 shadow-lg max-h-48 overflow-y-auto">
+                          <div className="text-[9px] text-gray-400 uppercase font-bold mb-1.5">Selecione os campos de saída</div>
+                          <div className="grid grid-cols-2 gap-1">
+                            {ALL_CLIENT_FIELDS.map(f => {
+                              const isActive = (node.config?.activeOutputFields || DEFAULT_NEW_CLIENT_OUTPUT_FIELDS).includes(f.key);
+                              return (
+                                <button
+                                  key={f.key}
+                                  onClick={(e) => { e.stopPropagation(); toggleNewClientOutputField(node, f.key); }}
+                                  className={`text-[10px] px-2 py-1 rounded-md text-left truncate transition-all ${
+                                    isActive
+                                      ? 'bg-emerald-100 text-emerald-700 font-medium border border-emerald-300'
+                                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent'
+                                  }`}
+                                >
+                                  {isActive ? '✓ ' : ''}{f.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        {getNewClientOutputFields(node).map(({ key, label }) => (
+                          <div key={key} className="flex items-center relative group/field" style={{ height: FIELD_ROW_HEIGHT }}>
+                            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border flex-1 min-w-0 shadow-sm transition-all bg-white border-emerald-100 hover:border-emerald-300 hover:shadow">
+                              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-emerald-400" />
+                              <span className="text-[11px] font-mono font-medium truncate text-gray-700">{label}</span>
+                              <span className="text-[9px] text-gray-400 ml-auto">{key}</span>
+                            </div>
+                            <div
+                              className="absolute -right-[26px] w-7 h-7 rounded-full border-[2.5px] border-emerald-400 cursor-crosshair hover:scale-[1.3] hover:border-emerald-600 hover:shadow-lg transition-all z-30 flex items-center justify-center shadow-md bg-white"
+                              onMouseDown={e => handlePortMouseDown(e, node.id, label)}
+                              title={`Conectar: ${label}`}
+                            >
+                              <div className="w-3 h-3 rounded-full bg-emerald-400 group-hover/field:bg-emerald-600 transition-colors" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Create client input fields */}
                   {node.type === 'create_client' && (
                     <div className="border-t-2 border-emerald-100 px-3 py-3 bg-emerald-50/30">
@@ -606,7 +694,7 @@ export default function AutomationCanvas({ nodes, edges, onNodesChange, onEdgesC
                   )}
 
                   {/* RIGHT port (output) - main, only when no field ports */}
-                  {!(node.type === 'webhook' && getWebhookFields(node).length > 0) && node.type !== 'create_client' && (
+                  {!(node.type === 'webhook' && getWebhookFields(node).length > 0) && !(node.type === 'new_client' && getNewClientOutputFields(node).length > 0) && node.type !== 'create_client' && (
                     <div
                       className="absolute -right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border-[2.5px] cursor-crosshair hover:scale-125 transition-transform z-30 flex items-center justify-center shadow-md"
                       style={{ borderColor: color }}

@@ -606,7 +606,21 @@ const AIAssistantHome: React.FC = () => {
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     )}
 
-                    {msg.action?.action === 'navigate' && (
+                    {/* Action buttons based on action type */}
+                    {msg.action?.navigate && (
+                      <button
+                        onClick={() => navigate(msg.action.navigate)}
+                        className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
+                      >
+                        {msg.action.action === 'event_created' ? 'Ver na Agenda →' :
+                         msg.action.action === 'contact_created' ? 'Ver Cadastros →' :
+                         msg.action.action === 'saved_to_drive' ? 'Abrir Drive →' :
+                         msg.action.action === 'folder_created' ? 'Abrir Drive →' :
+                         msg.action.label ? `Ir para ${msg.action.label} →` : 'Abrir →'}
+                      </button>
+                    )}
+                    {msg.action?.action === 'navigate' && !msg.action?.navigate && (
                       <button
                         onClick={() => navigate(msg.action.path)}
                         className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
@@ -622,15 +636,6 @@ const AIAssistantHome: React.FC = () => {
                         style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
                       >
                         Importar Contatos →
-                      </button>
-                    )}
-                    {msg.action?.action === 'saved_to_drive' && (
-                      <button
-                        onClick={() => navigate('/dashboard/drive')}
-                        className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                        style={{ backgroundColor: hubColor || DEFAULT_COLOR, color: 'white' }}
-                      >
-                        Abrir Drive →
                       </button>
                     )}
                     {msg.action?.action === 'request_file' && (

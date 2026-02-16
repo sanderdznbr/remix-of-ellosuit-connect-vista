@@ -213,20 +213,35 @@ body[data-scroll-locked] {
     --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
   }
 
-  /* ===== Dashboard Home: full-bleed blue behind navbar ===== */
-  main:has([data-dashboard-home]) {
-    padding-bottom: 0 !important;
-    background: inherit;
+  /* ===== Dashboard Home: full-bleed behind navbar ===== */
+  @media (max-width: 767px) {
+    main:has([data-dashboard-home]) {
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+    [data-dashboard-home] {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 1;
+      padding-top: calc(3.5rem + env(safe-area-inset-top)) !important;
+      padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
+    }
+    [data-dashboard-home]:not([data-has-chat]) {
+      touch-action: none;
+      overflow: hidden !important;
+    }
+    [data-dashboard-home][data-has-chat] {
+      overflow-y: auto !important;
+    }
   }
-  main:has([data-dashboard-home]:not([data-has-chat])) {
-    overflow: hidden !important;
-    touch-action: none;
-    -webkit-overflow-scrolling: auto;
-  }
-  [data-dashboard-home]:not([data-has-chat]) {
-    overflow: hidden !important;
-    touch-action: none;
-    min-height: 100%;
+  @media (min-width: 768px) {
+    main:has([data-dashboard-home]) {
+      padding-bottom: 0 !important;
+      background: inherit;
+    }
+    main:has([data-dashboard-home]:not([data-has-chat])) {
+      overflow: hidden !important;
+    }
   }
 
   /* ===== Dashboard Home: preserve light mode always ===== */

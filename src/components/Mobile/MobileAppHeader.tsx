@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Sun } from 'lucide-react';
+import { Bell, Moon, Sun, Settings, User, CreditCard, Shield, LogOut, ChevronRight, HelpCircle, Bug, Palette, X } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useHubColor } from '@/hooks/useHubColor';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,14 +12,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import logoEllo from '@/assets/logoellosuit.png';
+
+const settingsItems = [
+  { icon: User, label: 'Meu Perfil', path: '/dashboard/perfil' },
+  { icon: CreditCard, label: 'Assinatura', path: '/dashboard/assinatura' },
+  { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes' },
+  { icon: Palette, label: 'Personalizar', path: '/dashboard/personalizar' },
+  { icon: Shield, label: 'Privacidade e Segurança', path: '/dashboard/seguranca' },
+  { icon: HelpCircle, label: 'Central de Ajuda', path: '/dashboard/ajuda' },
+  { icon: Bug, label: 'Reportar Problema', path: '/dashboard/reportar-problema' },
+];
 
 const MobileAppHeader = () => {
   const navigate = useNavigate();
   const { color: hubColor } = useHubColor();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const headerBg = hubColor || 'hsl(var(--primary))';
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
+  const userEmail = user?.email || '';
+  const avatarUrl = user?.user_metadata?.avatar_url;
+
+  const handleLogout = async () => {
+    setSheetOpen(false);
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
 
   return (
     <header
@@ -39,7 +69,7 @@ const MobileAppHeader = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 -mr-2 rounded-lg text-white active:bg-white/10 transition-colors relative">
+              <button className="p-2 rounded-lg text-white active:bg-white/10 transition-colors relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">3</span>
               </button>
@@ -86,6 +116,64 @@ const MobileAppHeader = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Settings Sheet Trigger */}
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <button className="p-2 -mr-2 rounded-lg text-white active:bg-white/10 transition-colors">
+                <Settings className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] p-0 bg-background border-l border-border">
+              <div className="flex flex-col h-full">
+                {/* User profile header */}
+                <div className="p-5 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={userName} className="h-12 w-12 rounded-full object-cover border-2 border-border" />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{userName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Settings items */}
+                <div className="flex-1 overflow-y-auto py-2">
+                  {settingsItems.map((item) => (
+                    <button
+                      key={item.path}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        navigate(item.path);
+                      }}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/50 active:bg-muted transition-colors"
+                    >
+                      <item.icon className="h-5 w-5 text-muted-foreground" />
+                      <span className="flex-1 text-sm font-medium text-foreground">{item.label}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Logout button */}
+                <div className="border-t border-border p-4">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 active:bg-destructive/25 transition-colors text-sm font-semibold"
+                  >
+                    <LogOut className="h-4.5 w-4.5" />
+                    Sair da conta
+                  </button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

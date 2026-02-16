@@ -202,8 +202,8 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
         <div className={cn(
           "flex items-center gap-3 p-2 rounded-2xl min-w-[220px] max-w-[280px]",
           fromMe 
-            ? "bg-[#005c4b]/20" 
-            : "bg-white/10 dark:bg-white/5"
+            ? "bg-white/20" 
+            : "bg-gray-100 dark:bg-white/5"
         )}>
           {/* Play/Pause Button */}
           <button

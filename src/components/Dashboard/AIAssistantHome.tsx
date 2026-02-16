@@ -35,6 +35,20 @@ function getFileCategory(name: string): string {
   return 'other';
 }
 
+function formatMessageContent(text: string): string {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Bold: **text**
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic: *text*
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Markdown links: [text](url)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="underline font-medium hover:opacity-80">$1</a>')
+    // Plain URLs
+    .replace(/(^|[^"'>])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="underline font-medium hover:opacity-80">$2</a>');
+  return html;
+}
+
 const AIAssistantHome: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -604,7 +618,9 @@ const AIAssistantHome: React.FC = () => {
                         <span className="text-sm text-gray-400">Pensando...</span>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-sm whitespace-pre-wrap"
+                         dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
+                      />
                     )}
 
                     {/* Action buttons based on action type */}

@@ -325,7 +325,7 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
           className={cn(
             "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors min-w-[200px] max-w-[280px]",
             fromMe 
-              ? "bg-[#005c4b]/30 hover:bg-[#005c4b]/40" 
+              ? "bg-white/20 hover:bg-white/30" 
               : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           )}
           onClick={() => {
@@ -337,18 +337,18 @@ const WhatsAppMediaMessage: React.FC<MediaMessageProps> = ({
             }
           }}
         >
-          <div className="w-10 h-12 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
+          <div className={cn("w-10 h-12 rounded flex items-center justify-center flex-shrink-0", fromMe ? "bg-white/30" : "bg-red-500")}>
             <FileText className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{fileName}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Toque para visualizar</p>
+            <p className={cn("text-sm font-medium truncate", fromMe ? "text-white" : "")}>{fileName}</p>
+            <p className={cn("text-xs", fromMe ? "text-white/70" : "text-gray-500 dark:text-gray-400")}>Toque para visualizar</p>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); handleDownload(mediaUrl, fileName); }}
             className="p-1"
           >
-            <Download className="h-5 w-5 text-gray-500 flex-shrink-0" />
+            <Download className={cn("h-5 w-5 flex-shrink-0", fromMe ? "text-white/80" : "text-gray-500")} />
           </button>
         </div>
         {fullscreenModal}

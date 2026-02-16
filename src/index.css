@@ -185,6 +185,46 @@
     --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
   }
 
+  /* ===== Dashboard Home: preserve light mode always ===== */
+  .dark [data-dashboard-home] .bg-white,
+  .dark [data-dashboard-home] .bg-white\/95 {
+    background-color: rgba(255,255,255,0.95) !important;
+  }
+  .dark [data-dashboard-home] .text-gray-800,
+  .dark [data-dashboard-home] .text-gray-900 {
+    color: #1f2937 !important;
+  }
+  .dark [data-dashboard-home] .text-gray-400,
+  .dark [data-dashboard-home] .placeholder\:text-gray-400\/70::placeholder {
+    color: #9ca3af !important;
+  }
+  .dark [data-dashboard-home] .text-gray-600 {
+    color: #4b5563 !important;
+  }
+  .dark [data-dashboard-home] .border-white\/60 {
+    border-color: rgba(255,255,255,0.6) !important;
+  }
+  .dark [data-dashboard-home] .border-gray-100 {
+    border-color: #f3f4f6 !important;
+  }
+  .dark [data-dashboard-home] .bg-gray-100,
+  .dark [data-dashboard-home] .bg-gray-200 {
+    background-color: #f3f4f6 !important;
+  }
+  .dark [data-dashboard-home] .hover\:bg-gray-100\/80:hover {
+    background-color: #f3f4f6 !important;
+  }
+  .dark [data-dashboard-home] .shadow-xl {
+    --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
+  }
+  .dark [data-dashboard-home] input {
+    color: #1f2937 !important;
+    background-color: transparent !important;
+  }
+  .dark [data-dashboard-home] input::placeholder {
+    color: #9ca3af !important;
+  }
+
   /* Fix gradient backgrounds for dark mode */
   .dark .from-gray-50 { --tw-gradient-from: hsl(var(--background)) !important; }
   .dark .from-white { --tw-gradient-from: hsl(var(--background)) !important; }

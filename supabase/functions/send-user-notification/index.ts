@@ -63,6 +63,48 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
+    // 1.5 Send Push Notification via OneSignal
+    let pushSent = false;
+    try {
+      const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
+      const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
+
+      if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
+        const pushPayload: any = {
+          app_id: ONESIGNAL_APP_ID,
+          include_aliases: { external_id: [user_id] },
+          target_channel: "push",
+          headings: { en: title },
+          contents: { en: message },
+        };
+
+        if (action_url) {
+          pushPayload.url = action_url;
+        }
+
+        const pushRes = await fetch("https://api.onesignal.com/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Key ${ONESIGNAL_REST_API_KEY}`,
+          },
+          body: JSON.stringify(pushPayload),
+        });
+
+        const pushData = await pushRes.json();
+        if (pushRes.ok) {
+          pushSent = true;
+          console.log(`[USER-NOTIFY] Push sent via OneSignal:`, pushData.id);
+        } else {
+          console.error(`[USER-NOTIFY] OneSignal push failed:`, pushData);
+        }
+      } else {
+        console.log("[USER-NOTIFY] OneSignal not configured, skipping push");
+      }
+    } catch (pushErr: any) {
+      console.error("[USER-NOTIFY] Push error:", pushErr);
+    }
+
     // 2. Send WhatsApp notification if enabled
     let whatsappSent = false;
 

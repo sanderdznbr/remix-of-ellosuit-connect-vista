@@ -127,6 +127,12 @@
   transform: scale(1.02) !important;
 }
 
+/* Hide FullCalendar native popover — we use our own modal */
+.calendar-container-v2 .fc-popover,
+.fc-more-popover {
+  display: none !important;
+}
+
 /* Time Grid (Week/Day) */
 .calendar-container-v2 .fc-timegrid-slot {
   height: 2.5rem !important;

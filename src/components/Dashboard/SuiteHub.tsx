@@ -5,18 +5,28 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import HubKPIChart from "./HubKPIChart";
 
+import previewCadastros from "@/assets/previews/suite-cadastros.jpg";
+import previewDrive from "@/assets/previews/suite-drive.jpg";
+import previewEquipe from "@/assets/previews/suite-equipe.jpg";
+import previewHabitos from "@/assets/previews/suite-habitos.jpg";
+import previewContratos from "@/assets/previews/suite-contratos.jpg";
+import previewPropostas from "@/assets/previews/suite-propostas.jpg";
+import previewRecibos from "@/assets/previews/suite-recibos.jpg";
+import previewAnalytics from "@/assets/previews/suite-analytics.jpg";
+import previewConfiguracoes from "@/assets/previews/suite-configuracoes.jpg";
+
 const SUITE_COLOR = "#3000E3";
 
 const suiteModules = [
-  { id: "cadastros", title: "Cadastros", description: "Clientes, leads e contatos", icon: Users, path: "/dashboard/cadastros" },
-  { id: "drive", title: "Arquivos", description: "Drive de documentos da empresa", icon: FolderOpen, path: "/dashboard/drive" },
-  { id: "equipe", title: "Equipe", description: "Colaboradores e permissões", icon: Briefcase, path: "/dashboard/equipe" },
-  { id: "habitos", title: "Hábitos", description: "Metas e rotinas diárias", icon: Target, path: "/dashboard/habitos" },
-  { id: "contratos", title: "Contratos", description: "Templates e contratos gerados", icon: FileText, path: "/dashboard/contratos" },
-  { id: "propostas", title: "Ordem de Serviço", description: "Orçamentos profissionais em PDF", icon: FileSignature, path: "/dashboard/propostas" },
-  { id: "recibos", title: "Recibos", description: "Recibos de pagamento", icon: FileText, path: "/dashboard/recibos" },
-  { id: "analytics", title: "Analytics", description: "Métricas e indicadores", icon: BarChart3, path: "/dashboard/analytics" },
-  { id: "configuracoes", title: "Configurações", description: "Personalize sua conta", icon: Settings, path: "/dashboard/configuracoes" },
+  { id: "cadastros", title: "Cadastros", description: "Clientes, leads e contatos", icon: Users, path: "/dashboard/cadastros", preview: previewCadastros },
+  { id: "drive", title: "Arquivos", description: "Drive de documentos da empresa", icon: FolderOpen, path: "/dashboard/drive", preview: previewDrive },
+  { id: "equipe", title: "Equipe", description: "Colaboradores e permissões", icon: Briefcase, path: "/dashboard/equipe", preview: previewEquipe },
+  { id: "habitos", title: "Hábitos", description: "Metas e rotinas diárias", icon: Target, path: "/dashboard/habitos", preview: previewHabitos },
+  { id: "contratos", title: "Contratos", description: "Templates e contratos gerados", icon: FileText, path: "/dashboard/contratos", preview: previewContratos },
+  { id: "propostas", title: "Ordem de Serviço", description: "Orçamentos profissionais em PDF", icon: FileSignature, path: "/dashboard/propostas", preview: previewPropostas },
+  { id: "recibos", title: "Recibos", description: "Recibos de pagamento", icon: FileText, path: "/dashboard/recibos", preview: previewRecibos },
+  { id: "analytics", title: "Analytics", description: "Métricas e indicadores", icon: BarChart3, path: "/dashboard/analytics", preview: previewAnalytics },
+  { id: "configuracoes", title: "Configurações", description: "Personalize sua conta", icon: Settings, path: "/dashboard/configuracoes", preview: previewConfiguracoes },
 ];
 
 export default function SuiteHub() {
@@ -93,15 +103,26 @@ export default function SuiteHub() {
           {suiteModules.map((module) => {
             const Icon = module.icon;
             return (
-              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card p-4 hover:shadow-md hover:border-border transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: SUITE_COLOR }}>
-                    <Icon className="h-5 w-5 text-white" />
+              <Link key={module.id} to={module.path} className="group rounded-2xl border border-border/60 bg-card overflow-hidden hover:shadow-md hover:border-border transition-all">
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted">
+                  <img
+                    src={module.preview}
+                    alt={`Preview ${module.title}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: SUITE_COLOR }}>
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">{module.title}</h3>
-                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{module.description}</p>
+                <div className="p-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">{module.title}</h3>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">{module.description}</p>
+                </div>
               </Link>
             );
           })}

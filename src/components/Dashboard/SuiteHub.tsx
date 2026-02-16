@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight, FileSignature, Target, Settings } from "lucide-react";
+import { Users, FolderOpen, Briefcase, BarChart3, FileText, ArrowRight, FileSignature, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,7 @@ import previewContratos from "@/assets/previews/suite-contratos.jpg";
 import previewPropostas from "@/assets/previews/suite-propostas.jpg";
 import previewRecibos from "@/assets/previews/suite-recibos.jpg";
 import previewAnalytics from "@/assets/previews/suite-analytics.jpg";
-import previewConfiguracoes from "@/assets/previews/suite-configuracoes.jpg";
+
 
 const SUITE_COLOR = "#3000E3";
 
@@ -26,7 +26,7 @@ const suiteModules = [
   { id: "propostas", title: "Ordem de Serviço", description: "Orçamentos profissionais em PDF", icon: FileSignature, path: "/dashboard/propostas", preview: previewPropostas },
   { id: "recibos", title: "Recibos", description: "Recibos de pagamento", icon: FileText, path: "/dashboard/recibos", preview: previewRecibos },
   { id: "analytics", title: "Analytics", description: "Métricas e indicadores", icon: BarChart3, path: "/dashboard/analytics", preview: previewAnalytics },
-  { id: "configuracoes", title: "Configurações", description: "Personalize sua conta", icon: Settings, path: "/dashboard/configuracoes", preview: previewConfiguracoes },
+  
 ];
 
 export default function SuiteHub() {

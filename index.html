@@ -97,6 +97,17 @@
 
   <body>
     <div id="root"></div>
+    <noscript>
+      <footer style="text-align:center;padding:24px;font-family:sans-serif;font-size:14px;color:#666;">
+        <a href="https://www.ellosuit.online/privacy" style="color:#3000E3;margin-right:16px;">Política de Privacidade</a>
+        <a href="https://www.ellosuit.online/terms" style="color:#3000E3;">Termos de Serviço</a>
+      </footer>
+    </noscript>
+    <!-- Static links for crawlers/bots that don't execute JS -->
+    <footer id="static-policy-links" style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;">
+      <a href="https://www.ellosuit.online/privacy">Política de Privacidade</a>
+      <a href="https://www.ellosuit.online/terms">Termos de Serviço</a>
+    </footer>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

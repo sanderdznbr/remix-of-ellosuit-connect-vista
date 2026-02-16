@@ -148,18 +148,18 @@ const UnifiedDatabase: React.FC = () => {
     setSearchTerm('');
   };
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+    return <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>;
   }
-  return <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+  return <div className="min-h-screen bg-background p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
         <div className="flex items-center gap-4">
           
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Banco de Dados</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Banco de Dados</h1>
+            <p className="text-sm text-muted-foreground">
               {filteredClients.length} de {clients.length} contatos
             </p>
           </div>
@@ -183,15 +183,15 @@ const UnifiedDatabase: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => clearFilters()}>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => clearFilters()}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
               </div>
-              <div className="p-2 rounded-xl bg-gray-100">
-                <Database className="h-5 w-5 text-gray-600" />
+              <div className="p-2 rounded-xl bg-muted">
+                <Database className="h-5 w-5 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
@@ -200,12 +200,12 @@ const UnifiedDatabase: React.FC = () => {
         const count = stats[key as keyof typeof stats] || 0;
         const Icon = config.icon;
         const isSelected = selectedTags.includes(key);
-        return <Card key={key} className={cn("border-0 shadow-sm hover:shadow-md transition-all cursor-pointer", isSelected && "ring-2 ring-blue-500")} onClick={() => toggleTag(key)}>
+        return <Card key={key} className={cn("border-border/60 shadow-sm hover:shadow-md transition-all cursor-pointer", isSelected && "ring-2 ring-blue-500")} onClick={() => toggleTag(key)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">{config.label}s</p>
-                    <p className="text-2xl font-bold text-gray-900">{count}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{config.label}s</p>
+                    <p className="text-2xl font-bold text-foreground">{count}</p>
                   </div>
                   <div className={cn("p-2 rounded-xl", config.color.split(' ')[0])}>
                     <Icon className={cn("h-5 w-5", config.color.split(' ')[1])} />
@@ -217,22 +217,22 @@ const UnifiedDatabase: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <Card className="border-0 shadow-sm">
+      <Card className="border-border/60 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Buscar por nome, empresa, email ou telefone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por nome, empresa, email ou telefone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-muted/50 border-border" />
             </div>
 
             {/* Tag Filters */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-500 flex items-center gap-1">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
                 <Tag className="h-4 w-4" />
                 Tipo:
               </span>
-              {Object.entries(TAG_CONFIGS).map(([key, config]) => <Badge key={key} variant="outline" className={cn("cursor-pointer transition-all", selectedTags.includes(key) ? config.color : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100")} onClick={() => toggleTag(key)}>
+              {Object.entries(TAG_CONFIGS).map(([key, config]) => <Badge key={key} variant="outline" className={cn("cursor-pointer transition-all", selectedTags.includes(key) ? config.color : "bg-muted/50 text-muted-foreground border-border hover:bg-muted")} onClick={() => toggleTag(key)}>
                   {config.label}
                   {selectedTags.includes(key) && <X className="h-3 w-3 ml-1" />}
                 </Badge>)}
@@ -240,18 +240,18 @@ const UnifiedDatabase: React.FC = () => {
 
             {/* Status Filters */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-500 flex items-center gap-1">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
                 <Filter className="h-4 w-4" />
                 Status:
               </span>
-              {Object.entries(STATUS_CONFIGS).map(([key, config]) => <Badge key={key} variant="outline" className={cn("cursor-pointer transition-all", selectedStatus.includes(key) ? config.color : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100")} onClick={() => toggleStatus(key)}>
+              {Object.entries(STATUS_CONFIGS).map(([key, config]) => <Badge key={key} variant="outline" className={cn("cursor-pointer transition-all", selectedStatus.includes(key) ? config.color : "bg-muted/50 text-muted-foreground border-border hover:bg-muted")} onClick={() => toggleStatus(key)}>
                   {config.label}
                   {selectedStatus.includes(key) && <X className="h-3 w-3 ml-1" />}
                 </Badge>)}
             </div>
 
             {/* Clear Filters */}
-            {(selectedTags.length > 0 || selectedStatus.length > 0 || searchTerm) && <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
+            {(selectedTags.length > 0 || selectedStatus.length > 0 || searchTerm) && <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
                 <X className="h-4 w-4 mr-1" />
                 Limpar
               </Button>}
@@ -280,20 +280,20 @@ const UnifiedDatabase: React.FC = () => {
         </Card>}
 
       {/* Data Table */}
-      <Card className="border-0 shadow-sm overflow-hidden">
+      <Card className="border-border/60 shadow-sm overflow-hidden">
         <ScrollArea className="w-full">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/80">
+              <TableRow className="bg-muted/30 border-border/40">
                 <TableHead className="w-12">
                   <Checkbox checked={selectedRows.length === filteredClients.length && filteredClients.length > 0} onCheckedChange={toggleAllRows} />
                 </TableHead>
-                <TableHead className="font-semibold text-gray-600">Nome</TableHead>
-                <TableHead className="font-semibold text-gray-600">Tipo</TableHead>
-                <TableHead className="font-semibold text-gray-600">Contato</TableHead>
-                <TableHead className="font-semibold text-gray-600">Status</TableHead>
-                <TableHead className="font-semibold text-gray-600">Tags</TableHead>
-                <TableHead className="font-semibold text-gray-600">Criado em</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Nome</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Tipo</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Contato</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Status</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Tags</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Criado em</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -301,8 +301,8 @@ const UnifiedDatabase: React.FC = () => {
               {filteredClients.length === 0 ? <TableRow>
                   <TableCell colSpan={8} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <Database className="h-8 w-8 text-gray-300" />
-                      <p className="text-gray-500">Nenhum contato encontrado</p>
+                      <Database className="h-8 w-8 text-muted-foreground/30" />
+                      <p className="text-muted-foreground">Nenhum contato encontrado</p>
                       <Button variant="outline" size="sm" onClick={handleAddClient}>
                         <Plus className="h-4 w-4 mr-1" />
                         Adicionar Contato
@@ -313,7 +313,7 @@ const UnifiedDatabase: React.FC = () => {
               const clientType = client.client_type || 'cliente';
               const tagConfig = TAG_CONFIGS[clientType] || TAG_CONFIGS.cliente;
               const statusConfig = STATUS_CONFIGS[client.status] || STATUS_CONFIGS.active;
-              return <TableRow key={client.id} className={cn("hover:bg-gray-50/80 transition-colors", selectedRows.includes(client.id) && "bg-blue-50/50")}>
+              return <TableRow key={client.id} className={cn("hover:bg-muted/30 transition-colors", selectedRows.includes(client.id) && "bg-primary/5")}>
                       <TableCell>
                         <Checkbox checked={selectedRows.includes(client.id)} onCheckedChange={() => toggleRowSelection(client.id)} />
                       </TableCell>
@@ -326,8 +326,8 @@ const UnifiedDatabase: React.FC = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium text-gray-900">{client.name}</p>
-                            {client.company_name && <p className="text-xs text-gray-500">{client.company_name}</p>}
+                            <p className="font-medium text-foreground">{client.name}</p>
+                            {client.company_name && <p className="text-xs text-muted-foreground">{client.company_name}</p>}
                           </div>
                         </div>
                       </TableCell>
@@ -338,11 +338,11 @@ const UnifiedDatabase: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {client.email && <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                          {client.email && <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Mail className="h-3 w-3" />
                               {client.email}
                             </div>}
-                          {client.phone && <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                          {client.phone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Phone className="h-3 w-3" />
                               {client.phone}
                             </div>}
@@ -363,7 +363,7 @@ const UnifiedDatabase: React.FC = () => {
                             </Badge>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(client.created_at).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell>

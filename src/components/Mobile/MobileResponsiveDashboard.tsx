@@ -13,7 +13,7 @@ import EmailTemplateBuilder from '@/components/Dashboard/EmailTemplateBuilder';
 import EmailTemplatesManager from '@/components/Dashboard/EmailTemplatesManager';
 import SentEmailTracker from '@/components/Dashboard/SentEmailTracker';
 import Analytics from '@/components/Dashboard/Analytics';
-import GroupedSidebarEditor from '@/components/Dashboard/GroupedSidebarEditor';
+import GeneralSettingsPage from '@/components/Dashboard/GeneralSettingsPage';
 import MeetingRooms from '@/components/Dashboard/MeetingRooms';
 import FluxosBoard from '@/components/Fluxos/FluxosBoard';
 import TarefasWeb from '@/components/Tarefas/TarefasWeb';
@@ -191,7 +191,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/relatorios" element={<ReportsDashboard />} />
             
             {/* Configurações - Suite (sempre acessível) */}
-            <Route path="/configuracoes" element={<GroupedSidebarEditor />} />
+            <Route path="/configuracoes" element={<GeneralSettingsPage />} />
             <Route path="/personalizar" element={<ImprovedDashboardCustomizer />} />
             <Route path="/seguranca" element={<SecuritySettings />} />
             <Route path="/suporte" element={<SupportDashboard />} />

@@ -1041,10 +1041,75 @@ Deno.serve(async (req) => {
                 }
               }
 
+              // ==================== ORDER DETECTION: Skip chatbot for orders ====================
+              let orderDetected = false;
+              if (!fromMe && conversation && content) {
+                const upperContent = content.toUpperCase();
+                const isOrder = upperContent.includes('PEDIDO VIA WHATSAPP') ||
+                  upperContent.includes('CÓDIGO DO PEDIDO') ||
+                  (upperContent.includes('*PEDIDO') && upperContent.includes('*PRODUTOS*')) ||
+                  (upperContent.includes('DADOS DO CLIENTE') && upperContent.includes('ENDEREÇO DE ENTREGA'));
+                
+                if (isOrder) {
+                  orderDetected = true;
+                  console.log(`📦 [ORDER] Order message detected in conversation ${conversation.id}, skipping chatbot/AI`);
+                  
+                  try {
+                    // Send acknowledgement
+                    const { data: sess } = await supabase
+                      .from('whatsapp_sessions')
+                      .select('baileys_server_url, instance_name')
+                      .eq('id', targetSessionId)
+                      .single();
+                    
+                    if (sess?.baileys_server_url) {
+                      const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                      const orderReply = `✅ Pedido recebido com sucesso!\n\nEstamos encaminhando para um atendente que irá dar andamento ao seu pedido. Aguarde, por favor! 🙏`;
+                      
+                      await fetch(`${sess.baileys_server_url}/api/message/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ instanceName: sess.instance_name, jid, message: orderReply }),
+                      });
+                      
+                      // Save the reply as a message
+                      await supabase.from('whatsapp_messages').insert({
+                        session_id: targetSessionId,
+                        conversation_id: conversation.id,
+                        company_id: companyId,
+                        content: orderReply,
+                        from_me: true,
+                        message_type: 'text',
+                        status: 'sent',
+                        sender_name: 'Sistema',
+                      });
+                      
+                      console.log(`📦 [ORDER] Acknowledgement sent to ${phoneNumber}`);
+                    }
+                    
+                    // Stop any active chatbot execution
+                    await supabase
+                      .from('chatbot_executions')
+                      .update({ status: 'completed', completed_at: new Date().toISOString() })
+                      .eq('conversation_id', conversation.id)
+                      .eq('status', 'running');
+                    
+                    // Disable AI auto-reply if active
+                    await supabase
+                      .from('whatsapp_conversations')
+                      .update({ ai_auto_reply_enabled: false, assigned_agent_id: null })
+                      .eq('id', conversation.id);
+                      
+                  } catch (orderErr) {
+                    console.error('📦 [ORDER] Error handling order:', orderErr);
+                  }
+                }
+              }
+
               // ==================== CHATBOT FLOW ENGINE ====================
               // Check if there's an active chatbot execution for this conversation
               let chatbotHandled = false;
-              if (!fromMe && conversation) {
+              if (!fromMe && conversation && !orderDetected) {
                 try {
                   // First check if AI auto-reply is already active — skip chatbot if so
                   const { data: convAiCheck } = await supabase
@@ -1905,7 +1970,7 @@ Deno.serve(async (req) => {
 
               // ==================== AI AUTO-RESPONSE ====================
               // Check if conversation has an AI agent assigned and auto-reply is enabled
-              if (!fromMe && conversation && !chatbotHandled) {
+              if (!fromMe && conversation && !chatbotHandled && !orderDetected) {
                 try {
                   console.log(`🤖 Checking AI auto-reply for conversation: ${conversation.id}`);
                   

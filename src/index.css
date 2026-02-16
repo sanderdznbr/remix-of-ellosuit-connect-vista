@@ -78,8 +78,20 @@
     --sidebar-ring: 252 100% 65%;
   }
 
+  /* Protect [data-keep-light] elements from dark mode overrides */
+  .dark [data-keep-light],
+  .dark [data-keep-light] * {
+    color: inherit;
+  }
+  .dark [data-keep-light] .text-gray-800 { color: #1f2937 !important; }
+  .dark [data-keep-light] .text-gray-400 { color: #9ca3af !important; }
+  .dark [data-keep-light] .text-gray-600 { color: #4b5563 !important; }
+  .dark [data-keep-light] .placeholder\:text-gray-400\/70::placeholder { color: rgba(156,163,175,0.7) !important; }
+  .dark [data-keep-light] .bg-gray-200\/60 { background-color: rgba(229,231,235,0.6) !important; }
+  .dark [data-keep-light] .hover\:bg-gray-100\/80:hover { background-color: rgba(243,244,246,0.8) !important; }
+
   /* ===== Dark mode global overrides for hardcoded Tailwind classes ===== */
-  .dark .bg-white {
+  .dark .bg-white:not([data-keep-light] *):not([data-keep-light]) {
     background-color: hsl(var(--card)) !important;
   }
   .dark .bg-gray-50,

@@ -67,7 +67,7 @@ const AIAssistantHome: React.FC = () => {
   const pendingSpeakRef = useRef<string | null>(null);
 
   const isDark = theme === 'dark';
-  const bgColor = isDark ? '#0a0a0a' : (hubColor || DEFAULT_COLOR);
+  const bgColor = isDark ? '#0f1923' : (hubColor || DEFAULT_COLOR);
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
   const firstName = userName.split(' ')[0];
 
@@ -384,7 +384,7 @@ const AIAssistantHome: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, delay: hasChat ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className={`relative flex items-center backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] overflow-hidden transition-all duration-300 ${isDark ? 'bg-white/10 border border-white/15 focus-within:bg-white/15 focus-within:border-white/25' : 'bg-white/95 border border-white/60 focus-within:bg-white focus-within:border-white/80'} focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)]`}>
+        <div className={`relative flex items-center backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.2)] overflow-hidden transition-all duration-300 ${isDark ? 'bg-white border border-gray-200 focus-within:border-gray-300' : 'bg-white/95 border border-white/60 focus-within:bg-white focus-within:border-white/80'} focus-within:shadow-[0_12px_50px_-10px_rgba(0,0,0,0.25)]`}>
           <input
             ref={fileInputRef}
             type="file"
@@ -395,16 +395,16 @@ const AIAssistantHome: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile || isProcessing}
-            className={`ml-3 p-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 group ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100/80'}`}
+            className={`ml-3 p-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 group hover:bg-gray-100/80`}
           >
             {uploadingFile ? (
-              <Loader2 className={`h-5 w-5 animate-spin ${isDark ? 'text-white/50' : 'text-gray-400'}`} />
+              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
             ) : (
-              <Paperclip className={`h-5 w-5 transition-colors ${isDark ? 'text-white/50 group-hover:text-white/80' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <Paperclip className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
             )}
           </button>
 
-          <div className={`mx-1 h-6 w-px ${isDark ? 'bg-white/15' : 'bg-gray-200/60'}`} />
+          <div className="mx-1 h-6 w-px bg-gray-200/60" />
 
           <input
             ref={inputRef}
@@ -413,7 +413,7 @@ const AIAssistantHome: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={attachedFile ? "Descreva o que fazer com o arquivo..." : "Pergunte qualquer coisa..."}
-            className={`flex-1 bg-transparent text-base md:text-[17px] px-3 py-4 md:py-[18px] outline-none font-medium tracking-[-0.01em] ${isDark ? 'text-white placeholder:text-white/40' : 'text-gray-800 placeholder:text-gray-400/70'}`}
+            className="flex-1 bg-transparent text-gray-800 placeholder:text-gray-400/70 text-base md:text-[17px] px-3 py-4 md:py-[18px] outline-none font-medium tracking-[-0.01em]"
             autoFocus
             disabled={isProcessing}
           />
@@ -424,16 +424,16 @@ const AIAssistantHome: React.FC = () => {
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isProcessing || isTranscribing}
               className={`p-2.5 rounded-xl transition-all duration-200 active:scale-90 disabled:opacity-40 ${
-                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : isDark ? 'hover:bg-white/10 group' : 'hover:bg-gray-100/80 group'
+                isRecording ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/30' : 'hover:bg-gray-100/80 group'
               }`}
               title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
             >
               {isTranscribing ? (
-                <Loader2 className={`h-5 w-5 animate-spin ${isDark ? 'text-white/50' : 'text-gray-400'}`} />
+                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
               ) : isRecording ? (
                 <MicOff className="h-5 w-5 text-white" />
               ) : (
-                <Mic className={`h-5 w-5 transition-colors ${isDark ? 'text-white/50 group-hover:text-white/80' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                <Mic className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
               )}
             </button>
 

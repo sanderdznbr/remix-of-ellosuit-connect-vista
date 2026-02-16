@@ -44,7 +44,7 @@ export const DEFAULT_RECEIPT_SETTINGS: Omit<ReceiptSettings, 'company_id'> = {
   show_watermark: false,
   watermark_text: null,
   footer_text: 'Documento gerado eletronicamente',
-  show_signature_line: true,
+  show_signature_line: false,
   signature_label: 'Assinatura',
 };
 

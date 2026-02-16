@@ -178,14 +178,13 @@ export default function ReceiptsPage() {
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   const selectedClient = clients.find((c: any) => c.id === clientId);
 
-  const downloadPDF = (r: any) => {
+  const downloadPDF = async (r: any) => {
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
     const clientName = r.client_name || (r.clients as any)?.name || 'N/A';
     const ts = themeSettings;
     let y = 20;
 
-    // Helper: parse hex to RGB
     const hexToRgb = (hex: string) => {
       const h = hex.replace('#', '');
       return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
@@ -195,6 +194,29 @@ export default function ReceiptsPage() {
     const tc = hexToRgb(ts.text_color);
     const ac = hexToRgb(ts.accent_color);
 
+    // Load logo image if configured
+    let logoImg: HTMLImageElement | null = null;
+    if (ts.logo_url) {
+      try {
+        logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = ts.logo_url!;
+        });
+      } catch { logoImg = null; }
+    }
+
+    // Helper to add logo
+    const addLogo = (x: number, yPos: number, maxH: number) => {
+      if (!logoImg) return;
+      const ratio = logoImg.width / logoImg.height;
+      const h = maxH;
+      const w = h * ratio;
+      doc.addImage(logoImg, 'PNG', x, yPos, Math.min(w, 50), h);
+    };
+
     // Border
     if (ts.show_border) {
       doc.setDrawColor(pc.r, pc.g, pc.b);
@@ -202,21 +224,29 @@ export default function ReceiptsPage() {
       doc.rect(10, 10, pw - 20, doc.internal.pageSize.getHeight() - 20);
     }
 
-    // Header with company info
+    // Header
     if (ts.layout_style === 'modern') {
       doc.setFillColor(pc.r, pc.g, pc.b);
       doc.rect(0, 0, pw, 42, 'F');
+      // Logo
+      if (logoImg) {
+        const lx = ts.logo_position === 'right' ? pw - 50 : ts.logo_position === 'center' ? pw / 2 - 8 : 14;
+        addLogo(lx, 6, 12);
+      }
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text('RECIBO', 14, y + 4);
+      const titleX = logoImg && ts.logo_position === 'left' ? 50 : 14;
+      doc.text('RECIBO', titleX, y + 4);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.text(r.receipt_number || '', pw - 14, y + 4, { align: 'right' });
-      if (ts.company_name) { doc.setFontSize(9); doc.text(ts.company_name, 14, y + 12); }
-      if (ts.company_cnpj) { doc.setFontSize(8); doc.text(`CNPJ: ${ts.company_cnpj}`, 14, y + 17); }
+      if (ts.company_name) { doc.setFontSize(9); doc.text(ts.company_name, titleX, y + 12); }
+      if (ts.company_cnpj) { doc.setFontSize(8); doc.text(`CNPJ: ${ts.company_cnpj}`, titleX, y + 17); }
       y = 52;
     } else if (ts.layout_style === 'corporate') {
+      if (logoImg) addLogo(14, 14, 14);
+      const textStartX = logoImg ? 52 : 14;
       doc.setTextColor(pc.r, pc.g, pc.b);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
@@ -225,15 +255,15 @@ export default function ReceiptsPage() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(ac.r, ac.g, ac.b);
       doc.text(r.receipt_number || '', pw - 14, y + 6, { align: 'right' });
-      if (ts.company_name) { doc.setTextColor(tc.r, tc.g, tc.b); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(ts.company_name, 14, y); }
+      if (ts.company_name) { doc.setTextColor(tc.r, tc.g, tc.b); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(ts.company_name, textStartX, y); }
       let infoY = y + 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(ac.r, ac.g, ac.b);
-      if (ts.company_cnpj) { doc.text(`CNPJ: ${ts.company_cnpj}`, 14, infoY); infoY += 4; }
-      if (ts.company_address) { doc.text(ts.company_address, 14, infoY); infoY += 4; }
-      if (ts.company_phone) { doc.text(`Tel: ${ts.company_phone}`, 14, infoY); infoY += 4; }
-      if (ts.company_email) { doc.text(ts.company_email, 14, infoY); infoY += 4; }
+      if (ts.company_cnpj) { doc.text(`CNPJ: ${ts.company_cnpj}`, textStartX, infoY); infoY += 4; }
+      if (ts.company_address) { doc.text(ts.company_address, textStartX, infoY); infoY += 4; }
+      if (ts.company_phone) { doc.text(`Tel: ${ts.company_phone}`, textStartX, infoY); infoY += 4; }
+      if (ts.company_email) { doc.text(ts.company_email, textStartX, infoY); infoY += 4; }
       y = Math.max(infoY + 4, 40);
       doc.setDrawColor(pc.r, pc.g, pc.b);
       doc.setLineWidth(0.5);
@@ -241,6 +271,11 @@ export default function ReceiptsPage() {
       y += 8;
     } else {
       // classic / minimal
+      if (logoImg) {
+        const lx = ts.layout_style === 'classic' ? pw / 2 - 8 : 14;
+        addLogo(lx, 14, 12);
+        y = 34;
+      }
       doc.setTextColor(pc.r, pc.g, pc.b);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
@@ -309,7 +344,7 @@ export default function ReceiptsPage() {
       doc.setGState(doc.GState({ opacity: 1 }));
     }
 
-    // Signature line
+    // Signature line (only if enabled)
     if (ts.show_signature_line) {
       y = Math.max(y + 15, 220);
       doc.setDrawColor(ac.r, ac.g, ac.b);
@@ -322,7 +357,7 @@ export default function ReceiptsPage() {
     }
 
     // Footer
-    y = Math.max(y + 5, 250);
+    y = Math.max(y + 5, ts.show_signature_line ? 250 : 220);
     doc.setDrawColor(200, 200, 200);
     doc.line(14, y, pw - 14, y);
     y += 8;

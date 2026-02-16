@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
           if (!userPhone) {
             const { data: userData } = await supabase.auth.admin.getUserById(user_id);
-            userPhone = userData?.user?.phone || userData?.user?.user_metadata?.whatsapp;
+            userPhone = userData?.user?.phone || userData?.user?.user_metadata?.whatsapp || userData?.user?.user_metadata?.phone;
           }
 
           if (userPhone) {

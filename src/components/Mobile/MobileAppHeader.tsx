@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Sun, Settings, User, CreditCard, Shield, LogOut, ChevronRight, HelpCircle, Bug, Palette, CheckCheck, Calendar, MessageSquare, CheckCircle, Video, Mail, FolderOpen, AlertCircle } from 'lucide-react';
+import { Bell, Moon, Sun, Settings, User, CreditCard, Shield, LogOut, ChevronRight, HelpCircle, Bug, Palette, CheckCheck, Calendar, MessageSquare, CheckCircle, Video, Mail, FolderOpen, AlertCircle, Trash2, Archive } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useHubColor } from '@/hooks/useHubColor';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,7 +55,7 @@ const MobileAppHeader = () => {
   const { color: hubColor } = useHubColor();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, archiveNotification } = useNotifications();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const headerBg = hubColor || 'hsl(var(--primary))';
@@ -145,7 +145,7 @@ const MobileAppHeader = () => {
                       <DropdownMenuItem
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`flex items-start gap-3 p-3 cursor-pointer ${!notif.is_read ? 'bg-primary/5' : ''}`}
+                        className={`flex items-start gap-3 p-3 cursor-pointer group ${!notif.is_read ? 'bg-primary/5' : ''}`}
                       >
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
@@ -161,9 +161,25 @@ const MobileAppHeader = () => {
                             <span className="font-medium text-sm text-foreground truncate">{notif.title}</span>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notif.message}</p>
-                          <span className="text-[10px] text-muted-foreground/70 mt-1 block">
-                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
-                          </span>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] text-muted-foreground/70">
+                              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); archiveNotification(notif.id); }}
+                                className="p-1 rounded hover:bg-muted-foreground/10"
+                              >
+                                <Archive className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                                className="p-1 rounded hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </DropdownMenuItem>
                     );

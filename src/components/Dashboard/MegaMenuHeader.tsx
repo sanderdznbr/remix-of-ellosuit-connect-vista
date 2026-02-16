@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { ElloLogo } from "@/components/shared/ElloLogo";
@@ -200,7 +200,7 @@ export function MegaMenuHeader() {
   const { color: hubColor } = useHubColor();
   const { isAdminMaster, loading: adminLoading } = useAdminMaster();
   const { theme, toggleTheme } = useTheme();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, archiveNotification } = useNotifications();
 
   const handleMouseEnter = (menuId: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -383,7 +383,7 @@ export function MegaMenuHeader() {
                           if (!notif.is_read) markAsRead(notif.id);
                           if (notif.action_url) navigate(notif.action_url);
                         }}
-                        className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted ${!notif.is_read ? 'bg-primary/5' : ''}`}
+                        className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted group ${!notif.is_read ? 'bg-primary/5' : ''}`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -394,6 +394,22 @@ export function MegaMenuHeader() {
                           <span className="text-[10px] text-muted-foreground/70 pl-3 block mt-0.5">
                             {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); archiveNotification(notif.id); }}
+                            className="p-1 rounded hover:bg-muted-foreground/10"
+                            title="Arquivar"
+                          >
+                            <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                            className="p-1 rounded hover:bg-destructive/10"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </button>
                         </div>
                       </DropdownMenuItem>
                     );

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useCallback } from 'react';
 
 export interface Notification {
   id: string;
@@ -17,6 +18,7 @@ export interface Notification {
   metadata: any;
   created_at: string;
   read_at: string | null;
+  archived_at: string | null;
 }
 
 export function useNotifications() {
@@ -31,14 +33,36 @@ export function useNotifications() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
       return (data || []) as Notification[];
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Poll every 30s
+    refetchInterval: 30000,
   });
+
+  // Auto-archive: check for read notifications older than 30 minutes
+  useEffect(() => {
+    if (!user?.id || notifications.length === 0) return;
+
+    const archiveCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const toArchive = notifications.filter(
+      n => n.is_read && n.read_at && n.read_at < archiveCutoff && !n.archived_at
+    );
+
+    if (toArchive.length > 0) {
+      const ids = toArchive.map(n => n.id);
+      supabase
+        .from('notifications')
+        .update({ archived_at: new Date().toISOString() })
+        .in('id', ids)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+        });
+    }
+  }, [notifications, user?.id, queryClient]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -83,6 +107,19 @@ export function useNotifications() {
     },
   });
 
+  const archiveNotification = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', notificationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+    },
+  });
+
   return {
     notifications,
     unreadCount,
@@ -90,6 +127,7 @@ export function useNotifications() {
     markAsRead: markAsRead.mutate,
     markAllAsRead: markAllAsRead.mutate,
     deleteNotification: deleteNotification.mutate,
+    archiveNotification: archiveNotification.mutate,
   };
 }
 

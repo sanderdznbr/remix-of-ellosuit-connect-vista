@@ -38,6 +38,19 @@ Deno.serve(async (req) => {
       if (upcoming15 && upcoming15.length > 0) {
         console.log(`⏰ Found ${upcoming15.length} events starting in ~15 minutes`);
         for (const evt of upcoming15) {
+          // Dedup: check if notification already exists for this event+type+minutes
+          const { data: existing } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', evt.created_by)
+            .contains('metadata', { event_id: evt.id, notification_type: 'event_upcoming', minutes_until: 15 })
+            .limit(1);
+          
+          if (existing && existing.length > 0) {
+            console.log(`⏭️ Skipping duplicate notification for event ${evt.id} (15min)`);
+            continue;
+          }
+
           await supabase.functions.invoke('send-user-notification', {
             body: {
               user_id: evt.created_by,
@@ -68,6 +81,19 @@ Deno.serve(async (req) => {
       if (upcoming60 && upcoming60.length > 0) {
         console.log(`⏰ Found ${upcoming60.length} events starting in ~1 hour`);
         for (const evt of upcoming60) {
+          // Dedup check
+          const { data: existing } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', evt.created_by)
+            .contains('metadata', { event_id: evt.id, notification_type: 'event_upcoming', minutes_until: 60 })
+            .limit(1);
+          
+          if (existing && existing.length > 0) {
+            console.log(`⏭️ Skipping duplicate notification for event ${evt.id} (60min)`);
+            continue;
+          }
+
           await supabase.functions.invoke('send-user-notification', {
             body: {
               user_id: evt.created_by,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, MessageSquare, Zap, Crosshair, Briefcase } from 'lucide-react';
+import { Sparkles, MessageSquare, Zap, Crosshair, Briefcase } from 'lucide-react';
 
 const HUB_COLORS = {
   omni: '#FF4500',
@@ -14,7 +14,7 @@ const navItems = [
     paths: ['/dashboard/omni', '/dashboard/crm-whatsapp', '/dashboard/disparos', '/dashboard/chatbot', '/dashboard/email', '/dashboard/email-templates', '/dashboard/bot-ia', '/dashboard/automacoes', '/dashboard/api-whatsapp'] },
   { id: 'flow', icon: Zap, label: 'Flow', path: '/dashboard/flows', prefix: '/dashboard/flow',  color: HUB_COLORS.flow,
     paths: ['/dashboard/flows', '/dashboard/agenda', '/dashboard/agenda-aberta', '/dashboard/tasks', '/dashboard/fluxos', '/dashboard/reunioes'] },
-  { id: 'home', icon: Home, label: 'Home', path: '/dashboard', prefix: '', color: HUB_COLORS.flow, paths: ['/dashboard'] },
+  { id: 'home', icon: Sparkles, label: 'Home', path: '/dashboard', prefix: '', color: '#3000E3', paths: ['/dashboard'] },
   { id: 'track', icon: Crosshair, label: 'Track', path: '/dashboard/track', prefix: '/dashboard/track', color: HUB_COLORS.track,
     paths: ['/dashboard/track', '/dashboard/rastreamento', '/dashboard/encurtador', '/dashboard/email-tracker', '/dashboard/leads', '/dashboard/ello-vision', '/dashboard/analytics'] },
   { id: 'suite', icon: Briefcase, label: 'Suite', path: '/dashboard/suite', prefix: '/dashboard/suite', color: HUB_COLORS.suite,
@@ -53,9 +53,9 @@ const MobileBottomNav = () => {
                   key="home"
                   onClick={() => navigate('/dashboard')}
                   className="relative -mt-5 flex items-center justify-center w-[52px] h-[52px] rounded-2xl shadow-lg active:scale-90 transition-transform"
-                  style={{ backgroundColor: HUB_COLORS.flow, boxShadow: `0 10px 15px -3px ${HUB_COLORS.flow}4D` }}
+                  style={{ backgroundColor: '#3000E3', boxShadow: '0 10px 15px -3px rgba(48,0,227,0.3)' }}
                 >
-                  <Home className="h-6 w-6 text-white" />
+                  <Sparkles className="h-6 w-6 text-white" />
                 </button>
               );
             }

@@ -3,6 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Video, Settings } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -248,7 +249,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
       <CalendarKPIs events={events} />
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <div className="calendar-container">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -258,7 +259,8 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
               }}
-              height="auto"
+              height="75vh"
+              contentHeight="auto"
               events={calendarEvents}
               dateClick={handleDateClick}
               select={handleDateSelect}
@@ -269,7 +271,13 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               selectMirror={true}
               dayMaxEvents={4}
               weekends={true}
-              locale="pt-br"
+              locale={ptBrLocale}
+              buttonText={{
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia',
+              }}
               eventDisplay="block"
               eventTextColor="#ffffff"
               selectLongPressDelay={0}

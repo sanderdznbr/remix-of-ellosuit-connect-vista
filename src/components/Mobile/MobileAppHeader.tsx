@@ -100,7 +100,7 @@ const MobileAppHeader = () => {
           </button>
 
           {/* Notifications */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded-lg text-white active:bg-white/10 transition-colors relative">
                 <Bell className="h-5 w-5" />

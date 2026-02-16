@@ -1,58 +1,88 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, MessageSquare, LayoutGrid, Eye, Briefcase } from 'lucide-react';
+import { LayoutGrid, MessageSquare, Zap, Crosshair, Briefcase } from 'lucide-react';
 import MobileMegaMenu from './MobileMegaMenu';
+
+const HUB_COLORS = {
+  omni: '#FF4500',
+  flow: '#007DE3',
+  track: '#3A9A1C',
+  suite: '#3000E3',
+};
+
+const navItems = [
+  { id: 'omni', icon: MessageSquare, label: 'Omni', path: '/dashboard/crm-whatsapp', prefix: '/dashboard/omni', color: HUB_COLORS.omni,
+    paths: ['/dashboard/crm-whatsapp', '/dashboard/disparos', '/dashboard/chatbot', '/dashboard/email', '/dashboard/email-templates', '/dashboard/bot-ia', '/dashboard/automacoes', '/dashboard/api-whatsapp'] },
+  { id: 'flow', icon: Zap, label: 'Flow', path: '/dashboard/agenda', prefix: '/dashboard/flow',  color: HUB_COLORS.flow,
+    paths: ['/dashboard/agenda', '/dashboard/agenda-aberta', '/dashboard/tasks', '/dashboard/fluxos', '/dashboard/reunioes'] },
+  { id: 'menu', icon: LayoutGrid, label: 'Menu', path: '', prefix: '', color: '', paths: [] },
+  { id: 'track', icon: Crosshair, label: 'Track', path: '/dashboard/rastreamento', prefix: '/dashboard/track', color: HUB_COLORS.track,
+    paths: ['/dashboard/rastreamento', '/dashboard/encurtador', '/dashboard/email-tracker', '/dashboard/leads', '/dashboard/ello-vision', '/dashboard/analytics'] },
+  { id: 'suite', icon: Briefcase, label: 'Suite', path: '/dashboard/cadastros', prefix: '/dashboard/suite', color: HUB_COLORS.suite,
+    paths: ['/dashboard/cadastros', '/dashboard/drive', '/dashboard/equipe', '/dashboard/habitos', '/dashboard/contratos', '/dashboard/configuracoes', '/dashboard/assinatura', '/dashboard/seguranca', '/dashboard/suporte'] },
+];
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showMegaMenu, setShowMegaMenu] = useState(false);
 
-  const items = [
-    { icon: Home, label: 'Início', path: '/dashboard' },
-    { icon: MessageSquare, label: 'Omni', path: '/dashboard/omni' },
-    { icon: null, label: 'Menu', path: '' }, // center button
-    { icon: Eye, label: 'Track', path: '/dashboard/track' },
-    { icon: Briefcase, label: 'Suite', path: '/dashboard/suite' },
-  ];
-
-  const isActive = (path: string) => {
-    if (path === '/dashboard') return location.pathname === '/dashboard';
-    return location.pathname.startsWith(path);
+  const getActiveHub = () => {
+    const path = location.pathname;
+    for (const item of navItems) {
+      if (item.id === 'menu') continue;
+      if (item.paths.some(p => path.startsWith(p))) return item.id;
+      if (item.prefix && path.startsWith(item.prefix)) return item.id;
+    }
+    return null;
   };
+
+  const activeHub = getActiveHub();
 
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
         <div className="bg-background/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
-          <div className="flex items-center justify-around h-16 px-1">
-            {items.map((item, idx) => {
-              if (idx === 2) {
+          <div className="flex items-center justify-around h-16 px-2">
+            {navItems.map((item) => {
+              if (item.id === 'menu') {
                 return (
                   <button
-                    key="center"
+                    key="menu"
                     onClick={() => setShowMegaMenu(true)}
-                    className="relative -mt-5 flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 active:scale-90 transition-transform"
+                    className="relative -mt-5 flex items-center justify-center w-[52px] h-[52px] rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 active:scale-90 transition-transform"
                   >
                     <LayoutGrid className="h-6 w-6" />
                   </button>
                 );
               }
 
-              const Icon = item.icon!;
-              const active = isActive(item.path);
+              const Icon = item.icon;
+              const isActive = activeHub === item.id;
 
               return (
                 <button
-                  key={item.path}
+                  key={item.id}
                   onClick={() => navigate(item.path)}
-                  className="flex flex-col items-center justify-center flex-1 py-2 gap-0.5 transition-colors"
+                  className="flex flex-col items-center justify-center flex-1 py-2 gap-1 transition-all"
                 >
-                  <Icon className={`h-5 w-5 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-[10px] transition-colors ${active ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                  <div
+                    className="flex items-center justify-center w-9 h-9 rounded-xl transition-all"
+                    style={isActive ? { backgroundColor: item.color + '18' } : {}}
+                  >
+                    <Icon
+                      className="h-5 w-5 transition-colors"
+                      style={{ color: isActive ? item.color : undefined }}
+                      {...(!isActive && { className: 'h-5 w-5 text-muted-foreground transition-colors' })}
+                    />
+                  </div>
+                  <span
+                    className="text-[10px] font-semibold transition-colors"
+                    style={{ color: isActive ? item.color : undefined }}
+                    {...(!isActive && { className: 'text-[10px] font-medium text-muted-foreground transition-colors' })}
+                  >
                     {item.label}
                   </span>
-                  {active && <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
                 </button>
               );
             })}

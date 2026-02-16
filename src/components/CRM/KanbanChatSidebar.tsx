@@ -62,12 +62,21 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
   const [sendingMessage, setSendingMessage] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Track last message timestamp for incremental polling
+  const lastMessageTsRef = useRef<string | null>(null);
+  const initialLoadDoneRef = useRef(false);
+
   // Load messages when conversation changes
   useEffect(() => {
     if (!conversation || !companyId || !isOpen) return;
+
+    // Reset on conversation change
+    initialLoadDoneRef.current = false;
+    lastMessageTsRef.current = null;
+    setMessages([]);
     
-    const loadMessages = async () => {
-      setLoading(true);
+    const loadMessages = async (isInitial: boolean) => {
+      if (isInitial) setLoading(true);
       
       // Get all conversation IDs for this phone
       const { data: convs } = await supabase
@@ -77,60 +86,82 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
         .eq('contact_phone', conversation.contact_phone);
       
       if (!convs || convs.length === 0) {
-        setLoading(false);
+        if (isInitial) setLoading(false);
         return;
       }
       
       const conversationIds = convs.map(c => c.id);
-      
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .in('conversation_id', conversationIds)
-        .order('timestamp', { ascending: true })
-        .limit(200);
-      
-      if (!error && data) {
-        // ROBUST DEDUPLICATION: Use wa_message_id as primary key, with content+timestamp as fallback
-        const uniqueMessages = new Map<string, WhatsAppMessage>();
+
+      if (isInitial) {
+        // Full load on first render
+        const { data, error } = await supabase
+          .from('whatsapp_messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .order('timestamp', { ascending: true })
+          .limit(200);
         
-        data.forEach(m => {
-          // Primary key: wa_message_id (unique from WhatsApp)
-          const timestamp = new Date(m.timestamp || m.created_at).getTime();
-          const fallbackKey = `${m.content?.substring(0, 50)}_${m.from_me}_${Math.floor(timestamp / 1000)}`;
-          const key = m.wa_message_id || fallbackKey;
-          
-          // Only add if not already exists - first occurrence wins
-          if (!uniqueMessages.has(key)) {
-            uniqueMessages.set(key, {
-              ...m,
-              created_at: m.timestamp || m.created_at
-            });
+        if (!error && data) {
+          const deduped = deduplicateMessages(data);
+          setMessages(deduped);
+          if (deduped.length > 0) {
+            lastMessageTsRef.current = deduped[deduped.length - 1].created_at;
           }
-        });
+        }
+        setLoading(false);
+        initialLoadDoneRef.current = true;
+      } else {
+        // Incremental: only fetch messages newer than last known
+        const since = lastMessageTsRef.current || new Date(0).toISOString();
+        const { data, error } = await supabase
+          .from('whatsapp_messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .gt('timestamp', since)
+          .order('timestamp', { ascending: true })
+          .limit(50);
         
-        // Sort by timestamp ascending with stable sorting
-        const sorted = Array.from(uniqueMessages.values())
-          .sort((a, b) => {
-            const timeA = new Date(a.created_at).getTime();
-            const timeB = new Date(b.created_at).getTime();
-            if (timeA === timeB) {
-              return a.id.localeCompare(b.id);
-            }
-            return timeA - timeB;
+        if (!error && data && data.length > 0) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.wa_message_id || m.id));
+            const newMsgs = data
+              .filter(m => !existingIds.has(m.wa_message_id || m.id))
+              .map(m => ({ ...m, created_at: m.timestamp || m.created_at } as WhatsAppMessage));
+            
+            if (newMsgs.length === 0) return prev; // No change → no re-render
+            
+            const merged = [...prev, ...newMsgs];
+            lastMessageTsRef.current = merged[merged.length - 1].created_at;
+            return merged;
           });
-        
-        setMessages(sorted);
+        }
       }
-      setLoading(false);
     };
     
-    loadMessages();
+    loadMessages(true);
     
-    // Poll for new messages
-    const interval = setInterval(loadMessages, 1000);
+    // Poll for NEW messages only every 2s
+    const interval = setInterval(() => loadMessages(false), 2000);
     return () => clearInterval(interval);
   }, [conversation?.contact_phone, companyId, isOpen]);
+
+  const deduplicateMessages = (data: any[]): WhatsAppMessage[] => {
+    const uniqueMessages = new Map<string, WhatsAppMessage>();
+    data.forEach(m => {
+      const timestamp = new Date(m.timestamp || m.created_at).getTime();
+      const fallbackKey = `${m.content?.substring(0, 50)}_${m.from_me}_${Math.floor(timestamp / 1000)}`;
+      const key = m.wa_message_id || fallbackKey;
+      if (!uniqueMessages.has(key)) {
+        uniqueMessages.set(key, { ...m, created_at: m.timestamp || m.created_at });
+      }
+    });
+    return Array.from(uniqueMessages.values())
+      .sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeA === timeB ? a.id.localeCompare(b.id) : timeA - timeB;
+      });
+  };
 
   // Scroll to bottom on new messages
   useEffect(() => {

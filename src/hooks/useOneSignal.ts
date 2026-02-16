@@ -55,29 +55,32 @@ export function useOneSignal() {
   }, [user?.id, ready]);
 
   const requestPermission = useCallback(async () => {
-    if (!ready) return;
-    try {
-      await (OneSignal as any).Notifications.requestPermission();
-      const perm = (Notification as any)?.permission || 'default';
-      setPermission(perm);
-      console.log('[OneSignal] Permission after request:', perm);
-    } catch (err) {
-      console.error('[OneSignal] Permission request error:', err);
+    // Try OneSignal first, fallback to native
+    if (ready) {
+      try {
+        await (OneSignal as any).Notifications.requestPermission();
+        setPermission(Notification.permission as any);
+        console.log('[OneSignal] Permission granted via SDK');
+        return;
+      } catch (err) {
+        console.warn('[OneSignal] SDK permission failed, trying native:', err);
+      }
+    }
+
+    // Native fallback - always works if Notification API exists
+    if (typeof Notification !== 'undefined') {
+      try {
+        const result = await Notification.requestPermission();
+        setPermission(result as any);
+        console.log('[OneSignal] Permission via native:', result);
+      } catch (err) {
+        console.error('[OneSignal] Native permission error:', err);
+        setInitError('Não foi possível solicitar permissão. Tente nas configurações do navegador.');
+      }
+    } else {
+      setInitError('Notificações não suportadas neste navegador/contexto (iframe).');
     }
   }, [ready]);
 
-  const requestNativePermission = useCallback(async () => {
-    if (typeof Notification === 'undefined') {
-      setInitError('Notificações não suportadas neste navegador.');
-      return;
-    }
-    try {
-      const result = await Notification.requestPermission();
-      setPermission(result as any);
-    } catch (err) {
-      console.error('[OneSignal] Native permission error:', err);
-    }
-  }, []);
-
-  return { permission, ready, requestPermission, requestNativePermission, initError };
+  return { permission, ready, requestPermission, initError };
 }

@@ -49,7 +49,7 @@ const SettingRow = ({ label, description, children }: {
 
 export default function GeneralSettingsPage() {
   const { theme, toggleTheme } = useTheme();
-  const { permission, ready: pushReady, requestPermission, requestNativePermission, initError: pushError } = useOneSignal();
+  const { permission, ready: pushReady, requestPermission, initError: pushError } = useOneSignal();
   const { settings: notifSettings, updateNotificationSettings } = useNotificationSettings();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -113,7 +113,7 @@ export default function GeneralSettingsPage() {
           </SettingRow>
 
           {pushStatus !== 'active' && pushStatus !== 'blocked' && (
-            <Button size="sm" onClick={() => { pushReady ? requestPermission() : requestNativePermission(); }} className="w-full">
+            <Button size="sm" onClick={requestPermission} className="w-full">
               <BellRing className="h-4 w-4 mr-2" />
               Ativar Notificações Push
             </Button>

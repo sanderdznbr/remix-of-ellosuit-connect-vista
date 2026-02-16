@@ -292,7 +292,7 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
               editable={true}
               selectable={true}
               selectMirror={true}
-              dayMaxEvents={3}
+              dayMaxEvents={2}
               weekends={true}
               locale={ptBrLocale}
               eventDisplay="block"

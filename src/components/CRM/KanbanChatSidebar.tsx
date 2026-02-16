@@ -276,7 +276,7 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
-            className="relative w-full max-w-lg h-[80vh] max-h-[700px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            className="relative w-full max-w-2xl h-[85vh] max-h-[800px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div
@@ -361,7 +361,7 @@ const KanbanChatSidebar: React.FC<KanbanChatSidebarProps> = ({
                             fromMe={message.from_me}
                           />
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap break-words">
+                          <p className={cn("text-sm whitespace-pre-wrap break-words", message.from_me ? "text-white" : "text-gray-800")}>
                             {message.content}
                           </p>
                         )}

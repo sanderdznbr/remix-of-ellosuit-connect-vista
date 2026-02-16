@@ -14,7 +14,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       {/* Desktop: Mega Menu Header | Mobile: App Header */}
       {isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
       
-      <main className={`flex-1 min-h-0 w-full ${isMobile ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none`} style={{ scrollbarGutter: 'stable' }}>
+      <main className={`flex-1 min-h-0 w-full ${isMobile ? 'pt-[calc(3.5rem+env(safe-area-inset-top)+0.75rem)] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none`} style={{ scrollbarGutter: 'stable' }}>
         {children}
       </main>
 

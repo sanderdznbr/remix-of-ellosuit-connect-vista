@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { useTheme } from '@/hooks/useTheme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useToolUsageTracker } from '@/hooks/useToolUsageTracker';
 
 interface ChatMessage {
   id: string;
@@ -33,15 +34,6 @@ function getFileCategory(name: string): string {
   if (['doc','docx'].includes(ext)) return 'doc';
   return 'other';
 }
-
-const SUGGESTIONS = [
-  { icon: MessageSquare, text: 'Abrir meu CRM WhatsApp' },
-  { icon: FolderPlus, text: 'Criar uma pasta no Drive' },
-  { icon: CalendarDays, text: 'Ver minha agenda de hoje' },
-  { icon: Mail, text: 'Enviar email marketing' },
-  { icon: UploadCloud, text: 'Envie um arquivo e peça para salvar' },
-  { icon: TableProperties, text: 'Importar planilha de contatos' },
-];
 
 const AIAssistantHome: React.FC = () => {
   const navigate = useNavigate();
@@ -366,6 +358,7 @@ const AIAssistantHome: React.FC = () => {
     }
   }, [messages, speakText]);
 
+  const { mostUsedTools } = useToolUsageTracker();
   const hasChat = messages.length > 0;
 
   const renderInput = () => (
@@ -483,15 +476,15 @@ const AIAssistantHome: React.FC = () => {
   return (
     <div data-dashboard-home className="flex flex-col h-full transition-colors duration-500" style={{ backgroundColor: bgColor }}>
       {!hasChat ? (
-        /* Empty state - greeting + suggestions + input inline */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 overflow-y-auto py-6">
-          <div className="w-full max-w-2xl text-center">
+        /* Empty state - greeting + input + most used tools */
+        <div className="flex-1 flex flex-col items-center px-4 md:px-6 overflow-y-auto py-6">
+          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 md:mb-3 tracking-tight">
+              <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 md:mb-3 tracking-tight text-center">
                 {getGreeting()}, {firstName}
               </h1>
             </motion.div>
@@ -500,53 +493,74 @@ const AIAssistantHome: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.35 }}
-              className="text-white/70 text-base md:text-xl mb-6 md:mb-8"
+              className="text-white/60 text-base md:text-lg mb-6 md:mb-8 text-center"
             >
               O que gostaria de fazer hoje?
             </motion.p>
 
+            {/* Input */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="grid grid-cols-2 gap-2 md:gap-2.5 max-w-xl mx-auto mb-6 md:mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="w-full px-0 md:px-4"
             >
-              {SUGGESTIONS.map((item, i) => (
-                <motion.button
-                  key={item.text}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: 0.6 + i * 0.06 }}
-                  onClick={() => {
-                    if (item.text.includes('arquivo')) {
-                      fileInputRef.current?.click();
-                    } else {
-                      setInput(item.text);
-                      setTimeout(() => handleSubmit(item.text), 100);
-                    }
-                  }}
-                  className="flex items-center gap-2 md:gap-2.5 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white/85 hover:text-white text-xs md:text-sm font-medium transition-all duration-200 border border-white/10 hover:border-white/25 active:scale-95 text-left"
-                >
-                  <item.icon className="h-4 w-4 md:h-5 md:w-5 shrink-0 text-white/70" />
-                  <span className="leading-tight">{item.text}</span>
-                </motion.button>
-              ))}
-            </motion.div>
-
-            {/* Input right below suggestions */}
-            <div className="px-0 md:px-4">
               {renderInput()}
-            </div>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              transition={{ duration: 0.5, delay: 1.0 }}
-              className="text-white/40 text-xs mt-4 md:mt-5"
-            >
-              💡 Anexe arquivos (planilhas, vídeos, imagens) e peça para a IA organizar, salvar ou processar.
-            </motion.p>
+            </motion.div>
           </div>
+
+          {/* Most used tools section */}
+          {mostUsedTools.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.7 }}
+              className="w-full max-w-3xl mt-8 mb-4"
+            >
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <Clock className="h-4 w-4 text-white/50" />
+                <h2 className="text-sm font-semibold text-white/70 tracking-wide uppercase">Ferramentas mais usadas</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {mostUsedTools.map((tool, i) => (
+                  <motion.div
+                    key={tool.path}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.8 + i * 0.06 }}
+                  >
+                    <Link
+                      to={tool.path}
+                      className="group block rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 bg-white/[0.07] hover:bg-white/[0.12] backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5"
+                    >
+                      <div className="relative w-full aspect-[16/10] overflow-hidden">
+                        <img
+                          src={tool.preview}
+                          alt={tool.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                        <div
+                          className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white/90"
+                          style={{ backgroundColor: `${tool.hubColor}cc` }}
+                        >
+                          {tool.hubLabel}
+                        </div>
+                      </div>
+                      <div className="p-3 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white/90">{tool.title}</h3>
+                          <p className="text-[10px] text-white/40">{tool.count} {tool.count === 1 ? 'acesso' : 'acessos'}</p>
+                        </div>
+                        <ArrowRight className="h-3.5 w-3.5 text-white/30 group-hover:text-white/60 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
       ) : (
         /* Chat mode - messages + fixed input at bottom */

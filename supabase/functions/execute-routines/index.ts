@@ -18,6 +18,108 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     console.log('⏰ Checking routines at:', now);
 
+    // === CHECK UPCOMING EVENTS (notify 15 min and 1 hour before) ===
+    try {
+      const nowDate = new Date();
+      const in15min = new Date(nowDate.getTime() + 15 * 60 * 1000);
+      const in1hour = new Date(nowDate.getTime() + 60 * 60 * 1000);
+      
+      // Events starting in ~15 minutes (14-16 min window)
+      const from15 = new Date(nowDate.getTime() + 14 * 60 * 1000).toISOString();
+      const to15 = new Date(nowDate.getTime() + 16 * 60 * 1000).toISOString();
+      
+      const { data: upcoming15 } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_date, created_by, company_id')
+        .gte('start_date', from15)
+        .lte('start_date', to15)
+        .neq('status', 'cancelled');
+
+      if (upcoming15 && upcoming15.length > 0) {
+        console.log(`⏰ Found ${upcoming15.length} events starting in ~15 minutes`);
+        for (const evt of upcoming15) {
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              user_id: evt.created_by,
+              company_id: evt.company_id,
+              title: '⏰ Evento em 15 minutos!',
+              message: `"${evt.title}" começa em 15 minutos`,
+              notification_type: 'event_upcoming',
+              category: 'calendar',
+              icon: 'Clock',
+              action_url: '/dashboard/agenda',
+              metadata: { event_id: evt.id, minutes_until: 15 },
+            },
+          }).catch(e => console.error('Notify error:', e));
+        }
+      }
+
+      // Events starting in ~1 hour (59-61 min window)
+      const from60 = new Date(nowDate.getTime() + 59 * 60 * 1000).toISOString();
+      const to60 = new Date(nowDate.getTime() + 61 * 60 * 1000).toISOString();
+      
+      const { data: upcoming60 } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_date, created_by, company_id')
+        .gte('start_date', from60)
+        .lte('start_date', to60)
+        .neq('status', 'cancelled');
+
+      if (upcoming60 && upcoming60.length > 0) {
+        console.log(`⏰ Found ${upcoming60.length} events starting in ~1 hour`);
+        for (const evt of upcoming60) {
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              user_id: evt.created_by,
+              company_id: evt.company_id,
+              title: '⏰ Evento em 1 hora',
+              message: `"${evt.title}" começa em 1 hora`,
+              notification_type: 'event_upcoming',
+              category: 'calendar',
+              icon: 'Clock',
+              action_url: '/dashboard/agenda',
+              metadata: { event_id: evt.id, minutes_until: 60 },
+            },
+          }).catch(e => console.error('Notify error:', e));
+        }
+      }
+
+      // Check tasks due soon (within 30 min window)
+      const taskFrom = nowDate.toISOString();
+      const taskTo = new Date(nowDate.getTime() + 31 * 60 * 1000).toISOString();
+      
+      const { data: dueTasks } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_date, created_by, company_id')
+        .in('event_type', ['task', 'reminder'])
+        .eq('status', 'pending')
+        .gte('start_date', taskFrom)
+        .lte('start_date', taskTo);
+
+      if (dueTasks && dueTasks.length > 0) {
+        console.log(`✅ Found ${dueTasks.length} tasks due soon`);
+        for (const task of dueTasks) {
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              user_id: task.created_by,
+              company_id: task.company_id,
+              title: '✅⏰ Tarefa prestes a vencer',
+              message: `"${task.title}" deve ser realizada agora`,
+              notification_type: 'task_due',
+              category: 'task',
+              icon: 'CheckSquare',
+              action_url: '/dashboard/tasks',
+              metadata: { task_id: task.id },
+            },
+          }).catch(e => console.error('Notify error:', e));
+        }
+      }
+    } catch (upcomingErr) {
+      console.error('⚠️ Error checking upcoming events:', upcomingErr);
+    }
+
+    // === EXISTING ROUTINE LOGIC ===
+
     // Fix active routines missing next_run_at
     const { data: missingNextRun } = await supabase
       .from('task_routines')

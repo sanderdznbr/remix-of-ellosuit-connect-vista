@@ -2353,6 +2353,13 @@ export type Database = {
           reminder_notifications_enabled: boolean
           updated_at: string
           user_id: string
+          whatsapp_dispatch_progress: boolean
+          whatsapp_email_sent: boolean
+          whatsapp_enabled: boolean
+          whatsapp_event_created: boolean
+          whatsapp_event_deleted: boolean
+          whatsapp_event_upcoming: boolean
+          whatsapp_task_due: boolean
         }
         Insert: {
           calendar_notifications_enabled?: boolean
@@ -2364,6 +2371,13 @@ export type Database = {
           reminder_notifications_enabled?: boolean
           updated_at?: string
           user_id: string
+          whatsapp_dispatch_progress?: boolean
+          whatsapp_email_sent?: boolean
+          whatsapp_enabled?: boolean
+          whatsapp_event_created?: boolean
+          whatsapp_event_deleted?: boolean
+          whatsapp_event_upcoming?: boolean
+          whatsapp_task_due?: boolean
         }
         Update: {
           calendar_notifications_enabled?: boolean
@@ -2375,6 +2389,13 @@ export type Database = {
           reminder_notifications_enabled?: boolean
           updated_at?: string
           user_id?: string
+          whatsapp_dispatch_progress?: boolean
+          whatsapp_email_sent?: boolean
+          whatsapp_enabled?: boolean
+          whatsapp_event_created?: boolean
+          whatsapp_event_deleted?: boolean
+          whatsapp_event_upcoming?: boolean
+          whatsapp_task_due?: boolean
         }
         Relationships: []
       }

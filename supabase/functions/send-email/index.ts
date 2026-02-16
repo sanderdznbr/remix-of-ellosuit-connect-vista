@@ -350,6 +350,25 @@ const handler = async (req: Request): Promise<Response> => {
             metadata: { recipient_email, subject, provider: sendResult.provider, campaign_id },
           }),
         }).catch(() => {});
+
+        // Send WhatsApp notification to user about email sent
+        if (user_id && company_id) {
+          fetch(`${SUPABASE_URL}/functions/v1/send-user-notification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({
+              user_id,
+              company_id,
+              title: "📧✅ E-mail enviado",
+              message: `E-mail "${subject}" enviado para ${recipient_email}`,
+              notification_type: "email_sent",
+              category: "email",
+              icon: "Mail",
+              action_url: "/dashboard/email-tracker",
+              metadata: { recipient_email, subject, campaign_id },
+            }),
+          }).catch(() => {});
+        }
       }
     } catch (e) { /* non-blocking */ }
 

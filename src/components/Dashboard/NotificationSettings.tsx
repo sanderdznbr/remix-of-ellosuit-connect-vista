@@ -6,11 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Smartphone, Clock, TestTube, RefreshCw, MessageSquare, Calendar, Mail, Send, CheckSquare, Trash2 } from 'lucide-react';
+import { Bell, Smartphone, Clock, TestTube, RefreshCw, MessageSquare, Calendar, Mail, Send, CheckSquare, Trash2, Globe } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
+import { useOneSignal } from '@/hooks/useOneSignal';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const NotificationSettings = () => {
   const { settings, updateNotificationSettings, isLoading } = useNotificationSettings();
@@ -21,8 +23,11 @@ const NotificationSettings = () => {
     requestNotificationPermission, 
     resetRegistration 
   } = useDeviceRegistration();
+  const { permission, ready: oneSignalReady, requestPermission: requestPushPermission } = useOneSignal();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isSendingPushTest, setIsSendingPushTest] = useState(false);
   const [testTitle, setTestTitle] = useState('🎉 Notificação Teste');
   const [testMessage, setTestMessage] = useState('Esta é uma notificação de teste do Ello Suit com APNs configurado!');
 
@@ -65,6 +70,33 @@ const NotificationSettings = () => {
       toast({ title: "❌ Erro", description: `Falha ao enviar notificação: ${error.message}`, variant: "destructive" });
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  const sendPushTest = async () => {
+    setIsSendingPushTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-user-notification', {
+        body: {
+          user_id: user?.id,
+          company_id: (settings as any)?.company_id || user?.id,
+          title: '🔔 Teste Push OneSignal',
+          message: 'Se você recebeu isso, as notificações push estão funcionando!',
+          type: 'info',
+          category: 'system',
+          notification_type: 'push_test',
+          send_whatsapp: false,
+        }
+      });
+      if (error) throw error;
+      toast({
+        title: "🎉 Push enviado!",
+        description: data?.push_sent !== false ? "Notificação push enviada via OneSignal" : "Notificação criada (push pode não ter sido entregue)",
+      });
+    } catch (error: any) {
+      toast({ title: "❌ Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSendingPushTest(false);
     }
   };
 
@@ -172,6 +204,61 @@ const NotificationSettings = () => {
               </div>
             </React.Fragment>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Push Notifications (OneSignal) */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Globe className="h-5 w-5 text-primary" />
+            Notificações Push (Navegador)
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Receba notificações push mesmo quando não estiver com o app aberto
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Status Push</Label>
+              <p className="text-sm text-muted-foreground">
+                {permission === 'granted' 
+                  ? '✅ Notificações push ativadas' 
+                  : permission === 'denied'
+                  ? '❌ Bloqueadas no navegador — desbloqueie nas configurações do navegador'
+                  : '⏳ Permissão não solicitada'}
+              </p>
+            </div>
+            <Badge variant={permission === 'granted' ? 'default' : permission === 'denied' ? 'destructive' : 'secondary'}>
+              {permission === 'granted' ? '✅ Ativo' : permission === 'denied' ? '🚫 Bloqueado' : '⏳ Pendente'}
+            </Badge>
+          </div>
+
+          {permission !== 'granted' && permission !== 'denied' && (
+            <Button onClick={requestPushPermission} disabled={!oneSignalReady} className="w-full">
+              <Bell className="h-4 w-4 mr-2" />
+              🔔 Ativar Notificações Push
+            </Button>
+          )}
+
+          {permission === 'granted' && (
+            <Button onClick={sendPushTest} disabled={isSendingPushTest} variant="outline" className="w-full">
+              {isSendingPushTest ? (
+                <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>Enviando...</>
+              ) : (
+                <><TestTube className="h-4 w-4 mr-2" />🧪 Enviar Push de Teste</>
+              )}
+            </Button>
+          )}
+
+          {permission === 'denied' && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+              <p className="text-sm text-destructive">
+                <strong>⚠️</strong> As notificações foram bloqueadas. Para reativar, clique no ícone 🔒 ao lado da URL no navegador e permita notificações.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -577,7 +577,7 @@ const AIAssistantHome: React.FC = () => {
                 >
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user'
-                      ? isDark ? 'bg-white/15 text-white backdrop-blur-sm border border-white/10' : 'bg-white/25 text-white backdrop-blur-sm border border-white/20'
+                      ? 'bg-[hsl(220,60%,15%)] text-white shadow-lg border border-white/10'
                       : isDark ? 'bg-neutral-800 text-white shadow-xl border border-neutral-700' : 'bg-white text-gray-900 shadow-xl border border-gray-100'
                   }`}>
                     {msg.fileUrl && msg.fileName && (

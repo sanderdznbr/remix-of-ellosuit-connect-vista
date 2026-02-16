@@ -51,8 +51,8 @@ const MobileAppHeader = () => {
 
   return (
     <header
-      className="sticky top-0 z-50 md:hidden transition-colors duration-500"
-      style={{ backgroundColor: headerBg }}
+      className="fixed top-0 left-0 right-0 z-50 md:hidden transition-colors duration-500"
+      style={{ backgroundColor: headerBg, paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex items-center justify-between h-14 px-4">
         <button onClick={() => navigate('/dashboard')} className="flex items-center">

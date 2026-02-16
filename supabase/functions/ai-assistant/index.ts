@@ -1011,7 +1011,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { message, messages, fileUrl, fileName, userId, companyId } = await req.json();
+    const { message, messages, fileUrl, fileName, userId, companyId, timezone } = await req.json();
 
     if (!userId || !companyId) {
       return new Response(JSON.stringify({ error: 'userId e companyId são obrigatórios' }), {
@@ -1032,14 +1032,30 @@ Deno.serve(async (req) => {
       supabase.from('company_users').select('role').eq('user_id', userId).eq('company_id', companyId).single(),
     ]);
 
+    const userTimezone = timezone || 'America/Sao_Paulo';
     const now = new Date();
-    const todayStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const isoToday = now.toISOString().split('T')[0];
+    const todayStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: userTimezone });
+    const currentTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: userTimezone });
+    
+    // Build ISO date in user's local timezone
+    const localParts = new Intl.DateTimeFormat('en-CA', { timeZone: userTimezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    const isoToday = localParts; // YYYY-MM-DD format
+    
+    // Also get local hour/minute for precise relative time calculations
+    const localHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: userTimezone, hour: 'numeric', hour12: false }).format(now));
+    const localMinute = Number(new Intl.DateTimeFormat('en-US', { timeZone: userTimezone, minute: 'numeric' }).format(now));
 
     const SYSTEM_PROMPT = `Você é o assistente IA da Ellosuit, uma plataforma completa de gestão empresarial. Você é inteligente, proativo e executa ações reais no sistema.
 
-DATA E HORA ATUAL: ${todayStr}, ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+DATA E HORA ATUAL: ${todayStr}, ${currentTime}
 DATA ISO HOJE: ${isoToday}
+HORA LOCAL: ${String(localHour).padStart(2, '0')}:${String(localMinute).padStart(2, '0')}
+TIMEZONE DO USUÁRIO: ${userTimezone}
+
+IMPORTANTE SOBRE HORÁRIOS:
+- Quando o usuário disser "daqui X minutos/horas", calcule baseado na HORA LOCAL acima (${String(localHour).padStart(2, '0')}:${String(localMinute).padStart(2, '0')})
+- Use a DATA ISO HOJE (${isoToday}) como base para datas
+- Formate datas para a tool como: ${isoToday}THH:mm:ss (sem timezone offset, já é hora local)
 
 CONTEXTO:
 - Empresa: ${companyData?.name || 'N/A'}

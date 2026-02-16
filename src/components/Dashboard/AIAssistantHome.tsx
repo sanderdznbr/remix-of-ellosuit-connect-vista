@@ -155,6 +155,7 @@ const AIAssistantHome: React.FC = () => {
           fileUrl, fileName,
           userId: user?.id,
           companyId,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           messages: messages.filter(m => !m.isLoading).map(m => ({
             role: m.role,
             content: m.content + (m.fileUrl ? `\n[Arquivo: ${m.fileName}]` : ''),

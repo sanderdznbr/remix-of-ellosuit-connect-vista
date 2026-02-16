@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle, Plus, Tag, ScrollText, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Loader2, Globe, Zap, ExternalLink, CheckCircle2, AlertCircle, Plus, Tag, ScrollText, ChevronDown, ChevronUp, Code } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -479,17 +479,76 @@ export default function AutomationPropertiesPanel({ node, automationId, onClose,
 
         {/* ===== NEW CLIENT TRIGGER ===== */}
         {node.type === 'new_client' && (
-          <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Tipo de Cliente</label>
-            <Select value={node.config?.clientType || 'any'} onValueChange={v => updateConfig('clientType', v)}>
-              <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Qualquer tipo</SelectItem>
-                <SelectItem value="lead">Lead</SelectItem>
-                <SelectItem value="client">Cliente</SelectItem>
-                <SelectItem value="prospect">Prospecto</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Tipo de Cliente</label>
+              <Select value={node.config?.clientType || 'any'} onValueChange={v => updateConfig('clientType', v)}>
+                <SelectTrigger className="rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Qualquer tipo</SelectItem>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="prospect">Prospecto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full rounded-xl text-xs h-8 gap-1.5"
+                onClick={() => updateConfig('showDynamicFields', !node.config?.showDynamicFields)}
+              >
+                <Code className="h-3.5 w-3.5" />
+                {node.config?.showDynamicFields ? 'Ocultar campos dinâmicos' : 'Exibir campos dinâmicos'}
+              </Button>
+
+              {node.config?.showDynamicFields && (
+                <div className="mt-2 rounded-xl border border-border bg-muted/40 p-2.5 space-y-1 max-h-64 overflow-y-auto">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">Clique para copiar a tag e usar em outros blocos:</p>
+                  {[
+                    { key: 'name', label: 'Nome' },
+                    { key: 'email', label: 'Email' },
+                    { key: 'phone', label: 'Telefone' },
+                    { key: 'whatsapp', label: 'WhatsApp' },
+                    { key: 'company_name', label: 'Empresa' },
+                    { key: 'cnpj_cpf', label: 'CPF/CNPJ' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'client_type', label: 'Tipo' },
+                    { key: 'profession', label: 'Profissão' },
+                    { key: 'birth_date', label: 'Nascimento' },
+                    { key: 'address_street', label: 'Rua' },
+                    { key: 'address_number', label: 'Número' },
+                    { key: 'address_city', label: 'Cidade' },
+                    { key: 'address_state', label: 'Estado' },
+                    { key: 'address_zip', label: 'CEP' },
+                    { key: 'website', label: 'Website' },
+                    { key: 'linkedin', label: 'LinkedIn' },
+                    { key: 'instagram', label: 'Instagram' },
+                    { key: 'facebook', label: 'Facebook' },
+                    { key: 'industry', label: 'Setor' },
+                    { key: 'company_size', label: 'Porte' },
+                    { key: 'annual_revenue', label: 'Receita anual' },
+                    { key: 'tags', label: 'Tags' },
+                    { key: 'notes', label: 'Observações' },
+                  ].map(f => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      className="flex items-center justify-between w-full text-left px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors group"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`{{client.${f.key}}}`);
+                        toast({ title: 'Copiado!', description: `{{client.${f.key}}}` });
+                      }}
+                    >
+                      <span className="text-[11px] text-foreground">{f.label}</span>
+                      <code className="text-[10px] font-mono text-muted-foreground group-hover:text-primary">{'{{client.' + f.key + '}}'}</code>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

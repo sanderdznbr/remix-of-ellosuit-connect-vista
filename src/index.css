@@ -6,6 +6,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent layout shift when Radix dialogs/sheets add overflow:hidden to body */
+body {
+  overflow: hidden !important;
+  width: 100% !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

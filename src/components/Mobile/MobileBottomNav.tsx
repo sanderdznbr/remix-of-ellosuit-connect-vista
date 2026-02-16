@@ -56,8 +56,8 @@ const MobileBottomNav = () => {
 
             if (isHome) {
               if (isOnHome) {
-                // Already on home, render empty spacer to maintain layout
-                return <div key="home" className="w-[54px]" />;
+                // Already on home, skip rendering entirely
+                return null;
               }
               return (
                 <button

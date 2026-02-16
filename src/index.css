@@ -204,6 +204,10 @@
   /* ===== Dashboard Home: full-bleed blue behind navbar ===== */
   main:has([data-dashboard-home]) {
     padding-bottom: 0 !important;
+    background: inherit;
+  }
+  main:has([data-dashboard-home]:not([data-has-chat])) {
+    overflow: hidden !important;
   }
   [data-dashboard-home] {
     min-height: 100%;

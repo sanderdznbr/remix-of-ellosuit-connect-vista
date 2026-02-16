@@ -31,7 +31,7 @@ const PAYMENT_METHODS = [
   'Transferência Bancária', 'Boleto', 'Cheque', 'Outro',
 ];
 
-const RECEIPT_COLOR = '#059669';
+const RECEIPT_COLOR = 'hsl(230, 100%, 50%)';
 
 export default function ReceiptsPage() {
   const navigate = useNavigate();

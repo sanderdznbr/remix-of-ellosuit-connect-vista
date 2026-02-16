@@ -568,16 +568,33 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
 
     case 'create_calendar_event': {
       const eventType = (args.event_type as string) || 'meeting';
-      const { data, error } = await supabase.from('calendar_events').insert({
+      // Generate Ellomeeting link for meetings
+      let meetingLink: string | null = null;
+      if (eventType === 'meeting') {
+        const roomCode = crypto.randomUUID().split('-')[0];
+        meetingLink = `https://www.ellosuit.online/meet/${roomCode}`;
+      }
+      const insertData: any = {
         title: args.title as string, start_date: args.start_date as string,
         end_date: args.end_date as string, description: (args.description as string) || null,
         event_type: eventType, status: 'pending', source: 'assistant',
         company_id: companyId, created_by: userId,
-      }).select('id, title, start_date').single();
+      };
+      if (meetingLink) {
+        insertData.meeting_link = meetingLink;
+        insertData.meeting_provider = 'ellosuit';
+      }
+      const { data, error } = await supabase.from('calendar_events').insert(insertData).select('id, title, start_date, meeting_link').single();
       if (error) return { result: `Erro ao criar evento: ${error.message}` };
       const s = new Date(data.start_date);
+      const dateStr = s.toLocaleDateString('pt-BR');
+      const timeStr = s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      let resultText = `✅ Evento "${data.title}" criado para ${dateStr} às ${timeStr}!`;
+      if (data.meeting_link) {
+        resultText += `\nLink da reunião: ${data.meeting_link}`;
+      }
       return {
-        result: `✅ Evento "${data.title}" criado para ${s.toLocaleDateString('pt-BR')} às ${s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}!`,
+        result: resultText,
         action: { action: 'event_created', data, navigate: '/dashboard/agenda' }
       };
     }
@@ -1084,7 +1101,10 @@ REGRAS:
 - Use emojis moderadamente para tornar as respostas visuais
 - Quando criar eventos, infira horários razoáveis se não especificados (ex: reunião = 1h, lembrete = 30min)
 - Se o usuário pedir para salvar um arquivo mas NÃO ANEXOU, use request_file
-- Confirme as ações executadas com detalhes`;
+- Confirme as ações executadas com detalhes
+- NÃO use markdown com asteriscos (** ou *) nas respostas. Use texto simples e emojis para formatação.
+- Para links, use o formato: texto_descritivo (URL) - ex: "Link da reunião: https://..."
+- Ao criar reuniões, o link do Ellomeeting é gerado automaticamente pela ferramenta, não invente links externos como Google Meet ou Zoom`;
 
     // Build conversation
     const apiMessages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];

@@ -2295,6 +2295,53 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          categories: Json
+          company_id: string
+          created_at: string
+          id: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          updated_at: string
+          user_id: string
+          whatsapp_enabled: boolean
+          whatsapp_number: string | null
+        }
+        Insert: {
+          categories?: Json
+          company_id: string
+          created_at?: string
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Update: {
+          categories?: Json
+          company_id?: string
+          created_at?: string
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_settings: {
         Row: {
           calendar_notifications_enabled: boolean
@@ -2330,6 +2377,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          category: string
+          company_id: string
+          created_at: string
+          icon: string | null
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+          whatsapp_sent: boolean
+        }
+        Insert: {
+          action_url?: string | null
+          category?: string
+          company_id: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+          whatsapp_sent?: boolean
+        }
+        Update: {
+          action_url?: string | null
+          category?: string
+          company_id?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+          whatsapp_sent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_items: {
         Row: {

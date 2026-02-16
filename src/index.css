@@ -201,6 +201,14 @@
     --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
   }
 
+  /* ===== Dashboard Home: full-bleed blue behind navbar ===== */
+  main:has([data-dashboard-home]) {
+    padding-bottom: 0 !important;
+  }
+  [data-dashboard-home] {
+    min-height: 100%;
+  }
+
   /* ===== Dashboard Home: preserve light mode always ===== */
   .dark [data-dashboard-home] .bg-white,
   .dark [data-dashboard-home] .bg-white\/95 {

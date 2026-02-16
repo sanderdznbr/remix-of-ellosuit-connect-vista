@@ -421,7 +421,7 @@ export function MegaMenuHeader() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="justify-center text-primary cursor-pointer font-medium"
-                    onClick={() => navigate('/dashboard/suporte')}
+                    onClick={() => navigate('/dashboard/notificacoes')}
                   >
                     Ver todas as notificações
                   </DropdownMenuItem>

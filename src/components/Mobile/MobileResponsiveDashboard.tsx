@@ -58,6 +58,7 @@ import ReportsDashboard from '@/components/Dashboard/ReportsDashboard';
 import SupportDashboard from '@/components/Dashboard/SupportDashboard';
 import ReportProblemForm from '@/components/Dashboard/ReportProblemForm';
 import SecuritySettings from '@/components/Dashboard/SecuritySettings';
+import NotificationsPage from '@/components/Dashboard/NotificationsPage';
 
 // User profile and subscription pages
 import UserProfilePage from '@/components/Dashboard/UserProfilePage';
@@ -194,6 +195,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/personalizar" element={<ImprovedDashboardCustomizer />} />
             <Route path="/seguranca" element={<SecuritySettings />} />
             <Route path="/suporte" element={<SupportDashboard />} />
+            <Route path="/notificacoes" element={<NotificationsPage />} />
             <Route path="/reportar-problema" element={<ReportProblemForm />} />
             <Route path="/ajuda" element={<HelpCenter />} />
             

@@ -6,6 +6,7 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
+  variantIcons,
 } from "@/components/ui/toast"
 
 export function Toaster() {
@@ -13,10 +14,14 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        const iconKey = variant || "default"
         return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
+          <Toast key={id} variant={variant} {...props}>
+            <div className="mt-0.5">
+              {variantIcons[iconKey] || variantIcons.default}
+            </div>
+            <div className="grid gap-0.5 flex-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
                 <ToastDescription>{description}</ToastDescription>

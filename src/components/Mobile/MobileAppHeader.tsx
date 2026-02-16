@@ -25,8 +25,9 @@ import logoEllo from '@/assets/logoellosuit.png';
 const settingsItems = [
   { icon: User, label: 'Meu Perfil', path: '/dashboard/perfil' },
   { icon: CreditCard, label: 'Assinatura', path: '/dashboard/assinatura' },
-  { icon: Shield, label: 'Privacidade e Segurança', path: '/dashboard/seguranca' },
-  { icon: HelpCircle, label: 'Central de Ajuda', path: '/dashboard/ajuda' },
+  { icon: Settings, label: 'Configurações', path: '/dashboard/configuracoes' },
+  { icon: Shield, label: 'Segurança', path: '/dashboard/seguranca' },
+  { icon: HelpCircle, label: 'Suporte', path: '/dashboard/suporte' },
   { icon: Bug, label: 'Reportar Problema', path: '/dashboard/reportar-problema' },
 ];
 
@@ -207,8 +208,9 @@ const MobileAppHeader = () => {
                 <Settings className="h-5 w-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] p-0 bg-background border-l border-border">
+            <SheetContent side="bottom" className="rounded-t-3xl p-0 bg-background border-t border-border max-h-[85dvh]">
               <div className="flex flex-col h-full">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mt-3 mb-1" />
                 <div className="p-5 border-b border-border">
                   <div className="flex items-center gap-3">
                     {avatarUrl ? (

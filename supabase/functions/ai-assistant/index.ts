@@ -516,6 +516,26 @@ const TOOLS = [
     }
   },
 
+  // === CRIAR AGENTE DE IA ===
+  {
+    type: "function",
+    function: {
+      name: "create_ai_agent",
+      description: "Criar um novo agente de IA. O usuário descreve o perfil, personalidade e instruções do agente.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome do agente" },
+          description: { type: "string", description: "Descrição breve do agente" },
+          personality: { type: "string", description: "Personalidade do agente (ex: profissional, amigável, técnico)" },
+          instructions: { type: "string", description: "Instruções detalhadas de como o agente deve se comportar e responder" },
+          model: { type: "string", enum: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "google/gemini-2.5-pro"], description: "Modelo de IA (padrão: gemini-3-flash-preview)" }
+        },
+        required: ["name", "personality", "instructions"]
+      }
+    }
+  },
+
   // === DASHBOARD SUMMARY ===
   {
     type: "function",
@@ -1452,6 +1472,28 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       };
     }
 
+    // ==================== CREATE AI AGENT ====================
+    case 'create_ai_agent': {
+      const { data: agent, error } = await supabase.from('ai_agents').insert({
+        name: args.name as string,
+        description: (args.description as string) || null,
+        personality: (args.personality as string) || 'Assistente profissional e amigável',
+        instructions: (args.instructions as string) || 'Responda de forma clara e útil.',
+        model: (args.model as string) || 'google/gemini-3-flash-preview',
+        is_active: true,
+        company_id: companyId,
+        created_by: userId,
+        settings: { temperature: 0.7, maxResponseChars: 500 },
+      }).select('id, name').single();
+
+      if (error) return { result: `❌ Erro ao criar agente: ${error.message}` };
+      
+      return {
+        result: `✅ Agente de IA "${agent.name}" criado com sucesso! Você pode editá-lo e ativá-lo no WhatsApp.`,
+        action: { action: 'agent_created', data: agent, navigate: `/bot-ia/editar/${agent.id}` }
+      };
+    }
+
     default:
       return { result: `Ferramenta "${toolName}" não reconhecida.` };
   }
@@ -1545,7 +1587,9 @@ REGRAS:
 - Se o usuário escolher "meu WhatsApp" e não tiver conectado, use connect_whatsapp para gerar o QR code direto no chat
 - Se o usuário escolher "Ellosuit", use send_whatsapp_message com use_ellosuit=true
 - Quando o usuário pedir para CRIAR uma automação, use create_automation. Pergunte o gatilho e as ações desejadas.
-- Quando o usuário pedir para CRIAR um chatbot, use create_chatbot. Pergunte o objetivo do fluxo e monte os passos.`;
+- Quando o usuário pedir para CRIAR um chatbot, use create_chatbot. Pergunte o objetivo do fluxo e monte os passos.
+- Quando o usuário pedir para CRIAR um agente de IA, use create_ai_agent. Pergunte o nome, personalidade e instruções.
+- Para AGENTES, ajude o usuário a definir personalidade e instruções detalhadas para obter melhores resultados.`;
 
     // Build conversation
     const apiMessages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];

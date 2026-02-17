@@ -435,6 +435,85 @@ const TOOLS = [
     }
   },
 
+  // === CRIAR AUTOMAÇÃO ===
+  {
+    type: "function",
+    function: {
+      name: "create_automation",
+      description: "Criar uma nova automação no sistema. O usuário descreve o que quer automatizar e a IA monta os nodes e edges.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome da automação" },
+          description: { type: "string", description: "Descrição do que a automação faz" },
+          trigger_type: { type: "string", enum: ["new_client", "new_event", "form_submit", "tag_added", "manual"], description: "Tipo de gatilho" },
+          actions: {
+            type: "array",
+            description: "Lista de ações a executar",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["send_email", "send_whatsapp", "create_task", "add_tag", "wait", "notify"], description: "Tipo da ação" },
+                config: { type: "object", description: "Configurações da ação" }
+              }
+            }
+          }
+        },
+        required: ["name", "trigger_type"]
+      }
+    }
+  },
+
+  // === CRIAR CHATBOT ===
+  {
+    type: "function",
+    function: {
+      name: "create_chatbot",
+      description: "Criar um novo fluxo de chatbot para WhatsApp. O usuário descreve o fluxo e a IA monta os blocos.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome do chatbot" },
+          description: { type: "string", description: "Descrição do fluxo" },
+          trigger: { type: "string", enum: ["whatsapp_channel", "keyword", "conversation_start"], description: "Tipo de gatilho" },
+          steps: {
+            type: "array",
+            description: "Passos do fluxo do chatbot",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["message", "buttons", "wait_response", "condition", "transfer_human", "transfer_ai_agent", "set_variable"], description: "Tipo do bloco" },
+                content: { type: "string", description: "Texto da mensagem ou condição" },
+                options: { type: "array", items: { type: "string" }, description: "Opções para botões" }
+              }
+            }
+          }
+        },
+        required: ["name", "trigger"]
+      }
+    }
+  },
+
+  // === CRIAR AGENTE DE IA ===
+  {
+    type: "function",
+    function: {
+      name: "create_ai_agent",
+      description: "Criar um novo agente de IA. O usuário descreve o perfil, personalidade e instruções do agente.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome do agente" },
+          description: { type: "string", description: "Descrição breve do agente" },
+          personality: { type: "string", description: "Personalidade do agente (ex: profissional, amigável, técnico)" },
+          instructions: { type: "string", description: "Instruções detalhadas de como o agente deve se comportar" },
+          model: { type: "string", enum: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "google/gemini-2.5-pro"], description: "Modelo de IA" }
+        },
+        required: ["name", "personality", "instructions"]
+      }
+    }
+  },
+
   // === AGENTES DE IA ===
   {
     type: "function",
@@ -1007,6 +1086,75 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       return `A Ellosuit é uma plataforma completa de gestão empresarial com: CRM WhatsApp, Email Marketing, Agenda, Tarefas, Drive, Contratos, Propostas, Recibos, Videoconferência, Chatbots, Agentes de IA, Automações, Agenda Aberta (booking), Serviços e muito mais. Posso verificar qualquer informação diretamente na conta do usuário.`;
     }
 
+    // ==================== CREATE AUTOMATION ====================
+    case 'create_automation': {
+      const triggerType = (args.trigger_type as string) || 'manual';
+      const actions = (args.actions as any[]) || [];
+      const nodes: any[] = [];
+      const edges: any[] = [];
+      const triggerId = crypto.randomUUID();
+      nodes.push({ id: triggerId, type: 'trigger', position: { x: 250, y: 50 }, data: { label: `Gatilho: ${triggerType}`, triggerType, config: {} } });
+      let prevNodeId = triggerId;
+      let yPos = 200;
+      for (const action of actions) {
+        const nodeId = crypto.randomUUID();
+        nodes.push({ id: nodeId, type: 'action', position: { x: 250, y: yPos }, data: { label: action.type || 'Ação', actionType: action.type, config: action.config || {} } });
+        edges.push({ id: `e-${prevNodeId}-${nodeId}`, source: prevNodeId, target: nodeId });
+        prevNodeId = nodeId;
+        yPos += 150;
+      }
+      const { data: automation, error } = await supabase.from('automations').insert({
+        name: args.name as string, description: (args.description as string) || null,
+        trigger_type: triggerType, nodes, edges, is_active: false,
+        company_id: companyId, created_by: userId,
+      }).select('id, name').single();
+      if (error) return `Erro ao criar automação: ${error.message}`;
+      return `Automação "${automation.name}" criada com ${nodes.length} blocos! Está desativada por padrão.`;
+    }
+
+    // ==================== CREATE CHATBOT ====================
+    case 'create_chatbot': {
+      const trigger = (args.trigger as string) || 'whatsapp_channel';
+      const steps = (args.steps as any[]) || [];
+      const nodes: any[] = [];
+      const edgesArr: any[] = [];
+      const triggerId = crypto.randomUUID();
+      nodes.push({ id: triggerId, type: 'trigger', subType: trigger, position: { x: 250, y: 50 }, data: { label: 'Gatilho', config: { triggerType: trigger } } });
+      let prevNodeId = triggerId;
+      let yPos = 200;
+      for (const step of steps) {
+        const nodeId = crypto.randomUUID();
+        const nodeType = step.type === 'buttons' ? 'message' : step.type === 'wait_response' ? 'delay' : step.type === 'condition' ? 'condition' : (step.type === 'transfer_human' || step.type === 'transfer_ai_agent' || step.type === 'set_variable') ? 'action' : 'message';
+        const subType = step.type === 'buttons' ? 'buttons' : step.type === 'wait_response' ? 'wait_response' : step.type || 'text';
+        nodes.push({ id: nodeId, type: nodeType, subType, position: { x: 250, y: yPos }, data: { label: step.content || step.type, config: { message: step.content, buttons: step.options?.map((opt: string, i: number) => ({ id: `btn-${i}`, label: opt })) || [] } } });
+        edgesArr.push({ id: `e-${prevNodeId}-${nodeId}`, source: prevNodeId, target: nodeId });
+        prevNodeId = nodeId;
+        yPos += 150;
+      }
+      const { data: chatbot, error } = await supabase.from('chatbot_flows').insert({
+        name: args.name as string, description: (args.description as string) || null,
+        nodes, edges: edgesArr, trigger_config: { triggerType: trigger },
+        is_active: false, company_id: companyId, created_by: userId,
+      }).select('id, name').single();
+      if (error) return `Erro ao criar chatbot: ${error.message}`;
+      return `Chatbot "${chatbot.name}" criado com ${nodes.length} blocos! Está desativado por padrão.`;
+    }
+
+    // ==================== CREATE AI AGENT ====================
+    case 'create_ai_agent': {
+      const { data: agent, error } = await supabase.from('ai_agents').insert({
+        name: args.name as string,
+        description: (args.description as string) || null,
+        personality: (args.personality as string) || 'Assistente profissional e amigável',
+        instructions: (args.instructions as string) || 'Responda de forma clara e útil.',
+        model: (args.model as string) || 'google/gemini-3-flash-preview',
+        is_active: true, company_id: companyId, created_by: userId,
+        settings: { temperature: 0.7, maxResponseChars: 500 },
+      }).select('id, name').single();
+      if (error) return `Erro ao criar agente: ${error.message}`;
+      return `Agente de IA "${agent.name}" criado com sucesso! Você pode editá-lo na plataforma.`;
+    }
+
     default:
       return `Ferramenta "${toolName}" não reconhecida.`;
   }
@@ -1072,6 +1220,9 @@ Deno.serve(async (req) => {
       '7. Responda sempre em português brasileiro.',
       '8. Quando o usuário enviar um arquivo, use upload_to_drive para salvá-lo.',
       '9. Você tem acesso a TODAS as funções do sistema: CRM, agenda, tarefas, drive, propostas, contratos, recibos, serviços, email, automações, chatbots, agentes de IA, booking e WhatsApp.',
+      '10. Quando o usuário pedir para CRIAR uma automação, use create_automation. Pergunte o gatilho e as ações.',
+      '11. Quando o usuário pedir para CRIAR um chatbot, use create_chatbot. Pergunte o objetivo do fluxo.',
+      '12. Quando o usuário pedir para CRIAR um agente de IA, use create_ai_agent. Pergunte nome, personalidade e instruções.',
       '',
       lastMedia ? `ARQUIVO RECEBIDO: O usuário enviou um arquivo (${lastMedia.fileName || 'arquivo'}). Use upload_to_drive para salvá-lo se solicitado.` : '',
       '',

@@ -69,3 +69,6 @@ verify_jwt = false
 [functions.send-user-notification]
 verify_jwt = false
 
+[functions.whatsapp-health-check]
+verify_jwt = false
+

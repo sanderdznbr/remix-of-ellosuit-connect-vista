@@ -876,6 +876,60 @@ Deno.serve(async (req) => {
                 console.error('🤖🆕 [AUTO-TRIGGER] Error:', autoTriggerErr);
               }
             }
+
+            // ==================== AUTO-ASSIGN AI AGENT BY SESSION ====================
+            // Check if any AI agent is configured to auto-respond on this specific WhatsApp session
+            if (!fromMe && conversation && !isGroup) {
+              try {
+                // Check if a chatbot was already triggered for this conversation
+                const { data: runningExec } = await supabase
+                  .from('chatbot_executions')
+                  .select('id')
+                  .eq('conversation_id', conversation.id)
+                  .eq('status', 'running')
+                  .limit(1);
+
+                const chatbotAlreadyRunning = runningExec && runningExec.length > 0;
+
+                if (!chatbotAlreadyRunning) {
+                  // Find an active AI agent bound to this specific WhatsApp session
+                  const { data: boundAgent } = await supabase
+                    .from('ai_agents')
+                    .select('id, name')
+                    .eq('company_id', companyId)
+                    .eq('whatsapp_enabled', true)
+                    .eq('whatsapp_session_id', targetSessionId)
+                    .eq('is_active', true)
+                    .limit(1)
+                    .single();
+
+                  if (boundAgent) {
+                    console.log(`🤖🔗 [AUTO-ASSIGN] Agent "${boundAgent.name}" bound to session ${targetSessionId}, auto-assigning to conversation ${conversation.id}`);
+                    await supabase
+                      .from('whatsapp_conversations')
+                      .update({
+                        assigned_agent_id: boundAgent.id,
+                        ai_auto_reply_enabled: true,
+                      })
+                      .eq('id', conversation.id);
+
+                    // Send system message
+                    await supabase.from('whatsapp_messages').insert({
+                      company_id: companyId,
+                      session_id: targetSessionId,
+                      conversation_id: conversation.id,
+                      content: `🤖 Agente "${boundAgent.name}" assumiu a conversa automaticamente.`,
+                      from_me: true,
+                      status: 'sent',
+                      message_type: 'system',
+                      sender_name: 'Sistema',
+                    });
+                  }
+                }
+              } catch (autoAssignErr) {
+                console.error('🤖🔗 [AUTO-ASSIGN] Error:', autoAssignErr);
+              }
+            }
           } else {
             // Update conversation with latest info
             const updateData: Record<string, unknown> = {

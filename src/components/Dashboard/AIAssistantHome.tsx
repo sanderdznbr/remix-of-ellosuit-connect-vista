@@ -18,6 +18,8 @@ interface ChatMessage {
   fileType?: string;
   action?: any;
   isLoading?: boolean;
+  qrCode?: string;
+  sessionId?: string;
 }
 
 const FILE_ICONS: Record<string, React.ElementType> = {
@@ -181,6 +183,8 @@ const AIAssistantHome: React.FC = () => {
 
       // Remove loading, add real response
       const responseText = data.response || data.error || 'Desculpe, ocorreu um erro.';
+      const qrCode = data.action?.qrCode || undefined;
+      const sessionId = data.action?.sessionId || undefined;
       setMessages(prev => {
         const filtered = prev.filter(m => m.id !== loadingId);
         return [...filtered, {
@@ -188,6 +192,8 @@ const AIAssistantHome: React.FC = () => {
           role: 'assistant',
           content: responseText,
           action: data.action,
+          qrCode,
+          sessionId,
         }];
       });
 
@@ -623,8 +629,23 @@ const AIAssistantHome: React.FC = () => {
                       />
                     )}
 
+                    {/* QR Code for WhatsApp connection */}
+                    {msg.action?.action === 'whatsapp_qr_code' && msg.action?.qrCode && (
+                      <WhatsAppQRInline 
+                        qrCode={msg.action.qrCode} 
+                        sessionId={msg.action.sessionId}
+                        onConnected={() => {
+                          setMessages(prev => prev.map(m => 
+                            m.id === msg.id 
+                              ? { ...m, content: '✅ WhatsApp vinculado com sucesso! Agora posso enviar mensagens pelo seu número.', action: { action: 'whatsapp_connected' }, qrCode: undefined }
+                              : m
+                          ));
+                        }}
+                      />
+                    )}
+
                     {/* Action buttons based on action type */}
-                    {msg.action?.navigate && (
+                    {msg.action?.navigate && msg.action?.action !== 'whatsapp_qr_code' && (
                       <button
                         onClick={() => navigate(msg.action.navigate)}
                         className="mt-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
@@ -634,6 +655,8 @@ const AIAssistantHome: React.FC = () => {
                          msg.action.action === 'contact_created' ? 'Ver Cadastros →' :
                          msg.action.action === 'saved_to_drive' ? 'Abrir Drive →' :
                          msg.action.action === 'folder_created' ? 'Abrir Drive →' :
+                         msg.action.action === 'automation_created' ? 'Ver Automações →' :
+                         msg.action.action === 'chatbot_created' ? 'Ver Chatbot Builder →' :
                          msg.action.label ? `Ir para ${msg.action.label} →` : 'Abrir →'}
                       </button>
                     )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Smartphone, Clock, TestTube, RefreshCw, MessageSquare, Calendar, Mail, Send, CheckSquare, Trash2, Globe } from 'lucide-react';
+import { Bell, Smartphone, Clock, TestTube, RefreshCw, MessageSquare, Calendar, Mail, Send, CheckSquare, Trash2, Globe, Phone, Save, Check } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { useDeviceRegistration } from '@/hooks/useDeviceRegistration';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const NotificationSettings = () => {
   const { settings, updateNotificationSettings, isLoading } = useNotificationSettings();
@@ -26,10 +27,67 @@ const NotificationSettings = () => {
   const { permission, ready: oneSignalReady, requestPermission: requestPushPermission } = useOneSignal();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSendingPushTest, setIsSendingPushTest] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [testTitle, setTestTitle] = useState('🎉 Notificação Teste');
   const [testMessage, setTestMessage] = useState('Esta é uma notificação de teste do Ello Suit com APNs configurado!');
+
+  // Load saved WhatsApp number
+  const { data: notifPrefs } = useQuery({
+    queryKey: ['notification-preferences', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (notifPrefs?.whatsapp_number) {
+      setWhatsappNumber(notifPrefs.whatsapp_number);
+    }
+  }, [notifPrefs]);
+
+  const saveWhatsappNumber = async () => {
+    if (!user) return;
+    setIsSavingPhone(true);
+    try {
+      const cleanNumber = whatsappNumber.replace(/\D/g, '');
+      if (!cleanNumber || cleanNumber.length < 10) {
+        toast({ title: '❌ Número inválido', description: 'Insira um número com DDD (ex: 5541999999999)', variant: 'destructive' });
+        return;
+      }
+
+      // Get company_id
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+
+      if (notifPrefs?.id) {
+        await supabase.from('notification_preferences').update({ whatsapp_number: cleanNumber }).eq('id', notifPrefs.id);
+      } else {
+        await supabase.from('notification_preferences').insert({
+          user_id: user.id,
+          company_id: cu?.company_id || user.id,
+          whatsapp_number: cleanNumber,
+          whatsapp_enabled: true,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+      toast({ title: '✅ Número salvo', description: 'Seu WhatsApp foi registrado para receber notificações.' });
+    } catch (error: any) {
+      toast({ title: '❌ Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsSavingPhone(false);
+    }
+  };
 
   const handleSettingChange = async (key: string, value: boolean | number) => {
     try {
@@ -184,7 +242,46 @@ const NotificationSettings = () => {
             Receba alertas diretamente no seu WhatsApp conectado à conta admin
           </p>
         </CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className="space-y-4">
+          {/* WhatsApp Number Input */}
+          <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-green-500" />
+              <Label className="text-sm font-medium">Seu número WhatsApp</Label>
+              {notifPrefs?.whatsapp_number && (
+                <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                  <Check className="h-3 w-3 mr-1" /> Registrado
+                </Badge>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="5541999999999"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                className="flex-1 h-9 text-sm"
+              />
+              <Button
+                size="sm"
+                onClick={saveWhatsappNumber}
+                disabled={isSavingPhone || !whatsappNumber.trim()}
+                className="h-9"
+              >
+                {isSavingPhone ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground" />
+                ) : (
+                  <><Save className="h-3.5 w-3.5 mr-1" /> Salvar</>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Informe com código do país + DDD + número (ex: 5541999999999). As notificações serão enviadas pelo WhatsApp da Ellosuit.
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Toggle list */}
           {whatsappToggles.map((toggle, index) => (
             <React.Fragment key={toggle.key}>
               {index > 0 && <Separator className="my-3" />}

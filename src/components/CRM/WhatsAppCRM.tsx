@@ -1753,13 +1753,11 @@ const WhatsAppCRM: React.FC = () => {
   return (
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
-      isMobile && showMobileChat ? "h-[100dvh] fixed inset-0 z-50" : isMobile ? "h-[100dvh]" : "h-[calc(100vh-64px)]"
+      "h-[100dvh] md:h-[calc(100vh-64px)]",
+      isMobile && showMobileChat && "fixed inset-0 z-50"
     )}>
-      {/* Top Header - Hidden on mobile */}
-      <div className={cn(
-        "p-3 border-b bg-card flex items-center justify-between flex-shrink-0",
-        isMobile && "hidden"
-      )}>
+      {/* Top Header - Hidden on mobile (md:flex) */}
+      <div className="p-3 border-b bg-card hidden md:flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           {/* View Toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -1959,9 +1957,8 @@ const WhatsAppCRM: React.FC = () => {
             "w-full md:w-96 lg:w-[400px] border-r flex flex-col bg-card",
             showMobileChat && "hidden md:flex"
           )}>
-            {/* Mobile WhatsApp-style header */}
-            {isMobile && (
-              <div className="flex items-center justify-between px-3 h-14 bg-[#FF4500] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+            {/* Mobile WhatsApp-style header - hidden on md+ screens */}
+              <div className="flex md:hidden items-center justify-between px-3 h-14 bg-[#FF4500] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => navigate('/dashboard')}
@@ -2101,10 +2098,9 @@ const WhatsAppCRM: React.FC = () => {
                   </DropdownMenu>
                 </div>
               </div>
-            )}
 
-            {/* Channel Selector - hidden on mobile, shown in header instead */}
-            {!isMobile && (
+            {/* Channel Selector - hidden on mobile, shown on md+ screens */}
+            <div className="hidden md:block">
               <ChannelSelector
                 sessions={sessions}
                 selectedSessionId={selectedSessionId}
@@ -2118,7 +2114,7 @@ const WhatsAppCRM: React.FC = () => {
                   loadConversations();
                 }}
               />
-            )}
+            </div>
             
             {/* Search & Filters */}
             <div className={cn("border-b space-y-2", isMobile ? "p-3 pt-2" : "p-4 space-y-3")}>

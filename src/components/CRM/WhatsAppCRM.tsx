@@ -2276,8 +2276,8 @@ const WhatsAppCRM: React.FC = () => {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                          {formatTime(conversation.last_message_at)}
+                        <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-auto pl-2 whitespace-nowrap">
+                          {conversation.last_message_at ? formatTime(conversation.last_message_at) : '--:--'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between min-w-0">

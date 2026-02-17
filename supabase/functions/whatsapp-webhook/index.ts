@@ -1591,28 +1591,59 @@ Deno.serve(async (req) => {
                             nextNodeId = edge?.target || null;
                             console.log(`🤖🔄 [CHATBOT] Matched button ${matchedIndex}: "${buttons[matchedIndex]}" -> ${nextNodeId}`);
                           } else {
-                            // === AI FALLBACK: Try to interpret user intent with AI before giving up ===
+                            // === AI DEEP FALLBACK: Scan entire flow tree to find matching product/option ===
                             let aiMatchedIndex = -1;
                             try {
                               const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
                               if (LOVABLE_API_KEY) {
-                                const buttonsDescription = buttons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
-                                const aiInterpretPrompt = `Você é um assistente que interpreta mensagens de clientes em um chatbot de WhatsApp.
+                                // Build a complete map of all reachable nodes from current node
+                                const flowMap: { path: string; nodeId: string; content: string; btns: string[] }[] = [];
+                                const visited = new Set<string>();
+                                
+                                const traverseNodes = (nodeId: string, pathPrefix: string, depth: number) => {
+                                  if (depth > 6 || visited.has(nodeId)) return;
+                                  visited.add(nodeId);
+                                  const outEdges = edges.filter((e: any) => e.source === nodeId);
+                                  for (const oe of outEdges) {
+                                    const tn = nodes.find((n: any) => n.id === oe.target);
+                                    if (!tn) continue;
+                                    const nc = tn.data?.config?.content || tn.data?.label || '';
+                                    const nb: string[] = tn.data?.config?.buttons || [];
+                                    const lbl = tn.data?.label || tn.id;
+                                    const np = `${pathPrefix} > ${lbl}`;
+                                    flowMap.push({ path: np, nodeId: tn.id, content: nc, btns: nb });
+                                    traverseNodes(tn.id, np, depth + 1);
+                                  }
+                                };
+                                
+                                traverseNodes(currentNode.id, currentNode.data?.label || 'Menu', 0);
+                                
+                                const currentButtonsDesc = buttons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                                const flowTreeDesc = flowMap.map((fm, i) => 
+                                  `[Nó ${i+1}] ${fm.path}\nConteúdo: ${fm.content}${fm.btns.length > 0 ? '\nSub-opções: ' + fm.btns.join(', ') : ''}`
+                                ).join('\n---\n');
+                                
+                                const aiPrompt = `Você é um assistente que interpreta mensagens de clientes em chatbots de WhatsApp de farmácia/e-commerce.
 
-O chatbot apresentou estas opções ao cliente:
-${buttonsDescription}
+MENU ATUAL apresentado ao cliente:
+${currentButtonsDesc}
 
-O cliente respondeu: "${userInput}"
+MENSAGEM DO CLIENTE: "${userInput}"
 
-Analise a mensagem do cliente e determine qual opção ele está tentando escolher. Considere:
-- Erros de digitação e abreviações
-- Nomes de produtos similares ou parciais
-- Intenção implícita na mensagem
-- Números ou referências indiretas às opções
+MAPA COMPLETO DO FLUXO (todos os produtos e caminhos acessíveis a partir de cada opção):
+${flowTreeDesc}
 
-Responda APENAS com o número da opção que melhor corresponde (ex: "1" ou "2"). Se realmente não for possível determinar a intenção, responda "0".`;
+TAREFA: Determine qual opção do MENU ATUAL o cliente quer acessar, analisando todo o fluxo.
 
-                                console.log(`🤖🧠 [CHATBOT-AI] Attempting AI fallback for: "${userInput}" against ${buttons.length} buttons`);
+REGRAS IMPORTANTES:
+- O cliente pode ter erros de digitação (ex: "Terzec" = "Tirzec", "sema" = "Semaglutida")  
+- Se o cliente menciona um produto específico com dosagem (ex: "15mg"), busque no mapa qual opção do menu atual leva a esse produto
+- Analise nomes comerciais, princípios ativos, abreviações
+- Só responda se tiver ALTA confiança no match
+
+Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar com confiança, responda 0.`;
+
+                                console.log(`🤖🧠 [CHATBOT-AI] Deep fallback: "${userInput}" - ${flowMap.length} nodes scanned`);
                                 
                                 const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                                   method: "POST",
@@ -1620,45 +1651,42 @@ Responda APENAS com o número da opção que melhor corresponde (ex: "1" ou "2")
                                   body: JSON.stringify({
                                     model: "google/gemini-3-flash-preview",
                                     messages: [
-                                      { role: "system", content: aiInterpretPrompt },
+                                      { role: "system", content: aiPrompt },
                                       { role: "user", content: userInput },
                                     ],
-                                    temperature: 0.1,
+                                    temperature: 0.05,
                                   }),
                                 });
                                 
                                 if (aiResp.ok) {
                                   const aiData = await aiResp.json();
                                   const aiAnswer = (aiData.choices?.[0]?.message?.content || '').trim();
-                                  const aiNum = parseInt(aiAnswer);
-                                  if (!isNaN(aiNum) && aiNum >= 1 && aiNum <= buttons.length) {
+                                  const numMatch = aiAnswer.match(/\d+/);
+                                  const aiNum = numMatch ? parseInt(numMatch[0]) : 0;
+                                  if (aiNum >= 1 && aiNum <= buttons.length) {
                                     aiMatchedIndex = aiNum - 1;
-                                    console.log(`🤖🧠 [CHATBOT-AI] AI matched "${userInput}" to option ${aiNum}: "${buttons[aiMatchedIndex]}"`);
+                                    console.log(`🤖🧠 [CHATBOT-AI] Matched "${userInput}" → option ${aiNum}: "${buttons[aiMatchedIndex]}"`);
                                   } else {
-                                    console.log(`🤖🧠 [CHATBOT-AI] AI could not match. Answer: "${aiAnswer}"`);
+                                    console.log(`🤖🧠 [CHATBOT-AI] No match. AI said: "${aiAnswer}"`);
                                   }
-                                } else {
-                                  console.log(`🤖🧠 [CHATBOT-AI] AI request failed: ${aiResp.status}`);
                                 }
                               }
                             } catch (aiErr) {
-                              console.error(`🤖🧠 [CHATBOT-AI] AI fallback error:`, aiErr);
+                              console.error(`🤖🧠 [CHATBOT-AI] Deep fallback error:`, aiErr);
                             }
                             
                             if (aiMatchedIndex >= 0) {
-                              // AI successfully matched - follow that button's edge
                               const edge = edges.find((e: any) =>
                                 e.source === currentNode.id && e.sourceHandle === `btn_${aiMatchedIndex}`
                               );
                               nextNodeId = edge?.target || null;
-                              console.log(`🤖🧠 [CHATBOT-AI] AI routed to button ${aiMatchedIndex}: "${buttons[aiMatchedIndex]}" -> ${nextNodeId}`);
+                              console.log(`🤖🧠 [CHATBOT-AI] Routed → btn ${aiMatchedIndex}: "${buttons[aiMatchedIndex]}" -> ${nextNodeId}`);
                             } else {
-                              // AI couldn't match either - follow "invalid" handle
                               const invalidEdge = edges.find((e: any) =>
                                 e.source === currentNode.id && e.sourceHandle === 'invalid'
                               );
                               nextNodeId = invalidEdge?.target || null;
-                              console.log(`🤖🔄 [CHATBOT] AI + keyword match failed for "${userInput}", following invalid edge -> ${nextNodeId}`);
+                              console.log(`🤖🔄 [CHATBOT] AI deep match failed for "${userInput}" -> invalid edge ${nextNodeId}`);
                             }
                           }
                         } else {

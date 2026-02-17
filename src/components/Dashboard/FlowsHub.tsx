@@ -66,8 +66,8 @@ export default function FlowsHub() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
-        <div className="mb-6">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 pt-2 pb-24 md:py-6">
+        <div className="mb-3">
           <h1 className="text-xl font-bold text-foreground">Flow</h1>
           <p className="text-xs text-muted-foreground">Produtividade e organização</p>
         </div>

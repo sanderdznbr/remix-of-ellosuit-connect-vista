@@ -447,6 +447,75 @@ const TOOLS = [
     }
   },
 
+  // === CONNECT WHATSAPP ===
+  {
+    type: "function",
+    function: {
+      name: "connect_whatsapp",
+      description: "Conectar um número de WhatsApp gerando QR Code para escaneamento. Use quando o usuário quer conectar o WhatsApp dele.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+
+  // === CRIAR AUTOMAÇÃO ===
+  {
+    type: "function",
+    function: {
+      name: "create_automation",
+      description: "Criar uma nova automação no sistema. O usuário descreve o que quer automatizar e a IA monta os nodes e edges.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome da automação" },
+          description: { type: "string", description: "Descrição do que a automação faz" },
+          trigger_type: { type: "string", enum: ["new_client", "new_event", "form_submit", "tag_added", "manual"], description: "Tipo de gatilho" },
+          actions: {
+            type: "array",
+            description: "Lista de ações a executar",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["send_email", "send_whatsapp", "create_task", "add_tag", "wait", "notify"], description: "Tipo da ação" },
+                config: { type: "object", description: "Configurações da ação (template, message, delay, etc.)" }
+              }
+            }
+          }
+        },
+        required: ["name", "trigger_type"]
+      }
+    }
+  },
+
+  // === CRIAR CHATBOT ===
+  {
+    type: "function",
+    function: {
+      name: "create_chatbot",
+      description: "Criar um novo fluxo de chatbot para WhatsApp. O usuário descreve o fluxo e a IA monta os blocos.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome do chatbot" },
+          description: { type: "string", description: "Descrição do fluxo" },
+          trigger: { type: "string", enum: ["whatsapp_channel", "keyword", "conversation_start"], description: "Tipo de gatilho" },
+          steps: {
+            type: "array",
+            description: "Passos do fluxo do chatbot",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["message", "buttons", "wait_response", "condition", "transfer_human", "transfer_ai_agent", "set_variable"], description: "Tipo do bloco" },
+                content: { type: "string", description: "Texto da mensagem ou condição" },
+                options: { type: "array", items: { type: "string" }, description: "Opções para botões" }
+              }
+            }
+          }
+        },
+        required: ["name", "trigger"]
+      }
+    }
+  },
+
   // === DASHBOARD SUMMARY ===
   {
     type: "function",
@@ -1162,6 +1231,227 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       };
     }
 
+    // ==================== CONNECT WHATSAPP ====================
+    case 'connect_whatsapp': {
+      // Check if already connected
+      const { data: existingSessions } = await supabase.from('whatsapp_sessions')
+        .select('id, instance_name, status, phone_number')
+        .eq('company_id', companyId)
+        .eq('status', 'connected');
+      
+      if (existingSessions?.length) {
+        return {
+          result: `✅ Seu WhatsApp já está conectado! Número: ${existingSessions[0].phone_number || 'N/A'}`,
+          action: { action: 'whatsapp_already_connected', session: existingSessions[0] }
+        };
+      }
+
+      const BAILEYS_URL_ENV = Deno.env.get('BAILEYS_SERVER_URL') || '';
+      const SUPABASE_URL_ENV = Deno.env.get('SUPABASE_URL') || '';
+
+      // Create new instance
+      const instanceName = `assistant-${companyId.substring(0, 8)}-${Date.now()}`;
+      const webhookSecret = crypto.randomUUID();
+      const webhookUrl = `${SUPABASE_URL_ENV}/functions/v1/whatsapp-webhook`;
+
+      const { data: session, error: sessionErr } = await supabase
+        .from('whatsapp_sessions')
+        .insert({
+          company_id: companyId,
+          user_id: userId,
+          instance_name: instanceName,
+          status: 'connecting',
+          webhook_secret: webhookSecret,
+          baileys_server_url: BAILEYS_URL_ENV,
+          settings: { webhook_url: webhookUrl, created_from: 'ai-assistant' }
+        })
+        .select()
+        .single();
+
+      if (sessionErr) return { result: `❌ Erro ao criar sessão: ${sessionErr.message}` };
+
+      // Create instance on Baileys server
+      let qrCode: string | null = null;
+      try {
+        const baileysRes = await fetch(`${BAILEYS_URL_ENV}/api/instance/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session.id, instanceName, webhookUrl, webhookSecret }),
+        });
+        const baileysData = await baileysRes.json();
+        if (baileysData?.qrCode) {
+          qrCode = baileysData.qrCode;
+          await supabase.from('whatsapp_sessions').update({ qr_code: qrCode }).eq('id', session.id);
+        }
+      } catch (e) {
+        console.error('[connect_whatsapp] Baileys error:', e);
+      }
+
+      // If no QR yet, try fetching it
+      if (!qrCode) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const qrRes = await fetch(`${BAILEYS_URL_ENV}/api/instance/qr?instanceName=${instanceName}`);
+          const qrData = await qrRes.json();
+          if (qrData?.qrCode) {
+            qrCode = qrData.qrCode;
+            await supabase.from('whatsapp_sessions').update({ qr_code: qrCode }).eq('id', session.id);
+          }
+        } catch (e) {
+          console.error('[connect_whatsapp] QR fetch error:', e);
+        }
+      }
+
+      return {
+        result: qrCode 
+          ? `📱 Escaneie o QR Code abaixo com seu WhatsApp para conectar!`
+          : `⏳ Estou gerando o QR Code... Isso pode levar alguns segundos. Tente novamente em instantes.`,
+        action: { 
+          action: 'whatsapp_qr_code', 
+          qrCode, 
+          sessionId: session.id 
+        }
+      };
+    }
+
+    // ==================== CREATE AUTOMATION ====================
+    case 'create_automation': {
+      const triggerType = (args.trigger_type as string) || 'manual';
+      const actions = (args.actions as any[]) || [];
+      
+      // Build nodes and edges for the automation
+      const nodes: any[] = [];
+      const edges: any[] = [];
+      
+      // Trigger node
+      const triggerId = crypto.randomUUID();
+      nodes.push({
+        id: triggerId,
+        type: 'trigger',
+        position: { x: 250, y: 50 },
+        data: { 
+          label: `Gatilho: ${triggerType}`,
+          triggerType,
+          config: {}
+        }
+      });
+
+      let prevNodeId = triggerId;
+      let yPos = 200;
+      
+      for (const action of actions) {
+        const nodeId = crypto.randomUUID();
+        nodes.push({
+          id: nodeId,
+          type: 'action',
+          position: { x: 250, y: yPos },
+          data: {
+            label: action.type || 'Ação',
+            actionType: action.type,
+            config: action.config || {}
+          }
+        });
+        edges.push({
+          id: `e-${prevNodeId}-${nodeId}`,
+          source: prevNodeId,
+          target: nodeId
+        });
+        prevNodeId = nodeId;
+        yPos += 150;
+      }
+
+      const { data: automation, error } = await supabase.from('automations').insert({
+        name: args.name as string,
+        description: (args.description as string) || null,
+        trigger_type: triggerType,
+        nodes,
+        edges,
+        is_active: false,
+        company_id: companyId,
+        created_by: userId,
+      }).select('id, name').single();
+
+      if (error) return { result: `❌ Erro ao criar automação: ${error.message}` };
+      
+      return {
+        result: `✅ Automação "${automation.name}" criada com ${nodes.length} blocos! Está desativada por padrão - ative quando estiver pronta.`,
+        action: { action: 'automation_created', data: automation, navigate: '/dashboard/automacoes' }
+      };
+    }
+
+    // ==================== CREATE CHATBOT ====================
+    case 'create_chatbot': {
+      const trigger = (args.trigger as string) || 'whatsapp_channel';
+      const steps = (args.steps as any[]) || [];
+      
+      const nodes: any[] = [];
+      const edgesArr: any[] = [];
+
+      // Trigger node
+      const triggerId = crypto.randomUUID();
+      nodes.push({
+        id: triggerId,
+        type: 'trigger',
+        subType: trigger,
+        position: { x: 250, y: 50 },
+        data: { label: 'Gatilho', config: { triggerType: trigger } }
+      });
+
+      let prevNodeId = triggerId;
+      let yPos = 200;
+
+      for (const step of steps) {
+        const nodeId = crypto.randomUUID();
+        const nodeType = step.type === 'buttons' ? 'message' : 
+                         step.type === 'wait_response' ? 'delay' :
+                         step.type === 'condition' ? 'condition' :
+                         step.type === 'transfer_human' || step.type === 'transfer_ai_agent' ? 'action' :
+                         step.type === 'set_variable' ? 'action' : 'message';
+        const subType = step.type === 'buttons' ? 'buttons' : 
+                        step.type === 'wait_response' ? 'wait_response' : 
+                        step.type || 'text';
+
+        nodes.push({
+          id: nodeId,
+          type: nodeType,
+          subType,
+          position: { x: 250, y: yPos },
+          data: { 
+            label: step.content || step.type,
+            config: {
+              message: step.content,
+              buttons: step.options?.map((opt: string, i: number) => ({ id: `btn-${i}`, label: opt })) || [],
+            }
+          }
+        });
+        edgesArr.push({
+          id: `e-${prevNodeId}-${nodeId}`,
+          source: prevNodeId,
+          target: nodeId
+        });
+        prevNodeId = nodeId;
+        yPos += 150;
+      }
+
+      const { data: chatbot, error } = await supabase.from('chatbot_flows').insert({
+        name: args.name as string,
+        description: (args.description as string) || null,
+        nodes,
+        edges: edgesArr,
+        trigger_config: { triggerType: trigger },
+        is_active: false,
+        company_id: companyId,
+        created_by: userId,
+      }).select('id, name').single();
+
+      if (error) return { result: `❌ Erro ao criar chatbot: ${error.message}` };
+      
+      return {
+        result: `✅ Chatbot "${chatbot.name}" criado com ${nodes.length} blocos! Está desativado por padrão - ative quando estiver pronto.`,
+        action: { action: 'chatbot_created', data: chatbot, navigate: '/dashboard/chatbot-builder' }
+      };
+    }
+
     default:
       return { result: `Ferramenta "${toolName}" não reconhecida.` };
   }
@@ -1225,19 +1515,19 @@ CONTEXTO:
 - Cargo: ${userData?.role || 'N/A'}
 
 CAPACIDADES (use as ferramentas para executar):
-1. **Agenda**: Criar, listar e excluir eventos/compromissos
-2. **Tarefas**: CRUD completo de tarefas e lembretes
-3. **CRM**: Criar, buscar, atualizar e excluir contatos
-4. **Drive**: Salvar arquivos, criar pastas, listar documentos
-5. **Serviços**: Cadastrar e listar serviços/produtos
-6. **Propostas/Contratos/Recibos**: Consultar documentos comerciais
-7. **Email Marketing**: Listar templates e emails enviados
-8. **Automações**: Listar e ativar/desativar automações
-9. **Chatbots**: Listar e gerenciar chatbots
-10. **WhatsApp**: Ver conversas recentes E ENVIAR MENSAGENS diretamente
-11. **Booking**: Ver links de agendamento
-12. **Dashboard**: Resumo geral do dia
-13. **Navegação**: Levar o usuário para qualquer módulo
+1. Agenda: Criar, listar e excluir eventos/compromissos
+2. Tarefas: CRUD completo de tarefas e lembretes
+3. CRM: Criar, buscar, atualizar e excluir contatos
+4. Drive: Salvar arquivos, criar pastas, listar documentos
+5. Serviços: Cadastrar e listar serviços/produtos
+6. Propostas/Contratos/Recibos: Consultar documentos comerciais
+7. Email Marketing: Listar templates e emails enviados
+8. Automações: Listar, ativar/desativar E CRIAR NOVAS automações
+9. Chatbots: Listar, gerenciar E CRIAR NOVOS chatbots
+10. WhatsApp: Ver conversas, ENVIAR MENSAGENS e CONECTAR novo número (QR Code)
+11. Booking: Ver links de agendamento
+12. Dashboard: Resumo geral do dia
+13. Navegação: Levar o usuário para qualquer módulo
 
 REGRAS:
 - EXECUTE as ações diretamente usando as ferramentas quando o usuário pedir
@@ -1251,8 +1541,11 @@ REGRAS:
 - NÃO use markdown com asteriscos (** ou *) nas respostas. Use texto simples e emojis para formatação.
 - Para links, use o formato: texto_descritivo (URL) - ex: "Link da reunião: https://..."
 - Ao criar reuniões, o link do Ellomeeting é gerado automaticamente pela ferramenta, não invente links externos como Google Meet ou Zoom
-- Quando o usuário pedir para ENVIAR uma mensagem via WhatsApp, DISPARAR ou NOTIFICAR alguém, use a ferramenta send_whatsapp_message. NÃO redirecione para telas, ENVIE diretamente.
-- Se o usuário não tiver WhatsApp conectado, informe e ofereça a opção de conectar`;
+- Quando o usuário pedir para ENVIAR uma mensagem via WhatsApp, DISPARAR ou NOTIFICAR alguém, PRIMEIRO pergunte: "Quer enviar pelo SEU WhatsApp ou pelo WhatsApp da Ellosuit?"
+- Se o usuário escolher "meu WhatsApp" e não tiver conectado, use connect_whatsapp para gerar o QR code direto no chat
+- Se o usuário escolher "Ellosuit", use send_whatsapp_message com use_ellosuit=true
+- Quando o usuário pedir para CRIAR uma automação, use create_automation. Pergunte o gatilho e as ações desejadas.
+- Quando o usuário pedir para CRIAR um chatbot, use create_chatbot. Pergunte o objetivo do fluxo e monte os passos.`;
 
     // Build conversation
     const apiMessages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];

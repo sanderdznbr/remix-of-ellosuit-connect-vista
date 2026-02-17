@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone, AlertCircle, Clock, Shield } from 'lucide-react';
+import { QrCode, Loader2, CheckCircle2, RefreshCw, Smartphone, AlertCircle, Clock, Shield, MessageCircle, Link2, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import WhatsAppSyncScreen from './WhatsAppSyncScreen';
+import ellosuit_icon from '@/assets/ellosuit-icon.png';
 
 interface WhatsAppQRModalProps {
   isOpen: boolean;

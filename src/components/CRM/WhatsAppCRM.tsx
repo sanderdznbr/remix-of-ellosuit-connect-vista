@@ -1755,7 +1755,7 @@ const WhatsAppCRM: React.FC = () => {
   return (
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
-      "h-[100dvh] md:h-full",
+      "h-[100dvh] md:h-[calc(100dvh-4rem)]",
       isMobile && showMobileChat && "fixed inset-0 z-50"
     )}>
       {/* Top Header - Hidden on mobile (md:flex) */}

@@ -1972,10 +1972,64 @@ const WhatsAppCRM: React.FC = () => {
                   <h1 className="text-white font-semibold text-lg">WhatsApp</h1>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Circle className={cn(
-                    "h-2.5 w-2.5 mr-1",
-                    connectedSessions.length > 0 ? "fill-emerald-400 text-emerald-400" : "fill-red-400 text-red-400"
-                  )} />
+                  {/* Channel selector button */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 h-9 px-2 rounded-full hover:bg-white/10 transition-colors">
+                        <Circle className={cn(
+                          "h-2.5 w-2.5",
+                          connectedSessions.length > 0 ? "fill-emerald-400 text-emerald-400" : "fill-red-400 text-red-400"
+                        )} />
+                        <Phone className="h-4 w-4 text-white" />
+                        <ChevronDown className="h-3 w-3 text-white/70" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-72">
+                      {sessions.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Nenhum canal configurado
+                        </div>
+                      ) : (
+                        sessions.map(session => {
+                          const isSelected = (selectedSessionId || connectedSessions[0]?.id) === session.id;
+                          return (
+                            <DropdownMenuItem
+                              key={session.id}
+                              onClick={() => { setSelectedSessionId(session.id); loadConversations(); }}
+                              className="flex items-center gap-3 p-2 cursor-pointer"
+                            >
+                              <div className="relative">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={session.profile_picture} />
+                                  <AvatarFallback className="bg-[#25D366] text-white text-xs">
+                                    <Phone className="h-4 w-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className={cn(
+                                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background",
+                                  session.status === 'connected' ? "bg-green-500" : "bg-red-500"
+                                )} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {session.phone_name || session.instance_name}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {session.phone_number || (session.status === 'connected' ? 'Conectado' : 'Desconectado')}
+                                </p>
+                              </div>
+                              {isSelected && <Check className="h-4 w-4 text-[#25D366] shrink-0" />}
+                            </DropdownMenuItem>
+                          );
+                        })
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowQRModal(true)} className="flex items-center gap-2 cursor-pointer">
+                        <Plus className="h-4 w-4" />
+                        <span>Adicionar novo canal</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-white/10 transition-colors">
@@ -2053,20 +2107,22 @@ const WhatsAppCRM: React.FC = () => {
               </div>
             )}
 
-            {/* Channel Selector */}
-            <ChannelSelector
-              sessions={sessions}
-              selectedSessionId={selectedSessionId}
-              onSelectSession={(id) => {
-                setSelectedSessionId(id);
-                loadConversations();
-              }}
-              onAddNew={() => setShowQRModal(true)}
-              onSessionDeleted={() => {
-                loadSessions();
-                loadConversations();
-              }}
-            />
+            {/* Channel Selector - hidden on mobile, shown in header instead */}
+            {!isMobile && (
+              <ChannelSelector
+                sessions={sessions}
+                selectedSessionId={selectedSessionId}
+                onSelectSession={(id) => {
+                  setSelectedSessionId(id);
+                  loadConversations();
+                }}
+                onAddNew={() => setShowQRModal(true)}
+                onSessionDeleted={() => {
+                  loadSessions();
+                  loadConversations();
+                }}
+              />
+            )}
             
             {/* Search & Filters */}
             <div className={cn("border-b space-y-2", isMobile ? "p-3 pt-2" : "p-4 space-y-3")}>

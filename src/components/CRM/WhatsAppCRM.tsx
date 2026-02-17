@@ -2253,8 +2253,8 @@ const WhatsAppCRM: React.FC = () => {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                           {isGroupConversation(conversation) && (
                             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           )}
@@ -2276,7 +2276,7 @@ const WhatsAppCRM: React.FC = () => {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-auto pl-2 whitespace-nowrap">
+                        <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap">
                           {conversation.last_message_at ? formatTime(conversation.last_message_at) : '--:--'}
                         </span>
                       </div>

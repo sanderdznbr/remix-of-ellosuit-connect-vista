@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Tag, UserPlus, Archive, Trash2, Phone, Bot, Check, MessageSquare, Copy } from 'lucide-react';
+import { Tag, UserPlus, Archive, Trash2, Phone, Bot, Check, MessageSquare, Copy, GitBranch, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ConversationLabel {
@@ -20,6 +20,7 @@ interface WhatsAppConversationData {
   contact_name?: string;
   status: string;
   assigned_agent_id?: string;
+  ai_auto_reply_enabled?: boolean;
   labels?: string[];
   last_message_at?: string;
 }
@@ -37,6 +38,8 @@ interface ConversationContextMenuProps {
   onDelete: (conv: WhatsAppConversationData) => void;
   onAssignAgent: (conv: WhatsAppConversationData, agentId: string | null) => void;
   onCopyPhone: (phone: string) => void;
+  onStartChatbot?: (conv: WhatsAppConversationData) => void;
+  onMarkResolved?: (conv: WhatsAppConversationData) => void;
 }
 
 const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
@@ -52,11 +55,13 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
   onDelete,
   onAssignAgent,
   onCopyPhone,
+  onStartChatbot,
+  onMarkResolved,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
@@ -70,11 +75,13 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen, onClose]);
@@ -84,7 +91,7 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
   // Adjust position to keep menu in viewport
   const adjustedPosition = {
     x: Math.min(position.x, window.innerWidth - 220),
-    y: Math.min(position.y, window.innerHeight - 350),
+    y: Math.min(position.y, window.innerHeight - 400),
   };
 
   const MenuItem: React.FC<{
@@ -100,10 +107,10 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
         onClose();
       }}
       className={cn(
-        "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-muted/80 transition-colors",
+        "w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 hover:bg-muted/80 transition-colors active:bg-muted",
         variant === 'destructive' && "text-destructive hover:bg-destructive/10",
         variant === 'warning' && "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20",
-        variant === 'success' && "text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20"
+        variant === 'success' && "text-[#FF4500] hover:bg-orange-50 dark:hover:bg-orange-950/20"
       )}
     >
       {icon}
@@ -119,7 +126,7 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-card border rounded-xl shadow-lg py-2 min-w-[200px] max-w-[250px] overflow-hidden"
+      className="fixed z-50 bg-card border rounded-xl shadow-lg py-2 min-w-[220px] max-w-[260px] overflow-hidden"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -151,49 +158,40 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
         )}
       </div>
 
-      {/* Actions */}
-      <MenuItem
-        icon={<Copy className="h-4 w-4" />}
-        label="Copiar número"
-        onClick={() => onCopyPhone(conversation.contact_phone)}
-      />
+      {/* Quick Actions */}
+      {onMarkResolved && conversation.status !== 'closed' && (
+        <MenuItem
+          icon={<CheckCircle2 className="h-4 w-4 text-[#FF4500]" />}
+          label="Marcar como resolvido"
+          onClick={() => onMarkResolved(conversation)}
+          variant="success"
+        />
+      )}
 
-      <MenuItem
-        icon={<Phone className="h-4 w-4" />}
-        label="Ligar"
-        onClick={() => window.open(`tel:${conversation.contact_phone}`)}
-      />
+      {onStartChatbot && (
+        <MenuItem
+          icon={<GitBranch className="h-4 w-4 text-[#FF4500]" />}
+          label="Ativar Chatbot"
+          onClick={() => onStartChatbot(conversation)}
+        />
+      )}
 
-      <Separator />
-
-      <MenuItem
-        icon={<Tag className="h-4 w-4" />}
-        label="Gerenciar etiquetas"
-        onClick={() => onManageLabels(conversation)}
-      />
-
-      <MenuItem
-        icon={<UserPlus className="h-4 w-4" />}
-        label="Adicionar à base de clientes"
-        onClick={() => onSaveLead(conversation)}
-      />
-
-      {/* AI Agents submenu */}
+      {/* AI Agents */}
       {aiAgents.length > 0 && (
         <>
           <Separator />
           <div className="px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-            Atribuir Agente IA
+            Agente IA
           </div>
           {aiAgents.map(agent => (
             <MenuItem
               key={agent.id}
-              icon={<Bot className="h-4 w-4 text-blue-500" />}
+              icon={<Bot className="h-4 w-4 text-[#FF4500]" />}
               label={agent.name}
               onClick={() => onAssignAgent(conversation, agent.id)}
               variant={conversation.assigned_agent_id === agent.id ? 'success' : 'default'}
               badge={conversation.assigned_agent_id === agent.id ? (
-                <Check className="h-3 w-3 text-green-500" />
+                <Check className="h-3 w-3 text-[#FF4500]" />
               ) : null}
             />
           ))}
@@ -206,6 +204,26 @@ const ConversationContextMenu: React.FC<ConversationContextMenuProps> = ({
           )}
         </>
       )}
+
+      <Separator />
+
+      <MenuItem
+        icon={<Copy className="h-4 w-4" />}
+        label="Copiar número"
+        onClick={() => onCopyPhone(conversation.contact_phone)}
+      />
+
+      <MenuItem
+        icon={<Tag className="h-4 w-4" />}
+        label="Gerenciar etiquetas"
+        onClick={() => onManageLabels(conversation)}
+      />
+
+      <MenuItem
+        icon={<UserPlus className="h-4 w-4" />}
+        label="Salvar como lead"
+        onClick={() => onSaveLead(conversation)}
+      />
 
       <Separator />
 

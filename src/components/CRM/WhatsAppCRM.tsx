@@ -2227,6 +2227,24 @@ const WhatsAppCRM: React.FC = () => {
                       selectedConversation?.id === conversation.id && "bg-muted"
                     )}
                     onContextMenu={(e) => handleConversationContextMenu(e, conversation)}
+                    onTouchStart={(e) => {
+                      const timer = setTimeout(() => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        setConversationContextMenu({
+                          isOpen: true,
+                          position: { x: touch.clientX, y: touch.clientY },
+                          conversation,
+                        });
+                      }, 500);
+                      (e.currentTarget as any)._longPressTimer = timer;
+                    }}
+                    onTouchEnd={(e) => {
+                      clearTimeout((e.currentTarget as any)._longPressTimer);
+                    }}
+                    onTouchMove={(e) => {
+                      clearTimeout((e.currentTarget as any)._longPressTimer);
+                    }}
                   >
                     <div className="relative">
                       <Avatar className="h-12 w-12">
@@ -3098,6 +3116,20 @@ const WhatsAppCRM: React.FC = () => {
         onDelete={(conv) => handleDeleteConversation(conv as WhatsAppConversationData)}
         onAssignAgent={(conv, agentId) => handleAssignAgent(conv as WhatsAppConversationData, agentId)}
         onCopyPhone={(phone) => handleCopyToClipboard(phone)}
+        onStartChatbot={(conv) => {
+          setSelectedConversation(conv as WhatsAppConversationData);
+          setShowStartChatbot(true);
+        }}
+        onMarkResolved={async (conv) => {
+          const { error } = await supabase
+            .from('whatsapp_conversations')
+            .update({ status: 'closed' })
+            .eq('id', conv.id);
+          if (!error) {
+            setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, status: 'closed' } : c));
+            toast({ title: 'Conversa marcada como resolvida' });
+          }
+        }}
       />
 
       {/* Message Context Menu */}

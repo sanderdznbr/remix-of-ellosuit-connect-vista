@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminMaster } from '@/hooks/useAdminMaster';
 import { useToast } from '@/hooks/use-toast';
 import WhatsAppQRModal from './WhatsAppQRModal';
 import WhatsAppKanbanView, { DEFAULT_COLUMNS, KanbanColumn } from './WhatsAppKanbanView';
@@ -212,6 +213,7 @@ const WhatsAppCRM: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isAdminMaster } = useAdminMaster();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -1753,7 +1755,7 @@ const WhatsAppCRM: React.FC = () => {
   return (
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
-      "h-[100dvh] md:h-[calc(100vh-64px)]",
+      "h-[100dvh] md:h-full",
       isMobile && showMobileChat && "fixed inset-0 z-50"
     )}>
       {/* Top Header - Hidden on mobile (md:flex) */}
@@ -1806,10 +1808,12 @@ const WhatsAppCRM: React.FC = () => {
             <RefreshCw className={cn("h-4 w-4 mr-1", syncingData && "animate-spin")} />
             <span className="hidden sm:inline text-xs">{syncingData ? 'Atualizando...' : 'Atualizar'}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowServerDownload(true)} className="h-7 px-2">
-            <Server className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline text-xs">Servidor</span>
-          </Button>
+          {isAdminMaster && (
+            <Button variant="ghost" size="sm" onClick={() => setShowServerDownload(true)} className="h-7 px-2">
+              <Server className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-xs">Servidor</span>
+            </Button>
+          )}
           {connectedSessions.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -2051,10 +2055,12 @@ const WhatsAppCRM: React.FC = () => {
                         <RefreshCw className={cn("h-4 w-4 mr-2", syncingData && "animate-spin")} />
                         {syncingData ? 'Atualizando...' : 'Atualizar'}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowServerDownload(true)}>
-                        <Server className="h-4 w-4 mr-2" />
-                        Servidor
-                      </DropdownMenuItem>
+                      {isAdminMaster && (
+                        <DropdownMenuItem onClick={() => setShowServerDownload(true)}>
+                          <Server className="h-4 w-4 mr-2" />
+                          Servidor
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       {connectedSessions.length > 0 ? (
                         <>

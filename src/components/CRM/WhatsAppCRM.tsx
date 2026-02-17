@@ -1756,7 +1756,8 @@ const WhatsAppCRM: React.FC = () => {
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
       "h-[100dvh] md:h-[calc(100dvh-4rem)]",
-      isMobile && showMobileChat && "fixed inset-0 z-50"
+      isMobile && showMobileChat && "fixed inset-0 z-50",
+      isMobile && !showMobileChat && "fixed inset-0 z-40"
     )}>
       {/* Top Header - Hidden on mobile (md:flex) */}
       <div className="p-3 border-b bg-card hidden md:flex items-center justify-between flex-shrink-0">
@@ -1962,7 +1963,7 @@ const WhatsAppCRM: React.FC = () => {
             showMobileChat && "hidden md:flex"
           )}>
             {/* Mobile WhatsApp-style header - hidden on md+ screens */}
-              <div className="flex md:hidden items-center justify-between px-3 h-14 bg-[#FF4500] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+              <div className="flex md:hidden items-center justify-between px-3 bg-[#FF4500] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(3.5rem + env(safe-area-inset-top))' }}>
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => navigate('/dashboard')}
@@ -2158,7 +2159,7 @@ const WhatsAppCRM: React.FC = () => {
             {/* AI Agents Section removed for cleaner mobile experience */}
         
         {/* Conversations List */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overscroll-contain">
           {syncingConversations ? (
             <div className="flex flex-col items-center justify-center h-64 text-center p-4">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF4500] mx-auto mb-4"></div>

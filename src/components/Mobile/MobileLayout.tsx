@@ -61,26 +61,11 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     );
   }
 
-  // Mobile CRM WhatsApp - fullscreen without header/navbar
+  // Mobile CRM WhatsApp - fullscreen, no header, no navbar
   if (isCrmWhatsApp) {
     return (
-      <div className="min-h-screen w-full bg-background relative">
-        {/* Minimal header with back arrow */}
-        <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center px-4 z-50">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-white" />
-          </button>
-          <span className="text-white font-medium ml-2 text-base">CRM WhatsApp</span>
-        </div>
-        
-        {/* Spacer */}
-        <div className="h-14" />
-        
-        {/* Full screen content - no padding bottom since no navbar */}
-        <main className="w-full bg-background">
+      <div className="h-[100dvh] w-full bg-background relative overflow-hidden">
+        <main className="w-full h-full bg-background">
           {children}
         </main>
       </div>

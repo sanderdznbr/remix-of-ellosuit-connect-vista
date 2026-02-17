@@ -2297,8 +2297,8 @@ const WhatsAppCRM: React.FC = () => {
                           {formatTime(conversation.last_message_at)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground truncate pr-2">
+                      <div className="flex items-center justify-between min-w-0">
+                        <p className="text-sm text-muted-foreground truncate pr-2 min-w-0 flex-1">
                           {conversation.last_message || 'Nova conversa'}
                         </p>
                         {(conversation.unread_count || 0) > 0 && (

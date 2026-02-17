@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Phone, MessageSquare, Settings, QrCode, Trash2, Users, Bot, Search, Filter, MoreVertical, Send, Check, CheckCheck, Circle, ArrowLeft, Sparkles, LayoutGrid, List, Tag, UserPlus, Contact, Archive, Image as ImageIcon, Loader2, Copy, Play, Pause, Mic, Server, Paperclip, FileText, Calendar, RefreshCw, Square, GitBranch, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ChannelSelector } from './ChannelSelector';
 import StartChatbotModal from './StartChatbotModal';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface WhatsAppSession {
   id: string;
@@ -208,6 +210,8 @@ const AudioPlayer: React.FC<{ mediaUrl: string; fromMe: boolean; isPTT?: boolean
 const WhatsAppCRM: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -306,7 +310,26 @@ const WhatsAppCRM: React.FC = () => {
     }
   }, [agentChatHistory]);
 
-  // Scroll to bottom on new messages
+  // Mobile: Handle browser back button to go back to conversation list instead of dashboard
+  useEffect(() => {
+    if (!isMobile || !showMobileChat) return;
+    
+    // Push a state so back button goes to conversation list
+    window.history.pushState({ whatsappChat: true }, '');
+    
+    const handlePopState = (e: PopStateEvent) => {
+      if (showMobileChat) {
+        e.preventDefault();
+        setShowMobileChat(false);
+        setSelectedConversation(null);
+        setSelectedAgent(null);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isMobile, showMobileChat]);
+
   useEffect(() => {
     if (!showScrollToBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1728,9 +1751,15 @@ const WhatsAppCRM: React.FC = () => {
   const currentMessages = selectedAgent ? agentChatMessages : messages;
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-background flex flex-col overflow-hidden">
-      {/* Top Header - Always visible */}
-      <div className="p-4 border-b bg-card flex items-center justify-between flex-shrink-0">
+    <div className={cn(
+      "bg-background flex flex-col overflow-hidden",
+      isMobile && showMobileChat ? "h-[100dvh] fixed inset-0 z-50" : "h-[calc(100vh-64px)]"
+    )}>
+      {/* Top Header - Hidden on mobile when chat is open */}
+      <div className={cn(
+        "p-4 border-b bg-card flex items-center justify-between flex-shrink-0",
+        isMobile && showMobileChat && "hidden"
+      )}>
         <div className="flex items-center gap-4">
           {/* View Toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -2243,18 +2272,30 @@ const WhatsAppCRM: React.FC = () => {
       {/* Chat Area - Right Panel */}
       <div className={cn(
         "flex-1 flex flex-col",
-        !showMobileChat && "hidden md:flex"
+        !showMobileChat && "hidden md:flex",
+        isMobile && showMobileChat && "w-full"
       )}>
         {selectedConversation || selectedAgent ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 border-b flex items-center justify-between px-4 bg-card">
+            <div className={cn(
+              "border-b flex items-center justify-between px-4 bg-card flex-shrink-0",
+              isMobile ? "h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]" : "h-16"
+            )}>
               <div className="flex items-center gap-3">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="md:hidden"
-                  onClick={() => setShowMobileChat(false)}
+                  onClick={() => {
+                    setShowMobileChat(false);
+                    setSelectedConversation(null);
+                    setSelectedAgent(null);
+                    // Pop the history state we pushed
+                    if (window.history.state?.whatsappChat) {
+                      window.history.back();
+                    }
+                  }}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -2718,7 +2759,10 @@ const WhatsAppCRM: React.FC = () => {
             </div>
             
             {/* Input Area */}
-            <div className="p-4 border-t bg-card">
+            <div className={cn(
+              "p-4 border-t bg-card",
+              isMobile && "pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            )}>
               {/* Hidden file input */}
               <input 
                 type="file" 

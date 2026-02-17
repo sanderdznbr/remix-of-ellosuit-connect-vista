@@ -1814,7 +1814,7 @@ const WhatsAppCRM: React.FC = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-7 px-2">
-                  <Circle className="h-2.5 w-2.5 fill-[#FF4500] text-[#FF4500] mr-1.5" />
+                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 mr-1.5" />
                   <span className="hidden sm:inline text-xs">Conexão</span>
                 </Button>
               </DropdownMenuTrigger>

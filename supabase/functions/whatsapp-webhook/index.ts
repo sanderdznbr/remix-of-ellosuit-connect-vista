@@ -1591,12 +1591,75 @@ Deno.serve(async (req) => {
                             nextNodeId = edge?.target || null;
                             console.log(`🤖🔄 [CHATBOT] Matched button ${matchedIndex}: "${buttons[matchedIndex]}" -> ${nextNodeId}`);
                           } else {
-                            // Invalid response - follow "invalid" handle
-                            const invalidEdge = edges.find((e: any) =>
-                              e.source === currentNode.id && e.sourceHandle === 'invalid'
-                            );
-                            nextNodeId = invalidEdge?.target || null;
-                            console.log(`🤖🔄 [CHATBOT] Invalid input "${userInput}", following invalid edge -> ${nextNodeId}`);
+                            // === AI FALLBACK: Try to interpret user intent with AI before giving up ===
+                            let aiMatchedIndex = -1;
+                            try {
+                              const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+                              if (LOVABLE_API_KEY) {
+                                const buttonsDescription = buttons.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n');
+                                const aiInterpretPrompt = `Você é um assistente que interpreta mensagens de clientes em um chatbot de WhatsApp.
+
+O chatbot apresentou estas opções ao cliente:
+${buttonsDescription}
+
+O cliente respondeu: "${userInput}"
+
+Analise a mensagem do cliente e determine qual opção ele está tentando escolher. Considere:
+- Erros de digitação e abreviações
+- Nomes de produtos similares ou parciais
+- Intenção implícita na mensagem
+- Números ou referências indiretas às opções
+
+Responda APENAS com o número da opção que melhor corresponde (ex: "1" ou "2"). Se realmente não for possível determinar a intenção, responda "0".`;
+
+                                console.log(`🤖🧠 [CHATBOT-AI] Attempting AI fallback for: "${userInput}" against ${buttons.length} buttons`);
+                                
+                                const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                                  method: "POST",
+                                  headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    model: "google/gemini-3-flash-preview",
+                                    messages: [
+                                      { role: "system", content: aiInterpretPrompt },
+                                      { role: "user", content: userInput },
+                                    ],
+                                    temperature: 0.1,
+                                  }),
+                                });
+                                
+                                if (aiResp.ok) {
+                                  const aiData = await aiResp.json();
+                                  const aiAnswer = (aiData.choices?.[0]?.message?.content || '').trim();
+                                  const aiNum = parseInt(aiAnswer);
+                                  if (!isNaN(aiNum) && aiNum >= 1 && aiNum <= buttons.length) {
+                                    aiMatchedIndex = aiNum - 1;
+                                    console.log(`🤖🧠 [CHATBOT-AI] AI matched "${userInput}" to option ${aiNum}: "${buttons[aiMatchedIndex]}"`);
+                                  } else {
+                                    console.log(`🤖🧠 [CHATBOT-AI] AI could not match. Answer: "${aiAnswer}"`);
+                                  }
+                                } else {
+                                  console.log(`🤖🧠 [CHATBOT-AI] AI request failed: ${aiResp.status}`);
+                                }
+                              }
+                            } catch (aiErr) {
+                              console.error(`🤖🧠 [CHATBOT-AI] AI fallback error:`, aiErr);
+                            }
+                            
+                            if (aiMatchedIndex >= 0) {
+                              // AI successfully matched - follow that button's edge
+                              const edge = edges.find((e: any) =>
+                                e.source === currentNode.id && e.sourceHandle === `btn_${aiMatchedIndex}`
+                              );
+                              nextNodeId = edge?.target || null;
+                              console.log(`🤖🧠 [CHATBOT-AI] AI routed to button ${aiMatchedIndex}: "${buttons[aiMatchedIndex]}" -> ${nextNodeId}`);
+                            } else {
+                              // AI couldn't match either - follow "invalid" handle
+                              const invalidEdge = edges.find((e: any) =>
+                                e.source === currentNode.id && e.sourceHandle === 'invalid'
+                              );
+                              nextNodeId = invalidEdge?.target || null;
+                              console.log(`🤖🔄 [CHATBOT] AI + keyword match failed for "${userInput}", following invalid edge -> ${nextNodeId}`);
+                            }
                           }
                         } else {
                           // Non-choice node: follow default edge (no sourceHandle or first edge)

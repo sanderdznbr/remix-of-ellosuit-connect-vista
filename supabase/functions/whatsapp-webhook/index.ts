@@ -817,14 +817,22 @@ Deno.serve(async (req) => {
 
                 if (autoFlows && autoFlows.length > 0) {
                   // Find flow with whatsapp_channel trigger (or conversation_start)
+                  // IMPORTANT: Respect sessionId filter — only trigger if flow matches this session or has no session filter
                   const triggerFlow = autoFlows.find((f: any) => {
                     const tc = f.trigger_config as Record<string, unknown> | null;
                     if (!tc) return false;
-                    return tc.type === 'whatsapp_channel' || tc.type === 'conversation_start';
+                    if (tc.type !== 'whatsapp_channel' && tc.type !== 'conversation_start') return false;
+                    // If flow has a specific sessionId, only trigger for that session
+                    if (tc.sessionId && tc.sessionId !== targetSessionId) return false;
+                    return true;
                   });
 
-                  // If no specific trigger found, use the first active flow as default
-                  const flowToTrigger = triggerFlow || autoFlows[0];
+                  // Only use a default flow if it doesn't have a session restriction
+                  const fallbackFlow = autoFlows.find((f: any) => {
+                    const tc = f.trigger_config as Record<string, unknown> | null;
+                    return !tc?.sessionId; // Only use flows without session filter as fallback
+                  });
+                  const flowToTrigger = triggerFlow || fallbackFlow;
 
                   if (flowToTrigger) {
                     // Check there's no existing execution for this conversation

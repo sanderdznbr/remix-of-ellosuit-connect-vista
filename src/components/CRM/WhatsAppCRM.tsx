@@ -1753,12 +1753,12 @@ const WhatsAppCRM: React.FC = () => {
   return (
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
-      isMobile && showMobileChat ? "h-[100dvh] fixed inset-0 z-50" : "h-[calc(100vh-64px)]"
+      isMobile && showMobileChat ? "h-[100dvh] fixed inset-0 z-50" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-[calc(100vh-64px)]"
     )}>
-      {/* Top Header - Hidden on mobile when chat is open */}
+      {/* Top Header - Hidden on mobile */}
       <div className={cn(
-        "p-4 border-b bg-card flex items-center justify-between flex-shrink-0",
-        isMobile && showMobileChat && "hidden"
+        "p-3 border-b bg-card flex items-center justify-between flex-shrink-0",
+        isMobile && "hidden"
       )}>
         <div className="flex items-center gap-4">
           {/* View Toggle */}
@@ -1798,47 +1798,24 @@ const WhatsAppCRM: React.FC = () => {
           </div>
         </div>
         
-        {/* Right side controls - Clean style like Lista/Kanban/Contatos */}
+        {/* Right side controls */}
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSelectedConversationForLabels(null);
-              setShowLabelsManager(true);
-            }}
-            className="h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedConversationForLabels(null); setShowLabelsManager(true); }} className="h-7 px-2">
             <Tag className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline text-xs">Etiquetas</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefreshData}
-            disabled={syncingData}
-            className="h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={handleRefreshData} disabled={syncingData} className="h-7 px-2">
             <RefreshCw className={cn("h-4 w-4 mr-1", syncingData && "animate-spin")} />
             <span className="hidden sm:inline text-xs">{syncingData ? 'Atualizando...' : 'Atualizar'}</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowServerDownload(true)}
-            className="h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowServerDownload(true)} className="h-7 px-2">
             <Server className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline text-xs">Servidor</span>
           </Button>
           {connectedSessions.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost"
-                  size="sm" 
-                  className="h-7 px-2"
-                >
+                <Button variant="ghost" size="sm" className="h-7 px-2">
                   <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500 mr-1.5" />
                   <span className="hidden sm:inline text-xs">Conexão</span>
                 </Button>
@@ -1853,81 +1830,154 @@ const WhatsAppCRM: React.FC = () => {
                   <QrCode className="h-4 w-4 mr-2" />
                   Conectar outro
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={async () => {
-                    const session = connectedSessions[0];
-                    if (!session) return;
-                    
-                    // OPTIMISTIC UPDATE - Update UI immediately to 'disconnected'
-                    // This ensures instant UI feedback
-                    setSessions(prev => prev.map(s => 
-                      s.id === session.id ? { ...s, status: 'disconnected' } : s
-                    ));
-                    
-                    try {
-                      // Update database
-                      await supabase
-                        .from('whatsapp_sessions')
-                        .update({ status: 'disconnected' })
-                        .eq('id', session.id);
-                      
-                      // CRITICAL: Force refetch to override any realtime updates
-                      // This ensures UI stays in sync with the database
-                      await loadSessions();
-                      
-                      // Call server to disconnect (fire and forget - don't wait)
-                      const serverUrl = session.baileys_server_url;
-                      if (serverUrl) {
-                        fetch(`${serverUrl}/disconnect/${session.instance_name}`, { method: 'POST' })
-                          .catch(e => console.warn('Server disconnect call failed:', e));
-                      }
-                      
-                      toast({ title: 'Desconectado', description: 'WhatsApp desconectado com sucesso' });
-                    } catch (e) {
-                      console.error('Error disconnecting:', e);
-                      // Refetch to get correct state on error
-                      await loadSessions();
-                      toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={async () => {
+                  const session = connectedSessions[0];
+                  if (!session) return;
+                  setSessions(prev => prev.map(s => s.id === session.id ? { ...s, status: 'disconnected' } : s));
+                  try {
+                    await supabase.from('whatsapp_sessions').update({ status: 'disconnected' }).eq('id', session.id);
+                    await loadSessions();
+                    const serverUrl = session.baileys_server_url;
+                    if (serverUrl) {
+                      fetch(`${serverUrl}/disconnect/${session.instance_name}`, { method: 'POST' }).catch(e => console.warn('Server disconnect call failed:', e));
                     }
-                  }}
-                >
+                    toast({ title: 'Desconectado', description: 'WhatsApp desconectado com sucesso' });
+                  } catch (e) {
+                    console.error('Error disconnecting:', e);
+                    await loadSessions();
+                    toast({ title: 'Erro', description: 'Erro ao desconectar', variant: 'destructive' });
+                  }
+                }}>
                   <Phone className="h-4 w-4 mr-2" />
                   Desconectar
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : hasDisconnectedSessions ? (
-            <Button 
-              variant="ghost"
-              size="sm" 
-              onClick={() => setShowQRModal(true)} 
-              className="h-7 px-2"
-            >
-              <Circle className="h-2.5 w-2.5 fill-destructive text-destructive mr-1.5" />
-              <span className="hidden sm:inline text-xs">Conexão</span>
-            </Button>
           ) : (
-            <Button 
-              variant="ghost"
-              size="sm" 
-              onClick={() => setShowQRModal(true)} 
-              className="h-7 px-2"
-            >
-              <Circle className="h-2.5 w-2.5 fill-muted-foreground text-muted-foreground mr-1.5" />
+            <Button variant="ghost" size="sm" onClick={() => setShowQRModal(true)} className="h-7 px-2">
+              <Circle className={cn("h-2.5 w-2.5 mr-1.5", hasDisconnectedSessions ? "fill-destructive text-destructive" : "fill-muted-foreground text-muted-foreground")} />
               <span className="hidden sm:inline text-xs">Conexão</span>
             </Button>
           )}
         </div>
 
-        {/* BaileysServerDownload Dialog */}
         {showServerDownload && (
-          <BaileysServerDownload 
-            isOpenExternal={showServerDownload} 
-            onClose={() => setShowServerDownload(false)} 
-          />
+          <BaileysServerDownload isOpenExternal={showServerDownload} onClose={() => setShowServerDownload(false)} />
         )}
       </div>
+
+      {/* Mobile-only: Gear settings button */}
+      {isMobile && !showMobileChat && (
+        <div className="flex items-center justify-between px-3 py-2 border-b bg-card flex-shrink-0">
+          <div className="flex items-center gap-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-8 px-2"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-8 px-2"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'contacts' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('contacts')}
+              className="h-8 px-2 relative"
+            >
+              <Users className="h-4 w-4" />
+              {contactsCount > 0 && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 h-4 min-w-4 p-0 text-[9px] flex items-center justify-center">
+                  {contactsCount > 999 ? '999+' : contactsCount}
+                </Badge>
+              )}
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            {/* Connection status indicator */}
+            <div className="flex items-center mr-1">
+              <Circle className={cn(
+                "h-2.5 w-2.5",
+                connectedSessions.length > 0 ? "fill-emerald-500 text-emerald-500" : "fill-destructive text-destructive"
+              )} />
+            </div>
+            
+            {/* Gear settings button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => { setSelectedConversationForLabels(null); setShowLabelsManager(true); }}>
+                  <Tag className="h-4 w-4 mr-2" />
+                  Gerenciar Etiquetas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRefreshData} disabled={syncingData}>
+                  <RefreshCw className={cn("h-4 w-4 mr-2", syncingData && "animate-spin")} />
+                  {syncingData ? 'Atualizando...' : 'Atualizar Dados'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowServerDownload(true)}>
+                  <Server className="h-4 w-4 mr-2" />
+                  Servidor Baileys
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {connectedSessions.length > 0 ? (
+                  <>
+                    <div className="px-2 py-1.5">
+                      <p className="text-xs font-medium flex items-center gap-1.5">
+                        <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
+                        {connectedSessions[0]?.phone_number || 'Conectado'}
+                      </p>
+                    </div>
+                    <DropdownMenuItem onClick={() => setShowQRModal(true)}>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Conectar outro canal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={async () => {
+                      const session = connectedSessions[0];
+                      if (!session) return;
+                      setSessions(prev => prev.map(s => s.id === session.id ? { ...s, status: 'disconnected' } : s));
+                      try {
+                        await supabase.from('whatsapp_sessions').update({ status: 'disconnected' }).eq('id', session.id);
+                        await loadSessions();
+                        if (session.baileys_server_url) {
+                          fetch(`${session.baileys_server_url}/disconnect/${session.instance_name}`, { method: 'POST' }).catch(() => {});
+                        }
+                        toast({ title: 'Desconectado' });
+                      } catch (e) {
+                        await loadSessions();
+                        toast({ title: 'Erro', variant: 'destructive' });
+                      }
+                    }}>
+                      <Phone className="h-4 w-4 mr-2" />
+                      Desconectar
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={() => setShowQRModal(true)}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Conectar WhatsApp
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
+
+      {showServerDownload && isMobile && (
+        <BaileysServerDownload isOpenExternal={showServerDownload} onClose={() => setShowServerDownload(false)} />
+      )}
 
       {/* Main Content */}
       {viewMode === 'kanban' ? (
@@ -2068,49 +2118,7 @@ const WhatsAppCRM: React.FC = () => {
               
             </div>
         
-            {/* AI Agents Section */}
-        {aiAgents.length > 0 && (
-          <div className="border-b">
-            <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-[#FF4500]" />
-                <span className="text-sm font-medium text-[#FF4500] dark:text-orange-300">Agentes IA</span>
-              </div>
-              <div className="space-y-1">
-                {aiAgents.map(agent => (
-                  <div
-                    key={agent.id}
-                    onClick={() => selectAgent(agent)}
-                    className={cn(
-                      "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
-                      selectedAgent?.id === agent.id 
-                        ? "bg-orange-100 dark:bg-orange-900/30" 
-                        : "hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                    )}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={agent.avatar_url || undefined} />
-                      <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-orange-600 text-white">
-                        <Bot className="h-5 w-5" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm truncate">{agent.name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-[#FF4500] dark:bg-orange-900 dark:text-orange-300">
-                          IA
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {agent.description || 'Agente de IA'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+            {/* AI Agents Section removed for cleaner mobile experience */}
         
         {/* Conversations List */}
         <ScrollArea className="flex-1">

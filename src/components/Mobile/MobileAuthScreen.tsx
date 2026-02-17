@@ -9,6 +9,24 @@ import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 const MobileAuthScreen = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+
+  // Force white status bar on auth screen
+  React.useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const prevTheme = meta?.getAttribute('content') || '#3000E3';
+    const prevBg = document.documentElement.style.backgroundColor || '';
+    const prevBodyBg = document.body.style.backgroundColor || '';
+
+    if (meta) meta.setAttribute('content', '#ffffff');
+    document.documentElement.style.backgroundColor = '#ffffff';
+    document.body.style.backgroundColor = '#ffffff';
+
+    return () => {
+      if (meta) meta.setAttribute('content', prevTheme);
+      document.documentElement.style.backgroundColor = prevBg;
+      document.body.style.backgroundColor = prevBodyBg;
+    };
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');

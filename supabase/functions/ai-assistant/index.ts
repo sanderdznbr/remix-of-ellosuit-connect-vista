@@ -419,6 +419,22 @@ const TOOLS = [
       }
     }
   },
+  {
+    type: "function",
+    function: {
+      name: "send_whatsapp_message",
+      description: "Enviar uma mensagem de WhatsApp para um contato. Busca automaticamente o número do contato pelo nome no CRM. Usa o WhatsApp conectado do usuário ou oferece alternativas.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_name: { type: "string", description: "Nome do contato (busca no CRM)" },
+          phone: { type: "string", description: "Número do telefone direto (se já souber, ex: 5541999999999)" },
+          message: { type: "string", description: "Texto da mensagem a enviar" }
+        },
+        required: ["message"]
+      }
+    }
+  },
 
   // === BOOKING ===
   {
@@ -930,6 +946,109 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       };
     }
 
+    case 'send_whatsapp_message': {
+      const contactName = args.contact_name as string | undefined;
+      let phone = args.phone as string | undefined;
+      const msgText = args.message as string;
+
+      // If no phone provided, search CRM by contact name
+      if (!phone && contactName) {
+        const { data: contact } = await supabase.from('clients')
+          .select('name, phone, whatsapp')
+          .eq('company_id', companyId)
+          .ilike('name', `%${contactName}%`)
+          .limit(1).single();
+        if (contact) {
+          phone = contact.whatsapp || contact.phone || undefined;
+          if (!phone) return { result: `Contato "${contact.name}" encontrado, mas não possui telefone/WhatsApp cadastrado.` };
+        } else {
+          return { result: `Contato "${contactName}" não encontrado no CRM. Informe o número diretamente ou verifique o nome.` };
+        }
+      }
+
+      if (!phone) return { result: 'Informe o nome do contato ou o número de telefone para enviar a mensagem.' };
+
+      // Clean phone number
+      const cleanPhone = phone.replace(/\D/g, '');
+
+      // Find user's connected WhatsApp session
+      const { data: sessions } = await supabase.from('whatsapp_sessions')
+        .select('id, instance_name, status, phone_number, baileys_server_url')
+        .eq('company_id', companyId)
+        .eq('status', 'connected')
+        .order('connected_at', { ascending: false });
+
+      let session = sessions?.[0] || null;
+
+      // If no connected session, check for Ellosuit master session
+      if (!session) {
+        const { data: elloSession } = await supabase.from('whatsapp_sessions')
+          .select('id, instance_name, status, phone_number, baileys_server_url')
+          .eq('status', 'connected')
+          .eq('instance_name', 'ellosuit-master')
+          .limit(1).single();
+        
+        if (elloSession) {
+          session = elloSession;
+        } else {
+          return {
+            result: `⚠️ Nenhum número de WhatsApp conectado. Para enviar mensagens, conecte seu WhatsApp no CRM.`,
+            action: { action: 'navigate', path: '/dashboard/crm-whatsapp', label: 'Conectar WhatsApp' }
+          };
+        }
+      }
+
+      const baileysUrl = (session.baileys_server_url || Deno.env.get('BAILEYS_SERVER_URL') || '').replace(/\/+$/, '');
+      if (!baileysUrl) {
+        return { result: '❌ Servidor WhatsApp não configurado. Contate o suporte.' };
+      }
+
+      try {
+        // Resolve JID (handle Brazilian 9th digit)
+        let jid = `${cleanPhone}@s.whatsapp.net`;
+        try {
+          const checkRes = await fetch(`${baileysUrl}/api/number/check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instanceName: session.instance_name, phone: cleanPhone }),
+          });
+          const checkData = await checkRes.json();
+          if (checkData?.exists && checkData?.jid) {
+            jid = checkData.jid;
+          }
+        } catch (e) {
+          console.log('[send_whatsapp] JID check failed, using fallback:', e);
+        }
+
+        // Send message
+        const sendRes = await fetch(`${baileysUrl}/api/message/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instanceName: session.instance_name,
+            jid,
+            message: { text: msgText },
+          }),
+        });
+
+        const sendText = await sendRes.text();
+        let sendData: any;
+        try { sendData = JSON.parse(sendText); } catch { sendData = null; }
+
+        if (sendRes.ok && sendData) {
+          return {
+            result: `✅ Mensagem enviada com sucesso para ${contactName || cleanPhone} via WhatsApp!`,
+            action: { action: 'whatsapp_sent', phone: cleanPhone }
+          };
+        } else {
+          return { result: `❌ Erro ao enviar: ${sendText.substring(0, 200)}` };
+        }
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        return { result: `❌ Erro ao enviar mensagem: ${errMsg}` };
+      }
+    }
+
     // ==================== WHATSAPP ====================
     case 'list_whatsapp_conversations': {
       let query = supabase.from('whatsapp_conversations')
@@ -1090,7 +1209,7 @@ CAPACIDADES (use as ferramentas para executar):
 7. **Email Marketing**: Listar templates e emails enviados
 8. **Automações**: Listar e ativar/desativar automações
 9. **Chatbots**: Listar e gerenciar chatbots
-10. **WhatsApp**: Ver conversas recentes
+10. **WhatsApp**: Ver conversas recentes E ENVIAR MENSAGENS diretamente
 11. **Booking**: Ver links de agendamento
 12. **Dashboard**: Resumo geral do dia
 13. **Navegação**: Levar o usuário para qualquer módulo
@@ -1106,7 +1225,9 @@ REGRAS:
 - Confirme as ações executadas com detalhes
 - NÃO use markdown com asteriscos (** ou *) nas respostas. Use texto simples e emojis para formatação.
 - Para links, use o formato: texto_descritivo (URL) - ex: "Link da reunião: https://..."
-- Ao criar reuniões, o link do Ellomeeting é gerado automaticamente pela ferramenta, não invente links externos como Google Meet ou Zoom`;
+- Ao criar reuniões, o link do Ellomeeting é gerado automaticamente pela ferramenta, não invente links externos como Google Meet ou Zoom
+- Quando o usuário pedir para ENVIAR uma mensagem via WhatsApp, DISPARAR ou NOTIFICAR alguém, use a ferramenta send_whatsapp_message. NÃO redirecione para telas, ENVIE diretamente.
+- Se o usuário não tiver WhatsApp conectado, informe e ofereça a opção de conectar`;
 
     // Build conversation
     const apiMessages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];

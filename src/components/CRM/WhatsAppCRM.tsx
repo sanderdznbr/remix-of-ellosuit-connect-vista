@@ -2254,7 +2254,7 @@ const WhatsAppCRM: React.FC = () => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                           {isGroupConversation(conversation) && (
                             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           )}
@@ -2263,44 +2263,17 @@ const WhatsAppCRM: React.FC = () => {
                           </span>
                           {/* AI Badge */}
                           {conversation.assigned_agent_id && conversation.ai_auto_reply_enabled && (
-                            <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900/30 dark:text-orange-300 text-[10px] px-1.5 py-0 gap-1">
+                            <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900/30 dark:text-orange-300 text-[10px] px-1.5 py-0 gap-1 flex-shrink-0">
                               <Sparkles className="h-2.5 w-2.5" />
                               IA
                             </Badge>
                           )}
                           {/* Chatbot Badge */}
                           {chatbotActiveConvIds.has(conversation.id) && !(conversation.assigned_agent_id && conversation.ai_auto_reply_enabled) && (
-                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0 gap-1">
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0 gap-1 flex-shrink-0">
                               <GitBranch className="h-2.5 w-2.5" />
                               Bot
                             </Badge>
-                          )}
-                          {/* Labels next to name */}
-                          {conversation.labels && conversation.labels.length > 0 && (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {conversation.labels.slice(0, 2).map(labelId => {
-                                const label = labels.find(l => l.id === labelId);
-                                if (!label) return null;
-                                return (
-                                  <span
-                                    key={labelId}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
-                                    style={{
-                                      backgroundColor: `${label.color}20`,
-                                      color: label.color,
-                                      border: `1px solid ${label.color}40`
-                                    }}
-                                  >
-                                    {label.name}
-                                  </span>
-                                );
-                              })}
-                              {conversation.labels.length > 2 && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  +{conversation.labels.length - 2}
-                                </span>
-                              )}
-                            </div>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
@@ -2317,6 +2290,33 @@ const WhatsAppCRM: React.FC = () => {
                           </Badge>
                         )}
                       </div>
+                      {/* Labels below message */}
+                      {conversation.labels && conversation.labels.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1 overflow-hidden">
+                          {conversation.labels.slice(0, 2).map(labelId => {
+                            const label = labels.find(l => l.id === labelId);
+                            if (!label) return null;
+                            return (
+                              <span
+                                key={labelId}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                style={{
+                                  backgroundColor: `${label.color}20`,
+                                  color: label.color,
+                                  border: `1px solid ${label.color}40`
+                                }}
+                              >
+                                {label.name}
+                              </span>
+                            );
+                          })}
+                          {conversation.labels.length > 2 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +{conversation.labels.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </SwipeableConversationItem>

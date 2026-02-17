@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { ModularSidebar } from '@/components/Dashboard/ModularSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ImprovedMobileNavbar from './ImprovedMobileNavbar';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import ConversationalOnboarding from '@/components/Onboarding/ConversationalOnboarding';
 import { GuidedTour } from '@/components/Onboarding/GuidedTour';
+import { ArrowLeft } from 'lucide-react';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,8 @@ interface MobileLayoutProps {
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const { isMobile } = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
   const { 
     hasCompletedOnboarding, 
     hasSeenTour, 
@@ -22,6 +25,9 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     completeTour,
     skipOnboarding 
   } = useOnboarding();
+
+  // Check if we're on the CRM WhatsApp page
+  const isCrmWhatsApp = location.pathname.includes('/crm-whatsapp') || location.pathname.includes('/crm');
 
   // Show onboarding wizard for new users
   if (!loading && !hasCompletedOnboarding) {
@@ -51,6 +57,32 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             onSkip={completeTour}
           />
         )}
+      </div>
+    );
+  }
+
+  // Mobile CRM WhatsApp - fullscreen without header/navbar
+  if (isCrmWhatsApp) {
+    return (
+      <div className="min-h-screen w-full bg-background relative">
+        {/* Minimal header with back arrow */}
+        <div className="fixed top-0 left-0 right-0 bg-primary h-14 flex items-center px-4 z-50">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-white" />
+          </button>
+          <span className="text-white font-medium ml-2 text-base">CRM WhatsApp</span>
+        </div>
+        
+        {/* Spacer */}
+        <div className="h-14" />
+        
+        {/* Full screen content - no padding bottom since no navbar */}
+        <main className="w-full bg-background">
+          {children}
+        </main>
       </div>
     );
   }

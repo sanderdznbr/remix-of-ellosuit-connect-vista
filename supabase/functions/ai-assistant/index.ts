@@ -423,13 +423,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "send_whatsapp_message",
-      description: "Enviar uma mensagem de WhatsApp para um contato. Busca automaticamente o número do contato pelo nome no CRM. Usa o WhatsApp conectado do usuário ou oferece alternativas.",
+      description: "Enviar uma mensagem de WhatsApp para um contato. Busca automaticamente o número do contato pelo nome no CRM. Usa o WhatsApp conectado do usuário. Se não tiver conectado, informe ao usuário que ele pode conectar ou usar o WhatsApp da Ellosuit (use_ellosuit=true).",
       parameters: {
         type: "object",
         properties: {
           contact_name: { type: "string", description: "Nome do contato (busca no CRM)" },
           phone: { type: "string", description: "Número do telefone direto (se já souber, ex: 5541999999999)" },
-          message: { type: "string", description: "Texto da mensagem a enviar" }
+          message: { type: "string", description: "Texto da mensagem a enviar" },
+          use_ellosuit: { type: "boolean", description: "Se true, envia pelo WhatsApp da Ellosuit ao invés do WhatsApp do usuário" }
         },
         required: ["message"]
       }
@@ -950,6 +951,7 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       const contactName = args.contact_name as string | undefined;
       let phone = args.phone as string | undefined;
       const msgText = args.message as string;
+      const useEllosuit = args.use_ellosuit as boolean | undefined;
 
       // If no phone provided, search CRM by contact name
       if (!phone && contactName) {
@@ -971,28 +973,51 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       // Clean phone number
       const cleanPhone = phone.replace(/\D/g, '');
 
-      // Find user's connected WhatsApp session
-      const { data: sessions } = await supabase.from('whatsapp_sessions')
-        .select('id, instance_name, status, phone_number, baileys_server_url')
-        .eq('company_id', companyId)
-        .eq('status', 'connected')
-        .order('connected_at', { ascending: false });
+      let session: any = null;
 
-      let session = sessions?.[0] || null;
-
-      // If no connected session, check for Ellosuit master session
-      if (!session) {
-        const { data: elloSession } = await supabase.from('whatsapp_sessions')
-          .select('id, instance_name, status, phone_number, baileys_server_url')
-          .eq('status', 'connected')
-          .eq('instance_name', 'ellosuit-master')
+      if (useEllosuit) {
+        // Use Ellosuit admin session - find the admin company's connected session
+        const { data: adminUser } = await supabase.from('company_users')
+          .select('company_id')
+          .eq('role', 'adminmaster')
           .limit(1).single();
         
-        if (elloSession) {
+        if (adminUser) {
+          const { data: elloSession } = await supabase.from('whatsapp_sessions')
+            .select('id, instance_name, status, phone_number, baileys_server_url')
+            .eq('company_id', adminUser.company_id)
+            .eq('status', 'connected')
+            .order('connected_at', { ascending: false })
+            .limit(1).single();
           session = elloSession;
-        } else {
+        }
+        
+        if (!session) {
+          // Fallback: find any connected session from admin email company
+          const { data: fallbackSessions } = await supabase.from('whatsapp_sessions')
+            .select('id, instance_name, status, phone_number, baileys_server_url')
+            .eq('status', 'connected')
+            .order('connected_at', { ascending: false })
+            .limit(1);
+          session = fallbackSessions?.[0] || null;
+        }
+
+        if (!session) {
+          return { result: '❌ O WhatsApp da Ellosuit não está disponível no momento. Tente conectar seu próprio número.' };
+        }
+      } else {
+        // Use user's company session
+        const { data: sessions } = await supabase.from('whatsapp_sessions')
+          .select('id, instance_name, status, phone_number, baileys_server_url')
+          .eq('company_id', companyId)
+          .eq('status', 'connected')
+          .order('connected_at', { ascending: false });
+
+        session = sessions?.[0] || null;
+
+        if (!session) {
           return {
-            result: `⚠️ Nenhum número de WhatsApp conectado. Para enviar mensagens, conecte seu WhatsApp no CRM.`,
+            result: `⚠️ Seu WhatsApp não está conectado no momento. Você tem duas opções:\n1. Conectar seu WhatsApp no CRM\n2. Posso enviar pelo WhatsApp da Ellosuit\n\nQual prefere?`,
             action: { action: 'navigate', path: '/dashboard/crm-whatsapp', label: 'Conectar WhatsApp' }
           };
         }

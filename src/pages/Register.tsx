@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import ellosuitLogo from '@/assets/logoellosuit.png';
 import authHero from '@/assets/auth-hero.jpg';
 
@@ -76,10 +77,16 @@ export default function Register() {
     }
   };
 
-  const handleNext = () => {
-    if (validateStep()) {
-      if (step < TOTAL_STEPS - 1) setStep(step + 1);
+  const handleNext = async () => {
+    if (!validateStep()) return;
+    
+    // For verification step, verify the code before proceeding
+    if (step === 2) {
+      const verified = await handleVerifyCode();
+      if (!verified) return;
     }
+    
+    if (step < TOTAL_STEPS - 1) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -91,12 +98,33 @@ export default function Register() {
     setSendingCode(true);
     setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const cleanPhone = phone.replace(/\D/g, '');
+      const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
+        body: { phone: cleanPhone },
+      });
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
       setCodeSent(true);
-    } catch {
-      setError('Erro ao enviar código. Tente novamente.');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao enviar código. Tente novamente.');
     } finally {
       setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async (): Promise<boolean> => {
+    setError(null);
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const { data, error: fnError } = await supabase.functions.invoke('verify-phone-code', {
+        body: { phone: cleanPhone, code: verificationCode },
+      });
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+      return true;
+    } catch (err: any) {
+      setError(err.message || 'Código inválido ou expirado.');
+      return false;
     }
   };
 
@@ -237,7 +265,7 @@ export default function Register() {
                     <Phone className="h-5 w-5 text-primary" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Enviaremos um SMS para{' '}
+                    Enviaremos um código via <span className="font-semibold text-foreground">WhatsApp</span> para{' '}
                     <span className="font-semibold text-foreground">{phone}</span>
                   </p>
                 </div>

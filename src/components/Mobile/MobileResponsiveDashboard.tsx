@@ -207,7 +207,7 @@ const MobileResponsiveDashboard = () => {
             {/* User Profile & Subscription - sempre acessível */}
             <Route path="/perfil" element={<UserProfilePage />} />
             <Route path="/assinatura" element={<SubscriptionPage />} />
-            <Route path="/ativar" element={<ActivatePlan />} />
+            <Route path="/ativar" element={<Navigate to="/checkout/ativar" replace />} />
             
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

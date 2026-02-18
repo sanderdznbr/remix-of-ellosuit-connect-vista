@@ -30,6 +30,7 @@ import PublicLeadFunnel from './pages/PublicLeadFunnel';
 import LeadFunnelAnalytics from './pages/LeadFunnelAnalytics';
 import DocsApiCrm from './pages/DocsApiCrm';
 import AcceptInvite from './pages/AcceptInvite';
+import CheckoutActivate from './pages/CheckoutActivate';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
               <Route path="/meet/:roomCode" element={<LiveKitMeeting />} />
               <Route path="/recover-meeting/:roomCode" element={<RecoverMeeting />} />
+              <Route path="/checkout/ativar" element={<CheckoutActivate />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/tasks" element={<Tarefas />} />
               <Route path="/booking-public/:slug" element={<ImprovedBookingPublic />} />

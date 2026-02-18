@@ -651,7 +651,7 @@ const AIAssistantHome: React.FC = () => {
                         />
                         {msg.action?.type === 'upgrade' && (
                           <button
-                            onClick={() => navigate('/dashboard/ativar')}
+                            onClick={() => navigate('/checkout/ativar')}
                             className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
                           >
                             <Sparkles className="h-4 w-4" />

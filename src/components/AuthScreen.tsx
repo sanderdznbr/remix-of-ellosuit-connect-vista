@@ -311,13 +311,23 @@ const AuthScreen = () => {
           {/* Toggle mode */}
           <p className="text-center text-xs text-muted-foreground pt-2">
             {mode === 'signin' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}{' '}
-            <button
-              type="button"
-              onClick={switchMode}
-              className="text-primary font-medium hover:underline"
-            >
-              {mode === 'signin' ? 'Cadastre-se' : 'Entrar'}
-            </button>
+            {mode === 'signin' ? (
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-primary font-medium hover:underline"
+              >
+                Cadastre-se
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={switchMode}
+                className="text-primary font-medium hover:underline"
+              >
+                Entrar
+              </button>
+            )}
           </p>
 
           {/* Coming Soon Popup */}

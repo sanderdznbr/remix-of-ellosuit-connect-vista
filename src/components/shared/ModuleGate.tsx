@@ -19,7 +19,7 @@ export default function ModuleGate({ module, children }: ModuleGateProps) {
   }
 
   if (!hasModuleAccess(module)) {
-    return <LockedFeaturePage module={module} />;
+    return <LockedFeaturePage module={module}>{children}</LockedFeaturePage>;
   }
 
   return <>{children}</>;

@@ -107,36 +107,36 @@ body[data-scroll-locked] {
   .dark [data-keep-light] .hover\:bg-gray-100\/80:hover { background-color: rgba(243,244,246,0.8) !important; }
 
   /* ===== Dark mode global overrides for hardcoded Tailwind classes ===== */
-  .dark .bg-white:not([data-keep-light] *):not([data-keep-light]) {
+  .dark .bg-white:not([data-keep-light] *):not([data-keep-light]):not([data-dashboard-home] *) {
     background-color: hsl(var(--card)) !important;
   }
-  .dark .bg-gray-50,
-  .dark .bg-gray-100,
-  .dark [class*="bg-gray-100\/"] {
+  .dark .bg-gray-50:not([data-dashboard-home] *),
+  .dark .bg-gray-100:not([data-dashboard-home] *),
+  .dark [class*="bg-gray-100\/"]:not([data-dashboard-home] *) {
     background-color: hsl(var(--muted)) !important;
   }
-  .dark .bg-gray-50\/30 {
+  .dark .bg-gray-50\/30:not([data-dashboard-home] *) {
     background-color: hsl(var(--background)) !important;
   }
-  .dark .bg-gray-200 {
+  .dark .bg-gray-200:not([data-dashboard-home] *) {
     background-color: hsl(var(--accent)) !important;
   }
-  .dark .text-gray-900,
-  .dark .text-gray-800 {
+  .dark .text-gray-900:not([data-dashboard-home] *),
+  .dark .text-gray-800:not([data-dashboard-home] *) {
     color: hsl(var(--foreground)) !important;
   }
-  .dark .text-gray-700,
-  .dark .text-gray-600 {
+  .dark .text-gray-700:not([data-dashboard-home] *),
+  .dark .text-gray-600:not([data-dashboard-home] *) {
     color: hsl(var(--muted-foreground)) !important;
   }
-  .dark .text-gray-500,
-  .dark .text-gray-400,
-  .dark .text-gray-300 {
+  .dark .text-gray-500:not([data-dashboard-home] *),
+  .dark .text-gray-400:not([data-dashboard-home] *),
+  .dark .text-gray-300:not([data-dashboard-home] *) {
     color: hsl(var(--muted-foreground)) !important;
   }
-  .dark .border-gray-100,
-  .dark .border-gray-200,
-  .dark .border-gray-300 {
+  .dark .border-gray-100:not([data-dashboard-home] *),
+  .dark .border-gray-200:not([data-dashboard-home] *),
+  .dark .border-gray-300:not([data-dashboard-home] *) {
     border-color: hsl(var(--border)) !important;
   }
   .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),

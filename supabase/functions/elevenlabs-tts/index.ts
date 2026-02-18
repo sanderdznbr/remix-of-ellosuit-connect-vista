@@ -6,6 +6,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Convert numbers to pt-BR words for TTS pronunciation
+const unidades = ['zero','uma','duas','três','quatro','cinco','seis','sete','oito','nove',
+  'dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+const dezenas = ['','','vinte','trinta','quarenta','cinquenta'];
+
+function numberToWords(n: number): string {
+  if (n < 20) return unidades[n];
+  const d = Math.floor(n / 10);
+  const u = n % 10;
+  return u === 0 ? dezenas[d] : `${dezenas[d]} e ${unidades[u]}`;
+}
+
+function timeToPortuguese(text: string): string {
+  // Match patterns like 20:00, 8:30, 08h00, 20h30
+  return text.replace(/(\d{1,2})[h:](\d{2})/g, (_match, h, m) => {
+    const hour = parseInt(h, 10);
+    const min = parseInt(m, 10);
+    let result = numberToWords(hour) + (hour === 1 ? ' hora' : ' horas');
+    if (min > 0) {
+      result += ' e ' + numberToWords(min) + (min === 1 ? ' minuto' : ' minutos');
+    }
+    return result;
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +63,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: text.slice(0, 5000), // Limit to 5000 chars
+          text: timeToPortuguese(text.slice(0, 5000)), // Convert times + limit to 5000 chars
           model_id: "eleven_multilingual_v2",
           voice_settings: {
             stability: 0.5,

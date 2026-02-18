@@ -31,6 +31,8 @@ import LeadFunnelAnalytics from './pages/LeadFunnelAnalytics';
 import DocsApiCrm from './pages/DocsApiCrm';
 import AcceptInvite from './pages/AcceptInvite';
 import CheckoutActivate from './pages/CheckoutActivate';
+import Register from './pages/Register';
+import Plans from './pages/Plans';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Index />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/plans" element={<Plans />} />
               <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/meeting/:roomCode" element={<MeetingRoom />} />
               <Route path="/meet/:roomCode" element={<LiveKitMeeting />} />

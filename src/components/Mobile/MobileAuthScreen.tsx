@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
 
 const MobileAuthScreen = () => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
 
   // Force white status bar on auth screen
@@ -205,9 +207,15 @@ const MobileAuthScreen = () => {
           {/* Toggle */}
           <p className="text-center text-xs text-muted-foreground">
             {mode === 'signin' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}{' '}
-            <button type="button" onClick={switchMode} className="text-primary font-medium hover:underline">
-              {mode === 'signin' ? 'Cadastre-se' : 'Entrar'}
-            </button>
+            {mode === 'signin' ? (
+              <button type="button" onClick={() => navigate('/register')} className="text-primary font-medium hover:underline">
+                Cadastre-se
+              </button>
+            ) : (
+              <button type="button" onClick={switchMode} className="text-primary font-medium hover:underline">
+                Entrar
+              </button>
+            )}
           </p>
 
           {/* Coming Soon Popup */}

@@ -288,9 +288,18 @@ body[data-scroll-locked] {
   .dark [data-dashboard-home] input {
     color: #1f2937 !important;
     background-color: transparent !important;
+    -webkit-text-fill-color: #1f2937 !important;
   }
   .dark [data-dashboard-home] input::placeholder {
     color: #9ca3af !important;
+    -webkit-text-fill-color: #9ca3af !important;
+  }
+  .dark [data-dashboard-home] [data-keep-light] {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+  .dark [data-dashboard-home] [data-keep-light] * {
+    color: inherit;
   }
 
   /* Fix gradient backgrounds for dark mode */

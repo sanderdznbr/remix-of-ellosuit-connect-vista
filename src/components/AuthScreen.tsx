@@ -15,6 +15,7 @@ import { useAdminMaster } from '@/hooks/useAdminMaster';
 
 const AuthScreen = () => {
   const { isMobile } = useIsMobile();
+  const [showComingSoon, setShowComingSoon] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,17 +116,9 @@ const AuthScreen = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) setError(String(error.message));
-    } catch {
-      setError('Erro inesperado com Google.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSocialLogin = () => {
+    setShowComingSoon(true);
+    setTimeout(() => setShowComingSoon(false), 3000);
   };
 
   const switchMode = () => {
@@ -278,7 +271,7 @@ const AuthScreen = () => {
             <Button
               variant="outline"
               className="w-full h-10 rounded-full border-border text-sm font-normal"
-              onClick={handleGoogleSignIn}
+              onClick={handleSocialLogin}
               disabled={isLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -293,6 +286,7 @@ const AuthScreen = () => {
             <Button
               variant="outline"
               className="w-full h-10 rounded-full border-border text-sm font-normal"
+              onClick={handleSocialLogin}
               disabled={isLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -304,6 +298,7 @@ const AuthScreen = () => {
             <Button
               variant="outline"
               className="w-full h-10 rounded-full border-border text-sm font-normal"
+              onClick={handleSocialLogin}
               disabled={isLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
@@ -324,6 +319,13 @@ const AuthScreen = () => {
               {mode === 'signin' ? 'Cadastre-se' : 'Entrar'}
             </button>
           </p>
+
+          {/* Coming Soon Popup */}
+          {showComingSoon && (
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+              🚀 Funcionalidade disponível em breve no lançamento do app!
+            </div>
+          )}
 
           {/* Legal links */}
           <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-4 pb-2">

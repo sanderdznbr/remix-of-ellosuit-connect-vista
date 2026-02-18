@@ -5045,7 +5045,7 @@ export type Database = {
         | "manage_crm"
         | "view_tracking"
         | "manage_tracking"
-      plan_type: "base" | "pro" | "business" | "enterprise" | "custom"
+      plan_type: "free" | "base" | "pro" | "business" | "enterprise" | "custom"
       resource_type:
         | "users"
         | "storage_gb"
@@ -5224,7 +5224,7 @@ export const Constants = {
         "view_tracking",
         "manage_tracking",
       ],
-      plan_type: ["base", "pro", "business", "enterprise", "custom"],
+      plan_type: ["free", "base", "pro", "business", "enterprise", "custom"],
       resource_type: [
         "users",
         "storage_gb",

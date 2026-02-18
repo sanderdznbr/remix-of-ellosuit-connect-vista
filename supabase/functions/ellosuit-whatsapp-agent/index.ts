@@ -1,6 +1,19 @@
 // Ellosuit WhatsApp Agent - AI agent with tool calling for ALL platform operations
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+async function logUsage(params: { service_type: string; action: string; model?: string; input_tokens?: number; output_tokens?: number; total_cost: number; user_id?: string; company_id?: string; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action, model: params.model || null,
+      input_tokens: params.input_tokens || 0, output_tokens: params.output_tokens || 0,
+      total_cost: params.total_cost, unit_cost: params.total_cost,
+      user_id: params.user_id || null, company_id: params.company_id || null,
+      metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1256,6 +1269,17 @@ Deno.serve(async (req) => {
     const data = await response.json();
     const choice = data.choices[0];
 
+    // Log first AI call cost
+    const u1 = data.usage || {};
+    const model = (settings.model as string) || 'google/gemini-3-flash-preview';
+    const cost1 = ((u1.prompt_tokens || 0) / 1000) * 0.00015 + ((u1.completion_tokens || 0) / 1000) * 0.0006;
+    logUsage({
+      service_type: 'lovable_ai', action: 'whatsapp_agent_call1', model,
+      input_tokens: u1.prompt_tokens || 0, output_tokens: u1.completion_tokens || 0,
+      total_cost: cost1, user_id: userId, company_id: companyId,
+      metadata: { has_tool_calls: !!choice.message.tool_calls?.length },
+    });
+
     // Handle tool calls (support multiple rounds)
     if (choice.message.tool_calls?.length > 0) {
       console.log(`🔧 [ELLOSUIT-AGENT] ${choice.message.tool_calls.length} tool call(s)`);
@@ -1281,6 +1305,16 @@ Deno.serve(async (req) => {
       if (followUpResponse.ok) {
         const followUpData = await followUpResponse.json();
         const finalMessage = followUpData.choices[0].message.content || '';
+
+        // Log second AI call cost
+        const u2 = followUpData.usage || {};
+        const cost2 = ((u2.prompt_tokens || 0) / 1000) * 0.00015 + ((u2.completion_tokens || 0) / 1000) * 0.0006;
+        logUsage({
+          service_type: 'lovable_ai', action: 'whatsapp_agent_call2', model,
+          input_tokens: u2.prompt_tokens || 0, output_tokens: u2.completion_tokens || 0,
+          total_cost: cost2, user_id: userId, company_id: companyId,
+        });
+
         console.log(`✅ [ELLOSUIT-AGENT] Final: ${finalMessage.substring(0, 100)}...`);
         return new Response(JSON.stringify({ response: finalMessage }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

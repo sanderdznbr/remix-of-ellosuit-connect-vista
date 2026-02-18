@@ -1,6 +1,18 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
 
+async function logUsage(params: { service_type: string; action: string; total_cost: number; user_id?: string; company_id?: string; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action,
+      total_cost: params.total_cost, unit_cost: params.total_cost,
+      user_id: params.user_id || null, company_id: params.company_id || null,
+      metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -332,6 +344,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`✅ Email sent successfully via ${sendResult.provider}:`, emailData.id);
+
+    // Log email sending cost: Resend ~$0.001/email, Gmail = free
+    const emailCost = sendResult.provider === 'resend' ? 0.001 : 0;
+    logUsage({
+      service_type: sendResult.provider === 'resend' ? 'resend_email' : 'gmail_api',
+      action: 'send_email', total_cost: emailCost,
+      user_id: user_id || undefined, company_id: company_id || undefined,
+      metadata: { recipient: recipient_email, subject, provider: sendResult.provider, campaign_id },
+    });
 
     // Notify admin about email sent
     try {

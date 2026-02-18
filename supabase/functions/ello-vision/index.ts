@@ -1,5 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+async function logUsage(params: { service_type: string; action: string; model?: string; input_tokens?: number; output_tokens?: number; total_cost: number; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action, model: params.model || null,
+      input_tokens: params.input_tokens || 0, output_tokens: params.output_tokens || 0,
+      total_cost: params.total_cost, unit_cost: params.total_cost, metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -323,6 +334,17 @@ REGRAS:
 
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices[0].message.content;
+
+    // Log cost for ello-vision AI call
+    const usage = aiData.usage || {};
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    const cost = (inputTokens / 1000) * 0.00015 + (outputTokens / 1000) * 0.0006;
+    logUsage({
+      service_type: 'lovable_ai', action: 'ello_vision_analysis', model: 'google/gemini-3-flash-preview',
+      input_tokens: inputTokens, output_tokens: outputTokens, total_cost: cost,
+      metadata: { data_summary_length: dataSummary.length },
+    });
 
     let parsed;
     try {

@@ -4059,6 +4059,33 @@ export type Database = {
           },
         ]
       }
+      user_email_preferences: {
+        Row: {
+          company_id: string
+          created_at: string
+          default_from_email: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          default_from_email: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          default_from_email?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           company_id: string

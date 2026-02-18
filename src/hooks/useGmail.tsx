@@ -18,6 +18,8 @@ export const useGmail = () => {
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [aliases, setAliases] = useState<GmailAlias[]>([]);
   const [selectedAlias, setSelectedAlias] = useState<string>('');
+  const [savedAlias, setSavedAlias] = useState<string>('');
+  const [savingAlias, setSavingAlias] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -347,11 +349,78 @@ export const useGmail = () => {
     }
   };
 
+  const loadSavedAlias = async () => {
+    if (!user) return;
+    try {
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyData?.company_id) return;
+
+      const { data } = await supabase
+        .from('user_email_preferences')
+        .select('default_from_email')
+        .eq('user_id', user.id)
+        .eq('company_id', companyData.company_id)
+        .maybeSingle();
+
+      if (data?.default_from_email) {
+        setSelectedAlias(data.default_from_email);
+        setSavedAlias(data.default_from_email);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar alias salvo:', error);
+    }
+  };
+
+  const savePreferredAlias = async (email: string) => {
+    if (!user || !email) return;
+    setSavingAlias(true);
+    try {
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyData?.company_id) throw new Error('Empresa não encontrada');
+
+      const { error } = await supabase
+        .from('user_email_preferences')
+        .upsert({
+          user_id: user.id,
+          company_id: companyData.company_id,
+          default_from_email: email,
+        }, { onConflict: 'user_id,company_id' });
+
+      if (error) throw error;
+
+      setSavedAlias(email);
+      toast({
+        title: "✅ Remetente salvo!",
+        description: `Emails serão enviados como ${email}`,
+      });
+    } catch (error: any) {
+      console.error('Erro ao salvar alias:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a preferência",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingAlias(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       checkConnection();
       getGoogleClientId();
       processOAuthCallback();
+      loadSavedAlias();
     }
   }, [user]);
 
@@ -368,7 +437,10 @@ export const useGmail = () => {
     emailAccount,
     aliases,
     selectedAlias,
+    savedAlias,
+    savingAlias,
     setSelectedAlias,
+    savePreferredAlias,
     connectGmail,
     disconnectGmail,
     checkConnection,

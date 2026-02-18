@@ -29,7 +29,7 @@ const EmailComposer = () => {
   const { toast } = useToast();
   const { templates } = useEmailTemplates();
   const { user } = useAuth();
-  const { isConnected, emailAccount, aliases, selectedAlias, setSelectedAlias } = useGmail();
+  const { isConnected, emailAccount, aliases, selectedAlias, savedAlias, savingAlias, setSelectedAlias, savePreferredAlias } = useGmail();
 
   useEffect(() => {
     if (isConnected && selectedAlias) {

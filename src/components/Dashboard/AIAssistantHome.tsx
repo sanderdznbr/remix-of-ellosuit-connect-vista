@@ -4,7 +4,7 @@ import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, F
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
-import { useTheme } from '@/hooks/useTheme';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -58,7 +58,7 @@ const AIAssistantHome: React.FC = () => {
   const { user } = useAuth();
   const { isFree } = useSubscription();
   const { color: hubColor } = useHubColor();
-  const { theme } = useTheme();
+  
   const { toast } = useToast();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -77,17 +77,8 @@ const AIAssistantHome: React.FC = () => {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSpeakRef = useRef<string | null>(null);
 
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-  
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
-  const bgColor = isDark ? 'hsl(222, 47%, 6%)' : (hubColor || DEFAULT_COLOR);
+  // Dashboard always uses the hub color regardless of theme
+  const bgColor = hubColor || DEFAULT_COLOR;
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'usuário';
   const firstName = userName.split(' ')[0];
 
@@ -620,7 +611,7 @@ const AIAssistantHome: React.FC = () => {
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user'
                       ? 'bg-white/15 backdrop-blur-md text-white font-medium shadow-lg border border-white/20'
-                      : isDark ? 'bg-neutral-800 text-white shadow-xl border border-neutral-700' : 'bg-white text-gray-900 shadow-xl border border-gray-100'
+                      : 'bg-white text-gray-900 shadow-xl border border-gray-100'
                   }`}>
                     {msg.fileUrl && msg.fileName && (
                       <div className={`flex items-center gap-2 mb-2 p-2 rounded-lg ${

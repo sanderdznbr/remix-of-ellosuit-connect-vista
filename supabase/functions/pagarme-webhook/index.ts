@@ -156,10 +156,10 @@ Deno.serve(async (req) => {
         
         console.log('Charge paid for company:', companyId);
 
-        // Send payment confirmation email
+        // Send payment confirmation email + auto-create receipt
         try {
           const chargeAmount = data?.amount ? (data.amount / 100) : (metadata?.billing_cycle === 'yearly' ? 2497 : 297);
-          const paymentMethod = data?.payment_method || data?.last_transaction?.payment_method || 'Cartão de Crédito';
+          const paymentMethod = data?.payment_method || data?.last_transaction?.payment_method || 'Cartao de Credito';
           const transactionId = data?.last_transaction?.id || data?.id || '';
 
           // Get user email from company
@@ -176,6 +176,24 @@ Deno.serve(async (req) => {
             if (authUser?.user?.email) {
               const userName = authUser.user.user_metadata?.username || authUser.user.email.split('@')[0];
               
+              // Create receipt record
+              const planName = metadata?.billing_cycle === 'yearly' ? 'Business (Anual)' : 'Business (Mensal)';
+              await supabase.from('receipts').insert({
+                company_id: companyId,
+                created_by: companyUser.user_id,
+                title: `Pagamento - Plano ${planName}`,
+                amount: chargeAmount,
+                payment_method: paymentMethod,
+                description: `Pagamento do plano ${planName}. ID Transacao: ${transactionId}. Proxima cobranca: ${nextBillingDate.toLocaleDateString('pt-BR')}.`,
+                client_name: userName,
+                client_document: authUser.user.user_metadata?.document || null,
+                status: 'pago',
+                notes: `Pagar.me Transaction: ${transactionId}`,
+                sent_at: new Date().toISOString(),
+              }).then(() => console.log('Receipt created for company:', companyId))
+                .catch(e => console.error('Receipt creation error:', e));
+
+              // Send payment confirmation email
               await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
                 method: 'POST',
                 headers: {

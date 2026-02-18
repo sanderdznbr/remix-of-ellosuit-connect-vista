@@ -199,7 +199,7 @@ const AuthScreen = () => {
                 <button
                   type="button"
                   className="text-xs text-primary hover:underline"
-                  onClick={() => {/* TODO: forgot password */}}
+                  onClick={() => navigate('/forgot-password')}
                 >
                   Esqueci minha senha
                 </button>

@@ -134,7 +134,7 @@ export default function Register() {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error: signUpError } = await signUp(email, password, username, companyName);
+      const { data, error: signUpError } = await signUp(email, password, username, companyName, phone);
       if (signUpError) {
         if (signUpError.message.includes('User already registered')) {
           setError('Este email já está cadastrado.');

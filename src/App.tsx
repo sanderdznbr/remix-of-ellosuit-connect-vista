@@ -32,6 +32,7 @@ import DocsApiCrm from './pages/DocsApiCrm';
 import AcceptInvite from './pages/AcceptInvite';
 import CheckoutActivate from './pages/CheckoutActivate';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import Plans from './pages/Plans';
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Index />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/plans" element={<Plans />} />
               <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/meeting/:roomCode" element={<MeetingRoom />} />

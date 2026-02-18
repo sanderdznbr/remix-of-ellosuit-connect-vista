@@ -29,7 +29,7 @@ const PLANS = {
   omni: { monthly: 19700, yearly: 197000, name: 'Omni - Comunicação' },
   flow: { monthly: 14700, yearly: 147000, name: 'Flow - Produtividade' },
   track: { monthly: 9700, yearly: 97000, name: 'Track - Rastreamento' },
-  business: { monthly: 39700, yearly: 397000, name: 'Business - Completo' },
+  business: { monthly: 29700, yearly: 297000, name: 'Business - Completo' },
 };
 
 Deno.serve(async (req) => {

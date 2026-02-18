@@ -27,13 +27,31 @@ interface LockedFeaturePageProps {
 
 export default function LockedFeaturePage({ module }: LockedFeaturePageProps) {
   const navigate = useNavigate();
-  const { isTrialExpired, trialEndsAt } = useSubscription();
+  const { isFree, isTrialExpired, trialEndsAt } = useSubscription();
   const info = moduleInfo[module];
+
+  const getMessage = () => {
+    if (isFree) {
+      return 'Você está no plano gratuito. Ative o plano Business para desbloquear todas as funcionalidades com 7 dias de teste grátis.';
+    }
+    if (isTrialExpired) {
+      return 'Seu período de teste gratuito terminou. Ative um plano para continuar usando este módulo.';
+    }
+    return 'Este módulo não está incluído no seu plano atual. Faça upgrade para acessar.';
+  };
+
+  const getButtonAction = () => {
+    if (isFree) {
+      return { label: 'Ativar Teste Grátis', path: '/dashboard/ativar' };
+    }
+    return { label: 'Ver Planos e Preços', path: '/dashboard/assinatura' };
+  };
+
+  const action = getButtonAction();
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        {/* Lock Icon */}
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto"
           style={{ backgroundColor: `${info.color}12` }}
@@ -41,48 +59,42 @@ export default function LockedFeaturePage({ module }: LockedFeaturePageProps) {
           <Lock className="h-10 w-10" style={{ color: info.color }} />
         </div>
 
-        {/* Title */}
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {info.name}
           </h1>
-          <p className="text-gray-500 text-sm leading-relaxed">
-            {isTrialExpired 
-              ? 'Seu período de teste gratuito terminou. Ative um plano para continuar usando este módulo.'
-              : `Este módulo não está incluído no seu plano atual. Faça upgrade para acessar.`
-            }
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {getMessage()}
           </p>
         </div>
 
-        {/* Module description */}
-        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+        <div className="bg-muted rounded-2xl p-4 border border-border">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4" style={{ color: info.color }} />
-            <span className="text-sm font-medium text-gray-700">O que está incluído:</span>
+            <span className="text-sm font-medium text-foreground">O que está incluído:</span>
           </div>
-          <p className="text-sm text-gray-500">{info.description}</p>
+          <p className="text-sm text-muted-foreground">{info.description}</p>
         </div>
 
         {isTrialExpired && trialEndsAt && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Teste expirou em {trialEndsAt.toLocaleDateString('pt-BR')}
           </p>
         )}
 
-        {/* CTA */}
         <div className="space-y-3">
           <Button 
-            onClick={() => navigate('/dashboard/assinatura')}
+            onClick={() => navigate(action.path)}
             className="w-full"
             style={{ backgroundColor: info.color }}
           >
-            Ver Planos e Preços
+            {action.label}
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard')}
-            className="w-full text-gray-500"
+            className="w-full text-muted-foreground"
           >
             Voltar ao Dashboard
           </Button>

@@ -29,13 +29,15 @@ const EmailComposer = () => {
   const { toast } = useToast();
   const { templates } = useEmailTemplates();
   const { user } = useAuth();
-  const { isConnected, emailAccount } = useGmail();
+  const { isConnected, emailAccount, aliases, selectedAlias, setSelectedAlias } = useGmail();
 
   useEffect(() => {
-    if (isConnected && emailAccount) {
+    if (isConnected && selectedAlias) {
+      setFromEmail(selectedAlias);
+    } else if (isConnected && emailAccount) {
       setFromEmail(emailAccount.email);
     }
-  }, [isConnected, emailAccount]);
+  }, [isConnected, emailAccount, selectedAlias]);
 
   const addRecipient = () => {
     if (currentRecipient && !recipients.includes(currentRecipient)) {
@@ -157,7 +159,24 @@ const EmailComposer = () => {
       ) : (
         <div className="flex items-center gap-2 p-4 rounded-2xl bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
           <CheckCircle2 className="h-4 w-4" />
-          <span className="text-sm">Enviando como: <strong>{emailAccount?.email}</strong></span>
+          <span className="text-sm">Enviando como:</span>
+          {aliases.length > 1 ? (
+            <Select value={selectedAlias || fromEmail} onValueChange={(val) => { setSelectedAlias(val); setFromEmail(val); }}>
+              <SelectTrigger className="h-7 w-auto min-w-[200px] bg-white dark:bg-gray-800 border-green-200 text-sm font-medium">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {aliases.map((alias) => (
+                  <SelectItem key={alias.email} value={alias.email}>
+                    {alias.displayName ? `${alias.displayName} <${alias.email}>` : alias.email}
+                    {alias.isPrimary ? ' (principal)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <strong>{selectedAlias || emailAccount?.email}</strong>
+          )}
         </div>
       )}
 

@@ -2,19 +2,25 @@ import React from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   CheckCircle2, 
   AlertCircle, 
   Mail, 
   ChevronDown,
   LogOut,
-  Loader2 
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
+import { GmailAlias } from '@/hooks/useGmail';
 
 interface EmailConnectionPopoverProps {
   isConnected: boolean;
   loading: boolean;
   emailAccount: any;
+  aliases?: GmailAlias[];
+  selectedAlias?: string;
+  onAliasChange?: (email: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
 }
@@ -23,6 +29,9 @@ const EmailConnectionPopover: React.FC<EmailConnectionPopoverProps> = ({
   isConnected,
   loading,
   emailAccount,
+  aliases = [],
+  selectedAlias,
+  onAliasChange,
   onConnect,
   onDisconnect
 }) => {
@@ -74,6 +83,24 @@ const EmailConnectionPopover: React.FC<EmailConnectionPopoverProps> = ({
               </Badge>
             </div>
             
+            {aliases.length > 1 && (
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-2">Enviar como:</p>
+                <Select value={selectedAlias || emailAccount?.email} onValueChange={(val) => onAliasChange?.(val)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aliases.map((alias) => (
+                      <SelectItem key={alias.email} value={alias.email}>
+                        {alias.displayName ? `${alias.displayName} <${alias.email}>` : alias.email}
+                        {alias.isPrimary ? ' ★' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="pt-2 border-t">
               <Button 
                 variant="outline"

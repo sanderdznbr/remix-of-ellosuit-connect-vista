@@ -89,7 +89,7 @@ const CleanEmailMarketing: React.FC = () => {
   
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isConnected, loading, emailAccount, connectGmail, disconnectGmail } = useGmail();
+  const { isConnected, loading, emailAccount, aliases, selectedAlias, setSelectedAlias, connectGmail, disconnectGmail } = useGmail();
 
   // Handle return from builder with template
   useEffect(() => {
@@ -331,6 +331,7 @@ const CleanEmailMarketing: React.FC = () => {
               subject,
               content_html: content,
               provider: 'gmail',
+              from_email: selectedAlias || emailAccount?.email,
               user_id: user.id,
               company_id: companyId
             }
@@ -903,7 +904,7 @@ const CleanEmailMarketing: React.FC = () => {
             <div className="border-t pt-4 space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">De:</span>
-                <span className="font-medium">{emailAccount?.email || 'Não conectado'}</span>
+                <span className="font-medium">{selectedAlias || emailAccount?.email || 'Não conectado'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Assunto:</span>
@@ -1028,11 +1029,27 @@ const CleanEmailMarketing: React.FC = () => {
                     </p>
                     {isConnected && emailAccount?.email && (
                       <p className="text-xs text-muted-foreground truncate">
-                        {emailAccount.email}
+                        {selectedAlias || emailAccount.email}
                       </p>
                     )}
                   </div>
                 </div>
+                {isConnected && aliases.length > 1 && (
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Enviar como:</span>
+                    <select
+                      value={selectedAlias || emailAccount?.email}
+                      onChange={(e) => setSelectedAlias(e.target.value)}
+                      className="w-full text-sm rounded-md border border-border bg-background px-2 py-1.5"
+                    >
+                      {aliases.map((alias) => (
+                        <option key={alias.email} value={alias.email}>
+                          {alias.displayName ? `${alias.displayName} <${alias.email}>` : alias.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Limite diário</span>

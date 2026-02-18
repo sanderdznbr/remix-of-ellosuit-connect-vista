@@ -617,11 +617,19 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       const { data, error } = await query;
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhuma tarefa encontrada.' };
+      const cards = data.map((t: any) => ({
+        type: 'task', title: t.title,
+        subtitle: t.description || undefined,
+        status: t.status === 'completed' ? 'Concluída' : t.status === 'pending' ? 'Pendente' : t.status,
+        statusColor: t.status === 'completed' ? 'green' : t.status === 'pending' ? 'yellow' : 'gray',
+        details: t.start_date ? [new Date(t.start_date).toLocaleDateString('pt-BR')] : [],
+        link: '/dashboard/agenda',
+      }));
       return {
         result: `Tarefas (${data.length}):\n` + data.map((t: any, i: number) =>
           `${i + 1}. "${t.title}" - Status: ${t.status || 'pending'}${t.start_date ? `, Data: ${new Date(t.start_date).toLocaleDateString('pt-BR')}` : ''}`
         ).join('\n'),
-        action: { action: 'list_tasks', data }
+        action: { action: 'list_tasks', data, cards }
       };
     }
 
@@ -676,6 +684,15 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
         .order('start_date', { ascending: true }).limit(20);
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: `Nenhum evento nos próximos ${daysAhead} dias.` };
+      const cards = data.map((e: any) => {
+        const s = new Date(e.start_date);
+        return {
+          type: 'event', title: e.title,
+          subtitle: `${s.toLocaleDateString('pt-BR')} às ${s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+          details: [e.event_type === 'meeting' ? '📹 Reunião' : e.event_type === 'reminder' ? '🔔 Lembrete' : '📅 Evento', ...(e.meeting_link ? [`🔗 ${e.meeting_link}`] : [])],
+          link: '/dashboard/agenda',
+        };
+      });
       return {
         result: `Eventos (${data.length}):\n` + data.map((e: any, i: number) => {
           const s = new Date(e.start_date);
@@ -683,7 +700,7 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
           if (e.meeting_link) line += `\n   🔗 Link: ${e.meeting_link}`;
           return line;
         }).join('\n'),
-        action: { action: 'list_events', data }
+        action: { action: 'list_events', data, cards }
       };
     }
 
@@ -740,11 +757,19 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       const { data, error } = await query;
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhum contato encontrado.' };
+      const cards = data.map((c: any) => ({
+        type: 'contact', title: c.name,
+        subtitle: c.company_name || undefined,
+        details: [c.email, c.phone].filter(Boolean),
+        status: c.status === 'active' ? 'Ativo' : c.status === 'lead' ? 'Lead' : c.status,
+        statusColor: c.status === 'active' ? 'green' : c.status === 'lead' ? 'blue' : 'gray',
+        link: '/dashboard/cadastros',
+      }));
       return {
         result: `Contatos (${data.length}):\n` + data.map((c: any, i: number) =>
           `${i + 1}. ${c.name}${c.email ? ` - ${c.email}` : ''}${c.phone ? ` - ${c.phone}` : ''}`
         ).join('\n'),
-        action: { action: 'list_contacts', data }
+        action: { action: 'list_contacts', data, cards }
       };
     }
 
@@ -976,11 +1001,19 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
         .limit((args.limit as number) || 10);
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhum email enviado.' };
+      const cards = data.map((e: any) => ({
+        type: 'email', title: e.subject,
+        subtitle: e.recipient_email,
+        status: e.open_count ? `${e.open_count}x aberto` : 'Não aberto',
+        statusColor: e.open_count ? 'green' : 'gray',
+        details: e.sent_at ? [new Date(e.sent_at).toLocaleDateString('pt-BR')] : [],
+        link: '/dashboard/email-tracker',
+      }));
       return {
         result: `Emails (${data.length}):\n` + data.map((e: any, i: number) =>
           `${i + 1}. "${e.subject}" → ${e.recipient_email} ${e.open_count ? `(${e.open_count}x aberto)` : ''}`
         ).join('\n'),
-        action: { action: 'list_emails', data }
+        action: { action: 'list_emails', data, cards }
       };
     }
 
@@ -991,11 +1024,18 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
         .eq('company_id', companyId).order('name');
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhuma automação configurada.' };
+      const cards = data.map((a: any) => ({
+        type: 'automation', title: a.name,
+        status: a.is_active ? 'Ativa' : 'Inativa',
+        statusColor: a.is_active ? 'green' : 'gray',
+        details: [`${a.execution_count || 0} execuções`, `Gatilho: ${a.trigger_type}`],
+        link: '/dashboard/automacoes',
+      }));
       return {
         result: `Automações (${data.length}):\n` + data.map((a: any, i: number) =>
           `${i + 1}. "${a.name}" - ${a.is_active ? 'Ativa' : 'Inativa'} - ${a.execution_count || 0} execuções`
         ).join('\n'),
-        action: { action: 'list_automations', data }
+        action: { action: 'list_automations', data, cards }
       };
     }
 
@@ -1016,11 +1056,18 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
         .eq('company_id', companyId).order('name');
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhum chatbot configurado.' };
+      const cards = data.map((c: any) => ({
+        type: 'chatbot', title: c.name,
+        status: c.is_active ? 'Ativo' : 'Inativo',
+        statusColor: c.is_active ? 'green' : 'gray',
+        details: [`${c.execution_count || 0} execuções`],
+        link: '/dashboard/chatbot-builder',
+      }));
       return {
         result: `Chatbots (${data.length}):\n` + data.map((c: any, i: number) =>
           `${i + 1}. "${c.name}" - ${c.is_active ? 'Ativo' : 'Inativo'}`
         ).join('\n'),
-        action: { action: 'list_chatbots', data }
+        action: { action: 'list_chatbots', data, cards }
       };
     }
 
@@ -1041,11 +1088,18 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
         .eq('company_id', companyId).order('name');
       if (error) return { result: `Erro: ${error.message}` };
       if (!data?.length) return { result: 'Nenhum agente de IA configurado.' };
+      const cards = data.map((a: any) => ({
+        type: 'agent', title: a.name,
+        status: a.is_active ? 'Ativo' : 'Inativo',
+        statusColor: a.is_active ? 'green' : 'gray',
+        details: [a.model || 'gemini-3-flash', a.whatsapp_enabled ? 'WhatsApp ✅' : ''].filter(Boolean),
+        link: `/dashboard/bot-ia/editar/${a.id}`,
+      }));
       return {
         result: `Agentes (${data.length}):\n` + data.map((a: any, i: number) =>
           `${i + 1}. "${a.name}" - ${a.is_active ? 'Ativo' : 'Inativo'}${a.whatsapp_enabled ? ' - WhatsApp ✅' : ''}`
         ).join('\n'),
-        action: { action: 'list_agents', data }
+        action: { action: 'list_agents', data, cards }
       };
     }
 
@@ -1229,6 +1283,14 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       const evList = (todayEvents.data || []).map((e: any) =>
         `  - ${new Date(e.start_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${e.title}`
       ).join('\n');
+      const summaryCards = [
+        { type: 'summary', title: 'Contatos', value: String(contacts.count || 0), extra: { color: '#8b5cf6' }, link: '/dashboard/cadastros' },
+        { type: 'summary', title: 'Tarefas pendentes', value: String(pendingTasks.count || 0), extra: { color: '#f59e0b' }, link: '/dashboard/agenda' },
+        { type: 'summary', title: 'Propostas enviadas', value: String(proposals.count || 0), extra: { color: '#f97316' } },
+        { type: 'summary', title: 'Documentos', value: String(docs.count || 0), extra: { color: '#64748b' }, link: '/dashboard/drive' },
+        { type: 'summary', title: 'Conversas não lidas', value: String(unreadChats.count || 0), extra: { color: '#22c55e' }, link: '/dashboard/crm-whatsapp' },
+        { type: 'summary', title: 'Eventos hoje', value: String(todayEvents.data?.length || 0), extra: { color: '#6366f1' }, link: '/dashboard/agenda' },
+      ];
       return {
         result: [
           `📊 Resumo do dia:`,
@@ -1239,7 +1301,7 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
           `💬 Conversas não lidas: ${unreadChats.count || 0}`,
           todayEvents.data?.length ? `\n📅 Eventos hoje:\n${evList}` : '📅 Nenhum evento hoje.',
         ].join('\n'),
-        action: { action: 'dashboard_summary' }
+        action: { action: 'dashboard_summary', cards: summaryCards }
       };
     }
 

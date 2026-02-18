@@ -5057,7 +5057,12 @@ export type Database = {
         | "tracked_docs_created"
         | "tracked_links_created"
         | "tracked_videos_created"
-      subscription_status: "active" | "canceled" | "past_due" | "trialing"
+      subscription_status:
+        | "free"
+        | "active"
+        | "canceled"
+        | "past_due"
+        | "trialing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5237,7 +5242,13 @@ export const Constants = {
         "tracked_links_created",
         "tracked_videos_created",
       ],
-      subscription_status: ["active", "canceled", "past_due", "trialing"],
+      subscription_status: [
+        "free",
+        "active",
+        "canceled",
+        "past_due",
+        "trialing",
+      ],
     },
   },
 } as const

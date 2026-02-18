@@ -34,7 +34,8 @@ import {
   Plus,
   LayoutTemplate,
   History,
-  Settings
+  Settings,
+  Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -89,7 +90,7 @@ const CleanEmailMarketing: React.FC = () => {
   
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isConnected, loading, emailAccount, aliases, selectedAlias, setSelectedAlias, connectGmail, disconnectGmail } = useGmail();
+  const { isConnected, loading, emailAccount, aliases, selectedAlias, savedAlias, savingAlias, setSelectedAlias, savePreferredAlias, connectGmail, disconnectGmail } = useGmail();
 
   // Handle return from builder with template
   useEffect(() => {
@@ -1048,6 +1049,21 @@ const CleanEmailMarketing: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    {selectedAlias && selectedAlias !== savedAlias && (
+                      <Button
+                        size="sm"
+                        className="w-full mt-1 gap-2"
+                        onClick={() => savePreferredAlias(selectedAlias)}
+                        disabled={savingAlias}
+                      >
+                        {savingAlias ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Salvar como padrão
+                      </Button>
+                    )}
                   </div>
                 )}
                 <div className="space-y-2">

@@ -13,6 +13,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { GmailAlias } from '@/hooks/useGmail';
+import { Save } from 'lucide-react';
 
 interface EmailConnectionPopoverProps {
   isConnected: boolean;
@@ -20,7 +21,10 @@ interface EmailConnectionPopoverProps {
   emailAccount: any;
   aliases?: GmailAlias[];
   selectedAlias?: string;
+  savedAlias?: string;
+  savingAlias?: boolean;
   onAliasChange?: (email: string) => void;
+  onSaveAlias?: (email: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
 }
@@ -31,7 +35,10 @@ const EmailConnectionPopover: React.FC<EmailConnectionPopoverProps> = ({
   emailAccount,
   aliases = [],
   selectedAlias,
+  savedAlias,
+  savingAlias,
   onAliasChange,
+  onSaveAlias,
   onConnect,
   onDisconnect
 }) => {
@@ -99,6 +106,21 @@ const EmailConnectionPopover: React.FC<EmailConnectionPopoverProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedAlias && selectedAlias !== savedAlias && (
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 gap-2"
+                    onClick={() => onSaveAlias?.(selectedAlias)}
+                    disabled={savingAlias}
+                  >
+                    {savingAlias ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Salvar como padrão
+                  </Button>
+                )}
               </div>
             )}
             <div className="pt-2 border-t">

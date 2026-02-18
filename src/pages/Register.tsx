@@ -320,18 +320,6 @@ export default function Register() {
                     Telefone verificado com sucesso!
                   </div>
                 )}
-
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Número Ellosuit (admin master)
-                  </Label>
-                  <Input
-                    value={ellosuitNumber}
-                    onChange={(e) => setEllosuitNumber(e.target.value)}
-                    placeholder="Opcional"
-                    className="h-12 mt-1.5 rounded-xl"
-                  />
-                </div>
               </div>
             )}
 

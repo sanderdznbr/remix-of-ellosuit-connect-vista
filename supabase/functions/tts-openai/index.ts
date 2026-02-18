@@ -1,4 +1,20 @@
 import { encodeBase64 as base64Encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; characters_used?: number; total_cost: number; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type,
+      action: params.action,
+      model: params.model || null,
+      characters_used: params.characters_used || 0,
+      total_cost: params.total_cost,
+      unit_cost: params.characters_used ? params.total_cost / params.characters_used : params.total_cost,
+      metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +80,18 @@ Deno.serve(async (req) => {
 
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = base64Encode(audioBuffer);
+
+    // Log cost: OpenAI TTS-1 ~$0.015 per 1K chars
+    const charCount = trimmedText.length;
+    const cost = (charCount / 1000) * 0.015;
+    logUsage({
+      service_type: 'openai_tts',
+      action: 'tts_generate',
+      model: 'tts-1',
+      characters_used: charCount,
+      total_cost: cost,
+      metadata: { voice, format: responseFormat, audio_size: audioBuffer.byteLength },
+    });
 
     console.log(`✅ TTS audio generated: ${audioBuffer.byteLength} bytes, format: ${responseFormat}`);
 

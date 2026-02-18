@@ -163,6 +163,68 @@ export type Database = {
           },
         ]
       }
+      api_usage_logs: {
+        Row: {
+          action: string
+          characters_used: number | null
+          company_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          file_size_bytes: number | null
+          id: string
+          input_tokens: number | null
+          metadata: Json | null
+          model: string | null
+          output_tokens: number | null
+          service_type: string
+          total_cost: number
+          unit_cost: number
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          characters_used?: number | null
+          company_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model?: string | null
+          output_tokens?: number | null
+          service_type: string
+          total_cost?: number
+          unit_cost?: number
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          characters_used?: number | null
+          company_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model?: string | null
+          output_tokens?: number | null
+          service_type?: string
+          total_cost?: number
+          unit_cost?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_executions: {
         Row: {
           automation_id: string

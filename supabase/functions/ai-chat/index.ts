@@ -1,4 +1,23 @@
 // AI Chat function using Lovable AI Gateway
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; input_tokens?: number; output_tokens?: number; total_cost: number; company_id?: string; user_id?: string; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type,
+      action: params.action,
+      model: params.model || null,
+      input_tokens: params.input_tokens || 0,
+      output_tokens: params.output_tokens || 0,
+      total_cost: params.total_cost,
+      unit_cost: params.total_cost,
+      company_id: params.company_id || null,
+      user_id: params.user_id || null,
+      metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,6 +109,27 @@ Deno.serve(async (req) => {
     console.log('✅ AI response received');
     
     const assistantMessage = data.choices[0].message.content;
+
+    // Log cost based on usage tokens
+    const usage = data.usage || {};
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    // Estimate cost based on model
+    let costPer1kInput = 0.00015; // gemini flash default
+    let costPer1kOutput = 0.0006;
+    if (model.includes('gpt-5')) { costPer1kInput = 0.005; costPer1kOutput = 0.015; }
+    else if (model.includes('gemini-2.5-pro') || model.includes('gemini-3-pro')) { costPer1kInput = 0.00125; costPer1kOutput = 0.005; }
+    const totalCost = (inputTokens / 1000) * costPer1kInput + (outputTokens / 1000) * costPer1kOutput;
+
+    logUsage({
+      service_type: 'lovable_ai',
+      action: 'chat_completion',
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_cost: totalCost,
+      metadata: { stream: false },
+    });
 
     return new Response(JSON.stringify({ 
       response: assistantMessage,

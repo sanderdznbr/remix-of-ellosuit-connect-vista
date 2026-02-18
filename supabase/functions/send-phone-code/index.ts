@@ -39,11 +39,13 @@ Deno.serve(async (req) => {
       expires_at: expiresAt,
     });
 
-    // Find ANY connected WhatsApp session to send from
+    // Find the admin's connected WhatsApp session to send from
+    const ADMIN_USER_ID = 'c63ba931-0c34-4461-ae8d-2908aed7dd20';
     const { data: sessions } = await supabase
       .from('whatsapp_sessions')
       .select('id, instance_name, baileys_server_url, status')
       .eq('status', 'connected')
+      .eq('user_id', ADMIN_USER_ID)
       .limit(1);
 
     const session = sessions?.[0];

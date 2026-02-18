@@ -109,9 +109,9 @@ export default function CheckoutActivate() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header with logo */}
-      <div className="max-w-5xl mx-auto px-6 pt-6 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex items-center justify-between">
         <img src={ellosuitLogo} alt="Ellosuit" className="h-8 w-auto" />
         <button
           onClick={() => navigate(-1)}
@@ -122,10 +122,10 @@ export default function CheckoutActivate() {
         </button>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-20">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-8 lg:gap-12">
           {/* Left — Form */}
-          <div>
+          <div className="order-2 lg:order-1">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-5">
               Comece seu teste grátis
             </h1>
@@ -254,7 +254,7 @@ export default function CheckoutActivate() {
           </div>
 
           {/* Right — Summary card */}
-          <div className="lg:sticky lg:top-8 h-fit">
+          <div className="order-1 lg:order-2 lg:sticky lg:top-8 h-fit">
             <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
               <h2 className="text-lg font-bold text-foreground">Seu plano trial</h2>
 

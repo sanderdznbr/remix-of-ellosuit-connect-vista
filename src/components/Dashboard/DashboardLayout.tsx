@@ -22,13 +22,10 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      {/* Desktop: Mega Menu Header | Mobile: App Header (hidden on CRM WhatsApp) */}
-      {isCrmWhatsApp ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
-      
-      {/* Free plan banner */}
+      {/* Free plan banner - above header */}
       {isFree && !isLoading && !isOnActivatePage && (
         <div 
-          className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+          className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity shrink-0"
           onClick={() => navigate('/dashboard/ativar')}
         >
           <Sparkles className="h-4 w-4" />
@@ -38,6 +35,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           <ArrowRight className="h-4 w-4" />
         </div>
       )}
+
+      {/* Desktop: Mega Menu Header | Mobile: App Header (hidden on CRM WhatsApp) */}
+      {isCrmWhatsApp ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
 
       <main className={`flex-1 min-h-0 w-full ${isMobile && !isCrmWhatsApp ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
         {children}

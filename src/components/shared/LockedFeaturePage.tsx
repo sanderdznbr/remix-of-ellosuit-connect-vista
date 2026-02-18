@@ -23,9 +23,10 @@ const moduleInfo: Record<ModuleType, { name: string; color: string; description:
 
 interface LockedFeaturePageProps {
   module: ModuleType;
+  children?: React.ReactNode;
 }
 
-export default function LockedFeaturePage({ module }: LockedFeaturePageProps) {
+export default function LockedFeaturePage({ module, children }: LockedFeaturePageProps) {
   const navigate = useNavigate();
   const { isFree, isTrialExpired, trialEndsAt } = useSubscription();
   const info = moduleInfo[module];
@@ -50,54 +51,60 @@ export default function LockedFeaturePage({ module }: LockedFeaturePageProps) {
   const action = getButtonAction();
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-6">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div
-          className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto"
-          style={{ backgroundColor: `${info.color}12` }}
-        >
-          <Lock className="h-10 w-10" style={{ color: info.color }} />
+    <div className="relative min-h-[80vh]">
+      {/* Blurred preview of the actual content */}
+      {children && (
+        <div className="pointer-events-none select-none" style={{ filter: 'blur(4px)', opacity: 0.5 }}>
+          {children}
         </div>
+      )}
 
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">
-            {info.name}
-          </h1>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {getMessage()}
-          </p>
-        </div>
-
-        <div className="bg-muted rounded-2xl p-4 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4" style={{ color: info.color }} />
-            <span className="text-sm font-medium text-foreground">O que está incluído:</span>
+      {/* Lock overlay */}
+      <div className={`${children ? 'absolute inset-0' : ''} flex items-center justify-center p-6 z-10`}>
+        <div className="max-w-md w-full text-center space-y-6 bg-background/95 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-border">
+          <div
+            className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto"
+            style={{ backgroundColor: `${info.color}12` }}
+          >
+            <Lock className="h-10 w-10" style={{ color: info.color }} />
           </div>
-          <p className="text-sm text-muted-foreground">{info.description}</p>
-        </div>
 
-        {isTrialExpired && trialEndsAt && (
-          <p className="text-xs text-muted-foreground">
-            Teste expirou em {trialEndsAt.toLocaleDateString('pt-BR')}
-          </p>
-        )}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">{info.name}</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">{getMessage()}</p>
+          </div>
 
-        <div className="space-y-3">
-          <Button 
-            onClick={() => navigate(action.path)}
-            className="w-full"
-            style={{ backgroundColor: info.color }}
-          >
-            {action.label}
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="w-full text-muted-foreground"
-          >
-            Voltar ao Dashboard
-          </Button>
+          <div className="bg-muted rounded-2xl p-4 border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4" style={{ color: info.color }} />
+              <span className="text-sm font-medium text-foreground">O que está incluído:</span>
+            </div>
+            <p className="text-sm text-muted-foreground">{info.description}</p>
+          </div>
+
+          {isTrialExpired && trialEndsAt && (
+            <p className="text-xs text-muted-foreground">
+              Teste expirou em {trialEndsAt.toLocaleDateString('pt-BR')}
+            </p>
+          )}
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => navigate(action.path)}
+              className="w-full"
+              style={{ backgroundColor: info.color }}
+            >
+              {action.label}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="w-full text-muted-foreground"
+            >
+              Voltar ao Dashboard
+            </Button>
+          </div>
         </div>
       </div>
     </div>

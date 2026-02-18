@@ -592,8 +592,20 @@ Deno.serve(async (req) => {
 
         if (!aliasResponse.ok) {
           const err = await aliasResponse.json();
-          console.error('❌ Gmail sendAs API error:', err);
-          throw new Error('Failed to fetch Gmail aliases');
+          console.error('⚠️ Gmail sendAs API error (falling back to primary):', err);
+          // Fallback: return primary email as only alias
+          return new Response(JSON.stringify({
+            success: true,
+            aliases: [{
+              email: emailAccount.email,
+              displayName: emailAccount.display_name || emailAccount.email,
+              isDefault: true,
+              isPrimary: true,
+              verificationStatus: 'accepted'
+            }]
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
         const aliasData = await aliasResponse.json();

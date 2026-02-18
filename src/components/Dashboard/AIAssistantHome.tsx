@@ -142,7 +142,8 @@ const AIAssistantHome: React.FC = () => {
       const blockedMsg: ChatMessage = {
         id: `blocked-${Date.now()}`,
         role: 'assistant',
-        content: '🔒 **Você está no plano gratuito.** Para usar o assistente de IA e todas as funcionalidades do Ellosuit, ative seu plano Business com **7 dias de teste grátis**.\n\n👉 [Ativar Teste Grátis](/dashboard/ativar)',
+        content: '🔒 **Você está no plano gratuito.** Para usar o assistente de IA e todas as funcionalidades do Ellosuit, ative seu plano Business com **7 dias de teste grátis**.',
+        action: { type: 'upgrade' },
       };
       setMessages(prev => [...prev, {
         id: `user-${Date.now()}`,
@@ -644,9 +645,21 @@ const AIAssistantHome: React.FC = () => {
                         <span className="text-sm text-gray-400">Pensando...</span>
                       </div>
                     ) : (
-                      <p className={`text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : ''}`}
-                         dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
-                      />
+                      <>
+                        <p className={`text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : ''}`}
+                           dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
+                        />
+                        {msg.action?.type === 'upgrade' && (
+                          <button
+                            onClick={() => navigate('/dashboard/ativar')}
+                            className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            Fazer Upgrade
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
                     )}
 
                     {/* QR Code for WhatsApp connection */}

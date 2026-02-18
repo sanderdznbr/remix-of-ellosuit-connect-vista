@@ -7,9 +7,12 @@ const corsHeaders = {
 };
 
 // Convert numbers to pt-BR words for TTS pronunciation
-const unidades = ['zero','uma','duas','três','quatro','cinco','seis','sete','oito','nove',
+const unidades = ['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove',
   'dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
 const dezenas = ['','','vinte','trinta','quarenta','cinquenta'];
+const centenas = ['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+
+const meses = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 function numberToWords(n: number): string {
   if (n < 20) return unidades[n];
@@ -18,17 +21,61 @@ function numberToWords(n: number): string {
   return u === 0 ? dezenas[d] : `${dezenas[d]} e ${unidades[u]}`;
 }
 
+function numberToWordsFem(n: number): string {
+  if (n === 1) return 'uma';
+  if (n === 2) return 'duas';
+  return numberToWords(n);
+}
+
+function yearToWords(y: number): string {
+  if (y === 2000) return 'dois mil';
+  if (y > 2000 && y < 2100) {
+    const remainder = y - 2000;
+    return `dois mil e ${numberToWords(remainder)}`;
+  }
+  const mil = Math.floor(y / 1000);
+  const rest = y % 1000;
+  let result = numberToWords(mil) + ' mil';
+  if (rest === 0) return result;
+  if (rest === 100) return result + ' e cem';
+  if (rest < 100) return result + ' e ' + numberToWords(rest);
+  const c = Math.floor(rest / 100);
+  const r = rest % 100;
+  if (r === 0) {
+    return rest === 100 ? result + ' e cem' : result + ' e ' + centenas[c];
+  }
+  return result + ' ' + centenas[c] + ' e ' + numberToWords(r);
+}
+
+function dateToPortuguese(text: string): string {
+  // Match DD/MM/YYYY or DD/MM/YY
+  return text.replace(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g, (_match, d, m, y) => {
+    const day = parseInt(d, 10);
+    const month = parseInt(m, 10);
+    let year = parseInt(y, 10);
+    if (year < 100) year += 2000;
+    if (month < 1 || month > 12) return _match;
+    const dayWord = day === 1 ? 'primeiro' : numberToWords(day);
+    return `${dayWord} de ${meses[month]} de ${yearToWords(year)}`;
+  });
+}
+
 function timeToPortuguese(text: string): string {
-  // Match patterns like 20:00, 8:30, 08h00, 20h30
   return text.replace(/(\d{1,2})[h:](\d{2})/g, (_match, h, m) => {
     const hour = parseInt(h, 10);
     const min = parseInt(m, 10);
-    let result = numberToWords(hour) + (hour === 1 ? ' hora' : ' horas');
+    let result = numberToWordsFem(hour) + (hour === 1 ? ' hora' : ' horas');
     if (min > 0) {
       result += ' e ' + numberToWords(min) + (min === 1 ? ' minuto' : ' minutos');
     }
     return result;
   });
+}
+
+function preprocessForTTS(text: string): string {
+  let result = dateToPortuguese(text);
+  result = timeToPortuguese(result);
+  return result;
 }
 
 serve(async (req) => {
@@ -63,7 +110,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: timeToPortuguese(text.slice(0, 5000)), // Convert times + limit to 5000 chars
+          text: preprocessForTTS(text.slice(0, 5000)),
           model_id: "eleven_multilingual_v2",
           voice_settings: {
             stability: 0.5,

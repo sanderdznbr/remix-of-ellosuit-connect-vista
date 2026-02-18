@@ -260,9 +260,9 @@ const handler = async (req: Request): Promise<Response> => {
         accessToken = await refreshGmailToken(supabase, emailAccount.id, emailAccount.refresh_token);
       }
 
-      // Use the Gmail account email as sender
-      finalFromEmail = gmailEmail;
-      finalFromName = from_name || (gmailEmail ? gmailEmail.split('@')[0] : 'User');
+      // Use the from_email if provided (alias support), otherwise use Gmail account email
+      finalFromEmail = from_email || gmailEmail;
+      finalFromName = from_name || (finalFromEmail ? finalFromEmail.split('@')[0] : 'User');
 
       sendResult = await sendWithGmail({
         ...requestData,

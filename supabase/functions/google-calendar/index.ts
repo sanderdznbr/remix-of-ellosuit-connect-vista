@@ -532,6 +532,89 @@ Deno.serve(async (req) => {
         });
       }
 
+      // List Gmail sendAs aliases (for "Send As" feature)
+      if (body.action === 'list_gmail_aliases') {
+        const { user_id } = body;
+        console.log('📋 Listing Gmail sendAs aliases for user:', user_id);
+
+        if (!user_id) {
+          throw new Error('user_id missing');
+        }
+
+        // Get user's Gmail account
+        const { data: emailAccount, error: accountError } = await supabase
+          .from('user_email_accounts')
+          .select('*')
+          .eq('user_id', user_id)
+          .eq('provider', 'gmail')
+          .single();
+
+        if (accountError || !emailAccount) {
+          throw new Error('Gmail account not found');
+        }
+
+        // Check/refresh token
+        let accessToken = emailAccount.access_token;
+        const now = new Date();
+        const expiresAt = new Date(emailAccount.expires_at);
+
+        if (now >= expiresAt && emailAccount.refresh_token) {
+          console.log('⚠️ Token expired, refreshing...');
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              refresh_token: emailAccount.refresh_token,
+              grant_type: 'refresh_token'
+            })
+          });
+          const tokens = await tokenResponse.json();
+          if (!tokenResponse.ok) {
+            throw new Error('Failed to refresh token');
+          }
+          accessToken = tokens.access_token;
+          const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+          await supabase.from('user_email_accounts').update({
+            access_token: accessToken,
+            expires_at: newExpiry
+          }).eq('id', emailAccount.id);
+        }
+
+        // Fetch sendAs aliases from Gmail API
+        const aliasResponse = await fetch(
+          'https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs',
+          {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          }
+        );
+
+        if (!aliasResponse.ok) {
+          const err = await aliasResponse.json();
+          console.error('❌ Gmail sendAs API error:', err);
+          throw new Error('Failed to fetch Gmail aliases');
+        }
+
+        const aliasData = await aliasResponse.json();
+        const aliases = (aliasData.sendAs || []).map((a: any) => ({
+          email: a.sendAsEmail,
+          displayName: a.displayName || '',
+          isDefault: a.isDefault || false,
+          isPrimary: a.isPrimary || false,
+          verificationStatus: a.verificationStatus || 'unknown'
+        })).filter((a: any) => a.verificationStatus === 'accepted' || a.isPrimary);
+
+        console.log(`✅ Found ${aliases.length} verified aliases`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          aliases
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       // Handle token renewal
       if (body.action === 'renew_token') {
         const { refreshToken, userId } = body;

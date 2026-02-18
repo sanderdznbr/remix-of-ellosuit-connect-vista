@@ -3,11 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+export interface GmailAlias {
+  email: string;
+  displayName: string;
+  isDefault: boolean;
+  isPrimary: boolean;
+  verificationStatus: string;
+}
+
 export const useGmail = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailAccount, setEmailAccount] = useState<any>(null);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [aliases, setAliases] = useState<GmailAlias[]>([]);
+  const [selectedAlias, setSelectedAlias] = useState<string>('');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -289,6 +299,8 @@ export const useGmail = () => {
 
       setIsConnected(false);
       setEmailAccount(null);
+      setAliases([]);
+      setSelectedAlias('');
       
       console.log('✅ Gmail desconectado');
       toast({
@@ -307,6 +319,34 @@ export const useGmail = () => {
     }
   };
 
+  const fetchAliases = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('📋 Buscando aliases do Gmail...');
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: { action: 'list_gmail_aliases', user_id: user.id }
+      });
+
+      if (error) {
+        console.error('❌ Erro ao buscar aliases:', error);
+        return;
+      }
+
+      if (data?.aliases) {
+        console.log('✅ Aliases encontrados:', data.aliases.length);
+        setAliases(data.aliases);
+        // Set default alias
+        const defaultAlias = data.aliases.find((a: GmailAlias) => a.isPrimary) || data.aliases[0];
+        if (defaultAlias && !selectedAlias) {
+          setSelectedAlias(defaultAlias.email);
+        }
+      }
+    } catch (error) {
+      console.error('💥 Erro ao buscar aliases:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       checkConnection();
@@ -315,12 +355,23 @@ export const useGmail = () => {
     }
   }, [user]);
 
+  // Fetch aliases when connected
+  useEffect(() => {
+    if (isConnected && user) {
+      fetchAliases();
+    }
+  }, [isConnected, user]);
+
   return {
     isConnected,
     loading,
     emailAccount,
+    aliases,
+    selectedAlias,
+    setSelectedAlias,
     connectGmail,
     disconnectGmail,
-    checkConnection
+    checkConnection,
+    fetchAliases
   };
 };

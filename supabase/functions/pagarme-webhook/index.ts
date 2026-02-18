@@ -59,6 +59,28 @@ Deno.serve(async (req) => {
           .eq('company_id', companyId);
         
         console.log('Subscription activated for company:', companyId);
+
+        // Send renewal email
+        if (type === 'subscription.renewed') {
+          try {
+            const { data: renewUser } = await supabase.from('company_users').select('user_id').eq('company_id', companyId).eq('role', 'admin').limit(1).single();
+            if (renewUser) {
+              const { data: renewAuth } = await supabase.auth.admin.getUserById(renewUser.user_id);
+              if (renewAuth?.user?.email) {
+                await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')}` },
+                  body: JSON.stringify({
+                    template_key: 'subscription_renewed',
+                    recipient_email: renewAuth.user.email,
+                    recipient_name: renewAuth.user.user_metadata?.username || renewAuth.user.email.split('@')[0],
+                    invoice_data: { plan_name: 'Business', amount: metadata?.billing_cycle === 'yearly' ? 2497 : 297, billing_cycle: metadata?.billing_cycle || 'monthly' },
+                  }),
+                }).catch(e => console.error('Renewal email error:', e));
+              }
+            }
+          } catch (e) { console.error('Renewal email error:', e); }
+        }
         break;
 
       case 'subscription.canceled':
@@ -79,6 +101,38 @@ Deno.serve(async (req) => {
           .eq('company_id', companyId);
         
         console.log('Subscription canceled for company:', companyId);
+
+        // Send cancelation + suspension emails
+        try {
+          const { data: cancelUser } = await supabase.from('company_users').select('user_id').eq('company_id', companyId).eq('role', 'admin').limit(1).single();
+          if (cancelUser) {
+            const { data: cancelAuth } = await supabase.auth.admin.getUserById(cancelUser.user_id);
+            if (cancelAuth?.user?.email) {
+              const cancelName = cancelAuth.user.user_metadata?.username || cancelAuth.user.email.split('@')[0];
+              // Cancellation confirmed email
+              await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')}` },
+                body: JSON.stringify({
+                  template_key: 'cancellation_confirmed',
+                  recipient_email: cancelAuth.user.email,
+                  recipient_name: cancelName,
+                  invoice_data: { plan_name: 'Business', billing_cycle: metadata?.billing_cycle || 'monthly' },
+                }),
+              }).catch(e => console.error('Cancel email error:', e));
+              // Account suspended email
+              await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')}` },
+                body: JSON.stringify({
+                  template_key: 'account_suspended',
+                  recipient_email: cancelAuth.user.email,
+                  recipient_name: cancelName,
+                }),
+              }).catch(e => console.error('Suspension email error:', e));
+            }
+          }
+        } catch (e) { console.error('Cancel email error:', e); }
         break;
 
       case 'subscription.pending':

@@ -13,13 +13,23 @@ const ADMIN_USER_ID = "c63ba931-0c34-4461-ae8d-2908aed7dd20";
 const ADMIN_COMPANY_ID = "60008c43-e536-482d-a090-91904de57534";
 
 // Template IDs
-const TEMPLATES = {
+const TEMPLATES: Record<string, string> = {
   welcome: "0694ac25-4442-49d0-892b-be075943cf25",
   payment_confirmed: "594cc505-eb98-4a32-9fd0-7178d585a9e0",
   payment_pending: "1eaf80c7-f806-49f0-aa05-c41c9169ea66",
   trial_started: "a1b2c3d4-0001-4000-8000-000000000001",
   trial_ending: "a1b2c3d4-0002-4000-8000-000000000002",
   account_suspended: "a1b2c3d4-0003-4000-8000-000000000003",
+  plan_upgraded: "b1000001-0001-4000-8000-000000000001",
+  subscription_renewed: "b1000001-0002-4000-8000-000000000002",
+  payment_failed: "b1000001-0003-4000-8000-000000000003",
+  cancellation_confirmed: "b1000001-0004-4000-8000-000000000004",
+  new_contact: "b1000001-0005-4000-8000-000000000005",
+  meeting_scheduled: "b1000001-0006-4000-8000-000000000006",
+  meeting_reminder: "b1000001-0007-4000-8000-000000000007",
+  document_shared: "b1000001-0008-4000-8000-000000000008",
+  proposal_sent: "b1000001-0009-4000-8000-000000000009",
+  refund_processed: "b1000001-0010-4000-8000-000000000010",
 };
 
 interface SystemEmailRequest {
@@ -129,6 +139,16 @@ Deno.serve(async (req) => {
       trial_started: `Seu periodo de teste comecou - Ellosuit`,
       trial_ending: `Seu periodo de teste esta acabando - Ellosuit`,
       account_suspended: `Conta suspensa - Ellosuit`,
+      plan_upgraded: `Upgrade Confirmado - Plano ${allVars.nome_plano || "Business"}`,
+      subscription_renewed: `Assinatura Renovada - Ellosuit`,
+      payment_failed: `Falha no Pagamento - Acao Necessaria`,
+      cancellation_confirmed: `Cancelamento Confirmado - Ellosuit`,
+      new_contact: `Cadastro Recebido - ${allVars.nome_cliente}`,
+      meeting_scheduled: `Reuniao Confirmada - ${allVars.titulo_reuniao || "Ellosuit"}`,
+      meeting_reminder: `Lembrete: Reuniao em 30 minutos`,
+      document_shared: `Documento Compartilhado - ${allVars.nome_documento || "Ellosuit"}`,
+      proposal_sent: `Nova Proposta - ${allVars.numero_proposta || "Ellosuit"}`,
+      refund_processed: `Reembolso Processado - Ellosuit`,
     };
     const subject = subjects[template_key] || template.name;
 

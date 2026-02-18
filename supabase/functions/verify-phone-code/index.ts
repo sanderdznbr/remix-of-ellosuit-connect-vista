@@ -26,21 +26,28 @@ Deno.serve(async (req) => {
 
     const cleanPhone = phone.replace(/\D/g, '');
 
-    // Find the latest valid code for this phone
-    const { data: verification } = await supabase
+    // First check if the code exists at all (regardless of expiry)
+    const { data: anyMatch } = await supabase
       .from('phone_verifications')
       .select('*')
       .eq('phone', cleanPhone)
       .eq('code', code)
       .eq('verified', false)
-      .gte('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (!verification) {
-      return new Response(JSON.stringify({ error: 'Código inválido ou expirado' }), {
-        status: 400,
+    if (!anyMatch) {
+      return new Response(JSON.stringify({ error: 'Código inválido. Verifique e tente novamente.' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if it's expired
+    if (new Date(anyMatch.expires_at) < new Date()) {
+      return new Response(JSON.stringify({ error: 'Código expirado. Solicite um novo código e tente novamente.' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -49,7 +56,7 @@ Deno.serve(async (req) => {
     await supabase
       .from('phone_verifications')
       .update({ verified: true })
-      .eq('id', verification.id);
+      .eq('id', anyMatch.id);
 
     return new Response(JSON.stringify({ success: true, message: 'Telefone verificado com sucesso' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

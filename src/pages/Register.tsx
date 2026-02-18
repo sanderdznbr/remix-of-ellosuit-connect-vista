@@ -392,7 +392,11 @@ export default function Register() {
             {/* CTA Button */}
             <div className="mt-8">
               {step < TOTAL_STEPS - 1 ? (
-                <Button onClick={handleNext} className="w-full h-12 rounded-xl text-sm font-medium">
+                <Button
+                  onClick={handleNext}
+                  className="w-full h-12 rounded-xl text-sm font-medium"
+                  disabled={step === 1 && !phoneVerified}
+                >
                   Continuar
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

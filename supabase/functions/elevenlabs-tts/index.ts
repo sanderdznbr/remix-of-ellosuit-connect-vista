@@ -1,4 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; characters_used?: number; total_cost: number; company_id?: string; user_id?: string; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type,
+      action: params.action,
+      model: params.model || null,
+      characters_used: params.characters_used || 0,
+      total_cost: params.total_cost,
+      unit_cost: params.characters_used ? params.total_cost / params.characters_used : params.total_cost,
+      company_id: params.company_id || null,
+      user_id: params.user_id || null,
+      metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -148,6 +166,18 @@ serve(async (req) => {
     }
 
     const audioBuffer = await response.arrayBuffer();
+
+    // Log cost: ElevenLabs ~$0.30 per 1K chars for multilingual_v2
+    const charCount = preprocessForTTS(text.slice(0, 5000)).length;
+    const cost = (charCount / 1000) * 0.30;
+    logUsage({
+      service_type: 'elevenlabs_tts',
+      action: 'tts_generate',
+      model: 'eleven_multilingual_v2',
+      characters_used: charCount,
+      total_cost: cost,
+      metadata: { voice_id: selectedVoice, audio_size: audioBuffer.byteLength },
+    });
 
     return new Response(audioBuffer, {
       headers: {

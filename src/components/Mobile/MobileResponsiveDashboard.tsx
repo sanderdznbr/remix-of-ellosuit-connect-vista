@@ -82,6 +82,7 @@ import AdminSubscriptionsPanel from '@/components/Admin/AdminSubscriptionsPanel'
 import AdminSystemHealth from '@/components/Admin/AdminSystemHealth';
 import AdminSupportPanel from '@/components/Admin/AdminSupportPanel';
 import AdminNotificationsLog from '@/components/Admin/AdminNotificationsLog';
+import AdminCostsPanel from '@/components/Admin/AdminCostsPanel';
 
 const MobileResponsiveDashboard = () => {
   const { user, loading } = useAuth();
@@ -113,6 +114,7 @@ const MobileResponsiveDashboard = () => {
         <Route path="notifications" element={<AdminNotificationsLog />} />
         <Route path="system" element={<AdminSystemHealth />} />
         <Route path="support" element={<AdminSupportPanel />} />
+        <Route path="costs" element={<AdminCostsPanel />} />
       </Route>
 
       {/* Dashboard padrão com MegaMenu */}

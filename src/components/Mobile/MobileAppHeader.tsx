@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Moon, Sun, Settings, User, CreditCard, Shield, LogOut, ChevronRight, HelpCircle, Bug, Palette, CheckCheck, Calendar, MessageSquare, CheckCircle, Video, Mail, FolderOpen, AlertCircle, Trash2, Archive } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useHubColor } from '@/hooks/useHubColor';
@@ -53,6 +53,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const MobileAppHeader = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { color: hubColor } = useHubColor();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
@@ -92,12 +93,14 @@ const MobileAppHeader = () => {
         </button>
 
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-white active:bg-white/10 transition-colors"
-          >
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
+          {location.pathname !== '/dashboard' && (
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-white active:bg-white/10 transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+          )}
 
           {/* Notifications */}
           <DropdownMenu modal={false}>

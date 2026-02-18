@@ -26,8 +26,8 @@ serve(async (req) => {
       });
     }
 
-    // Use Sarah voice by default - natural female voice
-    const selectedVoice = voiceId || "EXAVITQu4vr4xnSDxMaL";
+    // Use Ello voice by default - custom Ellosuit voice
+    const selectedVoice = voiceId || "RGymW84CSmfVugnA5tvA";
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}?output_format=mp3_44100_128`,

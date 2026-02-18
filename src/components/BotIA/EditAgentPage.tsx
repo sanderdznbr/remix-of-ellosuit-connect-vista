@@ -908,9 +908,10 @@ const EditAgentPage: React.FC = () => {
                 {audioResponseMode !== 'disabled' && (
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Voz</Label>
-                    <p className="text-xs text-gray-400 mb-2">Escolha a voz para as respostas em áudio (OpenAI TTS)</p>
+                    <p className="text-xs text-gray-400 mb-2">Escolha a voz para as respostas em áudio</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {[
+                        { value: 'ello', label: '⭐ Ello', desc: 'Voz Ellosuit (ElevenLabs)' },
                         { value: 'alloy', label: 'Alloy', desc: 'Neutra e versátil' },
                         { value: 'echo', label: 'Echo', desc: 'Masculina suave' },
                         { value: 'fable', label: 'Fable', desc: 'Expressiva' },

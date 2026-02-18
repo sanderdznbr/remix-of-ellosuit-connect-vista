@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useToolUsageTracker } from '@/hooks/useToolUsageTracker';
 import WhatsAppQRInline from './WhatsAppQRInline';
+import AIAssistantCards, { type RichCard } from './AIAssistantCards';
 
 interface ChatMessage {
   id: string;
@@ -640,6 +641,10 @@ const AIAssistantHome: React.FC = () => {
                         <p className={`text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : ''}`}
                            dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
                         />
+                        {/* Rich visual cards */}
+                        {msg.action?.cards && msg.action.cards.length > 0 && (
+                          <AIAssistantCards cards={msg.action.cards as RichCard[]} />
+                        )}
                         {msg.action?.type === 'upgrade' && (
                           <button
                             onClick={() => navigate('/checkout/ativar')}

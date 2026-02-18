@@ -17,6 +17,9 @@ const TEMPLATES = {
   welcome: "0694ac25-4442-49d0-892b-be075943cf25",
   payment_confirmed: "594cc505-eb98-4a32-9fd0-7178d585a9e0",
   payment_pending: "1eaf80c7-f806-49f0-aa05-c41c9169ea66",
+  trial_started: "a1b2c3d4-0001-4000-8000-000000000001",
+  trial_ending: "a1b2c3d4-0002-4000-8000-000000000002",
+  account_suspended: "a1b2c3d4-0003-4000-8000-000000000003",
 };
 
 interface SystemEmailRequest {
@@ -120,9 +123,12 @@ Deno.serve(async (req) => {
 
     // Determine subject based on template
     const subjects: Record<string, string> = {
-      welcome: `Bem-vindo ao Ellosuit, ${allVars.nome_cliente}! 🚀`,
+      welcome: `Bem-vindo ao Ellosuit, ${allVars.nome_cliente}!`,
       payment_confirmed: `Pagamento Confirmado - Fatura ${allVars.numero_fatura || ""}`,
-      payment_pending: `Ação Necessária: Pagamento Pendente - Ellosuit`,
+      payment_pending: `Acao Necessaria: Pagamento Pendente - Ellosuit`,
+      trial_started: `Seu periodo de teste comecou - Ellosuit`,
+      trial_ending: `Seu periodo de teste esta acabando - Ellosuit`,
+      account_suspended: `Conta suspensa - Ellosuit`,
     };
     const subject = subjects[template_key] || template.name;
 

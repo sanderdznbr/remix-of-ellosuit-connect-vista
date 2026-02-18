@@ -1,4 +1,15 @@
 // Realtime Transcription
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; total_cost: number; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action, model: params.model || null,
+      total_cost: params.total_cost, unit_cost: params.total_cost, metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,6 +137,13 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ Transcription:', text.substring(0, 80));
+
+    // OpenAI Whisper: ~$0.006 per minute, estimate ~5s chunks
+    logUsage({
+      service_type: 'openai_whisper', action: 'realtime_transcription', model: 'whisper-1',
+      total_cost: 0.0005, // ~5s chunk = $0.0005
+      metadata: { text_length: text.length },
+    });
 
     return new Response(JSON.stringify({
       text,

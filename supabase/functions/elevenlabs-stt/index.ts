@@ -1,4 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; total_cost: number; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action, model: params.model || null,
+      total_cost: params.total_cost, unit_cost: params.total_cost, metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,6 +65,13 @@ serve(async (req) => {
     }
 
     const transcription = await response.json();
+
+    // ElevenLabs Scribe STT: ~$0.40 per hour of audio, estimate ~30s per request
+    logUsage({
+      service_type: 'elevenlabs_stt', action: 'speech_to_text', model: 'scribe_v2',
+      total_cost: 0.0033, // ~$0.40/hr, ~30s avg = $0.0033
+      metadata: { text_length: transcription.text?.length || 0 },
+    });
 
     return new Response(JSON.stringify({ text: transcription.text }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,4 +1,16 @@
 // Speaker Diarization
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+async function logUsage(params: { service_type: string; action: string; model?: string; total_cost: number; duration_seconds?: number; metadata?: Record<string, any> }) {
+  try {
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    await sb.from('api_usage_logs').insert({
+      service_type: params.service_type, action: params.action, model: params.model || null,
+      total_cost: params.total_cost, unit_cost: params.total_cost,
+      duration_seconds: params.duration_seconds || null, metadata: params.metadata || {},
+    });
+  } catch (e) { console.error('logUsage error:', e); }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -124,10 +136,19 @@ Deno.serve(async (req) => {
     });
     console.log('📊 Distribuição de speakers:', Object.fromEntries(speakerCounts));
 
+    // Log cost: AssemblyAI ~$0.65 per hour
+    const audioDuration = transcriptResult.audio_duration || 0;
+    const cost = (audioDuration / 3600) * 0.65;
+    logUsage({
+      service_type: 'assemblyai', action: 'speaker_diarization', model: 'assemblyai_v2',
+      total_cost: cost, duration_seconds: audioDuration,
+      metadata: { speaker_count: actualUniqueSpeakers.size, segments: segments.length },
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
-        speakerCount: actualUniqueSpeakers.size, // Use the actual count from segments
+        speakerCount: actualUniqueSpeakers.size,
         segments,
         fullText: transcriptResult.text,
       }),

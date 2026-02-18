@@ -290,6 +290,8 @@ const handler = async (req: Request): Promise<Response> => {
         content_text,
         tracking_pixel_id,
         status: sendResult.status,
+        user_id: user_id || null,
+        company_id: company_id || null,
         metadata: {
           provider: sendResult.provider,
           external_id: sendResult.external_id,

@@ -251,6 +251,35 @@ export default function CheckoutActivate() {
                 </div>
               </div>
             </section>
+
+            {/* Mobile/tablet submit button — after form */}
+            <div className="lg:hidden mt-8">
+              <Button
+                onClick={() => handleSubmit()}
+                className="w-full h-12 text-base rounded-xl"
+                size="lg"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Iniciar teste grátis
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground mt-3">
+                Seu plano começa em {trialEndDate}, a menos que cancele.
+              </p>
+              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mt-2">
+                <Lock className="h-3 w-3" />
+                Pagamento seguro via Pagar.me
+              </div>
+            </div>
           </div>
 
           {/* Right — Summary card */}
@@ -318,24 +347,26 @@ export default function CheckoutActivate() {
                 </div>
               </div>
 
-              <Button
-                onClick={() => handleSubmit()}
-                className="w-full h-12 text-base rounded-xl"
-                size="lg"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Iniciar teste grátis
-                  </>
-                )}
-              </Button>
+              <div className="hidden lg:block">
+                <Button
+                  onClick={() => handleSubmit()}
+                  className="w-full h-12 text-base rounded-xl"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Iniciar teste grátis
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <p className="text-xs text-center text-muted-foreground">
                 Seu plano começa em {trialEndDate}, a menos que cancele. Cancele a qualquer momento.

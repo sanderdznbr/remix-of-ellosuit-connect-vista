@@ -129,7 +129,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/omni" element={<ModuleGate module="omni"><OmniHub /></ModuleGate>} />
             <Route path="/flows" element={<ModuleGate module="flow"><FlowsHub /></ModuleGate>} />
             <Route path="/track" element={<ModuleGate module="track"><TrackHub /></ModuleGate>} />
-            <Route path="/suite" element={<SuiteHub />} />
+            <Route path="/suite" element={<ModuleGate module="suite"><SuiteHub /></ModuleGate>} />
             
             {/* Inteligência Artificial - Omni */}
             <Route path="/bot-ia" element={<ModuleGate module="omni"><BotIADashboard /></ModuleGate>} />
@@ -167,19 +167,19 @@ const MobileResponsiveDashboard = () => {
             <Route path="/encurtador" element={<ModuleGate module="track"><LinkShortenerPage /></ModuleGate>} />
             <Route path="/track/leads" element={<ModuleGate module="track"><LeadTrackingDashboard /></ModuleGate>} />
             
-            {/* Gestão - Suite (sempre acessível) */}
-            <Route path="/cadastros" element={<UnifiedDatabase />} />
-            <Route path="/drive" element={<DriveManager />} />
-            <Route path="/equipe" element={<TeamManagement />} />
-            <Route path="/habitos" element={<HabitsPage />} />
-            <Route path="/habitos/builder" element={<HabitFlowBuilder />} />
-            <Route path="/contratos" element={<ContractsPage />} />
-            <Route path="/contratos/editor" element={<ContractEditor />} />
-            <Route path="/contratos/visualizar" element={<ContractViewer />} />
-            <Route path="/propostas" element={<ProposalsPage />} />
-            <Route path="/propostas/editor" element={<ProposalEditor />} />
-            <Route path="/recibos" element={<ReceiptsPage />} />
-            <Route path="/recibos/design" element={<ReceiptThemeBuilder />} />
+            {/* Gestão - Suite (bloqueado no free) */}
+            <Route path="/cadastros" element={<ModuleGate module="suite"><UnifiedDatabase /></ModuleGate>} />
+            <Route path="/drive" element={<ModuleGate module="suite"><DriveManager /></ModuleGate>} />
+            <Route path="/equipe" element={<ModuleGate module="suite"><TeamManagement /></ModuleGate>} />
+            <Route path="/habitos" element={<ModuleGate module="suite"><HabitsPage /></ModuleGate>} />
+            <Route path="/habitos/builder" element={<ModuleGate module="suite"><HabitFlowBuilder /></ModuleGate>} />
+            <Route path="/contratos" element={<ModuleGate module="suite"><ContractsPage /></ModuleGate>} />
+            <Route path="/contratos/editor" element={<ModuleGate module="suite"><ContractEditor /></ModuleGate>} />
+            <Route path="/contratos/visualizar" element={<ModuleGate module="suite"><ContractViewer /></ModuleGate>} />
+            <Route path="/propostas" element={<ModuleGate module="suite"><ProposalsPage /></ModuleGate>} />
+            <Route path="/propostas/editor" element={<ModuleGate module="suite"><ProposalEditor /></ModuleGate>} />
+            <Route path="/recibos" element={<ModuleGate module="suite"><ReceiptsPage /></ModuleGate>} />
+            <Route path="/recibos/design" element={<ModuleGate module="suite"><ReceiptThemeBuilder /></ModuleGate>} />
             
             {/* Legacy routes */}
             <Route path="/clientes" element={<Navigate to="/dashboard/cadastros" replace />} />
@@ -190,10 +190,10 @@ const MobileResponsiveDashboard = () => {
             <Route path="/rastreamento-link" element={<Navigate to="/dashboard/rastreamento" replace />} />
             <Route path="/rastreamento-video" element={<Navigate to="/dashboard/rastreamento" replace />} />
             
-            {/* Insights - Suite (sempre acessível) */}
-            <Route path="/analytics" element={<Analytics onNavigate={handleNavigate} />} />
-            <Route path="/ello-vision" element={<ElloVisionDashboard />} />
-            <Route path="/relatorios" element={<ReportsDashboard />} />
+            {/* Insights - Suite (bloqueado no free) */}
+            <Route path="/analytics" element={<ModuleGate module="suite"><Analytics onNavigate={handleNavigate} /></ModuleGate>} />
+            <Route path="/ello-vision" element={<ModuleGate module="suite"><ElloVisionDashboard /></ModuleGate>} />
+            <Route path="/relatorios" element={<ModuleGate module="suite"><ReportsDashboard /></ModuleGate>} />
             
             {/* Configurações - Suite (sempre acessível) */}
             <Route path="/configuracoes" element={<GeneralSettingsPage />} />

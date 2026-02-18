@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export type PlanType = 'free' | 'base' | 'pro' | 'business' | 'enterprise' | 'custom';
 export type BillingCycle = 'monthly' | 'yearly';
 export type SubscriptionStatus = 'free' | 'active' | 'canceled' | 'past_due' | 'trialing';
-export type ModuleType = 'omni' | 'flow' | 'track';
+export type ModuleType = 'omni' | 'flow' | 'track' | 'suite';
 export type AddonType = 'users' | 'storage' | 'emails' | 'ai_agents' | 'whatsapp_sessions' | 'booking_links' | 'meeting_hours' | 'tracked_docs' | 'priority_support';
 export type ResourceType = 'users' | 'storage_gb' | 'emails_sent' | 'ai_agents_active' | 'whatsapp_sessions_active' | 'booking_links_active' | 'meeting_hours_used' | 'tracked_docs_created' | 'tracked_links_created' | 'tracked_videos_created';
 

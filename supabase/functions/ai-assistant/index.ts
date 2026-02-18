@@ -1490,7 +1490,7 @@ async function executeTool(toolName: string, args: Record<string, unknown>, cont
       
       return {
         result: `✅ Agente de IA "${agent.name}" criado com sucesso! Você pode editá-lo e ativá-lo no WhatsApp.`,
-        action: { action: 'agent_created', data: agent, navigate: `/bot-ia/editar/${agent.id}` }
+        action: { action: 'agent_created', data: agent, navigate: `/dashboard/bot-ia/editar/${agent.id}` }
       };
     }
 

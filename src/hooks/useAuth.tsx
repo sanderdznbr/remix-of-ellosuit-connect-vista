@@ -85,7 +85,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, username: string, companyName: string) => {
+  const signUp = async (email: string, password: string, username: string, companyName: string, phone?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     console.log('📝 Signing up:', email, 'with company:', companyName);
@@ -97,7 +97,8 @@ export const useAuth = () => {
         emailRedirectTo: redirectUrl,
         data: {
           username: username,
-          company_name: companyName
+          company_name: companyName,
+          ...(phone ? { phone: phone.replace(/\D/g, '') } : {})
         }
       }
     });

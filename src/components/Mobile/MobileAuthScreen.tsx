@@ -142,7 +142,7 @@ const MobileAuthScreen = () => {
                   />
                   <span className="text-xs text-muted-foreground">Manter conectado</span>
                 </label>
-                <button type="button" className="text-xs text-primary hover:underline">Esqueci minha senha</button>
+                <button type="button" className="text-xs text-primary hover:underline" onClick={() => navigate('/forgot-password')}>Esqueci minha senha</button>
               </div>
               <Button type="submit" className="w-full h-10 rounded-full bg-primary text-primary-foreground text-sm" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}

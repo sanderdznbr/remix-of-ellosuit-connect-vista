@@ -54,10 +54,22 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs TTS error:", response.status, errText);
+      
+      // Parse error for user-friendly message
+      let errorMessage = "TTS generation failed";
+      try {
+        const errData = JSON.parse(errText);
+        if (errData?.detail?.status === "quota_exceeded") {
+          errorMessage = `Cota de caracteres ElevenLabs esgotada. Restam ${errData.detail.message?.match(/(\d+) credits remaining/)?.[1] || '0'} créditos.`;
+        } else {
+          errorMessage = errData?.detail?.message || errData?.detail || errorMessage;
+        }
+      } catch {}
+      
       return new Response(
-        JSON.stringify({ error: "TTS generation failed" }),
+        JSON.stringify({ error: errorMessage }),
         {
-          status: 500,
+          status: response.status === 401 ? 401 : 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );

@@ -336,7 +336,7 @@ const AIAssistantHome: React.FC = () => {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: cleanText }),
+          body: JSON.stringify({ text: cleanText, voiceId: 'RGymW84CSmfVugnA5tvA' }),
         }
       );
 

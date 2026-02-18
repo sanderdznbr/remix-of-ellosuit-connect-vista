@@ -2380,26 +2380,62 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                               let sendSuccess = false;
                               
                               if (shouldSendAudio) {
-                                // Generate TTS
-                                const ttsResp = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-                                  body: JSON.stringify({ text: aiReply, voice: ttsVoice, speed: 1.0, format: 'opus' }),
-                                });
-                                if (ttsResp.ok) {
-                                  const ttsData = await ttsResp.json();
-                                  const audioFileName = `ai-audio/${aiMsgId}.ogg`;
-                                  const binaryStr = atob(ttsData.audio_base64);
+                                let audioBase64 = '';
+                                let audioContentType = 'audio/ogg; codecs=opus';
+                                
+                                if (ttsVoice === 'ello') {
+                                  // Use ElevenLabs TTS with Ello voice
+                                  const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                                  if (ELEVENLABS_API_KEY) {
+                                    const elloResp = await fetch(
+                                      `https://api.elevenlabs.io/v1/text-to-speech/RGymW84CSmfVugnA5tvA?output_format=mp3_44100_128`,
+                                      {
+                                        method: 'POST',
+                                        headers: { 'xi-api-key': ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: aiReply.slice(0, 5000), model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true } }),
+                                      }
+                                    );
+                                    if (elloResp.ok) {
+                                      const elloBuffer = await elloResp.arrayBuffer();
+                                      const elloBytes = new Uint8Array(elloBuffer);
+                                      // Safe base64 encoding for large buffers
+                                      let binary = '';
+                                      for (let i = 0; i < elloBytes.length; i++) binary += String.fromCharCode(elloBytes[i]);
+                                      audioBase64 = btoa(binary);
+                                      audioContentType = 'audio/mpeg';
+                                    } else {
+                                      console.error('❌ ElevenLabs Ello TTS failed:', elloResp.status);
+                                    }
+                                  }
+                                }
+                                
+                                // Fallback to OpenAI TTS for non-ello voices or if ElevenLabs failed
+                                if (!audioBase64) {
+                                  const ttsResp = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+                                    body: JSON.stringify({ text: aiReply, voice: ttsVoice === 'ello' ? 'nova' : ttsVoice, speed: 1.0, format: 'opus' }),
+                                  });
+                                  if (ttsResp.ok) {
+                                    const ttsData = await ttsResp.json();
+                                    audioBase64 = ttsData.audio_base64;
+                                    audioContentType = 'audio/ogg; codecs=opus';
+                                  }
+                                }
+                                
+                                if (audioBase64) {
+                                  const audioFileName = `ai-audio/${aiMsgId}.${audioContentType.includes('mpeg') ? 'mp3' : 'ogg'}`;
+                                  const binaryStr = atob(audioBase64);
                                   const bytes = new Uint8Array(binaryStr.length);
                                   for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
                                   
-                                  const { error: uploadErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, bytes, { contentType: 'audio/ogg; codecs=opus', upsert: true });
+                                  const { error: uploadErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, bytes, { contentType: audioContentType, upsert: true });
                                   if (!uploadErr) {
                                     const { data: pubUrl } = supabase.storage.from('whatsapp-media').getPublicUrl(audioFileName);
                                     const voiceResp = await fetch(`${sessionData.baileys_server_url}/api/message/send-voice`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ instanceName: sessionData.instance_name, jid: sendJid, audioUrl: pubUrl.publicUrl, mimetype: 'audio/ogg; codecs=opus' }),
+                                      body: JSON.stringify({ instanceName: sessionData.instance_name, jid: sendJid, audioUrl: pubUrl.publicUrl, mimetype: audioContentType }),
                                     });
                                     sendSuccess = voiceResp.ok;
                                     if (sendSuccess) {

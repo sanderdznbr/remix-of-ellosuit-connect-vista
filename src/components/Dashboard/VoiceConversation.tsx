@@ -165,7 +165,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ open, onClose, bg
               apikey: SUPABASE_KEY,
               Authorization: `Bearer ${SUPABASE_KEY}`,
             },
-            body: JSON.stringify({ text: cleanText }),
+            body: JSON.stringify({ text: cleanText, voiceId: 'RGymW84CSmfVugnA5tvA' }),
           });
 
           if (ttsResponse.ok) {

@@ -43,7 +43,7 @@ export default function LockedFeaturePage({ module, children }: LockedFeaturePag
 
   const getButtonAction = () => {
     if (isFree) {
-      return { label: 'Ativar Teste Grátis', path: '/dashboard/ativar' };
+      return { label: 'Ativar Teste Grátis', path: '/checkout/ativar' };
     }
     return { label: 'Ver Planos e Preços', path: '/dashboard/assinatura' };
   };

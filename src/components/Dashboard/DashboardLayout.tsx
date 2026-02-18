@@ -26,7 +26,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       {isFree && !isLoading && !isOnActivatePage && (
         <div 
           className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity shrink-0"
-          onClick={() => navigate('/dashboard/ativar')}
+          onClick={() => navigate('/checkout/ativar')}
         >
           <Sparkles className="h-4 w-4" />
           <span className="text-sm font-medium">

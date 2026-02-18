@@ -1102,6 +1102,33 @@ const EmailTemplateBuilder: React.FC = () => {
                 />
               </div>
             </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Tamanho da Fonte</Label>
+              <Input 
+                value={selectedElementData.styles.fontSize}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, fontSize: e.target.value }})}
+                placeholder="16px"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Altura da Linha</Label>
+              <Input 
+                value={selectedElementData.styles.lineHeight}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, lineHeight: e.target.value }})}
+                placeholder="1.6"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Padding</Label>
+              <Input 
+                value={selectedElementData.styles.padding || ''}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, padding: e.target.value }})}
+                placeholder="8px 0"
+                className="mt-1.5"
+              />
+            </div>
           </div>
         )}
 
@@ -1180,6 +1207,24 @@ const EmailTemplateBuilder: React.FC = () => {
                 className="mt-1.5"
               />
             </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Tamanho da Fonte</Label>
+              <Input 
+                value={selectedElementData.styles.fontSize}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, fontSize: e.target.value }})}
+                placeholder="16px"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Padding</Label>
+              <Input 
+                value={selectedElementData.styles.padding || ''}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, padding: e.target.value }})}
+                placeholder="16px 32px"
+                className="mt-1.5"
+              />
+            </div>
           </div>
         )}
 
@@ -1237,12 +1282,41 @@ const EmailTemplateBuilder: React.FC = () => {
                 ))}
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Largura</Label>
+                <Input 
+                  value={selectedElementData.styles.width}
+                  onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, width: e.target.value }})}
+                  placeholder="100%"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Largura Máx.</Label>
+                <Input 
+                  value={selectedElementData.styles.maxWidth}
+                  onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, maxWidth: e.target.value }})}
+                  placeholder="100%"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Borda Arredondada</Label>
               <Input 
                 value={selectedElementData.styles.borderRadius}
                 onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, borderRadius: e.target.value }})}
                 placeholder="8px"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Padding</Label>
+              <Input 
+                value={selectedElementData.styles.padding || ''}
+                onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, padding: e.target.value }})}
+                placeholder="0px"
                 className="mt-1.5"
               />
             </div>

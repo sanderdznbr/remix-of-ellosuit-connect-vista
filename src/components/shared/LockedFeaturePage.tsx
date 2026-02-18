@@ -19,6 +19,11 @@ const moduleInfo: Record<ModuleType, { name: string; color: string; description:
     color: '#3A9A1C',
     description: 'Rastreamento de Documentos, Links e Emails',
   },
+  suite: {
+    name: 'Ellosuit Suite',
+    color: '#3000E3',
+    description: 'Cadastros, Drive, Equipe, Contratos, Propostas, Recibos e Analytics',
+  },
 };
 
 interface LockedFeaturePageProps {

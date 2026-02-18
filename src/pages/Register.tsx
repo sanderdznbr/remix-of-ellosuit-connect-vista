@@ -10,12 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import ellosuitLogo from '@/assets/logoellosuit.png';
 import authHero from '@/assets/auth-hero.jpg';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 const STEP_SUBTITLES = [
   'Conte-nos sobre você',
   'Dados do seu negócio',
-  'Confirme seu telefone',
   'Crie seu acesso',
 ];
 
@@ -47,7 +46,9 @@ export default function Register() {
   const [ellosuitNumber, setEllosuitNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,12 +63,9 @@ export default function Register() {
       case 1:
         if (!document.trim() || document.replace(/\D/g, '').length < 11) { setError('Informe um CPF ou CNPJ válido.'); return false; }
         if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Informe um telefone válido.'); return false; }
+        if (!phoneVerified) { setError('Verifique seu telefone antes de continuar.'); return false; }
         return true;
       case 2:
-        if (!codeSent) { setError('Envie o código de verificação primeiro.'); return false; }
-        if (verificationCode.length < 4) { setError('Informe o código de verificação.'); return false; }
-        return true;
-      case 3:
         if (!email.trim()) { setError('Informe seu email.'); return false; }
         if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
         if (password !== confirmPassword) { setError('As senhas não coincidem.'); return false; }
@@ -77,15 +75,8 @@ export default function Register() {
     }
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (!validateStep()) return;
-    
-    // For verification step, verify the code before proceeding
-    if (step === 2) {
-      const verified = await handleVerifyCode();
-      if (!verified) return;
-    }
-    
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
   };
 
@@ -95,10 +86,14 @@ export default function Register() {
   };
 
   const handleSendCode = async () => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setError('Informe um telefone válido antes de enviar o código.');
+      return;
+    }
     setSendingCode(true);
     setError(null);
     try {
-      const cleanPhone = phone.replace(/\D/g, '');
       const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
         body: { phone: cleanPhone },
       });
@@ -112,7 +107,12 @@ export default function Register() {
     }
   };
 
-  const handleVerifyCode = async (): Promise<boolean> => {
+  const handleVerifyCode = async () => {
+    if (verificationCode.length < 4) {
+      setError('Informe o código de verificação.');
+      return;
+    }
+    setVerifyingCode(true);
     setError(null);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
@@ -121,10 +121,11 @@ export default function Register() {
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
-      return true;
+      setPhoneVerified(true);
     } catch (err: any) {
       setError(err.message || 'Código inválido ou expirado.');
-      return false;
+    } finally {
+      setVerifyingCode(false);
     }
   };
 
@@ -171,7 +172,7 @@ export default function Register() {
         {/* Form area */}
         <div className="flex-1 flex items-center justify-center px-6 sm:px-10 py-10">
           <div className="w-full max-w-md">
-            {/* Progress bar — minimal */}
+            {/* Progress bar */}
             <div className="flex gap-1.5 mb-10">
               {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                 <div
@@ -221,7 +222,7 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 1 — Company */}
+            {/* Step 1 — Business + Phone Verification */}
             {step === 1 && (
               <div className="space-y-5">
                 <div>
@@ -238,11 +239,88 @@ export default function Register() {
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Telefone</Label>
                   <Input
                     value={phone}
-                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    onChange={(e) => {
+                      setPhone(formatPhone(e.target.value));
+                      // Reset verification if phone changes
+                      if (phoneVerified) {
+                        setPhoneVerified(false);
+                        setCodeSent(false);
+                        setVerificationCode('');
+                      }
+                    }}
                     placeholder="(11) 99999-9999"
                     className="h-12 mt-1.5 rounded-xl"
+                    disabled={phoneVerified}
                   />
                 </div>
+
+                {/* Phone verification inline */}
+                {!phoneVerified ? (
+                  <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Phone className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {codeSent
+                          ? <>Código enviado via <span className="font-semibold text-foreground">WhatsApp</span> para <span className="font-semibold text-foreground">{phone}</span></>
+                          : 'Enviaremos um código via WhatsApp para verificar seu número'}
+                      </p>
+                    </div>
+
+                    {!codeSent ? (
+                      <Button
+                        type="button"
+                        onClick={handleSendCode}
+                        variant="outline"
+                        className="w-full h-10 rounded-xl text-sm"
+                        disabled={sendingCode || phone.replace(/\D/g, '').length < 10}
+                      >
+                        {sendingCode ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                        ) : (
+                          'Enviar código de verificação'
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-3">
+                        <Input
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                          placeholder="• • • • • •"
+                          className="h-12 rounded-xl text-center text-xl tracking-[0.4em] font-mono"
+                          maxLength={6}
+                          autoFocus
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleVerifyCode}
+                          className="w-full h-10 rounded-xl text-sm"
+                          disabled={verifyingCode || verificationCode.length < 4}
+                        >
+                          {verifyingCode ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verificando...</>
+                          ) : (
+                            'Verificar código'
+                          )}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={handleSendCode}
+                          className="text-xs text-primary hover:underline w-full text-center"
+                        >
+                          Reenviar código
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-primary font-medium rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                    <Check className="h-4 w-4" />
+                    Telefone verificado com sucesso!
+                  </div>
+                )}
+
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Número Ellosuit (admin master)
@@ -257,64 +335,8 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 2 — Verification */}
+            {/* Step 2 — Credentials */}
             {step === 2 && (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-border bg-muted/20 p-6 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <Phone className="h-5 w-5 text-primary" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Enviaremos um código via <span className="font-semibold text-foreground">WhatsApp</span> para{' '}
-                    <span className="font-semibold text-foreground">{phone}</span>
-                  </p>
-                </div>
-
-                {!codeSent ? (
-                  <Button
-                    onClick={handleSendCode}
-                    className="w-full h-12 rounded-xl"
-                    disabled={sendingCode}
-                  >
-                    {sendingCode ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
-                    ) : (
-                      'Enviar código'
-                    )}
-                  </Button>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                      <Check className="h-4 w-4" />
-                      Código enviado!
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Código de verificação
-                      </Label>
-                      <Input
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                        placeholder="• • • • • •"
-                        className="h-14 mt-1.5 rounded-xl text-center text-xl tracking-[0.4em] font-mono"
-                        maxLength={6}
-                        autoFocus
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSendCode}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Reenviar código
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 3 — Credentials */}
-            {step === 3 && (
               <div className="space-y-5">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</Label>

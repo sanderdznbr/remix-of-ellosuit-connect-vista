@@ -697,7 +697,7 @@ const CleanEmailMarketing: React.FC = () => {
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Preview na caixa de entrada</p>
             <div className="bg-background rounded-lg p-4 border shadow-sm">
-              <p className="font-semibold text-sm text-muted-foreground">{emailAccount?.email || 'seu@email.com'}</p>
+              <p className="font-semibold text-sm text-muted-foreground">{selectedAlias || emailAccount?.email || 'seu@email.com'}</p>
               <p className="font-bold text-lg mt-1">{subject}</p>
               <p className="text-muted-foreground mt-1 truncate">
                 {content ? content.replace(/<[^>]*>/g, '').substring(0, 80) + '...' : 'Prévia do conteúdo do email...'}

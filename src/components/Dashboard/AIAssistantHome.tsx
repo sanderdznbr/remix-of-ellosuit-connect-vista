@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
 import { useTheme } from '@/hooks/useTheme';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,6 +56,7 @@ function formatMessageContent(text: string): string {
 const AIAssistantHome: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isFree } = useSubscription();
   const { color: hubColor } = useHubColor();
   const { theme } = useTheme();
   const { toast } = useToast();
@@ -134,6 +136,23 @@ const AIAssistantHome: React.FC = () => {
     const messageText = text || input.trim();
     if (!messageText && !attachedFile) return;
     if (isProcessing) return;
+
+    // Block free users from using AI
+    if (isFree) {
+      const blockedMsg: ChatMessage = {
+        id: `blocked-${Date.now()}`,
+        role: 'assistant',
+        content: '🔒 **Você está no plano gratuito.** Para usar o assistente de IA e todas as funcionalidades do Ellosuit, ative seu plano Business com **7 dias de teste grátis**.\n\n👉 [Ativar Teste Grátis](/dashboard/ativar)',
+      };
+      setMessages(prev => [...prev, {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: messageText,
+      }, blockedMsg]);
+      setInput('');
+      setAttachedFile(null);
+      return;
+    }
 
     let fileUrl: string | undefined;
     let fileName: string | undefined;
@@ -215,7 +234,7 @@ const AIAssistantHome: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [input, attachedFile, isProcessing, user?.id, companyId, messages, navigate, toast]);
+  }, [input, attachedFile, isProcessing, isFree, user?.id, companyId, messages, navigate, toast]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

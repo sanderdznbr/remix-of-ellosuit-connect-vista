@@ -65,6 +65,7 @@ import NotificationsPage from '@/components/Dashboard/NotificationsPage';
 import UserProfilePage from '@/components/Dashboard/UserProfilePage';
 import SubscriptionPage from '@/components/Dashboard/SubscriptionPage';
 import HelpCenter from '@/components/Dashboard/HelpCenter';
+import ActivatePlan from '@/pages/ActivatePlan';
 
 // Lead Capture
 import LeadFunnelsManager from '@/components/LeadCapture/LeadFunnelsManager';
@@ -206,6 +207,7 @@ const MobileResponsiveDashboard = () => {
             {/* User Profile & Subscription - sempre acessível */}
             <Route path="/perfil" element={<UserProfilePage />} />
             <Route path="/assinatura" element={<SubscriptionPage />} />
+            <Route path="/ativar" element={<ActivatePlan />} />
             
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

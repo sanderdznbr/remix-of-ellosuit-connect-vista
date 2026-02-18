@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-export type PlanType = 'base' | 'pro' | 'business' | 'enterprise' | 'custom';
+export type PlanType = 'free' | 'base' | 'pro' | 'business' | 'enterprise' | 'custom';
 export type BillingCycle = 'monthly' | 'yearly';
-export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'trialing';
+export type SubscriptionStatus = 'free' | 'active' | 'canceled' | 'past_due' | 'trialing';
 export type ModuleType = 'omni' | 'flow' | 'track';
 export type AddonType = 'users' | 'storage' | 'emails' | 'ai_agents' | 'whatsapp_sessions' | 'booking_links' | 'meeting_hours' | 'tracked_docs' | 'priority_support';
 export type ResourceType = 'users' | 'storage_gb' | 'emails_sent' | 'ai_agents_active' | 'whatsapp_sessions_active' | 'booking_links_active' | 'meeting_hours_used' | 'tracked_docs_created' | 'tracked_links_created' | 'tracked_videos_created';
@@ -55,6 +55,7 @@ export interface SubscriptionAddon {
 export interface SubscriptionData {
   isLoading: boolean;
   isActive: boolean;
+  isFree: boolean;
   planType: PlanType;
   billingCycle: BillingCycle;
   status: SubscriptionStatus;
@@ -145,9 +146,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const companyId = useCompanyId();
   const [isLoading, setIsLoading] = useState(true);
   const hasFetchedOnce = useRef(false);
-  const [planType, setPlanType] = useState<PlanType>('base');
+  const [planType, setPlanType] = useState<PlanType>('free');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [status, setStatus] = useState<SubscriptionStatus>('trialing');
+  const [status, setStatus] = useState<SubscriptionStatus>('free');
   const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<Date | null>(null);
   const [monthlyPrice, setMonthlyPrice] = useState(97);
@@ -277,10 +278,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return modules.some(m => m.type === module && m.isActive);
   }, [planType, modules]);
 
+  const isFree = status === 'free' || planType === 'free';
+
   const hasModuleAccess = useCallback((module: ModuleType): boolean => {
+    if (isFree) return false;
     if (isTrialActive) return true;
     return hasModule(module);
-  }, [isTrialActive, hasModule]);
+  }, [isFree, isTrialActive, hasModule]);
 
   const hasOmni = hasModule('omni');
   const hasFlow = hasModule('flow');
@@ -325,11 +329,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const canSendEmail = useCallback(() => hasModuleAccess('omni') && checkLimit('emails_sent'), [hasModuleAccess, checkLimit]);
   const canCreateTrackedDoc = useCallback(() => hasModuleAccess('track') && checkLimit('tracked_docs_created'), [hasModuleAccess, checkLimit]);
 
-  const isActive = status === 'active' || isTrialActive;
+  const isActive = (status === 'active' || isTrialActive) && !isFree;
 
   const value: SubscriptionData = {
     isLoading,
     isActive,
+    isFree,
     planType,
     billingCycle,
     status,

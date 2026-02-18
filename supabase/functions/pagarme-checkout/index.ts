@@ -269,6 +269,51 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-create receipt for trial activation
+    try {
+      const planName = PLANS[plan_id as keyof typeof PLANS]?.name || 'Business';
+      const receiptTitle = `Ativacao Trial 7 Dias - ${planName}`;
+      
+      await supabase.from('receipts').insert({
+        company_id: companyUser.company_id,
+        created_by: userId,
+        title: receiptTitle,
+        amount: 0,
+        payment_method: 'Trial Gratuito',
+        description: `Periodo de teste gratuito de 7 dias do plano ${planName}. Valido ate ${trialEndsAt.toLocaleDateString('pt-BR')}.`,
+        client_name: body.customer.name,
+        client_document: body.customer.document,
+        status: 'pago',
+        notes: `Assinatura Pagar.me: ${subscriptionData.id}`,
+      });
+
+      console.log('Trial receipt created for company:', companyUser.company_id);
+
+      // Send trial started email
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+      
+      await fetch(`${supabaseUrl}/functions/v1/send-system-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
+          template_key: 'trial_started',
+          recipient_email: body.customer.email,
+          recipient_name: body.customer.name,
+          variables: {
+            nome_plano: planName,
+          },
+        }),
+      }).catch(e => console.error('Trial email error:', e));
+
+      console.log('Trial email sent to:', body.customer.email);
+    } catch (receiptErr) {
+      console.error('Error creating trial receipt:', receiptErr);
+    }
+
     // Return success with PIX QR code if applicable
     let pixData = null;
     if (payment_method === 'pix' && subscriptionData.current_cycle?.current_invoice?.charges?.[0]?.last_transaction) {

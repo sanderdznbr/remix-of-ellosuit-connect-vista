@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import ellosuitLogo from '@/assets/ellosuit-logo.png';
@@ -103,11 +104,18 @@ const AuthScreen = () => {
         }
         return;
       }
-      if (data?.user && !data.session) {
-        setSuccess('Cadastro realizado! Verifique seu email.');
-        setMode('signin');
-      } else if (data?.session) {
-        navigate(getReturnPath(), { replace: true });
+      if (data?.user) {
+        // Send welcome email
+        supabase.functions.invoke('send-system-email', {
+          body: { template_key: 'welcome', recipient_email: email, recipient_name: username || email.split('@')[0] },
+        }).catch(() => {});
+        
+        if (!data.session) {
+          setSuccess('Cadastro realizado! Verifique seu email.');
+          setMode('signin');
+        } else {
+          navigate(getReturnPath(), { replace: true });
+        }
       }
     } catch {
       setError('Erro inesperado. Tente novamente.');

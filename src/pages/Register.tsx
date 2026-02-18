@@ -144,6 +144,16 @@ export default function Register() {
         return;
       }
       if (data?.user) {
+        // Send welcome email asynchronously
+        try {
+          supabase.functions.invoke('send-system-email', {
+            body: {
+              template_key: 'welcome',
+              recipient_email: email,
+              recipient_name: username || email.split('@')[0],
+            },
+          }).catch(() => {}); // Non-blocking
+        } catch {}
         navigate('/plans');
       }
     } catch {

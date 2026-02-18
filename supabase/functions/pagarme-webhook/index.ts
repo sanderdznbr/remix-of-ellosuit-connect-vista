@@ -93,6 +93,43 @@ Deno.serve(async (req) => {
           .eq('company_id', companyId);
         
         console.log('Subscription past_due for company:', companyId);
+
+        // Send payment pending email
+        try {
+          const { data: pendingUser } = await supabase
+            .from('company_users')
+            .select('user_id')
+            .eq('company_id', companyId)
+            .eq('role', 'admin')
+            .limit(1)
+            .single();
+
+          if (pendingUser) {
+            const { data: pendingAuth } = await supabase.auth.admin.getUserById(pendingUser.user_id);
+            if (pendingAuth?.user?.email) {
+              await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')}`,
+                },
+                body: JSON.stringify({
+                  template_key: 'payment_pending',
+                  recipient_email: pendingAuth.user.email,
+                  recipient_name: pendingAuth.user.user_metadata?.username || pendingAuth.user.email.split('@')[0],
+                  invoice_data: {
+                    plan_name: 'Business',
+                    amount: metadata?.billing_cycle === 'yearly' ? 2497 : 297,
+                    billing_cycle: metadata?.billing_cycle || 'monthly',
+                  },
+                }),
+              }).catch(e => console.error('Pending email error:', e));
+            }
+          }
+        } catch (emailErr) {
+          console.error('Error sending pending email:', emailErr);
+        }
+
         break;
 
       case 'charge.paid':
@@ -118,6 +155,55 @@ Deno.serve(async (req) => {
           .eq('company_id', companyId);
         
         console.log('Charge paid for company:', companyId);
+
+        // Send payment confirmation email
+        try {
+          const chargeAmount = data?.amount ? (data.amount / 100) : (metadata?.billing_cycle === 'yearly' ? 2497 : 297);
+          const paymentMethod = data?.payment_method || data?.last_transaction?.payment_method || 'Cartão de Crédito';
+          const transactionId = data?.last_transaction?.id || data?.id || '';
+
+          // Get user email from company
+          const { data: companyUser } = await supabase
+            .from('company_users')
+            .select('user_id')
+            .eq('company_id', companyId)
+            .eq('role', 'admin')
+            .limit(1)
+            .single();
+
+          if (companyUser) {
+            const { data: authUser } = await supabase.auth.admin.getUserById(companyUser.user_id);
+            if (authUser?.user?.email) {
+              const userName = authUser.user.user_metadata?.username || authUser.user.email.split('@')[0];
+              
+              await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-system-email`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')}`,
+                },
+                body: JSON.stringify({
+                  template_key: 'payment_confirmed',
+                  recipient_email: authUser.user.email,
+                  recipient_name: userName,
+                  invoice_data: {
+                    plan_name: 'Business',
+                    amount: chargeAmount,
+                    payment_method: paymentMethod,
+                    transaction_id: transactionId,
+                    billing_cycle: metadata?.billing_cycle || 'monthly',
+                    next_billing_date: nextBillingDate.toISOString(),
+                  },
+                }),
+              }).catch(e => console.error('Payment email error:', e));
+
+              console.log('Payment confirmation email sent to:', authUser.user.email);
+            }
+          }
+        } catch (emailErr) {
+          console.error('Error sending payment email:', emailErr);
+        }
+
         break;
 
       case 'charge.payment_failed':

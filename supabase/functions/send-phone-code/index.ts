@@ -75,6 +75,12 @@ Deno.serve(async (req) => {
 
     const messageText = `🔐 *Código de verificação Ellosuit*\n\nSeu código é: *${code}*\n\nEle é válido por 10 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`;
 
+    console.log(`[VERIFY] Sending to Baileys: ${baileysUrl}/api/message/send`, JSON.stringify({
+      instanceName: session.instance_name,
+      jid,
+      message: { text: messageText },
+    }));
+
     const sendResponse = await fetch(`${baileysUrl}/api/message/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -85,9 +91,11 @@ Deno.serve(async (req) => {
       }),
     });
 
+    const responseText = await sendResponse.text();
+    console.log(`[VERIFY] Baileys response status: ${sendResponse.status}, body: ${responseText}`);
+
     if (!sendResponse.ok) {
-      const errText = await sendResponse.text();
-      console.error(`[VERIFY] Failed to send WhatsApp message:`, errText);
+      console.error(`[VERIFY] Failed to send WhatsApp message:`, responseText);
       return new Response(JSON.stringify({ error: 'Falha ao enviar código via WhatsApp.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

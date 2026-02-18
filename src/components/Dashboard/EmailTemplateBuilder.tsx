@@ -97,11 +97,29 @@ const createDefaultElement = (type: string): EmailElement => {
 };
 
 // Parse saved HTML back into EmailElement[] for editing
-const parseHtmlToElements = (html: string): { elements: EmailElement[]; globalStyles?: any } => {
+const parseHtmlToElements = (html: string): { elements: EmailElement[]; globalStyles?: any; rawHtml?: boolean } => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const container = doc.querySelector('.email-container');
-  if (!container) return { elements: [] };
+  
+  // If no .email-container found, this is a raw HTML template (table-based)
+  // Import it as a single HTML block that can be edited in source
+  if (!container) {
+    // Try to extract meaningful content from body
+    const body = doc.body;
+    if (body && body.innerHTML.trim()) {
+      return {
+        elements: [{
+          id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'paragraph',
+          content: { text: html },
+          styles: { color: '#4a4a4a', fontSize: '16px', lineHeight: '1.6', textAlign: 'left' as any, padding: '0' }
+        }],
+        rawHtml: true
+      };
+    }
+    return { elements: [] };
+  }
 
   const elements: EmailElement[] = [];
   const makeId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -601,6 +619,7 @@ const EmailTemplateBuilder: React.FC = () => {
   
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [rawHtmlContent, setRawHtmlContent] = useState<string | null>(null);
   
   // Global styles - default to white backgrounds
   const [globalStyles, setGlobalStyles] = useState({
@@ -651,6 +670,11 @@ const EmailTemplateBuilder: React.FC = () => {
 
         // Parse HTML back into elements
         const parsed = parseHtmlToElements(data.html_content);
+        if (parsed.rawHtml) {
+          // Template was created with raw HTML (not in the builder)
+          // Store original HTML and create a single paragraph element with it
+          setRawHtmlContent(data.html_content);
+        }
         if (parsed.elements.length > 0) {
           setElements(parsed.elements);
           saveToHistory(parsed.elements);
@@ -900,7 +924,7 @@ const EmailTemplateBuilder: React.FC = () => {
     setSaving(true);
 
     try {
-      const htmlContent = generateHTML();
+      const htmlContent = rawHtmlContent || generateHTML();
       
       if (editingTemplateId) {
         // Update existing template
@@ -1893,7 +1917,30 @@ const EmailTemplateBuilder: React.FC = () => {
             style={{ backgroundColor: '#ffffff' }}
           >
             <div style={{ padding: globalStyles.padding, minHeight: '500px', fontFamily: globalStyles.fontFamily, backgroundColor: '#ffffff', color: '#000000' }}>
-              {elements.length === 0 ? (
+              {rawHtmlContent ? (
+                <div>
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800 font-medium">📝 Template HTML importado</p>
+                    <p className="text-xs text-amber-600 mt-1">Este template usa HTML personalizado. Edite o código abaixo ou salve as alterações de nome/descrição.</p>
+                  </div>
+                  <Textarea
+                    value={rawHtmlContent}
+                    onChange={(e) => setRawHtmlContent(e.target.value)}
+                    rows={20}
+                    className="font-mono text-xs w-full"
+                    placeholder="HTML do template..."
+                  />
+                  <div className="mt-4 border rounded-lg overflow-hidden">
+                    <p className="text-xs font-medium p-2 bg-muted">Preview:</p>
+                    <iframe
+                      srcDoc={rawHtmlContent}
+                      className="w-full border-0"
+                      style={{ height: '500px' }}
+                      title="Template Preview"
+                    />
+                  </div>
+                </div>
+              ) : elements.length === 0 ? (
                 <div className="h-[400px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-white">
                   <Palette className="h-12 w-12 mb-4 text-gray-300" />
                   <p className="text-lg font-medium text-gray-600">Comece a construir seu email</p>

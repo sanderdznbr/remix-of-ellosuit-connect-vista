@@ -33,8 +33,11 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const [editData, setEditData] = useState({
     notes: '',
     recording_link: '',
-    status: 'pending'
+    status: 'pending',
+    title: '',
+    description: '',
   });
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [rescheduleData, setRescheduleData] = useState({
     newDate: '',
     newStartTime: '',
@@ -52,8 +55,11 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       setEditData({
         notes: meetingData.notes || '',
         recording_link: meetingData.recording_link || '',
-        status: meetingData.status || 'pending'
+        status: meetingData.status || 'pending',
+        title: event.title || '',
+        description: event.extendedProps?.description || '',
       });
+      setIsEditingDetails(false);
     }
   }, [event, isOpen]);
 
@@ -245,6 +251,50 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
     }
   };
 
+  const handleSaveDetails = async () => {
+    if (!event?.id || !user) return;
+    
+    setIsLoading(true);
+    try {
+      const updateData: any = {
+        title: editData.title,
+        description: editData.description,
+      };
+
+      // Update dates if changed
+      const dateVal = rescheduleData.newDate || format(eventStartDate, 'yyyy-MM-dd');
+      const startTime = rescheduleData.newStartTime || format(eventStartDate, 'HH:mm');
+      const endTime = rescheduleData.newEndTime || format(eventEndDate, 'HH:mm');
+      
+      updateData.start_date = new Date(`${dateVal}T${startTime}`).toISOString();
+      updateData.end_date = new Date(`${dateVal}T${endTime}`).toISOString();
+
+      const { error } = await supabase
+        .from('calendar_events')
+        .update(updateData)
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Evento atualizado com sucesso!"
+      });
+
+      setIsEditingDetails(false);
+      onEventUpdate?.();
+    } catch (error: any) {
+      console.error('Erro ao salvar detalhes:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar detalhes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRescheduleEvent = async () => {
     if (!event?.id || !user || !rescheduleData.newDate || !rescheduleData.newStartTime || !rescheduleData.newEndTime) return;
 
@@ -396,83 +446,149 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
           </TabsList>
 
           <TabsContent value="details" className="space-y-6 mt-6">
-            {/* Data e Horário */}
-            <div className="flex items-start space-x-3">
-              <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div>
-                <p className="font-medium text-gray-900">Data e Horário</p>
-                <p className="text-sm text-gray-600">
-                  {startDateTime.date} das {startDateTime.time} às {endDateTime.time}
-                </p>
-                {startDateTime.date !== endDateTime.date && (
-                  <p className="text-sm text-gray-500">
-                    Termina em {endDateTime.date}
-                  </p>
-                )}
-              </div>
+            {/* Edit toggle */}
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingDetails(!isEditingDetails)}
+              >
+                {isEditingDetails ? <X className="h-4 w-4 mr-1" /> : <Edit3 className="h-4 w-4 mr-1" />}
+                {isEditingDetails ? 'Cancelar' : 'Editar Detalhes'}
+              </Button>
             </div>
 
-            {/* Descrição */}
-            {eventData.description && (
-              <div className="flex items-start space-x-3">
-                <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+            {isEditingDetails ? (
+              <div className="space-y-4">
                 <div>
-                  <p className="font-medium text-gray-900">Descrição</p>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {eventData.description}
-                  </p>
+                  <label className="text-sm font-medium text-gray-700">Título</label>
+                  <Input
+                    value={editData.title}
+                    onChange={(e) => setEditData({...editData, title: e.target.value})}
+                    placeholder="Título do evento"
+                  />
                 </div>
-              </div>
-            )}
-
-            {/* Link da Reunião */}
-            {meetingLink && (
-              <div className="flex items-start space-x-3">
-                <Video className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">Link da Reunião</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-sm text-blue-600 break-all">{meetingLink}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(meetingLink, '_blank')}
-                      className="h-8 px-3 text-xs"
-                      disabled={eventStatus.status === 'past'}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      {eventStatus.status === 'past' ? 'Expirado' : 'Abrir'}
-                    </Button>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Descrição</label>
+                  <Textarea
+                    value={editData.description}
+                    onChange={(e) => setEditData({...editData, description: e.target.value})}
+                    rows={3}
+                    placeholder="Descrição do evento..."
+                    className="resize-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Data</label>
+                    <Input
+                      type="date"
+                      value={rescheduleData.newDate || format(eventStartDate, 'yyyy-MM-dd')}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newDate: e.target.value})}
+                    />
                   </div>
-                  {eventStatus.status === 'past' && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      O link pode não estar mais ativo após o término da reunião
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Início</label>
+                    <Input
+                      type="time"
+                      value={rescheduleData.newStartTime || format(eventStartDate, 'HH:mm')}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newStartTime: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Fim</label>
+                    <Input
+                      type="time"
+                      value={rescheduleData.newEndTime || format(eventEndDate, 'HH:mm')}
+                      onChange={(e) => setRescheduleData({...rescheduleData, newEndTime: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSaveDetails}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Título */}
+                <div className="flex items-start space-x-3">
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-gray-900">Data e Horário</p>
+                    <p className="text-sm text-gray-600">
+                      {startDateTime.date} das {startDateTime.time} às {endDateTime.time}
                     </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Gravação da Reunião */}
-            {editData.recording_link && (
-              <div className="flex items-start space-x-3">
-                <Video className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">Gravação da Reunião</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-sm text-blue-600 break-all">{editData.recording_link}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(editData.recording_link, '_blank')}
-                      className="h-8 px-3 text-xs"
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Assistir
-                    </Button>
+                    {startDateTime.date !== endDateTime.date && (
+                      <p className="text-sm text-gray-500">
+                        Termina em {endDateTime.date}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
+
+                {/* Descrição */}
+                {eventData.description && (
+                  <div className="flex items-start space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-gray-900">Descrição</p>
+                      <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {eventData.description}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Link da Reunião */}
+                {meetingLink && (
+                  <div className="flex items-start space-x-3">
+                    <Video className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Link da Reunião</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-sm text-blue-600 break-all">{meetingLink}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(meetingLink, '_blank')}
+                          className="h-8 px-3 text-xs"
+                          disabled={eventStatus.status === 'past'}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          {eventStatus.status === 'past' ? 'Expirado' : 'Abrir'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gravação da Reunião */}
+                {editData.recording_link && (
+                  <div className="flex items-start space-x-3">
+                    <Video className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Gravação da Reunião</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-sm text-blue-600 break-all">{editData.recording_link}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(editData.recording_link, '_blank')}
+                          className="h-8 px-3 text-xs"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Assistir
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 

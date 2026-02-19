@@ -47,7 +47,9 @@ import {
   Linkedin,
   MessageCircle,
   Twitter,
-  X
+  X,
+  Crown,
+  Info
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -57,15 +59,17 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface EmailElement {
   id: string;
-  type: 'header' | 'paragraph' | 'button' | 'image' | 'divider' | 'spacer' | 'columns' | 'list' | 'social' | 'footer' | 'video';
+  type: 'header' | 'paragraph' | 'button' | 'image' | 'divider' | 'spacer' | 'columns' | 'list' | 'social' | 'footer' | 'video' | 'logo-header' | 'alert';
   content: any;
   styles: any;
 }
 
 const ELEMENT_TYPES = [
+  { type: 'logo-header', label: 'Cabeçalho', icon: Crown, category: 'content' },
   { type: 'header', label: 'Título', icon: Type, category: 'content' },
   { type: 'paragraph', label: 'Parágrafo', icon: AlignLeft, category: 'content' },
   { type: 'button', label: 'Botão', icon: Square, category: 'content' },
+  { type: 'alert', label: 'Caixa Info', icon: Info, category: 'content' },
   { type: 'image', label: 'Imagem', icon: Image, category: 'media' },
   { type: 'video', label: 'Vídeo', icon: Video, category: 'media' },
   { type: 'divider', label: 'Divisor', icon: Minus, category: 'layout' },
@@ -80,15 +84,17 @@ const createDefaultElement = (type: string): EmailElement => {
   const id = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   const defaults: Record<string, any> = {
+    'logo-header': { content: { logoSrc: '', title: '', subtitle: '' }, styles: { gradientFrom: '#3A00E5', gradientTo: '#6B3AFF', padding: '40px', textAlign: 'center', titleColor: '#ffffff', subtitleColor: 'rgba(255,255,255,0.8)', borderRadius: '0' } },
     header: { content: { text: 'Título do Email', level: 'h1' }, styles: { color: '#1a1a1a', fontSize: '32px', textAlign: 'center', fontWeight: '700', padding: '16px 0' } },
     paragraph: { content: { text: 'Seu texto aqui. Clique para editar e personalizar.' }, styles: { color: '#4a4a4a', fontSize: '16px', lineHeight: '1.6', textAlign: 'left', padding: '8px 0' } },
     button: { content: { text: 'Clique Aqui', url: '#' }, styles: { backgroundColor: '#FF4500', color: '#ffffff', padding: '16px 32px', borderRadius: '8px', fontSize: '16px', textAlign: 'center' } },
+    alert: { content: { text: 'Informação importante aqui.', alertType: 'info' }, styles: { backgroundColor: '#EFF6FF', borderColor: '#3B82F6', textColor: '#1E40AF', padding: '16px 20px', borderRadius: '8px', borderWidth: '1px', fontSize: '14px' } },
     image: { content: { src: '', alt: 'Imagem' }, styles: { width: '100%', maxWidth: '100%', borderRadius: '8px', alignment: 'center' } },
     video: { content: { src: '', thumbnail: '', alt: 'Vídeo' }, styles: { width: '100%', maxWidth: '100%', borderRadius: '8px', alignment: 'center' } },
     divider: { content: {}, styles: { borderColor: '#e0e0e0', borderWidth: '1px', margin: '24px 0' } },
     spacer: { content: {}, styles: { height: '40px' } },
     columns: { content: { left: 'Coluna Esquerda', right: 'Coluna Direita' }, styles: { gap: '16px', backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '8px' } },
-    list: { content: { items: ['Item 1', 'Item 2', 'Item 3'] }, styles: { color: '#4a4a4a', fontSize: '16px', lineHeight: '1.8' } },
+    list: { content: { items: ['Item 1', 'Item 2', 'Item 3'], listIcon: 'bullet' }, styles: { color: '#4a4a4a', fontSize: '16px', lineHeight: '1.8' } },
     social: { content: { facebook: '', instagram: '', linkedin: '', whatsapp: '', twitter: '' }, styles: { iconSize: '32px', gap: '16px', alignment: 'center' } },
     footer: { content: { text: '© 2024 Sua Empresa. Todos os direitos reservados.', unsubscribe: '#', address: 'Seu endereço aqui' }, styles: { color: '#888888', fontSize: '12px', backgroundColor: '#f9f9f9', padding: '24px' } },
   };
@@ -321,7 +327,7 @@ const SortableElement: React.FC<{
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (['header', 'paragraph', 'button', 'footer'].includes(element.type)) {
+    if (['header', 'paragraph', 'button', 'footer', 'logo-header', 'alert'].includes(element.type)) {
       setIsEditing(true);
     }
   };
@@ -331,7 +337,7 @@ const SortableElement: React.FC<{
     const newText = e.currentTarget.textContent || '';
     if (element.type === 'header' || element.type === 'paragraph' || element.type === 'button') {
       onUpdateText(element.id, { content: { ...element.content, text: newText } });
-    } else if (element.type === 'footer') {
+    } else if (element.type === 'footer' || element.type === 'alert') {
       onUpdateText(element.id, { content: { ...element.content, text: newText } });
     }
   };
@@ -481,12 +487,25 @@ const SortableElement: React.FC<{
           </div>
         );
       case 'list':
-        return (
+        const listIconType = element.content.listIcon || 'bullet';
+        const getIconChar = (icon: string) => {
+          switch(icon) { case 'check': return '✓'; case 'arrow': return '→'; case 'star': return '★'; case 'dot': return '•'; default: return ''; }
+        };
+        return listIconType === 'bullet' ? (
           <ul style={{ ...element.styles, paddingLeft: '24px', margin: 0 }}>
             {element.content.items.map((item: string, i: number) => (
               <li key={i} style={{ marginBottom: '8px' }}>{item}</li>
             ))}
           </ul>
+        ) : (
+          <div style={{ ...element.styles, margin: 0 }}>
+            {element.content.items.map((item: string, i: number) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+                <span style={{ color: listIconType === 'check' ? '#22C55E' : element.styles.color, fontWeight: 'bold', flexShrink: 0 }}>{getIconChar(listIconType)}</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
         );
       case 'social':
         const socialIcons = [
@@ -539,6 +558,50 @@ const SortableElement: React.FC<{
             </p>
             {element.content.address && <p style={{ margin: '0 0 8px 0', opacity: 0.8 }}>{element.content.address}</p>}
             <a href={element.content.unsubscribe} style={{ color: '#888', fontSize: '11px' }}>Cancelar inscrição</a>
+          </div>
+        );
+      case 'logo-header':
+        return (
+          <div 
+            style={{ 
+              background: `linear-gradient(135deg, ${element.styles.gradientFrom} 0%, ${element.styles.gradientTo} 100%)`,
+              padding: element.styles.padding,
+              textAlign: element.styles.textAlign as any,
+              borderRadius: element.styles.borderRadius,
+            }}
+            onDoubleClick={handleDoubleClick}
+          >
+            {element.content.logoSrc && (
+              <img src={element.content.logoSrc} alt="Logo" style={{ maxHeight: '50px', marginBottom: '16px', display: 'inline-block' }} />
+            )}
+            {element.content.title && (
+              <h1 
+                style={{ color: element.styles.titleColor, fontSize: '28px', fontWeight: '700', margin: element.content.logoSrc ? '0' : '0 0 8px 0', outline: isEditing ? '2px solid #FF4500' : 'none', borderRadius: '4px' }}
+                contentEditable={isEditing} suppressContentEditableWarning
+                onBlur={(e) => { setIsEditing(false); onUpdateText(element.id, { content: { ...element.content, title: e.currentTarget.textContent || '' } }); }}
+                onKeyDown={handleKeyDown}
+              >{element.content.title}</h1>
+            )}
+            {element.content.subtitle && <p style={{ color: element.styles.subtitleColor, fontSize: '16px', margin: '8px 0 0' }}>{element.content.subtitle}</p>}
+            {!element.content.logoSrc && !element.content.title && (
+              <div style={{ color: 'rgba(255,255,255,0.6)', padding: '20px' }}>
+                <Crown style={{ width: '32px', height: '32px', marginBottom: '8px' }} />
+                <p>Configure o cabeçalho</p>
+              </div>
+            )}
+          </div>
+        );
+      case 'alert':
+        return (
+          <div 
+            style={{ backgroundColor: element.styles.backgroundColor, border: `${element.styles.borderWidth} solid ${element.styles.borderColor}`, borderRadius: element.styles.borderRadius, padding: element.styles.padding, color: element.styles.textColor, fontSize: element.styles.fontSize }}
+            onDoubleClick={handleDoubleClick}
+          >
+            <p style={{ margin: 0, outline: isEditing ? '2px solid #FF4500' : 'none', borderRadius: '4px' }}
+              contentEditable={isEditing} suppressContentEditableWarning
+              onBlur={(e) => { setIsEditing(false); onUpdateText(element.id, { content: { ...element.content, text: e.currentTarget.textContent || '' } }); }}
+              onKeyDown={handleKeyDown}
+            >{element.content.text}</p>
           </div>
         );
       default:
@@ -668,19 +731,27 @@ const EmailTemplateBuilder: React.FC = () => {
         setTemplateName(data.name);
         setTemplateDescription(data.description || '');
 
-        // Parse HTML back into elements
-        const parsed = parseHtmlToElements(data.html_content);
-        if (parsed.rawHtml) {
-          // Template was created with raw HTML (not in the builder)
-          // Store original HTML and create a single paragraph element with it
-          setRawHtmlContent(data.html_content);
-        }
-        if (parsed.elements.length > 0) {
-          setElements(parsed.elements);
-          saveToHistory(parsed.elements);
-        }
-        if (parsed.globalStyles) {
-          setGlobalStyles(prev => ({ ...prev, ...parsed.globalStyles }));
+        // Check if design_data exists (block-based editing)
+        const designData = (data as any).design_data;
+        if (designData && designData.elements && designData.elements.length > 0) {
+          setElements(designData.elements);
+          saveToHistory(designData.elements);
+          if (designData.globalStyles) {
+            setGlobalStyles(prev => ({ ...prev, ...designData.globalStyles }));
+          }
+        } else {
+          // Fallback: Parse HTML back into elements
+          const parsed = parseHtmlToElements(data.html_content);
+          if (parsed.rawHtml) {
+            setRawHtmlContent(data.html_content);
+          }
+          if (parsed.elements.length > 0) {
+            setElements(parsed.elements);
+            saveToHistory(parsed.elements);
+          }
+          if (parsed.globalStyles) {
+            setGlobalStyles(prev => ({ ...prev, ...parsed.globalStyles }));
+          }
         }
       } catch (err) {
         console.error('Error loading template:', err);
@@ -882,7 +953,15 @@ const EmailTemplateBuilder: React.FC = () => {
           html += `<div style="display: flex; gap: ${el.styles.gap}; padding: 16px 0;"><div style="flex: 1; padding: ${el.styles.padding}; background-color: ${el.styles.backgroundColor}; border-radius: ${el.styles.borderRadius};">${el.content.left}</div><div style="flex: 1; padding: ${el.styles.padding}; background-color: ${el.styles.backgroundColor}; border-radius: ${el.styles.borderRadius};">${el.content.right}</div></div>`;
           break;
         case 'list':
-          html += `<ul style="color: ${el.styles.color}; font-size: ${el.styles.fontSize}; line-height: ${el.styles.lineHeight}; padding-left: 24px; margin: 16px 0;">${el.content.items.map((item: string) => `<li style="margin-bottom: 8px;">${item}</li>`).join('')}</ul>`;
+          const lIcon = el.content.listIcon || 'bullet';
+          if (lIcon === 'bullet') {
+            html += `<ul style="color: ${el.styles.color}; font-size: ${el.styles.fontSize}; line-height: ${el.styles.lineHeight}; padding-left: 24px; margin: 16px 0;">${el.content.items.map((item: string) => `<li style="margin-bottom: 8px;">${item}</li>`).join('')}</ul>`;
+          } else {
+            const iconMap: Record<string, string> = { check: '✓', arrow: '→', star: '★', dot: '•' };
+            const ic = iconMap[lIcon] || '•';
+            const icColor = lIcon === 'check' ? '#22C55E' : el.styles.color;
+            html += `<div style="color: ${el.styles.color}; font-size: ${el.styles.fontSize}; line-height: ${el.styles.lineHeight}; margin: 16px 0;">${el.content.items.map((item: string) => `<div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px;"><span style="color: ${icColor}; font-weight: bold;">${ic}</span><span>${item}</span></div>`).join('')}</div>`;
+          }
           break;
         case 'social':
           const socialLinks = [];
@@ -897,6 +976,16 @@ const EmailTemplateBuilder: React.FC = () => {
           break;
         case 'footer':
           html += `<div style="text-align: center; color: ${el.styles.color}; font-size: ${el.styles.fontSize}; background-color: ${el.styles.backgroundColor}; padding: ${el.styles.padding}; border-radius: 8px; margin-top: 24px;"><p style="margin: 0 0 8px 0;">${el.content.text}</p>${el.content.address ? `<p style="margin: 0 0 8px 0; opacity: 0.8;">${el.content.address}</p>` : ''}<a href="${el.content.unsubscribe}" style="color: #888; font-size: 11px;">Cancelar inscrição</a></div>`;
+          break;
+        case 'logo-header':
+          html += `<div style="background: linear-gradient(135deg, ${el.styles.gradientFrom} 0%, ${el.styles.gradientTo} 100%); padding: ${el.styles.padding}; text-align: ${el.styles.textAlign}; border-radius: ${el.styles.borderRadius};">`;
+          if (el.content.logoSrc) html += `<img src="${el.content.logoSrc}" alt="Logo" style="max-height: 50px; margin-bottom: 16px;">`;
+          if (el.content.title) html += `<h1 style="color: ${el.styles.titleColor}; font-size: 28px; font-weight: 700; margin: 0;">${el.content.title}</h1>`;
+          if (el.content.subtitle) html += `<p style="color: ${el.styles.subtitleColor}; font-size: 16px; margin: 8px 0 0;">${el.content.subtitle}</p>`;
+          html += `</div>`;
+          break;
+        case 'alert':
+          html += `<div style="background-color: ${el.styles.backgroundColor}; border: ${el.styles.borderWidth} solid ${el.styles.borderColor}; border-radius: ${el.styles.borderRadius}; padding: ${el.styles.padding}; color: ${el.styles.textColor}; font-size: ${el.styles.fontSize}; margin: 16px 0;"><p style="margin: 0;">${el.content.text}</p></div>`;
           break;
       }
     });
@@ -925,6 +1014,7 @@ const EmailTemplateBuilder: React.FC = () => {
 
     try {
       const htmlContent = rawHtmlContent || generateHTML();
+      const designDataPayload = rawHtmlContent ? null : { elements, globalStyles };
       
       if (editingTemplateId) {
         // Update existing template
@@ -934,8 +1024,9 @@ const EmailTemplateBuilder: React.FC = () => {
             name: templateName,
             description: templateDescription,
             html_content: htmlContent,
+            design_data: designDataPayload,
             updated_at: new Date().toISOString(),
-          })
+          } as any)
           .eq('id', editingTemplateId);
 
         if (error) throw error;
@@ -948,10 +1039,11 @@ const EmailTemplateBuilder: React.FC = () => {
             name: templateName,
             description: templateDescription,
             html_content: htmlContent,
+            design_data: designDataPayload,
             category: 'custom',
             user_id: user.id,
             company_id: companyId
-          })
+          } as any)
           .select()
           .single();
 
@@ -1446,6 +1538,28 @@ const EmailTemplateBuilder: React.FC = () => {
         {selectedElementData.type === 'list' && (
           <div className="space-y-4">
             <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Estilo da Lista</Label>
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                {[
+                  { value: 'bullet', label: '• Lista' },
+                  { value: 'check', label: '✓ Check' },
+                  { value: 'arrow', label: '→ Seta' },
+                  { value: 'star', label: '★ Estrela' },
+                  { value: 'dot', label: '• Ponto' },
+                ].map(({ value, label }) => (
+                  <Button
+                    key={value}
+                    variant="outline"
+                    size="sm"
+                    className={`text-xs ${(selectedElementData.content.listIcon || 'bullet') === value ? 'bg-[#FF4500] text-white border-[#FF4500] hover:bg-[#E03E00]' : ''}`}
+                    onClick={() => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, listIcon: value }})}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Itens (um por linha)</Label>
               <Textarea 
                 value={selectedElementData.content.items.join('\n')}
@@ -1576,6 +1690,117 @@ const EmailTemplateBuilder: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Logo Header styles */}
+        {selectedElementData.type === 'logo-header' && (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Logo (URL ou Upload)</Label>
+              <div className="mt-1.5">
+                <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+                  <span className="text-xs text-muted-foreground">{uploading ? 'Enviando...' : 'Upload logo'}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const url = await uploadFile(file, 'logos');
+                    if (url) updateElement(selectedElementData.id, { content: { ...selectedElementData.content, logoSrc: url } });
+                    e.target.value = '';
+                  }} disabled={uploading} />
+                </label>
+              </div>
+              <Input value={selectedElementData.content.logoSrc} onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, logoSrc: e.target.value }})} placeholder="https://..." className="mt-2 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Título</Label>
+              <Input value={selectedElementData.content.title} onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, title: e.target.value }})} className="mt-1.5" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Subtítulo</Label>
+              <Input value={selectedElementData.content.subtitle} onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, subtitle: e.target.value }})} className="mt-1.5" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Gradiente De</Label>
+                <div className="flex gap-2 mt-1.5">
+                  <Input type="color" value={selectedElementData.styles.gradientFrom} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, gradientFrom: e.target.value }})} className="w-12 h-10 p-1 cursor-pointer" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Gradiente Para</Label>
+                <div className="flex gap-2 mt-1.5">
+                  <Input type="color" value={selectedElementData.styles.gradientTo} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, gradientTo: e.target.value }})} className="w-12 h-10 p-1 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cor do Título</Label>
+                <Input type="color" value={selectedElementData.styles.titleColor} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, titleColor: e.target.value }})} className="w-full h-10 p-1 cursor-pointer mt-1.5" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cor Subtítulo</Label>
+                <Input type="color" value={selectedElementData.styles.subtitleColor || '#ffffff'} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, subtitleColor: e.target.value }})} className="w-full h-10 p-1 cursor-pointer mt-1.5" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Padding</Label>
+              <Input value={selectedElementData.styles.padding} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, padding: e.target.value }})} placeholder="40px" className="mt-1.5" />
+            </div>
+          </div>
+        )}
+
+        {/* Alert styles */}
+        {selectedElementData.type === 'alert' && (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Texto</Label>
+              <Textarea value={selectedElementData.content.text} onChange={e => updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: e.target.value }})} rows={3} className="mt-1.5" />
+              <DynamicVariables onInsertVariable={(variable) => {
+                const current = selectedElementData.content.text || '';
+                updateElement(selectedElementData.id, { content: { ...selectedElementData.content, text: current + variable }});
+              }} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Tipo</Label>
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                {[
+                  { value: 'info', label: 'Info', bg: '#EFF6FF', border: '#3B82F6', text: '#1E40AF' },
+                  { value: 'success', label: 'Sucesso', bg: '#F0FDF4', border: '#22C55E', text: '#166534' },
+                  { value: 'warning', label: 'Aviso', bg: '#FFFBEB', border: '#F59E0B', text: '#92400E' },
+                  { value: 'error', label: 'Erro', bg: '#FEF2F2', border: '#EF4444', text: '#991B1B' },
+                ].map(({ value, label, bg, border, text }) => (
+                  <Button key={value} variant="outline" size="sm"
+                    className={`text-xs ${selectedElementData.content.alertType === value ? 'bg-[#FF4500] text-white border-[#FF4500]' : ''}`}
+                    onClick={() => updateElement(selectedElementData.id, { 
+                      content: { ...selectedElementData.content, alertType: value },
+                      styles: { ...selectedElementData.styles, backgroundColor: bg, borderColor: border, textColor: text }
+                    })}
+                  >{label}</Button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Fundo</Label>
+                <Input type="color" value={selectedElementData.styles.backgroundColor} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, backgroundColor: e.target.value }})} className="w-full h-10 p-1 cursor-pointer mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Borda</Label>
+                <Input type="color" value={selectedElementData.styles.borderColor} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, borderColor: e.target.value }})} className="w-full h-10 p-1 cursor-pointer mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Texto</Label>
+                <Input type="color" value={selectedElementData.styles.textColor} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, textColor: e.target.value }})} className="w-full h-10 p-1 cursor-pointer mt-1" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Borda Arredondada</Label>
+              <Input value={selectedElementData.styles.borderRadius} onChange={e => updateElement(selectedElementData.id, { styles: { ...selectedElementData.styles, borderRadius: e.target.value }})} placeholder="8px" className="mt-1.5" />
+            </div>
+          </div>
+        )}
+
       </div>
     );
   };

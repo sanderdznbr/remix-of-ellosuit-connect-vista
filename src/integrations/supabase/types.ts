@@ -1648,6 +1648,7 @@ export type Database = {
           company_id: string
           created_at: string
           description: string | null
+          design_data: Json | null
           html_content: string
           id: string
           is_active: boolean
@@ -1661,6 +1662,7 @@ export type Database = {
           company_id: string
           created_at?: string
           description?: string | null
+          design_data?: Json | null
           html_content: string
           id?: string
           is_active?: boolean
@@ -1674,6 +1676,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           description?: string | null
+          design_data?: Json | null
           html_content?: string
           id?: string
           is_active?: boolean

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Phone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,10 +43,9 @@ export default function Register() {
   const [companyName, setCompanyName] = useState('');
   const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
-  const [ellosuitNumber, setEllosuitNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [email, setEmail] = useState('');
@@ -63,10 +62,10 @@ export default function Register() {
       case 1:
         if (!document.trim() || document.replace(/\D/g, '').length < 11) { setError('Informe um CPF ou CNPJ válido.'); return false; }
         if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Informe um telefone válido.'); return false; }
-        if (!phoneVerified) { setError('Verifique seu telefone antes de continuar.'); return false; }
+        if (!email.trim()) { setError('Informe seu email para verificação.'); return false; }
+        if (!emailVerified) { setError('Verifique seu email antes de continuar.'); return false; }
         return true;
       case 2:
-        if (!email.trim()) { setError('Informe seu email.'); return false; }
         if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
         if (password !== confirmPassword) { setError('As senhas não coincidem.'); return false; }
         return true;
@@ -86,16 +85,15 @@ export default function Register() {
   };
 
   const handleSendCode = async () => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setError('Informe um telefone válido antes de enviar o código.');
+    if (!email.trim()) {
+      setError('Informe seu email antes de enviar o código.');
       return;
     }
     setSendingCode(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
-        body: { phone: cleanPhone },
+      const { data, error: fnError } = await supabase.functions.invoke('send-email-code', {
+        body: { email, phone: phone.replace(/\D/g, '') },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
@@ -115,13 +113,13 @@ export default function Register() {
     setVerifyingCode(true);
     setError(null);
     try {
-      const cleanPhone = phone.replace(/\D/g, '');
+      const identifier = phone.replace(/\D/g, '') || email;
       const { data, error: fnError } = await supabase.functions.invoke('verify-phone-code', {
-        body: { phone: cleanPhone, code: verificationCode },
+        body: { phone: identifier, code: verificationCode },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
-      setPhoneVerified(true);
+      setEmailVerified(true);
     } catch (err: any) {
       setError(err.message || 'Código inválido ou expirado.');
     } finally {
@@ -144,7 +142,6 @@ export default function Register() {
         return;
       }
       if (data?.user) {
-        // Send welcome email asynchronously
         try {
           supabase.functions.invoke('send-system-email', {
             body: {
@@ -152,7 +149,7 @@ export default function Register() {
               recipient_email: email,
               recipient_name: username || email.split('@')[0],
             },
-          }).catch(() => {}); // Non-blocking
+          }).catch(() => {});
         } catch {}
         navigate('/plans');
       }
@@ -232,7 +229,7 @@ export default function Register() {
               </div>
             )}
 
-            {/* Step 1 — Business + Phone Verification */}
+            {/* Step 1 — Business + Email Verification */}
             {step === 1 && (
               <div className="space-y-5">
                 <div>
@@ -249,32 +246,41 @@ export default function Register() {
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Telefone</Label>
                   <Input
                     value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    placeholder="(11) 99999-9999"
+                    className="h-12 mt-1.5 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</Label>
+                  <Input
+                    type="email"
+                    value={email}
                     onChange={(e) => {
-                      setPhone(formatPhone(e.target.value));
-                      // Reset verification if phone changes
-                      if (phoneVerified) {
-                        setPhoneVerified(false);
+                      setEmail(e.target.value);
+                      if (emailVerified) {
+                        setEmailVerified(false);
                         setCodeSent(false);
                         setVerificationCode('');
                       }
                     }}
-                    placeholder="(11) 99999-9999"
+                    placeholder="voce@suaempresa.com"
                     className="h-12 mt-1.5 rounded-xl"
-                    disabled={phoneVerified}
+                    disabled={emailVerified}
                   />
                 </div>
 
-                {/* Phone verification inline */}
-                {!phoneVerified ? (
+                {/* Email verification inline */}
+                {!emailVerified ? (
                   <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Phone className="h-4 w-4 text-primary" />
+                        <Mail className="h-4 w-4 text-primary" />
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {codeSent
-                          ? <>Código enviado via <span className="font-semibold text-foreground">WhatsApp</span> para <span className="font-semibold text-foreground">{phone}</span></>
-                          : 'Enviaremos um código via WhatsApp para verificar seu número'}
+                          ? <>Código enviado para <span className="font-semibold text-foreground">{email}</span>. Verifique sua caixa de entrada e spam.</>
+                          : 'Enviaremos um código por email para verificar sua identidade'}
                       </p>
                     </div>
 
@@ -284,7 +290,7 @@ export default function Register() {
                         onClick={handleSendCode}
                         variant="outline"
                         className="w-full h-10 rounded-xl text-sm"
-                        disabled={sendingCode || phone.replace(/\D/g, '').length < 10}
+                        disabled={sendingCode || !email.trim()}
                       >
                         {sendingCode ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
@@ -327,25 +333,19 @@ export default function Register() {
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-primary font-medium rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <Check className="h-4 w-4" />
-                    Telefone verificado com sucesso!
+                    Email verificado com sucesso!
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 2 — Credentials */}
+            {/* Step 2 — Credentials (password only, email already collected) */}
             {step === 2 && (
               <div className="space-y-5">
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</Label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="voce@suaempresa.com"
-                    className="h-12 mt-1.5 rounded-xl"
-                    autoFocus
-                  />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground rounded-2xl border border-border bg-muted/20 p-4">
+                  <Mail className="h-4 w-4" />
+                  <span>{email}</span>
+                  <Check className="h-4 w-4 text-primary ml-auto" />
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Senha</Label>
@@ -357,6 +357,7 @@ export default function Register() {
                       placeholder="Mínimo 6 caracteres"
                       className="h-12 pr-10 rounded-xl"
                       minLength={6}
+                      autoFocus
                     />
                     <button
                       type="button"
@@ -405,7 +406,7 @@ export default function Register() {
                 <Button
                   onClick={handleNext}
                   className="w-full h-12 rounded-xl text-sm font-medium"
-                  disabled={step === 1 && !phoneVerified}
+                  disabled={step === 1 && !emailVerified}
                 >
                   Continuar
                   <ArrowRight className="ml-2 h-4 w-4" />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Phone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,15 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import ellosuitLogo from '@/assets/logoellosuit.png';
 import authHero from '@/assets/auth-hero.jpg';
 
-const formatPhone = (value: string) => {
-  const v = value.replace(/\D/g, '').substring(0, 11);
-  if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-};
-
 const TOTAL_STEPS = 3;
 const STEP_SUBTITLES = [
-  'Informe seu telefone cadastrado',
+  'Informe seu email cadastrado',
   'Confirme o código enviado',
   'Crie sua nova senha',
 ];
@@ -31,28 +25,26 @@ export default function ForgotPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
 
   const handleSendCode = async () => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setError('Informe um telefone válido.');
+    if (!email.trim()) {
+      setError('Informe seu email.');
       return;
     }
     setSendingCode(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
-        body: { phone: cleanPhone },
+      const { data, error: fnError } = await supabase.functions.invoke('send-email-code', {
+        body: { email },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
@@ -72,13 +64,13 @@ export default function ForgotPassword() {
     setVerifyingCode(true);
     setError(null);
     try {
-      const cleanPhone = phone.replace(/\D/g, '');
+      // verify-phone-code uses the "phone" field — we pass email as identifier
       const { data, error: fnError } = await supabase.functions.invoke('verify-phone-code', {
-        body: { phone: cleanPhone, code: verificationCode },
+        body: { phone: email, code: verificationCode },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
-      setPhoneVerified(true);
+      setEmailVerified(true);
       setStep(2);
     } catch (err: any) {
       setError(err.message || 'Código inválido ou expirado.');
@@ -99,26 +91,20 @@ export default function ForgotPassword() {
     setIsResetting(true);
     setError(null);
     try {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const { data, error: fnError } = await supabase.functions.invoke('reset-password-by-phone', {
-        body: { phone: cleanPhone, newPassword: password },
+      // Use reset-password-by-phone with email lookup
+      const { data, error: fnError } = await supabase.functions.invoke('reset-password-by-email', {
+        body: { email, newPassword: password },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
-      // Auto-login with the new password
-      if (data?.email) {
-        setResetEmail(data.email);
-        const { error: signInError } = await signIn(data.email, password);
-        if (signInError) {
-          // Password was reset but auto-login failed, redirect to login
-          navigate('/');
-          return;
-        }
-        navigate('/dashboard');
-      } else {
+      // Auto-login
+      const { error: signInError } = await signIn(email, password);
+      if (signInError) {
         navigate('/');
+        return;
       }
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Erro ao redefinir senha.');
     } finally {
@@ -168,24 +154,24 @@ export default function ForgotPassword() {
               </Alert>
             )}
 
-            {/* Step 0 — Phone */}
+            {/* Step 0 — Email */}
             {step === 0 && (
               <div className="space-y-5">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Telefone cadastrado</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Email cadastrado</Label>
                   <Input
-                    value={phone}
-                    onChange={(e) => setPhone(formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="voce@suaempresa.com"
                     className="h-12 mt-1.5 rounded-xl"
                     autoFocus
                   />
                 </div>
                 <Button
                   onClick={() => {
-                    const cleanPhone = phone.replace(/\D/g, '');
-                    if (cleanPhone.length < 10) {
-                      setError('Informe um telefone válido.');
+                    if (!email.trim()) {
+                      setError('Informe seu email.');
                       return;
                     }
                     setError(null);
@@ -193,7 +179,7 @@ export default function ForgotPassword() {
                     setStep(1);
                   }}
                   className="w-full h-12 rounded-xl text-sm font-medium"
-                  disabled={sendingCode || phone.replace(/\D/g, '').length < 10}
+                  disabled={sendingCode || !email.trim()}
                 >
                   {sendingCode ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
@@ -210,10 +196,10 @@ export default function ForgotPassword() {
                 <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Phone className="h-4 w-4 text-primary" />
+                      <Mail className="h-4 w-4 text-primary" />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Código enviado via <span className="font-semibold text-foreground">WhatsApp</span> para <span className="font-semibold text-foreground">{phone}</span>
+                      Código enviado para <span className="font-semibold text-foreground">{email}</span>. Verifique sua caixa de entrada e spam.
                     </p>
                   </div>
 
@@ -254,7 +240,7 @@ export default function ForgotPassword() {
               <div className="space-y-5">
                 <div className="flex items-center gap-2 text-sm text-primary font-medium rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-2">
                   <Check className="h-4 w-4" />
-                  Telefone verificado com sucesso!
+                  Email verificado com sucesso!
                 </div>
 
                 <div>

@@ -4,6 +4,8 @@ import {
   GitBranch, Save, Play, ArrowLeft, Plus, BarChart3,
   Pause, Settings, ChevronDown, Trash2, Sparkles, MessageCircle
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import ChatBotMobileBuilder from './ChatBotMobileBuilder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +33,7 @@ const ChatBotBuilder: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isMobile } = useIsMobile();
   
   // State
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -281,6 +284,25 @@ const ChatBotBuilder: React.FC = () => {
       <div className="h-[calc(100vh-64px)] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: BRAND_COLOR }}></div>
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <ChatBotMobileBuilder
+        nodes={nodes}
+        edges={edges}
+        flowName={flowName}
+        isActive={currentFlow?.is_active || false}
+        isSaving={isSaving}
+        onNodesChange={setNodes}
+        onEdgesChange={setEdges}
+        onFlowNameChange={setFlowName}
+        onSave={saveFlow}
+        onToggleActive={toggleFlowActive}
+        onBack={() => navigate('/dashboard/omni')}
+        onNodeUpdate={handleNodeUpdate}
+      />
     );
   }
 

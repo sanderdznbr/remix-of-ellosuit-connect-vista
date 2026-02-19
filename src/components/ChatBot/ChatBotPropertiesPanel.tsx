@@ -1364,8 +1364,8 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
     }
   };
 
-  return (
-    <div className="w-80 bg-background border-l flex flex-col h-full">
+   return (
+    <div className="w-80 max-md:w-full bg-background border-l max-md:border-l-0 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -1378,7 +1378,7 @@ const ChatBotPropertiesPanel: React.FC<ChatBotPropertiesPanelProps> = ({
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 max-md:max-h-[60vh]">
         <div className="p-4 space-y-4">
           {/* Label */}
           <div className="space-y-2">

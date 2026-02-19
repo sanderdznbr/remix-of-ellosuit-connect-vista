@@ -148,7 +148,7 @@ export const useEmailTemplates = () => {
     if (user) {
       fetchTemplates();
     }
-  }, [user]);
+  }, [user?.id]);
 
   return {
     templates,

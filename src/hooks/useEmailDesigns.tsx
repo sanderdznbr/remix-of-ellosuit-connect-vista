@@ -136,7 +136,7 @@ export const useEmailDesigns = () => {
     if (user) {
       fetchDesigns();
     }
-  }, [user]);
+  }, [user?.id]);
 
   return {
     designs,

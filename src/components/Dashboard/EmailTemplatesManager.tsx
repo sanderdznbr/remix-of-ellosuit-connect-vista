@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Edit, Copy, Trash2, Eye,
@@ -29,14 +29,24 @@ interface UnifiedTemplate {
 
 const EmailTemplatesManager: React.FC = () => {
   const navigate = useNavigate();
-  const { designs, loading: loadingDesigns, deleteDesign } = useEmailDesigns();
-  const { templates, loading: loadingTemplates, deleteTemplate, duplicateTemplate } = useEmailTemplates();
+  const { designs, loading: loadingDesigns, deleteDesign, refetch: refetchDesigns } = useEmailDesigns();
+  const { templates, loading: loadingTemplates, deleteTemplate, duplicateTemplate, refetch: refetchTemplates } = useEmailTemplates();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   const loading = loadingDesigns || loadingTemplates;
+
+  // Refetch when page regains focus (e.g., returning from builder)
+  useEffect(() => {
+    const handleFocus = () => {
+      refetchDesigns();
+      refetchTemplates();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refetchDesigns, refetchTemplates]);
 
   // Merge both sources into a unified list
   const unifiedList: UnifiedTemplate[] = [

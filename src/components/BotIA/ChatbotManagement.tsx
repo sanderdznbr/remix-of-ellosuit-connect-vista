@@ -254,13 +254,13 @@ const ChatbotManagement: React.FC = () => {
     );
   }
 
-  return (
+   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Chatbots</h1>
-          <p className="text-gray-500 mt-1">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Chatbots</h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">
             Aqui você consegue criar e gerenciar os chatbots da sua organização.
           </p>
         </div>
@@ -268,8 +268,8 @@ const ChatbotManagement: React.FC = () => {
         {/* Main Card */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {/* Search + Actions */}
-          <div className="p-4 flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
+          <div className="p-3 sm:p-4 flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="relative flex-1 min-w-[140px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Pesquisar"
@@ -279,7 +279,7 @@ const ChatbotManagement: React.FC = () => {
               />
             </div>
             <Select defaultValue="all">
-              <SelectTrigger className="w-[140px] rounded-xl border-gray-200">
+              <SelectTrigger className="w-[110px] sm:w-[140px] rounded-xl border-gray-200">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -288,19 +288,19 @@ const ChatbotManagement: React.FC = () => {
                 <SelectItem value="inactive">Inativos</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex-1" />
             <Button 
               onClick={() => setShowCreateModal(true)}
-              className="rounded-xl gap-2 text-white"
+              className="rounded-xl gap-2 text-white ml-auto"
               style={{ backgroundColor: OMNI_COLOR }}
             >
               <Plus className="h-4 w-4" />
-              Novo chatbot
+              <span className="hidden sm:inline">Novo chatbot</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
 
-          {/* Table Header */}
-          <div className="grid grid-cols-[40px_40px_1fr_180px_140px_140px_120px_120px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {/* Desktop Table Header - hidden on mobile */}
+          <div className="hidden lg:grid grid-cols-[40px_40px_1fr_180px_140px_140px_120px_120px] gap-4 px-4 py-3 border-t border-b border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 uppercase tracking-wider">
             <div className="flex items-center justify-center">
               <Checkbox 
                 checked={selectedFlows.length === filteredFlows.length && filteredFlows.length > 0}
@@ -341,107 +341,114 @@ const ChatbotManagement: React.FC = () => {
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredFlows.map(flow => (
-                <div 
-                  key={flow.id}
-                  className="grid grid-cols-[40px_40px_1fr_180px_140px_140px_120px_120px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors"
-                >
-                  <div className="flex items-center justify-center">
-                    <Checkbox 
-                      checked={selectedFlows.includes(flow.id)}
-                      onCheckedChange={() => toggleSelectFlow(flow.id)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-center">
-                    <div className="cursor-grab">
-                      <svg className="h-4 w-4 text-gray-400" viewBox="0 0 16 16" fill="currentColor">
-                        <circle cx="4" cy="4" r="1.5" />
-                        <circle cx="4" cy="8" r="1.5" />
-                        <circle cx="4" cy="12" r="1.5" />
-                        <circle cx="10" cy="4" r="1.5" />
-                        <circle cx="10" cy="8" r="1.5" />
-                        <circle cx="10" cy="12" r="1.5" />
-                      </svg>
+                <React.Fragment key={flow.id}>
+                  {/* Desktop Row */}
+                  <div className="hidden lg:grid grid-cols-[40px_40px_1fr_180px_140px_140px_120px_120px] gap-4 px-4 py-4 items-center hover:bg-gray-50/50 transition-colors">
+                    <div className="flex items-center justify-center">
+                      <Checkbox 
+                        checked={selectedFlows.includes(flow.id)}
+                        onCheckedChange={() => toggleSelectFlow(flow.id)}
+                      />
                     </div>
-                  </div>
-                  
-                  <div className="font-medium text-gray-900 truncate">
-                    {flow.name}
-                  </div>
-                  
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {sessions.length > 0 ? (
-                      sessions.slice(0, 2).map(s => (
+                    <div className="flex items-center justify-center">
+                      <div className="cursor-grab">
+                        <svg className="h-4 w-4 text-gray-400" viewBox="0 0 16 16" fill="currentColor">
+                          <circle cx="4" cy="4" r="1.5" /><circle cx="4" cy="8" r="1.5" /><circle cx="4" cy="12" r="1.5" />
+                          <circle cx="10" cy="4" r="1.5" /><circle cx="10" cy="8" r="1.5" /><circle cx="10" cy="12" r="1.5" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="font-medium text-gray-900 truncate">{flow.name}</div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {sessions.length > 0 ? sessions.slice(0, 2).map(s => (
                         <div key={s.id} className="flex items-center gap-1 text-xs text-gray-600">
                           <span className="text-green-500">●</span>
                           <span className="truncate max-w-[80px]">{s.instance_name}</span>
                         </div>
-                      ))
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                      )) : <span className="text-gray-400">-</span>}
+                    </div>
+                    <div className="text-sm text-gray-500">{formatRelativeDate(flow.created_at)}</div>
+                    <div className="text-sm text-gray-500">{formatRelativeDate(flow.updated_at)}</div>
+                    <div className="text-sm text-gray-900 font-medium">{flow.execution_count || 0}</div>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" title="Estatísticas" onClick={() => handleOpenStats(flow)}><BarChart3 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" title="Editar" onClick={() => navigate(`/dashboard/chatbot-builder?flowId=${flow.id}`)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className={`h-8 w-8 p-0 ${flow.is_active ? 'text-green-600 hover:text-red-600' : 'text-gray-500 hover:text-green-600'}`} title={flow.is_active ? 'Desativar' : 'Ativar'} onClick={() => handleToggleActive(flow)}><Power className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700" title="Duplicar" onClick={() => handleDuplicateFlow(flow)}><Copy className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600" title="Excluir" onClick={() => handleDeleteFlow(flow.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
                   </div>
-                  
-                  <div className="text-sm text-gray-500">
-                    {formatRelativeDate(flow.created_at)}
+
+                  {/* Mobile Card */}
+                  <div className="lg:hidden p-3 sm:p-4 hover:bg-gray-50/50 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <Checkbox 
+                        checked={selectedFlows.includes(flow.id)}
+                        onCheckedChange={() => toggleSelectFlow(flow.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-900 truncate">{flow.name}</span>
+                          <Badge 
+                            className={`text-[10px] px-1.5 py-0 rounded-full shrink-0 ${flow.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                          >
+                            {flow.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                          {sessions.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <span className="text-green-500">●</span>
+                              {sessions[0]?.instance_name}
+                            </span>
+                          )}
+                          <span>{formatRelativeDate(flow.updated_at)}</span>
+                          <span>{flow.execution_count || 0} exec.</span>
+                        </div>
+                        {/* Mobile Action Buttons */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <Button
+                            size="sm"
+                            className="h-8 rounded-lg gap-1.5 text-white text-xs"
+                            style={{ backgroundColor: OMNI_COLOR }}
+                            onClick={() => navigate(`/dashboard/chatbot-builder?flowId=${flow.id}`)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-8 rounded-lg gap-1.5 text-xs ${flow.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}`}
+                            onClick={() => handleToggleActive(flow)}
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                            {flow.is_active ? 'Desativar' : 'Ativar'}
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg">
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl">
+                              <DropdownMenuItem onClick={() => handleOpenStats(flow)}>
+                                <BarChart3 className="h-4 w-4 mr-2" />Estatísticas
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDuplicateFlow(flow)}>
+                                <Copy className="h-4 w-4 mr-2" />Duplicar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteFlow(flow.id)} className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="text-sm text-gray-500">
-                    {formatRelativeDate(flow.updated_at)}
-                  </div>
-                  
-                  <div className="text-sm text-gray-900 font-medium">
-                    {flow.execution_count || 0}
-                  </div>
-                  
-                  <div className="flex items-center justify-end gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      title="Estatísticas"
-                      onClick={() => handleOpenStats(flow)}
-                    >
-                      <BarChart3 className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      title="Editar"
-                      onClick={() => navigate(`/dashboard/chatbot-builder?flowId=${flow.id}`)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`h-8 w-8 p-0 ${flow.is_active ? 'text-green-600 hover:text-red-600' : 'text-gray-500 hover:text-green-600'}`}
-                      title={flow.is_active ? 'Desativar' : 'Ativar'}
-                      onClick={() => handleToggleActive(flow)}
-                    >
-                      <Power className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
-                      title="Duplicar"
-                      onClick={() => handleDuplicateFlow(flow)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
-                      title="Excluir"
-                      onClick={() => handleDeleteFlow(flow.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                </React.Fragment>
               ))}
             </div>
           )}

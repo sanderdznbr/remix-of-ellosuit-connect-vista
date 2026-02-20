@@ -269,31 +269,68 @@ export function MegaMenuHeader() {
 
         {/* Early Access Modal */}
         {showEarlyAccessModal && (
-          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" onClick={() => setShowEarlyAccessModal(false)}>
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setShowEarlyAccessModal(false)} className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={() => setShowEarlyAccessModal(false)}>
+            <div className="bg-gradient-to-b from-[#1a0a3e] to-[#0d0527] rounded-3xl max-w-sm w-full shadow-2xl relative overflow-hidden border border-white/10" onClick={(e) => e.stopPropagation()}>
+              {/* Glow effect */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#3000E3]/40 blur-[80px] rounded-full" />
+              
+              <button onClick={() => setShowEarlyAccessModal(false)} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/10 transition-colors z-10">
+                <X className="h-4 w-4 text-white/60" />
               </button>
-              <div className="text-center space-y-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
-                  <Sparkles className="h-7 w-7 text-white" />
+
+              <div className="relative z-10 px-6 pt-8 pb-6 text-center space-y-5">
+                {/* Logo */}
+                <div className="flex justify-center">
+                  <ElloLogo className="h-10 w-auto" color="white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Você tem Acesso Antecipado! 🎉</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Parabéns! Você é um <strong>usuário privilegiado</strong> da Ellosuit. Isso significa que você faz parte do nosso grupo seleto de early adopters que estão experimentando a plataforma antes do lançamento oficial.
-                </p>
-                <div className="bg-blue-50 rounded-xl p-4 text-left space-y-2">
-                  <p className="text-sm font-semibold text-blue-900">O que isso significa:</p>
-                  <ul className="text-xs text-blue-800 space-y-1.5">
-                    <li>✨ Acesso a todas as funcionalidades em <strong>beta-test</strong></li>
-                    <li>🚀 Novidades e melhorias contínuas toda semana</li>
-                    <li>💬 Canal direto com a equipe para sugestões e feedback</li>
-                    <li>🎁 Condições especiais exclusivas para quem entrou cedo</li>
-                  </ul>
+
+                {/* Badge */}
+                <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full">
+                  <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
+                  <span className="text-xs font-semibold text-white uppercase tracking-wider">Acesso Antecipado</span>
                 </div>
-                <p className="text-xs text-gray-400">
-                  Estamos em fase de testes. Algumas funcionalidades podem mudar conforme evoluímos com o seu feedback.
+
+                <h3 className="text-lg font-bold text-white">Você é um usuário privilegiado!</h3>
+                
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Você faz parte do nosso grupo seleto de <strong className="text-white">early adopters</strong> que estão usando a Ellosuit antes do lançamento oficial. A plataforma está em <strong className="text-white">beta-test</strong>.
                 </p>
+
+                {/* Benefits */}
+                <div className="space-y-2.5 text-left">
+                  <div className="flex items-start gap-3 bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span className="text-lg">💰</span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Valores Reduzidos</p>
+                      <p className="text-xs text-white/50">Preços exclusivos por ter entrado cedo na plataforma</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span className="text-lg">⚡</span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Suporte Prioritário</p>
+                      <p className="text-xs text-white/50">Canal direto com a equipe para ajuda imediata</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-white/5 rounded-xl p-3 border border-white/10">
+                    <span className="text-lg">🚀</span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Novidades Semanais</p>
+                      <p className="text-xs text-white/50">Melhorias contínuas com base no seu feedback</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-white/30">
+                  Estamos em fase de testes. Funcionalidades podem evoluir com o seu feedback.
+                </p>
+
+                <button
+                  onClick={() => setShowEarlyAccessModal(false)}
+                  className="w-full py-2.5 bg-white text-[#1a0a3e] font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors"
+                >
+                  Entendi!
+                </button>
               </div>
             </div>
           </div>

@@ -255,8 +255,11 @@ export function MegaMenuHeader() {
     >
       <div className="h-16 px-6 flex items-center justify-between relative">
         {/* Logo */}
-        <Link to="/dashboard" className="flex items-center gap-3">
+        <Link to="/dashboard" className="flex items-center gap-2">
           <ElloLogo className="h-8 w-auto" color="white" />
+          <span className="text-[10px] font-medium text-white/70 bg-white/15 px-1.5 py-0.5 rounded-full leading-none tracking-wide uppercase">
+            Acesso Antecipado
+          </span>
         </Link>
 
         {/* Main Navigation */}

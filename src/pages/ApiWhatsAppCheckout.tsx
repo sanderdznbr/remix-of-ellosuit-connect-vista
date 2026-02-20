@@ -21,6 +21,11 @@ interface Plan {
   recommended?: boolean;
 }
 
+const INSTALLMENT_FEES: Record<number, number> = {
+  1: 3.99, 2: 13.83, 3: 14.28, 4: 15.24, 5: 16.18, 6: 17.11,
+  7: 19.88, 8: 20.78, 9: 21.67, 10: 22.54, 11: 23.40, 12: 24.26,
+};
+
 const PLANS: Plan[] = [
   {
     id: 'starter',
@@ -458,12 +463,15 @@ const ApiWhatsAppCheckout: React.FC = () => {
                         onChange={(e) => setInstallments(Number(e.target.value))}
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                       >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={n}>
-                            {n}x de {formatCurrency(Math.ceil(selectedPlan.price / n))}
-                            {n === 1 ? ' (à vista)' : ''}
-                          </option>
-                        ))}
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
+                          const fee = INSTALLMENT_FEES[n] || 0;
+                          return (
+                            <option key={n} value={n}>
+                              {n}x de {formatCurrency(Math.ceil(selectedPlan.price / n))}
+                              {n === 1 ? ` (à vista) — ${fee}%` : ` — ${fee.toFixed(2).replace('.', ',')}%`}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>

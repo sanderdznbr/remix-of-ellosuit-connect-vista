@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Phone, Check, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, Phone, Check, ChevronDown, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,6 +23,7 @@ interface ChannelSelectorProps {
   selectedSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
   onAddNew: () => void;
+  onReconnect?: () => void;
   onSessionDeleted?: () => void;
 }
 
@@ -31,6 +32,7 @@ export function ChannelSelector({
   selectedSessionId, 
   onSelectSession, 
   onAddNew,
+  onReconnect,
   onSessionDeleted
 }: ChannelSelectorProps) {
   const { toast } = useToast();
@@ -169,6 +171,22 @@ export function ChannelSelector({
                   </div>
                   {selectedSession?.id === session.id && (
                     <Check className="h-4 w-4 text-[#25D366] shrink-0" />
+                  )}
+                  {/* Reconnect button for disconnected sessions */}
+                  {session.status !== 'connected' && onReconnect && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-[#FF4500] hover:bg-[#FF4500]/10"
+                      title="Reconectar sessão"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectSession(session.id);
+                        onReconnect();
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                   )}
                   {/* Delete button for disconnected sessions */}
                   {session.status !== 'connected' && (

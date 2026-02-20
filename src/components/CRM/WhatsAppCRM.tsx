@@ -2116,6 +2116,7 @@ const WhatsAppCRM: React.FC = () => {
                   loadConversations();
                 }}
                 onAddNew={() => setShowQRModal(true)}
+                onReconnect={() => setShowQRModal(true)}
                 onSessionDeleted={() => {
                   loadSessions();
                   loadConversations();

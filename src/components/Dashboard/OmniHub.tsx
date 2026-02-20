@@ -18,7 +18,7 @@ const OMNI_COLOR = "#FF4500";
 
 const omniModules = [
   { id: "crm-whatsapp", title: "CRM WhatsApp", description: "Conversas, leads e atendimentos via WhatsApp", icon: MessageSquare, path: "/dashboard/crm-whatsapp", preview: previewCrmWhatsapp },
-  { id: "api-whatsapp", title: "API WhatsApp", description: "API para integrar envio de mensagens", icon: Key, path: "/dashboard/api-whatsapp", preview: previewApiWhatsapp },
+  { id: "api-whatsapp", title: "API WhatsApp", description: "API restrita para integrar sistemas externos ao CRM", icon: Key, path: "/dashboard/api-whatsapp", preview: previewApiWhatsapp },
   { id: "disparos", title: "Disparos em Massa", description: "Envie mensagens para vários contatos", icon: Megaphone, path: "/dashboard/disparos", preview: previewDisparos },
   { id: "chatbot-builder", title: "ChatBot Builder", description: "Fluxos de atendimento automatizados", icon: GitBranch, path: "/dashboard/chatbot", preview: previewChatbot },
   { id: "email-marketing", title: "Email Marketing", description: "Campanhas, templates e automações", icon: Mail, path: "/dashboard/email", preview: previewEmail },

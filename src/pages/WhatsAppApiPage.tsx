@@ -246,10 +246,10 @@ const WhatsAppApiPage: React.FC = () => {
             <div className="min-w-0">
               <h1 className="text-lg md:text-xl font-bold flex items-center gap-2 text-white truncate">
                 <Key className="h-5 w-5 shrink-0" />
-                API CRM WhatsApp
+                API WhatsApp — Integração Restrita
               </h1>
               <p className="text-xs md:text-sm text-white/80 truncate">
-                Gerencie API Keys, visualize logs e documentação
+                Integre o CRM WhatsApp da Ellosuit ao seu próprio sistema via API
               </p>
             </div>
           </div>

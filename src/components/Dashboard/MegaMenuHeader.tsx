@@ -78,7 +78,7 @@ const menuGroups: MenuGroup[] = [
       {
         title: "Desenvolvedores",
         items: [
-          { id: "api-whatsapp", label: "API WhatsApp", description: "API pública para integrações", icon: Key, path: "/dashboard/api-whatsapp" },
+          { id: "api-whatsapp", label: "API WhatsApp", description: "API restrita para integração de sistemas", icon: Key, path: "/dashboard/api-whatsapp" },
         ]
       }
     ]

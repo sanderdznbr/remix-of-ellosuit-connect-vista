@@ -21,20 +21,32 @@ interface Plan {
   recommended?: boolean;
 }
 
+const INSTALLMENT_FEES: Record<number, number> = {
+  1: 3.99, 2: 13.83, 3: 14.28, 4: 15.24, 5: 16.18, 6: 17.11,
+  7: 19.88, 8: 20.78, 9: 21.67, 10: 22.54, 11: 23.40, 12: 24.26,
+};
+
 const PLANS: Plan[] = [
   {
     id: 'starter',
     label: 'Starter',
     sessions: 1,
     price: 30000,
-    features: ['1 sessão WhatsApp', '500 msgs/dia', 'Suporte por email', 'Rate limit: 30/min'],
+    features: ['1 sessão WhatsApp', '2.000 msgs/dia', 'Suporte por email', 'Rate limit: 30/min'],
+  },
+  {
+    id: 'growth',
+    label: 'Growth',
+    sessions: 2,
+    price: 54700,
+    features: ['2 sessões WhatsApp', '5.000 msgs/dia', 'Suporte por email', 'Rate limit: 45/min', 'Webhooks'],
   },
   {
     id: 'professional',
     label: 'Professional',
     sessions: 3,
     price: 79700,
-    features: ['3 sessões WhatsApp', '2.000 msgs/dia', 'Suporte prioritário', 'Rate limit: 60/min', 'Webhooks'],
+    features: ['3 sessões WhatsApp', '10.000 msgs/dia', 'Suporte prioritário', 'Rate limit: 60/min', 'Webhooks'],
     recommended: true,
   },
   {
@@ -42,7 +54,14 @@ const PLANS: Plan[] = [
     label: 'Business',
     sessions: 5,
     price: 149700,
-    features: ['5 sessões WhatsApp', '5.000 msgs/dia', 'Suporte dedicado', 'Rate limit: 120/min', 'Webhooks + Analytics'],
+    features: ['5 sessões WhatsApp', '20.000 msgs/dia', 'Suporte dedicado', 'Rate limit: 120/min', 'Webhooks + Analytics'],
+  },
+  {
+    id: 'scale',
+    label: 'Scale',
+    sessions: 8,
+    price: 219700,
+    features: ['8 sessões WhatsApp', '40.000 msgs/dia', 'Suporte dedicado', 'Rate limit: 200/min', 'Webhooks + Analytics', 'SLA 99.5%'],
   },
   {
     id: 'enterprise',
@@ -234,7 +253,9 @@ const ApiWhatsAppCheckout: React.FC = () => {
     }
   }, [selectedPlan, cardNumber, cardName, cardExpiry, cardCvv, customerDocument, customerName, customerPhone, installments, session, toast, navigate]);
 
-  const installmentAmount = selectedPlan ? Math.ceil(selectedPlan.price / installments) : 0;
+  const feePercent = INSTALLMENT_FEES[installments] || 0;
+  const totalWithFee = selectedPlan ? Math.ceil(selectedPlan.price * (1 + feePercent / 100)) : 0;
+  const installmentAmount = selectedPlan ? Math.ceil(totalWithFee / installments) : 0;
 
   if (activeSubscription) {
     return (
@@ -279,55 +300,75 @@ const ApiWhatsAppCheckout: React.FC = () => {
       <div className="max-w-6xl mx-auto p-4 md:p-6">
         {/* Plan Selection */}
         {!selectedPlan ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PLANS.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative cursor-pointer transition-all hover:shadow-lg ${
-                  plan.recommended ? 'border-[#FF4500] ring-2 ring-[#FF4500]/20' : 'border-border'
-                }`}
-                onClick={() => setSelectedPlan(plan)}
-              >
-                {plan.recommended && (
-                  <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FF4500] text-white text-xs">
-                    Recomendado
-                  </Badge>
-                )}
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-bold">{plan.label}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{plan.sessions} {plan.sessions === 1 ? 'sessão' : 'sessões'} WhatsApp</p>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PLANS.map((plan) => (
+                <Card
+                  key={plan.id}
+                  className={`relative cursor-pointer transition-all hover:shadow-lg ${
+                    plan.recommended ? 'border-[#FF4500] ring-2 ring-[#FF4500]/20' : 'border-border'
+                  }`}
+                  onClick={() => setSelectedPlan(plan)}
+                >
+                  {plan.recommended && (
+                    <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FF4500] text-white text-xs">
+                      Recomendado
+                    </Badge>
+                  )}
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-bold">{plan.label}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{plan.sessions} {plan.sessions === 1 ? 'sessão' : 'sessões'} WhatsApp</p>
 
-                  <div className="mt-4">
-                    <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
-                    <span className="text-sm text-muted-foreground">/ano</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ou 12x de {formatCurrency(Math.ceil(plan.price / 12))}
-                  </p>
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
+                      <span className="text-sm text-muted-foreground">/ano</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ou 12x de {formatCurrency(Math.ceil(plan.price * (1 + INSTALLMENT_FEES[12] / 100) / 12))}
+                    </p>
 
-                  <ul className="mt-4 space-y-2">
-                    {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+                    <ul className="mt-4 space-y-2">
+                      {plan.features.map((f, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
 
-                  <Button
-                    className="w-full mt-6"
-                    style={{ backgroundColor: '#FF4500' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedPlan(plan);
-                    }}
-                  >
-                    Selecionar
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <Button
+                      className="w-full mt-6"
+                      style={{ backgroundColor: '#FF4500' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPlan(plan);
+                      }}
+                    >
+                      Selecionar
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Credit Card Fees Table */}
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" /> Taxas de Parcelamento no Cartão de Crédito
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                  {Object.entries(INSTALLMENT_FEES).map(([n, fee]) => (
+                    <div key={n} className="text-center border rounded-md p-2">
+                      <span className="text-sm font-bold">{n}x</span>
+                      <p className="text-xs text-muted-foreground">{fee.toFixed(2).replace('.', ',')}%</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">* Taxas aplicadas ao valor total do plano anual. Pagamento à vista (1x) possui a menor taxa.</p>
+              </CardContent>
+            </Card>
+          </>
         ) : (
           /* Checkout Form */
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -421,12 +462,16 @@ const ApiWhatsAppCheckout: React.FC = () => {
                         onChange={(e) => setInstallments(Number(e.target.value))}
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                       >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={n}>
-                            {n}x de {formatCurrency(Math.ceil(selectedPlan.price / n))}
-                            {n === 1 ? ' (à vista)' : ''}
-                          </option>
-                        ))}
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
+                          const fee = INSTALLMENT_FEES[n] || 0;
+                          const total = Math.ceil(selectedPlan.price * (1 + fee / 100));
+                          return (
+                            <option key={n} value={n}>
+                              {n}x de {formatCurrency(Math.ceil(total / n))}
+                              {n === 1 ? ' (à vista)' : ` (${fee}% juros)`}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>
@@ -462,10 +507,16 @@ const ApiWhatsAppCheckout: React.FC = () => {
                       <span className="text-muted-foreground">Parcelas</span>
                       <span>{installments}x de {formatCurrency(installmentAmount)}</span>
                     </div>
+                    {installments > 1 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Taxa cartão ({feePercent}%)</span>
+                        <span className="text-muted-foreground">+{formatCurrency(totalWithFee - selectedPlan.price)}</span>
+                      </div>
+                    )}
                     <hr />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total</span>
-                      <span style={{ color: '#FF4500' }}>{formatCurrency(selectedPlan.price)}</span>
+                      <span style={{ color: '#FF4500' }}>{formatCurrency(totalWithFee)}</span>
                     </div>
                   </div>
 

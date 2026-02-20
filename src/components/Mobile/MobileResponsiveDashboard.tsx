@@ -73,6 +73,7 @@ import LeadFunnelBuilder from '@/components/LeadCapture/LeadFunnelBuilder';
 import LeadFunnelAnalytics from '@/pages/LeadFunnelAnalytics';
 import LeadTrackingDashboard from '@/pages/LeadTrackingDashboard';
 import WhatsAppApiPage from '@/pages/WhatsAppApiPage';
+import ApiWhatsAppCheckout from '@/pages/ApiWhatsAppCheckout';
 import DisparosPage from '@/components/Disparos/DisparosPage';
 
 // Admin
@@ -143,6 +144,7 @@ const MobileResponsiveDashboard = () => {
             {/* Comunicação - Omni */}
             <Route path="/crm-whatsapp" element={<ModuleGate module="omni"><WhatsAppCRM /></ModuleGate>} />
             <Route path="/api-whatsapp" element={<ModuleGate module="omni"><WhatsAppApiPage /></ModuleGate>} />
+            <Route path="/api-whatsapp/checkout" element={<ModuleGate module="omni"><ApiWhatsAppCheckout /></ModuleGate>} />
             <Route path="/disparos" element={<ModuleGate module="omni"><DisparosPage /></ModuleGate>} />
             <Route path="/email" element={<ModuleGate module="omni"><CleanEmailMarketing /></ModuleGate>} />
             <Route path="/email/builder" element={<ModuleGate module="omni"><EmailTemplateBuilder /></ModuleGate>} />

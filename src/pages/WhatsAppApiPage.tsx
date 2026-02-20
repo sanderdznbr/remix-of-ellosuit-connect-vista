@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Copy, Trash2, Plus, Eye, EyeOff, Power, Code, Loader2, RefreshCw, ExternalLink, CheckCircle, XCircle, Clock, AlertTriangle, ArrowLeft, BarChart3, ChevronDown, ChevronUp, Lightbulb, AlertCircle, Ban } from 'lucide-react';
+import { Key, Copy, Trash2, Plus, Eye, EyeOff, Power, Code, Loader2, RefreshCw, ExternalLink, CheckCircle, XCircle, Clock, AlertTriangle, ArrowLeft, BarChart3, ChevronDown, ChevronUp, Lightbulb, AlertCircle, Ban, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -254,6 +254,11 @@ const WhatsAppApiPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 pl-11 md:pl-0 md:justify-end flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/api-whatsapp/checkout')} className="border-white/30 text-white bg-white/10 hover:bg-white/20 text-xs md:text-sm">
+              <CreditCard className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+              <span className="hidden sm:inline">Planos & Preços</span>
+              <span className="sm:hidden">Planos</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={() => window.open('/docs-apicrm', '_blank')} className="border-white/30 text-white bg-white/10 hover:bg-white/20 text-xs md:text-sm">
               <ExternalLink className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
               <span className="hidden sm:inline">Documentação</span>

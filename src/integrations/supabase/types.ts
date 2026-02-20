@@ -225,6 +225,107 @@ export type Database = {
           },
         ]
       }
+      api_whatsapp_subscriptions: {
+        Row: {
+          annual_price: number
+          beehive_secure_id: string | null
+          beehive_secure_url: string | null
+          beehive_status: string | null
+          beehive_transaction_id: string | null
+          canceled_at: string | null
+          card_brand: string | null
+          card_last_digits: string | null
+          company_id: string
+          created_at: string
+          customer_document: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          expires_at: string | null
+          id: string
+          installment_amount: number
+          installments: number
+          metadata: Json | null
+          paid_at: string | null
+          payment_method: string | null
+          plan_label: string
+          plan_name: string
+          sessions_included: number
+          starts_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annual_price: number
+          beehive_secure_id?: string | null
+          beehive_secure_url?: string | null
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          canceled_at?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id: string
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          expires_at?: string | null
+          id?: string
+          installment_amount: number
+          installments?: number
+          metadata?: Json | null
+          paid_at?: string | null
+          payment_method?: string | null
+          plan_label: string
+          plan_name: string
+          sessions_included?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annual_price?: number
+          beehive_secure_id?: string | null
+          beehive_secure_url?: string | null
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          canceled_at?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id?: string
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          expires_at?: string | null
+          id?: string
+          installment_amount?: number
+          installments?: number
+          metadata?: Json | null
+          paid_at?: string | null
+          payment_method?: string | null
+          plan_label?: string
+          plan_name?: string
+          sessions_included?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_whatsapp_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_executions: {
         Row: {
           automation_id: string

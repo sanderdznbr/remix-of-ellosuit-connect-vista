@@ -21,11 +21,6 @@ interface Plan {
   recommended?: boolean;
 }
 
-const INSTALLMENT_FEES: Record<number, number> = {
-  1: 3.99, 2: 13.83, 3: 14.28, 4: 15.24, 5: 16.18, 6: 17.11,
-  7: 19.88, 8: 20.78, 9: 21.67, 10: 22.54, 11: 23.40, 12: 24.26,
-};
-
 const PLANS: Plan[] = [
   {
     id: 'starter',
@@ -253,9 +248,7 @@ const ApiWhatsAppCheckout: React.FC = () => {
     }
   }, [selectedPlan, cardNumber, cardName, cardExpiry, cardCvv, customerDocument, customerName, customerPhone, installments, session, toast, navigate]);
 
-  const feePercent = INSTALLMENT_FEES[installments] || 0;
-  const totalWithFee = selectedPlan ? Math.ceil(selectedPlan.price * (1 + feePercent / 100)) : 0;
-  const installmentAmount = selectedPlan ? Math.ceil(totalWithFee / installments) : 0;
+  const installmentAmount = selectedPlan ? Math.ceil(selectedPlan.price / installments) : 0;
 
   if (activeSubscription) {
     return (
@@ -282,93 +275,96 @@ const ApiWhatsAppCheckout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
       {/* Header */}
-      <div className="p-4 md:p-6" style={{ background: 'linear-gradient(135deg, #FF4500, #FF6B35)' }}>
-        <div className="max-w-6xl mx-auto">
-          <Button variant="ghost" onClick={() => navigate('/dashboard/api-whatsapp')} className="text-white hover:bg-white/20 mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-            <Zap className="h-7 w-7" />
-            API WhatsApp — Planos
-          </h1>
-          <p className="text-white/80 mt-1">Escolha o plano ideal para sua integração. Pagamento anual com até 12x no cartão.</p>
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FF4500, #FF6B35, #FF8C42)' }} />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djJoLTJ2LTJoMnptMC00djJoLTJ2LTJoMnptLTQgOHYyaC0ydi0yaDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+        <div className="relative p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <Button variant="ghost" onClick={() => navigate('/dashboard/api-whatsapp')} className="text-white/90 hover:text-white hover:bg-white/15 mb-5 -ml-2 rounded-xl">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            </Button>
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Zap className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">API WhatsApp — Planos</h1>
+                <p className="text-white/70 mt-0.5 text-sm md:text-base">Escolha o plano ideal para sua integração. Pagamento anual com até 12x.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
-        {/* Plan Selection */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {!selectedPlan ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {PLANS.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className={`relative cursor-pointer transition-all hover:shadow-lg ${
-                    plan.recommended ? 'border-[#FF4500] ring-2 ring-[#FF4500]/20' : 'border-border'
-                  }`}
-                  onClick={() => setSelectedPlan(plan)}
-                >
-                  {plan.recommended && (
-                    <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FF4500] text-white text-xs">
-                      Recomendado
-                    </Badge>
-                  )}
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-bold">{plan.label}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{plan.sessions} {plan.sessions === 1 ? 'sessão' : 'sessões'} WhatsApp</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {PLANS.map((plan) => (
+              <Card
+                key={plan.id}
+                className={`relative cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 rounded-2xl overflow-hidden group ${
+                  plan.recommended ? 'ring-2 ring-[#FF4500] shadow-lg shadow-[#FF4500]/10' : 'border-border hover:border-[#FF4500]/30'
+                }`}
+                onClick={() => setSelectedPlan(plan)}
+              >
+                {plan.recommended && (
+                  <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #FF4500, #FF6B35)' }} />
+                )}
+                {plan.recommended && (
+                  <Badge className="absolute top-3 right-3 bg-[#FF4500] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                    ⭐ Recomendado
+                  </Badge>
+                )}
+                <CardContent className="p-6">
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold">{plan.label}</h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">{plan.sessions} {plan.sessions === 1 ? 'sessão' : 'sessões'} WhatsApp</p>
+                  </div>
 
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
-                      <span className="text-sm text-muted-foreground">/ano</span>
+                  <div className="mb-5">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-extrabold tracking-tight">{formatCurrency(plan.price)}</span>
+                      <span className="text-sm text-muted-foreground font-medium">/ano</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      ou 12x de {formatCurrency(Math.ceil(plan.price * (1 + INSTALLMENT_FEES[12] / 100) / 12))}
+                      ou 12x de {formatCurrency(Math.ceil(plan.price / 12))}
                     </p>
+                  </div>
 
-                    <ul className="mt-4 space-y-2">
+                  <div className="border-t pt-4">
+                    <ul className="space-y-2.5">
                       {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm">
-                          <Check className="h-4 w-4 text-green-500 shrink-0" />
-                          {f}
+                        <li key={i} className="flex items-center gap-2.5 text-sm">
+                          <div className="h-5 w-5 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                            <Check className="h-3 w-3 text-green-600" />
+                          </div>
+                          <span className="text-foreground/80">{f}</span>
                         </li>
                       ))}
                     </ul>
+                  </div>
 
-                    <Button
-                      className="w-full mt-6"
-                      style={{ backgroundColor: '#FF4500' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedPlan(plan);
-                      }}
-                    >
-                      Selecionar
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Credit Card Fees Table */}
-            <Card className="mt-6">
-              <CardContent className="p-6">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" /> Taxas de Parcelamento no Cartão de Crédito
-                </h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {Object.entries(INSTALLMENT_FEES).map(([n, fee]) => (
-                    <div key={n} className="text-center border rounded-md p-2">
-                      <span className="text-sm font-bold">{n}x</span>
-                      <p className="text-xs text-muted-foreground">{fee.toFixed(2).replace('.', ',')}%</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">* Taxas aplicadas ao valor total do plano anual. Pagamento à vista (1x) possui a menor taxa.</p>
-              </CardContent>
-            </Card>
-          </>
+                  <Button
+                    className={`w-full mt-6 rounded-xl h-11 font-semibold transition-all ${
+                      plan.recommended
+                        ? 'text-white shadow-md shadow-[#FF4500]/20'
+                        : 'bg-foreground/5 text-foreground hover:bg-foreground/10 border border-border'
+                    }`}
+                    style={plan.recommended ? { backgroundColor: '#FF4500' } : undefined}
+                    variant={plan.recommended ? 'default' : 'ghost'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPlan(plan);
+                    }}
+                  >
+                    {plan.recommended ? 'Começar agora' : 'Selecionar'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : (
           /* Checkout Form */
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -462,16 +458,12 @@ const ApiWhatsAppCheckout: React.FC = () => {
                         onChange={(e) => setInstallments(Number(e.target.value))}
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                       >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
-                          const fee = INSTALLMENT_FEES[n] || 0;
-                          const total = Math.ceil(selectedPlan.price * (1 + fee / 100));
-                          return (
-                            <option key={n} value={n}>
-                              {n}x de {formatCurrency(Math.ceil(total / n))}
-                              {n === 1 ? ' (à vista)' : ` (${fee}% juros)`}
-                            </option>
-                          );
-                        })}
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n}x de {formatCurrency(Math.ceil(selectedPlan.price / n))}
+                            {n === 1 ? ' (à vista)' : ''}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -507,16 +499,10 @@ const ApiWhatsAppCheckout: React.FC = () => {
                       <span className="text-muted-foreground">Parcelas</span>
                       <span>{installments}x de {formatCurrency(installmentAmount)}</span>
                     </div>
-                    {installments > 1 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Taxa cartão ({feePercent}%)</span>
-                        <span className="text-muted-foreground">+{formatCurrency(totalWithFee - selectedPlan.price)}</span>
-                      </div>
-                    )}
                     <hr />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total</span>
-                      <span style={{ color: '#FF4500' }}>{formatCurrency(totalWithFee)}</span>
+                      <span style={{ color: '#FF4500' }}>{formatCurrency(selectedPlan.price)}</span>
                     </div>
                   </div>
 

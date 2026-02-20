@@ -277,7 +277,7 @@ export default function CheckoutActivate() {
               </p>
               <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mt-2">
                 <Lock className="h-3 w-3" />
-                Pagamento seguro via Pagar.me
+                Pagamento seguro
               </div>
             </div>
           </div>
@@ -374,7 +374,7 @@ export default function CheckoutActivate() {
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                 <Lock className="h-3 w-3" />
-                Pagamento seguro via Pagar.me
+                Pagamento seguro
               </div>
             </div>
           </div>

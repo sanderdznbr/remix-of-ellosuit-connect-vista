@@ -284,7 +284,7 @@ export default function ActivatePlan() {
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
-                Pagamento processado de forma segura pela Pagar.me.
+                Pagamento processado de forma segura.
                 <br />
                 Ao continuar, você concorda com nossos termos de uso.
               </p>

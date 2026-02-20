@@ -4,7 +4,7 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive, X, Sparkles
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { ElloLogo } from "@/components/shared/ElloLogo";
@@ -193,6 +193,7 @@ const configMenu: MenuGroup = {
 
 export function MegaMenuHeader() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [showEarlyAccessModal, setShowEarlyAccessModal] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -257,10 +258,46 @@ export function MegaMenuHeader() {
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-2">
           <ElloLogo className="h-8 w-auto" color="white" />
-          <span className="text-[10px] font-medium text-white/70 bg-white/15 px-1.5 py-0.5 rounded-full leading-none tracking-wide uppercase">
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowEarlyAccessModal(true); }}
+            className="text-[10px] font-medium text-white/70 bg-white/15 px-1.5 py-0.5 rounded-full leading-none tracking-wide uppercase hover:bg-white/25 transition-colors cursor-pointer"
+          >
             Acesso Antecipado
-          </span>
+          </button>
         </Link>
+
+        {/* Early Access Modal */}
+        {showEarlyAccessModal && (
+          <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" onClick={() => setShowEarlyAccessModal(false)}>
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setShowEarlyAccessModal(false)} className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+              <div className="text-center space-y-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto">
+                  <Sparkles className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Você tem Acesso Antecipado! 🎉</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Parabéns! Você é um <strong>usuário privilegiado</strong> da Ellosuit. Isso significa que você faz parte do nosso grupo seleto de early adopters que estão experimentando a plataforma antes do lançamento oficial.
+                </p>
+                <div className="bg-blue-50 rounded-xl p-4 text-left space-y-2">
+                  <p className="text-sm font-semibold text-blue-900">O que isso significa:</p>
+                  <ul className="text-xs text-blue-800 space-y-1.5">
+                    <li>✨ Acesso a todas as funcionalidades em <strong>beta-test</strong></li>
+                    <li>🚀 Novidades e melhorias contínuas toda semana</li>
+                    <li>💬 Canal direto com a equipe para sugestões e feedback</li>
+                    <li>🎁 Condições especiais exclusivas para quem entrou cedo</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Estamos em fase de testes. Algumas funcionalidades podem mudar conforme evoluímos com o seu feedback.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Navigation */}
         <nav className="flex items-center gap-0.5 h-full">

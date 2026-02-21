@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight, Volume2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
@@ -339,6 +339,8 @@ const AIAssistantHome: React.FC = () => {
 
       if (!cleanText) { setIsSpeaking(false); return; }
 
+      console.log('🔊 [TTS] Generating audio for:', cleanText.substring(0, 60));
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
@@ -352,7 +354,10 @@ const AIAssistantHome: React.FC = () => {
         }
       );
 
-      if (!response.ok) throw new Error('TTS failed');
+      if (!response.ok) {
+        console.error('🔊 [TTS] Failed:', response.status);
+        throw new Error('TTS failed');
+      }
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -365,16 +370,43 @@ const AIAssistantHome: React.FC = () => {
         URL.revokeObjectURL(audioUrl);
       };
       audio.onerror = () => {
+        console.error('🔊 [TTS] Audio playback error');
         setIsSpeaking(false);
         currentAudioRef.current = null;
       };
 
-      await audio.play();
+      try {
+        await audio.play();
+        console.log('🔊 [TTS] Playing audio successfully');
+      } catch (playErr: any) {
+        console.warn('🔊 [TTS] Autoplay blocked:', playErr.name);
+        // Browser blocked autoplay - store URL for manual play
+        setIsSpeaking(false);
+        currentAudioRef.current = null;
+        // Show toast with manual play option
+        toast({
+          title: '🔊 Resposta em áudio disponível',
+          description: 'Toque para ouvir a resposta',
+          variant: 'default',
+          action: (
+            <button
+              onClick={() => {
+                const manualAudio = new Audio(audioUrl);
+                manualAudio.onended = () => URL.revokeObjectURL(audioUrl);
+                manualAudio.play().catch(() => {});
+              }}
+              className="px-3 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground"
+            >
+              Ouvir
+            </button>
+          ) as any,
+        });
+      }
     } catch (err) {
-      console.error('TTS error:', err);
+      console.error('🔊 [TTS] Error:', err);
       setIsSpeaking(false);
     }
-  }, []);
+  }, [toast]);
 
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
@@ -638,9 +670,20 @@ const AIAssistantHome: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        <p className={`text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : ''}`}
-                           dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
-                        />
+                        <div className="flex items-start gap-2">
+                          <p className={`text-sm whitespace-pre-wrap flex-1 ${msg.role === 'user' ? 'text-white' : ''}`}
+                             dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content) }}
+                          />
+                          {msg.role === 'assistant' && !msg.action?.type && msg.content && (
+                            <button
+                              onClick={() => speakText(msg.content)}
+                              className="shrink-0 mt-0.5 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                              title="Ouvir resposta"
+                            >
+                              <Volume2 className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
+                            </button>
+                          )}
+                        </div>
                         {/* Rich visual cards */}
                         {msg.action?.cards && msg.action.cards.length > 0 && (
                           <AIAssistantCards cards={msg.action.cards as RichCard[]} />

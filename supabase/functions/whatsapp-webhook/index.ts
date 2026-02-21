@@ -2385,7 +2385,35 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                   }
                                 } else {
                                   console.error('🤖🌐 [PLATFORM-AGENT] Scribe error:', scribeResp.status);
-                                  platformInputContent = '[O usuário enviou um áudio mas houve erro na transcrição. Peça para digitar.]';
+                                  // Fallback to OpenAI Whisper
+                                  console.log('🤖🌐 [PLATFORM-AGENT] Trying Whisper fallback...');
+                                  try {
+                                    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+                                    if (OPENAI_API_KEY) {
+                                      const whisperForm = new FormData();
+                                      whisperForm.append('file', new Blob([audioBuffer], { type: 'audio/ogg' }), 'audio.ogg');
+                                      whisperForm.append('model', 'whisper-1');
+                                      whisperForm.append('language', 'pt');
+                                      const whisperResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                                        body: whisperForm,
+                                      });
+                                      if (whisperResp.ok) {
+                                        const whisperResult = await whisperResp.json();
+                                        if (whisperResult.text?.trim()?.length > 2) {
+                                          platformInputContent = whisperResult.text.trim();
+                                          console.log(`🎙️🌐 [PLATFORM] Whisper Transcribed: ${platformInputContent.substring(0, 100)}`);
+                                          await supabase.from('whatsapp_messages').update({ content: `🎙️ ${platformInputContent}` }).eq('wa_message_id', messageId);
+                                        }
+                                      }
+                                    }
+                                  } catch (whisperErr) {
+                                    console.error('🤖🌐 [PLATFORM-AGENT] Whisper fallback error:', whisperErr);
+                                  }
+                                  if (platformInputContent === content) {
+                                    platformInputContent = '[O usuário enviou um áudio mas houve erro na transcrição. Peça para digitar.]';
+                                  }
                                 }
                               }
                             }
@@ -2398,7 +2426,6 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                             platformInputContent = '[O usuário enviou um áudio mas o sistema não conseguiu acessar o arquivo. Peça educadamente para digitar ou enviar novamente.]';
                           }
                         }
-                        
                         // Load conversation history
                         const { data: histMsgs } = await supabase
                           .from('whatsapp_messages')
@@ -2471,7 +2498,9 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                               
                               // Determine audio mode
                               const audioResponseMode = (agentSettings.audioResponseMode as string) || 'disabled';
-                              const ttsVoice = (agentSettings.ttsVoice as string) || 'nova';
+                              // Force 'ello' voice for platform agent
+                              const ttsVoice = 'ello';
+                              console.log(`🤖🌐 [PLATFORM-AGENT] Forced ttsVoice=ello, audioResponseMode=${audioResponseMode}, messageType=${messageType}`);
                               const shouldSendAudio = audioResponseMode === 'always' || 
                                 (audioResponseMode === 'when_audio' && (messageType === 'audio' || messageType === 'ptt'));
                               
@@ -2696,61 +2725,79 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                         }
 
                         if (mediaUrl) {
-                        console.log('🎙️ Audio message detected, attempting transcription via ElevenLabs Scribe...');
-                        try {
-                          const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-                          if (ELEVENLABS_API_KEY) {
-                            // Download the audio file
-                            const audioResponse = await fetch(mediaUrl);
-                            if (audioResponse.ok) {
-                              const audioBuffer = await audioResponse.arrayBuffer();
-                              console.log(`🎙️ Audio downloaded: ${audioBuffer.byteLength} bytes`);
-                              
-                              // Send to ElevenLabs Scribe for transcription
-                              const scribeForm = new FormData();
-                              const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
-                              scribeForm.append('file', audioBlob, 'audio.ogg');
-                              scribeForm.append('model_id', 'scribe_v2');
-                              scribeForm.append('language_code', 'por');
-                              
-                              const scribeResponse = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-                                method: 'POST',
-                                headers: { 'xi-api-key': ELEVENLABS_API_KEY },
-                                body: scribeForm,
-                              });
-                              
-                              if (scribeResponse.ok) {
-                                const scribeResult = await scribeResponse.json();
-                                const transcribedText = scribeResult.text?.trim();
-                                if (transcribedText && transcribedText.length > 2) {
-                                  console.log(`🎙️ ElevenLabs Transcription: ${transcribedText.substring(0, 100)}`);
-                                  aiInputContent = `[O cliente enviou um áudio dizendo]: ${transcribedText}`;
-                                  
-                                  // Update the stored message content with transcription
-                                  await supabase
-                                    .from('whatsapp_messages')
-                                    .update({ content: `🎙️ ${transcribedText}` })
-                                    .eq('wa_message_id', messageId);
+                          console.log('🎙️ Audio message detected, attempting transcription via ElevenLabs Scribe...');
+                          try {
+                            const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                            if (ELEVENLABS_API_KEY) {
+                              const audioResponse = await fetch(mediaUrl);
+                              if (audioResponse.ok) {
+                                const audioBuffer = await audioResponse.arrayBuffer();
+                                console.log(`🎙️ Audio downloaded: ${audioBuffer.byteLength} bytes`);
+                                const scribeForm = new FormData();
+                                const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
+                                scribeForm.append('file', audioBlob, 'audio.ogg');
+                                scribeForm.append('model_id', 'scribe_v2');
+                                scribeForm.append('language_code', 'por');
+                                const scribeResponse = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+                                  method: 'POST',
+                                  headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+                                  body: scribeForm,
+                                });
+                                if (scribeResponse.ok) {
+                                  const scribeResult = await scribeResponse.json();
+                                  const transcribedText = scribeResult.text?.trim();
+                                  if (transcribedText && transcribedText.length > 2) {
+                                    console.log(`🎙️ ElevenLabs Transcription: ${transcribedText.substring(0, 100)}`);
+                                    aiInputContent = `[O cliente enviou um áudio dizendo]: ${transcribedText}`;
+                                    await supabase.from('whatsapp_messages').update({ content: `🎙️ ${transcribedText}` }).eq('wa_message_id', messageId);
+                                  } else {
+                                    console.log('🎙️ Transcription empty or too short');
+                                    aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça educadamente para ele repetir ou digitar.]';
+                                  }
                                 } else {
-                                  console.log('🎙️ Transcription empty or too short');
-                                  aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça educadamente para ele repetir ou digitar.]';
+                                  const errText = await scribeResponse.text();
+                                  console.error('🎙️ ElevenLabs Scribe API error:', scribeResponse.status, errText);
+                                  // Fallback to OpenAI Whisper
+                                  console.log('🎙️ Trying OpenAI Whisper fallback...');
+                                  try {
+                                    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+                                    if (OPENAI_API_KEY) {
+                                      const whisperForm = new FormData();
+                                      whisperForm.append('file', new Blob([audioBuffer], { type: 'audio/ogg' }), 'audio.ogg');
+                                      whisperForm.append('model', 'whisper-1');
+                                      whisperForm.append('language', 'pt');
+                                      const whisperResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                                        body: whisperForm,
+                                      });
+                                      if (whisperResp.ok) {
+                                        const whisperResult = await whisperResp.json();
+                                        if (whisperResult.text?.trim()?.length > 2) {
+                                          console.log(`🎙️ Whisper Transcription: ${whisperResult.text.trim().substring(0, 100)}`);
+                                          aiInputContent = `[O cliente enviou um áudio dizendo]: ${whisperResult.text.trim()}`;
+                                          await supabase.from('whatsapp_messages').update({ content: `🎙️ ${whisperResult.text.trim()}` }).eq('wa_message_id', messageId);
+                                        }
+                                      }
+                                    }
+                                  } catch (whisperErr) {
+                                    console.error('🎙️ Whisper fallback error:', whisperErr);
+                                  }
+                                  if (!aiInputContent.includes('[O cliente enviou um áudio dizendo]')) {
+                                    aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo no momento. Peça educadamente para ele digitar a mensagem.]';
+                                  }
                                 }
                               } else {
-                                const errText = await scribeResponse.text();
-                                console.error('🎙️ ElevenLabs Scribe API error:', scribeResponse.status, errText);
-                                aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo no momento. Peça educadamente para ele digitar a mensagem.]';
+                                console.error('🎙️ Failed to download audio:', audioResponse.status);
+                                aiInputContent = '[O cliente enviou um áudio mas não foi possível acessá-lo. Peça educadamente para ele digitar.]';
                               }
                             } else {
-                              console.error('🎙️ Failed to download audio:', audioResponse.status);
-                              aiInputContent = '[O cliente enviou um áudio mas não foi possível acessá-lo. Peça educadamente para ele digitar.]';
+                              aiInputContent = '[O cliente enviou um áudio. Peça para ele digitar a mensagem pois não há serviço de transcrição configurado.]';
                             }
-                          } else {
-                            aiInputContent = '[O cliente enviou um áudio. Peça para ele digitar a mensagem pois não há serviço de transcrição configurado.]';
+                          } catch (transcribeErr) {
+                            console.error('🎙️ Transcription error:', transcribeErr);
+                            aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça educadamente para ele digitar.]';
                           }
-                        } catch (transcribeErr) {
-                          console.error('🎙️ Transcription error:', transcribeErr);
-                          aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça educadamente para ele digitar.]';
-                        }
                         } else {
                           console.log('🎙️ Audio message without mediaUrl after download attempt');
                           aiInputContent = '[O cliente enviou um áudio mas o sistema não conseguiu acessar o arquivo de áudio para transcrição. Peça educadamente para ele digitar ou enviar novamente.]';
@@ -2841,7 +2888,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                             const shouldSendAudio = audioResponseMode === 'always' || 
                               (audioResponseMode === 'when_audio' && (messageType === 'audio' || messageType === 'ptt'));
                             
-                            console.log(`🤖 Audio mode: ${audioResponseMode}, messageType: ${messageType}, shouldSendAudio: ${shouldSendAudio}`);
+                            console.log(`🤖 Audio mode: ${audioResponseMode}, ttsVoice: ${ttsVoice}, messageType: ${messageType}, shouldSendAudio: ${shouldSendAudio}`);
                             
                             // Use remoteJid directly - it's already resolved from remoteJidAlt in the webhook
                             // For LID contacts, the remoteJid is the best we have
@@ -2927,7 +2974,32 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                     });
                                   
                                   // Generate TTS for the text without URLs
-                                  const ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                  let ttsResponse: Response | null = null;
+                                  
+                                  if (ttsVoice === 'ello') {
+                                    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                                    if (ELEVENLABS_API_KEY) {
+                                      const elloResp = await fetch(
+                                        `https://api.elevenlabs.io/v1/text-to-speech/RGymW84CSmfVugnA5tvA?output_format=mp3_44100_128`,
+                                        {
+                                          method: 'POST',
+                                          headers: { 'xi-api-key': ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ text: audioContent.slice(0, 5000), model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true } }),
+                                        }
+                                      );
+                                      if (elloResp.ok) {
+                                        const elloBuffer = await elloResp.arrayBuffer();
+                                        const elloBytes = new Uint8Array(elloBuffer);
+                                        let binary = '';
+                                        for (let i = 0; i < elloBytes.length; i++) binary += String.fromCharCode(elloBytes[i]);
+                                        ttsResponse = new Response(JSON.stringify({ audio_base64: btoa(binary), format: 'mp3' }), { status: 200 });
+                                        console.log('🎙️ ElevenLabs TTS (URL path) generated successfully');
+                                      }
+                                    }
+                                  }
+                                  
+                                  if (!ttsResponse) {
+                                    ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
                                     method: 'POST',
                                     headers: {
                                       'Content-Type': 'application/json',
@@ -2935,11 +3007,12 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                     },
                                     body: JSON.stringify({
                                       text: audioContent,
-                                      voice: ttsVoice,
+                                      voice: ttsVoice === 'ello' ? 'nova' : ttsVoice,
                                       speed: 1.0,
                                       format: 'opus'
                                     })
-                                  });
+                                    });
+                                  }
                                   
                                   let audioSent = false;
                                   if (ttsResponse.ok) {
@@ -3019,7 +3092,41 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                 if (shouldSendAudio && partIndex === 0) {
                                   // Generate TTS audio for first part only
                                   console.log(`🎙️ Generating TTS audio with voice: ${ttsVoice}`);
-                                  const ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
+                                  
+                                  let ttsResponse: Response | null = null;
+                                  let isElevenLabs = false;
+                                  
+                                  if (ttsVoice === 'ello') {
+                                    // Use ElevenLabs TTS
+                                    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+                                    if (ELEVENLABS_API_KEY) {
+                                      const elloResp = await fetch(
+                                        `https://api.elevenlabs.io/v1/text-to-speech/RGymW84CSmfVugnA5tvA?output_format=mp3_44100_128`,
+                                        {
+                                          method: 'POST',
+                                          headers: { 'xi-api-key': ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ text: partContent.slice(0, 5000), model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true } }),
+                                        }
+                                      );
+                                      if (elloResp.ok) {
+                                        const elloBuffer = await elloResp.arrayBuffer();
+                                        const elloBytes = new Uint8Array(elloBuffer);
+                                        let binary = '';
+                                        for (let i = 0; i < elloBytes.length; i++) binary += String.fromCharCode(elloBytes[i]);
+                                        const audioBase64 = btoa(binary);
+                                        // Create a fake response-like object for compatibility
+                                        ttsResponse = new Response(JSON.stringify({ audio_base64: audioBase64, format: 'mp3' }), { status: 200 });
+                                        isElevenLabs = true;
+                                        console.log('🎙️ ElevenLabs TTS generated successfully');
+                                      } else {
+                                        console.error('🎙️ ElevenLabs TTS failed:', elloResp.status, '- falling back to OpenAI');
+                                      }
+                                    }
+                                  }
+                                  
+                                  // Fallback to OpenAI TTS
+                                  if (!ttsResponse) {
+                                    ttsResponse = await fetch(`${SUPABASE_URL}/functions/v1/tts-openai`, {
                                     method: 'POST',
                                     headers: {
                                       'Content-Type': 'application/json',
@@ -3027,11 +3134,12 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                     },
                                     body: JSON.stringify({
                                       text: partContent,
-                                      voice: ttsVoice,
+                                      voice: ttsVoice === 'ello' ? 'nova' : ttsVoice,
                                       speed: 1.0,
                                       format: 'opus'
                                     })
-                                  });
+                                    });
+                                  }
                                   
                                   if (ttsResponse.ok) {
                                     const ttsData = await ttsResponse.json();

@@ -327,7 +327,6 @@ const AIAssistantHome: React.FC = () => {
       currentAudioRef.current = null;
     }
 
-    setIsSpeaking(true);
     try {
       // Clean text for TTS (remove emojis, markdown, etc.)
       const cleanText = text
@@ -337,7 +336,7 @@ const AIAssistantHome: React.FC = () => {
         .replace(/https?:\/\/\S+/g, '')
         .trim();
 
-      if (!cleanText) { setIsSpeaking(false); return; }
+      if (!cleanText) { return; }
 
       console.log('🔊 [TTS] Generating audio for:', cleanText.substring(0, 60));
 
@@ -355,24 +354,40 @@ const AIAssistantHome: React.FC = () => {
       );
 
       if (!response.ok) {
-        console.error('🔊 [TTS] Failed:', response.status);
+        const errBody = await response.text().catch(() => '');
+        console.error('🔊 [TTS] Failed:', response.status, errBody);
         throw new Error('TTS failed');
       }
 
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        console.error('🔊 [TTS] Unexpected content-type:', contentType);
+        throw new Error('TTS returned non-audio response');
+      }
+
       const audioBlob = await response.blob();
+      console.log('🔊 [TTS] Got audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
+
+      if (audioBlob.size < 500) {
+        console.error('🔊 [TTS] Audio blob too small:', audioBlob.size);
+        throw new Error('TTS returned empty audio');
+      }
+
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       currentAudioRef.current = audio;
+      setIsSpeaking(true);
 
       audio.onended = () => {
         setIsSpeaking(false);
         currentAudioRef.current = null;
         URL.revokeObjectURL(audioUrl);
       };
-      audio.onerror = () => {
-        console.error('🔊 [TTS] Audio playback error');
+      audio.onerror = (e) => {
+        console.error('🔊 [TTS] Audio playback error', e);
         setIsSpeaking(false);
         currentAudioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
       };
 
       try {
@@ -380,10 +395,10 @@ const AIAssistantHome: React.FC = () => {
         console.log('🔊 [TTS] Playing audio successfully');
       } catch (playErr: any) {
         console.warn('🔊 [TTS] Autoplay blocked:', playErr.name);
-        // Browser blocked autoplay - store URL for manual play
         setIsSpeaking(false);
         currentAudioRef.current = null;
         // Show toast with manual play option
+        const savedUrl = audioUrl;
         toast({
           title: '🔊 Resposta em áudio disponível',
           description: 'Toque para ouvir a resposta',
@@ -391,8 +406,8 @@ const AIAssistantHome: React.FC = () => {
           action: (
             <button
               onClick={() => {
-                const manualAudio = new Audio(audioUrl);
-                manualAudio.onended = () => URL.revokeObjectURL(audioUrl);
+                const manualAudio = new Audio(savedUrl);
+                manualAudio.onended = () => URL.revokeObjectURL(savedUrl);
                 manualAudio.play().catch(() => {});
               }}
               className="px-3 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground"

@@ -2316,7 +2316,8 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                         
                         // Transcribe audio if needed
                         let platformInputContent = content;
-                        if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
+                        if ((messageType === 'audio' || messageType === 'ptt')) {
+                          if (mediaUrl) {
                           try {
                             const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
                             if (ELEVENLABS_API_KEY) {
@@ -2337,12 +2338,22 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                   if (scribeResult.text?.trim()?.length > 2) {
                                     platformInputContent = scribeResult.text.trim();
                                     await supabase.from('whatsapp_messages').update({ content: `🎙️ ${platformInputContent}` }).eq('wa_message_id', messageId);
+                                  } else {
+                                    platformInputContent = '[O usuário enviou um áudio mas não foi possível entender. Peça educadamente para repetir ou digitar.]';
                                   }
+                                } else {
+                                  console.error('🤖🌐 [PLATFORM-AGENT] Scribe error:', scribeResp.status);
+                                  platformInputContent = '[O usuário enviou um áudio mas houve erro na transcrição. Peça para digitar.]';
                                 }
                               }
                             }
                           } catch (sttErr) {
                             console.error('🤖🌐 [PLATFORM-AGENT] STT error:', sttErr);
+                            platformInputContent = '[O usuário enviou um áudio mas ocorreu um erro. Peça para digitar.]';
+                          }
+                          } else {
+                            console.log('🤖🌐 [PLATFORM-AGENT] Audio without mediaUrl');
+                            platformInputContent = '[O usuário enviou um áudio mas o sistema não conseguiu acessar o arquivo. Peça educadamente para digitar ou enviar novamente.]';
                           }
                         }
                         
@@ -2600,7 +2611,8 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                       
                       // If message is audio/ptt, try to transcribe it before sending to AI
                       let aiInputContent = content;
-                      if ((messageType === 'audio' || messageType === 'ptt') && mediaUrl) {
+                      if ((messageType === 'audio' || messageType === 'ptt')) {
+                        if (mediaUrl) {
                         console.log('🎙️ Audio message detected, attempting transcription via ElevenLabs Scribe...');
                         try {
                           const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
@@ -2638,23 +2650,27 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                     .eq('wa_message_id', messageId);
                                 } else {
                                   console.log('🎙️ Transcription empty or too short');
-                                  aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça para ele repetir ou digitar.]';
+                                  aiInputContent = '[O cliente enviou um áudio mas não foi possível entender o conteúdo. Peça educadamente para ele repetir ou digitar.]';
                                 }
                               } else {
                                 const errText = await scribeResponse.text();
                                 console.error('🎙️ ElevenLabs Scribe API error:', scribeResponse.status, errText);
-                                aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo. Peça para ele digitar a mensagem.]';
+                                aiInputContent = '[O cliente enviou um áudio. Não foi possível transcrevê-lo no momento. Peça educadamente para ele digitar a mensagem.]';
                               }
                             } else {
                               console.error('🎙️ Failed to download audio:', audioResponse.status);
-                              aiInputContent = '[O cliente enviou um áudio mas não foi possível acessá-lo. Peça para ele digitar.]';
+                              aiInputContent = '[O cliente enviou um áudio mas não foi possível acessá-lo. Peça educadamente para ele digitar.]';
                             }
                           } else {
                             aiInputContent = '[O cliente enviou um áudio. Peça para ele digitar a mensagem pois não há serviço de transcrição configurado.]';
                           }
                         } catch (transcribeErr) {
                           console.error('🎙️ Transcription error:', transcribeErr);
-                          aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça para ele digitar.]';
+                          aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça educadamente para ele digitar.]';
+                        }
+                        } else {
+                          console.log('🎙️ Audio message without mediaUrl - cannot transcribe');
+                          aiInputContent = '[O cliente enviou um áudio mas o sistema não conseguiu acessar o arquivo de áudio para transcrição. Peça educadamente para ele digitar ou enviar novamente.]';
                         }
                       }
                       

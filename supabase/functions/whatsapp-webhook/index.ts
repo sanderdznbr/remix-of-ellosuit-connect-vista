@@ -670,6 +670,51 @@ Deno.serve(async (req) => {
           } else if (messageContent.audioMessage) {
             messageType = messageContent.audioMessage.ptt ? 'ptt' : 'audio';
             content = '[Áudio]';
+            // Try to download audio from Baileys server if no mediaUrl provided
+            if (!mediaUrl && !fromMe && targetSessionId) {
+              try {
+                const { data: sessAudio } = await supabase
+                  .from('whatsapp_sessions')
+                  .select('baileys_server_url, instance_name')
+                  .eq('id', targetSessionId)
+                  .single();
+                if (sessAudio?.baileys_server_url) {
+                  console.log(`🎙️ [AUDIO-DL] Downloading audio via Baileys server for msg ${messageId}`);
+                  const dlResp = await fetch(`${sessAudio.baileys_server_url}/api/media/download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instanceName: sessAudio.instance_name, messageId, remoteJid }),
+                  });
+                  if (dlResp.ok) {
+                    const dlData = await dlResp.json();
+                    if (dlData.base64 || dlData.url) {
+                      if (dlData.url) {
+                        mediaUrl = dlData.url;
+                        console.log(`🎙️ [AUDIO-DL] Got audio URL: ${mediaUrl.substring(0, 80)}`);
+                      } else if (dlData.base64) {
+                        // Upload base64 audio to storage
+                        const audioFileName = `incoming-audio/${targetSessionId}/${messageId}.ogg`;
+                        const binaryStr = atob(dlData.base64);
+                        const audioBytes = new Uint8Array(binaryStr.length);
+                        for (let i = 0; i < binaryStr.length; i++) audioBytes[i] = binaryStr.charCodeAt(i);
+                        const { error: upErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, audioBytes, { contentType: 'audio/ogg', upsert: true });
+                        if (!upErr) {
+                          const { data: pubData } = supabase.storage.from('whatsapp-media').getPublicUrl(audioFileName);
+                          mediaUrl = pubData.publicUrl;
+                          console.log(`🎙️ [AUDIO-DL] Uploaded audio to storage: ${mediaUrl.substring(0, 80)}`);
+                        } else {
+                          console.error('🎙️ [AUDIO-DL] Upload error:', upErr);
+                        }
+                      }
+                    }
+                  } else {
+                    console.log(`🎙️ [AUDIO-DL] Download endpoint returned ${dlResp.status}`);
+                  }
+                }
+              } catch (dlErr) {
+                console.error('🎙️ [AUDIO-DL] Error downloading audio:', dlErr);
+              }
+            }
           } else if (messageContent.documentMessage) {
             messageType = 'document';
             content = messageContent.documentMessage.fileName || '[Documento]';

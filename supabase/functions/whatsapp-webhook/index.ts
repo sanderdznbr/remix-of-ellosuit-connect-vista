@@ -2317,6 +2317,47 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                         // Transcribe audio if needed
                         let platformInputContent = content;
                         if ((messageType === 'audio' || messageType === 'ptt')) {
+                          // If mediaUrl is empty, try downloading from Baileys server first
+                          if (!mediaUrl && targetSessionId) {
+                            try {
+                              const { data: sessAudioPlatform } = await supabase
+                                .from('whatsapp_sessions')
+                                .select('baileys_server_url, instance_name')
+                                .eq('id', targetSessionId)
+                                .single();
+                              if (sessAudioPlatform?.baileys_server_url) {
+                                console.log(`🎙️🌐 [PLATFORM-AUDIO-DL] Downloading audio via Baileys for msg ${messageId}`);
+                                const dlResp = await fetch(`${sessAudioPlatform.baileys_server_url}/api/media/download`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ instanceName: sessAudioPlatform.instance_name, messageId, remoteJid }),
+                                });
+                                if (dlResp.ok) {
+                                  const dlData = await dlResp.json();
+                                  if (dlData.url) {
+                                    mediaUrl = dlData.url;
+                                    console.log(`🎙️🌐 [PLATFORM-AUDIO-DL] Got URL: ${mediaUrl.substring(0, 80)}`);
+                                  } else if (dlData.base64) {
+                                    const audioFileName = `incoming-audio/${targetSessionId}/${messageId}.ogg`;
+                                    const binaryStr = atob(dlData.base64);
+                                    const audioBytes = new Uint8Array(binaryStr.length);
+                                    for (let i = 0; i < binaryStr.length; i++) audioBytes[i] = binaryStr.charCodeAt(i);
+                                    const { error: upErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, audioBytes, { contentType: 'audio/ogg', upsert: true });
+                                    if (!upErr) {
+                                      const { data: pubData } = supabase.storage.from('whatsapp-media').getPublicUrl(audioFileName);
+                                      mediaUrl = pubData.publicUrl;
+                                      console.log(`🎙️🌐 [PLATFORM-AUDIO-DL] Uploaded: ${mediaUrl.substring(0, 80)}`);
+                                    }
+                                  }
+                                } else {
+                                  console.log(`🎙️🌐 [PLATFORM-AUDIO-DL] Download returned ${dlResp.status}`);
+                                }
+                              }
+                            } catch (dlErr) {
+                              console.error('🎙️🌐 [PLATFORM-AUDIO-DL] Error:', dlErr);
+                            }
+                          }
+
                           if (mediaUrl) {
                           try {
                             const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
@@ -2337,6 +2378,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                   const scribeResult = await scribeResp.json();
                                   if (scribeResult.text?.trim()?.length > 2) {
                                     platformInputContent = scribeResult.text.trim();
+                                    console.log(`🎙️🌐 [PLATFORM] Transcribed: ${platformInputContent.substring(0, 100)}`);
                                     await supabase.from('whatsapp_messages').update({ content: `🎙️ ${platformInputContent}` }).eq('wa_message_id', messageId);
                                   } else {
                                     platformInputContent = '[O usuário enviou um áudio mas não foi possível entender. Peça educadamente para repetir ou digitar.]';
@@ -2352,7 +2394,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                             platformInputContent = '[O usuário enviou um áudio mas ocorreu um erro. Peça para digitar.]';
                           }
                           } else {
-                            console.log('🤖🌐 [PLATFORM-AGENT] Audio without mediaUrl');
+                            console.log('🤖🌐 [PLATFORM-AGENT] Audio without mediaUrl after download attempt');
                             platformInputContent = '[O usuário enviou um áudio mas o sistema não conseguiu acessar o arquivo. Peça educadamente para digitar ou enviar novamente.]';
                           }
                         }
@@ -2612,6 +2654,47 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                       // If message is audio/ptt, try to transcribe it before sending to AI
                       let aiInputContent = content;
                       if ((messageType === 'audio' || messageType === 'ptt')) {
+                        // If mediaUrl is empty, try downloading from Baileys server
+                        if (!mediaUrl && targetSessionId) {
+                          try {
+                            const { data: sessAudioAgent } = await supabase
+                              .from('whatsapp_sessions')
+                              .select('baileys_server_url, instance_name')
+                              .eq('id', targetSessionId)
+                              .single();
+                            if (sessAudioAgent?.baileys_server_url) {
+                              console.log(`🎙️ [AGENT-AUDIO-DL] Downloading audio via Baileys for msg ${messageId}`);
+                              const dlResp = await fetch(`${sessAudioAgent.baileys_server_url}/api/media/download`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ instanceName: sessAudioAgent.instance_name, messageId, remoteJid }),
+                              });
+                              if (dlResp.ok) {
+                                const dlData = await dlResp.json();
+                                if (dlData.url) {
+                                  mediaUrl = dlData.url;
+                                  console.log(`🎙️ [AGENT-AUDIO-DL] Got URL: ${mediaUrl.substring(0, 80)}`);
+                                } else if (dlData.base64) {
+                                  const audioFileName = `incoming-audio/${targetSessionId}/${messageId}.ogg`;
+                                  const binaryStr = atob(dlData.base64);
+                                  const audioBytes = new Uint8Array(binaryStr.length);
+                                  for (let i = 0; i < binaryStr.length; i++) audioBytes[i] = binaryStr.charCodeAt(i);
+                                  const { error: upErr } = await supabase.storage.from('whatsapp-media').upload(audioFileName, audioBytes, { contentType: 'audio/ogg', upsert: true });
+                                  if (!upErr) {
+                                    const { data: pubData } = supabase.storage.from('whatsapp-media').getPublicUrl(audioFileName);
+                                    mediaUrl = pubData.publicUrl;
+                                    console.log(`🎙️ [AGENT-AUDIO-DL] Uploaded: ${mediaUrl.substring(0, 80)}`);
+                                  }
+                                }
+                              } else {
+                                console.log(`🎙️ [AGENT-AUDIO-DL] Download returned ${dlResp.status}`);
+                              }
+                            }
+                          } catch (dlErr) {
+                            console.error('🎙️ [AGENT-AUDIO-DL] Error:', dlErr);
+                          }
+                        }
+
                         if (mediaUrl) {
                         console.log('🎙️ Audio message detected, attempting transcription via ElevenLabs Scribe...');
                         try {
@@ -2669,7 +2752,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                           aiInputContent = '[O cliente enviou um áudio mas ocorreu um erro na transcrição. Peça educadamente para ele digitar.]';
                         }
                         } else {
-                          console.log('🎙️ Audio message without mediaUrl - cannot transcribe');
+                          console.log('🎙️ Audio message without mediaUrl after download attempt');
                           aiInputContent = '[O cliente enviou um áudio mas o sistema não conseguiu acessar o arquivo de áudio para transcrição. Peça educadamente para ele digitar ou enviar novamente.]';
                         }
                       }

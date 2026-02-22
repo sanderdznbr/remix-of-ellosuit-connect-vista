@@ -212,6 +212,13 @@ const NotificationSettings = () => {
       icon: Send,
       color: 'text-primary',
     },
+    {
+      key: 'whatsapp_birthday_reminder',
+      label: 'Aniversário de clientes',
+      description: 'Lembrete quando um cliente fizer aniversário',
+      icon: Calendar,
+      color: 'text-pink-500',
+    },
   ];
 
   return (

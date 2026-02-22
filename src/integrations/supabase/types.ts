@@ -4941,14 +4941,17 @@ export type Database = {
       workflow_cards: {
         Row: {
           assigned_user_id: string | null
+          attachments: string[] | null
           checklist: Json | null
           column_id: string
+          comments: Json | null
           company_id: string
           created_at: string
           created_by: string
           description: string | null
           due_date: string | null
           id: string
+          links: string[] | null
           position: number
           priority: string | null
           start_date: string | null
@@ -4958,14 +4961,17 @@ export type Database = {
         }
         Insert: {
           assigned_user_id?: string | null
+          attachments?: string[] | null
           checklist?: Json | null
           column_id: string
+          comments?: Json | null
           company_id: string
           created_at?: string
           created_by: string
           description?: string | null
           due_date?: string | null
           id?: string
+          links?: string[] | null
           position: number
           priority?: string | null
           start_date?: string | null
@@ -4975,14 +4981,17 @@ export type Database = {
         }
         Update: {
           assigned_user_id?: string | null
+          attachments?: string[] | null
           checklist?: Json | null
           column_id?: string
+          comments?: Json | null
           company_id?: string
           created_at?: string
           created_by?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          links?: string[] | null
           position?: number
           priority?: string | null
           start_date?: string | null

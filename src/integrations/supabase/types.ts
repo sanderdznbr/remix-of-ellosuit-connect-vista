@@ -2576,6 +2576,7 @@ export type Database = {
           reminder_notifications_enabled: boolean
           updated_at: string
           user_id: string
+          whatsapp_birthday_reminder: boolean
           whatsapp_dispatch_progress: boolean
           whatsapp_email_sent: boolean
           whatsapp_enabled: boolean
@@ -2594,6 +2595,7 @@ export type Database = {
           reminder_notifications_enabled?: boolean
           updated_at?: string
           user_id: string
+          whatsapp_birthday_reminder?: boolean
           whatsapp_dispatch_progress?: boolean
           whatsapp_email_sent?: boolean
           whatsapp_enabled?: boolean
@@ -2612,6 +2614,7 @@ export type Database = {
           reminder_notifications_enabled?: boolean
           updated_at?: string
           user_id?: string
+          whatsapp_birthday_reminder?: boolean
           whatsapp_dispatch_progress?: boolean
           whatsapp_email_sent?: boolean
           whatsapp_enabled?: boolean

@@ -118,13 +118,14 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         // Map notification_type to the column name in notification_settings
-        const typeToColumn: Record<string, string> = {
+    const typeToColumn: Record<string, string> = {
           event_created: "whatsapp_event_created",
           event_upcoming: "whatsapp_event_upcoming",
           event_deleted: "whatsapp_event_deleted",
           task_due: "whatsapp_task_due",
           email_sent: "whatsapp_email_sent",
           dispatch_progress: "whatsapp_dispatch_progress",
+          birthday_reminder: "whatsapp_birthday_reminder",
         };
 
         const whatsappGlobalEnabled = notifSettings?.whatsapp_enabled !== false;
@@ -248,6 +249,7 @@ function formatWhatsAppMessage(
     task_due: "✅⏰",
     email_sent: "📧✅",
     dispatch_progress: "📤🚀",
+    birthday_reminder: "🎂🎉",
   };
 
   const categoryIcons: Record<string, string> = {

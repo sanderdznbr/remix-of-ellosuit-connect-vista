@@ -4469,6 +4469,7 @@ export type Database = {
           notes: string | null
           pipeline_stage: string | null
           profile_picture: string | null
+          remote_jid: string | null
           session_id: string | null
           status: string | null
           unread_count: number | null
@@ -4497,6 +4498,7 @@ export type Database = {
           notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
+          remote_jid?: string | null
           session_id?: string | null
           status?: string | null
           unread_count?: number | null
@@ -4525,6 +4527,7 @@ export type Database = {
           notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
+          remote_jid?: string | null
           session_id?: string | null
           status?: string | null
           unread_count?: number | null

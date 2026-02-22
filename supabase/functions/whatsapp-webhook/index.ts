@@ -476,7 +476,7 @@ Deno.serve(async (req) => {
               processedCount++;
             } else {
               // Create new conversation
-              const { error } = await supabase
+               const { error } = await supabase
                 .from('whatsapp_conversations')
                 .insert({
                   session_id: targetSessionId,
@@ -484,6 +484,7 @@ Deno.serve(async (req) => {
                   contact_phone: phoneNumber,
                   contact_name: contactName,
                   profile_picture: profilePicture,
+                  remote_jid: chat.id || (phoneNumber + '@s.whatsapp.net'),
                   status: chat.archive ? 'archived' : 'open',
                   last_message: lastMessageContent || chat.lastMessage?.conversation || '',
                   last_message_at: lastMessageAt,
@@ -835,12 +836,13 @@ Deno.serve(async (req) => {
           
           if (!conversation) {
             // Build insert payload with v4.1.0 enhanced fields
-            const insertPayload: Record<string, unknown> = {
+             const insertPayload: Record<string, unknown> = {
               session_id: targetSessionId,
               company_id: companyId,
               contact_phone: phoneNumber,
               contact_name: contactName,
               profile_picture: profilePicture,
+              remote_jid: remoteJid,
               status: 'open',
               last_message: content,
               last_message_at: new Date().toISOString(),
@@ -1039,6 +1041,10 @@ Deno.serve(async (req) => {
             }
             if (groupParticipants && groupParticipants.length > 0) {
               updateData.group_participants = groupParticipants;
+            }
+            // Always keep remote_jid up to date
+            if (remoteJid && remoteJid.includes('@')) {
+              updateData.remote_jid = remoteJid;
             }
             
             await supabase

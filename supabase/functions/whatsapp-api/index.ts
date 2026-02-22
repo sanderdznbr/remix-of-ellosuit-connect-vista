@@ -509,8 +509,6 @@ Deno.serve(async (req) => {
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
         const cleanPhone = phone.replace(/\D/g, '');
-        // Groups have 18+ digit IDs and use @g.us, individual contacts use @s.whatsapp.net
-        const jid = cleanPhone.includes('@') ? cleanPhone : (cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`);
         const messageText = typeof message === 'string' ? message.trim() : String(message ?? '').trim();
 
         if (!messageText) {
@@ -535,6 +533,7 @@ Deno.serve(async (req) => {
               session_id: sessionId,
               company_id: session.company_id,
               contact_phone: phone,
+              remote_jid: cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`,
               status: 'open',
               last_message_at: new Date().toISOString()
             })
@@ -542,6 +541,12 @@ Deno.serve(async (req) => {
             .single();
           conversation = newConv;
         }
+
+        // Use stored remote_jid if available, otherwise construct from phone
+        const storedJid = conversation?.remote_jid;
+        const jid = storedJid && storedJid.includes('@') 
+          ? storedJid 
+          : (cleanPhone.includes('@') ? cleanPhone : (cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`));
 
         // Send via Baileys if connected
         if (normalizedServerUrl && session.status === 'connected') {

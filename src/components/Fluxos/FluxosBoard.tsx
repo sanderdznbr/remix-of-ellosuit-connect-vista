@@ -360,6 +360,7 @@ const EnhancedCardModal: React.FC<{
   const [collaboratorEmail, setCollaboratorEmail] = useState('');
   const [activeTab, setActiveTab] = useState('details');
   const [assignedUserId, setAssignedUserId] = useState<string>('');
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -752,23 +753,82 @@ const EnhancedCardModal: React.FC<{
               
               <Separator />
               
-              {/* Assigned Members */}
-              <div>
-                <label className="text-sm font-medium mb-3 block text-muted-foreground">
-                  Membros Atribuídos
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    <Avatar className="h-9 w-9 border-2 border-background">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">VC</AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <Button variant="outline" size="sm" className="rounded-xl">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
+               {/* Assigned Members */}
+               <div>
+                 <label className="text-sm font-medium mb-3 block text-muted-foreground">
+                   Membros Atribuídos
+                 </label>
+                 <div className="flex items-center gap-2 flex-wrap">
+                   {assignedUserId && employees.length > 0 && (() => {
+                     const member = employees.find((e: any) => e.user_id === assignedUserId);
+                     const initials = member?.name ? member.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'VC';
+                     return (
+                       <div className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-1.5">
+                         <Avatar className="h-7 w-7 border-2 border-background">
+                           <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">{initials}</AvatarFallback>
+                         </Avatar>
+                         <span className="text-sm">{member?.name || 'Membro'}</span>
+                         <button onClick={() => setAssignedUserId('')} className="ml-1 text-muted-foreground hover:text-foreground">
+                           <X className="h-3 w-3" />
+                         </button>
+                       </div>
+                     );
+                   })()}
+                   {!assignedUserId && (
+                     <Avatar className="h-9 w-9 border-2 border-background">
+                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">VC</AvatarFallback>
+                     </Avatar>
+                   )}
+                   <div className="relative">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       className="rounded-xl"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setShowMemberPicker(!showMemberPicker);
+                       }}
+                     >
+                       <Plus className="h-4 w-4 mr-1" />
+                       Adicionar
+                     </Button>
+                     {showMemberPicker && (
+                       <div className="absolute left-0 top-full mt-2 z-50 w-64 bg-popover border border-border rounded-xl shadow-lg p-2 space-y-1">
+                         <p className="text-xs font-medium text-muted-foreground px-2 py-1">Selecionar membro</p>
+                         {employees.length === 0 && (
+                           <p className="text-xs text-muted-foreground px-2 py-2">Nenhum membro encontrado</p>
+                         )}
+                         {employees.map((emp: any) => {
+                           const initials = emp.name ? emp.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '??';
+                           const isSelected = assignedUserId === emp.user_id;
+                           return (
+                             <button
+                               key={emp.user_id}
+                               className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left text-sm transition-colors ${
+                                 isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+                               }`}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 setAssignedUserId(isSelected ? '' : emp.user_id);
+                                 setShowMemberPicker(false);
+                               }}
+                             >
+                               <Avatar className="h-7 w-7">
+                                 <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{initials}</AvatarFallback>
+                               </Avatar>
+                               <div className="flex-1 truncate">
+                                 <span className="font-medium">{emp.name}</span>
+                                 {emp.email && <p className="text-[10px] text-muted-foreground truncate">{emp.email}</p>}
+                               </div>
+                               {isSelected && <CheckSquare className="h-4 w-4 text-primary" />}
+                             </button>
+                           );
+                         })}
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               </div>
             </TabsContent>
           </ScrollArea>
         </Tabs>

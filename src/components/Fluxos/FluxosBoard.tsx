@@ -814,6 +814,7 @@ const FluxosBoard: React.FC = () => {
   const [activeCard, setActiveCard] = useState<WorkflowCard | null>(null);
 
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [selectedBoardColor, setSelectedBoardColor] = useState('#0079BF');
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
@@ -928,7 +929,7 @@ const FluxosBoard: React.FC = () => {
       name: groupName,
       company_id: companyId,
       created_by: user.id,
-      color: '#3B82F6'
+      color: selectedBoardColor || '#3B82F6'
     });
     
     setGroupName('');
@@ -1078,6 +1079,19 @@ const FluxosBoard: React.FC = () => {
 
   const currentWorkflow = workflows.find(w => w.id === selectedWorkflow);
 
+  // Board background colors for Trello-style gallery
+  const boardColors = [
+    { value: '#0079BF', label: 'Azul' },
+    { value: '#D29034', label: 'Dourado' },
+    { value: '#519839', label: 'Verde' },
+    { value: '#B04632', label: 'Vermelho' },
+    { value: '#89609E', label: 'Roxo' },
+    { value: '#CD5A91', label: 'Rosa' },
+    { value: '#4BBF6B', label: 'Lima' },
+    { value: '#00AECC', label: 'Ciano' },
+    { value: '#838C91', label: 'Cinza' },
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -1089,51 +1103,129 @@ const FluxosBoard: React.FC = () => {
     );
   }
 
-  // Empty state - no boards
+  // Empty state - no boards (Trello-inspired)
   if (groups.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <CheckSquare className="h-10 w-10 text-primary" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-50/30">
+        {/* Hero section */}
+        <div className="max-w-4xl mx-auto px-6 pt-16 pb-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25 mb-6">
+              <CheckSquare className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">
+              Ello Flows
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-md mx-auto">
+              Organize projetos, tarefas e equipes em quadros Kanban intuitivos.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold mb-3">Ello Flows</h1>
-          <p className="text-muted-foreground mb-8">
-            Organize projetos, tarefas e equipes em quadros Kanban intuitivos.
-          </p>
-          <Button onClick={() => setShowGroupModal(true)} size="lg" className="gap-2 rounded-xl">
-            <Plus className="h-5 w-5" />
-            Criar Primeiro Quadro
-          </Button>
-        </div>
-        
-        <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
-          <DialogContent className="rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>Novo Quadro</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome do Quadro</label>
-                <Input
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Ex: Marketing, Desenvolvimento..."
-                  className="rounded-xl h-11"
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowGroupModal(false)} className="rounded-xl">
-                  Cancelar
-                </Button>
-                <Button onClick={createGroup} disabled={!groupName.trim()} className="rounded-xl">
+
+          {/* Create board card - Trello style */}
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-1">Criar seu primeiro quadro</h2>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Um quadro é feito de listas e cartões. Use-o para gerenciar projetos, acompanhar tarefas ou organizar qualquer coisa.
+                </p>
+
+                {/* Board name input */}
+                <div className="mb-5">
+                  <label className="text-sm font-medium mb-2 block text-foreground/70">Título do quadro</label>
+                  <Input
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder="Ex: Marketing, Desenvolvimento, Sprint..."
+                    className="rounded-xl h-11 text-sm"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Color picker - Trello style */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-3 block text-foreground/70">Cor de fundo</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {boardColors.map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => setSelectedBoardColor(color.value)}
+                        className={`w-12 h-9 rounded-lg transition-all hover:opacity-90 hover:ring-2 hover:ring-offset-2 hover:ring-foreground/20 ${
+                          selectedBoardColor === color.value ? 'ring-2 ring-offset-2 ring-foreground/40 scale-105' : ''
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                        title={color.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="mb-6 rounded-xl overflow-hidden" style={{ backgroundColor: selectedBoardColor }}>
+                  <div className="p-4">
+                    <div className="flex gap-2">
+                      {['A Fazer', 'Em Progresso', 'Concluído'].map((col) => (
+                        <div key={col} className="flex-1 bg-black/15 backdrop-blur-sm rounded-lg p-2">
+                          <div className="text-white/90 text-xs font-semibold mb-2">{col}</div>
+                          <div className="space-y-1.5">
+                            <div className="bg-white rounded-md shadow-sm p-1.5">
+                              <div className="h-1.5 bg-gray-200 rounded w-3/4" />
+                            </div>
+                            <div className="bg-white rounded-md shadow-sm p-1.5">
+                              <div className="h-1.5 bg-gray-200 rounded w-1/2" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => { setShowGroupModal(false); createGroup(); }}
+                  disabled={!groupName.trim()} 
+                  size="lg"
+                  className="w-full rounded-xl gap-2 text-base font-semibold h-12"
+                  style={{ 
+                    backgroundColor: selectedBoardColor, 
+                    color: 'white',
+                  }}
+                >
+                  <Plus className="h-5 w-5" />
                   Criar Quadro
                 </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+
+          {/* Template suggestions */}
+          <div className="max-w-2xl mx-auto mt-8">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Comece com um template</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { name: 'Gestão de Projeto', color: '#0079BF', icon: '📋' },
+                { name: 'Marketing', color: '#519839', icon: '📢' },
+                { name: 'Vendas CRM', color: '#D29034', icon: '💰' },
+                { name: 'Sprint Ágil', color: '#B04632', icon: '🚀' },
+                { name: 'Onboarding', color: '#89609E', icon: '👋' },
+                { name: 'Suporte', color: '#00AECC', icon: '🎧' },
+              ].map((template) => (
+                <button
+                  key={template.name}
+                  onClick={() => { setGroupName(template.name); setSelectedBoardColor(template.color); }}
+                  className="group text-left rounded-xl overflow-hidden border border-border/50 hover:border-border hover:shadow-md transition-all"
+                >
+                  <div className="h-16 flex items-end p-3" style={{ backgroundColor: template.color }}>
+                    <span className="text-white font-semibold text-sm drop-shadow-sm flex items-center gap-1.5">
+                      <span className="text-base">{template.icon}</span>
+                      {template.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1364,13 +1456,47 @@ const FluxosBoard: React.FC = () => {
 
       {/* Modals */}
       <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="rounded-2xl sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Novo Quadro</DialogTitle>
+            <DialogTitle className="text-lg">Criar Quadro</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Board preview */}
+            <div className="rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: selectedBoardColor }}>
+              <div className="p-3 flex gap-2">
+                {['Lista 1', 'Lista 2', 'Lista 3'].map((col) => (
+                  <div key={col} className="flex-1 bg-black/15 backdrop-blur-sm rounded-md p-1.5">
+                    <div className="text-white/80 text-[10px] font-medium mb-1">{col}</div>
+                    <div className="space-y-1">
+                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-gray-200 rounded w-3/4" /></div>
+                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-gray-200 rounded w-1/2" /></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Color picker */}
             <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome do Quadro</label>
+              <label className="text-sm font-medium mb-2.5 block text-foreground/70">Cor de fundo</label>
+              <div className="flex gap-2 flex-wrap">
+                {boardColors.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => setSelectedBoardColor(color.value)}
+                    className={`w-10 h-8 rounded-lg transition-all hover:opacity-90 ${
+                      selectedBoardColor === color.value ? 'ring-2 ring-offset-2 ring-foreground/40 scale-110' : ''
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Name */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-foreground/70">Título do quadro <span className="text-destructive">*</span></label>
               <Input
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
@@ -1379,11 +1505,17 @@ const FluxosBoard: React.FC = () => {
                 autoFocus
               />
             </div>
-            <div className="flex justify-end gap-2">
+
+            <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" onClick={() => setShowGroupModal(false)} className="rounded-xl">
                 Cancelar
               </Button>
-              <Button onClick={createGroup} disabled={!groupName.trim()} className="rounded-xl">
+              <Button 
+                onClick={createGroup} 
+                disabled={!groupName.trim()} 
+                className="rounded-xl text-white"
+                style={{ backgroundColor: selectedBoardColor }}
+              >
                 Criar Quadro
               </Button>
             </div>

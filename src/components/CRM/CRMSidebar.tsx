@@ -39,7 +39,7 @@ const CRMSidebar: React.FC<CRMSidebarProps> = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-16 h-full flex flex-col bg-[#FF4500] shrink-0">
+    <div className="w-16 min-w-[64px] h-full flex flex-col bg-[#FF4500] shrink-0">
       {/* Logo */}
       <div className="h-14 flex items-center justify-center border-b border-white/10">
         <Link to="/dashboard">

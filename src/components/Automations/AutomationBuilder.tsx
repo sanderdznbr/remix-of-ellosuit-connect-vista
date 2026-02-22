@@ -81,7 +81,7 @@ export default function AutomationBuilder() {
         setAutomations(typed);
         if (editId) {
           const target = typed.find(a => a.id === editId);
-          if (target) selectAutomation(target);
+          if (target) { selectAutomation(target); }
         }
         // If no editId, start with a blank canvas for a new automation
       }
@@ -90,10 +90,91 @@ export default function AutomationBuilder() {
     load();
   }, [companyId]);
 
+  // Normalize legacy nodes that have generic type "trigger"/"action" with details in node.data
+  const normalizeLegacyNodes = (rawNodes: AutomationNode[]): AutomationNode[] => {
+    return rawNodes.map(node => {
+      const data = node.data || {};
+      
+      // Already a valid block type
+      if (AUTOMATION_BLOCKS.find(b => b.type === node.type)) {
+        // Still ensure label is set
+        if (!node.label || node.label === node.type) {
+          const block = AUTOMATION_BLOCKS.find(b => b.type === node.type);
+          return { ...node, label: block?.label || node.label || node.type };
+        }
+        return node;
+      }
+
+      // Legacy "trigger" type - map based on data.trigger_type or data.config
+      if (node.type === 'trigger') {
+        const triggerType = data.trigger_type || '';
+        let mappedType = 'webhook';
+        let label = data.label || 'Gatilho';
+        
+        if (triggerType === 'webhook' || triggerType === 'subscription_change') {
+          mappedType = 'webhook';
+        } else if (triggerType === 'scheduled' || triggerType === 'schedule') {
+          mappedType = 'schedule';
+        } else if (triggerType === 'new_client') {
+          mappedType = 'new_client';
+        } else if (triggerType === 'client_updated') {
+          mappedType = 'client_updated';
+        } else if (triggerType === 'proposal_status' || triggerType === 'document_event') {
+          mappedType = 'proposal_status';
+        }
+
+        const block = AUTOMATION_BLOCKS.find(b => b.type === mappedType);
+        return {
+          ...node,
+          type: mappedType,
+          label: label,
+          config: { ...block?.defaultConfig, ...data.config },
+        };
+      }
+
+      // Legacy "action" type - map based on data.action_type
+      if (node.type === 'action') {
+        const actionType = data.action_type || '';
+        let mappedType = 'http_request';
+        let label = data.label || 'Ação';
+
+        if (actionType === 'send_email') {
+          mappedType = 'send_email';
+        } else if (actionType === 'send_whatsapp') {
+          mappedType = 'send_whatsapp';
+        } else if (actionType === 'create_client') {
+          mappedType = 'create_client';
+        } else if (actionType === 'update_client') {
+          mappedType = 'update_client';
+        } else if (actionType === 'create_task') {
+          mappedType = 'create_task';
+        } else if (actionType === 'create_proposal') {
+          mappedType = 'create_proposal';
+        } else if (actionType === 'create_receipt') {
+          mappedType = 'create_receipt';
+        } else if (actionType === 'deactivate_modules') {
+          mappedType = 'http_request';
+          label = label || 'Desativar Módulos';
+        }
+
+        const block = AUTOMATION_BLOCKS.find(b => b.type === mappedType);
+        return {
+          ...node,
+          type: mappedType,
+          label: label,
+          config: { ...block?.defaultConfig, ...data.config },
+        };
+      }
+
+      // Unknown type - keep as-is but set a label
+      return { ...node, label: data.label || node.label || node.type };
+    });
+  };
+
   const selectAutomation = (a: Automation) => {
     setCurrent(a);
     setFlowName(a.name);
-    setNodes(a.nodes || []);
+    setNodes(normalizeLegacyNodes(a.nodes || []));
     setEdges(a.edges || []);
     setSelectedNodeId(null);
   };

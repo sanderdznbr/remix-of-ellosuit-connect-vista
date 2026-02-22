@@ -1741,7 +1741,7 @@ const WhatsAppCRM: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-64px)] bg-background flex items-center justify-center">
+      <div className="h-full bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF4500] mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando CRM WhatsApp...</p>
@@ -1755,7 +1755,7 @@ const WhatsAppCRM: React.FC = () => {
   return (
     <div className={cn(
       "bg-background flex flex-col overflow-hidden",
-      "h-[100dvh] md:h-[calc(100dvh-4rem)]",
+      "h-[100dvh] md:h-full",
       isMobile && showMobileChat && "fixed inset-0 z-50",
       isMobile && !showMobileChat && "fixed inset-0 z-40"
     )}>

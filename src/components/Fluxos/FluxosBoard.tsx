@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, MoreHorizontal, Calendar, GripVertical, X, Trash2, Edit2, Clock, CheckSquare, Star, Filter, Paperclip, MessageSquare, Link2, Users, Share2, Copy, ExternalLink, Image, FileText, Tag, User } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Plus, MoreHorizontal, Calendar, GripVertical, X, Trash2, Edit2, Clock, CheckSquare, Star, Filter, Paperclip, MessageSquare, Link2, Users, Share2, Copy, ExternalLink, Image, FileText, Tag, User, FolderOpen, Upload, HardDrive, Loader2, Download, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -345,7 +345,9 @@ const EnhancedCardModal: React.FC<{
   onSave: (cardData: Partial<WorkflowCard>) => void;
   onDelete?: () => void;
   employees?: any[];
-}> = ({ card, open, onClose, onSave, onDelete, employees = [] }) => {
+  companyId?: string | null;
+  userId?: string;
+}> = ({ card, open, onClose, onSave, onDelete, employees = [], companyId, userId }) => {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -361,6 +363,12 @@ const EnhancedCardModal: React.FC<{
   const [activeTab, setActiveTab] = useState('details');
   const [assignedUserId, setAssignedUserId] = useState<string>('');
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [attachments, setAttachments] = useState<{ name: string; url: string; type: string; size?: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [showDrivePicker, setShowDrivePicker] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [loadingDrive, setLoadingDrive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (card) {
@@ -372,6 +380,11 @@ const EnhancedCardModal: React.FC<{
       setLinks(card.links || []);
       setComments(card.comments || []);
       setAssignedUserId(card.assigned_user_id || '');
+      setAttachments(card.attachments ? card.attachments.map(url => {
+        const name = url.split('/').pop() || 'arquivo';
+        const ext = name.split('.').pop()?.toLowerCase() || '';
+        return { name: decodeURIComponent(name), url, type: ext };
+      }) : []);
     } else {
       setTitle('');
       setDescription('');
@@ -381,6 +394,7 @@ const EnhancedCardModal: React.FC<{
       setLinks([]);
       setComments([]);
       setAssignedUserId('');
+      setAttachments([]);
     }
     setActiveTab('details');
   }, [card, open]);
@@ -395,8 +409,96 @@ const EnhancedCardModal: React.FC<{
       links: links.length > 0 ? links : undefined,
       comments: comments.length > 0 ? comments : undefined,
       assigned_user_id: assignedUserId || undefined,
+      attachments: attachments.length > 0 ? attachments.map(a => a.url) : undefined,
     });
     onClose();
+  };
+
+  const getOrCreateDriveFolder = async (parentId: string | null, folderName: string): Promise<string | null> => {
+    if (!companyId || !userId) return null;
+    const query = supabase.from('document_folders').select('id').eq('company_id', companyId).eq('name', folderName);
+    if (parentId) query.eq('parent_folder_id', parentId);
+    else query.is('parent_folder_id', null);
+    const { data } = await query.single();
+    if (data) return data.id;
+    const { data: newFolder, error } = await supabase.from('document_folders').insert({
+      company_id: companyId, created_by: userId, name: folderName, parent_folder_id: parentId,
+    }).select('id').single();
+    if (error || !newFolder) return null;
+    return newFolder.id;
+  };
+
+  const uploadFileToDrive = async (file: File, cardTitle: string) => {
+    if (!companyId || !userId) return null;
+    // Create folder structure: Fluxos / cardTitle
+    const fluxosFolderId = await getOrCreateDriveFolder(null, 'Fluxos');
+    if (!fluxosFolderId) return null;
+    const safeName = cardTitle.trim() || 'Sem Título';
+    const cardFolderId = await getOrCreateDriveFolder(fluxosFolderId, safeName);
+    if (!cardFolderId) return null;
+
+    const filePath = `${companyId}/fluxos/${safeName}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
+    if (uploadError) { toast({ title: 'Erro ao enviar', description: uploadError.message, variant: 'destructive' }); return null; }
+
+    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath);
+
+    // Save reference in documents table
+    await supabase.from('documents').insert({
+      company_id: companyId, created_by: userId, name: file.name, file_type: file.type || 'application/octet-stream',
+      file_url: urlData.publicUrl, file_size: file.size, folder_id: cardFolderId,
+    });
+
+    return { name: file.name, url: urlData.publicUrl, type: file.name.split('.').pop()?.toLowerCase() || '', size: file.size };
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const cardName = title || card?.title || 'Sem Título';
+    const newAttachments: typeof attachments = [];
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) { toast({ title: 'Arquivo muito grande', description: `${file.name} excede 10MB`, variant: 'destructive' }); continue; }
+      const result = await uploadFileToDrive(file, cardName);
+      if (result) newAttachments.push(result);
+    }
+    setAttachments(prev => [...prev, ...newAttachments]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (newAttachments.length > 0) toast({ title: `${newAttachments.length} arquivo(s) enviado(s)`, description: 'Salvo automaticamente no ElloDrive' });
+  };
+
+  const loadDriveFiles = async () => {
+    if (!companyId) return;
+    setLoadingDrive(true);
+    const { data } = await supabase.from('documents').select('id, name, file_url, file_type, file_size')
+      .eq('company_id', companyId).order('created_at', { ascending: false }).limit(50);
+    setDriveFiles(data || []);
+    setLoadingDrive(false);
+  };
+
+  const addFromDrive = (doc: any) => {
+    if (attachments.some(a => a.url === doc.file_url)) { toast({ title: 'Já adicionado' }); return; }
+    setAttachments(prev => [...prev, { name: doc.name, url: doc.file_url, type: doc.file_type, size: doc.file_size }]);
+    setShowDrivePicker(false);
+    toast({ title: 'Arquivo adicionado do ElloDrive' });
+  };
+
+  const removeAttachment = (url: string) => {
+    setAttachments(prev => prev.filter(a => a.url !== url));
+  };
+
+  const getFileIcon = (type: string) => {
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'image'].some(t => type.includes(t))) return <Image className="h-4 w-4 text-primary" />;
+    return <FileText className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const formatSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(0)}KB`;
+    return `${(bytes / 1048576).toFixed(1)}MB`;
   };
 
   const addTag = () => {
@@ -629,27 +731,99 @@ const EnhancedCardModal: React.FC<{
             
             {/* Attachments Tab */}
             <TabsContent value="attachments" className="space-y-4 mt-0 pr-2">
-              <div className="border-2 border-dashed border-muted-foreground/20 rounded-2xl p-8 text-center hover:border-primary/30 transition-colors cursor-pointer">
-                <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Paperclip className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="font-medium mb-1">Arraste arquivos aqui</h3>
-                <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
-                <div className="flex gap-2 justify-center">
-                  <Button variant="outline" size="sm" className="rounded-xl">
-                    <Image className="h-4 w-4 mr-2" />
-                    Imagens
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-xl">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Documentos
-                  </Button>
-                </div>
+              <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.svg" />
+
+              {/* Upload area */}
+              <div
+                className="border-2 border-dashed border-muted-foreground/20 rounded-2xl p-6 text-center hover:border-primary/30 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <p className="text-sm text-muted-foreground">Enviando e salvando no ElloDrive...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-medium mb-1 text-sm">Arraste arquivos ou clique para enviar</h3>
+                    <p className="text-xs text-muted-foreground">PDF, DOC, XLS, PNG, JPG (máx. 10MB) • Salva automaticamente no ElloDrive</p>
+                  </>
+                )}
               </div>
-              
-              <div className="text-center text-sm text-muted-foreground">
-                Tipos suportados: PDF, DOC, XLS, PNG, JPG (máx. 10MB)
-              </div>
+
+              {/* Drive picker button */}
+              <Button
+                variant="outline"
+                className="w-full rounded-xl gap-2"
+                onClick={(e) => { e.stopPropagation(); setShowDrivePicker(true); loadDriveFiles(); }}
+              >
+                <HardDrive className="h-4 w-4" />
+                Puxar do ElloDrive
+              </Button>
+
+              {/* Drive picker modal */}
+              {showDrivePicker && (
+                <div className="border border-border rounded-xl bg-card p-3 space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 text-primary" />
+                      Selecionar do ElloDrive
+                    </h4>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowDrivePicker(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {loadingDrive ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : driveFiles.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum arquivo encontrado no Drive</p>
+                  ) : (
+                    <ScrollArea className="max-h-48">
+                      <div className="space-y-1">
+                        {driveFiles.map((doc: any) => (
+                          <button
+                            key={doc.id}
+                            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm hover:bg-muted transition-colors"
+                            onClick={() => addFromDrive(doc)}
+                          >
+                            {getFileIcon(doc.file_type || '')}
+                            <span className="truncate flex-1">{doc.name}</span>
+                            {doc.file_size && <span className="text-[10px] text-muted-foreground">{formatSize(doc.file_size)}</span>}
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </div>
+              )}
+
+              {/* Attached files list */}
+              {attachments.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Arquivos anexados ({attachments.length})</label>
+                  {attachments.map((att, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 p-2.5 bg-muted/50 rounded-xl group">
+                      {getFileIcon(att.type)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{att.name}</p>
+                        {att.size && <p className="text-[10px] text-muted-foreground">{formatSize(att.size)}</p>}
+                      </div>
+                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </a>
+                      <button onClick={() => removeAttachment(att.url)} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
             
             {/* Comments Tab */}
@@ -958,7 +1132,21 @@ const FluxosBoard: React.FC = () => {
       .eq('workflow_columns.workflow_id', selectedWorkflow)
       .order('position');
     
-    setCards(data || []);
+    setCards((data || []).map((d: any) => ({
+      id: d.id,
+      column_id: d.column_id,
+      title: d.title,
+      description: d.description,
+      position: d.position,
+      priority: d.priority,
+      due_date: d.due_date,
+      tags: d.tags,
+      created_by: d.created_by,
+      attachments: d.attachments,
+      links: d.links,
+      comments: d.comments as any,
+      assigned_user_id: d.assigned_user_id,
+    })));
   };
 
   useEffect(() => {
@@ -1062,7 +1250,7 @@ const FluxosBoard: React.FC = () => {
     if (selectedCard) {
       await supabase
         .from('workflow_cards')
-        .update(cardData)
+        .update({ ...cardData, attachments: cardData.attachments || [] })
         .eq('id', selectedCard.id);
       toast({ title: 'Card atualizado!' });
     } else {
@@ -1072,6 +1260,7 @@ const FluxosBoard: React.FC = () => {
         priority: cardData.priority || 'medium',
         due_date: cardData.due_date,
         tags: cardData.tags,
+        attachments: cardData.attachments || [],
         column_id: selectedColumnId,
         company_id: companyId,
         created_by: user.id,
@@ -1679,6 +1868,8 @@ const FluxosBoard: React.FC = () => {
           setSelectedCard(null);
         } : undefined}
         employees={employees}
+        companyId={companyId}
+        userId={user?.id}
       />
     </div>
   );

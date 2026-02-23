@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -9,7 +10,7 @@ import { Plus, Trash2, Video, Settings, Calendar, ChevronLeft, ChevronRight } fr
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import CalendarKPIs from './CalendarKPIs';
 import { useToast } from '@/hooks/use-toast';
-import ImprovedEventModal from './ImprovedEventModal';
+
 import AppointmentModal from './AppointmentModal';
 import ReminderModal from './ReminderModal';
 import EnhancedEventDetailsModal from './EnhancedEventDetailsModal';
@@ -30,6 +31,7 @@ interface MyCalendarProps {
 const FLOW_COLOR = "#007DE3";
 
 const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
+  const navigate = useNavigate();
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -90,7 +92,15 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const handleTypeSelect = (type: 'meeting' | 'appointment' | 'reminder') => {
     setShowTypeSelector(false);
-    if (type === 'meeting') setShowEventModal(true);
+    if (type === 'meeting') {
+      const params = new URLSearchParams();
+      if (selectedDate) params.set('date', selectedDate);
+      if (selectedRange) {
+        params.set('start', selectedRange.start);
+        params.set('end', selectedRange.end);
+      }
+      navigate(`/dashboard/agenda/nova-reuniao?${params.toString()}`);
+    }
     else if (type === 'appointment') setShowAppointmentModal(true);
     else if (type === 'reminder') setShowReminderModal(true);
   };
@@ -352,12 +362,6 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
         onClose={() => { setShowTypeSelector(false); setSelectedDate(null); setSelectedRange(null); }}
         onSelectType={handleTypeSelect}
         selectedDate={selectedDate || ''}
-      />
-      <ImprovedEventModal
-        isOpen={showEventModal} onClose={handleCloseAllModals}
-        selectedDate={selectedDate} selectedRange={selectedRange}
-        onCreateEvent={handleCreateEvent}
-        onNavigateToSettings={onNavigate ? () => onNavigate('settings') : undefined}
       />
       <AppointmentModal
         isOpen={showAppointmentModal} onClose={handleCloseAllModals}

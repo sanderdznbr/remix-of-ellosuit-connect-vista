@@ -8,6 +8,7 @@ import ModuleGate from '@/components/shared/ModuleGate';
 // Import components
 import Home from '@/components/Dashboard/Home';
 import MyCalendar from '@/components/Dashboard/MyCalendar';
+import NewMeetingWizard from '@/components/Dashboard/NewMeetingWizard';
 import CleanEmailMarketing from '@/components/Dashboard/CleanEmailMarketing';
 import EmailTemplateBuilder from '@/components/Dashboard/EmailTemplateBuilder';
 import EmailTemplatesManager from '@/components/Dashboard/EmailTemplatesManager';
@@ -157,6 +158,7 @@ const MobileResponsiveDashboard = () => {
             
             {/* Produtividade - Flow */}
             <Route path="/agenda" element={<ModuleGate module="flow"><MyCalendar /></ModuleGate>} />
+            <Route path="/agenda/nova-reuniao" element={<ModuleGate module="flow"><NewMeetingWizard /></ModuleGate>} />
             <Route path="/agenda-aberta" element={<ModuleGate module="flow"><ImprovedAgendaAberta /></ModuleGate>} />
             <Route path="/agenda-aberta/editor" element={<ModuleGate module="flow"><BookingThemeBuilder /></ModuleGate>} />
             <Route path="/tasks" element={<ModuleGate module="flow"><TarefasWeb /></ModuleGate>} />

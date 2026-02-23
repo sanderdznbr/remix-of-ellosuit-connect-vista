@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkflowGroup, WorkflowColumn } from './types';
+import { FluxosBoardBackgroundPicker, BoardBackground } from './FluxosBoardBackgroundPicker';
 
 interface BoardAutomation {
   id: string;
@@ -24,19 +25,17 @@ interface BoardAutomation {
 interface FluxosSettingsSidebarProps {
   boardColor: string;
   boardName: string;
+  boardBackground?: BoardBackground;
   group?: WorkflowGroup;
   columns: WorkflowColumn[];
   employees?: any[];
   onColorChange?: (color: string) => void;
+  onBackgroundChange?: (bg: BoardBackground) => void;
 }
 
-const boardColors = [
-  '#0079BF', '#D29034', '#519839', '#B04632', '#89609E',
-  '#CD5A91', '#4BBF6B', '#00AECC', '#838C91'
-];
 
 export const FluxosSettingsSidebar: React.FC<FluxosSettingsSidebarProps> = ({
-  boardColor, boardName, group, columns, employees = [], onColorChange
+  boardColor, boardName, boardBackground, group, columns, employees = [], onColorChange, onBackgroundChange
 }) => {
   const [automations, setAutomations] = useState<BoardAutomation[]>([
     {
@@ -119,22 +118,19 @@ export const FluxosSettingsSidebar: React.FC<FluxosSettingsSidebarProps> = ({
           <ScrollArea className="flex-1 mt-4">
             {/* General Settings */}
             <TabsContent value="settings" className="px-6 pb-6 space-y-6 mt-0">
-              {/* Customization */}
+              {/* Background Customization */}
               <div>
                 <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                  <Palette className="h-4 w-4" /> Personalização
+                  <Palette className="h-4 w-4" /> Tela de Fundo
                 </h4>
-                <label className="text-xs text-muted-foreground mb-2 block">Cor do quadro</label>
-                <div className="flex gap-2 flex-wrap">
-                  {boardColors.map(color => (
-                    <button
-                      key={color}
-                      onClick={() => onColorChange?.(color)}
-                      className={`w-8 h-8 rounded-lg transition-all hover:scale-110 ${boardColor === color ? 'ring-2 ring-offset-2 ring-foreground/40 scale-110' : ''}`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
+                <FluxosBoardBackgroundPicker
+                  currentBackground={boardBackground || { type: 'solid', value: boardColor }}
+                  onBackgroundChange={(bg) => {
+                    onBackgroundChange?.(bg);
+                    if (bg.type === 'solid') onColorChange?.(bg.value);
+                  }}
+                  onClose={() => {}}
+                />
               </div>
 
               <Separator />

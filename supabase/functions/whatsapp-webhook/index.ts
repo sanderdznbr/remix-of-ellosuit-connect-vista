@@ -1320,34 +1320,50 @@ Deno.serve(async (req) => {
                   const isNo = upperContent === 'NÃO' || upperContent === 'NAO' || upperContent === '2' || upperContent === 'NO';
 
                   if (isYes || isNo) {
-                    // Check if this phone has any pending RSVP (search globally, not by company)
-                    // The invite might have been sent from a different WhatsApp session
+                    // Build phone variants from multiple sources:
+                    // 1. phoneNumber (may be LID digits)
+                    // 2. conversation.contact_phone (real phone from DB)
+                    // 3. remoteJid variants
                     const cleanPhone = phoneNumber.replace(/\D/g, '');
-                    // Build phone variants (with/without 9th digit for Brazilian numbers)
-                    const phoneVariants = [cleanPhone];
+                    const phoneVariants = new Set<string>([cleanPhone]);
+                    
+                    // CRITICAL: Use the conversation's contact_phone which has the REAL number
+                    // This solves the LID problem where phoneNumber is a LID identifier
+                    if (conversation?.contact_phone) {
+                      const convPhone = conversation.contact_phone.replace(/\D/g, '');
+                      phoneVariants.add(convPhone);
+                      // Also add 9th digit variants for Brazilian numbers
+                      if (convPhone.startsWith('55') && convPhone.length === 13) {
+                        phoneVariants.add(convPhone.slice(0, 4) + convPhone.slice(5));
+                      } else if (convPhone.startsWith('55') && convPhone.length === 12) {
+                        phoneVariants.add(convPhone.slice(0, 4) + '9' + convPhone.slice(4));
+                      }
+                    }
+                    
+                    // Add 9th digit variants for the main phoneNumber too
                     if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
-                      // Has 9th digit, also try without it
-                      phoneVariants.push(cleanPhone.slice(0, 4) + cleanPhone.slice(5));
+                      phoneVariants.add(cleanPhone.slice(0, 4) + cleanPhone.slice(5));
                     } else if (cleanPhone.startsWith('55') && cleanPhone.length === 12) {
-                      // Missing 9th digit, also try with it
-                      phoneVariants.push(cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4));
+                      phoneVariants.add(cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4));
                     }
 
-                    // Also check by resolved_jid
-                    const jidVariants = [remoteJid];
+                    // Build JID variants for resolved_jid matching
+                    const jidVariants = new Set<string>([remoteJid]);
                     for (const pv of phoneVariants) {
-                      jidVariants.push(`${pv}@s.whatsapp.net`);
+                      jidVariants.add(`${pv}@s.whatsapp.net`);
                     }
 
-                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneVariants.join(', ')}, jids: ${jidVariants.join(', ')}`);
+                    const phoneArr = Array.from(phoneVariants);
+                    const jidArr = Array.from(jidVariants);
+                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneArr.join(', ')}, jids: ${jidArr.join(', ')}, conv.contact_phone: ${conversation?.contact_phone}`);
 
                     const { data: pendingRsvps } = await supabase
                       .from('meeting_rsvp')
                       .select('id, event_id, company_id, attendee_name')
                       .in('status', ['pending', 'reminded'])
                       .or(
-                        phoneVariants.map(p => `attendee_phone.eq.${p}`).join(',') + ',' +
-                        jidVariants.map(j => `resolved_jid.eq.${j}`).join(',')
+                        phoneArr.map(p => `attendee_phone.eq.${p}`).join(',') + ',' +
+                        jidArr.map(j => `resolved_jid.eq.${j}`).join(',')
                       )
                       .order('invited_at', { ascending: false })
                       .limit(1);

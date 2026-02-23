@@ -55,13 +55,14 @@ O participante respondeu: "${message}"
 REGRAS IMPORTANTES:
 1. Determine se quer REMARCAR ou CANCELAR.
 2. Se quer remarcar, extraia a data e o HORÁRIO EXATO mencionado na mensagem.
-3. O HORÁRIO deve ser EXATAMENTE o que o participante escreveu. Se disse "10h", use 10:00. Se disse "14h", use 14:00. Se disse "15:30", use 15:30. NUNCA invente ou altere o horário.
+3. O HORÁRIO deve ser EXATAMENTE o que o participante escreveu. Se disse "10h", use 10:00. Se disse "14h", use 14:00. Se disse "15h", use 15:00. Se disse "15:30", use 15:30. NUNCA invente ou altere o horário.
 4. Para dias da semana (ex: "terça"), calcule a próxima ocorrência a partir de hoje.
+5. IMPORTANTE: O horário é no fuso horário de Brasília (America/Sao_Paulo, UTC-3). Retorne a data/hora NO FORMATO COM OFFSET: "YYYY-MM-DDTHH:MM:SS-03:00".
 
 Responda APENAS com JSON válido:
-{"type": "reschedule" ou "cancel", "suggested_date": "YYYY-MM-DDTHH:MM:SS" ou null, "interpretation": "breve explicação em português"}
+{"type": "reschedule" ou "cancel", "suggested_date": "YYYY-MM-DDTHH:MM:SS-03:00" ou null, "interpretation": "breve explicação em português"}
 
-ATENÇÃO: O horário no suggested_date DEVE ser idêntico ao mencionado pelo participante. Exemplo: se disse "10h", suggested_date deve ter T10:00:00.`;
+ATENÇÃO: O horário no suggested_date DEVE ser idêntico ao mencionado pelo participante no fuso de Brasília. Exemplo: se disse "15h", suggested_date deve ser "YYYY-MM-DDT15:00:00-03:00". NUNCA converta para UTC.`;
 
       let aiResult = { type: 'cancel', suggested_date: null as string | null, interpretation: 'Não foi possível interpretar a resposta' };
 

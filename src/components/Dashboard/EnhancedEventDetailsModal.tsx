@@ -923,7 +923,8 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                               <p className="text-sm font-medium text-foreground mb-2">
                                 📆 Data sugerida: {new Date(req.ai_interpreted_date).toLocaleDateString('pt-BR', {
                                   weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-                                  hour: '2-digit', minute: '2-digit'
+                                  hour: '2-digit', minute: '2-digit',
+                                  timeZone: 'America/Sao_Paulo'
                                 })}
                               </p>
                             )}

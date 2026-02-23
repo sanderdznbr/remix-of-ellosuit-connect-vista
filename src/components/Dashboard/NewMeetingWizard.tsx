@@ -23,6 +23,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+const FLOW_BLUE = '#007DE3';
+
 interface RegisteredUser {
   id: string;
   email: string;
@@ -142,9 +144,14 @@ const NewMeetingWizard = () => {
     }
   };
 
-  // Phone mask
+  // Phone mask - auto-adds 55 prefix for Brazilian numbers
   const formatPhone = (value: string): string => {
-    const digits = value.replace(/\D/g, '').slice(0, 13);
+    let digits = value.replace(/\D/g, '').slice(0, 13);
+    // Auto-prepend 55 if user starts typing DDD directly (2 digit area code)
+    if (digits.length >= 2 && !digits.startsWith('55') && !digits.startsWith('1')) {
+      digits = '55' + digits;
+    }
+    digits = digits.slice(0, 13);
     if (digits.length === 0) return '';
     if (digits.length <= 2) return `+${digits}`;
     if (digits.length <= 4) return `+${digits.slice(0, 2)} (${digits.slice(2)}`;
@@ -296,13 +303,13 @@ const NewMeetingWizard = () => {
     <div className="min-h-[calc(100dvh-4rem)] bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-4 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/agenda')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
             <h1 className="text-lg md:text-xl font-bold flex items-center gap-2">
-              <Video className="h-5 w-5 text-primary" /> Nova Reunião
+              <Video className="h-5 w-5" style={{ color: FLOW_BLUE }} /> Nova Reunião
             </h1>
             <p className="text-xs text-muted-foreground hidden sm:block">
               {STEPS[currentStep - 1].description}
@@ -315,7 +322,7 @@ const NewMeetingWizard = () => {
       </div>
 
       {/* Progress steps */}
-      <div className="max-w-4xl mx-auto px-4 pt-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 pt-6">
         <div className="flex items-center justify-between mb-8">
           {STEPS.map((step, i) => {
             const Icon = step.icon;
@@ -333,26 +340,27 @@ const NewMeetingWizard = () => {
                 >
                   <div className={cn(
                     'w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all',
-                    isActive && 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25',
-                    isDone && 'border-primary bg-primary/10 text-primary',
                     !isDone && !isActive && 'border-muted-foreground/30 text-muted-foreground'
-                  )}>
+                  )}
+                  style={{
+                    ...(isActive ? { borderColor: FLOW_BLUE, backgroundColor: FLOW_BLUE, color: 'white', boxShadow: `0 8px 24px ${FLOW_BLUE}40` } : {}),
+                    ...(isDone ? { borderColor: FLOW_BLUE, backgroundColor: `${FLOW_BLUE}15`, color: FLOW_BLUE } : {}),
+                  }}>
                     {isDone ? <Check className="h-5 w-5" /> : <Icon className="h-4 w-4 md:h-5 md:w-5" />}
                   </div>
                   <span className={cn(
                     'text-[10px] md:text-xs font-medium hidden sm:block',
-                    isActive && 'text-primary',
-                    isDone && 'text-primary',
                     !isDone && !isActive && 'text-muted-foreground'
-                  )}>
+                  )}
+                  style={{ color: (isActive || isDone) ? FLOW_BLUE : undefined }}>
                     {step.label}
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={cn(
-                    'flex-1 h-0.5 mx-1 md:mx-2 rounded-full transition-all',
-                    currentStep > step.id ? 'bg-primary' : 'bg-muted'
-                  )} />
+                  <div
+                    className={cn('flex-1 h-0.5 mx-1 md:mx-2 rounded-full transition-all', currentStep <= step.id && 'bg-muted')}
+                    style={currentStep > step.id ? { backgroundColor: FLOW_BLUE } : undefined}
+                  />
                 )}
               </React.Fragment>
             );
@@ -367,11 +375,11 @@ const NewMeetingWizard = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="max-w-2xl mx-auto"
+            className="max-w-3xl mx-auto"
           >
             {currentStep === 1 && (
               <div className="space-y-6">
-                <div className="bg-card rounded-xl border p-6 space-y-5">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-sm font-semibold">
                       Título da Reunião *
@@ -399,7 +407,7 @@ const NewMeetingWizard = () => {
 
             {currentStep === 2 && (
               <div className="space-y-6">
-                <div className="bg-card rounded-xl border p-6 space-y-5">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-5">
                   <div className="flex items-center space-x-3 p-3 rounded-lg bg-accent/50">
                     <Checkbox
                       id="allDay" checked={isAllDay}
@@ -454,18 +462,16 @@ const NewMeetingWizard = () => {
             {currentStep === 3 && (
               <div className="space-y-6">
                 {/* Meeting link */}
-                <div className="bg-card rounded-xl border p-6 space-y-4">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-4">
                   <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <Link2 className="h-4 w-4" /> Link de Reunião Online
+                    <Link2 className="h-4 w-4" style={{ color: FLOW_BLUE }} /> Link de Reunião Online
                   </Label>
                   <Button
                     type="button"
                     variant={createMeetingLink ? 'default' : 'outline'}
                     onClick={() => setCreateMeetingLink(!createMeetingLink)}
-                    className={cn(
-                      'w-full h-12 flex items-center justify-center gap-2 text-sm',
-                      createMeetingLink && 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground'
-                    )}
+                    className={cn('w-full h-12 flex items-center justify-center gap-2 text-sm')}
+                    style={createMeetingLink ? { background: `linear-gradient(to right, ${FLOW_BLUE}, ${FLOW_BLUE}cc)`, color: 'white' } : undefined}
                   >
                     <Video className="h-4 w-4" />
                     {createMeetingLink ? 'Ellomeeting ativado ✓' : 'Criar link Ellomeeting'}
@@ -476,7 +482,7 @@ const NewMeetingWizard = () => {
                 </div>
 
                 {/* Color */}
-                <div className="bg-card rounded-xl border p-6 space-y-4">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-4">
                   <Label className="flex items-center gap-2 text-sm font-semibold">
                     <Palette className="h-4 w-4" /> Cor do Evento
                   </Label>
@@ -497,7 +503,7 @@ const NewMeetingWizard = () => {
                 </div>
 
                 {/* Recurrence */}
-                <div className="bg-card rounded-xl border p-6">
+                <div className="bg-card rounded-2xl border p-6 md:p-8">
                   <RecurrenceSelector config={recurrence} onChange={setRecurrence} />
                 </div>
               </div>
@@ -505,7 +511,7 @@ const NewMeetingWizard = () => {
 
             {currentStep === 4 && (
               <div className="space-y-6">
-                <div className="bg-card rounded-xl border p-6 space-y-4">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-4">
                   <Label className="flex items-center gap-2 text-sm font-semibold">
                     <Users className="h-4 w-4" /> Convidar Participantes
                   </Label>
@@ -552,7 +558,7 @@ const NewMeetingWizard = () => {
                         <Input
                           value={participantInput} onChange={handleParticipantInputChange}
                           onKeyDown={handleParticipantKeyDown}
-                          placeholder={inputMode === 'phone' ? '+55 (41) 98535-0504' : 'email@exemplo.com'}
+                          placeholder={inputMode === 'phone' ? '(41) 98535-0504' : 'email@exemplo.com'}
                           className="text-sm h-11" type={inputMode === 'email' ? 'email' : 'tel'}
                         />
                         <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0"
@@ -620,9 +626,9 @@ const NewMeetingWizard = () => {
                 </div>
 
                 {/* Summary */}
-                <div className="bg-card rounded-xl border p-6 space-y-3">
+                <div className="bg-card rounded-2xl border p-6 md:p-8 space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary" /> Resumo
+                    <Check className="h-4 w-4" style={{ color: FLOW_BLUE }} /> Resumo
                   </h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -661,25 +667,27 @@ const NewMeetingWizard = () => {
         </AnimatePresence>
 
         {/* Navigation buttons */}
-        <div className="max-w-2xl mx-auto flex gap-3 pt-6 pb-8">
+        <div className="max-w-3xl mx-auto flex gap-3 pt-6 pb-8">
           {currentStep > 1 ? (
-            <Button variant="outline" onClick={prevStep} className="flex-1 h-12">
+            <Button variant="outline" onClick={prevStep} className="flex-1 h-12 rounded-xl">
               <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => navigate('/dashboard/agenda')} className="flex-1 h-12">
+            <Button variant="outline" onClick={() => navigate('/dashboard/agenda')} className="flex-1 h-12 rounded-xl">
               Cancelar
             </Button>
           )}
 
           {currentStep < 4 ? (
             <Button onClick={nextStep} disabled={!canProceed()}
-              className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+              className="flex-1 h-12 text-white rounded-xl"
+              style={{ background: `linear-gradient(to right, ${FLOW_BLUE}, ${FLOW_BLUE}cc)` }}>
               Próximo <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isLoading}
-              className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+              className="flex-1 h-12 text-white rounded-xl"
+              style={{ background: `linear-gradient(to right, ${FLOW_BLUE}, ${FLOW_BLUE}cc)` }}>
               {isLoading ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Criando...</>
               ) : (

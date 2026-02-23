@@ -21,6 +21,7 @@ import { WorkflowGroup, Workflow, WorkflowColumn, WorkflowCard, EnrichedWorkflow
 import { TrelloColumnComponent } from './TrelloColumn';
 import { FluxosSettingsSidebar } from './FluxosSettingsSidebar';
 import { FluxosListView } from './FluxosListView';
+import { BoardBackground } from './FluxosBoardBackgroundPicker';
 
 // ─── Enhanced Card Modal ────────────────────────────────────────────
 const EnhancedCardModal: React.FC<{
@@ -416,6 +417,7 @@ const FluxosBoard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeCard, setActiveCard] = useState<WorkflowCard | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [boardBackground, setBoardBackground] = useState<BoardBackground>({ type: 'solid', value: '#007DE3' });
 
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [selectedBoardColor, setSelectedBoardColor] = useState('#0079BF');
@@ -502,6 +504,11 @@ const FluxosBoard: React.FC = () => {
         setSelectedGroup(wf.group_id);
         setSelectedWorkflow(wf.id);
         setShowBoardHome(false);
+        // Load saved background
+        const savedBg = localStorage.getItem(`fluxos_bg_${boardId}`);
+        if (savedBg) {
+          try { setBoardBackground(JSON.parse(savedBg)); } catch {}
+        }
       }
     }
   }, [boardId, allWorkflows]);
@@ -805,22 +812,34 @@ const FluxosBoard: React.FC = () => {
   }
 
   // ─── Kanban / List Board View ─────────────────────────────────────
-  const darkenColor = (hex: string, amount: number) => {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const r = Math.max(0, (num >> 16) - amount);
-    const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
-    const b = Math.max(0, (num & 0x0000FF) - amount);
-    return `rgb(${r},${g},${b})`;
+  const getBoardBackgroundStyle = (): React.CSSProperties => {
+    const bg = boardBackground;
+    if (bg.type === 'image') return { backgroundImage: `url(${bg.value})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+    if (bg.type === 'gradient') return { background: bg.value };
+    const darken = (hex: string, amount: number) => {
+      const num = parseInt(hex.replace('#', ''), 16);
+      const r = Math.max(0, (num >> 16) - amount);
+      const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
+      const b = Math.max(0, (num & 0x0000FF) - amount);
+      return `rgb(${r},${g},${b})`;
+    };
+    return { background: `linear-gradient(180deg, ${bg.value} 0%, ${darken(bg.value, 40)} 100%)` };
   };
 
+  const isLightBackground = boardBackground.type === 'solid' && ['#FFFFFF', '#F4F5F7'].includes(boardBackground.value);
+  const textClass = isLightBackground ? 'text-gray-800' : 'text-white';
+  const textMutedClass = isLightBackground ? 'text-gray-500' : 'text-white/70';
+  const hoverBgClass = isLightBackground ? 'hover:bg-black/5' : 'hover:bg-white/10';
+  const bgOverlayClass = isLightBackground ? 'bg-black/5' : 'bg-white/20';
+
   return (
-    <div className="min-h-screen" style={{ background: `linear-gradient(180deg, ${boardColor} 0%, ${darkenColor(boardColor, 40)} 100%)` }}>
+    <div className="min-h-screen" style={getBoardBackgroundStyle()}>
       {/* Board Header - translucent over colored bg */}
-      <div className="sticky top-0 z-10 backdrop-blur-sm" style={{ backgroundColor: `${boardColor}cc` }}>
+      <div className="sticky top-0 z-10 backdrop-blur-sm" style={{ backgroundColor: isLightBackground ? 'rgba(255,255,255,0.8)' : `${boardColor}88` }}>
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={goHome} className="rounded-xl h-9 px-3 text-white/80 hover:text-white hover:bg-white/10">← Quadros</Button>
+              <Button variant="ghost" size="sm" onClick={goHome} className={`rounded-xl h-9 px-3 ${textMutedClass} hover:${textClass} ${hoverBgClass}`}>← Quadros</Button>
               <Separator orientation="vertical" className="h-6" />
               <div className="flex items-center gap-2">
                 {currentGroup && (
@@ -828,28 +847,28 @@ const FluxosBoard: React.FC = () => {
                     {currentGroup.name.charAt(0)}
                   </div>
                 )}
-                <h1 className="text-lg font-bold text-white">{currentWorkflow?.name || 'Fluxo'}</h1>
+                <h1 className={`text-lg font-bold ${textClass}`}>{currentWorkflow?.name || 'Fluxo'}</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {/* View Toggle */}
-              <div className="flex items-center bg-white/20 rounded-xl p-1">
-                <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white/30 shadow-sm text-white' : 'text-white/70 hover:text-white'}`} title="Kanban">
+              <div className={`flex items-center ${bgOverlayClass} rounded-xl p-1`}>
+                <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? `${isLightBackground ? 'bg-black/10' : 'bg-white/30'} shadow-sm ${textClass}` : `${textMutedClass} hover:${textClass}`}`} title="Kanban">
                   <LayoutGrid className="h-4 w-4" />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white/30 shadow-sm text-white' : 'text-white/70 hover:text-white'}`} title="Lista">
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? `${isLightBackground ? 'bg-black/10' : 'bg-white/30'} shadow-sm ${textClass}` : `${textMutedClass} hover:${textClass}`}`} title="Lista">
                   <List className="h-4 w-4" />
                 </button>
               </div>
 
-              <Badge className="rounded-xl text-xs px-3 py-1 bg-white/20 text-white border-0 hover:bg-white/30">
+              <Badge className={`rounded-xl text-xs px-3 py-1 ${bgOverlayClass} ${textClass} border-0`}>
                 {columns.length} listas • {cards.length} cards
               </Badge>
 
-              {/* Settings Sidebar */}
               <FluxosSettingsSidebar
                 boardColor={boardColor}
                 boardName={currentWorkflow?.name || 'Quadro'}
+                boardBackground={boardBackground}
                 group={currentGroup}
                 columns={columns}
                 employees={employees}
@@ -859,12 +878,19 @@ const FluxosBoard: React.FC = () => {
                     loadGroups();
                   }
                 }}
+                onBackgroundChange={(bg) => {
+                  setBoardBackground(bg);
+                  if (selectedWorkflow) localStorage.setItem(`fluxos_bg_${selectedWorkflow}`, JSON.stringify(bg));
+                  if (bg.type === 'solid' && currentGroup) {
+                    supabase.from('workflow_groups').update({ color: bg.value }).eq('id', currentGroup.id).then(() => loadGroups());
+                  }
+                }}
               />
 
               {selectedGroup && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"><MoreHorizontal className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className={`rounded-xl h-9 w-9 ${textMutedClass} hover:${textClass} ${hoverBgClass}`}><MoreHorizontal className="h-4 w-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-xl w-48">
                     <DropdownMenuItem onClick={() => setShowWorkflowModal(true)} className="rounded-lg"><Plus className="h-4 w-4 mr-2" />Novo Quadro</DropdownMenuItem>
@@ -878,9 +904,9 @@ const FluxosBoard: React.FC = () => {
 
           {/* Workflow tabs */}
           {selectedGroup && workflows.length > 1 && (
-            <div className="flex items-center gap-1 bg-white/15 rounded-xl p-1 w-fit">
+            <div className={`flex items-center gap-1 ${bgOverlayClass} rounded-xl p-1 w-fit`}>
               {workflows.map(wf => (
-                <button key={wf.id} onClick={() => openWorkflow(wf.id, selectedGroup)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedWorkflow === wf.id ? 'bg-white/30 text-white shadow-sm' : 'text-white/70 hover:text-white'}`}>
+                <button key={wf.id} onClick={() => openWorkflow(wf.id, selectedGroup)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedWorkflow === wf.id ? `${isLightBackground ? 'bg-black/10' : 'bg-white/30'} ${textClass} shadow-sm` : `${textMutedClass} hover:${textClass}`}`}>
                   {wf.name}
                 </button>
               ))}
@@ -898,7 +924,7 @@ const FluxosBoard: React.FC = () => {
               {columns.map(column => {
                 const columnCards = cards.filter(c => c.column_id === column.id);
                 return (
-                  <TrelloColumnComponent key={column.id} column={column} cards={columnCards} employees={employees}
+                  <TrelloColumnComponent key={column.id} column={column} cards={columnCards} employees={employees} lightMode={isLightBackground}
                     onAddCard={() => { setSelectedColumnId(column.id); setSelectedCard(null); setShowCardModal(true); }}
                     onEditCard={(card) => { setSelectedCard(card); setShowCardModal(true); }}
                     onDeleteCard={deleteCard}
@@ -908,7 +934,7 @@ const FluxosBoard: React.FC = () => {
                 );
               })}
               <div className="w-72 flex-shrink-0">
-                <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-2xl bg-white/10 hover:bg-white/15" onClick={() => { setEditingColumn(null); setColumnName(''); setColumnColor('#3B82F6'); setShowColumnModal(true); }}>
+                <Button variant="ghost" className={`w-full h-12 border-2 border-dashed rounded-2xl ${isLightBackground ? 'border-gray-300 hover:border-gray-400 text-gray-500 hover:text-gray-700 bg-black/5 hover:bg-black/10' : 'border-white/20 hover:border-white/40 text-white/70 hover:text-white bg-white/10 hover:bg-white/15'}`} onClick={() => { setEditingColumn(null); setColumnName(''); setColumnColor('#3B82F6'); setShowColumnModal(true); }}>
                   <Plus className="h-5 w-5 mr-2" />Adicionar Lista
                 </Button>
               </div>

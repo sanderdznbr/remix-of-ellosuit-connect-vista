@@ -514,7 +514,22 @@ Deno.serve(async (req) => {
         let companyId = '';
         let sessionPhone = '';
 
-        if (!targetSessionId && instanceName) {
+        // Try by sessionId first
+        if (targetSessionId) {
+          const { data: session } = await supabase
+            .from('whatsapp_sessions')
+            .select('company_id, phone_number')
+            .eq('id', targetSessionId)
+            .single();
+
+          if (session) {
+            companyId = session.company_id;
+            sessionPhone = session.phone_number || '';
+          }
+        }
+
+        // Fallback: if sessionId didn't resolve OR wasn't provided, try instanceName
+        if (!companyId && instanceName) {
           const { data: session } = await supabase
             .from('whatsapp_sessions')
             .select('id, company_id, phone_number')
@@ -525,17 +540,7 @@ Deno.serve(async (req) => {
             targetSessionId = session.id;
             companyId = session.company_id;
             sessionPhone = session.phone_number || '';
-          }
-        } else if (targetSessionId) {
-          const { data: session } = await supabase
-            .from('whatsapp_sessions')
-            .select('company_id, phone_number')
-            .eq('id', targetSessionId)
-            .single();
-
-          if (session) {
-            companyId = session.company_id;
-            sessionPhone = session.phone_number || '';
+            console.log(`[Session] Resolved via instanceName fallback: ${instanceName} -> ${session.id}`);
           }
         }
 

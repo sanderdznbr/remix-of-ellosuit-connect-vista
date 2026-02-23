@@ -581,6 +581,7 @@ export type Database = {
           google_event_id: string | null
           id: string
           is_all_day: boolean | null
+          meeting_code: string | null
           meeting_data: Json | null
           meeting_link: string | null
           meeting_provider:
@@ -609,6 +610,7 @@ export type Database = {
           google_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
+          meeting_code?: string | null
           meeting_data?: Json | null
           meeting_link?: string | null
           meeting_provider?:
@@ -637,6 +639,7 @@ export type Database = {
           google_event_id?: string | null
           id?: string
           is_all_day?: boolean | null
+          meeting_code?: string | null
           meeting_data?: Json | null
           meeting_link?: string | null
           meeting_provider?:

@@ -1341,6 +1341,45 @@ const FluxosBoard: React.FC = () => {
     { value: '#838C91', label: 'Cinza' },
   ];
 
+  // Track recently viewed workflows
+  const [recentWorkflows, setRecentWorkflows] = useState<string[]>([]);
+  const [showBoardHome, setShowBoardHome] = useState(!selectedWorkflow);
+  const [allWorkflows, setAllWorkflows] = useState<(Workflow & { group_name: string; group_color: string })[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('fluxos_recent');
+    if (stored) setRecentWorkflows(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    const loadAllWorkflows = async () => {
+      if (!companyId) return;
+      const { data: wfs } = await supabase.from('workflows').select('*').eq('company_id', companyId);
+      if (wfs) {
+        const enriched = wfs.map(wf => {
+          const grp = groups.find(g => g.id === wf.group_id);
+          return { ...wf, group_name: grp?.name || '', group_color: grp?.color || '#6B7280' };
+        });
+        setAllWorkflows(enriched);
+      }
+    };
+    if (groups.length > 0) loadAllWorkflows();
+  }, [groups, companyId]);
+
+  const openWorkflow = (workflowId: string, groupId: string) => {
+    setSelectedGroup(groupId);
+    setSelectedWorkflow(workflowId);
+    setShowBoardHome(false);
+    const updated = [workflowId, ...recentWorkflows.filter(id => id !== workflowId)].slice(0, 6);
+    setRecentWorkflows(updated);
+    localStorage.setItem('fluxos_recent', JSON.stringify(updated));
+  };
+
+  const goHome = () => {
+    setSelectedWorkflow('');
+    setShowBoardHome(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -1352,132 +1391,7 @@ const FluxosBoard: React.FC = () => {
     );
   }
 
-  // Empty state - no boards (Trello-inspired)
-  if (groups.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-50/30">
-        {/* Hero section */}
-        <div className="max-w-4xl mx-auto px-6 pt-16 pb-8">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25 mb-6">
-              <CheckSquare className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">
-              Ello Flows
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Organize projetos, tarefas e equipes em quadros Kanban intuitivos.
-            </p>
-          </div>
-
-          {/* Create board card - Trello style */}
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-1">Criar seu primeiro quadro</h2>
-                <p className="text-sm text-muted-foreground mb-5">
-                  Um quadro é feito de listas e cartões. Use-o para gerenciar projetos, acompanhar tarefas ou organizar qualquer coisa.
-                </p>
-
-                {/* Board name input */}
-                <div className="mb-5">
-                  <label className="text-sm font-medium mb-2 block text-foreground/70">Título do quadro</label>
-                  <Input
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    placeholder="Ex: Marketing, Desenvolvimento, Sprint..."
-                    className="rounded-xl h-11 text-sm"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Color picker - Trello style */}
-                <div className="mb-6">
-                  <label className="text-sm font-medium mb-3 block text-foreground/70">Cor de fundo</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {boardColors.map((color) => (
-                      <button
-                        key={color.value}
-                        onClick={() => setSelectedBoardColor(color.value)}
-                        className={`w-12 h-9 rounded-lg transition-all hover:opacity-90 hover:ring-2 hover:ring-offset-2 hover:ring-foreground/20 ${
-                          selectedBoardColor === color.value ? 'ring-2 ring-offset-2 ring-foreground/40 scale-105' : ''
-                        }`}
-                        style={{ backgroundColor: color.value }}
-                        title={color.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div className="mb-6 rounded-xl overflow-hidden" style={{ backgroundColor: selectedBoardColor }}>
-                  <div className="p-4">
-                    <div className="flex gap-2">
-                      {['A Fazer', 'Em Progresso', 'Concluído'].map((col) => (
-                        <div key={col} className="flex-1 bg-black/15 backdrop-blur-sm rounded-lg p-2">
-                          <div className="text-white/90 text-xs font-semibold mb-2">{col}</div>
-                          <div className="space-y-1.5">
-                            <div className="bg-white rounded-md shadow-sm p-1.5">
-                              <div className="h-1.5 bg-gray-200 rounded w-3/4" />
-                            </div>
-                            <div className="bg-white rounded-md shadow-sm p-1.5">
-                              <div className="h-1.5 bg-gray-200 rounded w-1/2" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={() => { setShowGroupModal(false); createGroup(); }}
-                  disabled={!groupName.trim()} 
-                  size="lg"
-                  className="w-full rounded-xl gap-2 text-base font-semibold h-12"
-                  style={{ 
-                    backgroundColor: selectedBoardColor, 
-                    color: 'white',
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                  Criar Quadro
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Template suggestions */}
-          <div className="max-w-2xl mx-auto mt-8">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Comece com um template</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { name: 'Gestão de Projeto', color: '#0079BF', icon: '📋' },
-                { name: 'Marketing', color: '#519839', icon: '📢' },
-                { name: 'Vendas CRM', color: '#D29034', icon: '💰' },
-                { name: 'Sprint Ágil', color: '#B04632', icon: '🚀' },
-                { name: 'Onboarding', color: '#89609E', icon: '👋' },
-                { name: 'Suporte', color: '#00AECC', icon: '🎧' },
-              ].map((template) => (
-                <button
-                  key={template.name}
-                  onClick={() => { setGroupName(template.name); setSelectedBoardColor(template.color); }}
-                  className="group text-left rounded-xl overflow-hidden border border-border/50 hover:border-border hover:shadow-md transition-all"
-                >
-                  <div className="h-16 flex items-end p-3" style={{ backgroundColor: template.color }}>
-                    <span className="text-white font-semibold text-sm drop-shadow-sm flex items-center gap-1.5">
-                      <span className="text-base">{template.icon}</span>
-                      {template.name}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No separate empty state - always show gallery view
 
   const deleteGroup = async (groupId: string) => {
     if (!confirm('Tem certeza que deseja excluir este quadro e todos seus fluxos?')) return;
@@ -1507,47 +1421,6 @@ const FluxosBoard: React.FC = () => {
     loadWorkflows();
     toast({ title: 'Fluxo excluído!' });
   };
-
-  // Track recently viewed workflows
-  const [recentWorkflows, setRecentWorkflows] = useState<string[]>([]);
-  const [showBoardHome, setShowBoardHome] = useState(!selectedWorkflow);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('fluxos_recent');
-    if (stored) setRecentWorkflows(JSON.parse(stored));
-  }, []);
-
-  const openWorkflow = (workflowId: string, groupId: string) => {
-    setSelectedGroup(groupId);
-    setSelectedWorkflow(workflowId);
-    setShowBoardHome(false);
-    const updated = [workflowId, ...recentWorkflows.filter(id => id !== workflowId)].slice(0, 6);
-    setRecentWorkflows(updated);
-    localStorage.setItem('fluxos_recent', JSON.stringify(updated));
-  };
-
-  const goHome = () => {
-    setSelectedWorkflow('');
-    setShowBoardHome(true);
-  };
-
-  // All workflows across all groups for recent section
-  const [allWorkflows, setAllWorkflows] = useState<(Workflow & { group_name: string; group_color: string })[]>([]);
-
-  useEffect(() => {
-    const loadAllWorkflows = async () => {
-      if (!companyId) return;
-      const { data: wfs } = await supabase.from('workflows').select('*').eq('company_id', companyId);
-      if (wfs) {
-        const enriched = wfs.map(wf => {
-          const grp = groups.find(g => g.id === wf.group_id);
-          return { ...wf, group_name: grp?.name || '', group_color: grp?.color || '#6B7280' };
-        });
-        setAllWorkflows(enriched);
-      }
-    };
-    if (groups.length > 0) loadAllWorkflows();
-  }, [groups, companyId]);
 
   const recentBoards = recentWorkflows
     .map(id => allWorkflows.find(w => w.id === id))
@@ -1717,6 +1590,20 @@ const FluxosBoard: React.FC = () => {
           {/* Workspaces */}
           <section className="space-y-8">
             <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Suas Áreas de Trabalho</h2>
+
+            {groups.length === 0 && (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
+                  <CheckSquare className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-1">Nenhuma área de trabalho ainda</h3>
+                <p className="text-sm text-muted-foreground mb-5">Crie sua primeira área de trabalho para começar a organizar seus projetos.</p>
+                <Button onClick={() => setShowGroupModal(true)} className="rounded-xl gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Área de Trabalho
+                </Button>
+              </div>
+            )}
 
             {groups.map(group => {
               const groupWorkflows = allWorkflows.filter(w => w.group_id === group.id);

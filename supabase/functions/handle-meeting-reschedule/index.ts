@@ -44,21 +44,24 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
       
       const today = new Date().toISOString().split('T')[0];
+      const dayOfWeek = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'][new Date().getDay()];
       const aiPrompt = `Você é um assistente que interpreta respostas de participantes sobre remarcação de reuniões.
 
 O participante recusou a reunião "${eventInfo.title}" que estava agendada para ${eventInfo.start_date}.
-A data de hoje é ${today}.
+Hoje é ${dayOfWeek}, ${today}.
 
 O participante respondeu: "${message}"
 
-Analise a mensagem e determine:
-1. Se o participante quer REMARCAR (sugeriu uma nova data/horário) ou CANCELAR (não quer participar de jeito nenhum)
-2. Se quer remarcar, extraia a data e horário sugeridos
+REGRAS IMPORTANTES:
+1. Determine se quer REMARCAR ou CANCELAR.
+2. Se quer remarcar, extraia a data e o HORÁRIO EXATO mencionado na mensagem.
+3. O HORÁRIO deve ser EXATAMENTE o que o participante escreveu. Se disse "10h", use 10:00. Se disse "14h", use 14:00. Se disse "15:30", use 15:30. NUNCA invente ou altere o horário.
+4. Para dias da semana (ex: "terça"), calcule a próxima ocorrência a partir de hoje.
 
-Responda APENAS com um JSON válido no formato:
+Responda APENAS com JSON válido:
 {"type": "reschedule" ou "cancel", "suggested_date": "YYYY-MM-DDTHH:MM:SS" ou null, "interpretation": "breve explicação em português"}
 
-Se a data não for clara ou o participante não especificou, coloque suggested_date como null e explique na interpretation.`;
+ATENÇÃO: O horário no suggested_date DEVE ser idêntico ao mencionado pelo participante. Exemplo: se disse "10h", suggested_date deve ter T10:00:00.`;
 
       let aiResult = { type: 'cancel', suggested_date: null as string | null, interpretation: 'Não foi possível interpretar a resposta' };
 

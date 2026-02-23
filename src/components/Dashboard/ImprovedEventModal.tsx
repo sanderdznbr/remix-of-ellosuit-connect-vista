@@ -21,7 +21,7 @@ interface ImprovedEventModalProps {
   onClose: () => void;
   selectedDate: string | null;
   selectedRange?: { start: string; end: string } | null;
-  onCreateEvent: (eventData: any, recurrence?: RecurrenceConfig) => Promise<void>;
+  onCreateEvent: (eventData: any, recurrence?: RecurrenceConfig) => Promise<any>;
   onNavigateToSettings?: () => void;
 }
 
@@ -295,7 +295,7 @@ const ImprovedEventModal = ({
         color: selectedColor
       };
 
-      await onCreateEvent(eventData, recurrence.enabled ? recurrence : undefined);
+      const createdEvent = await onCreateEvent(eventData, recurrence.enabled ? recurrence : undefined);
       
       // Send invites via edge function (non-blocking)
       if (sendInvites && participants.length > 0) {
@@ -316,6 +316,7 @@ const ImprovedEventModal = ({
               name: p.name,
             })),
             company_id: resolvedCompanyId,
+            event_id: createdEvent?.id || null,
           }
         }).then(res => {
           if (res.error) {

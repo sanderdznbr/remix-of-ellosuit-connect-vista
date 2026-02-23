@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link, Trash2, Users, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +44,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
     newEndTime: ''
   });
   const [showReschedule, setShowReschedule] = useState(false);
+  const [rsvpList, setRsvpList] = useState<any[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,6 +61,17 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
         description: event.extendedProps?.description || '',
       });
       setIsEditingDetails(false);
+      
+      // Fetch RSVP data
+      const eventId = event.id || event.extendedProps?.id;
+      if (eventId) {
+        supabase
+          .from('meeting_rsvp')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('invited_at', { ascending: true })
+          .then(({ data }) => setRsvpList(data || []));
+      }
     }
   }, [event, isOpen]);
 
@@ -613,6 +625,38 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                           <ExternalLink className="h-3 w-3 mr-1" />
                           Assistir
                         </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* RSVP Status */}
+                {rsvpList.length > 0 && (
+                  <div className="flex items-start space-x-3">
+                    <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 mb-2">Confirmações de Presença</p>
+                      <div className="space-y-2">
+                        {rsvpList.map((rsvp) => (
+                          <div key={rsvp.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium">
+                              {rsvp.attendee_name || rsvp.attendee_phone || rsvp.attendee_email}
+                            </span>
+                            <Badge className={
+                              rsvp.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                              rsvp.status === 'declined' ? 'bg-red-100 text-red-800' :
+                              rsvp.status === 'reminded' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-600'
+                            }>
+                              {rsvp.status === 'confirmed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                              {rsvp.status === 'declined' && <XCircle className="h-3 w-3 mr-1" />}
+                              {(rsvp.status === 'pending' || rsvp.status === 'reminded') && <HelpCircle className="h-3 w-3 mr-1" />}
+                              {rsvp.status === 'confirmed' ? 'Confirmado' :
+                               rsvp.status === 'declined' ? 'Recusado' :
+                               rsvp.status === 'reminded' ? 'Lembrado' : 'Pendente'}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>

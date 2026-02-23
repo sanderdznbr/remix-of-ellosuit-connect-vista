@@ -15,18 +15,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { action, reschedule_request_id, event_id } = await req.json();
+    const body = await req.json();
+    const { action, reschedule_request_id, event_id } = body;
 
     // Action: organizer confirms or denies a reschedule proposal
     if (action === 'respond') {
-      const { response } = await req.json().catch(() => ({ response: null }));
-      // This is handled by direct DB update from frontend
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Action: AI interprets a free-text reschedule response from participant
     if (action === 'interpret') {
-      const { message, attendee_phone, rsvp_id, event_id: evId, company_id, session_id, conversation_id, remote_jid } = await req.json();
+      const { message, attendee_phone, rsvp_id, event_id: evId, company_id, session_id, conversation_id, remote_jid } = body;
       
       // Get event details
       const { data: eventInfo } = await supabase

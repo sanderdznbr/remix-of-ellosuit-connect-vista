@@ -123,51 +123,47 @@ const ImprovedEventModal = ({
         .filter(email => email && email.includes('@'));
 
       let meetingLink = '';
-      let finalMeetingProvider: string | null = null;
+      let finalMeetingProvider: 'google_meet' | 'zoom' | 'teams' | 'ellosuit' | null = null;
 
       // Create Ellomeeting room if requested
       if (createMeetingLink) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          const { data: companyUser } = await supabase
-            .from('company_users')
-            .select('company_id')
-            .eq('user_id', user!.id)
-            .single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
 
-          if (companyUser) {
-            const roomCode = Math.random().toString(36).substring(2, 10);
-            
-            const { data: roomData, error: roomError } = await supabase
-              .from('meeting_rooms')
-              .insert({
-                title: title,
-                room_code: roomCode,
-                max_participants: 50,
-                recording_enabled: false,
-                chat_enabled: true,
-                screen_sharing_enabled: true,
-                company_id: companyUser.company_id,
-                created_by: user!.id,
-              })
-              .select('id')
-              .single();
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single();
 
-            if (roomError) {
-              console.error('Error creating meeting room:', roomError);
-            } else {
-              meetingLink = APP_CONFIG.getMeetingUrl(roomCode);
-              finalMeetingProvider = 'ellosuit';
-              console.log('✅ Ellomeeting room created:', roomCode, meetingLink);
-            }
-          }
-        } catch (error) {
-          console.error('Error creating Ellomeeting room:', error);
+        if (!companyUser) throw new Error('Empresa não encontrada');
+
+        const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        const { error: roomError } = await supabase
+          .from('meeting_rooms')
+          .insert({
+            title: title,
+            room_code: roomCode,
+            max_participants: 50,
+            recording_enabled: false,
+            chat_enabled: true,
+            screen_sharing_enabled: true,
+            company_id: companyUser.company_id,
+            created_by: user.id,
+          });
+
+        if (roomError) {
+          console.error('Error creating meeting room:', roomError);
           toast({
-            title: "Aviso",
-            description: "Evento criado, mas falha ao gerar link da reunião",
+            title: "Erro",
+            description: "Falha ao criar sala de reunião: " + roomError.message,
             variant: "destructive"
           });
+        } else {
+          meetingLink = APP_CONFIG.getMeetingUrl(roomCode);
+          finalMeetingProvider = 'ellosuit';
+          console.log('✅ Ellomeeting room created:', roomCode, meetingLink);
         }
       }
 

@@ -180,12 +180,46 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
     if (!showScrollButton) scrollToBottom();
   }, [messages]);
 
+  const refetchMessages = async () => {
+    const { data, error } = await supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('conversation_id', conversation.id)
+      .order('timestamp', { ascending: true });
+
+    if (!error && data) {
+      setMessages(data.map(m => ({
+        id: m.id,
+        from_me: m.from_me,
+        content: m.content || '',
+        timestamp: m.timestamp,
+        status: m.status,
+        message_type: m.message_type || 'text',
+        media_url: m.media_url || '',
+        media_caption: m.media_caption || '',
+        sender_name: m.sender_name || '',
+        sender_phone: m.sender_phone || ''
+      })));
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || sending) return;
 
     setSending(true);
     const messageContent = inputMessage.trim();
     setInputMessage('');
+
+    // Add message locally immediately with temp ID
+    const tempId = `temp-${Date.now()}`;
+    const tempTimestamp = new Date().toISOString();
+    setMessages(prev => [...prev, {
+      id: tempId,
+      from_me: true,
+      content: messageContent,
+      timestamp: tempTimestamp,
+      status: 'sent'
+    }]);
 
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-api', {
@@ -199,19 +233,13 @@ const WhatsAppConversation: React.FC<WhatsAppConversationProps> = ({
 
       if (error) throw error;
 
-      // Add message locally immediately with temp ID
-      const tempId = `temp-${Date.now()}`;
-      const tempTimestamp = new Date().toISOString();
-      setMessages(prev => [...prev, {
-        id: tempId,
-        from_me: true,
-        content: messageContent,
-        timestamp: tempTimestamp,
-        status: 'sent'
-      }]);
+      // Refetch messages from DB after a short delay to ensure persistence
+      setTimeout(() => refetchMessages(), 1500);
 
     } catch (e: any) {
       console.error('Error sending message:', e);
+      // Remove temp message on failure
+      setMessages(prev => prev.filter(m => m.id !== tempId));
       toast({
         title: 'Erro',
         description: 'Erro ao enviar mensagem. Tente novamente.',

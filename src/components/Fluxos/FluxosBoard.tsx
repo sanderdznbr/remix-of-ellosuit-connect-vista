@@ -1429,49 +1429,18 @@ const FluxosBoard: React.FC = () => {
   const renderModals = () => (
     <>
       <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
-        <DialogContent className="rounded-2xl sm:max-w-lg">
+        <DialogContent className="rounded-2xl sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-lg">Nova Área de Trabalho</DialogTitle>
+            <DialogTitle>Nova Área de Trabalho</DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            <div className="rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: selectedBoardColor }}>
-              <div className="p-3 flex gap-2">
-                {['Lista 1', 'Lista 2', 'Lista 3'].map((col) => (
-                  <div key={col} className="flex-1 bg-black/15 backdrop-blur-sm rounded-md p-1.5">
-                    <div className="text-white/80 text-[10px] font-medium mb-1">{col}</div>
-                    <div className="space-y-1">
-                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-muted rounded w-3/4" /></div>
-                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-muted rounded w-1/2" /></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2.5 block text-muted-foreground">Cor de fundo</label>
-              <div className="flex gap-2 flex-wrap">
-                {boardColors.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => setSelectedBoardColor(color.value)}
-                    className={`w-10 h-8 rounded-lg transition-all hover:opacity-90 ${
-                      selectedBoardColor === color.value ? 'ring-2 ring-offset-2 ring-foreground/40 scale-110' : ''
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    title={color.label}
-                  />
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome <span className="text-destructive">*</span></label>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome</label>
               <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex: Marketing, Desenvolvimento..." className="rounded-xl h-11" autoFocus />
             </div>
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowGroupModal(false)} className="rounded-xl">Cancelar</Button>
-              <Button onClick={createGroup} disabled={!groupName.trim()} className="rounded-xl text-white" style={{ backgroundColor: selectedBoardColor }}>
-                Criar Área
-              </Button>
+              <Button onClick={createGroup} disabled={!groupName.trim()} className="rounded-xl">Criar Área</Button>
             </div>
           </div>
         </DialogContent>

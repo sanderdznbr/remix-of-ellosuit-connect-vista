@@ -165,6 +165,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/reunioes" element={<ModuleGate module="flow"><MeetingRooms /></ModuleGate>} />
             <Route path="/reunioes/gravacoes" element={<ModuleGate module="flow"><MeetingRecordings /></ModuleGate>} />
             <Route path="/fluxos" element={<ModuleGate module="flow"><FluxosBoard /></ModuleGate>} />
+            <Route path="/fluxos/:boardId" element={<ModuleGate module="flow"><FluxosBoard /></ModuleGate>} />
             
             {/* Rastreamento - Track */}
             <Route path="/rastreamento" element={<ModuleGate module="track"><TrackUploadPage /></ModuleGate>} />

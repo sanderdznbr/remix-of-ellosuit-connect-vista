@@ -630,37 +630,68 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                   </div>
                 )}
 
-                {/* RSVP Status */}
-                {rsvpList.length > 0 && (
-                  <div className="flex items-start space-x-3">
-                    <Users className="h-5 w-5 text-gray-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900 mb-2">Confirmações de Presença</p>
+                {/* RSVP Status / Participants */}
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 mb-2">
+                      Participantes {rsvpList.length > 0 && (
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          ({rsvpList.filter(r => r.status === 'confirmed').length} confirmado(s), {rsvpList.filter(r => r.status === 'declined').length} recusado(s))
+                        </span>
+                      )}
+                    </p>
+                    
+                    {rsvpList.length > 0 ? (
                       <div className="space-y-2">
                         {rsvpList.map((rsvp) => (
-                          <div key={rsvp.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                            <span className="text-sm font-medium">
-                              {rsvp.attendee_name || rsvp.attendee_phone || rsvp.attendee_email}
-                            </span>
-                            <Badge className={
-                              rsvp.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                              rsvp.status === 'declined' ? 'bg-red-100 text-red-800' :
-                              rsvp.status === 'reminded' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-600'
+                          <div key={rsvp.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
+                            rsvp.status === 'confirmed' ? 'bg-green-50 border-green-200' :
+                            rsvp.status === 'declined' ? 'bg-red-50 border-red-200' :
+                            'bg-muted/50 border-border'
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                rsvp.status === 'confirmed' ? 'bg-green-500' :
+                                rsvp.status === 'declined' ? 'bg-red-500' :
+                                rsvp.status === 'reminded' ? 'bg-yellow-500' :
+                                'bg-gray-400'
+                              }`} />
+                              <span className="text-sm font-medium">
+                                {rsvp.attendee_name || rsvp.attendee_phone || rsvp.attendee_email}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={
+                              rsvp.status === 'confirmed' ? 'border-green-300 text-green-700 bg-green-100' :
+                              rsvp.status === 'declined' ? 'border-red-300 text-red-700 bg-red-100' :
+                              rsvp.status === 'reminded' ? 'border-yellow-300 text-yellow-700 bg-yellow-100' :
+                              'border-gray-300 text-gray-600 bg-gray-100'
                             }>
-                              {rsvp.status === 'confirmed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                              {rsvp.status === 'declined' && <XCircle className="h-3 w-3 mr-1" />}
-                              {(rsvp.status === 'pending' || rsvp.status === 'reminded') && <HelpCircle className="h-3 w-3 mr-1" />}
-                              {rsvp.status === 'confirmed' ? 'Confirmado' :
-                               rsvp.status === 'declined' ? 'Recusado' :
-                               rsvp.status === 'reminded' ? 'Lembrado' : 'Pendente'}
+                              {rsvp.status === 'confirmed' && <><CheckCircle className="h-3 w-3 mr-1" /> Confirmado</>}
+                              {rsvp.status === 'declined' && <><XCircle className="h-3 w-3 mr-1" /> Recusado</>}
+                              {rsvp.status === 'reminded' && <><HelpCircle className="h-3 w-3 mr-1" /> Lembrado</>}
+                              {rsvp.status === 'pending' && <><HelpCircle className="h-3 w-3 mr-1" /> Pendente</>}
                             </Badge>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    ) : attendees.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {attendees.map((att: string, i: number) => (
+                          <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
+                            <div className="w-2 h-2 rounded-full bg-gray-400" />
+                            <span className="text-sm">{att}</span>
+                            <Badge variant="outline" className="ml-auto text-[10px] border-gray-300 text-gray-500">
+                              Sem RSVP
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum participante adicionado</p>
+                    )}
                   </div>
-                )}
+                </div>
               </>
             )}
           </TabsContent>

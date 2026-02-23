@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
                     company_id: resolvedCompanyId,
                     contact_phone: phone,
                     contact_name: participant.name || phone,
-                    remote_jid: jid,
+                    remote_jid: resolvedJid,
                     status: 'open',
                     last_message_at: new Date().toISOString()
                   })

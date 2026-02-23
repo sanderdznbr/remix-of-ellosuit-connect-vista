@@ -182,17 +182,41 @@ const ImprovedEventModal = ({
     setParticipants(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [inputMode, setInputMode] = useState<'email' | 'phone'>('phone');
+
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 13);
+    if (digits.length === 0) return '';
+    if (digits.length <= 2) return `+${digits}`;
+    if (digits.length <= 4) return `+${digits.slice(0, 2)} (${digits.slice(2)}`;
+    if (digits.length <= 9) return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4)}`;
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  };
+
+  const handleParticipantInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (inputMode === 'phone') {
+      setParticipantInput(formatPhone(val));
+    } else {
+      setParticipantInput(val);
+    }
+  };
+
+  const submitParticipant = () => {
+    const val = participantInput.trim();
+    if (!val) return;
+    if (inputMode === 'email') {
+      if (val.includes('@')) addParticipant('email', val);
+    } else {
+      const digits = val.replace(/\D/g, '');
+      if (digits.length >= 10) addParticipant('phone', digits);
+    }
+  };
+
   const handleParticipantKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const val = participantInput.trim().replace(',', '');
-      if (val.includes('@')) {
-        addParticipant('email', val);
-      } else if (val.replace(/\D/g, '').length >= 8) {
-        addParticipant('phone', val);
-      } else if (val) {
-        addParticipant('email', val); // default to email
-      }
+      submitParticipant();
     }
   };
 
@@ -489,30 +513,47 @@ const ImprovedEventModal = ({
                   </TabsList>
 
                   <TabsContent value="manual" className="mt-2 space-y-2">
+                    <div className="flex gap-1 mb-1">
+                      <Button
+                        type="button"
+                        variant={inputMode === 'phone' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        onClick={() => { setInputMode('phone'); setParticipantInput(''); }}
+                      >
+                        <Phone className="h-3 w-3 mr-1" /> Telefone
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={inputMode === 'email' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        onClick={() => { setInputMode('email'); setParticipantInput(''); }}
+                      >
+                        <Mail className="h-3 w-3 mr-1" /> Email
+                      </Button>
+                    </div>
                     <div className="flex gap-2">
                       <Input
                         value={participantInput}
-                        onChange={(e) => setParticipantInput(e.target.value)}
+                        onChange={handleParticipantInputChange}
                         onKeyDown={handleParticipantKeyDown}
-                        placeholder="Email ou telefone + Enter"
+                        placeholder={inputMode === 'phone' ? '+55 (41) 98535-0504' : 'email@exemplo.com'}
                         className="text-sm h-9"
+                        type={inputMode === 'email' ? 'email' : 'tel'}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         className="h-9 px-3"
-                        onClick={() => {
-                          const val = participantInput.trim();
-                          if (val.includes('@')) addParticipant('email', val);
-                          else if (val) addParticipant('phone', val);
-                        }}
+                        onClick={submitParticipant}
                       >
                         <UserPlus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Digite email ou telefone e pressione Enter
+                      {inputMode === 'phone' ? 'Digite o número com DDD e pressione Enter' : 'Digite o email e pressione Enter'}
                     </p>
                   </TabsContent>
 

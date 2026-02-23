@@ -2461,6 +2461,85 @@ export type Database = {
           },
         ]
       }
+      meeting_reschedule_requests: {
+        Row: {
+          ai_interpretation: string | null
+          ai_interpreted_date: string | null
+          attendee_name: string | null
+          attendee_phone: string
+          company_id: string
+          created_at: string
+          event_id: string
+          id: string
+          organizer_response: string | null
+          request_type: string
+          responded_at: string | null
+          rsvp_id: string
+          status: string
+          suggested_date: string | null
+          suggested_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_interpretation?: string | null
+          ai_interpreted_date?: string | null
+          attendee_name?: string | null
+          attendee_phone: string
+          company_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          organizer_response?: string | null
+          request_type?: string
+          responded_at?: string | null
+          rsvp_id: string
+          status?: string
+          suggested_date?: string | null
+          suggested_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_interpretation?: string | null
+          ai_interpreted_date?: string | null
+          attendee_name?: string | null
+          attendee_phone?: string
+          company_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          organizer_response?: string | null
+          request_type?: string
+          responded_at?: string | null
+          rsvp_id?: string
+          status?: string
+          suggested_date?: string | null
+          suggested_text?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_reschedule_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_reschedule_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_reschedule_requests_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_rsvp"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_rooms: {
         Row: {
           chat_enabled: boolean | null

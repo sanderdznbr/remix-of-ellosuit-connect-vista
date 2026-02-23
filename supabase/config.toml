@@ -81,4 +81,6 @@ verify_jwt = false
 [functions.beehive-webhook]
 verify_jwt = false
 
+[functions.handle-meeting-reschedule]
+verify_jwt = false
 

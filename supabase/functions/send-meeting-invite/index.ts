@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
       event_time,
       meeting_link, 
       participants,  // Array of { type: 'email' | 'phone', value: string, name?: string }
-      company_id 
+      company_id,
+      event_id       // calendar_events ID for RSVP tracking
     } = body;
 
     if (!event_title || !participants || participants.length === 0) {
@@ -80,12 +81,15 @@ Deno.serve(async (req) => {
 
     const BAILEYS_URL = whatsappSession?.baileys_server_url || Deno.env.get('BAILEYS_SERVER_URL') || '';
 
-    // Build invite message
+    // Build invite message with RSVP options
     const inviteMessage = `📅 *Convite de Reunião*\n\n` +
       `*${event_title}*\n` +
       (event_date ? `📆 Data: ${event_date}\n` : '') +
       (event_time ? `🕐 Horário: ${event_time}\n` : '') +
       (meeting_link ? `\n🔗 *Link da reunião:*\n${meeting_link}\n` : '') +
+      `\n📋 *Confirme sua presença:*\n` +
+      `Responda *Sim* para confirmar\n` +
+      `Responda *Não* para recusar\n` +
       `\n_Enviado via Ellosuit_`;
 
     for (const participant of participants) {
@@ -180,6 +184,19 @@ Deno.serve(async (req) => {
                     status: 'sent',
                     timestamp: new Date().toISOString()
                   });
+              }
+
+              // Create RSVP record
+              if (event_id) {
+                await supabase.from('meeting_rsvp').insert({
+                  event_id,
+                  company_id: resolvedCompanyId,
+                  attendee_phone: phone,
+                  attendee_name: participant.name || null,
+                  resolved_jid: resolvedJid,
+                  status: 'pending',
+                });
+                console.log(`[Meeting Invite] 📋 RSVP record created for ${phone}`);
               }
 
               results.push({ participant: participant.value, status: 'sent', channel: 'whatsapp' });

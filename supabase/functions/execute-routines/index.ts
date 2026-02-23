@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     await sendEventReminders(supabase);
     await sendTaskReminders(supabase);
     await sendBirthdayReminders(supabase);
+    await sendRsvpReminders(supabase);
 
     // === EXISTING ROUTINE LOGIC ===
     await executeRoutines(supabase, now);
@@ -373,4 +374,77 @@ function calculateNextRun(routine: any): string {
   next.setDate(next.getDate() + 1);
   next.setHours(hours, minutes, 0, 0);
   return next.toISOString();
+}
+
+// ==================== RSVP REMINDERS (30 min before event) ====================
+async function sendRsvpReminders(supabase: any) {
+  try {
+    const now = new Date();
+    const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
+    const thirtyFiveMinLater = new Date(now.getTime() + 35 * 60 * 1000);
+
+    // Find pending RSVPs for events starting in ~30 minutes that haven't been reminded
+    const { data: pendingRsvps } = await supabase
+      .from('meeting_rsvp')
+      .select('id, event_id, company_id, attendee_phone, attendee_name, resolved_jid')
+      .in('status', ['pending'])
+      .is('reminder_sent_at', null)
+      .not('attendee_phone', 'is', null);
+
+    if (!pendingRsvps || pendingRsvps.length === 0) return;
+
+    // Check which events are starting in ~30 minutes
+    for (const rsvp of pendingRsvps) {
+      const { data: event } = await supabase
+        .from('calendar_events')
+        .select('title, start_date, meeting_link, company_id')
+        .eq('id', rsvp.event_id)
+        .single();
+
+      if (!event) continue;
+
+      const eventStart = new Date(event.start_date);
+      if (eventStart < thirtyMinLater || eventStart > thirtyFiveMinLater) continue;
+
+      // Find WhatsApp session
+      const { data: session } = await supabase
+        .from('whatsapp_sessions')
+        .select('id, instance_name, baileys_server_url')
+        .eq('company_id', rsvp.company_id)
+        .eq('status', 'connected')
+        .limit(1)
+        .single();
+
+      if (!session?.baileys_server_url) continue;
+
+      const reminderMsg = `⏰ *Lembrete de Reunião*\n\n` +
+        `*${event.title}*\n` +
+        `📆 Começa em 30 minutos!\n` +
+        (event.meeting_link ? `\n🔗 *Link:* ${event.meeting_link}\n` : '') +
+        `\n📋 Você ainda não confirmou.\nResponda *Sim* para confirmar ou *Não* para recusar.\n` +
+        `\n_Enviado via Ellosuit_`;
+
+      const jid = rsvp.resolved_jid || `${rsvp.attendee_phone}@s.whatsapp.net`;
+      
+      try {
+        const sendRes = await fetch(`${session.baileys_server_url}/api/message/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instanceName: session.instance_name, jid, message: { text: reminderMsg } }),
+        });
+
+        if (sendRes.ok) {
+          await supabase
+            .from('meeting_rsvp')
+            .update({ status: 'reminded', reminder_sent_at: new Date().toISOString() })
+            .eq('id', rsvp.id);
+          console.log(`⏰ [RSVP] Reminder sent to ${rsvp.attendee_phone} for "${event.title}"`);
+        }
+      } catch (e) {
+        console.error(`⏰ [RSVP] Reminder send failed:`, e);
+      }
+    }
+  } catch (err) {
+    console.error('⏰ [RSVP] Reminder error:', err);
+  }
 }

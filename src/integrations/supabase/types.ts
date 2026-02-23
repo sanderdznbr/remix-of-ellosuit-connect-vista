@@ -2518,6 +2518,69 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_rsvp: {
+        Row: {
+          attendee_email: string | null
+          attendee_name: string | null
+          attendee_phone: string | null
+          company_id: string
+          created_at: string
+          event_id: string
+          id: string
+          invited_at: string
+          reminder_sent_at: string | null
+          resolved_jid: string | null
+          responded_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attendee_email?: string | null
+          attendee_name?: string | null
+          attendee_phone?: string | null
+          company_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          invited_at?: string
+          reminder_sent_at?: string | null
+          resolved_jid?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attendee_email?: string | null
+          attendee_name?: string | null
+          attendee_phone?: string | null
+          company_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          invited_at?: string
+          reminder_sent_at?: string | null
+          resolved_jid?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_rsvp_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_rsvp_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           categories: Json

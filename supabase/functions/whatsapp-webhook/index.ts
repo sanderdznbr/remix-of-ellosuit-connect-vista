@@ -1283,6 +1283,101 @@ Deno.serve(async (req) => {
                 }
               }
 
+              // ==================== MEETING RSVP DETECTION ====================
+              // Check if incoming message is a response to a meeting invite
+              if (!fromMe && conversation && content && !orderDetected) {
+                try {
+                  const upperContent = content.trim().toUpperCase();
+                  const isYes = upperContent === 'SIM' || upperContent === '1' || upperContent === 'YES' || upperContent === 'CONFIRMO';
+                  const isNo = upperContent === 'NÃO' || upperContent === 'NAO' || upperContent === '2' || upperContent === 'NO';
+
+                  if (isYes || isNo) {
+                    // Check if this phone has any pending RSVP
+                    const { data: pendingRsvps } = await supabase
+                      .from('meeting_rsvp')
+                      .select('id, event_id, company_id, attendee_name')
+                      .eq('company_id', companyId)
+                      .in('status', ['pending', 'reminded'])
+                      .or(`attendee_phone.eq.${phoneNumber},resolved_jid.eq.${remoteJid}`)
+                      .order('invited_at', { ascending: false })
+                      .limit(1);
+
+                    if (pendingRsvps && pendingRsvps.length > 0) {
+                      const rsvp = pendingRsvps[0];
+                      const newStatus = isYes ? 'confirmed' : 'declined';
+
+                      await supabase
+                        .from('meeting_rsvp')
+                        .update({ status: newStatus, responded_at: new Date().toISOString() })
+                        .eq('id', rsvp.id);
+
+                      console.log(`📋 [RSVP] ${phoneNumber} responded "${newStatus}" to event ${rsvp.event_id}`);
+
+                      // Get event details for notification
+                      const { data: eventInfo } = await supabase
+                        .from('calendar_events')
+                        .select('title, created_by, start_date, company_id')
+                        .eq('id', rsvp.event_id)
+                        .single();
+
+                      if (eventInfo) {
+                        // Send confirmation reply via WhatsApp
+                        const { data: sess } = await supabase
+                          .from('whatsapp_sessions')
+                          .select('baileys_server_url, instance_name')
+                          .eq('id', targetSessionId)
+                          .single();
+
+                        if (sess?.baileys_server_url) {
+                          const replyJid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+                          let replyMsg = '';
+                          
+                          if (isYes) {
+                            replyMsg = `✅ *Presença confirmada!*\n\nSua participação na reunião *"${eventInfo.title}"* foi registrada.\n\nObrigado!`;
+                          } else {
+                            replyMsg = `❌ *Participação recusada*\n\nRegistramos que você não poderá participar da reunião *"${eventInfo.title}"*.\n\nO organizador será notificado.`;
+                          }
+
+                          await fetch(`${sess.baileys_server_url}/api/message/send`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ instanceName: sess.instance_name, jid: replyJid, message: { text: replyMsg } }),
+                          });
+
+                          // Save reply as message
+                          await supabase.from('whatsapp_messages').insert({
+                            session_id: targetSessionId,
+                            conversation_id: conversation.id,
+                            company_id: companyId,
+                            content: replyMsg,
+                            from_me: true,
+                            message_type: 'text',
+                            status: 'sent',
+                            sender_name: 'Sistema',
+                          });
+                        }
+
+                        // Notify organizer
+                        const contactDisplayName = rsvp.attendee_name || contactName || phoneNumber;
+                        await supabase.from('notifications').insert({
+                          user_id: eventInfo.created_by,
+                          company_id: eventInfo.company_id,
+                          title: isYes ? '✅ Presença confirmada' : '❌ Participação recusada',
+                          message: `${contactDisplayName} ${isYes ? 'confirmou presença' : 'recusou participar'} na reunião "${eventInfo.title}"`,
+                          type: isYes ? 'success' : 'warning',
+                          category: 'calendar',
+                          icon: 'Calendar',
+                          action_url: '/dashboard/agenda',
+                          metadata: { event_id: rsvp.event_id, rsvp_id: rsvp.id, status: newStatus },
+                        });
+                      }
+                    }
+                  }
+                } catch (rsvpErr) {
+                  console.error('[RSVP] Error processing RSVP response:', rsvpErr);
+                }
+              }
+
               // ==================== CHATBOT FLOW ENGINE ====================
               // Check if there's an active chatbot execution for this conversation
               let chatbotHandled = false;

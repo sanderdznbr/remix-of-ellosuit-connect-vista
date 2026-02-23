@@ -568,12 +568,24 @@ Deno.serve(async (req) => {
 
             if (sendResponse.ok) {
               const sendData = await sendResponse.json();
+              const waMessageId = sendData.messageId || sendData.key?.id || `panel-${Date.now()}`;
 
-              // DON'T insert message here - the webhook will handle it
-              // This prevents duplicate messages (one from API, one from webhook)
-              // The webhook has proper deduplication by wa_message_id
+              // Save sent message to database with wa_message_id for dedup
+              const { data: savedMsg } = await supabase
+                .from('whatsapp_messages')
+                .upsert({
+                  conversation_id: conversation?.id,
+                  wa_message_id: waMessageId,
+                  from_me: true,
+                  content: messageText,
+                  message_type: 'text',
+                  status: 'sent',
+                  timestamp: new Date().toISOString()
+                }, { onConflict: 'wa_message_id' })
+                .select('id')
+                .single();
 
-              // Just update conversation last_message
+              // Update conversation last_message
               await supabase
                 .from('whatsapp_conversations')
                 .update({
@@ -584,7 +596,8 @@ Deno.serve(async (req) => {
 
               return new Response(JSON.stringify({
                 success: true,
-                messageId: sendData.messageId || sendData.key?.id
+                messageId: waMessageId,
+                dbId: savedMsg?.id
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               });

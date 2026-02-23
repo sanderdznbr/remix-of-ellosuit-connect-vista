@@ -805,14 +805,22 @@ const FluxosBoard: React.FC = () => {
   }
 
   // ─── Kanban / List Board View ─────────────────────────────────────
+  const darkenColor = (hex: string, amount: number) => {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, (num >> 16) - amount);
+    const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
+    const b = Math.max(0, (num & 0x0000FF) - amount);
+    return `rgb(${r},${g},${b})`;
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Board Header with color accent */}
-      <div className="border-b sticky top-0 z-10" style={{ borderColor: `${boardColor}30`, backgroundColor: 'var(--background)' }}>
+    <div className="min-h-screen" style={{ background: `linear-gradient(180deg, ${boardColor} 0%, ${darkenColor(boardColor, 40)} 100%)` }}>
+      {/* Board Header - translucent over colored bg */}
+      <div className="sticky top-0 z-10 backdrop-blur-sm" style={{ backgroundColor: `${boardColor}cc` }}>
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={goHome} className="rounded-xl h-9 px-3 text-muted-foreground hover:text-foreground">← Quadros</Button>
+              <Button variant="ghost" size="sm" onClick={goHome} className="rounded-xl h-9 px-3 text-white/80 hover:text-white hover:bg-white/10">← Quadros</Button>
               <Separator orientation="vertical" className="h-6" />
               <div className="flex items-center gap-2">
                 {currentGroup && (
@@ -820,21 +828,21 @@ const FluxosBoard: React.FC = () => {
                     {currentGroup.name.charAt(0)}
                   </div>
                 )}
-                <h1 className="text-lg font-bold text-foreground">{currentWorkflow?.name || 'Fluxo'}</h1>
+                <h1 className="text-lg font-bold text-white">{currentWorkflow?.name || 'Fluxo'}</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {/* View Toggle */}
-              <div className="flex items-center bg-muted/50 rounded-xl p-1">
-                <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
+              <div className="flex items-center bg-white/20 rounded-xl p-1">
+                <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white/30 shadow-sm text-white' : 'text-white/70 hover:text-white'}`} title="Kanban">
                   <LayoutGrid className="h-4 w-4" />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white/30 shadow-sm text-white' : 'text-white/70 hover:text-white'}`} title="Lista">
                   <List className="h-4 w-4" />
                 </button>
               </div>
 
-              <Badge variant="secondary" className="rounded-xl text-xs px-3 py-1">
+              <Badge className="rounded-xl text-xs px-3 py-1 bg-white/20 text-white border-0 hover:bg-white/30">
                 {columns.length} listas • {cards.length} cards
               </Badge>
 
@@ -856,7 +864,7 @@ const FluxosBoard: React.FC = () => {
               {selectedGroup && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9"><MoreHorizontal className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"><MoreHorizontal className="h-4 w-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-xl w-48">
                     <DropdownMenuItem onClick={() => setShowWorkflowModal(true)} className="rounded-lg"><Plus className="h-4 w-4 mr-2" />Novo Quadro</DropdownMenuItem>
@@ -870,9 +878,9 @@ const FluxosBoard: React.FC = () => {
 
           {/* Workflow tabs */}
           {selectedGroup && workflows.length > 1 && (
-            <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1 w-fit">
+            <div className="flex items-center gap-1 bg-white/15 rounded-xl p-1 w-fit">
               {workflows.map(wf => (
-                <button key={wf.id} onClick={() => openWorkflow(wf.id, selectedGroup)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedWorkflow === wf.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                <button key={wf.id} onClick={() => openWorkflow(wf.id, selectedGroup)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selectedWorkflow === wf.id ? 'bg-white/30 text-white shadow-sm' : 'text-white/70 hover:text-white'}`}>
                   {wf.name}
                 </button>
               ))}
@@ -880,8 +888,6 @@ const FluxosBoard: React.FC = () => {
           )}
         </div>
 
-        {/* Color accent bar */}
-        <div className="h-1 w-full" style={{ backgroundColor: boardColor }} />
       </div>
 
       {/* Board Content */}
@@ -902,7 +908,7 @@ const FluxosBoard: React.FC = () => {
                 );
               })}
               <div className="w-72 flex-shrink-0">
-                <Button variant="outline" className="w-full h-12 border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 text-muted-foreground hover:text-foreground rounded-2xl bg-muted/20" onClick={() => { setEditingColumn(null); setColumnName(''); setColumnColor('#3B82F6'); setShowColumnModal(true); }}>
+                <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-2xl bg-white/10 hover:bg-white/15" onClick={() => { setEditingColumn(null); setColumnName(''); setColumnColor('#3B82F6'); setShowColumnModal(true); }}>
                   <Plus className="h-5 w-5 mr-2" />Adicionar Lista
                 </Button>
               </div>

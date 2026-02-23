@@ -1285,6 +1285,7 @@ Deno.serve(async (req) => {
 
               // ==================== MEETING RSVP DETECTION ====================
               // Check if incoming message is a response to a meeting invite
+              let rsvpHandled = false;
               if (!fromMe && conversation && content && !orderDetected) {
                 try {
                   const upperContent = content.trim().toUpperCase();
@@ -1312,6 +1313,7 @@ Deno.serve(async (req) => {
                         .eq('id', rsvp.id);
 
                       console.log(`📋 [RSVP] ${phoneNumber} responded "${newStatus}" to event ${rsvp.event_id}`);
+                      rsvpHandled = true; // Prevent AI from responding
 
                       // Get event details for notification
                       const { data: eventInfo } = await supabase
@@ -1381,7 +1383,7 @@ Deno.serve(async (req) => {
               // ==================== CHATBOT FLOW ENGINE ====================
               // Check if there's an active chatbot execution for this conversation
               let chatbotHandled = false;
-              if (!fromMe && conversation && !orderDetected) {
+              if (!fromMe && conversation && !orderDetected && !rsvpHandled) {
                 try {
                   // First check if AI auto-reply is already active — skip chatbot if so
                   const { data: convAiCheck } = await supabase
@@ -2333,7 +2335,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
 
               // ==================== AI AUTO-RESPONSE ====================
               // Check if conversation has an AI agent assigned and auto-reply is enabled
-              if (!fromMe && conversation && !chatbotHandled && !orderDetected) {
+              if (!fromMe && conversation && !chatbotHandled && !orderDetected && !rsvpHandled) {
                 try {
                   console.log(`🤖 Checking AI auto-reply for conversation: ${conversation.id}`);
                   

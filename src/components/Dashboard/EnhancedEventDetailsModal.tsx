@@ -195,6 +195,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
           meeting_link: meetingLink || null,
           attendees: [phone],
           company_id: companyId,
+          event_id: event.id || event.extendedProps?.id || null,
           custom_message: confirmMsg,
         }
       });
@@ -795,6 +796,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                                         meeting_link: meetingLink || null,
                                         attendees: [att],
                                         company_id: eventCompanyId,
+                                        event_id: eventId,
                                         custom_message: confirmMsg,
                                       }
                                     });

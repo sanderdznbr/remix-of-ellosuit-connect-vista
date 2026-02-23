@@ -1320,13 +1320,35 @@ Deno.serve(async (req) => {
                   const isNo = upperContent === 'NÃO' || upperContent === 'NAO' || upperContent === '2' || upperContent === 'NO';
 
                   if (isYes || isNo) {
-                    // Check if this phone has any pending RSVP
+                    // Check if this phone has any pending RSVP (search globally, not by company)
+                    // The invite might have been sent from a different WhatsApp session
+                    const cleanPhone = phoneNumber.replace(/\D/g, '');
+                    // Build phone variants (with/without 9th digit for Brazilian numbers)
+                    const phoneVariants = [cleanPhone];
+                    if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
+                      // Has 9th digit, also try without it
+                      phoneVariants.push(cleanPhone.slice(0, 4) + cleanPhone.slice(5));
+                    } else if (cleanPhone.startsWith('55') && cleanPhone.length === 12) {
+                      // Missing 9th digit, also try with it
+                      phoneVariants.push(cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4));
+                    }
+
+                    // Also check by resolved_jid
+                    const jidVariants = [remoteJid];
+                    for (const pv of phoneVariants) {
+                      jidVariants.push(`${pv}@s.whatsapp.net`);
+                    }
+
+                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneVariants.join(', ')}, jids: ${jidVariants.join(', ')}`);
+
                     const { data: pendingRsvps } = await supabase
                       .from('meeting_rsvp')
                       .select('id, event_id, company_id, attendee_name')
-                      .eq('company_id', companyId)
                       .in('status', ['pending', 'reminded'])
-                      .or(`attendee_phone.eq.${phoneNumber},resolved_jid.eq.${remoteJid}`)
+                      .or(
+                        phoneVariants.map(p => `attendee_phone.eq.${p}`).join(',') + ',' +
+                        jidVariants.map(j => `resolved_jid.eq.${j}`).join(',')
+                      )
                       .order('invited_at', { ascending: false })
                       .limit(1);
 

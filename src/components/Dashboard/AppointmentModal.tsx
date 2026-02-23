@@ -15,7 +15,7 @@ interface AppointmentModalProps {
   onClose: () => void;
   selectedDate: string;
   selectedRange?: { start: string; end: string } | null;
-  onCreateEvent: (eventData: any) => Promise<void>;
+  onCreateEvent: (eventData: any) => Promise<any>;
 }
 
 const AppointmentModal = ({ 

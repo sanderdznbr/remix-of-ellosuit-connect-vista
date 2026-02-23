@@ -97,9 +97,10 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
   const handleCreateEvent = async (eventData: any, recurrence?: RecurrenceConfig) => {
     try {
-      await createEvent(eventData, recurrence);
+      const result = await createEvent(eventData, recurrence);
       await refreshEvents();
       handleCloseAllModals();
+      return result;
     } catch (error) {
       console.error('Error creating event:', error);
     }

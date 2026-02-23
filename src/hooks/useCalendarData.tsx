@@ -216,10 +216,10 @@ export const useCalendarData = () => {
           : "Evento criado com sucesso!"
       });
 
-      // Send WhatsApp notification for event creation
+      // Send notification for event creation (non-blocking)
       try {
         const eventDate = format(new Date(eventData.start_date), "dd/MM 'às' HH:mm", { locale: ptBR });
-        await supabase.functions.invoke('send-user-notification', {
+        supabase.functions.invoke('send-user-notification', {
           body: {
             user_id: user.id,
             company_id: companyData.company_id,
@@ -230,7 +230,7 @@ export const useCalendarData = () => {
             icon: 'Calendar',
             action_url: '/dashboard/agenda',
           },
-        });
+        }).catch(notifErr => console.error('Notification error:', notifErr));
       } catch (notifErr) {
         console.error('Notification error:', notifErr);
       }

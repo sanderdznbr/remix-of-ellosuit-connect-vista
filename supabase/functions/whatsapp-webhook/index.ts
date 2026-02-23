@@ -1491,11 +1491,15 @@ Deno.serve(async (req) => {
                     else if (pv.startsWith('55') && pv.length === 12) expanded.push(pv.slice(0, 4) + '9' + pv.slice(4));
                   }
 
+                  // Only consider awaiting_response records created more than 10 seconds ago
+                  // to avoid processing the same message that triggered the reschedule prompt
+                  const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
                   const { data: pendingReschedule } = await supabase
                     .from('meeting_reschedule_requests')
                     .select('id, event_id, rsvp_id, company_id, attendee_phone')
                     .eq('status', 'awaiting_response')
                     .in('attendee_phone', expanded)
+                    .lt('created_at', tenSecondsAgo)
                     .order('created_at', { ascending: false })
                     .limit(1);
 

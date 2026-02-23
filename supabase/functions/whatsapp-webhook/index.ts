@@ -1329,64 +1329,62 @@ Deno.serve(async (req) => {
                       phoneVariants.add(convPhone);
                     }
 
-                    // CRITICAL FIX: If the contact_phone looks like a LID (not starting with country code),
-                    // search for OTHER conversations with the same contact_name that have a real phone number.
-                    // This handles the case where Baileys uses LIDs but the invite was sent to a real number.
-                    const isLidPhone = !cleanPhone.startsWith('55') && !cleanPhone.startsWith('1') && cleanPhone.length > 13;
-                    if (isLidPhone && conversation?.contact_name && companyId) {
-                      console.log(`📋 [RSVP] Phone looks like LID (${cleanPhone}), searching for real phone via contact_name: ${conversation.contact_name}`);
-                      const { data: altConvs } = await supabase
-                        .from('whatsapp_conversations')
-                        .select('contact_phone')
-                        .eq('company_id', companyId)
-                        .eq('contact_name', conversation.contact_name)
-                        .neq('contact_phone', conversation.contact_phone)
-                        .limit(5);
+                    // Detect if this is a LID (Linked Identity Device) - not a real phone number
+                    const isLidPhone = isLidJid(remoteJid) || (!cleanPhone.startsWith('55') && !cleanPhone.startsWith('1') && cleanPhone.length > 13);
+                    
+                    let pendingRsvps: any[] | null = null;
+
+                    if (isLidPhone && companyId) {
+                      // ===== LID FALLBACK: Search ALL pending RSVPs for this company =====
+                      // When message comes from a LID, we can't match by phone number.
+                      // Instead, search for the most recent pending RSVP in this company.
+                      // The user just responded Sim/Não, so the most recent pending RSVP is likely the one.
+                      console.log(`📋 [RSVP] LID detected (${cleanPhone}), searching ALL pending RSVPs for company ${companyId}`);
                       
-                      if (altConvs) {
-                        for (const ac of altConvs) {
-                          const altPhone = ac.contact_phone.replace(/\D/g, '');
-                          if (altPhone.startsWith('55') || (altPhone.length >= 10 && altPhone.length <= 13)) {
-                            phoneVariants.add(altPhone);
-                            console.log(`📋 [RSVP] Found real phone from alt conversation: ${altPhone}`);
-                          }
+                      const { data } = await supabase
+                        .from('meeting_rsvp')
+                        .select('id, event_id, company_id, attendee_name')
+                        .eq('company_id', companyId)
+                        .in('status', ['pending', 'reminded'])
+                        .order('invited_at', { ascending: false })
+                        .limit(1);
+                      
+                      pendingRsvps = data;
+                      console.log(`📋 [RSVP] LID fallback found ${pendingRsvps?.length || 0} pending RSVPs`);
+                    } else {
+                      // ===== Normal phone matching =====
+                      // Add 9th digit variants for Brazilian numbers
+                      const expandedVariants = new Set<string>(phoneVariants);
+                      for (const pv of phoneVariants) {
+                        if (pv.startsWith('55') && pv.length === 13) {
+                          expandedVariants.add(pv.slice(0, 4) + pv.slice(5));
+                        } else if (pv.startsWith('55') && pv.length === 12) {
+                          expandedVariants.add(pv.slice(0, 4) + '9' + pv.slice(4));
                         }
                       }
-                      
-                      // Also try direct RSVP search by company_id if we have pending ones
-                      // This is a last resort - find any pending RSVP for this company
-                    }
-                    
-                    // Add 9th digit variants for Brazilian numbers
-                    const expandedVariants = new Set<string>(phoneVariants);
-                    for (const pv of phoneVariants) {
-                      if (pv.startsWith('55') && pv.length === 13) {
-                        expandedVariants.add(pv.slice(0, 4) + pv.slice(5));
-                      } else if (pv.startsWith('55') && pv.length === 12) {
-                        expandedVariants.add(pv.slice(0, 4) + '9' + pv.slice(4));
+
+                      const jidVariants = new Set<string>([remoteJid]);
+                      for (const pv of expandedVariants) {
+                        jidVariants.add(`${pv}@s.whatsapp.net`);
                       }
+
+                      const phoneArr = Array.from(expandedVariants);
+                      const jidArr = Array.from(jidVariants);
+                      console.log(`📋 [RSVP] Normal phone check for: ${phoneArr.join(', ')}`);
+
+                      const { data } = await supabase
+                        .from('meeting_rsvp')
+                        .select('id, event_id, company_id, attendee_name')
+                        .in('status', ['pending', 'reminded'])
+                        .or(
+                          phoneArr.map(p => `attendee_phone.eq.${p}`).join(',') + ',' +
+                          jidArr.map(j => `resolved_jid.eq.${j}`).join(',')
+                        )
+                        .order('invited_at', { ascending: false })
+                        .limit(1);
+                      
+                      pendingRsvps = data;
                     }
-
-                    // Build JID variants
-                    const jidVariants = new Set<string>([remoteJid]);
-                    for (const pv of expandedVariants) {
-                      jidVariants.add(`${pv}@s.whatsapp.net`);
-                    }
-
-                    const phoneArr = Array.from(expandedVariants);
-                    const jidArr = Array.from(jidVariants);
-                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneArr.join(', ')}, jids: ${jidArr.join(', ')}`);
-
-                    const { data: pendingRsvps } = await supabase
-                      .from('meeting_rsvp')
-                      .select('id, event_id, company_id, attendee_name')
-                      .in('status', ['pending', 'reminded'])
-                      .or(
-                        phoneArr.map(p => `attendee_phone.eq.${p}`).join(',') + ',' +
-                        jidArr.map(j => `resolved_jid.eq.${j}`).join(',')
-                      )
-                      .order('invited_at', { ascending: false })
-                      .limit(1);
 
                     if (pendingRsvps && pendingRsvps.length > 0) {
                       const rsvp = pendingRsvps[0];

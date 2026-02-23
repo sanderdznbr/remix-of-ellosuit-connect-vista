@@ -1420,7 +1420,18 @@ Deno.serve(async (req) => {
                           if (isYes) {
                             replyMsg = `✅ *Presença confirmada!*\n\nSua participação na reunião *"${eventInfo.title}"* foi registrada.\n\nObrigado!`;
                           } else {
-                            replyMsg = `❌ *Participação recusada*\n\nRegistramos que você não poderá participar da reunião *"${eventInfo.title}"*.\n\nO organizador será notificado.`;
+                            replyMsg = `❌ *Participação recusada*\n\nRegistramos que você não poderá participar da reunião *"${eventInfo.title}"*.\n\nVocê gostaria de *remarcar para outro dia* ou *cancelar definitivamente*?\n\nResponda livremente, por exemplo:\n• _"Quero remarcar para quinta às 15h"_\n• _"Cancelar"_`;
+                            
+                            // Create a reschedule request in awaiting_response state
+                            await supabase.from('meeting_reschedule_requests').insert({
+                              event_id: rsvp.event_id,
+                              rsvp_id: rsvp.id,
+                              company_id: eventInfo.company_id,
+                              attendee_phone: phoneNumber,
+                              attendee_name: rsvp.attendee_name || contactName || phoneNumber,
+                              status: 'awaiting_response',
+                            });
+                            console.log(`📅 [RESCHEDULE] Created awaiting_response record for ${phoneNumber} on event ${rsvp.event_id}`);
                           }
 
                           await fetch(`${sess.baileys_server_url}/api/message/send`, {
@@ -1463,10 +1474,74 @@ Deno.serve(async (req) => {
                 }
               }
 
+              // ==================== MEETING RESCHEDULE DETECTION ====================
+              // Check if there's a pending reschedule request awaiting the participant's response
+              let rescheduleHandled = false;
+              if (!fromMe && conversation && content && !orderDetected && !rsvpHandled) {
+                try {
+                  const cleanPhone = phoneNumber.replace(/\D/g, '');
+                  const phoneVariants = [cleanPhone];
+                  if (conversation?.contact_phone) {
+                    phoneVariants.push(conversation.contact_phone.replace(/\D/g, ''));
+                  }
+                  // Add 9th digit variants
+                  const expanded = [...phoneVariants];
+                  for (const pv of phoneVariants) {
+                    if (pv.startsWith('55') && pv.length === 13) expanded.push(pv.slice(0, 4) + pv.slice(5));
+                    else if (pv.startsWith('55') && pv.length === 12) expanded.push(pv.slice(0, 4) + '9' + pv.slice(4));
+                  }
+
+                  const { data: pendingReschedule } = await supabase
+                    .from('meeting_reschedule_requests')
+                    .select('id, event_id, rsvp_id, company_id, attendee_phone')
+                    .eq('status', 'awaiting_response')
+                    .in('attendee_phone', expanded)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                  if (pendingReschedule && pendingReschedule.length > 0) {
+                    const req = pendingReschedule[0];
+                    console.log(`📅 [RESCHEDULE] Processing response from ${phoneNumber}: "${content}"`);
+                    rescheduleHandled = true;
+
+                    // Call the edge function to interpret via AI
+                    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+                    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+                    
+                    await fetch(`${SUPABASE_URL}/functions/v1/handle-meeting-reschedule`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        action: 'interpret',
+                        message: content,
+                        attendee_phone: phoneNumber,
+                        rsvp_id: req.rsvp_id,
+                        event_id: req.event_id,
+                        company_id: req.company_id,
+                        session_id: targetSessionId,
+                        conversation_id: conversation.id,
+                        remote_jid: remoteJid,
+                      }),
+                    });
+
+                    // Delete the awaiting_response record (it's been processed)
+                    await supabase
+                      .from('meeting_reschedule_requests')
+                      .delete()
+                      .eq('id', req.id);
+                  }
+                } catch (rescheduleErr) {
+                  console.error('[RESCHEDULE] Error:', rescheduleErr);
+                }
+              }
+
               // ==================== CHATBOT FLOW ENGINE ====================
               // Check if there's an active chatbot execution for this conversation
               let chatbotHandled = false;
-              if (!fromMe && conversation && !orderDetected && !rsvpHandled) {
+              if (!fromMe && conversation && !orderDetected && !rsvpHandled && !rescheduleHandled) {
                 try {
                   // First check if AI auto-reply is already active — skip chatbot if so
                   const { data: convAiCheck } = await supabase
@@ -2418,7 +2493,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
 
               // ==================== AI AUTO-RESPONSE ====================
               // Check if conversation has an AI agent assigned and auto-reply is enabled
-              if (!fromMe && conversation && !chatbotHandled && !orderDetected && !rsvpHandled) {
+              if (!fromMe && conversation && !chatbotHandled && !orderDetected && !rsvpHandled && !rescheduleHandled) {
                 try {
                   console.log(`🤖 Checking AI auto-reply for conversation: ${conversation.id}`);
                   

@@ -46,6 +46,8 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const [showReschedule, setShowReschedule] = useState(false);
   const [rsvpList, setRsvpList] = useState<any[]>([]);
   const [sendingRsvpFor, setSendingRsvpFor] = useState<string | null>(null);
+  const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([]);
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -58,6 +60,14 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       .eq('event_id', eventId)
       .order('invited_at', { ascending: true })
       .then(({ data }) => setRsvpList(data || []));
+    
+    supabase
+      .from('meeting_reschedule_requests')
+      .select('*')
+      .eq('event_id', eventId)
+      .in('status', ['reschedule_proposed', 'cancelled', 'awaiting_response'])
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setRescheduleRequests(data || []));
   }, []);
 
   React.useEffect(() => {
@@ -76,13 +86,21 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       if (eventId) {
         fetchRsvpData(eventId);
 
-        // Real-time subscription for RSVP updates
+        // Real-time subscription for RSVP and reschedule updates
         const channel = supabase
-          .channel(`rsvp-${eventId}`)
+          .channel(`rsvp-reschedule-${eventId}`)
           .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'meeting_rsvp',
+            filter: `event_id=eq.${eventId}`,
+          }, () => {
+            fetchRsvpData(eventId);
+          })
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'meeting_reschedule_requests',
             filter: `event_id=eq.${eventId}`,
           }, () => {
             fetchRsvpData(eventId);
@@ -206,6 +224,36 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       toast({ title: "Erro", description: "Falha ao enviar solicitação", variant: "destructive" });
     } finally {
       setSendingRsvpFor(null);
+    }
+  };
+
+  // Handle reschedule response (confirm/deny)
+  const handleRescheduleResponse = async (requestId: string, response: 'confirm' | 'deny') => {
+    setRespondingTo(requestId);
+    try {
+      const action = response === 'confirm' ? 'confirm_reschedule' : 'deny_reschedule';
+      const res = await supabase.functions.invoke('handle-meeting-reschedule', {
+        body: { action, reschedule_request_id: requestId }
+      });
+      
+      if (res.error) throw res.error;
+      
+      toast({
+        title: response === 'confirm' ? '✅ Remarcação confirmada' : '❌ Remarcação negada',
+        description: response === 'confirm' 
+          ? 'O evento foi remarcado e o participante foi notificado'
+          : 'O participante foi notificado da negativa',
+      });
+      
+      // Refresh data
+      const eventId = event?.id || event?.extendedProps?.id;
+      if (eventId) fetchRsvpData(eventId);
+      onEventUpdate?.();
+    } catch (err: any) {
+      console.error('Error responding to reschedule:', err);
+      toast({ title: 'Erro', description: 'Falha ao processar resposta', variant: 'destructive' });
+    } finally {
+      setRespondingTo(null);
     }
   };
 
@@ -824,6 +872,95 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Reschedule Requests */}
+                {rescheduleRequests.length > 0 && (
+                  <div className="flex items-start space-x-3 mt-4">
+                    <CalendarIcon className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground mb-2">
+                        Solicitações de Remarcação
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          ({rescheduleRequests.filter(r => r.status === 'reschedule_proposed').length} pendente(s))
+                        </span>
+                      </p>
+                      <div className="space-y-3">
+                        {rescheduleRequests.map((req) => (
+                          <div key={req.id} className={`p-3 rounded-lg border ${
+                            req.status === 'reschedule_proposed' ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' :
+                            req.status === 'cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800' :
+                            'bg-muted/50 border-border'
+                          }`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-foreground">
+                                {req.attendee_name || req.attendee_phone}
+                              </span>
+                              <Badge variant="outline" className={
+                                req.status === 'reschedule_proposed' ? 'border-amber-300 text-amber-700 bg-amber-100 dark:text-amber-300' :
+                                req.status === 'cancelled' ? 'border-red-300 text-red-700 bg-red-100 dark:text-red-300' :
+                                req.status === 'awaiting_response' ? 'border-blue-300 text-blue-700 bg-blue-100 dark:text-blue-300' :
+                                'border-border text-muted-foreground'
+                              }>
+                                {req.status === 'reschedule_proposed' && '📅 Quer remarcar'}
+                                {req.status === 'cancelled' && '❌ Cancelou'}
+                                {req.status === 'awaiting_response' && '⏳ Aguardando resposta'}
+                              </Badge>
+                            </div>
+
+                            {req.ai_interpretation && (
+                              <p className="text-sm text-muted-foreground mb-2 italic">
+                                "{req.ai_interpretation}"
+                              </p>
+                            )}
+
+                            {req.suggested_text && (
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Mensagem original: "{req.suggested_text}"
+                              </p>
+                            )}
+
+                            {req.ai_interpreted_date && (
+                              <p className="text-sm font-medium text-foreground mb-2">
+                                📆 Data sugerida: {new Date(req.ai_interpreted_date).toLocaleDateString('pt-BR', {
+                                  weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </p>
+                            )}
+
+                            {req.status === 'reschedule_proposed' && (
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  disabled={respondingTo === req.id}
+                                  onClick={() => handleRescheduleResponse(req.id, 'confirm')}
+                                >
+                                  {respondingTo === req.id ? (
+                                    <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Check className="h-3 w-3 mr-1" />
+                                  )}
+                                  Confirmar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-300 text-red-600 hover:bg-red-50"
+                                  disabled={respondingTo === req.id}
+                                  onClick={() => handleRescheduleResponse(req.id, 'deny')}
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  Negar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </TabsContent>

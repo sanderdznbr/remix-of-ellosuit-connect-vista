@@ -115,6 +115,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   const eventStartDate = new Date(event.start);
   const eventEndDate = new Date(event.end);
   const canReschedule = !isPast(eventStartDate);
+  const attendees: string[] = eventData.attendees || [];
 
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -126,6 +127,27 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
   const startDateTime = formatDateTime(event.start);
   const endDateTime = formatDateTime(event.end);
+
+  // Helper to notify attendees about event changes
+  const notifyAttendeesChange = (changeType: string, extra: Record<string, any> = {}) => {
+    if (attendees.length === 0) return;
+    const companyId = eventData.company_id;
+    supabase.functions.invoke('notify-event-change', {
+      body: {
+        change_type: changeType,
+        event_title: event.title,
+        event_date: startDateTime.date,
+        event_time: `${startDateTime.time} - ${endDateTime.time}`,
+        meeting_link: meetingLink || null,
+        attendees,
+        company_id: companyId,
+        ...extra,
+      }
+    }).then(res => {
+      if (res.error) console.error('Notify error:', res.error);
+      else console.log(`✅ ${changeType} notifications: ${res.data?.sent}/${res.data?.total}`);
+    }).catch(err => console.error('Notify error:', err));
+  };
 
   const handleDeleteEvent = async () => {
     if (!event?.id || !user) return;
@@ -174,7 +196,8 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
       console.log('✅ Event deleted from local database');
 
-      // Send WhatsApp notification for event deletion (non-blocking)
+      // Notify attendees about cancellation
+      notifyAttendeesChange('cancelled');
       const eventCompanyId = event.extendedProps?.company_id || event.company_id;
       if (eventCompanyId) {
         supabase.functions.invoke('send-user-notification', {
@@ -318,6 +341,12 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
       if (error) throw error;
 
+      // Notify attendees about reschedule
+      notifyAttendeesChange('rescheduled', {
+        new_date: format(newStartDateTime, 'dd/MM/yyyy', { locale: ptBR }),
+        new_time: `${rescheduleData.newStartTime} - ${rescheduleData.newEndTime}`,
+      });
+
       toast({
         title: "Sucesso",
         description: "Reunião reagendada com sucesso!"
@@ -340,6 +369,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
   const handleMarkAsCompleted = async () => {
     await updateEventStatus('completed', 'Reunião marcada como concluída');
+    notifyAttendeesChange('completed');
   };
 
   const handleMarkAsPostponed = async () => {

@@ -1320,42 +1320,62 @@ Deno.serve(async (req) => {
                   const isNo = upperContent === 'NÃO' || upperContent === 'NAO' || upperContent === '2' || upperContent === 'NO';
 
                   if (isYes || isNo) {
-                    // Build phone variants from multiple sources:
-                    // 1. phoneNumber (may be LID digits)
-                    // 2. conversation.contact_phone (real phone from DB)
-                    // 3. remoteJid variants
                     const cleanPhone = phoneNumber.replace(/\D/g, '');
                     const phoneVariants = new Set<string>([cleanPhone]);
                     
-                    // CRITICAL: Use the conversation's contact_phone which has the REAL number
-                    // This solves the LID problem where phoneNumber is a LID identifier
+                    // Use conversation's contact_phone
                     if (conversation?.contact_phone) {
                       const convPhone = conversation.contact_phone.replace(/\D/g, '');
                       phoneVariants.add(convPhone);
-                      // Also add 9th digit variants for Brazilian numbers
-                      if (convPhone.startsWith('55') && convPhone.length === 13) {
-                        phoneVariants.add(convPhone.slice(0, 4) + convPhone.slice(5));
-                      } else if (convPhone.startsWith('55') && convPhone.length === 12) {
-                        phoneVariants.add(convPhone.slice(0, 4) + '9' + convPhone.slice(4));
-                      }
-                    }
-                    
-                    // Add 9th digit variants for the main phoneNumber too
-                    if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
-                      phoneVariants.add(cleanPhone.slice(0, 4) + cleanPhone.slice(5));
-                    } else if (cleanPhone.startsWith('55') && cleanPhone.length === 12) {
-                      phoneVariants.add(cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4));
                     }
 
-                    // Build JID variants for resolved_jid matching
-                    const jidVariants = new Set<string>([remoteJid]);
+                    // CRITICAL FIX: If the contact_phone looks like a LID (not starting with country code),
+                    // search for OTHER conversations with the same contact_name that have a real phone number.
+                    // This handles the case where Baileys uses LIDs but the invite was sent to a real number.
+                    const isLidPhone = !cleanPhone.startsWith('55') && !cleanPhone.startsWith('1') && cleanPhone.length > 13;
+                    if (isLidPhone && conversation?.contact_name && companyId) {
+                      console.log(`📋 [RSVP] Phone looks like LID (${cleanPhone}), searching for real phone via contact_name: ${conversation.contact_name}`);
+                      const { data: altConvs } = await supabase
+                        .from('whatsapp_conversations')
+                        .select('contact_phone')
+                        .eq('company_id', companyId)
+                        .eq('contact_name', conversation.contact_name)
+                        .neq('contact_phone', conversation.contact_phone)
+                        .limit(5);
+                      
+                      if (altConvs) {
+                        for (const ac of altConvs) {
+                          const altPhone = ac.contact_phone.replace(/\D/g, '');
+                          if (altPhone.startsWith('55') || (altPhone.length >= 10 && altPhone.length <= 13)) {
+                            phoneVariants.add(altPhone);
+                            console.log(`📋 [RSVP] Found real phone from alt conversation: ${altPhone}`);
+                          }
+                        }
+                      }
+                      
+                      // Also try direct RSVP search by company_id if we have pending ones
+                      // This is a last resort - find any pending RSVP for this company
+                    }
+                    
+                    // Add 9th digit variants for Brazilian numbers
+                    const expandedVariants = new Set<string>(phoneVariants);
                     for (const pv of phoneVariants) {
+                      if (pv.startsWith('55') && pv.length === 13) {
+                        expandedVariants.add(pv.slice(0, 4) + pv.slice(5));
+                      } else if (pv.startsWith('55') && pv.length === 12) {
+                        expandedVariants.add(pv.slice(0, 4) + '9' + pv.slice(4));
+                      }
+                    }
+
+                    // Build JID variants
+                    const jidVariants = new Set<string>([remoteJid]);
+                    for (const pv of expandedVariants) {
                       jidVariants.add(`${pv}@s.whatsapp.net`);
                     }
 
-                    const phoneArr = Array.from(phoneVariants);
+                    const phoneArr = Array.from(expandedVariants);
                     const jidArr = Array.from(jidVariants);
-                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneArr.join(', ')}, jids: ${jidArr.join(', ')}, conv.contact_phone: ${conversation?.contact_phone}`);
+                    console.log(`📋 [RSVP] Checking pending RSVPs for phones: ${phoneArr.join(', ')}, jids: ${jidArr.join(', ')}`);
 
                     const { data: pendingRsvps } = await supabase
                       .from('meeting_rsvp')

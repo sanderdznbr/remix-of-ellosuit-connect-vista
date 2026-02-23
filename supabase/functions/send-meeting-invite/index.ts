@@ -106,16 +106,39 @@ Deno.serve(async (req) => {
 
           if (whatsappSession && BAILEYS_URL) {
             const normalizedServerUrl = BAILEYS_URL.replace(/\/+$/, '');
-            const jid = `${phone}@s.whatsapp.net`;
 
-            console.log(`[Meeting Invite] Sending WhatsApp to ${phone} via ${normalizedServerUrl}`);
+            // Use number check to resolve the real JID (handles LID contacts, 9th digit, etc.)
+            let resolvedJid = `${phone}@s.whatsapp.net`;
+            try {
+              const checkResponse = await fetch(`${normalizedServerUrl}/api/number/check`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  instanceName: whatsappSession.instance_name,
+                  phone: phone,
+                })
+              });
+              if (checkResponse.ok) {
+                const checkData = await checkResponse.json();
+                if (checkData.exists && checkData.jid) {
+                  resolvedJid = checkData.jid;
+                  console.log(`[Meeting Invite] Resolved ${phone} -> ${resolvedJid}`);
+                } else {
+                  console.log(`[Meeting Invite] Number ${phone} not found on WhatsApp, using default JID`);
+                }
+              }
+            } catch (checkErr) {
+              console.error(`[Meeting Invite] Number check failed, using default JID:`, checkErr);
+            }
+
+            console.log(`[Meeting Invite] Sending WhatsApp to ${resolvedJid} via ${normalizedServerUrl}`);
 
             const sendResponse = await fetch(`${normalizedServerUrl}/api/message/send`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 instanceName: whatsappSession.instance_name,
-                jid,
+                jid: resolvedJid,
                 message: { text: inviteMessage }
               })
             });

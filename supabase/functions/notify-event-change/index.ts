@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
       attendees,
       company_id,
       custom_message,  // optional: override the WhatsApp message
+      event_id,        // optional: calendar_events ID for RSVP tracking
     } = body;
 
     if (!change_type || !event_title || !attendees || attendees.length === 0) {
@@ -211,6 +212,33 @@ Deno.serve(async (req) => {
             results.push({ attendee, status: sendResponse.ok ? 'sent' : 'failed', channel: 'whatsapp' });
             if (sendResponse.ok) {
               console.log(`[Event Change] ✅ WhatsApp sent to ${resolvedJid}`);
+              
+              // Create/update RSVP record for confirmation requests
+              if (change_type === 'confirmation_request' && event_id) {
+                // Upsert RSVP record
+                const { data: existingRsvp } = await supabase
+                  .from('meeting_rsvp')
+                  .select('id')
+                  .eq('event_id', event_id)
+                  .eq('attendee_phone', phone)
+                  .limit(1)
+                  .single();
+                
+                if (existingRsvp) {
+                  await supabase.from('meeting_rsvp')
+                    .update({ status: 'pending', responded_at: null, resolved_jid: resolvedJid })
+                    .eq('id', existingRsvp.id);
+                } else {
+                  await supabase.from('meeting_rsvp').insert({
+                    event_id,
+                    company_id: resolvedCompanyId,
+                    attendee_phone: phone,
+                    resolved_jid: resolvedJid,
+                    status: 'pending',
+                  });
+                }
+                console.log(`[Event Change] 📋 RSVP record upserted for ${phone}`);
+              }
             }
           } catch (err) {
             results.push({ attendee, status: 'failed', channel: 'whatsapp', reason: String(err) });

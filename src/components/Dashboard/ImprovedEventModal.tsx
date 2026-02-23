@@ -5,13 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { useZoomIntegration } from '@/hooks/useZoomIntegration';
 import { supabase } from '@/integrations/supabase/client';
-import { Video, Calendar, Users, Clock, Settings, Palette } from 'lucide-react';
+import { Video, Calendar, Users, Clock, Palette, Link2, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ColorPicker from './ColorPicker';
 import RecurrenceSelector, { RecurrenceConfig } from './RecurrenceSelector';
+import { APP_CONFIG } from '@/config/app';
 
 interface ImprovedEventModalProps {
   isOpen: boolean;
@@ -48,15 +47,13 @@ const ImprovedEventModal = ({
   const [endTime, setEndTime] = useState('');
   const [attendees, setAttendees] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [selectedMeetingProvider, setSelectedMeetingProvider] = useState<'google_meet' | 'zoom' | null>(null);
+  const [createMeetingLink, setCreateMeetingLink] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3600FF');
   const [recurrence, setRecurrence] = useState<RecurrenceConfig>(defaultRecurrence);
 
   const { toast } = useToast();
-  const { isConnected: isGoogleConnected, createGoogleMeetEvent } = useGoogleCalendar();
-  const { isConnected: isZoomConnected, getValidAccessToken } = useZoomIntegration();
 
   useEffect(() => {
     if (selectedDate) {
@@ -90,36 +87,9 @@ const ImprovedEventModal = ({
     setEndTime('');
     setAttendees('');
     setIsAllDay(false);
-    setSelectedMeetingProvider(null);
+    setCreateMeetingLink(false);
     setSelectedColor('#3600FF');
     setRecurrence(defaultRecurrence);
-  };
-
-  const createZoomMeeting = async (eventData: any) => {
-    try {
-      const accessToken = await getValidAccessToken();
-      
-      const { data, error } = await supabase.functions.invoke('zoom-integration', {
-        body: {
-          action: 'create_meeting',
-          accessToken: accessToken,
-          eventData: eventData
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      return {
-        success: true,
-        meetingLink: data.meetingLink,
-        meetingId: data.meetingId
-      };
-    } catch (error) {
-      console.error('Error creating Zoom meeting:', error);
-      throw error;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,52 +123,49 @@ const ImprovedEventModal = ({
         .filter(email => email && email.includes('@'));
 
       let meetingLink = '';
-      let googleEventId = '';
-      let finalMeetingProvider = '';
+      let finalMeetingProvider: string | null = null;
 
-      // Criar reunião conforme o provedor selecionado
-      if (selectedMeetingProvider === 'google_meet' && isGoogleConnected) {
+      // Create Ellomeeting room if requested
+      if (createMeetingLink) {
         try {
-          const googleResult = await createGoogleMeetEvent({
-            title,
-            description,
-            start_date: finalStartDate,
-            end_date: finalEndDate,
-            attendees: attendeesList
-          });
+          const { data: { user } } = await supabase.auth.getUser();
+          const { data: companyUser } = await supabase
+            .from('company_users')
+            .select('company_id')
+            .eq('user_id', user!.id)
+            .single();
 
-          if (googleResult.success) {
-            meetingLink = googleResult.meetLink;
-            googleEventId = googleResult.googleEventId;
-            finalMeetingProvider = 'google_meet';
+          if (companyUser) {
+            const roomCode = Math.random().toString(36).substring(2, 10);
+            
+            const { data: roomData, error: roomError } = await supabase
+              .from('meeting_rooms')
+              .insert({
+                title: title,
+                room_code: roomCode,
+                max_participants: 50,
+                recording_enabled: false,
+                chat_enabled: true,
+                screen_sharing_enabled: true,
+                company_id: companyUser.company_id,
+                created_by: user!.id,
+              })
+              .select('id')
+              .single();
+
+            if (roomError) {
+              console.error('Error creating meeting room:', roomError);
+            } else {
+              meetingLink = APP_CONFIG.getMeetingUrl(roomCode);
+              finalMeetingProvider = 'ellosuit';
+              console.log('✅ Ellomeeting room created:', roomCode, meetingLink);
+            }
           }
         } catch (error) {
-          console.error('Error creating Google Meet event:', error);
+          console.error('Error creating Ellomeeting room:', error);
           toast({
             title: "Aviso",
-            description: "Evento criado, mas falha ao gerar link do Google Meet",
-            variant: "destructive"
-          });
-        }
-      } else if (selectedMeetingProvider === 'zoom' && isZoomConnected) {
-        try {
-          const zoomResult = await createZoomMeeting({
-            title,
-            description,
-            start_date: finalStartDate,
-            end_date: finalEndDate,
-            attendees: attendeesList
-          });
-
-          if (zoomResult.success) {
-            meetingLink = zoomResult.meetingLink;
-            finalMeetingProvider = 'zoom';
-          }
-        } catch (error) {
-          console.error('Error creating Zoom meeting:', error);
-          toast({
-            title: "Aviso",
-            description: "Evento criado, mas falha ao gerar link do Zoom",
+            description: "Evento criado, mas falha ao gerar link da reunião",
             variant: "destructive"
           });
         }
@@ -206,15 +173,16 @@ const ImprovedEventModal = ({
 
       const eventData = {
         title,
-        description,
+        description: createMeetingLink && meetingLink 
+          ? `${description}\n\nLink da reunião: ${meetingLink}`.trim()
+          : description,
         start_date: finalStartDate,
         end_date: finalEndDate,
         event_type: 'meeting' as const,
         attendees: attendeesList,
         is_all_day: isAllDay,
-        meeting_link: meetingLink,
-        meeting_provider: finalMeetingProvider,
-        google_event_id: googleEventId || undefined,
+        meeting_link: meetingLink || undefined,
+        meeting_provider: finalMeetingProvider || undefined,
         color: selectedColor
       };
 
@@ -381,61 +349,24 @@ const ImprovedEventModal = ({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Tipo de Reunião</Label>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Link de Reunião
+                </Label>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  {isGoogleConnected && (
-                    <Button
-                      type="button"
-                      variant={selectedMeetingProvider === 'google_meet' ? 'default' : 'outline'}
-                      onClick={() => setSelectedMeetingProvider(selectedMeetingProvider === 'google_meet' ? null : 'google_meet')}
-                      className="h-20 p-4 flex items-center justify-center"
-                    >
-                      <img 
-                        src="/lovable-uploads/7e846fa0-7d39-4b0b-8448-c4e61d1c5b2f.png" 
-                        alt="Google Meet"
-                        className="w-[90%] h-auto object-contain"
-                      />
-                    </Button>
-                  )}
-                  
-                  {isZoomConnected && (
-                    <Button
-                      type="button"
-                      variant={selectedMeetingProvider === 'zoom' ? 'default' : 'outline'}
-                      onClick={() => setSelectedMeetingProvider(selectedMeetingProvider === 'zoom' ? null : 'zoom')}
-                      className="h-20 p-4 flex items-center justify-center"
-                    >
-                      <img 
-                        src="https://freelogopng.com/images/all_img/1685422532zoom-logo-png.png" 
-                        alt="Zoom"
-                        className="w-12 h-8 object-contain"
-                      />
-                    </Button>
-                  )}
-                </div>
-
-                {(!isGoogleConnected && !isZoomConnected) && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-700 mb-2">
-                      Conecte Google Meet ou Zoom para criar links de reunião automaticamente
-                    </p>
-                    {onNavigateToSettings && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          onNavigateToSettings();
-                          onClose();
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <Settings className="h-4 w-4" />
-                        Configurar Integrações
-                      </Button>
-                    )}
-                  </div>
+                <Button
+                  type="button"
+                  variant={createMeetingLink ? 'default' : 'outline'}
+                  onClick={() => setCreateMeetingLink(!createMeetingLink)}
+                  className={`w-full h-12 flex items-center justify-center gap-2 ${createMeetingLink ? 'bg-gradient-to-r from-[#3600FF] to-[#4F46E5]' : ''}`}
+                >
+                  <Video className="h-4 w-4" />
+                  {createMeetingLink ? 'Link Ellomeeting será criado ✓' : 'Criar link de reunião Ellomeeting'}
+                </Button>
+                {createMeetingLink && (
+                  <p className="text-xs text-muted-foreground">
+                    Um link Ellomeeting será gerado automaticamente ao criar o evento
+                  </p>
                 )}
               </div>
             </div>

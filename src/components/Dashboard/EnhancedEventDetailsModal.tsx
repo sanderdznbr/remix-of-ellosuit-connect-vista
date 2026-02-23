@@ -765,12 +765,52 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                     ) : attendees.length > 0 ? (
                       <div className="space-y-1.5">
                         {attendees.map((att: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
-                            <div className="w-2 h-2 rounded-full bg-gray-400" />
-                            <span className="text-sm">{att}</span>
-                            <Badge variant="outline" className="ml-auto text-[10px] border-gray-300 text-gray-500">
-                              Sem RSVP
-                            </Badge>
+                          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-gray-400" />
+                              <span className="text-sm">{att}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500">
+                                Sem RSVP
+                              </Badge>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                disabled={sendingRsvpFor === att}
+                                onClick={async () => {
+                                  setSendingRsvpFor(att);
+                                  try {
+                                    const eventId = event.id || event.extendedProps?.id;
+                                    const eventCompanyId = event.extendedProps?.company_id || event.company_id;
+                                    await supabase.functions.invoke('notify-event-change', {
+                                      body: {
+                                        type: 'confirmation_request',
+                                        event_id: eventId,
+                                        company_id: eventCompanyId,
+                                        participants: [{ phone: att, name: att }],
+                                        event_title: event.title,
+                                        event_date: event.start || event.start_date,
+                                      }
+                                    });
+                                    toast({ title: "Enviado", description: "Solicitação de confirmação enviada" });
+                                  } catch (err) {
+                                    toast({ title: "Erro", description: "Falha ao enviar", variant: "destructive" });
+                                  } finally {
+                                    setSendingRsvpFor(null);
+                                  }
+                                }}
+                                title="Solicitar confirmação via WhatsApp"
+                              >
+                                {sendingRsvpFor === att ? (
+                                  <RefreshCw className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Send className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>

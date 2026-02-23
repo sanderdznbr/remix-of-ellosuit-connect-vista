@@ -274,7 +274,7 @@ ATENÇÃO: O horário no suggested_date DEVE ser idêntico ao mencionado pelo pa
           ? new Date(request.ai_interpreted_date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
           : 'nova data';
 
-        const msg = `✅ *Reunião remarcada com sucesso!*\n\nA reunião *"${(request.calendar_events as any)?.title}"* foi remarcada para *${dateStr}*.\n\nSua presença está confirmada!`;
+        const msg = `📅 *Reunião remarcada!*\n\nA reunião *"${(request.calendar_events as any)?.title}"* foi remarcada para *${dateStr}*.\n\nVocê confirma sua presença no novo horário?\n\nResponda *Sim* para confirmar ou *Não* para recusar.`;
 
         await fetch(`${sess.baileys_server_url}/api/message/send`, {
           method: 'POST',

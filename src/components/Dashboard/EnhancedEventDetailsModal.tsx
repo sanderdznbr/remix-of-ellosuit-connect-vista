@@ -174,12 +174,13 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
       console.log('✅ Event deleted from local database');
 
-      // Send WhatsApp notification for event deletion
-      try {
-        await supabase.functions.invoke('send-user-notification', {
+      // Send WhatsApp notification for event deletion (non-blocking)
+      const eventCompanyId = event.extendedProps?.company_id || event.company_id;
+      if (eventCompanyId) {
+        supabase.functions.invoke('send-user-notification', {
           body: {
             user_id: user.id,
-            company_id: event.extendedProps?.company_id,
+            company_id: eventCompanyId,
             title: '📅❌ Evento removido',
             message: `O evento "${event.title}" foi excluído da sua agenda`,
             notification_type: 'event_deleted',
@@ -187,9 +188,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
             icon: 'Calendar',
             action_url: '/dashboard/agenda',
           },
-        });
-      } catch (notifErr) {
-        console.error('Notification error:', notifErr);
+        }).catch(err => console.error('Notification error:', err));
       }
 
       toast({

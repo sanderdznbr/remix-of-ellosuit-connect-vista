@@ -32,15 +32,16 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      change_type,     // 'rescheduled' | 'completed' | 'cancelled'
+      change_type,     // 'rescheduled' | 'completed' | 'cancelled' | 'confirmation_request'
       event_title,
-      event_date,      // formatted date string
-      event_time,      // formatted time string
-      new_date,        // for rescheduled
-      new_time,        // for rescheduled
+      event_date,
+      event_time,
+      new_date,
+      new_time,
       meeting_link,
-      attendees,       // array of strings (emails/phones)
+      attendees,
       company_id,
+      custom_message,  // optional: override the WhatsApp message
     } = body;
 
     if (!change_type || !event_title || !attendees || attendees.length === 0) {
@@ -113,6 +114,12 @@ Deno.serve(async (req) => {
             <hr style="margin-top: 24px; border: none; border-top: 1px solid #eee;" />
             <p style="color: #999; font-size: 12px;">Enviado via Ellosuit</p>
           </div>`;
+        break;
+
+      case 'confirmation_request':
+        whatsappMessage = custom_message || `📋 *Solicitação de Confirmação*\n\n*${event_title}*\n${event_date ? `📆 ${event_date}` : ''}${event_time ? ` às ${event_time}` : ''}\n\nResponda *Sim* para confirmar ou *Não* para recusar.\n\n_Enviado via Ellosuit_`;
+        emailSubject = `📋 Confirme sua presença: ${event_title}`;
+        emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;"><h2 style="color: #3600FF;">📋 Confirme sua Presença</h2><h3>${event_title}</h3>${event_date ? `<p><strong>Data:</strong> ${event_date}</p>` : ''}${event_time ? `<p><strong>Horário:</strong> ${event_time}</p>` : ''}<p>Por favor, confirme sua participação respondendo a este convite.</p><hr style="margin-top: 24px; border: none; border-top: 1px solid #eee;" /><p style="color: #999; font-size: 12px;">Enviado via Ellosuit</p></div>`;
         break;
 
       default:

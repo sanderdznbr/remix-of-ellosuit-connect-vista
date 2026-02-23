@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link, Trash2, Users, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, Video, ExternalLink, AlertCircle, FileText, Edit3, Save, X, Check, Pause, Calendar as CalendarIcon, Link, Trash2, Users, CheckCircle, XCircle, HelpCircle, Send, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -45,10 +45,20 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
   });
   const [showReschedule, setShowReschedule] = useState(false);
   const [rsvpList, setRsvpList] = useState<any[]>([]);
+  const [sendingRsvpFor, setSendingRsvpFor] = useState<string | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
   const { deleteGoogleCalendarEvent, isConnected: googleConnected } = useGoogleCalendar();
+
+  const fetchRsvpData = React.useCallback((eventId: string) => {
+    supabase
+      .from('meeting_rsvp')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('invited_at', { ascending: true })
+      .then(({ data }) => setRsvpList(data || []));
+  }, []);
 
   React.useEffect(() => {
     if (event && isOpen) {
@@ -62,18 +72,29 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
       });
       setIsEditingDetails(false);
       
-      // Fetch RSVP data
       const eventId = event.id || event.extendedProps?.id;
       if (eventId) {
-        supabase
-          .from('meeting_rsvp')
-          .select('*')
-          .eq('event_id', eventId)
-          .order('invited_at', { ascending: true })
-          .then(({ data }) => setRsvpList(data || []));
+        fetchRsvpData(eventId);
+
+        // Real-time subscription for RSVP updates
+        const channel = supabase
+          .channel(`rsvp-${eventId}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'meeting_rsvp',
+            filter: `event_id=eq.${eventId}`,
+          }, () => {
+            fetchRsvpData(eventId);
+          })
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       }
     }
-  }, [event, isOpen]);
+  }, [event, isOpen, fetchRsvpData]);
 
   if (!event) return null;
 
@@ -139,6 +160,53 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
   const startDateTime = formatDateTime(event.start);
   const endDateTime = formatDateTime(event.end);
+
+  // Request RSVP confirmation via WhatsApp
+  const handleRequestConfirmation = async (rsvp: any) => {
+    setSendingRsvpFor(rsvp.id);
+    try {
+      const phone = rsvp.attendee_phone;
+      if (!phone) {
+        toast({ title: "Erro", description: "Participante sem telefone cadastrado", variant: "destructive" });
+        return;
+      }
+
+      const companyId = eventData.company_id;
+      const confirmMsg = `📋 *Solicitação de Confirmação*\n\n` +
+        `Gostaríamos de confirmar sua presença na reunião:\n\n` +
+        `📌 *${event.title}*\n` +
+        `📆 ${startDateTime.date} às ${startDateTime.time}\n` +
+        (meetingLink ? `🔗 ${meetingLink}\n` : '') +
+        `\nResponda *Sim* para confirmar ou *Não* para recusar.`;
+
+      // Reset RSVP status to pending so the webhook can detect the response
+      await supabase
+        .from('meeting_rsvp')
+        .update({ status: 'pending', responded_at: null })
+        .eq('id', rsvp.id);
+
+      // Send via notify-event-change with custom message
+      await supabase.functions.invoke('notify-event-change', {
+        body: {
+          change_type: 'confirmation_request',
+          event_title: event.title,
+          event_date: startDateTime.date,
+          event_time: `${startDateTime.time} - ${endDateTime.time}`,
+          meeting_link: meetingLink || null,
+          attendees: [phone],
+          company_id: companyId,
+          custom_message: confirmMsg,
+        }
+      });
+
+      toast({ title: "Enviado", description: `Solicitação enviada para ${rsvp.attendee_name || phone}` });
+    } catch (err: any) {
+      console.error('Error requesting confirmation:', err);
+      toast({ title: "Erro", description: "Falha ao enviar solicitação", variant: "destructive" });
+    } finally {
+      setSendingRsvpFor(null);
+    }
+  };
 
   // Helper to notify attendees about event changes
   const notifyAttendeesChange = (changeType: string, extra: Record<string, any> = {}) => {
@@ -661,17 +729,36 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                                 {rsvp.attendee_name || rsvp.attendee_phone || rsvp.attendee_email}
                               </span>
                             </div>
-                            <Badge variant="outline" className={
-                              rsvp.status === 'confirmed' ? 'border-green-300 text-green-700 bg-green-100' :
-                              rsvp.status === 'declined' ? 'border-red-300 text-red-700 bg-red-100' :
-                              rsvp.status === 'reminded' ? 'border-yellow-300 text-yellow-700 bg-yellow-100' :
-                              'border-gray-300 text-gray-600 bg-gray-100'
-                            }>
-                              {rsvp.status === 'confirmed' && <><CheckCircle className="h-3 w-3 mr-1" /> Confirmado</>}
-                              {rsvp.status === 'declined' && <><XCircle className="h-3 w-3 mr-1" /> Recusado</>}
-                              {rsvp.status === 'reminded' && <><HelpCircle className="h-3 w-3 mr-1" /> Lembrado</>}
-                              {rsvp.status === 'pending' && <><HelpCircle className="h-3 w-3 mr-1" /> Pendente</>}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className={
+                                rsvp.status === 'confirmed' ? 'border-green-300 text-green-700 bg-green-100' :
+                                rsvp.status === 'declined' ? 'border-red-300 text-red-700 bg-red-100' :
+                                rsvp.status === 'reminded' ? 'border-yellow-300 text-yellow-700 bg-yellow-100' :
+                                'border-gray-300 text-gray-600 bg-gray-100'
+                              }>
+                                {rsvp.status === 'confirmed' && <><CheckCircle className="h-3 w-3 mr-1" /> Confirmado</>}
+                                {rsvp.status === 'declined' && <><XCircle className="h-3 w-3 mr-1" /> Recusado</>}
+                                {rsvp.status === 'reminded' && <><HelpCircle className="h-3 w-3 mr-1" /> Lembrado</>}
+                                {rsvp.status === 'pending' && <><HelpCircle className="h-3 w-3 mr-1" /> Pendente</>}
+                              </Badge>
+                              {rsvp.attendee_phone && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  disabled={sendingRsvpFor === rsvp.id}
+                                  onClick={() => handleRequestConfirmation(rsvp)}
+                                  title="Solicitar confirmação via WhatsApp"
+                                >
+                                  {sendingRsvpFor === rsvp.id ? (
+                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Send className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

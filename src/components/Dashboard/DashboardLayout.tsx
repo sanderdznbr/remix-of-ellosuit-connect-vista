@@ -17,14 +17,17 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { isFree, isLoading } = useSubscription();
   useRoutineExecutor();
 
-  // CRM WhatsApp detection
+  // CRM hub detection: CRM WhatsApp page OR any page accessed from CRM sidebar (?hub=crm)
+  const searchParams = new URLSearchParams(location.search);
+  const isCrmHub = searchParams.get('hub') === 'crm';
   const isCrmWhatsApp = location.pathname.includes('/crm-whatsapp');
+  const isCrmContext = isCrmWhatsApp || isCrmHub;
   const isCrmWhatsAppMobile = isMobile && isCrmWhatsApp;
-  const isCrmWhatsAppDesktop = !isMobile && isCrmWhatsApp;
+  const isCrmContextDesktop = !isMobile && isCrmContext;
   const isOnActivatePage = location.pathname.includes('/ativar');
 
-  // Desktop CRM WhatsApp: full-screen with sidebar, no header
-  if (isCrmWhatsAppDesktop) {
+  // Desktop CRM context: full-screen with sidebar, no header
+  if (isCrmContextDesktop) {
     return (
       <div className="flex h-[100dvh] bg-background overflow-hidden">
         <CRMSidebar />

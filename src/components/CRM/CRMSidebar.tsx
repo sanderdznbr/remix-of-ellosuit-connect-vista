@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
   Bot, 
@@ -26,17 +26,19 @@ interface CRMSidebarProps {
 
 const navItems = [
   { id: 'home', icon: Home, label: 'Dashboard', path: '/dashboard' },
-  { id: 'crm', icon: MessageSquare, label: 'CRM WhatsApp', path: '/dashboard/crm-whatsapp', active: true },
-  { id: 'chatbot', icon: GitBranch, label: 'Chatbot Builder', path: '/dashboard/chatbot' },
-  { id: 'agents', icon: Bot, label: 'Agentes de IA', path: '/dashboard/bot-ia' },
-  { id: 'contacts', icon: Users, label: 'Contatos', path: '/dashboard/cadastros' },
-  { id: 'disparos', icon: Megaphone, label: 'Disparos em Massa', path: '/dashboard/disparos' },
-  { id: 'automacoes', icon: Settings, label: 'Automações', path: '/dashboard/automacoes' },
+  { id: 'crm', icon: MessageSquare, label: 'CRM WhatsApp', path: '/dashboard/crm-whatsapp' },
+  { id: 'chatbot', icon: GitBranch, label: 'Chatbot Builder', path: '/dashboard/chatbot?hub=crm' },
+  { id: 'agents', icon: Bot, label: 'Agentes de IA', path: '/dashboard/bot-ia?hub=crm' },
+  { id: 'contacts', icon: Users, label: 'Contatos', path: '/dashboard/cadastros?hub=crm' },
+  { id: 'disparos', icon: Megaphone, label: 'Disparos em Massa', path: '/dashboard/disparos?hub=crm' },
+  { id: 'automacoes', icon: Settings, label: 'Automações', path: '/dashboard/automacoes?hub=crm' },
 ];
 
 const CRMSidebar: React.FC<CRMSidebarProps> = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   return (
     <div className="w-16 min-w-[64px] h-full flex flex-col bg-[#FF4500] shrink-0">
@@ -52,18 +54,20 @@ const CRMSidebar: React.FC<CRMSidebarProps> = () => {
         <TooltipProvider delayDuration={0}>
           {navItems.map((item) => {
             const IconComponent = item.icon;
-            return (
-              <Tooltip key={item.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => navigate(item.path)}
-                    className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
-                      item.active
-                        ? "bg-white/20 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
+                    const itemBasePath = item.path.split('?')[0];
+                    const isActive = currentPath === itemBasePath || (item.id === 'crm' && currentPath.includes('/crm-whatsapp'));
+                    return (
+                      <Tooltip key={item.id}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => navigate(item.path)}
+                            className={cn(
+                              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
+                              isActive
+                                ? "bg-white/20 text-white"
+                                : "text-white/70 hover:bg-white/10 hover:text-white"
+                            )}
+                          >
                     <IconComponent className="h-5 w-5" />
                   </button>
                 </TooltipTrigger>

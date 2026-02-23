@@ -228,8 +228,8 @@ const TrelloColumn: React.FC<{
   return (
     <div 
       ref={setNodeRef}
-      className={`w-72 flex-shrink-0 flex flex-col bg-gray-50 rounded-2xl max-h-[calc(100vh-180px)] border transition-all ${
-        isOver ? 'border-blue-300 bg-blue-50/50 scale-[1.01]' : 'border-gray-100'
+      className={`w-72 flex-shrink-0 flex flex-col bg-muted/50 rounded-2xl max-h-[calc(100vh-180px)] border transition-all ${
+        isOver ? 'border-primary/30 bg-primary/5 scale-[1.01]' : 'border-border/40'
       }`}
     >
       {/* Column Header */}
@@ -1508,226 +1508,74 @@ const FluxosBoard: React.FC = () => {
     toast({ title: 'Fluxo excluído!' });
   };
 
-  return (
-    <div className="min-h-screen bg-white">
-      {/* Clean Header */}
-      <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
-        <div className="px-6 py-4">
-          {/* Title Row */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Fluxos de Trabalho</h1>
-              <p className="text-sm text-gray-500">Kanban para gerenciar projetos e processos</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {currentWorkflow && (
-                <Badge variant="secondary" className="rounded-xl text-xs px-3 py-1">
-                  {columns.length} listas • {cards.length} cards
-                </Badge>
-              )}
-            </div>
-          </div>
-          
-          {/* Board & Flow Selector */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                <SelectTrigger className="w-48 rounded-xl border-gray-200 bg-white h-10">
-                  <SelectValue placeholder="Selecione um quadro..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {groups.map(group => (
-                    <SelectItem key={group.id} value={group.id} className="rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-3 w-3 text-amber-500" />
-                        {group.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" size="icon" onClick={() => setShowGroupModal(true)} className="rounded-xl border-gray-200 h-10 w-10" title="Novo quadro">
-                <Plus className="h-4 w-4" />
-              </Button>
+  // Track recently viewed workflows
+  const [recentWorkflows, setRecentWorkflows] = useState<string[]>([]);
+  const [showBoardHome, setShowBoardHome] = useState(!selectedWorkflow);
 
-              {selectedGroup && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-xl border-gray-200 h-10 w-10" title="Opções do quadro">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="rounded-xl w-48">
-                    <DropdownMenuItem onClick={() => setShowGroupModal(true)} className="rounded-lg">
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Novo Quadro
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => deleteGroup(selectedGroup)} className="text-destructive rounded-lg">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Quadro
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-            
-            <Separator orientation="vertical" className="h-8 hidden sm:block" />
-            
-            {selectedGroup && (
-              <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1">
-                {workflows.map(workflow => (
-                  <div key={workflow.id} className="flex items-center group">
-                    <button
-                      onClick={() => setSelectedWorkflow(workflow.id)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        selectedWorkflow === workflow.id
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      {workflow.name}
-                    </button>
-                    {selectedWorkflow === workflow.id && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1 rounded-md hover:bg-gray-200 transition-colors ml-0.5">
-                            <MoreHorizontal className="h-3.5 w-3.5 text-gray-400" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="rounded-xl w-44">
-                          <DropdownMenuItem onClick={() => deleteWorkflow(workflow.id)} className="text-destructive rounded-lg">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir Fluxo
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={() => setShowWorkflowModal(true)}
-                  className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Novo
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+  useEffect(() => {
+    const stored = localStorage.getItem('fluxos_recent');
+    if (stored) setRecentWorkflows(JSON.parse(stored));
+  }, []);
 
-      {/* Kanban Board */}
-      {selectedWorkflow ? (
-        <div className="px-6 pb-6 overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300" style={{ height: 'calc(100vh - 160px)' }}>
-          <DndContext 
-            sensors={sensors} 
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex gap-4 min-w-max">
-              {columns.map(column => {
-                const columnCards = cards.filter(c => c.column_id === column.id);
-                
-                return (
-                  <TrelloColumn
-                    key={column.id}
-                    column={column}
-                    cards={columnCards}
-                    employees={employees}
-                    onAddCard={() => {
-                      setSelectedColumnId(column.id);
-                      setSelectedCard(null);
-                      setShowCardModal(true);
-                    }}
-                    onEditCard={(card) => {
-                      setSelectedCard(card);
-                      setShowCardModal(true);
-                    }}
-                    onDeleteCard={deleteCard}
-                    onDeleteColumn={() => deleteColumn(column.id)}
-                    onEditColumn={() => {
-                      setEditingColumn(column);
-                      setColumnName(column.name);
-                      setColumnColor(column.color);
-                      setShowColumnModal(true);
-                    }}
-                  />
-                );
-              })}
-              
-              {/* Add Column */}
-              <div className="w-80 flex-shrink-0">
-                <Button 
-                  variant="outline"
-                  className="w-full h-12 border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 text-muted-foreground hover:text-foreground rounded-2xl bg-muted/20"
-                  onClick={() => {
-                    setEditingColumn(null);
-                    setColumnName('');
-                    setColumnColor('#3B82F6');
-                    setShowColumnModal(true);
-                  }}
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Adicionar Lista
-                </Button>
-              </div>
-            </div>
-            
-            <DragOverlay>
-              {activeCard && (
-                <div className="bg-card rounded-xl shadow-2xl border p-3 w-80 rotate-2">
-                  <p className="font-medium text-sm">{activeCard.title}</p>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        </div>
-      ) : workflows.length === 0 && selectedGroup ? (
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <CheckSquare className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhum fluxo criado</h3>
-            <p className="text-muted-foreground mb-4">Crie um fluxo para começar</p>
-            <Button onClick={() => setShowWorkflowModal(true)} className="rounded-xl">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Fluxo
-            </Button>
-          </div>
-        </div>
-      ) : null}
+  const openWorkflow = (workflowId: string, groupId: string) => {
+    setSelectedGroup(groupId);
+    setSelectedWorkflow(workflowId);
+    setShowBoardHome(false);
+    const updated = [workflowId, ...recentWorkflows.filter(id => id !== workflowId)].slice(0, 6);
+    setRecentWorkflows(updated);
+    localStorage.setItem('fluxos_recent', JSON.stringify(updated));
+  };
 
-      {/* Modals */}
+  const goHome = () => {
+    setSelectedWorkflow('');
+    setShowBoardHome(true);
+  };
+
+  // All workflows across all groups for recent section
+  const [allWorkflows, setAllWorkflows] = useState<(Workflow & { group_name: string; group_color: string })[]>([]);
+
+  useEffect(() => {
+    const loadAllWorkflows = async () => {
+      if (!companyId) return;
+      const { data: wfs } = await supabase.from('workflows').select('*').eq('company_id', companyId);
+      if (wfs) {
+        const enriched = wfs.map(wf => {
+          const grp = groups.find(g => g.id === wf.group_id);
+          return { ...wf, group_name: grp?.name || '', group_color: grp?.color || '#6B7280' };
+        });
+        setAllWorkflows(enriched);
+      }
+    };
+    if (groups.length > 0) loadAllWorkflows();
+  }, [groups, companyId]);
+
+  const recentBoards = recentWorkflows
+    .map(id => allWorkflows.find(w => w.id === id))
+    .filter(Boolean) as (Workflow & { group_name: string; group_color: string })[];
+
+  const renderModals = () => (
+    <>
       <Dialog open={showGroupModal} onOpenChange={setShowGroupModal}>
         <DialogContent className="rounded-2xl sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg">Criar Quadro</DialogTitle>
+            <DialogTitle className="text-lg">Nova Área de Trabalho</DialogTitle>
           </DialogHeader>
           <div className="space-y-5">
-            {/* Board preview */}
             <div className="rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: selectedBoardColor }}>
               <div className="p-3 flex gap-2">
                 {['Lista 1', 'Lista 2', 'Lista 3'].map((col) => (
                   <div key={col} className="flex-1 bg-black/15 backdrop-blur-sm rounded-md p-1.5">
                     <div className="text-white/80 text-[10px] font-medium mb-1">{col}</div>
                     <div className="space-y-1">
-                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-gray-200 rounded w-3/4" /></div>
-                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-gray-200 rounded w-1/2" /></div>
+                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-muted rounded w-3/4" /></div>
+                      <div className="bg-white rounded shadow-sm p-1"><div className="h-1 bg-muted rounded w-1/2" /></div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Color picker */}
             <div>
-              <label className="text-sm font-medium mb-2.5 block text-foreground/70">Cor de fundo</label>
+              <label className="text-sm font-medium mb-2.5 block text-muted-foreground">Cor de fundo</label>
               <div className="flex gap-2 flex-wrap">
                 {boardColors.map((color) => (
                   <button
@@ -1742,71 +1590,39 @@ const FluxosBoard: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            {/* Name */}
             <div>
-              <label className="text-sm font-medium mb-2 block text-foreground/70">Título do quadro <span className="text-destructive">*</span></label>
-              <Input
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Ex: Marketing, Desenvolvimento..."
-                className="rounded-xl h-11"
-                autoFocus
-              />
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome <span className="text-destructive">*</span></label>
+              <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex: Marketing, Desenvolvimento..." className="rounded-xl h-11" autoFocus />
             </div>
-
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setShowGroupModal(false)} className="rounded-xl">
-                Cancelar
-              </Button>
-              <Button 
-                onClick={createGroup} 
-                disabled={!groupName.trim()} 
-                className="rounded-xl text-white"
-                style={{ backgroundColor: selectedBoardColor }}
-              >
-                Criar Quadro
+              <Button variant="outline" onClick={() => setShowGroupModal(false)} className="rounded-xl">Cancelar</Button>
+              <Button onClick={createGroup} disabled={!groupName.trim()} className="rounded-xl text-white" style={{ backgroundColor: selectedBoardColor }}>
+                Criar Área
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showWorkflowModal} onOpenChange={setShowWorkflowModal}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Novo Fluxo</DialogTitle>
+            <DialogTitle>Novo Quadro</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome do Fluxo</label>
-              <Input
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                placeholder="Ex: Sprint 1, Campanha Q1..."
-                className="rounded-xl h-11"
-                autoFocus
-              />
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome do Quadro</label>
+              <Input value={workflowName} onChange={(e) => setWorkflowName(e.target.value)} placeholder="Ex: Sprint 1, Campanha Q1..." className="rounded-xl h-11" autoFocus />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowWorkflowModal(false)} className="rounded-xl">
-                Cancelar
-              </Button>
-              <Button onClick={createWorkflow} disabled={!workflowName.trim()} className="rounded-xl">
-                Criar Fluxo
-              </Button>
+              <Button variant="outline" onClick={() => setShowWorkflowModal(false)} className="rounded-xl">Cancelar</Button>
+              <Button onClick={createWorkflow} disabled={!workflowName.trim()} className="rounded-xl">Criar Quadro</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showColumnModal} onOpenChange={(open) => {
         setShowColumnModal(open);
-        if (!open) {
-          setEditingColumn(null);
-          setColumnName('');
-          setColumnColor('#3B82F6');
-        }
+        if (!open) { setEditingColumn(null); setColumnName(''); setColumnColor('#3B82F6'); }
       }}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
@@ -1815,62 +1631,318 @@ const FluxosBoard: React.FC = () => {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block text-muted-foreground">Nome da Lista</label>
-              <Input
-                value={columnName}
-                onChange={(e) => setColumnName(e.target.value)}
-                placeholder="Ex: A Fazer, Em Progresso..."
-                className="rounded-xl h-11"
-                autoFocus
-              />
+              <Input value={columnName} onChange={(e) => setColumnName(e.target.value)} placeholder="Ex: A Fazer, Em Progresso..." className="rounded-xl h-11" autoFocus />
             </div>
             <div>
               <label className="text-sm font-medium mb-3 block text-muted-foreground">Cor</label>
               <div className="flex gap-2 flex-wrap">
                 {columnColors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setColumnColor(color)}
-                    className={`w-9 h-9 rounded-xl border-2 transition-all hover:scale-110 ${
-                      columnColor === color ? 'border-foreground scale-110 shadow-md' : 'border-transparent'
-                    }`}
+                  <button key={color} onClick={() => setColumnColor(color)}
+                    className={`w-9 h-9 rounded-xl border-2 transition-all hover:scale-110 ${columnColor === color ? 'border-foreground scale-110 shadow-md' : 'border-transparent'}`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowColumnModal(false)} className="rounded-xl">
-                Cancelar
-              </Button>
-              <Button 
-                onClick={editingColumn ? updateColumn : createColumn} 
-                disabled={!columnName.trim()}
-                className="rounded-xl"
-              >
+              <Button variant="outline" onClick={() => setShowColumnModal(false)} className="rounded-xl">Cancelar</Button>
+              <Button onClick={editingColumn ? updateColumn : createColumn} disabled={!columnName.trim()} className="rounded-xl">
                 {editingColumn ? 'Salvar' : 'Criar Lista'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
       <EnhancedCardModal
         card={selectedCard}
         open={showCardModal}
-        onClose={() => {
-          setShowCardModal(false);
-          setSelectedCard(null);
-        }}
+        onClose={() => { setShowCardModal(false); setSelectedCard(null); }}
         onSave={saveCard}
-        onDelete={selectedCard ? () => {
-          deleteCard(selectedCard.id);
-          setShowCardModal(false);
-          setSelectedCard(null);
-        } : undefined}
+        onDelete={selectedCard ? () => { deleteCard(selectedCard.id); setShowCardModal(false); setSelectedCard(null); } : undefined}
         employees={employees}
         companyId={companyId}
         userId={user?.id}
       />
+    </>
+  );
+
+  // Board Home View (Trello-style gallery)
+  if (showBoardHome || !selectedWorkflow) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="border-b border-border/60 bg-background sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Fluxos de Trabalho</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Organize projetos, tarefas e equipes em quadros Kanban</p>
+            </div>
+            <Button onClick={() => setShowGroupModal(true)} className="rounded-2xl h-10 px-5 gap-2 font-semibold shadow-sm">
+              <Plus className="h-4 w-4" />
+              Nova Área de Trabalho
+            </Button>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
+          {/* Recently Viewed */}
+          {recentBoards.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Visualizado recentemente</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {recentBoards.map(board => (
+                  <button
+                    key={board.id}
+                    onClick={() => openWorkflow(board.id, board.group_id)}
+                    className="group text-left rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/40 hover:border-border"
+                  >
+                    <div className="h-24 relative" style={{ backgroundColor: board.group_color }}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="font-bold text-white text-sm truncate drop-shadow-sm">{board.name}</h3>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2 bg-card">
+                      <span className="text-xs text-muted-foreground">{board.group_name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Workspaces */}
+          <section className="space-y-8">
+            <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Suas Áreas de Trabalho</h2>
+
+            {groups.map(group => {
+              const groupWorkflows = allWorkflows.filter(w => w.group_id === group.id);
+              return (
+                <div key={group.id} className="space-y-4">
+                  {/* Workspace Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-sm shadow-sm"
+                        style={{ backgroundColor: group.color }}
+                      >
+                        {group.name.charAt(0).toUpperCase()}
+                      </div>
+                      <h3 className="font-semibold text-foreground text-base">{group.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl text-xs h-8 gap-1.5 border-border/60"
+                        onClick={() => { setSelectedGroup(group.id); setShowWorkflowModal(true); }}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Novo Quadro
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="rounded-xl h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl w-48">
+                          <DropdownMenuItem onClick={() => deleteGroup(group.id)} className="text-destructive rounded-lg">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir Área
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Board Cards Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {groupWorkflows.map(workflow => (
+                      <button
+                        key={workflow.id}
+                        onClick={() => openWorkflow(workflow.id, group.id)}
+                        className="group text-left rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/40 hover:border-border"
+                      >
+                        <div className="h-24 relative" style={{ backgroundColor: group.color }}>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Star className="h-4 w-4 text-white/80 hover:text-amber-300 transition-colors" />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <h3 className="font-bold text-white text-sm truncate drop-shadow-sm">{workflow.name}</h3>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+
+                    {/* Create New Board Card */}
+                    <button
+                      onClick={() => { setSelectedGroup(group.id); setShowWorkflowModal(true); }}
+                      className="h-24 rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/40 bg-muted/30 hover:bg-muted/50 flex items-center justify-center transition-all duration-200 group"
+                    >
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground font-medium transition-colors">
+                        Criar novo quadro
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Delete workflow action per board (via dropdown on hover, already in card) */}
+                </div>
+              );
+            })}
+          </section>
+        </div>
+
+        {/* Modals rendered below */}
+        {renderModals()}
+      </div>
+    );
+  }
+
+  // Kanban Board View (when a workflow is selected)
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Kanban Header */}
+      <div className="border-b border-border/60 bg-background sticky top-0 z-10">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={goHome} className="rounded-xl h-9 px-3 text-muted-foreground hover:text-foreground">
+                ← Quadros
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const currentGroup = groups.find(g => g.id === selectedGroup);
+                  return currentGroup ? (
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: currentGroup.color }}>
+                      {currentGroup.name.charAt(0)}
+                    </div>
+                  ) : null;
+                })()}
+                <h1 className="text-lg font-bold text-foreground">{currentWorkflow?.name || 'Fluxo'}</h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="rounded-xl text-xs px-3 py-1">
+                {columns.length} listas • {cards.length} cards
+              </Badge>
+              {selectedGroup && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl w-48">
+                    <DropdownMenuItem onClick={() => setShowWorkflowModal(true)} className="rounded-lg">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Quadro
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => { deleteWorkflow(selectedWorkflow); goHome(); }} className="text-destructive rounded-lg">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Quadro
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
+          
+          {/* Workflow tabs */}
+          {selectedGroup && workflows.length > 1 && (
+            <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1 w-fit">
+              {workflows.map(wf => (
+                <button
+                  key={wf.id}
+                  onClick={() => openWorkflow(wf.id, selectedGroup)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    selectedWorkflow === wf.id
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {wf.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Kanban Board */}
+      <div className="px-6 pb-6 pt-4 overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30" style={{ height: 'calc(100vh - 140px)' }}>
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 min-w-max">
+            {columns.map(column => {
+              const columnCards = cards.filter(c => c.column_id === column.id);
+              return (
+                <TrelloColumn
+                  key={column.id}
+                  column={column}
+                  cards={columnCards}
+                  employees={employees}
+                  onAddCard={() => {
+                    setSelectedColumnId(column.id);
+                    setSelectedCard(null);
+                    setShowCardModal(true);
+                  }}
+                  onEditCard={(card) => {
+                    setSelectedCard(card);
+                    setShowCardModal(true);
+                  }}
+                  onDeleteCard={deleteCard}
+                  onDeleteColumn={() => deleteColumn(column.id)}
+                  onEditColumn={() => {
+                    setEditingColumn(column);
+                    setColumnName(column.name);
+                    setColumnColor(column.color);
+                    setShowColumnModal(true);
+                  }}
+                />
+              );
+            })}
+            
+            {/* Add Column */}
+            <div className="w-72 flex-shrink-0">
+              <Button 
+                variant="outline"
+                className="w-full h-12 border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 text-muted-foreground hover:text-foreground rounded-2xl bg-muted/20"
+                onClick={() => {
+                  setEditingColumn(null);
+                  setColumnName('');
+                  setColumnColor('#3B82F6');
+                  setShowColumnModal(true);
+                }}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Adicionar Lista
+              </Button>
+            </div>
+          </div>
+          
+          <DragOverlay>
+            {activeCard && (
+              <div className="bg-card rounded-xl shadow-2xl border p-3 w-72 rotate-2">
+                <p className="font-medium text-sm">{activeCard.title}</p>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {renderModals()}
     </div>
   );
 };

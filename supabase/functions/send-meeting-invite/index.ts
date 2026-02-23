@@ -92,11 +92,16 @@ Deno.serve(async (req) => {
       try {
         if (participant.type === 'phone' || (participant.type === 'user' && !participant.value.includes('@'))) {
           // Send WhatsApp message
-          const phone = participant.value.replace(/\D/g, '');
+          let phone = participant.value.replace(/\D/g, '');
           
           if (!phone || phone.length < 8) {
             results.push({ participant: participant.value, status: 'skipped', reason: 'Número inválido' });
             continue;
+          }
+
+          // Ensure Brazilian country code prefix
+          if (!phone.startsWith('55') && phone.length <= 11) {
+            phone = '55' + phone;
           }
 
           if (whatsappSession && BAILEYS_URL) {

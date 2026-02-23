@@ -320,7 +320,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[680px] max-h-[92vh] overflow-hidden p-0 rounded-3xl border-0 shadow-2xl bg-background gap-0">
+      <DialogContent className="sm:max-w-[680px] max-h-[92vh] overflow-hidden p-0 rounded-3xl border-0 shadow-2xl bg-background gap-0 [&>button.absolute]:hidden">
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent" />
           <div className="relative px-6 pt-6 pb-4">
@@ -735,7 +735,7 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
           </div>
         </Tabs>
 
-        {meetingLink && eventStatus.status !== 'past' && (
+        {meetingLink && eventStatus.status === 'ongoing' && (
           <div className="px-6 pb-5 pt-2 border-t border-border/50">
             <Button onClick={() => window.open(meetingLink, '_blank')} className="w-full rounded-2xl h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20">
               <Video className="h-4 w-4 mr-2" /> Entrar na Reunião

@@ -147,7 +147,7 @@ const MobileMegaMenu: React.FC<MobileMegaMenuProps> = ({ isOpen, onClose }) => {
                 {/* Hub header */}
                 <div className="flex items-center gap-2 mb-3 px-0.5">
                   <span className="text-sm">{hub.emoji}</span>
-                  <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: hub.color }}>
+                  <h3 className="text-[13px] font-bold uppercase tracking-widest text-foreground">
                     {hub.name}
                   </h3>
                   <div className="flex-1 h-px ml-1" style={{ backgroundColor: hub.color + '20' }} />

@@ -785,14 +785,17 @@ const EnhancedEventDetailsModal: React.FC<EnhancedEventDetailsModalProps> = ({
                                   try {
                                     const eventId = event.id || event.extendedProps?.id;
                                     const eventCompanyId = event.extendedProps?.company_id || event.company_id;
+                                    const confirmMsg = `📋 *Solicitação de Confirmação*\n\nGostaríamos de confirmar sua presença na reunião:\n\n📌 *${event.title}*\n📆 ${startDateTime.date} às ${startDateTime.time}\n${meetingLink ? `🔗 ${meetingLink}\n` : ''}\nResponda *Sim* para confirmar ou *Não* para recusar.`;
                                     await supabase.functions.invoke('notify-event-change', {
                                       body: {
-                                        type: 'confirmation_request',
-                                        event_id: eventId,
-                                        company_id: eventCompanyId,
-                                        participants: [{ phone: att, name: att }],
+                                        change_type: 'confirmation_request',
                                         event_title: event.title,
-                                        event_date: event.start || event.start_date,
+                                        event_date: startDateTime.date,
+                                        event_time: `${startDateTime.time} - ${endDateTime.time}`,
+                                        meeting_link: meetingLink || null,
+                                        attendees: [att],
+                                        company_id: eventCompanyId,
+                                        custom_message: confirmMsg,
                                       }
                                     });
                                     toast({ title: "Enviado", description: "Solicitação de confirmação enviada" });

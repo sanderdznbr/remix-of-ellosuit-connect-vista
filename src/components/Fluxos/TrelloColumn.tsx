@@ -32,17 +32,18 @@ export const TrelloColumnComponent: React.FC<TrelloColumnProps> = ({ column, car
   return (
     <div
       ref={setNodeRef}
-      className={`w-72 flex-shrink-0 flex flex-col bg-muted/50 rounded-2xl max-h-[calc(100vh-180px)] border transition-all ${isOver ? 'border-primary/30 bg-primary/5 scale-[1.01]' : 'border-border/40'}`}
+      className={`w-72 flex-shrink-0 flex flex-col rounded-2xl max-h-[calc(100vh-180px)] border transition-all ${isOver ? 'border-white/30 scale-[1.01]' : 'border-white/10'}`}
+      style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(4px)' }}
     >
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
-          <h3 className="font-semibold text-sm text-foreground truncate">{column.name}</h3>
-          <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full font-medium">{cards.length}</span>
+          <h3 className="font-semibold text-sm text-white truncate">{column.name}</h3>
+          <span className="text-xs text-white/70 bg-white/15 px-2 py-0.5 rounded-full font-medium">{cards.length}</span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg"><MoreHorizontal className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg text-white/60 hover:text-white hover:bg-white/10"><MoreHorizontal className="h-4 w-4" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl">
             <DropdownMenuItem onClick={onAddCard} className="rounded-lg"><Plus className="h-4 w-4 mr-2" />Adicionar card</DropdownMenuItem>
@@ -61,8 +62,8 @@ export const TrelloColumnComponent: React.FC<TrelloColumnProps> = ({ column, car
             ))}
           </SortableContext>
           {cards.length === 0 && !isAddingCard && (
-            <div className={`text-center py-6 text-xs transition-all ${isOver ? 'text-primary' : 'text-muted-foreground'}`}>
-              <div className={`border-2 border-dashed rounded-xl p-4 transition-all ${isOver ? 'border-primary bg-primary/10 scale-105' : 'border-muted-foreground/20'}`}>
+            <div className={`text-center py-6 text-xs transition-all ${isOver ? 'text-white' : 'text-white/50'}`}>
+              <div className={`border-2 border-dashed rounded-xl p-4 transition-all ${isOver ? 'border-white/40 bg-white/10 scale-105' : 'border-white/15'}`}>
                 {isOver ? '📥 Solte o card aqui!' : 'Arraste cards aqui'}
               </div>
             </div>
@@ -81,7 +82,7 @@ export const TrelloColumnComponent: React.FC<TrelloColumnProps> = ({ column, car
 
       {!isAddingCard && (
         <div className="p-3 pt-0">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-background/80 h-9 rounded-xl" onClick={() => setIsAddingCard(true)}>
+          <Button variant="ghost" className="w-full justify-start text-white/60 hover:text-white hover:bg-white/10 h-9 rounded-xl" onClick={() => setIsAddingCard(true)}>
             <Plus className="h-4 w-4 mr-2" />Adicionar card
           </Button>
         </div>

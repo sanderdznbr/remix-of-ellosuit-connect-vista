@@ -225,29 +225,33 @@ const ImprovedEventModal = ({
         finalEndDate = new Date(endDate + 'T' + endTime).toISOString();
       }
 
-      const attendeesList = participants
-        .filter(p => p.type === 'email' || p.type === 'user')
-        .map(p => p.value);
+      // Include ALL participants (email + phone) in attendees
+      const attendeesList = participants.map(p => p.value);
 
       let meetingLink = '';
       let finalMeetingProvider: 'google_meet' | 'zoom' | 'teams' | 'ellosuit' | null = null;
+      let resolvedCompanyId = '';
+
+      // Get company info early (needed for both room creation and invites)
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Usuário não autenticado');
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', authUser.id)
+        .single();
+
+      if (!companyUser) throw new Error('Empresa não encontrada');
+      resolvedCompanyId = companyUser.company_id;
 
       // Create Ellomeeting room if requested
       if (createMeetingLink) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (!authUser) throw new Error('Usuário não autenticado');
-
-        const { data: companyUser } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', authUser.id)
-          .single();
-
-        if (!companyUser) throw new Error('Empresa não encontrada');
-
         const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
         
-        const { error: roomError } = await supabase
+        console.log('🔧 Creating meeting room with:', { title, roomCode, company_id: resolvedCompanyId, created_by: authUser.id });
+        
+        const { data: roomData, error: roomError } = await supabase
           .from('meeting_rooms')
           .insert({
             title,
@@ -256,12 +260,14 @@ const ImprovedEventModal = ({
             recording_enabled: false,
             chat_enabled: true,
             screen_sharing_enabled: true,
-            company_id: companyUser.company_id,
+            company_id: resolvedCompanyId,
             created_by: authUser.id,
-          });
+          })
+          .select('id')
+          .single();
 
         if (roomError) {
-          console.error('Error creating meeting room:', roomError);
+          console.error('❌ Error creating meeting room:', roomError.code, roomError.message, roomError.details, roomError.hint);
           toast({
             title: "Aviso",
             description: "Evento será criado sem link de reunião: " + roomError.message,
@@ -270,7 +276,7 @@ const ImprovedEventModal = ({
         } else {
           meetingLink = APP_CONFIG.getMeetingUrl(roomCode);
           finalMeetingProvider = 'ellosuit';
-          console.log('✅ Ellomeeting room created:', roomCode, meetingLink);
+          console.log('✅ Ellomeeting room created:', roomCode, meetingLink, roomData);
         }
       }
 
@@ -291,9 +297,40 @@ const ImprovedEventModal = ({
 
       await onCreateEvent(eventData, recurrence.enabled ? recurrence : undefined);
       
-      // Send invites if enabled
-      if (sendInvites && participants.length > 0 && meetingLink) {
-        sendInvitations(meetingLink, finalStartDate);
+      // Send invites via edge function (non-blocking)
+      if (sendInvites && participants.length > 0) {
+        const eventDateFormatted = new Date(finalStartDate).toLocaleDateString('pt-BR');
+        const eventTimeFormatted = !isAllDay 
+          ? `${startTime} - ${endTime}` 
+          : 'Dia inteiro';
+        
+        supabase.functions.invoke('send-meeting-invite', {
+          body: {
+            event_title: title,
+            event_date: eventDateFormatted,
+            event_time: eventTimeFormatted,
+            meeting_link: meetingLink || null,
+            participants: participants.map(p => ({
+              type: p.type === 'user' ? (p.value.includes('@') ? 'email' : 'phone') : p.type,
+              value: p.value,
+              name: p.name,
+            })),
+            company_id: resolvedCompanyId,
+          }
+        }).then(res => {
+          if (res.error) {
+            console.error('Invite error:', res.error);
+          } else {
+            const data = res.data;
+            console.log(`✅ Convites: ${data.sent}/${data.total} enviados`);
+            if (data.sent > 0) {
+              toast({
+                title: "Convites enviados",
+                description: `${data.sent} convite(s) enviado(s) com sucesso!`,
+              });
+            }
+          }
+        }).catch(err => console.error('Invite error:', err));
       }
 
       resetForm();
@@ -310,31 +347,7 @@ const ImprovedEventModal = ({
     }
   };
 
-  const sendInvitations = async (meetingLink: string, eventDate: string) => {
-    // Send invitations via edge function (non-blocking)
-    for (const participant of participants) {
-      try {
-        if (participant.type === 'email' || (participant.type === 'user' && participant.value.includes('@'))) {
-          // Send email invitation
-          await supabase.functions.invoke('send-user-notification', {
-            body: {
-              user_id: user?.id,
-              company_id: '', // Will be resolved in the function
-              title: `📅 Convite: ${title}`,
-              message: `Você foi convidado para "${title}" em ${new Date(eventDate).toLocaleDateString('pt-BR')}. Link: ${meetingLink}`,
-              notification_type: 'event_created',
-              category: 'calendar',
-              icon: 'Calendar',
-              action_url: meetingLink,
-              metadata: { invite_email: participant.value },
-            },
-          });
-        }
-      } catch (err) {
-        console.error('Error sending invite to', participant.value, err);
-      }
-    }
-  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

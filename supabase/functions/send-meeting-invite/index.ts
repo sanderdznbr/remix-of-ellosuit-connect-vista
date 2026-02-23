@@ -1,0 +1,231 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get auth user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Usuário não autenticado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await req.json();
+    const { 
+      event_title, 
+      event_date, 
+      event_time,
+      meeting_link, 
+      participants,  // Array of { type: 'email' | 'phone', value: string, name?: string }
+      company_id 
+    } = body;
+
+    if (!event_title || !participants || participants.length === 0) {
+      return new Response(JSON.stringify({ error: 'event_title e participants são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`[Meeting Invite] Sending invites for "${event_title}" to ${participants.length} participants`);
+
+    const results: any[] = [];
+
+    // Get company's WhatsApp session for sending messages
+    const resolvedCompanyId = company_id || (await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+    ).data?.company_id;
+
+    if (!resolvedCompanyId) {
+      return new Response(JSON.stringify({ error: 'Empresa não encontrada' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Find active WhatsApp session for this company
+    const { data: whatsappSession } = await supabase
+      .from('whatsapp_sessions')
+      .select('id, instance_name, baileys_server_url, status')
+      .eq('company_id', resolvedCompanyId)
+      .eq('status', 'connected')
+      .limit(1)
+      .single();
+
+    const BAILEYS_URL = whatsappSession?.baileys_server_url || Deno.env.get('BAILEYS_SERVER_URL') || '';
+
+    // Build invite message
+    const inviteMessage = `📅 *Convite de Reunião*\n\n` +
+      `*${event_title}*\n` +
+      (event_date ? `📆 Data: ${event_date}\n` : '') +
+      (event_time ? `🕐 Horário: ${event_time}\n` : '') +
+      (meeting_link ? `\n🔗 *Link da reunião:*\n${meeting_link}\n` : '') +
+      `\n_Enviado via Ellosuit_`;
+
+    for (const participant of participants) {
+      try {
+        if (participant.type === 'phone' || (participant.type === 'user' && !participant.value.includes('@'))) {
+          // Send WhatsApp message
+          const phone = participant.value.replace(/\D/g, '');
+          
+          if (!phone || phone.length < 8) {
+            results.push({ participant: participant.value, status: 'skipped', reason: 'Número inválido' });
+            continue;
+          }
+
+          if (whatsappSession && BAILEYS_URL) {
+            const normalizedServerUrl = BAILEYS_URL.replace(/\/+$/, '');
+            const jid = `${phone}@s.whatsapp.net`;
+
+            console.log(`[Meeting Invite] Sending WhatsApp to ${phone} via ${normalizedServerUrl}`);
+
+            const sendResponse = await fetch(`${normalizedServerUrl}/api/message/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                instanceName: whatsappSession.instance_name,
+                jid,
+                message: { text: inviteMessage }
+              })
+            });
+
+            if (sendResponse.ok) {
+              // Save message in conversations
+              let { data: conversation } = await supabase
+                .from('whatsapp_conversations')
+                .select('id')
+                .eq('session_id', whatsappSession.id)
+                .eq('contact_phone', phone)
+                .single();
+
+              if (!conversation) {
+                const { data: newConv } = await supabase
+                  .from('whatsapp_conversations')
+                  .insert({
+                    session_id: whatsappSession.id,
+                    company_id: resolvedCompanyId,
+                    contact_phone: phone,
+                    contact_name: participant.name || phone,
+                    remote_jid: jid,
+                    status: 'open',
+                    last_message_at: new Date().toISOString()
+                  })
+                  .select('id')
+                  .single();
+                conversation = newConv;
+              }
+
+              if (conversation) {
+                await supabase
+                  .from('whatsapp_messages')
+                  .insert({
+                    conversation_id: conversation.id,
+                    content: inviteMessage,
+                    message_type: 'text',
+                    from_me: true,
+                    status: 'sent',
+                    timestamp: new Date().toISOString()
+                  });
+              }
+
+              results.push({ participant: participant.value, status: 'sent', channel: 'whatsapp' });
+              console.log(`[Meeting Invite] ✅ WhatsApp sent to ${phone}`);
+            } else {
+              const errorText = await sendResponse.text();
+              console.error(`[Meeting Invite] ❌ WhatsApp send failed:`, errorText);
+              results.push({ participant: participant.value, status: 'failed', reason: 'Falha no envio WhatsApp', channel: 'whatsapp' });
+            }
+          } else {
+            console.log(`[Meeting Invite] No active WhatsApp session for company ${resolvedCompanyId}`);
+            results.push({ participant: participant.value, status: 'skipped', reason: 'WhatsApp não conectado' });
+          }
+
+        } else if (participant.type === 'email' || (participant.type === 'user' && participant.value.includes('@'))) {
+          // Send email invite
+          console.log(`[Meeting Invite] Sending email invite to ${participant.value}`);
+          
+          // Use existing send-system-email edge function
+          const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-system-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              to: participant.value,
+              subject: `📅 Convite: ${event_title}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #3600FF;">📅 Convite de Reunião</h2>
+                  <h3>${event_title}</h3>
+                  ${event_date ? `<p><strong>Data:</strong> ${event_date}</p>` : ''}
+                  ${event_time ? `<p><strong>Horário:</strong> ${event_time}</p>` : ''}
+                  ${meeting_link ? `<p><a href="${meeting_link}" style="background: #3600FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 16px;">Entrar na Reunião</a></p>` : ''}
+                  <hr style="margin-top: 24px; border: none; border-top: 1px solid #eee;" />
+                  <p style="color: #999; font-size: 12px;">Enviado via Ellosuit</p>
+                </div>
+              `
+            })
+          });
+
+          if (emailResponse.ok) {
+            results.push({ participant: participant.value, status: 'sent', channel: 'email' });
+            console.log(`[Meeting Invite] ✅ Email sent to ${participant.value}`);
+          } else {
+            const errorText = await emailResponse.text();
+            console.error(`[Meeting Invite] ❌ Email send failed:`, errorText);
+            results.push({ participant: participant.value, status: 'failed', reason: 'Falha no envio do email', channel: 'email' });
+          }
+        }
+      } catch (err) {
+        console.error(`[Meeting Invite] Error sending to ${participant.value}:`, err);
+        results.push({ participant: participant.value, status: 'failed', reason: String(err) });
+      }
+    }
+
+    const sentCount = results.filter(r => r.status === 'sent').length;
+    console.log(`[Meeting Invite] Done: ${sentCount}/${participants.length} sent successfully`);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      results,
+      sent: sentCount,
+      total: participants.length 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
+  } catch (err) {
+    console.error('[Meeting Invite] Error:', err);
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+});

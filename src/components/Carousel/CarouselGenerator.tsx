@@ -128,6 +128,47 @@ const CarouselGenerator: React.FC = () => {
     setEditorRefImage(url);
   };
 
+  // Web search state
+  const [searchingWeb, setSearchingWeb] = useState(false);
+  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+
+  const handleSearchWeb = async () => {
+    if (!topic.trim()) return;
+    setSearchingWeb(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('search-news', {
+        body: { topic: topic.trim(), language: 'pt-BR' },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
+      
+      const content = data.content;
+      setWebSearchResult({
+        summary: content.summary || 'Conteúdo encontrado com sucesso',
+        citations: data.citations || [],
+        content,
+        images: data.images || [],
+      });
+
+      // Auto-fill topic with richer content
+      if (content.title) {
+        setTopic(content.title + (content.subtitle ? '\n\n' + content.subtitle : ''));
+      }
+
+      // Auto-fill keywords from image search terms
+      if (content.image_search_terms?.length > 0) {
+        setKeywords(content.image_search_terms.join(', '));
+      }
+
+      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
+    } catch (err: any) {
+      console.error('Web search error:', err);
+      toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });
+    } finally {
+      setSearchingWeb(false);
+    }
+  };
+
   const [savingCarousel, setSavingCarousel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [carouselHistory, setCarouselHistory] = useState<any[]>([]);
@@ -324,7 +365,14 @@ const CarouselGenerator: React.FC = () => {
       for (let i = 0; i < Math.min(imageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
 
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: { action: 'generate-content', topic: topic.trim(), keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), cardCount, imageCardIndices: imageCardIndices.sort((a, b) => a - b) },
+        body: {
+          action: 'generate-content',
+          topic: topic.trim(),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount,
+          imageCardIndices: imageCardIndices.sort((a, b) => a - b),
+          ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+        },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
@@ -697,7 +745,8 @@ const CarouselGenerator: React.FC = () => {
               {wizardStep === 0 && (
                 <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                   cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
-                  enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt} />
+                  enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
+                  searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
               )}
               {wizardStep === 1 && (
                 <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}

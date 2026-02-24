@@ -46,11 +46,33 @@ Deno.serve(async (req) => {
       const profile = igData.profile || {};
       const posts = (igData.posts || []).slice(0, 12);
 
-      // Collect images: avatar + post images
-      const images: any[] = [];
+      // Helper to proxy an image URL to base64 data URI
+      async function proxyImageToBase64(imageUrl: string): Promise<string | null> {
+        try {
+          const imgRes = await fetch(imageUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          });
+          if (!imgRes.ok) return null;
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          const arrayBuffer = await imgRes.arrayBuffer();
+          const uint8 = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < uint8.length; i++) {
+            binary += String.fromCharCode(uint8[i]);
+          }
+          const b64 = btoa(binary);
+          return `data:${contentType};base64,${b64}`;
+        } catch (e) {
+          console.error('Failed to proxy image:', e);
+          return null;
+        }
+      }
+
+      // Collect raw image URLs first
+      const rawImages: { id: string; url: string; thumb: string; label: string; type: string }[] = [];
 
       if (profile.avatar_hd || profile.avatar) {
-        images.push({
+        rawImages.push({
           id: 'avatar',
           url: profile.avatar_hd || profile.avatar,
           thumb: profile.avatar || profile.avatar_hd,
@@ -61,20 +83,19 @@ Deno.serve(async (req) => {
 
       for (const post of posts) {
         if (post.link) {
-          images.push({
-            id: post.id || `post-${images.length}`,
+          rawImages.push({
+            id: post.id || `post-${rawImages.length}`,
             url: post.link,
             thumb: post.thumbnail || post.link,
             label: (post.caption || '').slice(0, 60) || `Post de @${igUsername}`,
             type: 'post',
           });
         }
-        // Also include carousel items if present
         if (post.carousel_items) {
           for (const item of post.carousel_items.slice(0, 3)) {
             if (item.link && item.type === 'image') {
-              images.push({
-                id: item.id || `carousel-${images.length}`,
+              rawImages.push({
+                id: item.id || `carousel-${rawImages.length}`,
                 url: item.link,
                 thumb: item.link,
                 label: `Carrossel de @${igUsername}`,
@@ -85,13 +106,24 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Proxy all images to base64 in parallel (limit to 16 for performance)
+      const limitedRaw = rawImages.slice(0, 16);
+      const images = await Promise.all(limitedRaw.map(async (img) => {
+        const b64 = await proxyImageToBase64(img.thumb || img.url);
+        return {
+          ...img,
+          url: b64 || img.url,
+          thumb: b64 || img.thumb,
+        };
+      }));
+
       return new Response(JSON.stringify({
         success: true,
         profile: {
           username: profile.username || igUsername,
           name: profile.name || igUsername,
           bio: profile.bio || '',
-          avatar: profile.avatar_hd || profile.avatar || '',
+          avatar: images.find(i => i.type === 'avatar')?.thumb || profile.avatar_hd || profile.avatar || '',
           followers: profile.followers || 0,
           is_verified: profile.is_verified || false,
         },

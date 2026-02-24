@@ -511,12 +511,6 @@ const CarouselGenerator: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: `${22 * s}px`, color: '#FFF', fontFamily: sans, fontWeight: 900,
             }}>✦</div>
-            {userName && (
-              <span style={{ fontFamily: sans, fontSize: `${24 * s}px`, fontWeight: 600, color: '#FFF' }}>
-                @{userName}
-              </span>
-            )}
-            <span style={{ fontSize: `${22 * s}px`, color: '#4A9EFF' }}>✓</span>
           </div>
 
           <div style={{
@@ -524,7 +518,7 @@ const CarouselGenerator: React.FC = () => {
             textAlign: 'center',
           }}>
             <h1 style={{
-              fontFamily: serif, fontSize: `${76 * s}px`, fontWeight: 900,
+              fontFamily: serif, fontSize: `${96 * s}px`, fontWeight: 900,
               lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase',
               letterSpacing: `-${1 * s}px`,
               textShadow: '0 4px 40px rgba(0,0,0,0.7)',

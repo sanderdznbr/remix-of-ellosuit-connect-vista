@@ -115,6 +115,7 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
 
     if (googleApiKey && googleCseId) {
       console.log('[IMAGES] Trying Google CSE with terms:', searchTerms.slice(0, 2));
+      console.log('[IMAGES] API Key prefix:', googleApiKey.substring(0, 10), '... CSE ID:', googleCseId);
       try {
         for (const term of searchTerms.slice(0, 2)) {
           const query = encodeURIComponent(term + ' ' + topic);

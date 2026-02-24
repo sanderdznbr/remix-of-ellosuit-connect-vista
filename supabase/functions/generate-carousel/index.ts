@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
       console.log('SearchAPI image search for:', searchQuery);
 
-      const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}`;
+      const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large`;
       
       const serpRes = await fetch(serpUrl);
       let images: any[] = [];

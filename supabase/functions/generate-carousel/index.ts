@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {
@@ -473,21 +473,30 @@ Responda APENAS em JSON válido:
       // Build message content with text + reference images
       const messageContent: any[] = [];
 
-      let textPrompt = `Generate a professional editorial magazine-quality photo for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
+      let textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
 DESCRIPTION: ${imagePrompt}
 
 STYLE REQUIREMENTS:
-- Cinematic lighting with dramatic shadows
 - High-end editorial/magazine aesthetic
 - Rich colors and professional color grading
 - Clean composition suitable for overlay text
 - Ultra high resolution, photorealistic quality`;
 
-      if (validFaceRefs.length > 0) {
-        textPrompt += `
+      // Add negative prompt if provided
+      if (negativePrompt) {
+        textPrompt += `\n\nDO NOT include any of the following: ${negativePrompt}`;
+      }
 
-CRITICAL - FACE/PERSON REFERENCE: I am attaching ${validFaceRefs.length} reference photo(s) of the person who MUST appear in this image. You MUST:
+      // Add fidelity instructions
+      if (fidelity === 'high') {
+        textPrompt += `\n\nCRITICAL: Follow reference images with MAXIMUM fidelity. Reproduce exact features, colors, textures, and composition.`;
+      } else if (fidelity === 'creative') {
+        textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
+      }
+
+      if (validFaceRefs.length > 0) {
+        textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching ${validFaceRefs.length} reference photo(s) of the person who MUST appear in this image. You MUST:
 1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
 2. The person must be clearly recognizable as the same individual in the reference photos
 3. Maintain their likeness with high fidelity - this is the #1 priority
@@ -495,12 +504,7 @@ CRITICAL - FACE/PERSON REFERENCE: I am attaching ${validFaceRefs.length} referen
       }
 
       if (validStyleRefs.length > 0) {
-        textPrompt += `
-
-BRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). You MUST:
-1. Match the visual style, color palette, and aesthetic of these references
-2. Incorporate brand elements, logos, or product imagery visible in the references
-3. Maintain brand consistency across the carousel`;
+        textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). Match the visual style, color palette, and aesthetic of these references.`;
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
@@ -593,14 +597,23 @@ BRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style refer
         } catch { /* try next */ }
       }
 
-      // Attempt 4: last resort - very simple generic prompt
+      // Attempt 4: last resort - extremely simple generic prompt with no specific content
       if (!generatedImage) {
+        const keywords = imagePrompt.split(/[.,;:!?]/).filter(Boolean);
+        const simpleDesc = keywords[0]?.trim() || 'professional business scene';
         const simpleContent = [{
           type: 'text',
-          text: `A professional photograph of ${imagePrompt.split('.')[0]}. High quality, 4:5 portrait.`
+          text: `Beautiful professional stock photo: ${simpleDesc}. Clean, well-lit, magazine quality, 4:5 portrait format.`
         }];
         try {
           generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', simpleContent, 4);
+        } catch { /* ignore */ }
+      }
+
+      // Attempt 5: absolute last resort - completely generic
+      if (!generatedImage) {
+        try {
+          generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', [{ type: 'text', text: 'Beautiful abstract gradient background in dark blue and orange tones, professional, clean, 4:5 portrait aspect ratio.' }], 5);
         } catch { /* ignore */ }
       }
 

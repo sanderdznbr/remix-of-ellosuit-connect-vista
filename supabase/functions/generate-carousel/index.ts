@@ -11,8 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, username } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {
@@ -424,129 +423,110 @@ Responda APENAS em JSON válido:
       });
     }
 
-    // ===== GENERATE AI IMAGE =====
+    // ===== GENERATE AI IMAGE (Lovable AI - Gemini) =====
     if (action === 'generate-ai-image') {
-      const NANOBANANA_API_KEY = Deno.env.get('NANOBANANA_API_KEY');
-      if (!NANOBANANA_API_KEY) {
-        return new Response(JSON.stringify({ error: 'NANOBANANA_API_KEY not configured' }), {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const imagePrompt = prompt || topic || 'abstract background';
-      
-      // If reference image URLs provided, use image-to-image editing
-      const hasReferences = referenceImageUrls && referenceImageUrls.length > 0;
+      const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
+      const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
+      const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
 
-      if (hasReferences) {
-        // Use Lovable AI gateway for image editing with references
-        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-        if (!LOVABLE_API_KEY) {
-          return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
-            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+      // Build message content with text + optional reference images
+      const messageContent: any[] = [];
 
-        const messageContent: any[] = [
-          { type: 'text', text: `Create a professional editorial magazine photo based on these reference images. ${imagePrompt}. Style: cinematic lighting, 4:5 portrait aspect ratio, high-end magazine quality.` }
-        ];
+      // Build detailed text prompt
+      let textPrompt = `Generate a professional editorial magazine-quality photo for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
-        for (const refUrl of referenceImageUrls.slice(0, 3)) {
-          messageContent.push({
-            type: 'image_url',
-            image_url: { url: refUrl }
-          });
-        }
+DESCRIPTION: ${imagePrompt}
 
-        const editResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image',
-            messages: [{ role: 'user', content: messageContent }],
-            modalities: ['image', 'text'],
-          }),
-        });
+STYLE REQUIREMENTS:
+- Cinematic lighting with dramatic shadows
+- High-end editorial/magazine aesthetic
+- Rich colors and professional color grading
+- Clean composition suitable for overlay text
+- Ultra high resolution, photorealistic quality`;
 
-        if (editResponse.ok) {
-          const editData = await editResponse.json();
-          const generatedImage = editData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          if (generatedImage) {
-            return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-        }
-        // Fall through to NanoBanana if image editing fails
-        console.log('Image editing with references failed, falling back to NanoBanana');
+      if (hasFaceRefs) {
+        textPrompt += `\n\nIMPORTANT - FACE CONSISTENCY: The person(s) in the attached reference photos MUST appear in this image. Maintain their exact facial features, skin tone, and likeness. This is critical for brand consistency across the carousel.`;
       }
 
-      const genResponse = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate', {
+      if (hasStyleRefs) {
+        textPrompt += `\n\nDESIGN STYLE REFERENCE: Use the attached style reference images as inspiration for the visual composition, color palette, and overall aesthetic. Match the design style but create original content.`;
+      }
+
+      messageContent.push({ type: 'text', text: textPrompt });
+
+      // Add face reference images (priority - first)
+      if (hasFaceRefs) {
+        for (const refUrl of faceReferenceUrls.slice(0, 3)) {
+          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+        }
+      }
+
+      // Add style reference images
+      if (hasStyleRefs) {
+        for (const refUrl of styleReferenceUrls.slice(0, 2)) {
+          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+        }
+      }
+
+      // Add general reference images
+      if (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) {
+        for (const refUrl of referenceImageUrls.slice(0, 3)) {
+          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+        }
+      }
+
+      console.log('Generating image with Gemini, refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs });
+
+      const genResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${NANOBANANA_API_KEY}`,
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: imagePrompt,
-          numImages: 1,
-          type: 'TEXTTOIAMGE',
-          image_size: imageSize || '1:1',
-          callBackUrl: 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/generate-carousel',
+          model: 'google/gemini-2.5-flash-image',
+          messages: [{ role: 'user', content: messageContent }],
+          modalities: ['image', 'text'],
         }),
       });
 
       if (!genResponse.ok) {
         const errText = await genResponse.text();
-        console.error('NanoBanana generate error:', genResponse.status, errText);
+        console.error('Gemini image gen error:', genResponse.status, errText);
+        if (genResponse.status === 429) {
+          return new Response(JSON.stringify({ error: 'Rate limit excedido. Tente novamente em alguns segundos.' }), {
+            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (genResponse.status === 402) {
+          return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
+            status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
         return new Response(JSON.stringify({ error: 'Erro ao gerar imagem com IA' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const genData = await genResponse.json();
-      const taskId = genData?.data?.taskId;
+      const generatedImage = genData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-      if (!taskId) {
-        return new Response(JSON.stringify({ error: 'Task ID não retornado' }), {
+      if (!generatedImage) {
+        console.error('No image in Gemini response:', JSON.stringify(genData).slice(0, 500));
+        return new Response(JSON.stringify({ error: 'Nenhuma imagem foi gerada' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      let imageUrl: string | null = null;
-      for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise(r => setTimeout(r, 2000));
-
-        const statusResponse = await fetch(
-          `https://api.nanobananaapi.ai/api/v1/nanobanana/record-info?taskId=${taskId}`,
-          { headers: { 'Authorization': `Bearer ${NANOBANANA_API_KEY}` } }
-        );
-
-        if (!statusResponse.ok) continue;
-
-        const statusData = await statusResponse.json();
-        const flag = statusData?.data?.successFlag;
-
-        if (flag === 1) {
-          imageUrl = statusData.data.response?.resultImageUrl || statusData.data.response?.originImageUrl;
-          break;
-        } else if (flag === 2 || flag === 3) {
-          return new Response(JSON.stringify({ error: statusData.data.errorMessage || 'Falha na geração' }), {
-            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      }
-
-      if (!imageUrl) {
-        return new Response(JSON.stringify({ error: 'Timeout na geração da imagem' }), {
-          status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      return new Response(JSON.stringify({ success: true, imageUrl }), {
+      return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

@@ -537,6 +537,25 @@ const WhatsAppCRM: React.FC = () => {
     return true;
   };
   
+  // Format phone number for display: +55 (17) 98183-2566
+  const formatPhoneDisplay = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+      const ddd = digits.slice(2, 4);
+      const number = digits.slice(4);
+      if (number.length === 9) {
+        return `+55 (${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
+      }
+      if (number.length === 8) {
+        return `+55 (${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
+      }
+    }
+    if (digits.length > 6) {
+      return `+${digits}`;
+    }
+    return phone;
+  };
+
   // Helper: Get display name for conversation (handles groups without names)
   // Also checks messages for sender_name as fallback
   const getDisplayName = (conv: WhatsAppConversationData, messagesForLookup?: WhatsAppMessage[]): string => {
@@ -557,7 +576,7 @@ const WhatsAppCRM: React.FC = () => {
     if (digits.length > 15) {
       return `Grupo ${digits.substring(0, 8)}...`;
     }
-    return conv.contact_phone;
+    return formatPhoneDisplay(conv.contact_phone);
   };
   
   // Helper: Check if conversation is a group
@@ -2408,7 +2427,7 @@ const WhatsAppCRM: React.FC = () => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {selectedAgent ? selectedAgent.description || 'Assistente virtual' : selectedConversation?.contact_phone}
+                      {selectedAgent ? selectedAgent.description || 'Assistente virtual' : formatPhoneDisplay(selectedConversation?.contact_phone || '')}
                     </p>
                   </div>
                 </button>

@@ -8,7 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
-  Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal
+  Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
+  Save, History, Clock, RotateCcw
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -96,6 +97,16 @@ const CarouselGenerator: React.FC = () => {
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
   const [showRefPanel, setShowRefPanel] = useState(false);
 
+  // Prompt enhancer
+  const [enhancingPrompt, setEnhancingPrompt] = useState(false);
+
+  // Save & History
+  const [savingCarousel, setSavingCarousel] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [carouselHistory, setCarouselHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [currentCarouselId, setCurrentCarouselId] = useState<string | null>(null);
+
   const [editingCard, setEditingCard] = useState<number | null>(null);
 
   const [brandName, setBrandName] = useState('Powered by ellosuit');
@@ -163,6 +174,152 @@ const CarouselGenerator: React.FC = () => {
 
   const removeReference = (index: number) => {
     setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ===== ENHANCE PROMPT =====
+  const enhancePrompt = async () => {
+    if (!topic.trim()) {
+      toast({ title: 'Insira um tópico primeiro', variant: 'destructive' });
+      return;
+    }
+    setEnhancingPrompt(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'enhance-prompt', prompt: topic.trim(), topic: topic.trim() },
+      });
+      if (error) throw error;
+      if (data?.enhancedPrompt) {
+        setTopic(data.enhancedPrompt);
+        toast({ title: 'Prompt melhorado com IA!' });
+      }
+    } catch (err) {
+      console.error('Enhance error:', err);
+      toast({ title: 'Erro ao melhorar prompt', variant: 'destructive' });
+    } finally {
+      setEnhancingPrompt(false);
+    }
+  };
+
+  // ===== SAVE CAROUSEL =====
+  const saveCarousel = async () => {
+    if (!carouselData) return;
+    setSavingCarousel(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Não autenticado');
+      
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .single();
+      if (!companyData) throw new Error('Empresa não encontrada');
+
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel };
+      
+      if (currentCarouselId) {
+        // Update existing
+        const { error } = await supabase
+          .from('generated_carousels')
+          .update({
+            title: carouselData.title || topic,
+            topic,
+            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+            carousel_data: carouselData as any,
+            style_config: styleConfig as any,
+            card_count: carouselData.cards.length,
+          })
+          .eq('id', currentCarouselId);
+        if (error) throw error;
+        toast({ title: 'Carrossel atualizado!' });
+      } else {
+        // Create new
+        const { data: inserted, error } = await supabase
+          .from('generated_carousels')
+          .insert({
+            company_id: companyData.company_id,
+            user_id: userData.user.id,
+            title: carouselData.title || topic,
+            topic,
+            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+            carousel_data: carouselData as any,
+            style_config: styleConfig as any,
+            card_count: carouselData.cards.length,
+          })
+          .select('id')
+          .single();
+        if (error) throw error;
+        setCurrentCarouselId(inserted?.id || null);
+        toast({ title: 'Carrossel salvo!' });
+      }
+    } catch (err: any) {
+      console.error('Save error:', err);
+      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingCarousel(false);
+    }
+  };
+
+  // ===== LOAD HISTORY =====
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      
+      const { data: companyData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .single();
+      if (!companyData) return;
+
+      const { data, error } = await supabase
+        .from('generated_carousels')
+        .select('*')
+        .eq('company_id', companyData.company_id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setCarouselHistory(data || []);
+    } catch (err) {
+      console.error('History error:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const loadCarousel = (item: any) => {
+    setCarouselData(item.carousel_data);
+    setTopic(item.topic);
+    setKeywords((item.keywords || []).join(', '));
+    setCurrentCarouselId(item.id);
+    if (item.style_config) {
+      const sc = item.style_config;
+      if (sc.bgColor) setBgColor(sc.bgColor);
+      if (sc.accentColor) setAccentColor(sc.accentColor);
+      if (sc.textColor) setTextColor(sc.textColor);
+      if (sc.selectedFont !== undefined) setSelectedFont(sc.selectedFont);
+      if (sc.brandName) setBrandName(sc.brandName);
+      if (sc.userName) setUserName(sc.userName);
+      if (sc.dateLabel) setDateLabel(sc.dateLabel);
+    }
+    setShowHistory(false);
+    setActiveCardIndex(0);
+    toast({ title: 'Carrossel carregado!' });
+  };
+
+  const deleteCarousel = async (id: string) => {
+    try {
+      await supabase.from('generated_carousels').delete().eq('id', id);
+      setCarouselHistory(prev => prev.filter(c => c.id !== id));
+      if (currentCarouselId === id) setCurrentCarouselId(null);
+      toast({ title: 'Carrossel removido' });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // ===== GENERATE AI IMAGE =====
@@ -316,7 +473,9 @@ const CarouselGenerator: React.FC = () => {
       });
 
       // Show everything at once - only now set the carousel data
-      setCarouselData({ ...data.data, cards: updatedCards });
+      const finalData = { ...data.data, cards: updatedCards };
+      setCarouselData(finalData);
+      setCurrentCarouselId(null); // New carousel, not saved yet
       setGeneratingAllImages(false);
       setImageGenProgress('');
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
@@ -505,18 +664,6 @@ const CarouselGenerator: React.FC = () => {
           }} />
           {renderHeader()}
           
-          <div style={{
-            position: 'absolute', left: '50%', top: `${520 * s}px`,
-            transform: 'translateX(-50%)',
-            display: 'flex', alignItems: 'center', gap: `${12 * s}px`, zIndex: 10,
-          }}>
-            <div style={{
-              width: `${52 * s}px`, height: `${52 * s}px`, borderRadius: '50%', backgroundColor: accentColor,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: `${22 * s}px`, color: '#FFF', fontFamily: sans, fontWeight: 900,
-            }}>✦</div>
-          </div>
-
           <div style={{
             position: 'absolute', bottom: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10,
             textAlign: 'center',
@@ -845,6 +992,11 @@ const CarouselGenerator: React.FC = () => {
           </div>
           {carouselData && !generatingAllImages && (
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel}
+                className="gap-1.5 rounded-xl">
+                {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {currentCarouselId ? 'Atualizar' : 'Salvar'}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setShowRefPanel(!showRefPanel)}
                 className="gap-1.5 rounded-xl">
                 <Globe className="h-4 w-4" /> Referências {referenceImages.length > 0 && `(${referenceImages.length})`}
@@ -858,6 +1010,12 @@ const CarouselGenerator: React.FC = () => {
                 Exportar PNGs
               </Button>
             </div>
+          )}
+          {!carouselData && (
+            <Button variant="outline" size="sm" onClick={() => { setShowHistory(true); loadHistory(); }}
+              className="gap-1.5 rounded-xl">
+              <History className="h-4 w-4" /> Histórico
+            </Button>
           )}
         </div>
       </div>
@@ -873,9 +1031,16 @@ const CarouselGenerator: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">Tópico do Carrossel</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-semibold text-foreground">Tópico do Carrossel</label>
+                  <Button variant="outline" size="sm" onClick={enhancePrompt} disabled={enhancingPrompt || !topic.trim()}
+                    className="gap-1.5 rounded-xl text-xs h-7 px-3" style={{ borderColor: FLOW_COLOR + '44', color: FLOW_COLOR }}>
+                    {enhancingPrompt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                    Melhorar com IA
+                  </Button>
+                </div>
                 <Textarea value={topic} onChange={(e) => setTopic(e.target.value)}
-                  placeholder="Ex: A colaboração entre Cimed e Toguro no mercado de suplementos"
+                  placeholder="Ex: Como a Ellosuit pode ajudar Toguro e Cimed a escalar vendas e atendimento"
                   className="rounded-2xl min-h-[80px] resize-none text-base" />
               </div>
               <div>
@@ -1020,7 +1185,49 @@ const CarouselGenerator: React.FC = () => {
           </Card>
         )}
 
-        {/* Progress banner */}
+        {/* History Panel */}
+        {showHistory && (
+          <Card className="border-0 shadow-lg rounded-3xl">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5" style={{ color: FLOW_COLOR }} />
+                  <h3 className="font-bold text-foreground">Histórico de Carrosséis</h3>
+                </div>
+                <button onClick={() => setShowHistory(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+              </div>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+                </div>
+              ) : carouselHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Nenhum carrossel salvo ainda.</p>
+              ) : (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {carouselHistory.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-2xl border border-border hover:bg-muted/50 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(item.created_at).toLocaleDateString('pt-BR')} às {new Date(item.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>• {item.card_count} cards</span>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => loadCarousel(item)} className="gap-1 rounded-xl text-xs">
+                        <RotateCcw className="h-3 w-3" /> Abrir
+                      </Button>
+                      <button onClick={() => deleteCarousel(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {generatingAllImages && (
           <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/50">
             <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" style={{ color: accentColor }} />
@@ -1047,7 +1254,7 @@ const CarouselGenerator: React.FC = () => {
                   <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl">
                     <Plus className="h-3 w-3" /> Card
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCarouselData(null)} className="rounded-xl">Novo</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="rounded-xl">Novo</Button>
                 </div>
               </div>
 

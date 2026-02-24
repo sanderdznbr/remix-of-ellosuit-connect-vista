@@ -97,6 +97,55 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ===== ENHANCE PROMPT =====
+    if (action === 'enhance-prompt') {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const enhanceResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: `Você é um especialista em criação de conteúdo editorial para Instagram. Receba um tópico simples e transforme em um prompt OTIMIZADO e DETALHADO para gerar um carrossel profissional.
+
+REGRAS:
+- Expanda o tópico com detalhes específicos, ângulos editoriais interessantes e gancho de engajamento
+- Se mencionar marcas/pessoas reais, adicione contexto relevante sobre eles
+- Se mencionar Ellosuit, contextualize as funcionalidades específicas da plataforma que se aplicam
+- Mantenha o tom profissional e editorial
+- O resultado deve ser 2-4 frases, máximo 200 palavras
+- Responda APENAS com o prompt melhorado, sem explicações adicionais
+- Em português brasileiro` },
+            { role: 'user', content: `Tópico original: ${prompt || topic}` },
+          ],
+        }),
+      });
+
+      if (!enhanceResponse.ok) {
+        const errText = await enhanceResponse.text();
+        console.error('Enhance prompt error:', enhanceResponse.status, errText);
+        return new Response(JSON.stringify({ error: 'Erro ao melhorar prompt' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const enhanceData = await enhanceResponse.json();
+      const enhanced = enhanceData.choices?.[0]?.message?.content || prompt || topic;
+
+      return new Response(JSON.stringify({ success: true, enhancedPrompt: enhanced.trim() }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // ===== GENERATE CONTENT =====
     if (action === 'generate-content') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -111,18 +160,44 @@ Deno.serve(async (req) => {
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
-CONTEXTO IMPORTANTE - O QUE É A ELLOSUIT:
-A Ellosuit é uma plataforma completa de gestão empresarial e CRM com inteligência artificial. Suas principais funcionalidades incluem:
-- CRM inteligente com gestão de clientes, leads e pipeline de vendas
-- Agentes de IA personalizáveis para atendimento automatizado via WhatsApp e chat
-- Automações de marketing (email marketing, campanhas, chatbots)
-- Calendário integrado com reuniões por vídeo (LiveKit)
-- Gerador de carrosséis para Instagram com IA
-- Gestão de documentos, contratos e propostas
-- Dashboard analítico com métricas de vendas e atendimento
-- Integração com WhatsApp Business para comunicação direta
-- Hub de marketing completo (Flow) com ferramentas de criação de conteúdo
-A Ellosuit ajuda empresas e empreendedores a automatizar processos, melhorar atendimento ao cliente e escalar vendas usando IA. Sempre que o tópico mencionar "Ellosuit", use esse conhecimento para gerar conteúdo preciso e relevante.
+CONTEXTO IMPORTANTE - O QUE É A ELLOSUIT (USE ESSES DADOS SEMPRE QUE O TÓPICO ENVOLVER A ELLOSUIT):
+A Ellosuit é uma plataforma SaaS completa de gestão empresarial, CRM e marketing com inteligência artificial. Ela foi projetada para empresas, agências e empreendedores que precisam centralizar operações, automatizar atendimento e escalar vendas.
+
+MÓDULOS E FUNCIONALIDADES DA ELLOSUIT:
+1. **Hub Omni (Comunicação e Atendimento)**:
+   - CRM inteligente: gestão completa de clientes, leads, pipeline de vendas com campos personalizados e tags
+   - Agentes de IA: chatbots personalizáveis que atendem no WhatsApp e chat web 24h/dia, com personalidade configurável, base de conhecimento e tom de voz da marca
+   - WhatsApp Business integrado: envio de mensagens, campanhas em massa, chatbots automatizados e atendimento humano no mesmo painel
+   - Email marketing: criação de campanhas, templates visuais, rastreamento de aberturas e cliques com analytics detalhados
+   - Automações de fluxo: triggers inteligentes (novo lead, mensagem recebida, etc.) com ações automatizadas
+
+2. **Hub Flow (Marketing e Produtividade)**:
+   - Gerador de Carrosséis com IA: criação automatizada de posts editoriais para Instagram com busca de referências na web
+   - Calendário inteligente: agendamento de reuniões, eventos e compromissos com buffer e links de booking públicos
+   - Reuniões por vídeo (LiveKit): videoconferência integrada com gravação, transcrição e compartilhamento de tela
+   - Biblioteca de Marca: repositório centralizado de logos, ícones e screenshots para consistência visual
+   - Email Designer: editor visual drag-and-drop para criar emails profissionais
+
+3. **Hub Track (Rastreamento e Analytics)**:
+   - Documentos rastreáveis: envie PDFs e saiba quando o destinatário abriu, quanto tempo leu e quais páginas visitou
+   - Links rastreáveis: URLs encurtadas com analytics de cliques, dispositivos e localização
+   - Dashboard Ello Vision: central de inteligência com IA que analisa métricas de engajamento, identifica riscos de churn e sugere ações estratégicas
+
+4. **Hub Suite (Gestão Empresarial)**:
+   - Banco de dados unificado: todos os contatos centralizados com campos customizáveis, importação/exportação e filtros avançados
+   - Contratos e propostas: templates editáveis, geração automática de documentos com dados do CRM
+   - Gestão de documentos: pastas organizadas, upload, compartilhamento e controle de versões
+   - Serviços e produtos: catálogo de serviços com precificação, custos e margens
+   - Recibos e notas: emissão automatizada com numeração sequencial
+
+5. **Recursos Transversais**:
+   - Notificações em tempo real: alertas de emails abertos, mensagens recebidas, eventos próximos
+   - Permissões por usuário: controle granular de acesso por módulo e ação (admin, manager, member)
+   - Multi-empresa: um usuário pode gerenciar múltiplas empresas no mesmo painel
+   - API aberta: webhooks e integrações com ferramentas externas
+   - Modo escuro/claro com identidade visual por hub
+
+A Ellosuit ajuda empresas e empreendedores a automatizar processos, melhorar atendimento ao cliente e escalar vendas usando IA. Sempre que o tópico mencionar "Ellosuit", use esse conhecimento DETALHADO para gerar conteúdo PRECISO, ESPECÍFICO e PROFISSIONAL sobre cada funcionalidade relevante.
 
 Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
 

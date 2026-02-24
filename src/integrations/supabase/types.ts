@@ -2156,6 +2156,56 @@ export type Database = {
           },
         ]
       }
+      generated_carousels: {
+        Row: {
+          card_count: number
+          carousel_data: Json
+          company_id: string
+          created_at: string
+          id: string
+          keywords: string[] | null
+          style_config: Json | null
+          title: string
+          topic: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_count?: number
+          carousel_data: Json
+          company_id: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          style_config?: Json | null
+          title: string
+          topic: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_count?: number
+          carousel_data?: Json
+          company_id?: string
+          created_at?: string
+          id?: string
+          keywords?: string[] | null
+          style_config?: Json | null
+          title?: string
+          topic?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_carousels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_contracts: {
         Row: {
           company_id: string

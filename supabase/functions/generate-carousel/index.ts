@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {
@@ -499,7 +499,10 @@ STYLE REQUIREMENTS:
         }
       }
 
-      console.log('Generating image with Gemini, refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs, messageContentParts: messageContent.length });
+      // Determine primary model based on user selection
+      const primaryModel = imageModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
+      const fallbackModel = imageModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
+      console.log('Generating image, model:', primaryModel, 'refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs, messageContentParts: messageContent.length });
 
       // Helper to attempt image generation with a given model and content
       async function tryGenerateImage(model: string, content: any[], attempt: number): Promise<string | null> {
@@ -535,7 +538,7 @@ STYLE REQUIREMENTS:
       // Attempt 1: original prompt with references
       let generatedImage: string | null = null;
       try {
-        generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', messageContent, 1);
+        generatedImage = await tryGenerateImage(primaryModel, messageContent, 1);
       } catch (e: any) {
         if (e?.status === 429) {
           return new Response(JSON.stringify({ error: 'Rate limit excedido. Tente novamente em alguns segundos.' }), {
@@ -556,7 +559,7 @@ STYLE REQUIREMENTS:
           text: `Create a professional, high-quality editorial photograph for an Instagram post (portrait 4:5 ratio). Scene: ${imagePrompt}. Style: cinematic lighting, magazine-quality, vibrant colors, clean composition. Ultra high resolution.` 
         }];
         try {
-          generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', simplifiedContent, 2);
+          generatedImage = await tryGenerateImage(primaryModel, simplifiedContent, 2);
         } catch { /* ignore, try next */ }
       }
 
@@ -567,7 +570,7 @@ STYLE REQUIREMENTS:
           text: `A beautiful professional photograph: ${imagePrompt}. Editorial magazine quality, cinematic lighting, 4:5 portrait aspect ratio.`
         }];
         try {
-          generatedImage = await tryGenerateImage('google/gemini-3-pro-image-preview', minimalContent, 3);
+          generatedImage = await tryGenerateImage(fallbackModel, minimalContent, 3);
         } catch { /* ignore */ }
       }
 

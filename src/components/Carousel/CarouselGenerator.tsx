@@ -125,6 +125,9 @@ const CarouselGenerator: React.FC = () => {
   const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
   const [loadingBrandAssets, setLoadingBrandAssets] = useState(false);
 
+  // Image model selection
+  const [imageModel, setImageModel] = useState<'gemini' | 'nano-banana'>('gemini');
+
   useEffect(() => {
     const fetchBrandAssets = async () => {
       if (!user?.id) return;
@@ -425,6 +428,7 @@ const CarouselGenerator: React.FC = () => {
           topic: imgPrompt,
           faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
           styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+          imageModel,
         },
       });
       if (error) throw error;
@@ -531,6 +535,7 @@ const CarouselGenerator: React.FC = () => {
                     topic: imgPrompt,
                     faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
                     styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+                    imageModel,
                   },
                 });
                 if (!imgError && imgData?.success && imgData?.imageUrl) {
@@ -646,6 +651,7 @@ const CarouselGenerator: React.FC = () => {
           imageSize: '3:4',
           topic: promptText,
           referenceImageUrls: refUrls.length > 0 ? refUrls : undefined,
+          imageModel,
         },
       });
       if (error) throw error;
@@ -1589,9 +1595,19 @@ const CarouselGenerator: React.FC = () => {
                         ) : (
                           <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
                             {brandAssets.map(asset => (
-                              <button key={asset.id} onClick={() => { updateCard(editingCard, { imageUrl: asset.file_url }); setShowBrandAssets(false); toast({ title: 'Imagem aplicada!' }); }}
-                                className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all" title={asset.name}>
+                              <button key={asset.id} onClick={() => {
+                                setStyleRefImages(prev => {
+                                  if (prev.some(r => r.url === asset.file_url)) return prev;
+                                  return [...prev, { url: asset.file_url, thumb: asset.file_url, label: asset.name, source: 'upload' as const }];
+                                });
+                                setShowBrandAssets(false);
+                                toast({ title: 'Referência de marca adicionada!', description: 'Será usada como referência visual na geração com IA.' });
+                              }}
+                                className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all relative group" title={asset.name}>
                                 <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[9px] text-white font-medium">+ Referência</span>
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -1617,12 +1633,42 @@ const CarouselGenerator: React.FC = () => {
                     <div className="flex items-center gap-2 mb-3">
                       <Wand2 className="h-5 w-5" style={{ color: accentColor }} />
                       <p className="text-sm font-bold text-foreground">Gerar com IA</p>
-                      {referenceImages.length > 0 && (
+                      {referenceImages.length + styleRefImages.length > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          {referenceImages.length} referências anexadas
+                          {referenceImages.length + styleRefImages.length} referências
                         </span>
                       )}
                     </div>
+                    {/* Model Selector */}
+                    <div className="flex gap-1.5 mb-3">
+                      <button
+                        onClick={() => setImageModel('gemini')}
+                        className={`flex-1 text-xs py-1.5 px-3 rounded-lg font-medium transition-all ${imageModel === 'gemini' ? 'text-white shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                        style={imageModel === 'gemini' ? { backgroundColor: accentColor } : {}}
+                      >
+                        ⚡ Gemini Flash
+                      </button>
+                      <button
+                        onClick={() => setImageModel('nano-banana')}
+                        className={`flex-1 text-xs py-1.5 px-3 rounded-lg font-medium transition-all ${imageModel === 'nano-banana' ? 'text-white shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                        style={imageModel === 'nano-banana' ? { backgroundColor: accentColor } : {}}
+                      >
+                        🎨 Nano Banana Pro
+                      </button>
+                    </div>
+                    {/* Style References Preview */}
+                    {styleRefImages.length > 0 && (
+                      <div className="flex gap-1.5 mb-3 flex-wrap">
+                        {styleRefImages.map((ref, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={ref.thumb} alt={ref.label} className="h-10 w-10 rounded-lg object-cover ring-1 ring-border" />
+                            <button onClick={() => setStyleRefImages(prev => prev.filter((_, i) => i !== idx))}
+                              className="absolute -top-1 -right-1 bg-destructive text-white rounded-full h-3.5 w-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                            <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-[7px] text-white text-center truncate rounded-b-lg">ref</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <Input value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)}
                         placeholder="Descreva a imagem..." className="rounded-xl flex-1" />

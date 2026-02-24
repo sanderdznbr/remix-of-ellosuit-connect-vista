@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, MessageSquare, Zap, Crosshair, Briefcase } from 'lucide-react';
+import { useHubColor } from '@/hooks/useHubColor';
 
 const HUB_COLORS = {
   omni: '#FF4500',
@@ -24,6 +25,7 @@ const navItems = [
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { color: hubColor } = useHubColor();
 
   const getActiveHub = () => {
     const path = location.pathname;
@@ -64,7 +66,7 @@ const MobileBottomNav = () => {
                   key="home"
                   onClick={() => navigate('/dashboard')}
                   className="relative -mt-5 flex items-center justify-center w-[54px] h-[54px] rounded-[18px] shadow-lg active:scale-90 transition-transform"
-                  style={{ background: 'linear-gradient(135deg, #4F46E5, #3000E3)', boxShadow: '0 8px 20px -4px rgba(48,0,227,0.4)' }}
+                  style={{ backgroundColor: hubColor, boxShadow: '0 8px 20px -4px rgba(0,0,0,0.25)' }}
                 >
                   <Home className="h-6 w-6 text-white" strokeWidth={2.2} />
                 </button>

@@ -3894,6 +3894,146 @@ export type Database = {
         }
         Relationships: []
       }
+      social_connections: {
+        Row: {
+          access_token: string
+          company_id: string
+          created_at: string
+          id: string
+          instagram_account_id: string | null
+          instagram_username: string | null
+          is_active: boolean | null
+          long_lived_token: string | null
+          metadata: Json | null
+          page_access_token: string | null
+          page_id: string | null
+          page_name: string | null
+          platform: string
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          company_id: string
+          created_at?: string
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          is_active?: boolean | null
+          long_lived_token?: string | null
+          metadata?: Json | null
+          page_access_token?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          platform: string
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          is_active?: boolean | null
+          long_lived_token?: string | null
+          metadata?: Json | null
+          page_access_token?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          platform?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          caption: string | null
+          carousel_id: string | null
+          company_id: string
+          connection_id: string | null
+          created_at: string
+          error_message: string | null
+          external_post_id: string | null
+          id: string
+          media_urls: string[] | null
+          metadata: Json | null
+          platform: string
+          post_type: string
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          carousel_id?: string | null
+          company_id: string
+          connection_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          platform: string
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          carousel_id?: string | null
+          company_id?: string
+          connection_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          platform?: string
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "social_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_addons: {
         Row: {
           addon_type: Database["public"]["Enums"]["addon_type"]

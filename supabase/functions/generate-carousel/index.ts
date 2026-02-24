@@ -499,45 +499,81 @@ STYLE REQUIREMENTS:
         }
       }
 
-      console.log('Generating image with Gemini, refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs });
+      console.log('Generating image with Gemini, refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs, messageContentParts: messageContent.length });
 
-      const genResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-          messages: [{ role: 'user', content: messageContent }],
-          modalities: ['image', 'text'],
-        }),
-      });
+      // Helper to attempt image generation with a given model and content
+      async function tryGenerateImage(model: string, content: any[], attempt: number): Promise<string | null> {
+        console.log(`Image gen attempt ${attempt} with model ${model}`);
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content }],
+            modalities: ['image', 'text'],
+          }),
+        });
 
-      if (!genResponse.ok) {
-        const errText = await genResponse.text();
-        console.error('Gemini image gen error:', genResponse.status, errText);
-        if (genResponse.status === 429) {
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error(`Attempt ${attempt} HTTP error:`, res.status, errText);
+          if (res.status === 429 || res.status === 402) throw { status: res.status };
+          return null;
+        }
+
+        const data = await res.json();
+        const img = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        if (!img) {
+          console.error(`Attempt ${attempt} no image. finish_reason:`, data.choices?.[0]?.finish_reason, 'native:', data.choices?.[0]?.native_finish_reason);
+        }
+        return img || null;
+      }
+
+      // Attempt 1: original prompt with references
+      let generatedImage: string | null = null;
+      try {
+        generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', messageContent, 1);
+      } catch (e: any) {
+        if (e?.status === 429) {
           return new Response(JSON.stringify({ error: 'Rate limit excedido. Tente novamente em alguns segundos.' }), {
             status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        if (genResponse.status === 402) {
+        if (e?.status === 402) {
           return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
             status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        return new Response(JSON.stringify({ error: 'Erro ao gerar imagem com IA' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
       }
 
-      const genData = await genResponse.json();
-      const generatedImage = genData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      // Attempt 2: simplified prompt without references (safety filter workaround)
+      if (!generatedImage) {
+        const simplifiedContent = [{ 
+          type: 'text', 
+          text: `Create a professional, high-quality editorial photograph for an Instagram post (portrait 4:5 ratio). Scene: ${imagePrompt}. Style: cinematic lighting, magazine-quality, vibrant colors, clean composition. Ultra high resolution.` 
+        }];
+        try {
+          generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', simplifiedContent, 2);
+        } catch { /* ignore, try next */ }
+      }
+
+      // Attempt 3: try pro model with simplified prompt
+      if (!generatedImage) {
+        const minimalContent = [{
+          type: 'text',
+          text: `A beautiful professional photograph: ${imagePrompt}. Editorial magazine quality, cinematic lighting, 4:5 portrait aspect ratio.`
+        }];
+        try {
+          generatedImage = await tryGenerateImage('google/gemini-3-pro-image-preview', minimalContent, 3);
+        } catch { /* ignore */ }
+      }
 
       if (!generatedImage) {
-        console.error('No image in Gemini response:', JSON.stringify(genData).slice(0, 500));
-        return new Response(JSON.stringify({ error: 'Nenhuma imagem foi gerada' }), {
+        console.error('All 3 image generation attempts failed for prompt:', imagePrompt.slice(0, 100));
+        return new Response(JSON.stringify({ error: 'Não foi possível gerar a imagem. Tente simplificar o prompt ou remover referências.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

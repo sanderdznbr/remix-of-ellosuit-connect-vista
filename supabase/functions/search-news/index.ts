@@ -109,34 +109,31 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
     let images: string[] = [];
     const searchTerms = parsedContent.image_search_terms || [topic];
 
-    // Strategy 1: Google CSE
-    const googleApiKey = Deno.env.get('GOOGLE_CSE_API_KEY');
-    const googleCseId = Deno.env.get('GOOGLE_CSE_ID');
-
-    if (googleApiKey && googleCseId) {
-      console.log('[IMAGES] Trying Google CSE with terms:', searchTerms.slice(0, 2));
-      console.log('[IMAGES] API Key prefix:', googleApiKey.substring(0, 10), '... CSE ID:', googleCseId);
+    // Strategy 1: SerpAPI Google Images
+    const serpApiKey = Deno.env.get('SERPAPI_API_KEY');
+    if (serpApiKey) {
+      console.log('[IMAGES] Trying SerpAPI with terms:', searchTerms.slice(0, 2));
       try {
         for (const term of searchTerms.slice(0, 2)) {
           const query = encodeURIComponent(term + ' ' + topic);
-          const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${query}&searchType=image&num=3&imgSize=large&safe=active`;
-          console.log('[IMAGES] Google CSE request for:', term);
+          const url = `https://serpapi.com/search.json?engine=google_images&q=${query}&num=3&safe=active&api_key=${serpApiKey}`;
+          console.log('[IMAGES] SerpAPI request for:', term);
           const imgResponse = await fetch(url);
           if (imgResponse.ok) {
             const imgData = await imgResponse.json();
-            const urls = (imgData.items || []).map((item: any) => item.link).filter(Boolean);
-            console.log('[IMAGES] Google CSE returned', urls.length, 'images for term:', term);
+            const urls = (imgData.images_results || []).slice(0, 3).map((item: any) => item.original || item.thumbnail).filter(Boolean);
+            console.log('[IMAGES] SerpAPI returned', urls.length, 'images for term:', term);
             images.push(...urls);
           } else {
             const errText = await imgResponse.text();
-            console.error('[IMAGES] Google CSE error:', imgResponse.status, errText);
+            console.error('[IMAGES] SerpAPI error:', imgResponse.status, errText);
           }
         }
       } catch (imgErr) {
-        console.error('[IMAGES] Google CSE exception:', imgErr);
+        console.error('[IMAGES] SerpAPI exception:', imgErr);
       }
     } else {
-      console.log('[IMAGES] Google CSE not configured, skipping. apiKey:', !!googleApiKey, 'cseId:', !!googleCseId);
+      console.log('[IMAGES] SerpAPI not configured, skipping');
     }
 
     // Strategy 2: Pexels fallback if no images found

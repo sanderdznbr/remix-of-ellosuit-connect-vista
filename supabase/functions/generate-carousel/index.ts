@@ -570,28 +570,37 @@ BRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style refer
         }
       }
 
-      // Attempt 2: keep references but simplify text (safety filter workaround)
-      if (!generatedImage && (validFaceRefs.length > 0 || validStyleRefs.length > 0)) {
+      // Attempt 2: simplified text, only style refs (face refs often trigger safety filters)
+      if (!generatedImage) {
         const retryContent: any[] = [
-          { type: 'text', text: `Create a professional portrait photo matching the person in the reference image(s). Scene: ${imagePrompt}. Style: cinematic, editorial, magazine quality, 4:5 portrait. Ultra high resolution.` },
+          { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio, ultra high resolution.` },
         ];
-        for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-        for (const ref of validStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        // Only add style refs (less likely to trigger safety filters than face refs)
+        for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
         try {
           generatedImage = await tryGenerateImage(primaryModel, retryContent, 2);
         } catch { /* try next */ }
       }
 
-      // Attempt 3: fallback model, simplified prompt
+      // Attempt 3: fallback model, NO references at all (clean generation)
       if (!generatedImage) {
         const minimalContent = [{
           type: 'text',
-          text: `A beautiful professional photograph: ${imagePrompt}. Editorial magazine quality, cinematic lighting, 4:5 portrait aspect ratio.`
+          text: `Generate a beautiful professional photograph: ${imagePrompt}. Editorial magazine quality, cinematic lighting, rich colors, 4:5 portrait aspect ratio. Ultra high resolution.`
         }];
-        // Still include face refs if available
-        for (const ref of validFaceRefs.slice(0, 2)) minimalContent.push({ type: 'image_url', image_url: { url: ref } } as any);
         try {
           generatedImage = await tryGenerateImage(fallbackModel, minimalContent, 3);
+        } catch { /* try next */ }
+      }
+
+      // Attempt 4: last resort - very simple generic prompt
+      if (!generatedImage) {
+        const simpleContent = [{
+          type: 'text',
+          text: `A professional photograph of ${imagePrompt.split('.')[0]}. High quality, 4:5 portrait.`
+        }];
+        try {
+          generatedImage = await tryGenerateImage('google/gemini-2.5-flash-image', simpleContent, 4);
         } catch { /* ignore */ }
       }
 

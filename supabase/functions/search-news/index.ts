@@ -109,31 +109,33 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
     let images: string[] = [];
     const searchTerms = parsedContent.image_search_terms || [topic];
 
-    // Strategy 1: SerpAPI Google Images
-    const serpApiKey = Deno.env.get('SERPAPI_API_KEY');
-    if (serpApiKey) {
-      console.log('[IMAGES] Trying SerpAPI with terms:', searchTerms.slice(0, 2));
+    // Strategy 1: Brave Search Images
+    const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
+    if (braveApiKey) {
+      console.log('[IMAGES] Trying Brave Search with terms:', searchTerms.slice(0, 2));
       try {
         for (const term of searchTerms.slice(0, 2)) {
           const query = encodeURIComponent(term + ' ' + topic);
-          const url = `https://serpapi.com/search.json?engine=google_images&q=${query}&num=3&safe=active&api_key=${serpApiKey}`;
-          console.log('[IMAGES] SerpAPI request for:', term);
-          const imgResponse = await fetch(url);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=3&safesearch=strict`;
+          console.log('[IMAGES] Brave Search request for:', term);
+          const imgResponse = await fetch(url, {
+            headers: { 'X-Subscription-Token': braveApiKey },
+          });
           if (imgResponse.ok) {
             const imgData = await imgResponse.json();
-            const urls = (imgData.images_results || []).slice(0, 3).map((item: any) => item.original || item.thumbnail).filter(Boolean);
-            console.log('[IMAGES] SerpAPI returned', urls.length, 'images for term:', term);
+            const urls = (imgData.results || []).slice(0, 3).map((item: any) => item.properties?.url || item.thumbnail?.src).filter(Boolean);
+            console.log('[IMAGES] Brave Search returned', urls.length, 'images for term:', term);
             images.push(...urls);
           } else {
             const errText = await imgResponse.text();
-            console.error('[IMAGES] SerpAPI error:', imgResponse.status, errText);
+            console.error('[IMAGES] Brave Search error:', imgResponse.status, errText);
           }
         }
       } catch (imgErr) {
-        console.error('[IMAGES] SerpAPI exception:', imgErr);
+        console.error('[IMAGES] Brave Search exception:', imgErr);
       }
     } else {
-      console.log('[IMAGES] SerpAPI not configured, skipping');
+      console.log('[IMAGES] Brave Search not configured, skipping');
     }
 
     // Strategy 2: Pexels fallback if no images found

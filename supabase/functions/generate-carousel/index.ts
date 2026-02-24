@@ -37,8 +37,12 @@ Deno.serve(async (req) => {
       if (!igRes.ok) {
         const errText = await igRes.text();
         console.error('Instagram API error:', igRes.status, errText);
-        return new Response(JSON.stringify({ error: 'Erro ao buscar perfil do Instagram' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        const isRateLimit = igRes.status === 429;
+        const errorMsg = isRateLimit 
+          ? 'Limite mensal do SearchAPI.io atingido. Faça upgrade do plano ou aguarde a renovação.' 
+          : `Erro ao buscar perfil do Instagram (${igRes.status})`;
+        return new Response(JSON.stringify({ success: false, error: errorMsg }), {
+          status: igRes.status === 429 ? 429 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 

@@ -111,6 +111,19 @@ Deno.serve(async (req) => {
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
+CONTEXTO IMPORTANTE - O QUE É A ELLOSUIT:
+A Ellosuit é uma plataforma completa de gestão empresarial e CRM com inteligência artificial. Suas principais funcionalidades incluem:
+- CRM inteligente com gestão de clientes, leads e pipeline de vendas
+- Agentes de IA personalizáveis para atendimento automatizado via WhatsApp e chat
+- Automações de marketing (email marketing, campanhas, chatbots)
+- Calendário integrado com reuniões por vídeo (LiveKit)
+- Gerador de carrosséis para Instagram com IA
+- Gestão de documentos, contratos e propostas
+- Dashboard analítico com métricas de vendas e atendimento
+- Integração com WhatsApp Business para comunicação direta
+- Hub de marketing completo (Flow) com ferramentas de criação de conteúdo
+A Ellosuit ajuda empresas e empreendedores a automatizar processos, melhorar atendimento ao cliente e escalar vendas usando IA. Sempre que o tópico mencionar "Ellosuit", use esse conhecimento para gerar conteúdo preciso e relevante.
+
 Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
 
 REGRAS DE LAYOUT (siga EXATAMENTE):

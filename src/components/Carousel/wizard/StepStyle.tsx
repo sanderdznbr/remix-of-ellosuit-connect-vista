@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Palette, Type } from 'lucide-react';
+import { Palette, Type, Layers, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { FLOW_COLOR } from './types';
 
 const FONT_OPTIONS = [
@@ -14,6 +14,163 @@ const FONT_OPTIONS = [
   { label: 'Bebas Neue', value: "'Bebas Neue', 'Impact', sans-serif" },
   { label: 'Oswald', value: "'Oswald', 'Impact', sans-serif" },
   { label: 'Raleway', value: "'Raleway', 'Helvetica Neue', sans-serif" },
+  // New fonts
+  { label: 'Inter', value: "'Inter', 'Helvetica Neue', sans-serif" },
+  { label: 'Space Grotesk', value: "'Space Grotesk', 'Helvetica Neue', sans-serif" },
+  { label: 'Sora', value: "'Sora', 'Helvetica Neue', sans-serif" },
+  { label: 'Outfit', value: "'Outfit', 'Helvetica Neue', sans-serif" },
+  { label: 'Clash Display', value: "'Clash Display', 'Impact', sans-serif" },
+  { label: 'Crimson Text', value: "'Crimson Text', 'Georgia', serif" },
+  { label: 'Libre Baskerville', value: "'Libre Baskerville', 'Georgia', serif" },
+  { label: 'Source Serif Pro', value: "'Source Serif Pro', 'Georgia', serif" },
+  { label: 'Archivo Black', value: "'Archivo Black', 'Impact', sans-serif" },
+  { label: 'Anton', value: "'Anton', 'Impact', sans-serif" },
+];
+
+// Color palette presets
+const COLOR_PRESETS = [
+  { name: 'Escuro Clássico', bg: '#0F0F1A', accent: '#E84D1A', text: '#FFFFFF' },
+  { name: 'Midnight Blue', bg: '#0A1628', accent: '#3B82F6', text: '#F1F5F9' },
+  { name: 'Elegant Green', bg: '#0D1F0D', accent: '#22C55E', text: '#F0FDF4' },
+  { name: 'Royal Purple', bg: '#1A0A2E', accent: '#A855F7', text: '#FAF5FF' },
+  { name: 'Rose Gold', bg: '#1C1017', accent: '#FB7185', text: '#FFF1F2' },
+  { name: 'Ocean Teal', bg: '#042F2E', accent: '#2DD4BF', text: '#F0FDFA' },
+  { name: 'Amber Fire', bg: '#1C1106', accent: '#F59E0B', text: '#FFFBEB' },
+  { name: 'Minimalista Claro', bg: '#FAFAF9', accent: '#18181B', text: '#18181B' },
+  { name: 'Paper Cream', bg: '#F8F4EF', accent: '#92400E', text: '#1C1917' },
+  { name: 'Cool Gray', bg: '#F3F4F6', accent: '#4F46E5', text: '#111827' },
+  { name: 'Soft Pink', bg: '#FDF2F8', accent: '#DB2777', text: '#1F2937' },
+  { name: 'Sage Green', bg: '#F0FDF4', accent: '#15803D', text: '#14532D' },
+  { name: 'Neon Night', bg: '#000000', accent: '#00FF88', text: '#FFFFFF' },
+  { name: 'Cyberpunk', bg: '#0D0221', accent: '#FF006E', text: '#F9FAFB' },
+  { name: 'Sunset Gradient', bg: '#1A0505', accent: '#FF6B35', text: '#FFF7ED' },
+  { name: 'Arctic Ice', bg: '#0C1222', accent: '#38BDF8', text: '#E0F2FE' },
+];
+
+// Style presets (post styles)
+export interface StylePreset {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  bgColor: string;
+  accentColor: string;
+  textColor: string;
+  fontIndex: number;
+  layoutPattern: ('dark' | 'light' | 'accent')[];
+}
+
+export const STYLE_PRESETS: StylePreset[] = [
+  {
+    id: 'editorial-dark',
+    name: 'Editorial Escuro',
+    description: 'Estilo sofisticado com fundo escuro e destaque vibrante',
+    emoji: '📰',
+    bgColor: '#0F0F1A',
+    accentColor: '#E84D1A',
+    textColor: '#FFFFFF',
+    fontIndex: 0,
+    layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
+  },
+  {
+    id: 'minimalist-light',
+    name: 'Minimalista Claro',
+    description: 'Design limpo e elegante com fundo claro',
+    emoji: '✨',
+    bgColor: '#FAFAF9',
+    accentColor: '#18181B',
+    textColor: '#18181B',
+    fontIndex: 10, // Inter
+    layoutPattern: ['light', 'light', 'dark', 'light', 'light'],
+  },
+  {
+    id: 'bold-impact',
+    name: 'Bold Impact',
+    description: 'Títulos grandes e impactantes com contraste alto',
+    emoji: '💥',
+    bgColor: '#000000',
+    accentColor: '#FFD60A',
+    textColor: '#FFFFFF',
+    fontIndex: 7, // Bebas Neue
+    layoutPattern: ['dark', 'accent', 'dark', 'accent', 'dark'],
+  },
+  {
+    id: 'gradient-purple',
+    name: 'Purple Haze',
+    description: 'Tons roxos elegantes com acentos dourados',
+    emoji: '🔮',
+    bgColor: '#1A0A2E',
+    accentColor: '#C084FC',
+    textColor: '#FAF5FF',
+    fontIndex: 11, // Space Grotesk
+    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
+  },
+  {
+    id: 'magazine-serif',
+    name: 'Magazine Editorial',
+    description: 'Estilo revista com tipografia serifada refinada',
+    emoji: '📖',
+    bgColor: '#F8F4EF',
+    accentColor: '#92400E',
+    textColor: '#1C1917',
+    fontIndex: 4, // Cormorant Garamond
+    layoutPattern: ['dark', 'light', 'light', 'accent', 'light'],
+  },
+  {
+    id: 'neon-cyber',
+    name: 'Neon Cyberpunk',
+    description: 'Visual futurista com cores neon e fundo escuro',
+    emoji: '🌃',
+    bgColor: '#0D0221',
+    accentColor: '#00FF88',
+    textColor: '#F9FAFB',
+    fontIndex: 12, // Sora
+    layoutPattern: ['dark', 'dark', 'dark', 'accent', 'dark'],
+  },
+  {
+    id: 'ocean-fresh',
+    name: 'Ocean Fresh',
+    description: 'Tons de oceano com sensação clean e fresca',
+    emoji: '🌊',
+    bgColor: '#042F2E',
+    accentColor: '#2DD4BF',
+    textColor: '#F0FDFA',
+    fontIndex: 5, // Montserrat
+    layoutPattern: ['dark', 'dark', 'light', 'dark', 'accent'],
+  },
+  {
+    id: 'rose-elegant',
+    name: 'Rose Elegante',
+    description: 'Tons suaves de rosa com elegância feminina',
+    emoji: '🌹',
+    bgColor: '#1C1017',
+    accentColor: '#FB7185',
+    textColor: '#FFF1F2',
+    fontIndex: 2, // Lora
+    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
+  },
+  {
+    id: 'corporate-blue',
+    name: 'Corporate Blue',
+    description: 'Profissional e corporativo com tons azuis',
+    emoji: '💼',
+    bgColor: '#0A1628',
+    accentColor: '#3B82F6',
+    textColor: '#F1F5F9',
+    fontIndex: 13, // Outfit
+    layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
+  },
+  {
+    id: 'sunset-warm',
+    name: 'Sunset Quente',
+    description: 'Tons quentes de pôr do sol com energia calorosa',
+    emoji: '🌅',
+    bgColor: '#1A0505',
+    accentColor: '#FF6B35',
+    textColor: '#FFF7ED',
+    fontIndex: 18, // Archivo Black
+    layoutPattern: ['dark', 'accent', 'dark', 'dark', 'accent'],
+  },
 ];
 
 interface Props {
@@ -31,12 +188,33 @@ interface Props {
   setUserName: (v: string) => void;
   dateLabel: string;
   setDateLabel: (v: string) => void;
+  onApplyPreset?: (preset: StylePreset) => void;
 }
 
 const StepStyle: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
   selectedFont, setSelectedFont, brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
+  onApplyPreset,
 }) => {
+  const [showAllFonts, setShowAllFonts] = useState(false);
+  const [activeSection, setActiveSection] = useState<'presets' | 'colors' | 'fonts' | 'branding'>('presets');
+
+  const applyPreset = (preset: StylePreset) => {
+    setBgColor(preset.bgColor);
+    setAccentColor(preset.accentColor);
+    setTextColor(preset.textColor);
+    setSelectedFont(preset.fontIndex);
+    onApplyPreset?.(preset);
+  };
+
+  const applyColorPreset = (p: typeof COLOR_PRESETS[0]) => {
+    setBgColor(p.bg);
+    setAccentColor(p.accent);
+    setTextColor(p.text);
+  };
+
+  const visibleFonts = showAllFonts ? FONT_OPTIONS : FONT_OPTIONS.slice(0, 12);
+
   return (
     <div className="space-y-5">
       <div className="text-center">
@@ -46,61 +224,169 @@ const StepStyle: React.FC<Props> = ({
         <p className="text-sm text-muted-foreground">Cores, fonte e identidade visual do carrossel</p>
       </div>
 
-      {/* Font */}
-      <div>
-        <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-          <Type className="h-3.5 w-3.5" /> Fonte
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {FONT_OPTIONS.map((font, i) => (
-            <button key={i} onClick={() => setSelectedFont(i)}
-              className={`px-3 py-2.5 rounded-xl text-sm border transition-all text-left ${selectedFont === i ? 'ring-2 ring-primary border-primary bg-primary/5 font-bold' : 'border-border hover:bg-muted/50'}`}>
-              <span style={{ fontFamily: font.value }}>{font.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Section tabs */}
+      <div className="flex gap-1 p-1 bg-muted rounded-xl">
+        {[
+          { key: 'presets' as const, label: 'Estilos', icon: <Sparkles className="h-3.5 w-3.5" /> },
+          { key: 'colors' as const, label: 'Cores', icon: <Palette className="h-3.5 w-3.5" /> },
+          { key: 'fonts' as const, label: 'Fontes', icon: <Type className="h-3.5 w-3.5" /> },
+          { key: 'branding' as const, label: 'Marca', icon: <Layers className="h-3.5 w-3.5" /> },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveSection(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+              activeSection === tab.key
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Style Presets */}
+      {activeSection === 'presets' && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-foreground">Escolha um estilo de post</p>
+          <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
+            {STYLE_PRESETS.map(preset => {
+              const isActive = bgColor === preset.bgColor && accentColor === preset.accentColor && textColor === preset.textColor;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className={`relative group text-left rounded-2xl border overflow-hidden transition-all ${
+                    isActive ? 'ring-2 ring-primary border-primary' : 'border-border hover:border-primary/40'
+                  }`}
+                >
+                  {/* Mini preview */}
+                  <div className="p-3 h-24" style={{ backgroundColor: preset.bgColor }}>
+                    <div className="flex items-center gap-1 mb-1.5">
+                      <span className="text-base">{preset.emoji}</span>
+                      <span style={{ color: preset.textColor, fontFamily: FONT_OPTIONS[preset.fontIndex]?.value, fontSize: 11, fontWeight: 700 }}>
+                        {preset.name}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="h-1.5 rounded-full w-3/4" style={{ backgroundColor: preset.accentColor }} />
+                      <div className="h-1 rounded-full w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.4 }} />
+                      <div className="h-1 rounded-full w-2/3" style={{ backgroundColor: preset.textColor, opacity: 0.25 }} />
+                    </div>
+                    {/* Color dots */}
+                    <div className="absolute bottom-2 right-2 flex gap-1">
+                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.bgColor }} />
+                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.accentColor }} />
+                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.textColor }} />
+                    </div>
+                  </div>
+                  <div className="px-3 py-2 bg-background">
+                    <p className="text-[10px] text-muted-foreground leading-tight">{preset.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Colors */}
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1.5 block">Cor de fundo</label>
-          <div className="flex gap-2 items-center">
-            <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
-            <Input value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+      {activeSection === 'colors' && (
+        <div className="space-y-4">
+          {/* Quick palettes */}
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Paletas prontas</p>
+            <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto pr-1">
+              {COLOR_PRESETS.map((p, i) => {
+                const isActive = bgColor === p.bg && accentColor === p.accent && textColor === p.text;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => applyColorPreset(p)}
+                    className={`rounded-xl p-1.5 border transition-all ${
+                      isActive ? 'ring-2 ring-primary border-primary' : 'border-border hover:border-primary/40'
+                    }`}
+                  >
+                    <div className="flex gap-0.5 mb-1">
+                      <div className="h-5 flex-1 rounded-l-md" style={{ backgroundColor: p.bg }} />
+                      <div className="h-5 flex-1" style={{ backgroundColor: p.accent }} />
+                      <div className="h-5 flex-1 rounded-r-md" style={{ backgroundColor: p.text }} />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground truncate text-center">{p.name}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom colors */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Cor de fundo</label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+                <Input value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Cor destaque</label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+                <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Cor do texto</label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+                <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+              </div>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Fonts */}
+      {activeSection === 'fonts' && (
         <div>
-          <label className="text-xs font-medium text-foreground mb-1.5 block">Cor destaque</label>
-          <div className="flex gap-2 items-center">
-            <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
-            <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+          <p className="text-xs font-semibold text-foreground mb-2">Escolha a fonte</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {visibleFonts.map((font, i) => (
+              <button key={i} onClick={() => setSelectedFont(i)}
+                className={`px-3 py-2.5 rounded-xl text-sm border transition-all text-left ${selectedFont === i ? 'ring-2 ring-primary border-primary bg-primary/5 font-bold' : 'border-border hover:bg-muted/50'}`}>
+                <span style={{ fontFamily: font.value }}>{font.label}</span>
+              </button>
+            ))}
           </div>
+          {FONT_OPTIONS.length > 12 && (
+            <button
+              onClick={() => setShowAllFonts(!showAllFonts)}
+              className="flex items-center gap-1 mx-auto mt-3 text-xs text-primary font-semibold hover:underline"
+            >
+              {showAllFonts ? <><ChevronUp className="h-3 w-3" /> Mostrar menos</> : <><ChevronDown className="h-3 w-3" /> Ver mais {FONT_OPTIONS.length - 12} fontes</>}
+            </button>
+          )}
         </div>
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1.5 block">Cor do texto</label>
-          <div className="flex gap-2 items-center">
-            <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
-            <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Branding */}
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
-          <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="rounded-xl text-xs" />
+      {activeSection === 'branding' && (
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
+            <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="rounded-xl text-xs" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
+            <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="seuuser" className="rounded-xl text-xs" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
+            <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-xl text-xs" />
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
-          <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="seuuser" className="rounded-xl text-xs" />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
-          <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-xl text-xs" />
-        </div>
-      </div>
+      )}
 
       {/* Preview mini */}
       <div className="flex gap-3 items-center p-4 rounded-2xl" style={{ backgroundColor: bgColor }}>
@@ -115,4 +401,5 @@ const StepStyle: React.FC<Props> = ({
   );
 };
 
+export { FONT_OPTIONS };
 export default StepStyle;

@@ -590,30 +590,42 @@ Deno.serve(async (req) => {
                   .select('id')
                   .single();
 
-                if (upsertError) {
-                  console.error(`[SEND] Upsert failed: ${upsertError.message}, trying insert...`);
-                  // Fallback: insert without wa_message_id conflict
-                  const { data: insertedMsg, error: insertError } = await supabase
+              if (upsertError) {
+                  console.error(`[SEND] Upsert failed: ${upsertError.message}, checking if already exists...`);
+                  // Check if message already exists before inserting a duplicate
+                  const { data: existingMsg } = await supabase
                     .from('whatsapp_messages')
-                    .insert({
-                      conversation_id: conversation?.id,
-                      session_id: sessionId,
-                      company_id: session.company_id,
-                      wa_message_id: `panel-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                      from_me: true,
-                      content: messageText,
-                      message_type: 'text',
-                      status: 'sent',
-                      timestamp: new Date().toISOString()
-                    })
                     .select('id')
-                    .single();
+                    .eq('wa_message_id', waMessageId)
+                    .maybeSingle();
 
-                  if (insertError) {
-                    console.error(`[SEND] Insert also failed: ${insertError.message}`);
+                  if (existingMsg) {
+                    savedMsgId = existingMsg.id;
+                    console.log(`[SEND] Message already exists: ${savedMsgId}`);
                   } else {
-                    savedMsgId = insertedMsg?.id;
-                    console.log(`[SEND] Fallback insert OK: ${savedMsgId}`);
+                    // Only insert if truly doesn't exist, using same wa_message_id
+                    const { data: insertedMsg, error: insertError } = await supabase
+                      .from('whatsapp_messages')
+                      .insert({
+                        conversation_id: conversation?.id,
+                        session_id: sessionId,
+                        company_id: session.company_id,
+                        wa_message_id: waMessageId,
+                        from_me: true,
+                        content: messageText,
+                        message_type: 'text',
+                        status: 'sent',
+                        timestamp: new Date().toISOString()
+                      })
+                      .select('id')
+                      .single();
+
+                    if (insertError) {
+                      console.error(`[SEND] Insert also failed: ${insertError.message}`);
+                    } else {
+                      savedMsgId = insertedMsg?.id;
+                      console.log(`[SEND] Fallback insert OK: ${savedMsgId}`);
+                    }
                   }
                 } else {
                   savedMsgId = savedMsg?.id;

@@ -11,6 +11,7 @@ import {
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, Instagram, UserPlus, BadgeCheck
 } from 'lucide-react';
+import StyleTemplateManager from './StyleTemplateManager';
 import html2canvas from 'html2canvas';
 
 const FLOW_COLOR = '#007DE3';
@@ -182,26 +183,9 @@ const CarouselGenerator: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleStyleRefUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setStyleRefImages(prev => [...prev, {
-          url: e.target!.result as string,
-          thumb: e.target!.result as string,
-          label: file.name,
-          source: 'upload',
-        }]);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeStyleRef = (index: number) => {
-    setStyleRefImages(prev => prev.filter((_, i) => i !== index));
-  };
-
   const removeReference = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
     setReferenceImages(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -1297,41 +1281,12 @@ const CarouselGenerator: React.FC = () => {
                 )}
               </div>
 
-              {/* Style reference images section */}
-              <div className="p-4 rounded-2xl border-2 border-dashed border-muted-foreground/20 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-4 w-4" style={{ color: FLOW_COLOR }} />
-                    <span className="text-sm font-semibold text-foreground">Referência de Estilo/Design (opcional)</span>
-                  </div>
-                  {styleRefImages.length > 0 && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{styleRefImages.length} anexadas</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Anexe imagens de posts/designs que você gosta para a IA usar como referência de estilo visual (layout, cores, composição). Não será usado para rostos.
-                </p>
-                <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border cursor-pointer hover:bg-muted/50 text-xs font-medium text-muted-foreground">
-                  <Upload className="h-3.5 w-3.5" /> Anexar imagens de referência de estilo
-                  <input type="file" accept="image/*" className="hidden" multiple
-                    onChange={(e) => { Array.from(e.target.files || []).forEach(handleStyleRefUpload); }} />
-                </label>
-                {styleRefImages.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {styleRefImages.map((ref, i) => (
-                      <div key={i} className="relative group">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden ring-2 ring-accent/30">
-                          <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
-                        </div>
-                        <button onClick={() => removeStyleRef(i)}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Style reference templates */}
+              <StyleTemplateManager
+                selectedImages={styleRefImages}
+                onImagesChange={setStyleRefImages}
+                flowColor={FLOW_COLOR}
+              />
               <div>
                 <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                   <Type className="h-3.5 w-3.5" /> Fonte do Carrossel

@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('Google CSE search for:', searchQuery);
+      console.log('Google CSE search for:', searchQuery, '| Key prefix:', GOOGLE_CSE_API_KEY?.substring(0, 10), '| CSE ID:', GOOGLE_CSE_ID);
 
       // Search Google Custom Search for real images
       const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=10&imgSize=large&safe=active`;

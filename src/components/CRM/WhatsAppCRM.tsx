@@ -27,6 +27,7 @@ import AudioRecorderButton from './AudioRecorderButton';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ChannelSelector } from './ChannelSelector';
 import StartChatbotModal from './StartChatbotModal';
+import ContactProfilePanel from './ContactProfilePanel';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -270,6 +271,9 @@ const WhatsAppCRM: React.FC = () => {
   
   // Schedule meeting modal state
   const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
+  
+  // Contact profile panel state
+  const [showContactProfile, setShowContactProfile] = useState(false);
   
   // Sync data state
   const [syncingData, setSyncingData] = useState(false);
@@ -2215,6 +2219,7 @@ const WhatsAppCRM: React.FC = () => {
                   onSelect={() => {
                     setSelectedConversation(conversation);
                     setSelectedAgent(null);
+                    setShowContactProfile(false);
                     markConversationAsRead(conversation);
                     setShowMobileChat(true);
                   }}
@@ -2341,10 +2346,11 @@ const WhatsAppCRM: React.FC = () => {
 
       {/* Chat Area - Right Panel */}
       <div className={cn(
-        "flex-1 flex flex-col",
+        "flex-1 flex",
         !showMobileChat && "hidden md:flex",
         isMobile && showMobileChat && "w-full"
       )}>
+      <div className="flex-1 flex flex-col min-w-0">
         {selectedConversation || selectedAgent ? (
           <>
             {/* Chat Header */}
@@ -2369,38 +2375,43 @@ const WhatsAppCRM: React.FC = () => {
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <Avatar className="h-10 w-10">
-                  {selectedAgent ? (
-                    <>
-                      <AvatarImage src={selectedAgent.avatar_url || undefined} />
-                      <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-orange-600 text-white">
-                        <Bot className="h-5 w-5" />
-                      </AvatarFallback>
-                    </>
-                  ) : (
-                    <>
-                      <AvatarImage src={selectedConversation?.profile_picture} />
-                      <AvatarFallback className="bg-orange-100 text-[#FF4500]">
-                        {(selectedConversation ? getDisplayName(selectedConversation, messages) : '').substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </>
-                  )}
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-medium">
-                      {selectedAgent ? selectedAgent.name : (selectedConversation ? getDisplayName(selectedConversation, messages) : '')}
-                    </h2>
-                    {selectedAgent && (
-                      <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900 dark:text-orange-300 text-xs">
-                        Agente IA
-                      </Badge>
+                <button 
+                  onClick={() => !selectedAgent && setShowContactProfile(true)}
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                >
+                  <Avatar className="h-10 w-10">
+                    {selectedAgent ? (
+                      <>
+                        <AvatarImage src={selectedAgent.avatar_url || undefined} />
+                        <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-orange-600 text-white">
+                          <Bot className="h-5 w-5" />
+                        </AvatarFallback>
+                      </>
+                    ) : (
+                      <>
+                        <AvatarImage src={selectedConversation?.profile_picture} />
+                        <AvatarFallback className="bg-orange-100 text-[#FF4500]">
+                          {(selectedConversation ? getDisplayName(selectedConversation, messages) : '').substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </>
                     )}
+                  </Avatar>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-medium">
+                        {selectedAgent ? selectedAgent.name : (selectedConversation ? getDisplayName(selectedConversation, messages) : '')}
+                      </h2>
+                      {selectedAgent && (
+                        <Badge className="bg-orange-100 text-[#FF4500] dark:bg-orange-900 dark:text-orange-300 text-xs">
+                          Agente IA
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedAgent ? selectedAgent.description || 'Assistente virtual' : selectedConversation?.contact_phone}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedAgent ? selectedAgent.description || 'Assistente virtual' : selectedConversation?.contact_phone}
-                  </p>
-                </div>
+                </button>
               </div>
               
               <div className="flex items-center gap-2">
@@ -2945,6 +2956,21 @@ const WhatsAppCRM: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Contact Profile Panel - Desktop */}
+      {showContactProfile && selectedConversation && !isMobile && companyId && (
+        <ContactProfilePanel
+          contactPhone={selectedConversation.contact_phone}
+          contactName={selectedConversation.contact_name}
+          profilePicture={selectedConversation.profile_picture}
+          companyId={companyId}
+          labels={selectedConversation.labels}
+          conversationStatus={selectedConversation.status}
+          createdAt={selectedConversation.last_message_at}
+          onClose={() => setShowContactProfile(false)}
+        />
+      )}
+      </div>
       {/* End of list view */}
       </div>
       )}
@@ -3151,6 +3177,22 @@ const WhatsAppCRM: React.FC = () => {
         contactPhone={selectedConversation?.contact_phone}
         onMeetingScheduled={handleMeetingScheduled}
       />
+
+      {/* Contact Profile - Mobile (full screen overlay) */}
+      {showContactProfile && selectedConversation && isMobile && companyId && (
+        <div className="fixed inset-0 z-50 bg-card animate-in slide-in-from-right duration-200">
+          <ContactProfilePanel
+            contactPhone={selectedConversation.contact_phone}
+            contactName={selectedConversation.contact_name}
+            profilePicture={selectedConversation.profile_picture}
+            companyId={companyId}
+            labels={selectedConversation.labels}
+            conversationStatus={selectedConversation.status}
+            createdAt={selectedConversation.last_message_at}
+            onClose={() => setShowContactProfile(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, topic, keywords, cardCount } = await req.json();
+    const body = await req.json();
+    const { action, topic, keywords, cardCount, prompt, imageSize } = body;
 
     if (action === 'generate-content') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -106,6 +107,87 @@ Responda APENAS em JSON válido neste formato:
       }
 
       return new Response(JSON.stringify({ success: true, data: parsed }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'generate-ai-image') {
+      const NANOBANANA_API_KEY = Deno.env.get('NANOBANANA_API_KEY');
+      if (!NANOBANANA_API_KEY) {
+        return new Response(JSON.stringify({ error: 'NANOBANANA_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+
+      const imagePrompt = prompt || topic || 'abstract background';
+
+      // Step 1: Create generation task
+      const genResponse = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NANOBANANA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: imagePrompt,
+          numImages: 1,
+          type: 'TEXTTOIAMGE',
+          image_size: imageSize || '1:1',
+          callBackUrl: 'https://jwddiyuezqrpuakazvgg.supabase.co/functions/v1/generate-carousel',
+        }),
+      });
+
+      if (!genResponse.ok) {
+        const errText = await genResponse.text();
+        console.error('NanoBanana generate error:', genResponse.status, errText);
+        return new Response(JSON.stringify({ error: 'Erro ao gerar imagem com IA' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const genData = await genResponse.json();
+      const taskId = genData?.data?.taskId;
+
+      if (!taskId) {
+        return new Response(JSON.stringify({ error: 'Task ID não retornado' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Step 2: Poll for result (max 60s)
+      let imageUrl: string | null = null;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise(r => setTimeout(r, 2000));
+
+        const statusResponse = await fetch(
+          `https://api.nanobananaapi.ai/api/v1/nanobanana/record-info?taskId=${taskId}`,
+          { headers: { 'Authorization': `Bearer ${NANOBANANA_API_KEY}` } }
+        );
+
+        if (!statusResponse.ok) continue;
+
+        const statusData = await statusResponse.json();
+        const flag = statusData?.data?.successFlag;
+
+        if (flag === 1) {
+          imageUrl = statusData.data.response?.resultImageUrl || statusData.data.response?.originImageUrl;
+          break;
+        } else if (flag === 2 || flag === 3) {
+          return new Response(JSON.stringify({ error: statusData.data.errorMessage || 'Falha na geração' }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        // flag === 0 means still generating, continue polling
+      }
+
+      if (!imageUrl) {
+        return new Response(JSON.stringify({ error: 'Timeout na geração da imagem' }), {
+          status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, imageUrl }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

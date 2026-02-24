@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Calendar, CheckSquare, Video, Zap, CalendarCheck, ArrowRight } from "lucide-react";
+import { Calendar, CheckSquare, Video, Zap, CalendarCheck, ArrowRight, LayoutGrid } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ const flowModules = [
   { id: "tasks", title: "Tarefas", description: "Listas, prioridades e lembretes", icon: CheckSquare, path: "/dashboard/tasks", preview: previewTasks },
   { id: "reunioes", title: "Videoconferência", description: "Reuniões com vídeo e gravação", icon: Video, path: "/dashboard/reunioes", preview: previewReunioes },
   { id: "fluxos", title: "Fluxos de Trabalho", description: "Kanban e automações de projetos", icon: Zap, path: "/dashboard/fluxos", preview: previewFluxos },
+  { id: "carrossel", title: "Gerador de Carrossel", description: "Carrosséis automáticos com IA", icon: LayoutGrid, path: "/dashboard/carrossel", preview: previewFluxos },
 ];
 
 export default function FlowsHub() {

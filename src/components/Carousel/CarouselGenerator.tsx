@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
-  Search, ChevronLeft, ChevronRight, Edit3, Loader2, X, Upload
+  Search, ChevronLeft, ChevronRight, Edit3, Loader2, X, Upload, Wand2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -54,6 +54,8 @@ const CarouselGenerator: React.FC = () => {
   const [searchingImages, setSearchingImages] = useState(false);
   const [pexelsImages, setPexelsImages] = useState<PexelsImage[]>([]);
   const [showImagePicker, setShowImagePicker] = useState<number | null>(null);
+  const [generatingAiImage, setGeneratingAiImage] = useState(false);
+  const [aiImagePrompt, setAiImagePrompt] = useState('');
 
   // Editing
   const [editingCard, setEditingCard] = useState<number | null>(null);
@@ -126,6 +128,35 @@ const CarouselGenerator: React.FC = () => {
     newCards[cardIndex] = { ...newCards[cardIndex], imageUrl };
     setCarouselData({ ...carouselData, cards: newCards });
     setShowImagePicker(null);
+  };
+
+  const generateAiImage = async (cardIndex: number) => {
+    const promptText = aiImagePrompt.trim() || carouselData?.cards[cardIndex]?.title || topic;
+    if (!promptText) {
+      toast({ title: 'Insira um prompt para a imagem', variant: 'destructive' });
+      return;
+    }
+    setGeneratingAiImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-ai-image',
+          prompt: `High quality Instagram carousel card image: ${promptText}. Modern, clean, professional style.`,
+          imageSize: '1:1',
+          topic: promptText,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao gerar imagem');
+      setCardImage(cardIndex, data.imageUrl);
+      setAiImagePrompt('');
+      toast({ title: 'Imagem gerada!', description: 'Imagem criada com IA aplicada ao card' });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Erro', description: err.message || 'Falha ao gerar imagem', variant: 'destructive' });
+    } finally {
+      setGeneratingAiImage(false);
+    }
   };
 
   const updateCard = (index: number, updates: Partial<CarouselCard>) => {
@@ -564,6 +595,14 @@ const CarouselGenerator: React.FC = () => {
                     <Button variant="outline" size="sm" onClick={() => setShowImagePicker(editingCard)} className="rounded-xl gap-1">
                       <Search className="h-3 w-3" /> Pexels
                     </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setShowImagePicker(editingCard); setAiImagePrompt(carouselData.cards[editingCard]?.title || ''); }}
+                      className="rounded-xl gap-1"
+                    >
+                      <Wand2 className="h-3 w-3" /> IA
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -580,10 +619,38 @@ const CarouselGenerator: React.FC = () => {
                     </button>
                   </div>
 
-                  {!pexelsImages.length && !searchingImages && (
-                    <Button onClick={() => searchImages()} className="w-full gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                      <Search className="h-4 w-4" /> Buscar imagens relacionadas
-                    </Button>
+                   {!pexelsImages.length && !searchingImages && (
+                    <div className="space-y-3">
+                      <Button onClick={() => searchImages()} className="w-full gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                        <Search className="h-4 w-4" /> Buscar imagens (Pexels)
+                      </Button>
+                      <div className="relative">
+                        <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+                        <p className="relative text-center text-xs text-muted-foreground bg-card px-3 w-fit mx-auto">ou gere com IA</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={aiImagePrompt}
+                          onChange={(e) => setAiImagePrompt(e.target.value)}
+                          placeholder="Descreva a imagem desejada..."
+                          className="rounded-xl flex-1"
+                        />
+                        <Button 
+                          onClick={() => generateAiImage(showImagePicker)} 
+                          disabled={generatingAiImage}
+                          className="gap-1 rounded-xl"
+                          style={{ backgroundColor: FLOW_COLOR }}
+                        >
+                          {generatingAiImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                          Gerar
+                        </Button>
+                      </div>
+                      {generatingAiImage && (
+                        <p className="text-xs text-muted-foreground text-center animate-pulse">
+                          Gerando imagem com IA... pode levar até 60s
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {searchingImages && (
@@ -606,6 +673,29 @@ const CarouselGenerator: React.FC = () => {
                         ))}
                       </div>
                       <p className="text-[10px] text-muted-foreground text-center">Fotos fornecidas por Pexels</p>
+                      <div className="border-t border-border pt-3 mt-1">
+                        <p className="text-xs font-medium text-foreground mb-2">Ou gere com IA:</p>
+                        <div className="flex gap-2">
+                          <Input
+                            value={aiImagePrompt}
+                            onChange={(e) => setAiImagePrompt(e.target.value)}
+                            placeholder="Descreva a imagem..."
+                            className="rounded-xl flex-1 text-xs"
+                          />
+                          <Button 
+                            onClick={() => generateAiImage(showImagePicker)} 
+                            disabled={generatingAiImage}
+                            size="sm"
+                            className="gap-1 rounded-xl"
+                            style={{ backgroundColor: FLOW_COLOR }}
+                          >
+                            {generatingAiImage ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                        {generatingAiImage && (
+                          <p className="text-[10px] text-muted-foreground text-center mt-1 animate-pulse">Gerando...</p>
+                        )}
+                      </div>
                     </>
                   )}
                 </CardContent>

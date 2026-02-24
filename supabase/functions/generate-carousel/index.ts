@@ -14,13 +14,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls } = body;
 
-    // ===== WEB SEARCH for reference images (Google Custom Search) =====
+    // ===== WEB SEARCH for reference images (SerpAPI Google Images) =====
     if (action === 'web-search') {
-      const GOOGLE_CSE_API_KEY = Deno.env.get('GOOGLE_CSE_API_KEY');
-      const GOOGLE_CSE_ID = Deno.env.get('GOOGLE_CSE_ID');
+      const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
       
-      if (!GOOGLE_CSE_API_KEY || !GOOGLE_CSE_ID) {
-        // Fallback to Pexels if Google CSE not configured
+      if (!SERPAPI_API_KEY) {
+        // Fallback to Pexels if SerpAPI not configured
         const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
         if (!PEXELS_API_KEY) {
           return new Response(JSON.stringify({ error: 'No image search API configured' }), {
@@ -52,32 +51,31 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('Google CSE search for:', searchQuery, '| Key prefix:', GOOGLE_CSE_API_KEY?.substring(0, 10), '| CSE ID:', GOOGLE_CSE_ID);
+      console.log('SerpAPI image search for:', searchQuery);
 
-      // Search Google Custom Search for real images
-      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=10&imgSize=large&safe=active`;
+      const serpUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&num=20&safe=active&api_key=${SERPAPI_API_KEY}`;
       
-      const googleRes = await fetch(googleUrl);
-      let googleImages: any[] = [];
+      const serpRes = await fetch(serpUrl);
+      let images: any[] = [];
       
-      if (googleRes.ok) {
-        const googleData = await googleRes.json();
-        googleImages = (googleData.items || []).map((item: any, idx: number) => ({
-          id: `google-${idx}`,
-          url: item.link,
-          thumb: item.image?.thumbnailLink || item.link,
-          small: item.image?.thumbnailLink || item.link,
+      if (serpRes.ok) {
+        const serpData = await serpRes.json();
+        images = (serpData.images_results || []).slice(0, 20).map((item: any, idx: number) => ({
+          id: `serp-${idx}`,
+          url: item.original,
+          thumb: item.thumbnail,
+          small: item.thumbnail,
           alt: item.title || searchQuery,
-          photographer: item.displayLink || 'Google',
+          photographer: item.source || 'Google',
           source: 'google',
-          width: item.image?.width,
-          height: item.image?.height,
+          width: item.original_width,
+          height: item.original_height,
         }));
       } else {
-        const errText = await googleRes.text();
-        console.error('Google CSE error:', googleRes.status, errText);
+        const errText = await serpRes.text();
+        console.error('SerpAPI error:', serpRes.status, errText);
         
-        // Fallback to Pexels on Google error
+        // Fallback to Pexels
         const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
         if (PEXELS_API_KEY) {
           const pexelsRes = await fetch(
@@ -86,7 +84,7 @@ Deno.serve(async (req) => {
           );
           if (pexelsRes.ok) {
             const pexelsData = await pexelsRes.json();
-            googleImages = (pexelsData.photos || []).map((p: any) => ({
+            images = (pexelsData.photos || []).map((p: any) => ({
               id: p.id, url: p.src.large2x || p.src.large, thumb: p.src.medium,
               alt: p.alt || searchQuery, photographer: p.photographer, source: 'pexels',
             }));
@@ -94,7 +92,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, images: googleImages, query: searchQuery }), {
+      return new Response(JSON.stringify({ success: true, images, query: searchQuery }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

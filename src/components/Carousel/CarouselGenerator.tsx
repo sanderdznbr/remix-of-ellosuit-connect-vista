@@ -122,6 +122,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Brand assets picker
   const [showBrandAssets, setShowBrandAssets] = useState(false);
+  const [showBrandInRef, setShowBrandInRef] = useState(false);
   const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
   const [loadingBrandAssets, setLoadingBrandAssets] = useState(false);
 
@@ -1305,7 +1306,43 @@ const CarouselGenerator: React.FC = () => {
                     <input type="file" accept="image/*" className="hidden" multiple
                       onChange={(e) => { Array.from(e.target.files || []).forEach(handleReferenceUpload); }} />
                   </label>
+                  <Button variant="outline" size="sm" onClick={() => setShowBrandInRef(prev => !prev)} className="rounded-xl gap-1.5 text-xs">
+                    <ImageIcon className="h-3.5 w-3.5" /> Brand
+                  </Button>
                 </div>
+
+                {/* Brand Assets inline picker for references */}
+                {showBrandInRef && (
+                  <div className="border rounded-xl p-3 space-y-2 bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-foreground">Biblioteca de Marca</p>
+                      <button onClick={() => setShowBrandInRef(false)} className="p-0.5 rounded hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                    {loadingBrandAssets ? (
+                      <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+                    ) : brandAssets.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">Nenhum asset encontrado. Adicione em Biblioteca de Marca.</p>
+                    ) : (
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-[140px] overflow-y-auto">
+                        {brandAssets.map(asset => (
+                          <button key={asset.id} onClick={() => {
+                            setReferenceImages(prev => {
+                              if (prev.some(r => r.url === asset.file_url)) return prev;
+                              return [...prev, { url: asset.file_url, thumb: asset.file_url, label: asset.name, source: 'upload' as const }];
+                            });
+                            toast({ title: 'Asset da marca anexado como referência!' });
+                          }}
+                            className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all relative group" title={asset.name}>
+                            <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="text-[9px] text-white font-medium">+ Ref</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Search results */}
                 {refSearchResults.length > 0 && (

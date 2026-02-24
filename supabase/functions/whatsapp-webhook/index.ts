@@ -86,6 +86,19 @@ function normalizeBrazilianPhone(phone: string): string {
   return phone;
 }
 
+// ============== HELPER: Normalize avatar URL for identity matching ==============
+function normalizeAvatarUrl(url?: string | null): string {
+  if (!url) return '';
+  return url.split('?')[0].trim().toLowerCase();
+}
+
+// ============== HELPER: Normalize LID JID variants ==============
+function normalizeLidJid(jid?: string | null): string {
+  if (!jid) return '';
+  // Some payloads can come as 159051732242678:4@lid
+  return jid.replace(/:\d+(?=@lid$)/, '');
+}
+
 // ============== HELPER: Clean phone/ID from JID ==============
 function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string | null {
   if (!jid) return null;
@@ -627,22 +640,25 @@ Deno.serve(async (req) => {
 
         for (const msg of messages) {
           const messageKey = msg.key || {};
-          // Use remoteJidAlt if available (contains real phone number instead of LID)
-          // This is critical for LID contacts where remoteJid is @lid but remoteJidAlt has the real @s.whatsapp.net JID
-          let remoteJid = messageKey.remoteJidAlt || messageKey.remoteJid || msg.from || msg.remoteJid;
-          
+          const keySenderPn = messageKey.senderPn || msg.senderPn || msg.senderPhoneJid || msg.participant || null;
+
+          // Prioritize non-LID alternatives when available (senderPn/remoteJidAlt)
+          let remoteJid = messageKey.remoteJidAlt || msg.remoteJidAlt || keySenderPn || messageKey.remoteJid || msg.from || msg.remoteJid;
+          remoteJid = normalizeLidJid(remoteJid);
+
           // Log all available JID fields for debugging LID issues
-          console.log(`[JID-DEBUG] remoteJid=${messageKey.remoteJid}, remoteJidAlt=${messageKey.remoteJidAlt}, msg.from=${msg.from}, msg.remoteJidAlt=${msg.remoteJidAlt}, msg.chatJid=${msg.chatJid}, resolved=${remoteJid}`);
-          
+          console.log(`[JID-DEBUG] remoteJid=${messageKey.remoteJid}, remoteJidAlt=${messageKey.remoteJidAlt}, senderPn=${messageKey.senderPn || msg.senderPn}, msg.from=${msg.from}, msg.remoteJidAlt=${msg.remoteJidAlt}, msg.chatJid=${msg.chatJid}, resolved=${remoteJid}`);
+
           // Skip WhatsApp Channels/Newsletters (Updates tab)
           if (isNewsletterJid(remoteJid)) {
             console.log(`[FILTER] Skipping newsletter message from: ${remoteJid}`);
             continue;
           }
-          
+
           // If still a LID, try to get real JID from other fields
           if (isLidJid(remoteJid)) {
-            const altJid = msg.remoteJidAlt || msg.chatJid || msg.from;
+            const altJidRaw = messageKey.remoteJidAlt || msg.remoteJidAlt || keySenderPn || msg.chatJid || msg.from;
+            const altJid = normalizeLidJid(altJidRaw);
             if (altJid && !isLidJid(altJid)) {
               console.log(`[LID] Resolved LID ${remoteJid} to real JID ${altJid}`);
               remoteJid = altJid;
@@ -905,12 +921,14 @@ Deno.serve(async (req) => {
             }
           }
           
-          // IMPROVED: Find conversation by company_id + contact_phone (with Brazilian 9th digit variant)
+          // IMPROVED: Find conversation by company_id + contact_phone (with Brazilian 9th digit variants)
           const msgPhoneVariants = [phoneNumber];
           if (phoneNumber.startsWith('55') && phoneNumber.length === 13) {
             msgPhoneVariants.push(phoneNumber.slice(0, 4) + phoneNumber.slice(5));
+          } else if (phoneNumber.startsWith('55') && phoneNumber.length === 12) {
+            msgPhoneVariants.push(phoneNumber.slice(0, 4) + '9' + phoneNumber.slice(4));
           }
-          
+
           let { data: conversation } = await supabase
             .from('whatsapp_conversations')
             .select('*')
@@ -919,6 +937,48 @@ Deno.serve(async (req) => {
             .order('last_message_at', { ascending: false })
             .limit(1)
             .maybeSingle();
+
+          // Fallback 1: match by remote_jid (helps when contact_phone is still stale)
+          if (!conversation && remoteJid) {
+            const { data: byJid } = await supabase
+              .from('whatsapp_conversations')
+              .select('*')
+              .eq('company_id', companyId)
+              .eq('remote_jid', normalizeLidJid(remoteJid))
+              .order('last_message_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (byJid) {
+              conversation = byJid;
+            }
+          }
+
+          // Fallback 2: merge legacy LID rows with real-phone rows by avatar fingerprint
+          if (!conversation && !isGroup && profilePicture) {
+            const avatarKey = normalizeAvatarUrl(profilePicture);
+            if (avatarKey) {
+              const { data: avatarCandidates } = await supabase
+                .from('whatsapp_conversations')
+                .select('*')
+                .eq('company_id', companyId)
+                .not('profile_picture', 'is', null)
+                .order('last_message_at', { ascending: false })
+                .limit(100);
+
+              const matchedByAvatar = (avatarCandidates || []).find((c: any) => {
+                const candidateAvatar = normalizeAvatarUrl(c.profile_picture);
+                const candidateDigits = (c.contact_phone || '').replace(/\D/g, '');
+                const isRealBrPhone = candidateDigits.startsWith('55') && (candidateDigits.length === 12 || candidateDigits.length === 13);
+                return Boolean(candidateAvatar && candidateAvatar === avatarKey && isRealBrPhone);
+              });
+
+              if (matchedByAvatar) {
+                conversation = matchedByAvatar;
+                console.log(`[DEDUP-LID] Matched avatar ${avatarKey} to existing conversation ${matchedByAvatar.id}`);
+              }
+            }
+          }
           
           if (!conversation) {
             // Build insert payload with v4.1.0 enhanced fields
@@ -1128,9 +1188,24 @@ Deno.serve(async (req) => {
             if (groupParticipants && groupParticipants.length > 0) {
               updateData.group_participants = groupParticipants;
             }
-            // Always keep remote_jid up to date
+
+            // Normalize legacy contact_phone when we now have a real BR number
+            const currentDigits = (conversation.contact_phone || '').replace(/\D/g, '');
+            const nextDigits = phoneNumber.replace(/\D/g, '');
+            const nextIsRealBrPhone = nextDigits.startsWith('55') && (nextDigits.length === 12 || nextDigits.length === 13);
+            if (nextIsRealBrPhone && currentDigits !== nextDigits) {
+              updateData.contact_phone = nextDigits;
+            }
+
+            // Keep remote_jid current, but avoid replacing a real jid with a LID fallback
             if (remoteJid && remoteJid.includes('@')) {
-              updateData.remote_jid = remoteJid;
+              const currentRemoteJid = conversation.remote_jid || '';
+              const incomingIsLid = isLidJid(remoteJid);
+              const currentIsLid = isLidJid(currentRemoteJid);
+
+              if (!incomingIsLid || !currentRemoteJid || currentIsLid) {
+                updateData.remote_jid = normalizeLidJid(remoteJid);
+              }
             }
             
             await supabase

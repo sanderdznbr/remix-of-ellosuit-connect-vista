@@ -105,6 +105,7 @@ const CarouselGenerator: React.FC = () => {
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
 
   // Step 4: Style
+  const [showHeader, setShowHeader] = useState(true);
   const [brandName, setBrandName] = useState('Powered by ellosuit');
   const [userName, setUserName] = useState('');
   const [dateLabel, setDateLabel] = useState(() => {
@@ -615,13 +616,16 @@ const CarouselGenerator: React.FC = () => {
     const accentTxt = isAccent ? '#FFD4A0' : isLight ? accentColor : accentColor;
     const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
 
-    const renderHeader = () => (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${28 * s * ps}px ${48 * s * ps}px`, fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 500, color: headerTxt, letterSpacing: `${0.5 * s}px`, position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
-        <span>{brandName}</span>
-        <span>{userName ? `@${userName}` : ''}</span>
-        <span>{dateLabel}</span>
-      </div>
-    );
+    const renderHeader = () => {
+      if (!showHeader) return null;
+      return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${28 * s * ps}px ${48 * s * ps}px`, fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 500, color: headerTxt, letterSpacing: `${0.5 * s}px`, position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+          <span>{brandName}</span>
+          <span>{userName ? `@${userName}` : ''}</span>
+          <span>{dateLabel}</span>
+        </div>
+      );
+    };
 
     if (card.type === 'cover') {
       return (
@@ -629,7 +633,6 @@ const CarouselGenerator: React.FC = () => {
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {card.imageUrl && <img src={card.imageUrl} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)' : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)` }} />
-          {renderHeader()}
           <div style={{ position: 'absolute', bottom: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: 'center' }}>
             <h1 style={{ fontFamily: serif, fontSize: `${96 * s * fs}px`, fontWeight: 900, lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `-${1 * s}px`, textShadow: '0 4px 40px rgba(0,0,0,0.7)' }}>
               {renderAccentText(card.title || '', accentColor, '#FFFFFF', 76, s)}
@@ -700,30 +703,27 @@ const CarouselGenerator: React.FC = () => {
       <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted"><ArrowLeft className="h-5 w-5" /></button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold" style={{ color: FLOW_COLOR }}>Gerador de Carrossel</h1>
-            <p className="text-xs text-muted-foreground">Carrosséis editoriais 1080×1350 para Instagram</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base sm:text-lg font-bold truncate" style={{ color: FLOW_COLOR }}>Gerador de Carrossel</h1>
+            <p className="text-xs text-muted-foreground hidden sm:block">Carrosséis editoriais 1080×1350 para Instagram</p>
           </div>
           {carouselData && !generatingAllImages && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1.5 rounded-xl">
+            <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
+              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
                 {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {currentCarouselId ? 'Atualizar' : 'Salvar'}
+                <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowRefPanel(!showRefPanel)} className="gap-1.5 rounded-xl">
-                <Globe className="h-4 w-4" /> Referências {referenceImages.length > 0 && `(${referenceImages.length})`}
+              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
+                <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Estilo</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1.5 rounded-xl">
-                <Palette className="h-4 w-4" /> Estilo
-              </Button>
-              <Button onClick={exportAllCards} disabled={exporting} className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PNGs
+              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ backgroundColor: FLOW_COLOR }}>
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} <span className="hidden sm:inline">Exportar PNGs</span>
               </Button>
             </div>
           )}
           {!carouselData && (
             <Button variant="outline" size="sm" onClick={() => { setShowHistory(true); loadHistory(); }} className="gap-1.5 rounded-xl">
-              <History className="h-4 w-4" /> Histórico
+              <History className="h-4 w-4" /> <span className="hidden sm:inline">Histórico</span>
             </Button>
           )}
         </div>
@@ -770,10 +770,11 @@ const CarouselGenerator: React.FC = () => {
                 <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
               )}
               {wizardStep === 3 && (
-                <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+              <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                   textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                   brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                  dateLabel={dateLabel} setDateLabel={setDateLabel} />
+                  dateLabel={dateLabel} setDateLabel={setDateLabel}
+                  showHeader={showHeader} setShowHeader={setShowHeader} />
               )}
 
               {/* Navigation */}
@@ -855,7 +856,8 @@ const CarouselGenerator: React.FC = () => {
               <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                 textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                 brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                dateLabel={dateLabel} setDateLabel={setDateLabel} />
+                dateLabel={dateLabel} setDateLabel={setDateLabel}
+                showHeader={showHeader} setShowHeader={setShowHeader} />
             </CardContent>
           </Card>
         )}
@@ -919,10 +921,10 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
               {/* Center: Large preview with card navigation */}
               <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 overflow-auto p-2">
-                <div className="relative" style={{ width: PREVIEW_W * 1.6, height: PREVIEW_H * 1.6 }}>
+                <div className="relative" style={{ width: PREVIEW_W * 1.6, maxWidth: '90vw' }}>
                   <div style={{ transform: 'scale(1.6)', transformOrigin: 'top left' }}>
                     {renderCardPreview(ec, validIndex)}
                   </div>

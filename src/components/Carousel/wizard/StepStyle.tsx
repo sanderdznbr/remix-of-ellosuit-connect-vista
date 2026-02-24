@@ -188,12 +188,15 @@ interface Props {
   setUserName: (v: string) => void;
   dateLabel: string;
   setDateLabel: (v: string) => void;
+  showHeader?: boolean;
+  setShowHeader?: (v: boolean) => void;
   onApplyPreset?: (preset: StylePreset) => void;
 }
 
 const StepStyle: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
   selectedFont, setSelectedFont, brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
+  showHeader = true, setShowHeader,
   onApplyPreset,
 }) => {
   const [showAllFonts, setShowAllFonts] = useState(false);
@@ -321,7 +324,7 @@ const StepStyle: React.FC<Props> = ({
           </div>
 
           {/* Custom colors */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-foreground mb-1.5 block">Cor de fundo</label>
               <div className="flex gap-2 items-center">
@@ -372,18 +375,31 @@ const StepStyle: React.FC<Props> = ({
 
       {/* Branding */}
       {activeSection === 'branding' && (
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
-            <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="rounded-xl text-xs" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
-            <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="seuuser" className="rounded-xl text-xs" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
-            <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-xl text-xs" />
+        <div className="space-y-4">
+          {setShowHeader && (
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showHeader}
+                onChange={(e) => setShowHeader(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary"
+              />
+              <span className="text-xs font-medium text-foreground">Exibir cabeçalho (marca, @ e data) nos cards</span>
+            </label>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
+              <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="rounded-xl text-xs" disabled={!showHeader} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
+              <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="seuuser" className="rounded-xl text-xs" disabled={!showHeader} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
+              <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-xl text-xs" disabled={!showHeader} />
+            </div>
           </div>
         </div>
       )}

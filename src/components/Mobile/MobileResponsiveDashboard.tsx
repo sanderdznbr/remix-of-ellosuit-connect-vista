@@ -48,6 +48,7 @@ import ReceiptsPage from '@/components/Receipts/ReceiptsPage';
 import ReceiptThemeBuilder from '@/components/Receipts/ReceiptThemeBuilder';
 import AutomationBuilder from '@/components/Automations/AutomationBuilder';
 import AutomationManagement from '@/components/Automations/AutomationManagement';
+import CarouselGenerator from '@/components/Carousel/CarouselGenerator';
 
 // Hub pages
 import OmniHub from '@/components/Dashboard/OmniHub';
@@ -170,6 +171,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/reunioes/gravacoes" element={<ModuleGate module="flow"><MeetingRecordings /></ModuleGate>} />
             <Route path="/fluxos" element={<ModuleGate module="flow"><FluxosBoard /></ModuleGate>} />
             <Route path="/fluxos/:boardId" element={<ModuleGate module="flow"><FluxosBoard /></ModuleGate>} />
+            <Route path="/carrossel" element={<ModuleGate module="flow"><CarouselGenerator /></ModuleGate>} />
             
             {/* Rastreamento - Track */}
             <Route path="/rastreamento" element={<ModuleGate module="track"><TrackUploadPage /></ModuleGate>} />

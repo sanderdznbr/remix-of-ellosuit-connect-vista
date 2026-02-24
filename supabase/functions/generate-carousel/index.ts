@@ -11,6 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const body = await req.json();
     const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====

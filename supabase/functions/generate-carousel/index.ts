@@ -463,24 +463,39 @@ STYLE REQUIREMENTS:
 
       messageContent.push({ type: 'text', text: textPrompt });
 
+      // Helper: only include base64 data URIs or non-Instagram URLs (Instagram URLs expire quickly)
+      const isValidImageUrl = (url: string) => {
+        if (!url) return false;
+        if (url.startsWith('data:image/')) return true;
+        if (url.includes('instagram.com') || url.includes('lookaside.') || url.includes('cdninstagram.com')) return false;
+        if (url.startsWith('http://') || url.startsWith('https://')) return true;
+        return false;
+      };
+
       // Add face reference images (priority - first)
       if (hasFaceRefs) {
         for (const refUrl of faceReferenceUrls.slice(0, 3)) {
-          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          if (isValidImageUrl(refUrl)) {
+            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          }
         }
       }
 
       // Add style reference images
       if (hasStyleRefs) {
         for (const refUrl of styleReferenceUrls.slice(0, 2)) {
-          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          if (isValidImageUrl(refUrl)) {
+            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          }
         }
       }
 
       // Add general reference images
       if (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) {
         for (const refUrl of referenceImageUrls.slice(0, 3)) {
-          messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          if (isValidImageUrl(refUrl)) {
+            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
+          }
         }
       }
 

@@ -186,8 +186,6 @@ const CarouselGenerator: React.FC = () => {
   const removeReference = (index: number) => {
     setReferenceImages(prev => prev.filter((_, i) => i !== index));
   };
-    setReferenceImages(prev => prev.filter((_, i) => i !== index));
-  };
 
   // ===== ENHANCE PROMPT =====
   const fetchInstagramProfile = async (usernameRaw: string) => {
@@ -1608,3 +1606,4 @@ const CarouselGenerator: React.FC = () => {
 };
 
 export default CarouselGenerator;
+

@@ -61,7 +61,7 @@ const StyleTemplateManager: React.FC<StyleTemplateManagerProps> = ({
         .maybeSingle();
       if (!cu) return;
       const { data, error } = await supabase
-        .from('carousel_style_templates' as any)
+        .from('carousel_style_templates')
         .select('*')
         .eq('company_id', cu.company_id)
         .order('created_at', { ascending: false });
@@ -129,13 +129,13 @@ const StyleTemplateManager: React.FC<StyleTemplateManagerProps> = ({
         .single();
       if (!cu) throw new Error('Empresa não encontrada');
 
-      const { error } = await supabase.from('carousel_style_templates' as any).insert({
+      const { error } = await supabase.from('carousel_style_templates').insert({
         company_id: cu.company_id,
         user_id: userData.user.id,
         name: newName.trim(),
         description: newDescription.trim() || null,
-        images: newImages,
-      } as any);
+        images: newImages as any,
+      });
       if (error) throw error;
 
       toast({ title: 'Template salvo!' });
@@ -154,7 +154,7 @@ const StyleTemplateManager: React.FC<StyleTemplateManagerProps> = ({
 
   const deleteTemplate = async (id: string) => {
     try {
-      await supabase.from('carousel_style_templates' as any).delete().eq('id', id);
+      await supabase.from('carousel_style_templates').delete().eq('id', id);
       setTemplates((prev) => prev.filter((t) => t.id !== id));
       if (activeTemplateId === id) {
         setActiveTemplateId(null);

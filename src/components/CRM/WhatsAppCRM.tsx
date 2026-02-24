@@ -614,8 +614,7 @@ const WhatsAppCRM: React.FC = () => {
       return;
     }
     
-    // Filter out invalid conversations and deduplicate by normalized phone
-    // Normalize Brazilian phones: ensure 9th digit for dedup key
+    // Filter out invalid conversations and deduplicate by normalized identity
     const normalizeBrPhone = (p: string) => {
       const d = p.replace(/\D/g, '');
       if (d.startsWith('55') && d.length === 12) {
@@ -623,21 +622,42 @@ const WhatsAppCRM: React.FC = () => {
       }
       return d;
     };
-    
-    const uniqueByPhone = new Map<string, typeof data[0]>();
+
+    const getAvatarKey = (url?: string | null) => (url || '').split('?')[0].trim().toLowerCase();
+    const isRealBrPhone = (digits: string) => digits.startsWith('55') && (digits.length === 12 || digits.length === 13);
+
+    const uniqueByIdentity = new Map<string, typeof data[0]>();
     (data || []).forEach(conv => {
-      const phone = normalizeBrPhone(conv.contact_phone);
-      
-      if (!isValidConversation(conv)) {
+      if (!isValidConversation(conv)) return;
+
+      const phoneDigits = normalizeBrPhone(conv.contact_phone);
+      const avatarKey = getAvatarKey(conv.profile_picture);
+      const isGroup = conv.remote_jid?.includes('@g.us') || phoneDigits.length > 15;
+      const isLidLike = conv.remote_jid?.includes('@lid') || (!isGroup && !isRealBrPhone(phoneDigits) && phoneDigits.length >= 14);
+
+      const identityKey = !isGroup && isLidLike && avatarKey
+        ? `avatar:${avatarKey}`
+        : `phone:${phoneDigits}`;
+
+      const existing = uniqueByIdentity.get(identityKey);
+      if (!existing) {
+        uniqueByIdentity.set(identityKey, conv);
         return;
       }
-      
-      if (!uniqueByPhone.has(phone) || 
-          new Date(conv.last_message_at) > new Date(uniqueByPhone.get(phone)!.last_message_at)) {
-        uniqueByPhone.set(phone, conv);
+
+      const existingDigits = normalizeBrPhone(existing.contact_phone);
+      const existingIsReal = isRealBrPhone(existingDigits);
+      const currentIsReal = isRealBrPhone(phoneDigits);
+
+      // Prefer canonical BR phone conversation over LID-like rows, then newest message
+      if (currentIsReal && !existingIsReal) {
+        uniqueByIdentity.set(identityKey, conv);
+      } else if (currentIsReal === existingIsReal && new Date(conv.last_message_at) > new Date(existing.last_message_at)) {
+        uniqueByIdentity.set(identityKey, conv);
       }
     });
-    const deduplicated = Array.from(uniqueByPhone.values())
+
+    const deduplicated = Array.from(uniqueByIdentity.values())
       .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
     
     // Only update state if data actually changed (prevent flicker)
@@ -652,12 +672,26 @@ const WhatsAppCRM: React.FC = () => {
   // Load messages from ALL conversations with the same contact_phone
   // IMPORTANT: Robust deduplication to prevent jumbled messages after reconnection
   const loadMessagesByPhone = async (contactPhone: string) => {
-    // First get all conversation IDs for this phone
+    // First get all conversation IDs for this phone (including 12/13-digit BR variants)
+    const normalizeBrPhone = (p: string) => {
+      const d = p.replace(/\D/g, '');
+      if (d.startsWith('55') && d.length === 12) {
+        return d.slice(0, 4) + '9' + d.slice(4);
+      }
+      return d;
+    };
+
+    const normalizedPhone = normalizeBrPhone(contactPhone);
+    const phoneVariants = [normalizedPhone];
+    if (normalizedPhone.startsWith('55') && normalizedPhone.length === 13) {
+      phoneVariants.push(normalizedPhone.slice(0, 4) + normalizedPhone.slice(5));
+    }
+
     const { data: convs } = await supabase
       .from('whatsapp_conversations')
       .select('id')
       .eq('company_id', companyId)
-      .eq('contact_phone', contactPhone);
+      .in('contact_phone', phoneVariants);
     
     if (!convs || convs.length === 0) return;
     

@@ -5,6 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function normalizeContactPhone(input: string): string {
+  const digits = (input || '').replace(/\D/g, '');
+  if (!digits) return '';
+
+  // Keep group identifiers untouched
+  if (digits.length >= 18) return digits;
+
+  let normalized = digits;
+  if (!normalized.startsWith('55') && normalized.length <= 11) {
+    normalized = `55${normalized}`;
+  }
+
+  // Add 9th digit when number comes as 55 + DD + 8 digits
+  if (normalized.startsWith('55') && normalized.length === 12) {
+    normalized = `${normalized.slice(0, 4)}9${normalized.slice(4)}`;
+  }
+
+  return normalized;
+}
+
+function buildPhoneVariants(normalizedPhone: string): string[] {
+  if (!normalizedPhone) return [];
+
+  const variants = new Set<string>([normalizedPhone]);
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 13) {
+    variants.add(normalizedPhone.slice(0, 4) + normalizedPhone.slice(5));
+  }
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 12) {
+    variants.add(normalizedPhone.slice(0, 4) + '9' + normalizedPhone.slice(4));
+  }
+
+  return Array.from(variants);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -508,7 +542,8 @@ Deno.serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
-        const cleanPhone = phone.replace(/\D/g, '');
+        const normalizedPhone = normalizeContactPhone(phone || '');
+        const phoneVariants = buildPhoneVariants(normalizedPhone);
         const messageText = typeof message === 'string' ? message.trim() : String(message ?? '').trim();
 
         if (!messageText) {
@@ -518,13 +553,26 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Find or create conversation
+        if (!normalizedPhone) {
+          return new Response(JSON.stringify({ error: 'phone inválido' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const fallbackJid = normalizedPhone.length >= 18
+          ? `${normalizedPhone}@g.us`
+          : `${normalizedPhone}@s.whatsapp.net`;
+
+        // Find or create conversation (company-wide + phone variants to avoid duplicates)
         let { data: conversation } = await supabase
           .from('whatsapp_conversations')
           .select('*')
-          .eq('session_id', sessionId)
-          .eq('contact_phone', phone)
-          .single();
+          .eq('company_id', session.company_id)
+          .in('contact_phone', phoneVariants)
+          .order('last_message_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (!conversation) {
           const { data: newConv } = await supabase
@@ -532,8 +580,8 @@ Deno.serve(async (req) => {
             .insert({
               session_id: sessionId,
               company_id: session.company_id,
-              contact_phone: phone,
-              remote_jid: cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`,
+              contact_phone: normalizedPhone,
+              remote_jid: fallbackJid,
               status: 'open',
               last_message_at: new Date().toISOString()
             })
@@ -542,11 +590,11 @@ Deno.serve(async (req) => {
           conversation = newConv;
         }
 
-        // Use stored remote_jid if available, otherwise construct from phone
+        // Use stored remote_jid if available, otherwise construct from normalized phone
         const storedJid = conversation?.remote_jid;
-        const jid = storedJid && storedJid.includes('@') 
-          ? storedJid 
-          : (cleanPhone.includes('@') ? cleanPhone : (cleanPhone.length >= 18 ? `${cleanPhone}@g.us` : `${cleanPhone}@s.whatsapp.net`));
+        const jid = storedJid && storedJid.includes('@')
+          ? storedJid
+          : fallbackJid;
 
         // Send via Baileys if connected
         if (normalizedServerUrl && session.status === 'connected') {
@@ -639,6 +687,9 @@ Deno.serve(async (req) => {
               await supabase
                 .from('whatsapp_conversations')
                 .update({
+                  session_id: sessionId,
+                  contact_phone: normalizedPhone,
+                  remote_jid: jid,
                   last_message: messageText,
                   last_message_at: new Date().toISOString()
                 })
@@ -717,6 +768,9 @@ Deno.serve(async (req) => {
         await supabase
           .from('whatsapp_conversations')
           .update({
+            session_id: sessionId,
+            contact_phone: normalizedPhone,
+            remote_jid: jid,
             last_message: messageText,
             last_message_at: new Date().toISOString()
           })
@@ -758,8 +812,11 @@ Deno.serve(async (req) => {
 
         const serverUrl = session.baileys_server_url || BAILEYS_URL;
         const normalizedServerUrl = (serverUrl || '').replace(/\/+$/, '');
-        const cleanPhone = phone.replace(/\D/g, '');
-        const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        const normalizedPhone = normalizeContactPhone(phone || '');
+        const phoneVariants = buildPhoneVariants(normalizedPhone);
+        const jid = normalizedPhone.length >= 18
+          ? `${normalizedPhone}@g.us`
+          : `${normalizedPhone}@s.whatsapp.net`;
 
         // Check if server is configured and session is connected
         if (!serverUrl) {
@@ -814,52 +871,76 @@ Deno.serve(async (req) => {
           if (sendResponse.ok) {
             const sendData = await sendResponse.json();
             console.log(`[SEND MEDIA] Success:`, sendData);
-            
-            // Find or create conversation for saving the message
+
+            // Find existing conversation with phone variants to prevent duplicates
             let { data: conversation } = await supabase
               .from('whatsapp_conversations')
               .select('id')
               .eq('company_id', session.company_id)
-              .eq('contact_phone', cleanPhone)
+              .in('contact_phone', phoneVariants)
               .order('last_message_at', { ascending: false })
               .limit(1)
-              .single();
-            
-            if (conversation) {
-              // Save the message to database with media_url
-              const contentText = mediaType === 'audio' || mediaType === 'ptt' 
-                ? '[Áudio]' 
-                : (caption || `[${mediaType === 'image' ? 'Imagem' : mediaType === 'video' ? 'Vídeo' : 'Documento'}]`);
-              
-              await supabase
-                .from('whatsapp_messages')
+              .maybeSingle();
+
+            if (!conversation) {
+              const { data: newConv } = await supabase
+                .from('whatsapp_conversations')
                 .insert({
-                  conversation_id: conversation.id,
                   session_id: sessionId,
                   company_id: session.company_id,
-                  from_me: true,
-                  content: contentText,
-                  message_type: mediaType === 'ptt' ? 'ptt' : mediaType,
-                  media_url: mediaUrl,
-                  media_caption: caption || null,
-                  status: 'sent',
-                  timestamp: new Date().toISOString(),
-                  wa_message_id: sendData.messageId || sendData.key?.id || null
-                });
-              
-              // Update conversation last_message
-              await supabase
-                .from('whatsapp_conversations')
-                .update({
-                  last_message: contentText,
-                  last_message_at: new Date().toISOString()
+                  contact_phone: normalizedPhone,
+                  remote_jid: jid,
+                  status: 'open',
+                  last_message_at: new Date().toISOString(),
                 })
-                .eq('id', conversation.id);
+                .select('id')
+                .single();
+              conversation = newConv;
             }
-            
-            return new Response(JSON.stringify({ 
-              success: true, 
-              messageId: sendData.messageId || sendData.key?.id 
+
+            if (!conversation?.id) {
+              return new Response(JSON.stringify({ error: 'Não foi possível resolver a conversa para salvar a mídia' }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+
+            // Save the message to database with media_url
+            const contentText = mediaType === 'audio' || mediaType === 'ptt'
+              ? '[Áudio]'
+              : (caption || `[${mediaType === 'image' ? 'Imagem' : mediaType === 'video' ? 'Vídeo' : 'Documento'}]`);
+
+            await supabase
+              .from('whatsapp_messages')
+              .insert({
+                conversation_id: conversation.id,
+                session_id: sessionId,
+                company_id: session.company_id,
+                from_me: true,
+                content: contentText,
+                message_type: mediaType === 'ptt' ? 'ptt' : mediaType,
+                media_url: mediaUrl,
+                media_caption: caption || null,
+                status: 'sent',
+                timestamp: new Date().toISOString(),
+                wa_message_id: sendData.messageId || sendData.key?.id || null
+              });
+
+            // Update conversation last_message and normalize identity fields
+            await supabase
+              .from('whatsapp_conversations')
+              .update({
+                session_id: sessionId,
+                contact_phone: normalizedPhone,
+                remote_jid: jid,
+                last_message: contentText,
+                last_message_at: new Date().toISOString()
+              })
+              .eq('id', conversation.id);
+
+            return new Response(JSON.stringify({
+              success: true,
+              messageId: sendData.messageId || sendData.key?.id
             }), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });

@@ -5,6 +5,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function normalizeContactPhone(input: string): string {
+  const digits = (input || '').replace(/\D/g, '');
+  if (!digits) return '';
+
+  let normalized = digits;
+  if (!normalized.startsWith('55') && normalized.length <= 11) {
+    normalized = `55${normalized}`;
+  }
+
+  if (normalized.startsWith('55') && normalized.length === 12) {
+    normalized = `${normalized.slice(0, 4)}9${normalized.slice(4)}`;
+  }
+
+  return normalized;
+}
+
+function buildPhoneVariants(normalizedPhone: string): string[] {
+  if (!normalizedPhone) return [];
+
+  const variants = new Set<string>([normalizedPhone]);
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 13) {
+    variants.add(normalizedPhone.slice(0, 4) + normalizedPhone.slice(5));
+  }
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 12) {
+    variants.add(normalizedPhone.slice(0, 4) + '9' + normalizedPhone.slice(4));
+  }
+
+  return Array.from(variants);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -96,17 +126,14 @@ Deno.serve(async (req) => {
       try {
         if (participant.type === 'phone' || (participant.type === 'user' && !participant.value.includes('@'))) {
           // Send WhatsApp message
-          let phone = participant.value.replace(/\D/g, '');
-          
+          const phone = normalizeContactPhone(participant.value || '');
+
           if (!phone || phone.length < 8) {
             results.push({ participant: participant.value, status: 'skipped', reason: 'Número inválido' });
             continue;
           }
 
-          // Ensure Brazilian country code prefix
-          if (!phone.startsWith('55') && phone.length <= 11) {
-            phone = '55' + phone;
-          }
+          const phoneVariants = buildPhoneVariants(phone);
 
           if (whatsappSession && BAILEYS_URL) {
             const normalizedServerUrl = BAILEYS_URL.replace(/\/+$/, '');
@@ -148,13 +175,15 @@ Deno.serve(async (req) => {
             });
 
             if (sendResponse.ok) {
-              // Save message in conversations
+              // Save message in existing conversation (company-wide + phone variants)
               let { data: conversation } = await supabase
                 .from('whatsapp_conversations')
                 .select('id')
-                .eq('session_id', whatsappSession.id)
-                .eq('contact_phone', phone)
-                .single();
+                .eq('company_id', resolvedCompanyId)
+                .in('contact_phone', phoneVariants)
+                .order('last_message_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
               if (!conversation) {
                 const { data: newConv } = await supabase
@@ -171,6 +200,16 @@ Deno.serve(async (req) => {
                   .select('id')
                   .single();
                 conversation = newConv;
+              } else {
+                await supabase
+                  .from('whatsapp_conversations')
+                  .update({
+                    session_id: whatsappSession.id,
+                    contact_phone: phone,
+                    remote_jid: resolvedJid,
+                    last_message_at: new Date().toISOString(),
+                  })
+                  .eq('id', conversation.id);
               }
 
               if (conversation) {

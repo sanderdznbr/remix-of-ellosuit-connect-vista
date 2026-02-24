@@ -638,6 +638,53 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_assets: {
+        Row: {
+          category: string
+          company_id: string
+          created_at: string
+          description: string | null
+          file_type: string
+          file_url: string
+          id: string
+          name: string
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          file_type?: string
+          file_url: string
+          id?: string
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bug_reports: {
         Row: {
           admin_notes: string | null

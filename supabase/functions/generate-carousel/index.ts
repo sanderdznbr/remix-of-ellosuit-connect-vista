@@ -12,8 +12,50 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls } = body;
 
+    // ===== WEB SEARCH for reference images =====
+    if (action === 'web-search') {
+      const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
+      if (!PEXELS_API_KEY) {
+        return new Response(JSON.stringify({ error: 'PEXELS_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const searchQuery = query || topic || '';
+      if (!searchQuery) {
+        return new Response(JSON.stringify({ error: 'Query is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Search Pexels for reference images
+      const pexelsRes = await fetch(
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=20&orientation=portrait`,
+        { headers: { 'Authorization': PEXELS_API_KEY } }
+      );
+
+      let pexelsImages: any[] = [];
+      if (pexelsRes.ok) {
+        const pexelsData = await pexelsRes.json();
+        pexelsImages = (pexelsData.photos || []).map((p: any) => ({
+          id: p.id,
+          url: p.src.large2x || p.src.large,
+          thumb: p.src.medium,
+          small: p.src.small,
+          alt: p.alt || searchQuery,
+          photographer: p.photographer,
+          source: 'pexels',
+        }));
+      }
+
+      return new Response(JSON.stringify({ success: true, images: pexelsImages, query: searchQuery }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ===== GENERATE CONTENT =====
     if (action === 'generate-content') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
       if (!LOVABLE_API_KEY) {
@@ -23,6 +65,7 @@ Deno.serve(async (req) => {
       }
 
       const numCards = cardCount || 7;
+      const imageCardIndices = body.imageCardIndices || []; // which cards should have images
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
@@ -33,14 +76,18 @@ REGRAS DE LAYOUT (siga EXATAMENTE):
 - Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
   - "bodyTop": Parágrafo principal (30-60 palavras), informativo e denso. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 15 palavras destacadas)
   - "bodyBottom": Segundo parágrafo (20-40 palavras), complementar, dados adicionais ou contexto
-  - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade relacionada ao conteúdo do card. Se o card mencionar marcas, produtos ou pessoas específicas, descreva visualmente o que deveria aparecer (ex: "embalagem de produto proteico em fundo escuro dramático", "atleta fitness bebendo shake em academia moderna")
+  - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes (ex: "homem musculoso fitness com camiseta preta em academia moderna, iluminação dramática", "embalagem de suplemento proteico em fundo escuro")
+  - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
+  - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo
 - Card ${numCards} (cta): CTA + mensagem motivacional
 
-IMPORTANTE sobre imagePrompt:
-- Descreva a cena, iluminação, composição e estilo
-- Se mencionar marcas reais, descreva o visual do produto sem usar o nome da marca (ex: "embalagem de salgadinho em tons laranja e preto")
-- Use estilo editorial/revista: iluminação cinematográfica, composição profissional
-- Varie os estilos: close-up de produtos, pessoas em ação, still life editorial
+${imageCardIndices.length > 0 ? `IMPORTANTE: Os cards nas posições ${imageCardIndices.join(', ')} DEVEM ter imagens (needsImage=true). Os demais podem ser somente texto.` : ''}
+
+IMPORTANTE sobre imagePrompt e searchTerms:
+- Se o tópico menciona PESSOAS REAIS (celebridades, influenciadores), inclua o nome deles em searchTerms para buscar fotos de referência
+- Se menciona MARCAS, inclua o nome + "logo" ou "produto" em searchTerms
+- imagePrompt deve descrever a cena visual detalhadamente (iluminação, composição, estilo)
+- searchTerms são para buscar referências reais na web
 
 Responda APENAS em JSON válido:
 {
@@ -50,19 +97,25 @@ Responda APENAS em JSON válido:
       "type": "cover",
       "title": "TÍTULO IMPACTANTE EM CAIXA ALTA",
       "subtitle": "Subtítulo descritivo curto",
-      "imagePrompt": "descrição visual para imagem de capa"
+      "imagePrompt": "descrição visual para imagem de capa",
+      "searchTerms": ["termo1", "termo2"],
+      "needsImage": true
     },
     {
       "type": "content",
       "bodyTop": "Parágrafo principal com **trechos destacados** em negrito...",
       "bodyBottom": "Segundo parágrafo complementar...",
-      "imagePrompt": "descrição visual para imagem do card"
+      "imagePrompt": "descrição visual para imagem do card",
+      "searchTerms": ["termo de busca"],
+      "needsImage": true
     },
     {
       "type": "cta",
       "title": "Gostou do conteúdo?",
       "body": "Salve, compartilhe e siga para mais!",
-      "imagePrompt": "descrição visual para CTA"
+      "imagePrompt": "descrição visual para CTA",
+      "searchTerms": [],
+      "needsImage": false
     }
   ]
 }`;
@@ -122,6 +175,7 @@ Responda APENAS em JSON válido:
       });
     }
 
+    // ===== GENERATE AI IMAGE =====
     if (action === 'generate-ai-image') {
       const NANOBANANA_API_KEY = Deno.env.get('NANOBANANA_API_KEY');
       if (!NANOBANANA_API_KEY) {
@@ -131,6 +185,55 @@ Responda APENAS em JSON válido:
       }
 
       const imagePrompt = prompt || topic || 'abstract background';
+      
+      // If reference image URLs provided, use image-to-image editing
+      const hasReferences = referenceImageUrls && referenceImageUrls.length > 0;
+
+      if (hasReferences) {
+        // Use Lovable AI gateway for image editing with references
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        if (!LOVABLE_API_KEY) {
+          return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const messageContent: any[] = [
+          { type: 'text', text: `Create a professional editorial magazine photo based on these reference images. ${imagePrompt}. Style: cinematic lighting, 4:5 portrait aspect ratio, high-end magazine quality.` }
+        ];
+
+        for (const refUrl of referenceImageUrls.slice(0, 3)) {
+          messageContent.push({
+            type: 'image_url',
+            image_url: { url: refUrl }
+          });
+        }
+
+        const editResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-image',
+            messages: [{ role: 'user', content: messageContent }],
+            modalities: ['image', 'text'],
+          }),
+        });
+
+        if (editResponse.ok) {
+          const editData = await editResponse.json();
+          const generatedImage = editData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (generatedImage) {
+            return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        }
+        // Fall through to NanoBanana if image editing fails
+        console.log('Image editing with references failed, falling back to NanoBanana');
+      }
 
       const genResponse = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate', {
         method: 'POST',
@@ -199,6 +302,7 @@ Responda APENAS em JSON válido:
       });
     }
 
+    // ===== SEARCH IMAGES (Pexels) =====
     if (action === 'search-images') {
       const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
       if (!PEXELS_API_KEY) {
@@ -207,9 +311,9 @@ Responda APENAS em JSON válido:
         });
       }
 
-      const query = keywords?.join(' ') || topic;
+      const searchQuery = query || keywords?.join(' ') || topic;
       const response = await fetch(
-        `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15&orientation=square`,
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=15&orientation=square`,
         { headers: { 'Authorization': PEXELS_API_KEY } }
       );
 

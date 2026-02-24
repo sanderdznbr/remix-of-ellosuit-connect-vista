@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
-  Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette
+  Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -40,12 +40,21 @@ interface CarouselCard {
   bodyBottom?: string;
   imageUrl?: string;
   imagePrompt?: string;
+  searchTerms?: string[];
+  needsImage?: boolean;
   layout?: 'dark' | 'light' | 'accent';
 }
 
 interface CarouselData {
   title: string;
   cards: CarouselCard[];
+}
+
+interface ReferenceImage {
+  url: string;
+  thumb: string;
+  label: string;
+  source: 'upload' | 'web';
 }
 
 interface PexelsImage {
@@ -64,6 +73,7 @@ const CarouselGenerator: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [cardCount, setCardCount] = useState(7);
+  const [imageCardCount, setImageCardCount] = useState(4);
   const [generating, setGenerating] = useState(false);
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -77,6 +87,13 @@ const CarouselGenerator: React.FC = () => {
   const [generatingAllImages, setGeneratingAllImages] = useState(false);
   const [imageGenProgress, setImageGenProgress] = useState('');
 
+  // Reference images for AI composition
+  const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
+  const [searchingReferences, setSearchingReferences] = useState(false);
+  const [refSearchQuery, setRefSearchQuery] = useState('');
+  const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
+  const [showRefPanel, setShowRefPanel] = useState(false);
+
   const [editingCard, setEditingCard] = useState<number | null>(null);
 
   const [brandName, setBrandName] = useState('Powered by ellosuit');
@@ -89,20 +106,71 @@ const CarouselGenerator: React.FC = () => {
   const [bgColor, setBgColor] = useState('#0F0F1A');
   const [accentColor, setAccentColor] = useState('#E84D1A');
   const [textColor, setTextColor] = useState('#FFFFFF');
-  const [selectedFont, setSelectedFont] = useState(0); // index into FONT_OPTIONS
+  const [selectedFont, setSelectedFont] = useState(0);
   const [showStylePanel, setShowStylePanel] = useState(false);
 
   const currentFont = FONT_OPTIONS[selectedFont];
   const serif = currentFont.value;
   const sans = "'Inter', 'Helvetica Neue', sans-serif";
 
-  // Build Google Fonts URL
   const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${FONT_OPTIONS.map(f => f.google).join('&family=')}&family=Inter:wght@400;500;600;700;800&display=swap`;
 
-  // Generate AI image for a specific card
+  // ===== SEARCH WEB FOR REFERENCES =====
+  const searchWebReferences = async (query: string) => {
+    if (!query.trim()) return;
+    setSearchingReferences(true);
+    setRefSearchResults([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'web-search', query: query.trim() },
+      });
+      if (error) throw error;
+      if (data?.images) setRefSearchResults(data.images);
+    } catch (err) {
+      console.error('Web search error:', err);
+      toast({ title: 'Erro na busca', variant: 'destructive' });
+    } finally {
+      setSearchingReferences(false);
+    }
+  };
+
+  const addReferenceFromSearch = (img: any) => {
+    setReferenceImages(prev => [...prev, {
+      url: img.url,
+      thumb: img.thumb || img.small || img.url,
+      label: img.alt || refSearchQuery,
+      source: 'web',
+    }]);
+    toast({ title: 'Referência adicionada!' });
+  };
+
+  const handleReferenceUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setReferenceImages(prev => [...prev, {
+          url: e.target!.result as string,
+          thumb: e.target!.result as string,
+          label: file.name,
+          source: 'upload',
+        }]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeReference = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ===== GENERATE AI IMAGE =====
   const generateAiImageForCard = async (cardIndex: number, cards: CarouselCard[]): Promise<string | null> => {
     const card = cards[cardIndex];
     const imgPrompt = card?.imagePrompt || card?.title || card?.bodyTop || topic;
+    
+    // Collect reference URLs for this card
+    const refUrls = referenceImages.map(r => r.url).filter(u => !u.startsWith('data:')); // Only web URLs for references
+    
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
@@ -110,6 +178,7 @@ const CarouselGenerator: React.FC = () => {
           prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
           imageSize: '3:4',
           topic: imgPrompt,
+          referenceImageUrls: refUrls.length > 0 ? refUrls : undefined,
         },
       });
       if (error) throw error;
@@ -121,6 +190,7 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
+  // ===== MAIN GENERATE FLOW =====
   const generateContent = async () => {
     if (!topic.trim()) {
       toast({ title: 'Insira um tópico', variant: 'destructive' });
@@ -128,12 +198,22 @@ const CarouselGenerator: React.FC = () => {
     }
     setGenerating(true);
     try {
+      // Calculate which cards should have images
+      const imageCardIndices: number[] = [0]; // cover always has image
+      const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1); // content cards
+      const shuffled = contentIndices.sort(() => Math.random() - 0.5);
+      const howManyContent = Math.min(imageCardCount - 1, shuffled.length); // -1 because cover counts
+      for (let i = 0; i < howManyContent; i++) {
+        imageCardIndices.push(shuffled[i]);
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount,
+          imageCardIndices: imageCardIndices.sort((a, b) => a - b),
         },
       });
       if (error) throw error;
@@ -148,25 +228,74 @@ const CarouselGenerator: React.FC = () => {
 
       setCarouselData({ ...data.data, cards });
       setActiveCardIndex(0);
-      toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados. Gerando imagens...` });
+      toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados. Buscando referências e gerando imagens...` });
 
+      // Step 1: Web search for references based on searchTerms from each card
+      setImageGenProgress('🔍 Buscando referências na web...');
+      const allSearchTerms = new Set<string>();
+      cards.forEach(c => {
+        (c.searchTerms || []).forEach((t: string) => allSearchTerms.add(t));
+      });
+
+      // Search for each unique term and collect reference URLs
+      const webRefs: string[] = [];
+      for (const term of Array.from(allSearchTerms).slice(0, 5)) {
+        try {
+          const { data: searchData } = await supabase.functions.invoke('generate-carousel', {
+            body: { action: 'web-search', query: term },
+          });
+          if (searchData?.images?.length > 0) {
+            webRefs.push(...searchData.images.slice(0, 3).map((img: any) => img.url));
+          }
+        } catch {
+          // ignore search errors
+        }
+      }
+
+      // Step 2: Generate AI images for cards that need them
       setGeneratingAllImages(true);
       const updatedCards = [...cards];
       
+      // Combine web refs with user-attached refs
+      const allRefUrls = [
+        ...referenceImages.map(r => r.url).filter(u => !u.startsWith('data:')),
+        ...webRefs.slice(0, 5),
+      ];
+
+      let imageCount = 0;
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
-        if (card.imagePrompt || card.type === 'cover') {
-          setImageGenProgress(`Gerando imagem ${i + 1}/${updatedCards.length}...`);
-          const url = await generateAiImageForCard(i, updatedCards);
-          if (url) {
-            updatedCards[i] = { ...updatedCards[i], imageUrl: url };
-            setCarouselData(prev => prev ? { ...prev, cards: [...updatedCards] } : null);
+        const shouldHaveImage = card.needsImage || card.type === 'cover' || imageCardIndices.includes(i);
+        
+        if (shouldHaveImage) {
+          imageCount++;
+          setImageGenProgress(`🎨 Gerando imagem ${imageCount}/${imageCardCount} (card ${i + 1})...`);
+          
+          try {
+            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+            const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
+              body: {
+                action: 'generate-ai-image',
+                prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
+                imageSize: '3:4',
+                topic: imgPrompt,
+                referenceImageUrls: allRefUrls.length > 0 ? allRefUrls : undefined,
+              },
+            });
+            
+            if (!imgError && imgData?.success && imgData?.imageUrl) {
+              updatedCards[i] = { ...updatedCards[i], imageUrl: imgData.imageUrl };
+              setCarouselData(prev => prev ? { ...prev, cards: [...updatedCards] } : null);
+            }
+          } catch (err) {
+            console.error('Image gen error for card', i, err);
           }
         }
       }
+
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      toast({ title: 'Carrossel completo!', description: 'Conteúdo e imagens prontos' });
+      toast({ title: 'Carrossel completo!', description: 'Conteúdo, referências e imagens prontos' });
 
     } catch (err: any) {
       console.error(err);
@@ -208,12 +337,14 @@ const CarouselGenerator: React.FC = () => {
     }
     setGeneratingAiImage(true);
     try {
+      const refUrls = referenceImages.map(r => r.url).filter(u => !u.startsWith('data:'));
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-ai-image',
           prompt: `Professional editorial photo, magazine quality, cinematic: ${promptText}`,
           imageSize: '3:4',
           topic: promptText,
+          referenceImageUrls: refUrls.length > 0 ? refUrls : undefined,
         },
       });
       if (error) throw error;
@@ -308,7 +439,6 @@ const CarouselGenerator: React.FC = () => {
     const s = isExport ? 1 : PREVIEW_W / CARD_W;
 
     const layout = card.layout || 'dark';
-    const isDark = layout === 'dark';
     const isLight = layout === 'light';
     const isAccent = layout === 'accent';
 
@@ -536,7 +666,80 @@ const CarouselGenerator: React.FC = () => {
     );
   };
 
-  // ==================== STYLE PANEL (shown after generation) ====================
+  // ==================== REFERENCE IMAGES PANEL ====================
+  const renderRefPanel = () => (
+    <Card className="border-0 shadow-md rounded-3xl">
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5" style={{ color: FLOW_COLOR }} />
+            <h3 className="font-bold text-foreground">Imagens de Referência</h3>
+          </div>
+          <button onClick={() => setShowRefPanel(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Busque fotos de pessoas ou marcas na web, ou anexe suas próprias imagens. Elas serão usadas como referência na geração das imagens com IA.
+        </p>
+
+        {/* Search web */}
+        <div className="flex gap-2">
+          <Input value={refSearchQuery} onChange={(e) => setRefSearchQuery(e.target.value)}
+            placeholder="Ex: Michael Jackson, Cimed logo, Toguro..."
+            className="rounded-xl flex-1"
+            onKeyDown={(e) => e.key === 'Enter' && searchWebReferences(refSearchQuery)} />
+          <Button onClick={() => searchWebReferences(refSearchQuery)} disabled={searchingReferences}
+            className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+            {searchingReferences ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Buscar
+          </Button>
+        </div>
+
+        {/* Upload */}
+        <label className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
+          <Paperclip className="h-4 w-4" /> Anexar imagem do dispositivo
+          <input type="file" accept="image/*" className="hidden" multiple
+            onChange={(e) => { Array.from(e.target.files || []).forEach(handleReferenceUpload); }} />
+        </label>
+
+        {/* Search results */}
+        {refSearchResults.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Resultados da busca — clique para adicionar</p>
+            <div className="grid grid-cols-5 gap-2 max-h-[200px] overflow-y-auto rounded-xl">
+              {refSearchResults.map((img, i) => (
+                <button key={i} onClick={() => addReferenceFromSearch(img)}
+                  className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
+                  <img src={img.thumb || img.url} alt={img.alt} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Attached references */}
+        {referenceImages.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Referências anexadas ({referenceImages.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {referenceImages.map((ref, i) => (
+                <div key={i} className="relative group">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-primary/30">
+                    <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
+                  </div>
+                  <button onClick={() => removeReference(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="h-3 w-3" />
+                  </button>
+                  <p className="text-[9px] text-muted-foreground text-center mt-0.5 truncate max-w-16">{ref.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  // ==================== STYLE PANEL ====================
   const renderStylePanel = () => (
     <Card className="border-0 shadow-md rounded-3xl">
       <CardContent className="p-5 space-y-4">
@@ -548,7 +751,6 @@ const CarouselGenerator: React.FC = () => {
           <button onClick={() => setShowStylePanel(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
         </div>
 
-        {/* Font selector */}
         <div>
           <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
             <Type className="h-3.5 w-3.5" /> Fonte
@@ -563,7 +765,6 @@ const CarouselGenerator: React.FC = () => {
           </div>
         </div>
 
-        {/* Color controls */}
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-medium text-foreground mb-1.5 block">Cor de fundo</label>
@@ -588,7 +789,6 @@ const CarouselGenerator: React.FC = () => {
           </div>
         </div>
 
-        {/* Brand settings */}
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
@@ -625,6 +825,10 @@ const CarouselGenerator: React.FC = () => {
           </div>
           {carouselData && !generatingAllImages && (
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowRefPanel(!showRefPanel)}
+                className="gap-1.5 rounded-xl">
+                <Globe className="h-4 w-4" /> Referências {referenceImages.length > 0 && `(${referenceImages.length})`}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)}
                 className="gap-1.5 rounded-xl">
                 <Palette className="h-4 w-4" /> Estilo
@@ -645,7 +849,7 @@ const CarouselGenerator: React.FC = () => {
             <CardContent className="p-6 space-y-5">
               <div className="text-center pb-2">
                 <h2 className="text-xl font-bold text-foreground mb-1">Criar Carrossel Editorial</h2>
-                <p className="text-sm text-muted-foreground">Conteúdo + imagens gerados automaticamente com IA</p>
+                <p className="text-sm text-muted-foreground">Busca web + geração de imagens + conteúdo automático com IA</p>
               </div>
 
               <div>
@@ -660,11 +864,18 @@ const CarouselGenerator: React.FC = () => {
                   placeholder="proteína, saúde, marketing (separadas por vírgula)" className="rounded-2xl" />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div>
                   <label className="text-xs font-medium text-foreground mb-1 block">Nº de Cards</label>
                   <Input type="number" min={3} max={15} value={cardCount}
                     onChange={(e) => setCardCount(parseInt(e.target.value) || 7)} className="rounded-2xl" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" /> Cards com imagem
+                  </label>
+                  <Input type="number" min={0} max={cardCount} value={imageCardCount}
+                    onChange={(e) => setImageCardCount(Math.min(parseInt(e.target.value) || 0, cardCount))} className="rounded-2xl" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
@@ -679,6 +890,66 @@ const CarouselGenerator: React.FC = () => {
                   <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
                   <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-2xl" />
                 </div>
+              </div>
+
+              {/* Reference images section */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-muted-foreground/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+                    <span className="text-sm font-semibold text-foreground">Imagens de Referência (opcional)</span>
+                  </div>
+                  {referenceImages.length > 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{referenceImages.length} anexadas</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Busque fotos de pessoas ou marcas para usar como referência na IA. Ex: busque "Toguro" para ter o rosto dele nas imagens geradas.
+                </p>
+                <div className="flex gap-2">
+                  <Input value={refSearchQuery} onChange={(e) => setRefSearchQuery(e.target.value)}
+                    placeholder="Buscar: Toguro, Cimed logo, Michael Jackson..."
+                    className="rounded-xl flex-1 text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && searchWebReferences(refSearchQuery)} />
+                  <Button onClick={() => searchWebReferences(refSearchQuery)} disabled={searchingReferences} size="sm"
+                    className="gap-1.5 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                    {searchingReferences ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />} Buscar
+                  </Button>
+                  <label className="inline-flex items-center gap-1.5 px-3 rounded-xl border border-border cursor-pointer hover:bg-muted/50 text-xs font-medium text-muted-foreground">
+                    <Paperclip className="h-3.5 w-3.5" /> Anexar
+                    <input type="file" accept="image/*" className="hidden" multiple
+                      onChange={(e) => { Array.from(e.target.files || []).forEach(handleReferenceUpload); }} />
+                  </label>
+                </div>
+
+                {/* Search results */}
+                {refSearchResults.length > 0 && (
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-[140px] overflow-y-auto">
+                    {refSearchResults.map((img, i) => (
+                      <button key={i} onClick={() => addReferenceFromSearch(img)}
+                        className="rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-primary transition-all ring-1 ring-border">
+                        <img src={img.thumb || img.url} alt={img.alt} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Attached references */}
+                {referenceImages.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    {referenceImages.map((ref, i) => (
+                      <div key={i} className="relative group">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden ring-2 ring-primary/30">
+                          <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
+                        </div>
+                        <button onClick={() => removeReference(i)}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Font selection */}
@@ -722,7 +993,7 @@ const CarouselGenerator: React.FC = () => {
 
               <Button onClick={generateContent} disabled={generating}
                 className="w-full gap-2 h-14 rounded-2xl text-lg font-bold" style={{ backgroundColor: FLOW_COLOR }}>
-                {generating ? <><Loader2 className="h-5 w-5 animate-spin" /> Gerando conteúdo + imagens com IA...</>
+                {generating ? <><Loader2 className="h-5 w-5 animate-spin" /> Buscando referências + gerando com IA...</>
                   : <><Sparkles className="h-5 w-5" /> Gerar Carrossel Completo</>}
               </Button>
             </CardContent>
@@ -739,6 +1010,9 @@ const CarouselGenerator: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Reference Panel (shown when toggled after generation) */}
+        {carouselData && showRefPanel && renderRefPanel()}
 
         {/* Style Panel (shown when toggled after generation) */}
         {carouselData && showStylePanel && renderStylePanel()}
@@ -868,6 +1142,11 @@ const CarouselGenerator: React.FC = () => {
                     <div className="flex items-center gap-2 mb-3">
                       <Wand2 className="h-5 w-5" style={{ color: accentColor }} />
                       <p className="text-sm font-bold text-foreground">Gerar com IA</p>
+                      {referenceImages.length > 0 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          {referenceImages.length} referências anexadas
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Input value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)}

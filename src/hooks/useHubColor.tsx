@@ -28,6 +28,7 @@ const flowRoutes = [
   '/dashboard/tasks',
   '/dashboard/reunioes',
   '/dashboard/fluxos',
+  '/dashboard/carrossel',
 ];
 
 const trackRoutes = [

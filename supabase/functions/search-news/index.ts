@@ -86,7 +86,6 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
     // Parse the JSON from the response
     let parsedContent;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsedContent = JSON.parse(jsonMatch[0]);
@@ -106,28 +105,69 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
       };
     }
 
-    // Now search for real images using Google CSE
+    // Search for images using multiple strategies
+    let images: string[] = [];
+    const searchTerms = parsedContent.image_search_terms || [topic];
+
+    // Strategy 1: Google CSE
     const googleApiKey = Deno.env.get('GOOGLE_CSE_API_KEY');
     const googleCseId = Deno.env.get('GOOGLE_CSE_ID');
-    let images: string[] = [];
 
-    if (googleApiKey && googleCseId && parsedContent.image_search_terms) {
+    if (googleApiKey && googleCseId) {
+      console.log('[IMAGES] Trying Google CSE with terms:', searchTerms.slice(0, 2));
       try {
-        const searchTerms = parsedContent.image_search_terms.slice(0, 2);
-        for (const term of searchTerms) {
-          const imgResponse = await fetch(
-            `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${encodeURIComponent(term + ' ' + topic)}&searchType=image&num=3&imgSize=large&safe=active`
-          );
+        for (const term of searchTerms.slice(0, 2)) {
+          const query = encodeURIComponent(term + ' ' + topic);
+          const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCseId}&q=${query}&searchType=image&num=3&imgSize=large&safe=active`;
+          console.log('[IMAGES] Google CSE request for:', term);
+          const imgResponse = await fetch(url);
           if (imgResponse.ok) {
             const imgData = await imgResponse.json();
             const urls = (imgData.items || []).map((item: any) => item.link).filter(Boolean);
+            console.log('[IMAGES] Google CSE returned', urls.length, 'images for term:', term);
             images.push(...urls);
+          } else {
+            const errText = await imgResponse.text();
+            console.error('[IMAGES] Google CSE error:', imgResponse.status, errText);
           }
         }
       } catch (imgErr) {
-        console.error('Image search error:', imgErr);
+        console.error('[IMAGES] Google CSE exception:', imgErr);
+      }
+    } else {
+      console.log('[IMAGES] Google CSE not configured, skipping. apiKey:', !!googleApiKey, 'cseId:', !!googleCseId);
+    }
+
+    // Strategy 2: Pexels fallback if no images found
+    if (images.length === 0) {
+      const pexelsKey = Deno.env.get('PEXELS_API_KEY');
+      if (pexelsKey) {
+        console.log('[IMAGES] Falling back to Pexels API');
+        try {
+          for (const term of searchTerms.slice(0, 2)) {
+            const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=3&orientation=landscape`;
+            const pexelsRes = await fetch(pexelsUrl, {
+              headers: { 'Authorization': pexelsKey },
+            });
+            if (pexelsRes.ok) {
+              const pexelsData = await pexelsRes.json();
+              const urls = (pexelsData.photos || []).map((p: any) => p.src?.large2x || p.src?.large || p.src?.original).filter(Boolean);
+              console.log('[IMAGES] Pexels returned', urls.length, 'images for term:', term);
+              images.push(...urls);
+            } else {
+              const errText = await pexelsRes.text();
+              console.error('[IMAGES] Pexels error:', pexelsRes.status, errText);
+            }
+          }
+        } catch (pexErr) {
+          console.error('[IMAGES] Pexels exception:', pexErr);
+        }
+      } else {
+        console.log('[IMAGES] Pexels API key not configured');
       }
     }
+
+    console.log('[IMAGES] Total images found:', images.length);
 
     return new Response(
       JSON.stringify({

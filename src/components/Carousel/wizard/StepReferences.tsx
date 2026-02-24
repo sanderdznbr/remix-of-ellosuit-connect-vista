@@ -16,6 +16,7 @@ interface Props {
   famousImages: { username: string; images: any[] }[];
   setFamousImages: React.Dispatch<React.SetStateAction<{ username: string; images: any[] }[]>>;
   brandAssets: { id: string; name: string; file_url: string; category: string }[];
+  webImages?: string[];
 }
 
 const StepReferences: React.FC<Props> = ({
@@ -23,6 +24,7 @@ const StepReferences: React.FC<Props> = ({
   famousList, setFamousList,
   famousImages, setFamousImages,
   brandAssets,
+  webImages,
 }) => {
   const { toast } = useToast();
   const [famousInput, setFamousInput] = useState('');
@@ -125,7 +127,7 @@ const StepReferences: React.FC<Props> = ({
         {([
           { key: 'face' as const, label: '👤 Rosto / Pessoa', count: faceRefs.length },
           { key: 'style' as const, label: '🎨 Marca / Estilo', count: styleRefs.length },
-          { key: 'web' as const, label: '🌐 Busca Web', count: 0 },
+          { key: 'web' as const, label: '🌐 Busca Web', count: (webImages?.length || 0) + referenceImages.filter(r => r.category === 'general').length },
         ]).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all ${activeTab === tab.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -307,15 +309,63 @@ const StepReferences: React.FC<Props> = ({
       {/* WEB TAB */}
       {activeTab === 'web' && (
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <Input value={refSearchQuery} onChange={(e) => setRefSearchQuery(e.target.value)}
-              placeholder="Ex: Neymar, Cimed logo, escritório moderno..."
-              className="rounded-xl flex-1"
-              onKeyDown={(e) => e.key === 'Enter' && searchWebReferences(refSearchQuery)} />
-            <Button onClick={() => searchWebReferences(refSearchQuery)} disabled={searchingReferences}
-              className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-              {searchingReferences ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Buscar
-            </Button>
+          {/* Auto images from Perplexity/Google */}
+          {webImages && webImages.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
+                <ImageIcon className="h-4 w-4" />
+                Imagens encontradas na pesquisa ({webImages.length})
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-[250px] overflow-y-auto rounded-xl">
+                {webImages.map((imgUrl, i) => {
+                  const alreadyAdded = referenceImages.some(r => r.url === imgUrl);
+                  return (
+                    <button key={i} onClick={() => {
+                      if (alreadyAdded) return;
+                      setReferenceImages(prev => [...prev, {
+                        url: imgUrl, thumb: imgUrl,
+                        label: `Web image ${i + 1}`, source: 'web', category: 'general',
+                      }]);
+                      toast({ title: 'Imagem adicionada como referência!' });
+                    }}
+                      className={`rounded-xl overflow-hidden aspect-video ring-1 ring-border relative group ${alreadyAdded ? 'opacity-50' : 'hover:opacity-80'} transition-opacity`}>
+                      <img src={imgUrl} alt={`Web ${i + 1}`} className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      {alreadyAdded && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-[10px] font-bold">✓ Adicionada</div>
+                      )}
+                      {!alreadyAdded && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-[10px] font-semibold">+ Usar no carrossel</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!webImages?.length && (
+            <div className="p-4 rounded-2xl bg-muted/50 border border-dashed border-border text-center space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Nenhuma imagem da pesquisa</p>
+              <p className="text-xs text-muted-foreground">Use o botão "Pesquisar na Web" na Etapa 1 para buscar imagens automaticamente</p>
+            </div>
+          )}
+
+          {/* Manual search */}
+          <div className="pt-2 border-t border-border space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">Ou busque manualmente:</p>
+            <div className="flex gap-2">
+              <Input value={refSearchQuery} onChange={(e) => setRefSearchQuery(e.target.value)}
+                placeholder="Ex: Neymar, Cimed logo, escritório moderno..."
+                className="rounded-xl flex-1"
+                onKeyDown={(e) => e.key === 'Enter' && searchWebReferences(refSearchQuery)} />
+              <Button onClick={() => searchWebReferences(refSearchQuery)} disabled={searchingReferences}
+                className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                {searchingReferences ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Buscar
+              </Button>
+            </div>
           </div>
 
           {refSearchResults.length > 0 && (

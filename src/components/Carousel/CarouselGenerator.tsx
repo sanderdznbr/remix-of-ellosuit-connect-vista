@@ -752,7 +752,8 @@ const CarouselGenerator: React.FC = () => {
                 <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                   famousList={famousList} setFamousList={setFamousList}
                   famousImages={famousImages} setFamousImages={setFamousImages}
-                  brandAssets={brandAssets} />
+                  brandAssets={brandAssets}
+                  webImages={webSearchResult?.images} />
               )}
               {wizardStep === 2 && (
                 <StepImageSettings settings={imageSettings} onChange={setImageSettings} />

@@ -635,9 +635,13 @@ const WhatsAppCRM: React.FC = () => {
       const isGroup = conv.remote_jid?.includes('@g.us') || phoneDigits.length > 15;
       const isLidLike = conv.remote_jid?.includes('@lid') || (!isGroup && !isRealBrPhone(phoneDigits) && phoneDigits.length >= 14);
 
-      const identityKey = !isGroup && isLidLike && avatarKey
-        ? `avatar:${avatarKey}`
-        : `phone:${phoneDigits}`;
+      // HIDE LID conversations entirely — they are ghost entries from WhatsApp's internal IDs
+      // Only show conversations with real Brazilian phone numbers or valid groups
+      if (isLidLike && !isGroup) {
+        return; // Skip — these contacts will appear under their real phone number
+      }
+
+      const identityKey = `phone:${phoneDigits}`;
 
       const existing = uniqueByIdentity.get(identityKey);
       if (!existing) {

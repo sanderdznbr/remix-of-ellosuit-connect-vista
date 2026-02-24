@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -70,6 +71,7 @@ interface PexelsImage {
 }
 
 const CarouselGenerator: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -117,6 +119,24 @@ const CarouselGenerator: React.FC = () => {
   const [carouselHistory, setCarouselHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [currentCarouselId, setCurrentCarouselId] = useState<string | null>(null);
+
+  // Brand assets picker
+  const [showBrandAssets, setShowBrandAssets] = useState(false);
+  const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
+  const [loadingBrandAssets, setLoadingBrandAssets] = useState(false);
+
+  useEffect(() => {
+    const fetchBrandAssets = async () => {
+      if (!user?.id) return;
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (!cu) return;
+      setLoadingBrandAssets(true);
+      const { data } = await supabase.from('brand_assets').select('id, name, file_url, category').eq('company_id', cu.company_id).eq('file_type', 'image').order('created_at', { ascending: false });
+      if (data) setBrandAssets(data);
+      setLoadingBrandAssets(false);
+    };
+    fetchBrandAssets();
+  }, [user?.id]);
 
   const [editingCard, setEditingCard] = useState<number | null>(null);
 
@@ -1505,12 +1525,15 @@ const CarouselGenerator: React.FC = () => {
                       <Input value={ec.imagePrompt || ''} onChange={(e) => updateCard(editingCard, { imagePrompt: e.target.value })}
                         placeholder="Descrição para gerar imagem com IA" className="rounded-xl" />
                     </div>
-                    <div className="flex gap-2">
-                      <label className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
+                    <div className="flex gap-2 flex-wrap">
+                      <label className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
                         <Upload className="h-4 w-4" /> Upload
                         <input type="file" accept="image/*" className="hidden"
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(editingCard, f); }} />
                       </label>
+                      <Button variant="outline" size="sm" onClick={() => setShowBrandAssets(prev => !prev)} className="rounded-xl gap-1 h-10">
+                        <ImageIcon className="h-4 w-4" /> Brand
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShowImagePicker(editingCard); }} className="rounded-xl gap-1 h-10">
                         <Search className="h-4 w-4" /> Pexels
                       </Button>
@@ -1520,6 +1543,29 @@ const CarouselGenerator: React.FC = () => {
                         <Wand2 className="h-4 w-4" /> Gerar IA
                       </Button>
                     </div>
+                    {/* Brand Assets Picker */}
+                    {showBrandAssets && (
+                      <div className="border rounded-xl p-3 space-y-2 bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-foreground">Biblioteca de Marca</p>
+                          <button onClick={() => setShowBrandAssets(false)} className="p-0.5 rounded hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                        {loadingBrandAssets ? (
+                          <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+                        ) : brandAssets.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum asset encontrado. Adicione em Biblioteca de Marca.</p>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
+                            {brandAssets.map(asset => (
+                              <button key={asset.id} onClick={() => { updateCard(editingCard, { imageUrl: asset.file_url }); setShowBrandAssets(false); toast({ title: 'Imagem aplicada!' }); }}
+                                className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all" title={asset.name}>
+                                <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ImageSettings, FLOW_COLOR } from './types';
-import { Settings2, Sparkles } from 'lucide-react';
+import { Settings2, Sparkles, Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface Props {
   settings: ImageSettings;
@@ -60,6 +60,8 @@ const CAMERA_ANGLES = [
 
 const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
   const update = (patch: Partial<ImageSettings>) => onChange({ ...settings, ...patch });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasScreenDevice = ['smartphone', 'tablet', 'laptop'].includes(settings.handObject);
 
   return (
     <div className="space-y-5">
@@ -176,12 +178,45 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
       </div>
 
       {/* Phone screen content (conditional) */}
-      {settings.handObject === 'smartphone' && (
-        <div>
-          <label className="text-xs font-semibold text-foreground mb-1.5 block">O que aparece na tela do celular?</label>
+      {hasScreenDevice && (
+        <div className="space-y-3">
+          <label className="text-xs font-semibold text-foreground mb-1.5 block">
+            O que aparece na tela do {settings.handObject === 'smartphone' ? 'celular' : settings.handObject === 'tablet' ? 'tablet' : 'notebook'}?
+          </label>
           <Input value={settings.phoneScreen} onChange={(e) => update({ phoneScreen: e.target.value })}
             placeholder="Ex: Dashboard Ellosuit, conversa WhatsApp, Instagram feed..."
             className="rounded-xl" />
+          
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Ou suba um print/screenshot da tela:
+            </label>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                const dataUrl = ev.target?.result as string;
+                if (dataUrl) update({ screenImageUrl: dataUrl });
+              };
+              reader.readAsDataURL(file);
+            }} />
+            {settings.screenImageUrl ? (
+              <div className="relative inline-block">
+                <img src={settings.screenImageUrl} alt="Screen preview" className="h-24 rounded-xl border border-border object-contain bg-muted" />
+                <button onClick={() => update({ screenImageUrl: '' })}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                <Upload className="h-4 w-4" />
+                Enviar screenshot da tela
+              </button>
+            )}
+          </div>
         </div>
       )}
 

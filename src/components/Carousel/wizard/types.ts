@@ -15,6 +15,7 @@ export interface ImageSettings {
   bodyPosition: string;
   handObject: string;
   phoneScreen: string;
+  screenImageUrl: string; // uploaded screenshot for device screen
   imageType: 'photo' | 'illustration' | 'print' | '3d-render' | 'cinematic';
   lightingStyle: 'cinematic' | 'natural' | 'studio' | 'dramatic' | 'soft' | 'neon';
   cameraAngle: 'front' | 'side' | 'low-angle' | 'high-angle' | 'close-up' | 'full-body';
@@ -54,6 +55,7 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   bodyPosition: '',
   handObject: '',
   phoneScreen: '',
+  screenImageUrl: '',
   imageType: 'photo',
   lightingStyle: 'cinematic',
   cameraAngle: 'front',

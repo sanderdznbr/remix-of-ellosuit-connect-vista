@@ -20,17 +20,19 @@ const PREVIEW_H = PREVIEW_W * (CARD_H / CARD_W);
 
 interface CarouselCard {
   type: 'cover' | 'content' | 'cta';
-  title: string;
+  title?: string;
   subtitle?: string;
   body?: string;
+  bodyTop?: string;
+  bodyBottom?: string;
   imageUrl?: string;
-  layout?: 'dark' | 'light' | 'accent' | 'image-full';
+  imagePrompt?: string;
+  layout?: 'dark' | 'light' | 'accent';
 }
 
 interface CarouselData {
   title: string;
   cards: CarouselCard[];
-  suggestedImageKeywords?: string[];
 }
 
 interface PexelsImage {
@@ -64,7 +66,7 @@ const CarouselGenerator: React.FC = () => {
 
   const [editingCard, setEditingCard] = useState<number | null>(null);
 
-  const [brandName, setBrandName] = useState('ellosuit');
+  const [brandName, setBrandName] = useState('Powered by ellosuit');
   const [userName, setUserName] = useState('');
   const [dateLabel, setDateLabel] = useState(() => {
     const d = new Date();
@@ -74,18 +76,18 @@ const CarouselGenerator: React.FC = () => {
   const [bgColor, setBgColor] = useState('#0F0F1A');
   const [accentColor, setAccentColor] = useState('#E84D1A');
   const [textColor, setTextColor] = useState('#FFFFFF');
-  const [generateImagesWithContent, setGenerateImagesWithContent] = useState(true);
 
-  const generateAiImageForCard = async (cardIndex: number, cards: CarouselCard[], promptOverride?: string): Promise<string | null> => {
+  // Generate AI image for a specific card
+  const generateAiImageForCard = async (cardIndex: number, cards: CarouselCard[]): Promise<string | null> => {
     const card = cards[cardIndex];
-    const promptText = promptOverride || card?.title || topic;
+    const imgPrompt = card?.imagePrompt || card?.title || card?.bodyTop || topic;
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-ai-image',
-          prompt: `Professional editorial Instagram carousel image, high quality, cinematic lighting: ${promptText}. Style: modern, bold, magazine quality.`,
+          prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
           imageSize: '3:4',
-          topic: promptText,
+          topic: imgPrompt,
         },
       });
       if (error) throw error;
@@ -115,40 +117,38 @@ const CarouselGenerator: React.FC = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
 
+      // Assign layouts
       const cards: CarouselCard[] = data.data.cards.map((c: any, i: number) => {
-        if (c.type === 'cover') return { ...c, layout: 'image-full' };
-        if (c.type === 'cta') return { ...c, layout: 'accent' };
-        const layouts: CarouselCard['layout'][] = ['dark', 'accent', 'light', 'dark'];
+        if (c.type === 'cover') return { ...c, layout: 'dark' as const };
+        if (c.type === 'cta') return { ...c, layout: 'accent' as const };
+        const layouts: CarouselCard['layout'][] = ['dark', 'dark', 'light', 'accent', 'dark'];
         return { ...c, layout: layouts[(i - 1) % layouts.length] };
       });
 
       setCarouselData({ ...data.data, cards });
       setActiveCardIndex(0);
-      toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados` });
+      toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados. Gerando imagens...` });
 
-      // Auto-generate images for cover + every 2nd content card
-      if (generateImagesWithContent) {
-        setGeneratingAllImages(true);
-        const imageIndices = cards.map((c, i) => (c.type === 'cover' || i % 2 === 0) ? i : -1).filter(i => i >= 0);
-        const updatedCards = [...cards];
-        
-        for (let idx = 0; idx < imageIndices.length; idx++) {
-          const ci = imageIndices[idx];
-          setImageGenProgress(`Gerando imagem ${idx + 1}/${imageIndices.length}...`);
-          const url = await generateAiImageForCard(ci, updatedCards);
+      // Auto-generate images for ALL cards
+      setGeneratingAllImages(true);
+      const updatedCards = [...cards];
+      
+      for (let i = 0; i < updatedCards.length; i++) {
+        const card = updatedCards[i];
+        // Generate images for cover and content cards (not accent-only or cta without prompt)
+        if (card.imagePrompt || card.type === 'cover') {
+          setImageGenProgress(`Gerando imagem ${i + 1}/${updatedCards.length}...`);
+          const url = await generateAiImageForCard(i, updatedCards);
           if (url) {
-            updatedCards[ci] = { ...updatedCards[ci], imageUrl: url };
+            updatedCards[i] = { ...updatedCards[i], imageUrl: url };
             setCarouselData(prev => prev ? { ...prev, cards: [...updatedCards] } : null);
           }
         }
-        setGeneratingAllImages(false);
-        setImageGenProgress('');
-        toast({ title: 'Imagens geradas!', description: `${imageIndices.length} imagens criadas com IA` });
       }
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
+      toast({ title: 'Carrossel completo!', description: 'Conteúdo e imagens prontos' });
 
-      if (data.data.suggestedImageKeywords?.length) {
-        searchImages(data.data.suggestedImageKeywords);
-      }
     } catch (err: any) {
       console.error(err);
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar', variant: 'destructive' });
@@ -166,7 +166,7 @@ const CarouselGenerator: React.FC = () => {
       });
       if (error) throw error;
       if (data?.images) setPexelsImages(data.images);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
     } finally {
       setSearchingImages(false);
@@ -182,9 +182,9 @@ const CarouselGenerator: React.FC = () => {
   };
 
   const generateAiImage = async (cardIndex: number) => {
-    const promptText = aiImagePrompt.trim() || carouselData?.cards[cardIndex]?.title || topic;
+    const promptText = aiImagePrompt.trim() || carouselData?.cards[cardIndex]?.imagePrompt || carouselData?.cards[cardIndex]?.title || topic;
     if (!promptText) {
-      toast({ title: 'Insira um prompt para a imagem', variant: 'destructive' });
+      toast({ title: 'Insira um prompt', variant: 'destructive' });
       return;
     }
     setGeneratingAiImage(true);
@@ -192,19 +192,19 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-ai-image',
-          prompt: `Professional editorial Instagram image, cinematic: ${promptText}`,
+          prompt: `Professional editorial photo, magazine quality, cinematic: ${promptText}`,
           imageSize: '3:4',
           topic: promptText,
         },
       });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Erro ao gerar imagem');
+      if (!data?.success) throw new Error(data?.error || 'Erro');
       setCardImage(cardIndex, data.imageUrl);
       setAiImagePrompt('');
       toast({ title: 'Imagem gerada!' });
     } catch (err: any) {
       console.error(err);
-      toast({ title: 'Erro', description: err.message || 'Falha ao gerar imagem', variant: 'destructive' });
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setGeneratingAiImage(false);
     }
@@ -219,7 +219,7 @@ const CarouselGenerator: React.FC = () => {
 
   const addCard = () => {
     if (!carouselData) return;
-    const newCard: CarouselCard = { type: 'content', title: 'Novo Card', body: 'Adicione seu conteúdo aqui...', layout: 'dark' };
+    const newCard: CarouselCard = { type: 'content', bodyTop: 'Texto principal aqui...', bodyBottom: 'Texto complementar...', layout: 'dark' };
     const cards = [...carouselData.cards];
     cards.splice(cards.length - 1, 0, newCard);
     setCarouselData({ ...carouselData, cards });
@@ -257,7 +257,7 @@ const CarouselGenerator: React.FC = () => {
         link.click();
         await new Promise(r => setTimeout(r, 300));
       }
-      toast({ title: 'Download completo!', description: `${carouselData.cards.length} imagens exportadas` });
+      toast({ title: 'Download completo!' });
     } catch (err) {
       console.error(err);
       toast({ title: 'Erro ao exportar', variant: 'destructive' });
@@ -266,58 +266,54 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  // ==================== CARD RENDER ====================
+  // ==================== RENDER HELPERS ====================
 
-  const getCardBg = (card: CarouselCard) => {
-    if (card.layout === 'accent') return accentColor;
-    if (card.layout === 'light') return '#F5F0EB';
-    if (card.layout === 'image-full') return bgColor;
-    return bgColor;
-  };
-
-  const getCardTextColor = (card: CarouselCard) => {
-    if (card.layout === 'light') return '#1A1A1A';
-    if (card.layout === 'accent') return '#FFFFFF';
-    return textColor;
-  };
-
-  const getAccentTextColor = (card: CarouselCard) => {
-    if (card.layout === 'light') return accentColor;
-    if (card.layout === 'accent') return '#FFD4A0';
-    return accentColor;
+  // Parse **bold** markers into accent-colored spans
+  const renderAccentText = (text: string, color: string, baseColor: string, fontSize: number, s: number) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <span>
+        {parts.map((part, i) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <span key={i} style={{ color }}>{part.slice(2, -2)}</span>;
+          }
+          return <span key={i} style={{ color: baseColor }}>{part}</span>;
+        })}
+      </span>
+    );
   };
 
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
     const w = isExport ? CARD_W : PREVIEW_W;
     const h = isExport ? CARD_H : PREVIEW_H;
     const s = isExport ? 1 : PREVIEW_W / CARD_W;
-    const bg = getCardBg(card);
-    const txt = getCardTextColor(card);
-    const accent = getAccentTextColor(card);
     const serif = "'Playfair Display', 'Georgia', serif";
     const sans = "'Inter', 'Helvetica Neue', sans-serif";
 
+    const layout = card.layout || 'dark';
+    const isDark = layout === 'dark';
+    const isLight = layout === 'light';
+    const isAccent = layout === 'accent';
+
+    const bg = isAccent ? accentColor : isLight ? '#F8F4EF' : bgColor;
+    const mainTxt = isLight ? '#1A1A1A' : '#FFFFFF';
+    const secondaryTxt = isAccent ? 'rgba(255,255,255,0.75)' : isLight ? '#666' : 'rgba(255,255,255,0.75)';
+    const accentTxt = isAccent ? '#FFD4A0' : isLight ? accentColor : accentColor;
+    const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
+
+    // Header bar
     const renderHeader = () => (
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: `${32 * s}px ${52 * s}px`,
-        fontFamily: sans, fontSize: `${22 * s}px`, fontWeight: 600,
-        color: txt, opacity: 0.7, letterSpacing: `${1 * s}px`,
+        padding: `${28 * s}px ${48 * s}px`,
+        fontFamily: sans, fontSize: `${20 * s}px`, fontWeight: 500,
+        color: headerTxt, letterSpacing: `${0.5 * s}px`,
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        textTransform: 'uppercase' as const,
       }}>
         <span>{brandName}</span>
+        <span>{userName ? `@${userName}` : ''}</span>
         <span>{dateLabel}</span>
-      </div>
-    );
-
-    const renderPageNum = () => (
-      <div style={{
-        position: 'absolute', bottom: `${40 * s}px`, right: `${52 * s}px`,
-        fontFamily: sans, fontSize: `${28 * s}px`, fontWeight: 700,
-        color: txt, opacity: 0.3, zIndex: 10,
-      }}>
-        {String(index + 1).padStart(2, '0')}/{String(carouselData?.cards.length || 0).padStart(2, '0')}
       </div>
     );
 
@@ -333,45 +329,48 @@ const CarouselGenerator: React.FC = () => {
           <div style={{
             position: 'absolute', inset: 0,
             background: card.imageUrl
-              ? 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0.1) 65%, rgba(0,0,0,0.3) 100%)'
-              : `linear-gradient(135deg, ${bgColor} 0%, ${accentColor}33 100%)`,
+              ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)'
+              : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)`,
           }} />
           {renderHeader()}
           
-          {/* Brand badge */}
+          {/* Badge */}
           <div style={{
-            position: 'absolute', left: `${52 * s}px`, top: `${100 * s}px`,
+            position: 'absolute', left: '50%', top: `${520 * s}px`,
+            transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: `${12 * s}px`, zIndex: 10,
           }}>
             <div style={{
-              width: `${56 * s}px`, height: `${56 * s}px`, borderRadius: '50%', backgroundColor: accentColor,
+              width: `${52 * s}px`, height: `${52 * s}px`, borderRadius: '50%', backgroundColor: accentColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: `${24 * s}px`, fontWeight: 900, color: '#FFF', fontFamily: sans,
+              fontSize: `${22 * s}px`, color: '#FFF', fontFamily: sans, fontWeight: 900,
             }}>✦</div>
             {userName && (
-              <span style={{ fontFamily: sans, fontSize: `${26 * s}px`, fontWeight: 700, color: '#FFF' }}>
+              <span style={{ fontFamily: sans, fontSize: `${24 * s}px`, fontWeight: 600, color: '#FFF' }}>
                 @{userName}
               </span>
             )}
+            <span style={{ fontSize: `${22 * s}px`, color: '#4A9EFF' }}>✓</span>
           </div>
 
           {/* Title */}
           <div style={{
-            position: 'absolute', bottom: `${80 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`, zIndex: 10,
+            position: 'absolute', bottom: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, zIndex: 10,
+            textAlign: 'center',
           }}>
             <h1 style={{
-              fontFamily: serif, fontSize: `${82 * s}px`, fontWeight: 900,
+              fontFamily: serif, fontSize: `${76 * s}px`, fontWeight: 900,
               lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase',
-              letterSpacing: `-${2 * s}px`,
-              textShadow: '0 4px 30px rgba(0,0,0,0.6)',
+              letterSpacing: `-${1 * s}px`,
+              textShadow: '0 4px 40px rgba(0,0,0,0.7)',
             }}>
-              {card.title}
+              {renderAccentText(card.title || '', accentColor, '#FFFFFF', 76, s)}
             </h1>
             {card.subtitle && (
               <p style={{
-                fontFamily: sans, fontSize: `${26 * s}px`, fontWeight: 500,
-                color: '#FFFFFF', opacity: 0.9, marginTop: `${24 * s}px`,
-                lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${2 * s}px`,
+                fontFamily: sans, fontSize: `${22 * s}px`, fontWeight: 600,
+                color: '#FFFFFF', opacity: 0.85, marginTop: `${24 * s}px`,
+                lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px`,
               }}>
                 → {card.subtitle}
               </p>
@@ -383,203 +382,149 @@ const CarouselGenerator: React.FC = () => {
 
     // ===== CTA =====
     if (card.type === 'cta') {
-      const ctaBg = card.layout === 'light' ? '#F5F0EB' : accentColor;
-      const ctaTxt = card.layout === 'light' ? '#1A1A1A' : '#FFFFFF';
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
-          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: ctaBg }}>
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {card.imageUrl && (
             <>
               <img src={card.imageUrl} alt="" crossOrigin="anonymous"
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)' }} />
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} />
             </>
           )}
           {renderHeader()}
-
           <div style={{
-            position: 'absolute', inset: `${100 * s}px ${52 * s}px ${80 * s}px`,
+            position: 'absolute', inset: `${100 * s}px ${48 * s}px ${60 * s}px`,
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
             textAlign: 'center', zIndex: 10,
           }}>
             <div style={{
-              width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%', backgroundColor: card.imageUrl ? '#FFF' : bgColor,
+              width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%',
+              backgroundColor: isAccent ? 'rgba(255,255,255,0.15)' : accentColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: `${36 * s}px`, fontWeight: 900, color: accentColor, fontFamily: sans,
+              fontSize: `${36 * s}px`, color: '#FFF', fontFamily: sans,
               marginBottom: `${40 * s}px`,
             }}>✦</div>
-
             <h2 style={{
-              fontFamily: serif, fontSize: `${72 * s}px`, fontWeight: 900,
-              lineHeight: 1.05, color: card.imageUrl ? '#FFF' : ctaTxt, marginBottom: `${30 * s}px`,
+              fontFamily: serif, fontSize: `${68 * s}px`, fontWeight: 900,
+              lineHeight: 1.05, color: mainTxt, marginBottom: `${30 * s}px`,
             }}>
               {card.title}
             </h2>
-
             {card.body && (
               <p style={{
-                fontFamily: serif, fontSize: `${36 * s}px`, fontWeight: 400,
-                lineHeight: 1.5, color: card.imageUrl ? '#FFF' : ctaTxt, fontStyle: 'italic',
-                opacity: 0.85, maxWidth: `${900 * s}px`,
+                fontFamily: serif, fontSize: `${34 * s}px`, fontWeight: 400,
+                lineHeight: 1.5, color: mainTxt, fontStyle: 'italic', opacity: 0.8,
+                maxWidth: `${900 * s}px`,
               }}>
                 "{card.body}"
               </p>
             )}
-
             {userName && (
               <div style={{
-                marginTop: `${50 * s}px`, padding: `${18 * s}px ${40 * s}px`,
-                border: `${3 * s}px solid ${card.imageUrl ? '#FFF' : ctaTxt}`,
+                marginTop: `${50 * s}px`, padding: `${16 * s}px ${36 * s}px`,
+                border: `${2.5 * s}px solid ${mainTxt}`,
                 borderRadius: `${50 * s}px`,
               }}>
                 <p style={{
-                  fontFamily: sans, fontSize: `${24 * s}px`, fontWeight: 700,
-                  color: card.imageUrl ? '#FFF' : ctaTxt, textTransform: 'uppercase',
-                  letterSpacing: `${2 * s}px`,
+                  fontFamily: sans, fontSize: `${22 * s}px`, fontWeight: 700,
+                  color: mainTxt, textTransform: 'uppercase', letterSpacing: `${2 * s}px`,
                 }}>
                   @{userName}
                 </p>
               </div>
             )}
           </div>
-          {renderPageNum()}
         </div>
       );
     }
 
     // ===== CONTENT CARDS =====
-    const layout = card.layout || 'dark';
+    // Reference layout: bodyTop (large serif) → image (rounded) → bodyBottom (large serif)
     const hasImage = !!card.imageUrl;
-    const imageOnTop = index % 2 === 0;
+    const topText = card.bodyTop || card.body || card.title || '';
+    const bottomText = card.bodyBottom || '';
 
+    // Text-only card (accent style or no image)
+    if (!hasImage && isAccent) {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
+          {renderHeader()}
+          <div style={{
+            position: 'absolute', top: `${90 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, bottom: `${60 * s}px`,
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5,
+            paddingTop: `${30 * s}px`,
+          }}>
+            <p style={{
+              fontFamily: serif, fontSize: `${56 * s}px`, fontWeight: 700,
+              lineHeight: 1.15, color: mainTxt,
+            }}>
+              {renderAccentText(topText, accentTxt, mainTxt, 56, s)}
+            </p>
+            {bottomText && (
+              <p style={{
+                fontFamily: serif, fontSize: `${32 * s}px`, fontWeight: 400,
+                lineHeight: 1.5, color: secondaryTxt,
+                marginTop: 'auto',
+                textDecoration: 'underline',
+                textDecorationColor: `${secondaryTxt}55`,
+                textUnderlineOffset: `${6 * s}px`,
+              }}>
+                {bottomText}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Standard content card: text-top → image → text-bottom
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
         {renderHeader()}
-
-        {/* FULL IMAGE BACKGROUND VARIANT */}
-        {hasImage && layout === 'dark' && (
-          <>
-            <img src={card.imageUrl} alt="" crossOrigin="anonymous"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.05) 70%)',
-            }} />
-            <div style={{
-              position: 'absolute', bottom: `${70 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`, zIndex: 10,
+        
+        <div style={{
+          position: 'absolute', top: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, bottom: `${40 * s}px`,
+          display: 'flex', flexDirection: 'column', zIndex: 5,
+        }}>
+          {/* TOP TEXT */}
+          <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
+            <p style={{
+              fontFamily: serif, fontSize: `${48 * s}px`, fontWeight: 700,
+              lineHeight: 1.18, color: mainTxt,
             }}>
-              <h2 style={{
-                fontFamily: serif, fontSize: `${64 * s}px`, fontWeight: 800,
-                lineHeight: 1.08, color: '#FFF', marginBottom: `${20 * s}px`,
-              }}>
-                {card.title}
-              </h2>
-              {card.body && (
-                <p style={{
-                  fontFamily: sans, fontSize: `${30 * s}px`, fontWeight: 400,
-                  lineHeight: 1.6, color: '#FFF', opacity: 0.85,
-                }}>
-                  {card.body}
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* TEXT + IMAGE SPLIT */}
-        {hasImage && layout !== 'dark' && imageOnTop && (
-          <>
-            <div style={{
-              position: 'absolute', top: `${80 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`,
-              height: `${580 * s}px`, borderRadius: `${20 * s}px`, overflow: 'hidden', zIndex: 5,
-            }}>
-              <img src={card.imageUrl} alt="" crossOrigin="anonymous"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <div style={{
-              position: 'absolute', bottom: `${70 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`, zIndex: 5,
-            }}>
-              <h2 style={{
-                fontFamily: serif, fontSize: `${58 * s}px`, fontWeight: 800,
-                lineHeight: 1.1, color: txt, marginBottom: `${18 * s}px`,
-              }}>
-                {card.title}
-              </h2>
-              {card.body && (
-                <p style={{
-                  fontFamily: sans, fontSize: `${30 * s}px`, fontWeight: 400,
-                  lineHeight: 1.55, color: accent,
-                }}>
-                  {card.body}
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* TEXT TOP + IMAGE BOTTOM */}
-        {hasImage && layout !== 'dark' && !imageOnTop && (
-          <>
-            <div style={{
-              position: 'absolute', top: `${90 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`, zIndex: 5,
-            }}>
-              <h2 style={{
-                fontFamily: serif, fontSize: `${58 * s}px`, fontWeight: 800,
-                lineHeight: 1.1, color: txt, marginBottom: `${18 * s}px`,
-              }}>
-                {card.title}
-              </h2>
-              {card.body && (
-                <p style={{
-                  fontFamily: sans, fontSize: `${30 * s}px`, fontWeight: 400,
-                  lineHeight: 1.55, color: accent,
-                }}>
-                  {card.body}
-                </p>
-              )}
-            </div>
-            <div style={{
-              position: 'absolute', bottom: `${60 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`,
-              height: `${560 * s}px`, borderRadius: `${20 * s}px`, overflow: 'hidden', zIndex: 5,
-            }}>
-              <img src={card.imageUrl} alt="" crossOrigin="anonymous"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          </>
-        )}
-
-        {/* TEXT ONLY (no image) */}
-        {!hasImage && (
-          <div style={{
-            position: 'absolute', top: `${90 * s}px`, left: `${52 * s}px`, right: `${52 * s}px`, bottom: `${70 * s}px`,
-            display: 'flex', flexDirection: 'column', justifyContent: 'center', zIndex: 5,
-          }}>
-            {/* Decorative line */}
-            <div style={{
-              width: `${80 * s}px`, height: `${6 * s}px`, backgroundColor: accent,
-              marginBottom: `${40 * s}px`, borderRadius: `${3 * s}px`,
-            }} />
-            <h2 style={{
-              fontFamily: serif, fontSize: `${68 * s}px`, fontWeight: 900,
-              lineHeight: 1.05, color: txt, marginBottom: `${36 * s}px`,
-            }}>
-              {card.title}
-            </h2>
-            {card.body && (
-              <p style={{
-                fontFamily: sans, fontSize: `${34 * s}px`, fontWeight: 400,
-                lineHeight: 1.6, color: txt, opacity: 0.8,
-                borderLeft: `${4 * s}px solid ${accent}`,
-                paddingLeft: `${24 * s}px`,
-              }}>
-                {card.body}
-              </p>
-            )}
+              {renderAccentText(topText, accentTxt, mainTxt, 48, s)}
+            </p>
           </div>
-        )}
 
-        {renderPageNum()}
+          {/* IMAGE */}
+          {hasImage && (
+            <div style={{
+              marginTop: `${24 * s}px`,
+              flex: 1,
+              minHeight: `${400 * s}px`,
+              borderRadius: `${16 * s}px`,
+              overflow: 'hidden',
+            }}>
+              <img src={card.imageUrl} alt="" crossOrigin="anonymous"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
+
+          {/* BOTTOM TEXT */}
+          {bottomText && (
+            <div style={{ paddingTop: `${24 * s}px` }}>
+              <p style={{
+                fontFamily: serif, fontSize: `${36 * s}px`, fontWeight: 600,
+                lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt,
+              }}>
+                {renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36, s)}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -600,14 +545,12 @@ const CarouselGenerator: React.FC = () => {
             <h1 className="text-lg font-bold" style={{ color: FLOW_COLOR }}>Gerador de Carrossel</h1>
             <p className="text-xs text-muted-foreground">Carrosséis editoriais 1080×1350 para Instagram</p>
           </div>
-          <div className="flex gap-2">
-            {carouselData && !generatingAllImages && (
-              <Button onClick={exportAllCards} disabled={exporting} className="gap-2" style={{ backgroundColor: FLOW_COLOR }}>
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Exportar PNGs
-              </Button>
-            )}
-          </div>
+          {carouselData && !generatingAllImages && (
+            <Button onClick={exportAllCards} disabled={exporting} className="gap-2" style={{ backgroundColor: FLOW_COLOR }}>
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Exportar PNGs
+            </Button>
+          )}
         </div>
       </div>
 
@@ -678,24 +621,9 @@ const CarouselGenerator: React.FC = () => {
                 </div>
               </div>
 
-              {/* AI Image toggle */}
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/50 border border-border">
-                <Wand2 className="h-5 w-5 flex-shrink-0" style={{ color: accentColor }} />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">Gerar imagens com IA automaticamente</p>
-                  <p className="text-xs text-muted-foreground">Imagens serão criadas para capa e cards alternados</p>
-                </div>
-                <button
-                  onClick={() => setGenerateImagesWithContent(!generateImagesWithContent)}
-                  className={`w-12 h-7 rounded-full transition-colors relative ${generateImagesWithContent ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${generateImagesWithContent ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-
               <Button onClick={generateContent} disabled={generating}
                 className="w-full gap-2 h-14 rounded-2xl text-lg font-bold" style={{ backgroundColor: FLOW_COLOR }}>
-                {generating ? <><Loader2 className="h-5 w-5 animate-spin" /> Gerando conteúdo com IA...</>
+                {generating ? <><Loader2 className="h-5 w-5 animate-spin" /> Gerando conteúdo + imagens com IA...</>
                   : <><Sparkles className="h-5 w-5" /> Gerar Carrossel Completo</>}
               </Button>
             </CardContent>
@@ -704,11 +632,11 @@ const CarouselGenerator: React.FC = () => {
 
         {/* Progress banner */}
         {generatingAllImages && (
-          <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/50 animate-pulse">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: accentColor }} />
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/50">
+            <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" style={{ color: accentColor }} />
             <div>
-              <p className="text-sm font-semibold text-foreground">{imageGenProgress || 'Gerando imagens...'}</p>
-              <p className="text-xs text-muted-foreground">As imagens serão aplicadas automaticamente aos cards</p>
+              <p className="text-sm font-semibold text-foreground">{imageGenProgress || 'Gerando imagens com IA...'}</p>
+              <p className="text-xs text-muted-foreground">Imagens são aplicadas automaticamente conforme ficam prontas</p>
             </div>
           </div>
         )}
@@ -730,7 +658,7 @@ const CarouselGenerator: React.FC = () => {
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group">
-                    <div className={`cursor-pointer transition-all rounded-2xl ${activeCardIndex === i ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-75 hover:opacity-100'}`}
+                    <div className={`cursor-pointer transition-all rounded-2xl ${activeCardIndex === i ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-70 hover:opacity-100'}`}
                       onClick={() => setActiveCardIndex(i)}>
                       {renderCardPreview(card, i)}
                     </div>
@@ -738,7 +666,7 @@ const CarouselGenerator: React.FC = () => {
                       <button onClick={() => setEditingCard(i)} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90">
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => setShowImagePicker(i)} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90">
+                      <button onClick={() => { setShowImagePicker(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90">
                         <ImageIcon className="h-3.5 w-3.5" />
                       </button>
                       {carouselData.cards.length > 2 && (
@@ -754,57 +682,75 @@ const CarouselGenerator: React.FC = () => {
             </div>
 
             {/* Edit Panel */}
-            {editingCard !== null && carouselData.cards[editingCard] && (
-              <Card className="border-0 shadow-md rounded-3xl">
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold">Editar Card {editingCard + 1}</h3>
-                    <button onClick={() => setEditingCard(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-                  </div>
-                  <Input value={carouselData.cards[editingCard].title}
-                    onChange={(e) => updateCard(editingCard, { title: e.target.value })} placeholder="Título" className="rounded-xl" />
-                  {carouselData.cards[editingCard].type === 'cover' && (
-                    <Input value={carouselData.cards[editingCard].subtitle || ''}
-                      onChange={(e) => updateCard(editingCard, { subtitle: e.target.value })} placeholder="Subtítulo" className="rounded-xl" />
-                  )}
-                  {(carouselData.cards[editingCard].type === 'content' || carouselData.cards[editingCard].type === 'cta') && (
-                    <Textarea value={carouselData.cards[editingCard].body || ''}
-                      onChange={(e) => updateCard(editingCard, { body: e.target.value })} placeholder="Conteúdo" className="rounded-xl min-h-[80px] resize-none" />
-                  )}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Layout</label>
-                    <div className="flex gap-2">
-                      {(['dark', 'light', 'accent'] as const).map(l => (
-                        <button key={l} onClick={() => updateCard(editingCard, { layout: l })}
-                          className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${carouselData.cards[editingCard].layout === l ? 'ring-2 ring-primary scale-105' : ''}`}
-                          style={{
-                            backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F5F0EB',
-                            color: l === 'light' ? '#1A1A1A' : '#FFF',
-                            borderColor: l === 'light' ? '#ddd' : 'transparent',
-                          }}>
-                          {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
-                        </button>
-                      ))}
+            {editingCard !== null && carouselData.cards[editingCard] && (() => {
+              const ec = carouselData.cards[editingCard];
+              return (
+                <Card className="border-0 shadow-md rounded-3xl">
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold">Editar Card {editingCard + 1}</h3>
+                      <button onClick={() => setEditingCard(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
-                      <Upload className="h-4 w-4" /> Upload
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(editingCard, f); }} />
-                    </label>
-                    <Button variant="outline" size="sm" onClick={() => setShowImagePicker(editingCard)} className="rounded-xl gap-1 h-10">
-                      <Search className="h-4 w-4" /> Pexels
-                    </Button>
-                    <Button size="sm"
-                      onClick={() => { setShowImagePicker(editingCard); setAiImagePrompt(carouselData.cards[editingCard]?.title || ''); }}
-                      className="rounded-xl gap-1 h-10" style={{ backgroundColor: accentColor }}>
-                      <Wand2 className="h-4 w-4" /> Gerar com IA
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    {ec.type === 'cover' && (
+                      <>
+                        <Input value={ec.title || ''} onChange={(e) => updateCard(editingCard, { title: e.target.value })} placeholder="Título" className="rounded-xl" />
+                        <Input value={ec.subtitle || ''} onChange={(e) => updateCard(editingCard, { subtitle: e.target.value })} placeholder="Subtítulo" className="rounded-xl" />
+                      </>
+                    )}
+                    {ec.type === 'content' && (
+                      <>
+                        <Textarea value={ec.bodyTop || ''} onChange={(e) => updateCard(editingCard, { bodyTop: e.target.value })}
+                          placeholder="Texto superior (use **destaque** para cor accent)" className="rounded-xl min-h-[80px] resize-none" />
+                        <Textarea value={ec.bodyBottom || ''} onChange={(e) => updateCard(editingCard, { bodyBottom: e.target.value })}
+                          placeholder="Texto inferior" className="rounded-xl min-h-[60px] resize-none" />
+                      </>
+                    )}
+                    {ec.type === 'cta' && (
+                      <>
+                        <Input value={ec.title || ''} onChange={(e) => updateCard(editingCard, { title: e.target.value })} placeholder="Título CTA" className="rounded-xl" />
+                        <Textarea value={ec.body || ''} onChange={(e) => updateCard(editingCard, { body: e.target.value })} placeholder="Mensagem" className="rounded-xl min-h-[60px] resize-none" />
+                      </>
+                    )}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Layout</label>
+                      <div className="flex gap-2">
+                        {(['dark', 'light', 'accent'] as const).map(l => (
+                          <button key={l} onClick={() => updateCard(editingCard, { layout: l })}
+                            className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${ec.layout === l ? 'ring-2 ring-primary scale-105' : ''}`}
+                            style={{
+                              backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF',
+                              color: l === 'light' ? '#1A1A1A' : '#FFF',
+                              borderColor: l === 'light' ? '#ddd' : 'transparent',
+                            }}>
+                            {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Prompt da imagem</label>
+                      <Input value={ec.imagePrompt || ''} onChange={(e) => updateCard(editingCard, { imagePrompt: e.target.value })}
+                        placeholder="Descrição para gerar imagem com IA" className="rounded-xl" />
+                    </div>
+                    <div className="flex gap-2">
+                      <label className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
+                        <Upload className="h-4 w-4" /> Upload
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(editingCard, f); }} />
+                      </label>
+                      <Button variant="outline" size="sm" onClick={() => { setShowImagePicker(editingCard); }} className="rounded-xl gap-1 h-10">
+                        <Search className="h-4 w-4" /> Pexels
+                      </Button>
+                      <Button size="sm"
+                        onClick={() => { setShowImagePicker(editingCard); setAiImagePrompt(ec.imagePrompt || ec.title || ''); }}
+                        className="rounded-xl gap-1 h-10" style={{ backgroundColor: accentColor }}>
+                        <Wand2 className="h-4 w-4" /> Gerar IA
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Image Picker */}
             {showImagePicker !== null && (
@@ -815,24 +761,24 @@ const CarouselGenerator: React.FC = () => {
                     <button onClick={() => setShowImagePicker(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
                   </div>
 
-                  {/* AI Generation - PRIMARY */}
+                  {/* AI Generation */}
                   <div className="p-4 rounded-2xl border-2 border-dashed" style={{ borderColor: accentColor + '66' }}>
                     <div className="flex items-center gap-2 mb-3">
                       <Wand2 className="h-5 w-5" style={{ color: accentColor }} />
-                      <p className="text-sm font-bold text-foreground">Gerar com IA (Nano Banana)</p>
+                      <p className="text-sm font-bold text-foreground">Gerar com IA</p>
                     </div>
                     <div className="flex gap-2">
                       <Input value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)}
-                        placeholder="Descreva a imagem que deseja..." className="rounded-xl flex-1" />
+                        placeholder="Descreva a imagem..." className="rounded-xl flex-1" />
                       <Button onClick={() => generateAiImage(showImagePicker)} disabled={generatingAiImage}
                         className="gap-2 rounded-xl px-5" style={{ backgroundColor: accentColor }}>
                         {generatingAiImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Gerar
                       </Button>
                     </div>
-                    {generatingAiImage && <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">⏳ Gerando imagem... pode levar até 60s</p>}
+                    {generatingAiImage && <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">⏳ Gerando... até 60s</p>}
                   </div>
 
-                  {/* Pexels search */}
+                  {/* Pexels */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Search className="h-4 w-4 text-muted-foreground" />
@@ -840,7 +786,7 @@ const CarouselGenerator: React.FC = () => {
                     </div>
                     {!pexelsImages.length && !searchingImages && (
                       <Button variant="outline" onClick={() => searchImages()} className="w-full gap-2 rounded-xl">
-                        <Search className="h-4 w-4" /> Buscar imagens
+                        <Search className="h-4 w-4" /> Buscar
                       </Button>
                     )}
                     {searchingImages && (
@@ -853,7 +799,7 @@ const CarouselGenerator: React.FC = () => {
                         <div className="grid grid-cols-4 gap-2 max-h-[250px] overflow-y-auto rounded-xl">
                           {pexelsImages.map((img) => (
                             <button key={img.id} onClick={() => setCardImage(showImagePicker, img.url)}
-                              className="relative rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
+                              className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
                               <img src={img.thumb} alt={img.alt} className="w-full h-full object-cover" />
                             </button>
                           ))}
@@ -869,7 +815,7 @@ const CarouselGenerator: React.FC = () => {
         )}
       </div>
 
-      {/* Hidden export canvases */}
+      {/* Hidden export */}
       {carouselData && (
         <div className="fixed -left-[9999px] top-0" aria-hidden>
           {carouselData.cards.map((card, i) => (

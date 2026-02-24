@@ -24,35 +24,47 @@ Deno.serve(async (req) => {
 
       const numCards = cardCount || 7;
 
-      const systemPrompt = `Você é um especialista em criação de carrosséis para Instagram. 
-Gere conteúdo otimizado para um carrossel de ${numCards} cards sobre o tópico fornecido.
+      const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
-REGRAS:
-- Card 1: Título chamativo (máx 8 palavras) + subtítulo curto
-- Cards 2 a ${numCards - 1}: Cada card deve ter um título curto (3-5 palavras) e um texto informativo (máx 40 palavras)
-- Card ${numCards}: CTA (chamada para ação) + frase motivacional
+Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
 
-Responda APENAS em JSON válido neste formato:
+REGRAS DE LAYOUT (siga EXATAMENTE):
+- Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo
+- Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
+  - "bodyTop": Parágrafo principal (30-60 palavras), informativo e denso. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 15 palavras destacadas)
+  - "bodyBottom": Segundo parágrafo (20-40 palavras), complementar, dados adicionais ou contexto
+  - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade relacionada ao conteúdo do card. Se o card mencionar marcas, produtos ou pessoas específicas, descreva visualmente o que deveria aparecer (ex: "embalagem de produto proteico em fundo escuro dramático", "atleta fitness bebendo shake em academia moderna")
+- Card ${numCards} (cta): CTA + mensagem motivacional
+
+IMPORTANTE sobre imagePrompt:
+- Descreva a cena, iluminação, composição e estilo
+- Se mencionar marcas reais, descreva o visual do produto sem usar o nome da marca (ex: "embalagem de salgadinho em tons laranja e preto")
+- Use estilo editorial/revista: iluminação cinematográfica, composição profissional
+- Varie os estilos: close-up de produtos, pessoas em ação, still life editorial
+
+Responda APENAS em JSON válido:
 {
   "title": "título do carrossel",
   "cards": [
     {
       "type": "cover",
-      "title": "Título Principal",
-      "subtitle": "Subtítulo explicativo"
+      "title": "TÍTULO IMPACTANTE EM CAIXA ALTA",
+      "subtitle": "Subtítulo descritivo curto",
+      "imagePrompt": "descrição visual para imagem de capa"
     },
     {
       "type": "content",
-      "title": "Título do Card",
-      "body": "Texto informativo do card..."
+      "bodyTop": "Parágrafo principal com **trechos destacados** em negrito...",
+      "bodyBottom": "Segundo parágrafo complementar...",
+      "imagePrompt": "descrição visual para imagem do card"
     },
     {
       "type": "cta",
-      "title": "Gostou?",
-      "body": "Salve, compartilhe e siga para mais conteúdo!"
+      "title": "Gostou do conteúdo?",
+      "body": "Salve, compartilhe e siga para mais!",
+      "imagePrompt": "descrição visual para CTA"
     }
-  ],
-  "suggestedImageKeywords": ["keyword1", "keyword2", "keyword3"]
+  ]
 }`;
 
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -91,7 +103,6 @@ Responda APENAS em JSON válido neste formato:
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '';
       
-      // Extract JSON from response
       let parsed;
       try {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -119,10 +130,8 @@ Responda APENAS em JSON válido neste formato:
         });
       }
 
-
       const imagePrompt = prompt || topic || 'abstract background';
 
-      // Step 1: Create generation task
       const genResponse = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate', {
         method: 'POST',
         headers: {
@@ -155,7 +164,6 @@ Responda APENAS em JSON válido neste formato:
         });
       }
 
-      // Step 2: Poll for result (max 60s)
       let imageUrl: string | null = null;
       for (let attempt = 0; attempt < 30; attempt++) {
         await new Promise(r => setTimeout(r, 2000));
@@ -178,7 +186,6 @@ Responda APENAS em JSON válido neste formato:
             status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        // flag === 0 means still generating, continue polling
       }
 
       if (!imageUrl) {

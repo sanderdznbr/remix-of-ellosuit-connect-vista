@@ -852,8 +852,8 @@ const CarouselGenerator: React.FC = () => {
 
             <div className="flex flex-1 overflow-hidden">
               {/* Center: Large preview with card navigation */}
-              <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 overflow-auto p-4">
-                <div style={{ transform: `scale(${Math.min(0.7, (window.innerHeight * 0.82) / CARD_H)})`, transformOrigin: 'center center' }}>
+              <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 overflow-auto p-2">
+                <div style={{ transform: `scale(${Math.min(0.85, (window.innerHeight * 0.78) / CARD_H)})`, transformOrigin: 'center center' }}>
                   {renderCardPreview(ec, validIndex)}
                 </div>
                 {/* Card navigation dots */}
@@ -883,6 +883,7 @@ const CarouselGenerator: React.FC = () => {
                 totalCards={carouselData.cards.length}
                 bgColor={bgColor}
                 accentColor={accentColor}
+                textColor={textColor}
                 onUpdateCard={updateCard}
                 onUpdateAllCards={updateAllCards}
                 onClose={() => setEditingCard(null)}
@@ -892,6 +893,9 @@ const CarouselGenerator: React.FC = () => {
                 generatingAiImage={generatingAiImage}
                 aiImagePrompt={aiImagePrompt}
                 setAiImagePrompt={setAiImagePrompt}
+                onChangeBgColor={setBgColor}
+                onChangeAccentColor={setAccentColor}
+                onChangeTextColor={setTextColor}
               />
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
-  Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp,
+  Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info,
 } from 'lucide-react';
 import { FLOW_COLOR } from '../wizard/types';
 
@@ -31,6 +31,7 @@ interface Props {
   totalCards: number;
   bgColor: string;
   accentColor: string;
+  textColor: string;
   onUpdateCard: (index: number, updates: Partial<CarouselCard>) => void;
   onUpdateAllCards: (updates: Partial<CarouselCard>) => void;
   onClose: () => void;
@@ -40,16 +41,21 @@ interface Props {
   generatingAiImage: boolean;
   aiImagePrompt: string;
   setAiImagePrompt: (v: string) => void;
+  onChangeBgColor: (c: string) => void;
+  onChangeAccentColor: (c: string) => void;
+  onChangeTextColor: (c: string) => void;
 }
 
 const CarouselEditorSidebar: React.FC<Props> = ({
-  card, cardIndex, totalCards, bgColor, accentColor,
+  card, cardIndex, totalCards, bgColor, accentColor, textColor,
   onUpdateCard, onUpdateAllCards, onClose,
   onUploadImage, onOpenImagePicker, onGenerateAiImage,
   generatingAiImage, aiImagePrompt, setAiImagePrompt,
+  onChangeBgColor, onChangeAccentColor, onChangeTextColor,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showGlobal, setShowGlobal] = React.useState(false);
+  const [showStyle, setShowStyle] = React.useState(false);
   const [globalFontScale, setGlobalFontScale] = React.useState(100);
   const [globalPaddingScale, setGlobalPaddingScale] = React.useState(100);
 
@@ -67,6 +73,8 @@ const CarouselEditorSidebar: React.FC<Props> = ({
     onUpdateAllCards({ layout });
   };
 
+  const PRESET_COLORS = ['#0F0F1A', '#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560', '#E84D1A', '#F38181', '#FCE38A', '#95E1D3', '#EAFFD0', '#F8F4EF', '#FFFFFF'];
+
   return (
     <div className="w-[340px] flex-shrink-0 border-l border-border bg-background flex flex-col h-full">
       {/* Header */}
@@ -81,13 +89,11 @@ const CarouselEditorSidebar: React.FC<Props> = ({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-5">
+        <div className="p-4 space-y-4">
           {/* ===== GLOBAL CONTROLS ===== */}
           <div className="rounded-2xl border border-border overflow-hidden">
-            <button
-              onClick={() => setShowGlobal(!showGlobal)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-            >
+            <button onClick={() => setShowGlobal(!showGlobal)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-2">
                 <LayoutGrid className="h-4 w-4" style={{ color: FLOW_COLOR }} />
                 <span className="text-sm font-semibold text-foreground">Todos os Cards</span>
@@ -98,17 +104,13 @@ const CarouselEditorSidebar: React.FC<Props> = ({
               <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Tamanho da Fonte (todos)</span>
+                    <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Fonte (todos)</span>
                     <span className="text-[10px] font-mono">{globalFontScale}%</span>
                   </label>
                   <input type="range" min="50" max="200" step="5" value={globalFontScale}
                     onChange={(e) => applyGlobalFont(parseInt(e.target.value))}
                     className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
-                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                    <span>50%</span><span>100%</span><span>200%</span>
-                  </div>
                 </div>
-
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1"><Maximize className="h-3 w-3" /> Margens (todos)</span>
@@ -118,7 +120,6 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                     onChange={(e) => applyGlobalPadding(parseInt(e.target.value))}
                     className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
                 </div>
-
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Layout (todos)</label>
                   <div className="flex gap-2">
@@ -139,11 +140,85 @@ const CarouselEditorSidebar: React.FC<Props> = ({
             )}
           </div>
 
+          {/* ===== STYLE / COLORS ===== */}
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <button onClick={() => setShowStyle(!showStyle)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+                <span className="text-sm font-semibold text-foreground">Cores & Estilo</span>
+              </div>
+              {showStyle ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {showStyle && (
+              <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
+                {/* Background color */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    Cor de Fundo
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={bgColor} onChange={(e) => onChangeBgColor(e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-border cursor-pointer" />
+                    <Input value={bgColor} onChange={(e) => onChangeBgColor(e.target.value)}
+                      className="rounded-xl text-xs h-8 font-mono flex-1" />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {PRESET_COLORS.slice(0, 7).map(c => (
+                      <button key={c} onClick={() => onChangeBgColor(c)}
+                        className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${bgColor === c ? 'border-primary scale-110' : 'border-border'}`}
+                        style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Accent color */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    Cor de Destaque
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={accentColor} onChange={(e) => onChangeAccentColor(e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-border cursor-pointer" />
+                    <Input value={accentColor} onChange={(e) => onChangeAccentColor(e.target.value)}
+                      className="rounded-xl text-xs h-8 font-mono flex-1" />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {['#E84D1A', '#E94560', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#007DE3'].map(c => (
+                      <button key={c} onClick={() => onChangeAccentColor(c)}
+                        className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${accentColor === c ? 'border-primary scale-110' : 'border-border'}`}
+                        style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Text color */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    Cor do Texto
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={textColor} onChange={(e) => onChangeTextColor(e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-border cursor-pointer" />
+                    <Input value={textColor} onChange={(e) => onChangeTextColor(e.target.value)}
+                      className="rounded-xl text-xs h-8 font-mono flex-1" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ===== CARD-SPECIFIC CONTENT ===== */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Type className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Conteúdo</span>
+            </div>
+
+            {/* Accent text hint */}
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-muted/60 text-[11px] text-muted-foreground leading-relaxed">
+              <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: FLOW_COLOR }} />
+              <span>Use <code className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">**texto**</code> para destacar em <span style={{ color: accentColor, fontWeight: 700 }}>cor de destaque</span></span>
             </div>
 
             {card.type === 'cover' && (

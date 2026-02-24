@@ -51,25 +51,25 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('SerpAPI image search for:', searchQuery);
+      console.log('SearchAPI image search for:', searchQuery);
 
-      const serpUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&num=20&safe=active&api_key=${SERPAPI_API_KEY}`;
+      const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}`;
       
       const serpRes = await fetch(serpUrl);
       let images: any[] = [];
       
       if (serpRes.ok) {
         const serpData = await serpRes.json();
-        images = (serpData.images_results || []).slice(0, 20).map((item: any, idx: number) => ({
+        images = (serpData.images || []).slice(0, 20).map((item: any, idx: number) => ({
           id: `serp-${idx}`,
-          url: item.original,
+          url: item.original?.link,
           thumb: item.thumbnail,
           small: item.thumbnail,
           alt: item.title || searchQuery,
-          photographer: item.source || 'Google',
+          photographer: item.source?.name || 'Google',
           source: 'google',
-          width: item.original_width,
-          height: item.original_height,
+          width: item.original?.width,
+          height: item.original?.height,
         }));
       } else {
         const errText = await serpRes.text();

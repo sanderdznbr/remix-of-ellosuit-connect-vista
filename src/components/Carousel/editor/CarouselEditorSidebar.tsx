@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
-  Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info,
+  Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info, Paperclip,
 } from 'lucide-react';
 import { FLOW_COLOR } from '../wizard/types';
+
+interface FontOption {
+  label: string;
+  value: string;
+  google: string;
+}
 
 interface CarouselCard {
   type: 'cover' | 'content' | 'cta';
@@ -44,6 +50,13 @@ interface Props {
   onChangeBgColor: (c: string) => void;
   onChangeAccentColor: (c: string) => void;
   onChangeTextColor: (c: string) => void;
+  // New props
+  fontOptions: FontOption[];
+  selectedFont: number;
+  onChangeFont: (index: number) => void;
+  referenceImageUrl: string | null;
+  onUploadReferenceImage: (file: File) => void;
+  onRemoveReferenceImage: () => void;
 }
 
 const CarouselEditorSidebar: React.FC<Props> = ({
@@ -52,8 +65,11 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   onUploadImage, onOpenImagePicker, onGenerateAiImage,
   generatingAiImage, aiImagePrompt, setAiImagePrompt,
   onChangeBgColor, onChangeAccentColor, onChangeTextColor,
+  fontOptions, selectedFont, onChangeFont,
+  referenceImageUrl, onUploadReferenceImage, onRemoveReferenceImage,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const refImageInputRef = useRef<HTMLInputElement>(null);
   const [showGlobal, setShowGlobal] = React.useState(false);
   const [showStyle, setShowStyle] = React.useState(false);
   const [globalFontScale, setGlobalFontScale] = React.useState(100);
@@ -204,6 +220,21 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                       className="rounded-xl text-xs h-8 font-mono flex-1" />
                   </div>
                 </div>
+
+                {/* Font selector */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <Type className="h-3 w-3" /> Fonte (todos os cards)
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {fontOptions.map((font, i) => (
+                      <button key={i} onClick={() => onChangeFont(i)}
+                        className={`px-2.5 py-2 rounded-xl text-xs border transition-all text-left truncate ${selectedFont === i ? 'ring-2 ring-primary border-primary bg-primary/5 font-bold' : 'border-border hover:bg-muted/50'}`}>
+                        <span style={{ fontFamily: font.value }}>{font.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -327,6 +358,29 @@ const CarouselEditorSidebar: React.FC<Props> = ({
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Prompt da imagem</label>
               <Textarea value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)}
                 placeholder="Descreva a imagem que deseja gerar..." className="rounded-xl min-h-[60px] resize-none text-sm" />
+            </div>
+
+            {/* Reference image */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Paperclip className="h-3 w-3" /> Foto de Referência (opcional)
+              </label>
+              <input ref={refImageInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadReferenceImage(f); }} />
+              {referenceImageUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={referenceImageUrl} alt="Referência" className="w-full h-24 object-cover" />
+                  <button onClick={onRemoveReferenceImage}
+                    className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => refImageInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                  <Paperclip className="h-4 w-4" /> Anexar referência
+                </button>
+              )}
             </div>
 
             <Button onClick={() => onGenerateAiImage(cardIndex)} disabled={generatingAiImage}

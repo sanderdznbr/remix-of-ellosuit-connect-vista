@@ -121,8 +121,13 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [showRefPanel, setShowRefPanel] = useState(false);
+  const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
 
-  // Save & History
+  const handleEditorRefImageUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setEditorRefImage(url);
+  };
+
   const [savingCarousel, setSavingCarousel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [carouselHistory, setCarouselHistory] = useState<any[]>([]);
@@ -437,7 +442,10 @@ const CarouselGenerator: React.FC = () => {
     setGeneratingAiImage(true);
     try {
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
-      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const styleRefUrls = [
+        ...referenceImages.filter(r => r.category === 'style').map(r => r.url),
+        ...(editorRefImage ? [editorRefImage] : []),
+      ];
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-ai-image',
@@ -898,6 +906,12 @@ const CarouselGenerator: React.FC = () => {
                 onChangeBgColor={setBgColor}
                 onChangeAccentColor={setAccentColor}
                 onChangeTextColor={setTextColor}
+                fontOptions={FONT_OPTIONS}
+                selectedFont={selectedFont}
+                onChangeFont={setSelectedFont}
+                referenceImageUrl={editorRefImage}
+                onUploadReferenceImage={handleEditorRefImageUpload}
+                onRemoveReferenceImage={() => setEditorRefImage(null)}
               />
             </div>
           </div>

@@ -166,6 +166,24 @@ export const AUTOMATION_BLOCKS: AutomationBlockDefinition[] = [
     color: '#059669',
     defaultConfig: { title: '', amount: '', payment_method: 'PIX', send_method: 'none', description: '' },
   },
+  {
+    type: 'publish_instagram',
+    label: 'Publicar no Instagram',
+    description: 'Gera carrossel e publica no Instagram',
+    category: 'action',
+    icon: 'Instagram',
+    color: '#E1306C',
+    defaultConfig: { topic: '', cardCount: 7, connectionId: '', autoCaption: true },
+  },
+  {
+    type: 'publish_facebook',
+    label: 'Publicar no Facebook',
+    description: 'Gera carrossel e publica no Facebook',
+    category: 'action',
+    icon: 'Facebook',
+    color: '#1877F2',
+    defaultConfig: { topic: '', cardCount: 7, connectionId: '', autoCaption: true },
+  },
 
   // Conditions
   {

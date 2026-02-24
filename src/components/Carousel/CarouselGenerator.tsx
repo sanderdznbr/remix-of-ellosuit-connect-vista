@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -18,6 +18,7 @@ import StepReferences from './wizard/StepReferences';
 import StepImageSettings from './wizard/StepImageSettings';
 import StepStyle, { STYLE_PRESETS, StylePreset } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
+import SocialPublishDialog from './SocialPublishDialog';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 
 const CARD_W = 1080;
@@ -81,8 +82,10 @@ interface PexelsImage {
 const CarouselGenerator: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -202,6 +205,29 @@ const CarouselGenerator: React.FC = () => {
     };
     fetchBrandAssets();
   }, [user?.id]);
+
+  // Handle Facebook OAuth callback
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code && searchParams.get('fb_callback') === '1') {
+      const state = localStorage.getItem('fb_oauth_state');
+      if (state) {
+        const { companyId, userId, redirectUri } = JSON.parse(state);
+        supabase.functions.invoke('facebook-auth', {
+          body: { action: 'exchange_code', code, redirectUri, userId, companyId },
+        }).then(({ data, error }) => {
+          if (error || !data?.success) {
+            toast({ title: 'Erro ao conectar Facebook', description: error?.message || 'Tente novamente', variant: 'destructive' });
+          } else {
+            toast({ title: '✅ Contas conectadas!', description: `${data.connections} contas vinculadas (${data.pages?.join(', ')})` });
+          }
+          localStorage.removeItem('fb_oauth_state');
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        });
+      }
+    }
+  }, [searchParams]);
 
   // ===== BUILD IMAGE PROMPT with settings =====
   const buildImagePrompt = (basePrompt: string): string => {
@@ -769,6 +795,9 @@ const CarouselGenerator: React.FC = () => {
               <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ backgroundColor: FLOW_COLOR }}>
                 {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} <span className="hidden sm:inline">Exportar PNGs</span>
               </Button>
+              <Button onClick={() => setShowPublishDialog(true)} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ background: 'linear-gradient(135deg, #833AB4, #E1306C, #F77737)' }}>
+                <ExternalLink className="h-4 w-4" /> <span className="hidden sm:inline">Publicar</span>
+              </Button>
             </div>
           )}
           {!carouselData && (
@@ -1078,6 +1107,14 @@ const CarouselGenerator: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Social Publish Dialog */}
+      <SocialPublishDialog
+        open={showPublishDialog}
+        onOpenChange={setShowPublishDialog}
+        imageUrls={carouselData?.cards.map(c => c.imageUrl).filter(Boolean) as string[] || []}
+        topic={topic}
+      />
     </div>
   );
 };

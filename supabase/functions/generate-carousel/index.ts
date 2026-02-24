@@ -438,10 +438,41 @@ Responda APENAS em JSON válido:
       const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
       const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
 
-      // Build message content with text + optional reference images
+      // Helper: proxy any image URL to base64 data URI for reliable AI ingestion
+      async function proxyToBase64(url: string): Promise<string | null> {
+        if (!url) return null;
+        if (url.startsWith('data:image/')) return url; // already base64
+        try {
+          const res = await fetch(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          });
+          if (!res.ok) return null;
+          const ct = res.headers.get('content-type') || 'image/jpeg';
+          const buf = await res.arrayBuffer();
+          const u8 = new Uint8Array(buf);
+          let bin = '';
+          for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+          return `data:${ct};base64,${btoa(bin)}`;
+        } catch (e) {
+          console.error('Proxy failed for:', url.slice(0, 80), e);
+          return null;
+        }
+      }
+
+      // Proxy ALL reference images to base64 in parallel (critical for Instagram URLs)
+      const allFaceRefs = hasFaceRefs ? await Promise.all(faceReferenceUrls.slice(0, 4).map(proxyToBase64)) : [];
+      const allStyleRefs = hasStyleRefs ? await Promise.all(styleReferenceUrls.slice(0, 3).map(proxyToBase64)) : [];
+      const allGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) ? await Promise.all(referenceImageUrls.slice(0, 4).map(proxyToBase64)) : [];
+
+      const validFaceRefs = allFaceRefs.filter(Boolean) as string[];
+      const validStyleRefs = allStyleRefs.filter(Boolean) as string[];
+      const validGeneralRefs = allGeneralRefs.filter(Boolean) as string[];
+
+      console.log('Proxied refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length });
+
+      // Build message content with text + reference images
       const messageContent: any[] = [];
 
-      // Build detailed text prompt
       let textPrompt = `Generate a professional editorial magazine-quality photo for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
 DESCRIPTION: ${imagePrompt}
@@ -453,60 +484,49 @@ STYLE REQUIREMENTS:
 - Clean composition suitable for overlay text
 - Ultra high resolution, photorealistic quality`;
 
-      if (hasFaceRefs) {
-        textPrompt += `\n\nIMPORTANT - FACE CONSISTENCY: The person(s) in the attached reference photos MUST appear in this image. Maintain their exact facial features, skin tone, and likeness. This is critical for brand consistency across the carousel.`;
+      if (validFaceRefs.length > 0) {
+        textPrompt += `
+
+CRITICAL - FACE/PERSON REFERENCE: I am attaching ${validFaceRefs.length} reference photo(s) of the person who MUST appear in this image. You MUST:
+1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
+2. The person must be clearly recognizable as the same individual in the reference photos
+3. Maintain their likeness with high fidelity - this is the #1 priority
+4. Place this person naturally in the scene described above`;
       }
 
-      if (hasStyleRefs) {
-        textPrompt += `\n\nDESIGN STYLE REFERENCE: Use the attached style reference images as inspiration for the visual composition, color palette, and overall aesthetic. Match the design style but create original content.`;
+      if (validStyleRefs.length > 0) {
+        textPrompt += `
+
+BRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). You MUST:
+1. Match the visual style, color palette, and aesthetic of these references
+2. Incorporate brand elements, logos, or product imagery visible in the references
+3. Maintain brand consistency across the carousel`;
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
 
-      // Helper: only include base64 data URIs or non-Instagram URLs (Instagram URLs expire quickly)
-      const isValidImageUrl = (url: string) => {
-        if (!url) return false;
-        if (url.startsWith('data:image/')) return true;
-        if (url.includes('instagram.com') || url.includes('lookaside.') || url.includes('cdninstagram.com')) return false;
-        if (url.startsWith('http://') || url.startsWith('https://')) return true;
-        return false;
-      };
-
-      // Add face reference images (priority - first)
-      if (hasFaceRefs) {
-        for (const refUrl of faceReferenceUrls.slice(0, 3)) {
-          if (isValidImageUrl(refUrl)) {
-            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
-          }
-        }
+      // Add face references FIRST (highest priority)
+      for (const ref of validFaceRefs) {
+        messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Add style reference images
-      if (hasStyleRefs) {
-        for (const refUrl of styleReferenceUrls.slice(0, 2)) {
-          if (isValidImageUrl(refUrl)) {
-            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
-          }
-        }
+      // Add style/brand references
+      for (const ref of validStyleRefs) {
+        messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Add general reference images
-      if (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) {
-        for (const refUrl of referenceImageUrls.slice(0, 3)) {
-          if (isValidImageUrl(refUrl)) {
-            messageContent.push({ type: 'image_url', image_url: { url: refUrl } });
-          }
-        }
+      // Add general references (only if no specific refs)
+      for (const ref of validGeneralRefs) {
+        messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Determine primary model based on user selection
+      // Determine primary model
       const primaryModel = imageModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
       const fallbackModel = imageModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
-      console.log('Generating image, model:', primaryModel, 'refs:', { hasFaceRefs, hasStyleRefs, hasGeneralRefs, messageContentParts: messageContent.length });
+      console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
 
-      // Helper to attempt image generation with a given model and content
       async function tryGenerateImage(model: string, content: any[], attempt: number): Promise<string | null> {
-        console.log(`Image gen attempt ${attempt} with model ${model}`);
+        console.log(`Attempt ${attempt} model=${model} parts=${content.length}`);
         const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -522,20 +542,18 @@ STYLE REQUIREMENTS:
 
         if (!res.ok) {
           const errText = await res.text();
-          console.error(`Attempt ${attempt} HTTP error:`, res.status, errText);
+          console.error(`Attempt ${attempt} error:`, res.status, errText);
           if (res.status === 429 || res.status === 402) throw { status: res.status };
           return null;
         }
 
         const data = await res.json();
         const img = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        if (!img) {
-          console.error(`Attempt ${attempt} no image. finish_reason:`, data.choices?.[0]?.finish_reason, 'native:', data.choices?.[0]?.native_finish_reason);
-        }
+        if (!img) console.error(`Attempt ${attempt} no image`, data.choices?.[0]?.finish_reason);
         return img || null;
       }
 
-      // Attempt 1: original prompt with references
+      // Attempt 1: full prompt with all proxied references
       let generatedImage: string | null = null;
       try {
         generatedImage = await tryGenerateImage(primaryModel, messageContent, 1);
@@ -552,30 +570,32 @@ STYLE REQUIREMENTS:
         }
       }
 
-      // Attempt 2: simplified prompt without references (safety filter workaround)
-      if (!generatedImage) {
-        const simplifiedContent = [{ 
-          type: 'text', 
-          text: `Create a professional, high-quality editorial photograph for an Instagram post (portrait 4:5 ratio). Scene: ${imagePrompt}. Style: cinematic lighting, magazine-quality, vibrant colors, clean composition. Ultra high resolution.` 
-        }];
+      // Attempt 2: keep references but simplify text (safety filter workaround)
+      if (!generatedImage && (validFaceRefs.length > 0 || validStyleRefs.length > 0)) {
+        const retryContent: any[] = [
+          { type: 'text', text: `Create a professional portrait photo matching the person in the reference image(s). Scene: ${imagePrompt}. Style: cinematic, editorial, magazine quality, 4:5 portrait. Ultra high resolution.` },
+        ];
+        for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        for (const ref of validStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
         try {
-          generatedImage = await tryGenerateImage(primaryModel, simplifiedContent, 2);
-        } catch { /* ignore, try next */ }
+          generatedImage = await tryGenerateImage(primaryModel, retryContent, 2);
+        } catch { /* try next */ }
       }
 
-      // Attempt 3: try pro model with simplified prompt
+      // Attempt 3: fallback model, simplified prompt
       if (!generatedImage) {
         const minimalContent = [{
           type: 'text',
           text: `A beautiful professional photograph: ${imagePrompt}. Editorial magazine quality, cinematic lighting, 4:5 portrait aspect ratio.`
         }];
+        // Still include face refs if available
+        for (const ref of validFaceRefs.slice(0, 2)) minimalContent.push({ type: 'image_url', image_url: { url: ref } } as any);
         try {
           generatedImage = await tryGenerateImage(fallbackModel, minimalContent, 3);
         } catch { /* ignore */ }
       }
 
       if (!generatedImage) {
-        console.error('All 3 image generation attempts failed for prompt:', imagePrompt.slice(0, 100));
         return new Response(JSON.stringify({ error: 'Não foi possível gerar a imagem. Tente simplificar o prompt ou remover referências.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

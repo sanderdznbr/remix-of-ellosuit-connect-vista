@@ -400,58 +400,108 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🔍 Buscando referências na web...');
 
-      // Web search
+      // Web search - collect REAL images from Brave/SerpAPI/Pexels
       const allSearchTerms = new Set<string>();
       cards.forEach(c => (c.searchTerms || []).forEach((t: string) => allSearchTerms.add(t)));
+      const webImagePool: string[] = [];
       const searchPromises = Array.from(allSearchTerms).slice(0, 5).map(async (term) => {
-        try { const { data: sd } = await supabase.functions.invoke('generate-carousel', { body: { action: 'web-search', query: term } }); return sd?.images?.slice(0, 3).map((i: any) => i.url) || []; } catch { return []; }
+        try {
+          const { data: sd } = await supabase.functions.invoke('generate-carousel', { body: { action: 'web-search', query: term } });
+          const urls = sd?.images?.slice(0, 4).map((i: any) => i.url).filter(Boolean) || [];
+          webImagePool.push(...urls);
+          return urls;
+        } catch { return []; }
       });
       await Promise.all(searchPromises);
+      console.log('Web image pool:', webImagePool.length, 'images found');
 
-      // Generate images
+      // Determine if we have face/brand references attached
       const updatedCards = [...cards];
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const hasFaceOrBrandRefs = faceRefUrls.length > 0 || styleRefUrls.length > 0;
 
+      // STRATEGY: Use real web photos first, only use AI when face/brand refs are attached
+      let webImageIndex = 0;
       const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
       let totalImages = 0;
+      let realImagesUsed = 0;
+      let aiImagesQueued = 0;
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         if (card.needsImage || card.type === 'cover' || imageCardIndices.includes(i)) {
           totalImages++;
-          const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
-          imagePromises.push({
-            index: i,
-            promise: (async () => {
-              try {
-                const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
-                  body: {
-                    action: 'generate-ai-image',
-                    prompt: buildImagePrompt(imgPrompt),
-                    imageSize: '3:4',
-                    topic: imgPrompt,
-                    faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                    styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-                    imageModel: imageSettings.model,
-                    negativePrompt: imageSettings.negativePrompt || undefined,
-                    fidelity: imageSettings.fidelity,
-                  },
-                });
-                if (!imgError && imgData?.success && imgData?.imageUrl) return imgData.imageUrl as string;
-              } catch (err) { console.error('Image gen error for card', i, err); }
-              return null;
-            })(),
-          });
+
+          // If we have face/brand refs → use AI to maintain consistency
+          if (hasFaceOrBrandRefs) {
+            aiImagesQueued++;
+            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+            imagePromises.push({
+              index: i,
+              promise: (async () => {
+                try {
+                  const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
+                    body: {
+                      action: 'generate-ai-image',
+                      prompt: buildImagePrompt(imgPrompt),
+                      imageSize: '3:4',
+                      topic: imgPrompt,
+                      faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+                      styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+                      imageModel: imageSettings.model,
+                      negativePrompt: imageSettings.negativePrompt || undefined,
+                      fidelity: imageSettings.fidelity,
+                    },
+                  });
+                  if (!imgError && imgData?.success && imgData?.imageUrl) return imgData.imageUrl as string;
+                } catch (err) { console.error('Image gen error for card', i, err); }
+                return null;
+              })(),
+            });
+          } else if (webImagePool.length > webImageIndex) {
+            // Use real web photo - NO AI needed!
+            updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex] };
+            webImageIndex++;
+            realImagesUsed++;
+          } else {
+            // No web images left - fall back to AI as last resort
+            aiImagesQueued++;
+            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+            imagePromises.push({
+              index: i,
+              promise: (async () => {
+                try {
+                  const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
+                    body: {
+                      action: 'generate-ai-image',
+                      prompt: buildImagePrompt(imgPrompt),
+                      imageSize: '3:4',
+                      topic: imgPrompt,
+                      imageModel: imageSettings.model,
+                      negativePrompt: imageSettings.negativePrompt || undefined,
+                      fidelity: imageSettings.fidelity,
+                    },
+                  });
+                  if (!imgError && imgData?.success && imgData?.imageUrl) return imgData.imageUrl as string;
+                } catch (err) { console.error('Image gen error for card', i, err); }
+                return null;
+              })(),
+            });
+          }
         }
       }
 
-      setImageGenProgress(`🎨 Gerando ${totalImages} imagens em paralelo...`);
-      const imageResults = await Promise.all(imagePromises.map(p => p.promise));
-      imagePromises.forEach((p, idx) => {
-        const url = imageResults[idx];
-        if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url };
-      });
+      if (imagePromises.length > 0) {
+        setImageGenProgress(`🎨 ${realImagesUsed} fotos reais + ${aiImagesQueued} imagens IA...`);
+        const imageResults = await Promise.all(imagePromises.map(p => p.promise));
+        imagePromises.forEach((p, idx) => {
+          const url = imageResults[idx];
+          if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url };
+        });
+      } else {
+        setImageGenProgress(`📸 ${realImagesUsed} fotos reais aplicadas!`);
+      }
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);

@@ -137,36 +137,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ===== WEB SEARCH for reference images (SerpAPI Google Images) =====
+    // ===== WEB SEARCH for reference images (Brave Search → SerpAPI → Pexels) =====
     if (action === 'web-search') {
-      const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
-      
-      if (!SERPAPI_API_KEY) {
-        // Fallback to Pexels if SerpAPI not configured
-        const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
-        if (!PEXELS_API_KEY) {
-          return new Response(JSON.stringify({ error: 'No image search API configured' }), {
-            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        const searchQuery = query || topic || '';
-        const pexelsRes = await fetch(
-          `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=20&orientation=portrait`,
-          { headers: { 'Authorization': PEXELS_API_KEY } }
-        );
-        let pexelsImages: any[] = [];
-        if (pexelsRes.ok) {
-          const pexelsData = await pexelsRes.json();
-          pexelsImages = (pexelsData.photos || []).map((p: any) => ({
-            id: p.id, url: p.src.large2x || p.src.large, thumb: p.src.medium,
-            small: p.src.small, alt: p.alt || searchQuery, photographer: p.photographer, source: 'pexels',
-          }));
-        }
-        return new Response(JSON.stringify({ success: true, images: pexelsImages, query: searchQuery }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
       const searchQuery = query || topic || '';
       if (!searchQuery) {
         return new Response(JSON.stringify({ error: 'Query is required' }), {
@@ -174,44 +146,77 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('SearchAPI image search for:', searchQuery);
-
-      const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large`;
-      
-      const serpRes = await fetch(serpUrl);
       let images: any[] = [];
-      
-      if (serpRes.ok) {
-        const serpData = await serpRes.json();
-        images = (serpData.images || []).slice(0, 20).map((item: any, idx: number) => ({
-          id: `serp-${idx}`,
-          url: item.original?.link,
-          thumb: item.thumbnail,
-          small: item.thumbnail,
-          alt: item.title || searchQuery,
-          photographer: item.source?.name || 'Google',
-          source: 'google',
-          width: item.original?.width,
-          height: item.original?.height,
-        }));
-      } else {
-        const errText = await serpRes.text();
-        console.error('SerpAPI error:', serpRes.status, errText);
-        
-        // Fallback to Pexels
+
+      // Strategy 1: Brave Search Images (fastest, cheapest)
+      const BRAVE_API_KEY = Deno.env.get('BRAVE_SEARCH_API_KEY');
+      if (BRAVE_API_KEY && images.length === 0) {
+        console.log('[web-search] Trying Brave Search for:', searchQuery);
+        try {
+          const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(searchQuery)}&count=10&safesearch=strict`;
+          const braveRes = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });
+          if (braveRes.ok) {
+            const braveData = await braveRes.json();
+            images = (braveData.results || []).slice(0, 15).map((item: any, idx: number) => ({
+              id: `brave-${idx}`,
+              url: item.properties?.url || item.thumbnail?.src,
+              thumb: item.thumbnail?.src || item.properties?.url,
+              alt: item.title || searchQuery,
+              photographer: item.source || 'Brave Search',
+              source: 'brave',
+              width: item.properties?.width,
+              height: item.properties?.height,
+            })).filter((img: any) => img.url);
+            console.log('[web-search] Brave returned', images.length, 'images');
+          } else {
+            console.error('[web-search] Brave error:', braveRes.status);
+          }
+        } catch (e) { console.error('[web-search] Brave exception:', e); }
+      }
+
+      // Strategy 2: SerpAPI Google Images fallback
+      if (images.length === 0) {
+        const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
+        if (SERPAPI_API_KEY) {
+          console.log('[web-search] Falling back to SerpAPI for:', searchQuery);
+          try {
+            const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large`;
+            const serpRes = await fetch(serpUrl);
+            if (serpRes.ok) {
+              const serpData = await serpRes.json();
+              images = (serpData.images || []).slice(0, 15).map((item: any, idx: number) => ({
+                id: `serp-${idx}`,
+                url: item.original?.link,
+                thumb: item.thumbnail,
+                alt: item.title || searchQuery,
+                photographer: item.source?.name || 'Google',
+                source: 'google',
+                width: item.original?.width,
+                height: item.original?.height,
+              })).filter((img: any) => img.url);
+            }
+          } catch (e) { console.error('[web-search] SerpAPI exception:', e); }
+        }
+      }
+
+      // Strategy 3: Pexels fallback
+      if (images.length === 0) {
         const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
         if (PEXELS_API_KEY) {
-          const pexelsRes = await fetch(
-            `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=15`,
-            { headers: { 'Authorization': PEXELS_API_KEY } }
-          );
-          if (pexelsRes.ok) {
-            const pexelsData = await pexelsRes.json();
-            images = (pexelsData.photos || []).map((p: any) => ({
-              id: p.id, url: p.src.large2x || p.src.large, thumb: p.src.medium,
-              alt: p.alt || searchQuery, photographer: p.photographer, source: 'pexels',
-            }));
-          }
+          console.log('[web-search] Falling back to Pexels');
+          try {
+            const pexelsRes = await fetch(
+              `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=15&orientation=portrait`,
+              { headers: { 'Authorization': PEXELS_API_KEY } }
+            );
+            if (pexelsRes.ok) {
+              const pexelsData = await pexelsRes.json();
+              images = (pexelsData.photos || []).map((p: any) => ({
+                id: p.id, url: p.src.large2x || p.src.large, thumb: p.src.medium,
+                alt: p.alt || searchQuery, photographer: p.photographer, source: 'pexels',
+              }));
+            }
+          } catch (e) { console.error('[web-search] Pexels exception:', e); }
         }
       }
 

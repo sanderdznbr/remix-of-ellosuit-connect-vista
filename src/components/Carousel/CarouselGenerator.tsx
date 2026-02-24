@@ -561,10 +561,42 @@ const CarouselGenerator: React.FC = () => {
       // Show everything at once - only now set the carousel data
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
-      setCurrentCarouselId(null); // New carousel, not saved yet
       setGeneratingAllImages(false);
       setImageGenProgress('');
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
+
+      // Auto-save to history
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { data: companyData } = await supabase
+            .from('company_users')
+            .select('company_id')
+            .eq('user_id', userData.user.id)
+            .limit(1)
+            .single();
+          if (companyData) {
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel };
+            const { data: inserted } = await supabase
+              .from('generated_carousels')
+              .insert({
+                company_id: companyData.company_id,
+                user_id: userData.user.id,
+                title: finalData.title || topic,
+                topic,
+                keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                carousel_data: finalData as any,
+                style_config: styleConfig as any,
+                card_count: finalData.cards.length,
+              })
+              .select('id')
+              .single();
+            if (inserted) setCurrentCarouselId(inserted.id);
+          }
+        }
+      } catch (saveErr) {
+        console.error('Auto-save error:', saveErr);
+      }
 
     } catch (err: any) {
       console.error(err);

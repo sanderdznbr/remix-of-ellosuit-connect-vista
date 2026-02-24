@@ -1418,6 +1418,31 @@ const CarouselGenerator: React.FC = () => {
                 </div>
               </div>
 
+              {/* Model selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Wand2 className="h-3.5 w-3.5" /> Modelo de Imagem
+                </label>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setImageModel('gemini')}
+                    className={`flex-1 text-xs py-2.5 px-3 rounded-xl font-medium transition-all border ${imageModel === 'gemini' ? 'text-white shadow-md border-transparent' : 'bg-muted text-muted-foreground hover:bg-muted/80 border-border'}`}
+                    style={imageModel === 'gemini' ? { backgroundColor: FLOW_COLOR } : {}}
+                  >
+                    ⚡ Gemini Flash
+                    <span className="block text-[10px] opacity-70 mt-0.5">Rápido, boa qualidade</span>
+                  </button>
+                  <button
+                    onClick={() => setImageModel('nano-banana')}
+                    className={`flex-1 text-xs py-2.5 px-3 rounded-xl font-medium transition-all border ${imageModel === 'nano-banana' ? 'text-white shadow-md border-transparent' : 'bg-muted text-muted-foreground hover:bg-muted/80 border-border'}`}
+                    style={imageModel === 'nano-banana' ? { backgroundColor: FLOW_COLOR } : {}}
+                  >
+                    🎨 Nano Banana Pro
+                    <span className="block text-[10px] opacity-70 mt-0.5">Melhor qualidade, mais lento</span>
+                  </button>
+                </div>
+              </div>
+
               <Button onClick={generateContent} disabled={generating}
                 className="w-full gap-2 h-14 rounded-2xl text-lg font-bold" style={{ backgroundColor: FLOW_COLOR }}>
                 {generating ? <><Loader2 className="h-5 w-5 animate-spin" /> Buscando referências + gerando com IA...</>

@@ -47,7 +47,7 @@ const COLOR_PRESETS = [
   { name: 'Arctic Ice', bg: '#0C1222', accent: '#38BDF8', text: '#E0F2FE' },
 ];
 
-// Style presets (post styles)
+// Style presets - now define LAYOUT DESIGNS, not just colors
 export interface StylePreset {
   id: string;
   name: string;
@@ -58,118 +58,102 @@ export interface StylePreset {
   textColor: string;
   fontIndex: number;
   layoutPattern: ('dark' | 'light' | 'accent')[];
+  // Layout design properties
+  layoutType: 'classic' | 'split' | 'full-image' | 'minimal-text' | 'bold-header' | 'editorial-grid';
+  imagePosition: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'full';
+  textAlignment: 'left' | 'center' | 'right';
+  coverStyle: 'overlay' | 'split-horizontal' | 'minimal' | 'bold-center';
+  contentDensity: 'compact' | 'balanced' | 'spacious';
 }
 
 export const STYLE_PRESETS: StylePreset[] = [
   {
-    id: 'editorial-dark',
-    name: 'Editorial Escuro',
-    description: 'Estilo sofisticado com fundo escuro e destaque vibrante',
+    id: 'editorial-classic',
+    name: 'Editorial Clássico',
+    description: 'Layout padrão: texto acima, imagem abaixo, fundo escuro. O formato mais usado.',
     emoji: '📰',
-    bgColor: '#0F0F1A',
-    accentColor: '#E84D1A',
-    textColor: '#FFFFFF',
+    bgColor: '#0F0F1A', accentColor: '#E84D1A', textColor: '#FFFFFF',
     fontIndex: 0,
     layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
+    layoutType: 'classic', imagePosition: 'center', textAlignment: 'left',
+    coverStyle: 'overlay', contentDensity: 'balanced',
   },
   {
-    id: 'minimalist-light',
-    name: 'Minimalista Claro',
-    description: 'Design limpo e elegante com fundo claro',
-    emoji: '✨',
-    bgColor: '#FAFAF9',
-    accentColor: '#18181B',
-    textColor: '#18181B',
+    id: 'split-layout',
+    name: 'Split Horizontal',
+    description: 'Imagem em metade do card, texto na outra metade. Moderno e limpo.',
+    emoji: '◧',
+    bgColor: '#FAFAF9', accentColor: '#18181B', textColor: '#18181B',
     fontIndex: 10, // Inter
     layoutPattern: ['light', 'light', 'dark', 'light', 'light'],
+    layoutType: 'split', imagePosition: 'left', textAlignment: 'left',
+    coverStyle: 'split-horizontal', contentDensity: 'balanced',
   },
   {
-    id: 'bold-impact',
-    name: 'Bold Impact',
-    description: 'Títulos grandes e impactantes com contraste alto',
-    emoji: '💥',
-    bgColor: '#000000',
-    accentColor: '#FFD60A',
-    textColor: '#FFFFFF',
+    id: 'full-image-overlay',
+    name: 'Imagem Full + Texto',
+    description: 'Imagem ocupa todo o card com texto sobreposto. Impactante e visual.',
+    emoji: '🖼️',
+    bgColor: '#000000', accentColor: '#FFD60A', textColor: '#FFFFFF',
     fontIndex: 7, // Bebas Neue
     layoutPattern: ['dark', 'accent', 'dark', 'accent', 'dark'],
+    layoutType: 'full-image', imagePosition: 'full', textAlignment: 'center',
+    coverStyle: 'bold-center', contentDensity: 'spacious',
   },
   {
-    id: 'gradient-purple',
-    name: 'Purple Haze',
-    description: 'Tons roxos elegantes com acentos dourados',
-    emoji: '🔮',
-    bgColor: '#1A0A2E',
-    accentColor: '#C084FC',
-    textColor: '#FAF5FF',
-    fontIndex: 11, // Space Grotesk
-    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
-  },
-  {
-    id: 'magazine-serif',
-    name: 'Magazine Editorial',
-    description: 'Estilo revista com tipografia serifada refinada',
-    emoji: '📖',
-    bgColor: '#F8F4EF',
-    accentColor: '#92400E',
-    textColor: '#1C1917',
+    id: 'minimal-text',
+    name: 'Texto Minimalista',
+    description: 'Foco 100% no texto com tipografia grande. Sem imagens nos cards de conteúdo.',
+    emoji: '✏️',
+    bgColor: '#F8F4EF', accentColor: '#92400E', textColor: '#1C1917',
     fontIndex: 4, // Cormorant Garamond
     layoutPattern: ['dark', 'light', 'light', 'accent', 'light'],
+    layoutType: 'minimal-text', imagePosition: 'center', textAlignment: 'center',
+    coverStyle: 'minimal', contentDensity: 'spacious',
   },
   {
-    id: 'neon-cyber',
-    name: 'Neon Cyberpunk',
-    description: 'Visual futurista com cores neon e fundo escuro',
+    id: 'bold-header',
+    name: 'Título Gigante',
+    description: 'Cabeçalho dominante em cada card, texto menor abaixo. Alto impacto.',
+    emoji: '💥',
+    bgColor: '#1A0A2E', accentColor: '#C084FC', textColor: '#FAF5FF',
+    fontIndex: 18, // Archivo Black
+    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
+    layoutType: 'bold-header', imagePosition: 'bottom', textAlignment: 'left',
+    coverStyle: 'bold-center', contentDensity: 'compact',
+  },
+  {
+    id: 'editorial-grid',
+    name: 'Grid Editorial',
+    description: 'Layout estilo revista com blocos de texto e imagem em grid organizado.',
+    emoji: '📐',
+    bgColor: '#0A1628', accentColor: '#3B82F6', textColor: '#F1F5F9',
+    fontIndex: 11, // Space Grotesk
+    layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
+    layoutType: 'editorial-grid', imagePosition: 'right', textAlignment: 'left',
+    coverStyle: 'overlay', contentDensity: 'compact',
+  },
+  {
+    id: 'neon-dark',
+    name: 'Neon Escuro',
+    description: 'Visual futurista com neon sobre fundo escuro. Ideal para tech e inovação.',
     emoji: '🌃',
-    bgColor: '#0D0221',
-    accentColor: '#00FF88',
-    textColor: '#F9FAFB',
+    bgColor: '#0D0221', accentColor: '#00FF88', textColor: '#F9FAFB',
     fontIndex: 12, // Sora
     layoutPattern: ['dark', 'dark', 'dark', 'accent', 'dark'],
+    layoutType: 'classic', imagePosition: 'center', textAlignment: 'center',
+    coverStyle: 'overlay', contentDensity: 'balanced',
   },
   {
-    id: 'ocean-fresh',
-    name: 'Ocean Fresh',
-    description: 'Tons de oceano com sensação clean e fresca',
-    emoji: '🌊',
-    bgColor: '#042F2E',
-    accentColor: '#2DD4BF',
-    textColor: '#F0FDFA',
-    fontIndex: 5, // Montserrat
-    layoutPattern: ['dark', 'dark', 'light', 'dark', 'accent'],
-  },
-  {
-    id: 'rose-elegant',
-    name: 'Rose Elegante',
-    description: 'Tons suaves de rosa com elegância feminina',
-    emoji: '🌹',
-    bgColor: '#1C1017',
-    accentColor: '#FB7185',
-    textColor: '#FFF1F2',
-    fontIndex: 2, // Lora
-    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
-  },
-  {
-    id: 'corporate-blue',
-    name: 'Corporate Blue',
-    description: 'Profissional e corporativo com tons azuis',
-    emoji: '💼',
-    bgColor: '#0A1628',
-    accentColor: '#3B82F6',
-    textColor: '#F1F5F9',
-    fontIndex: 13, // Outfit
-    layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
-  },
-  {
-    id: 'sunset-warm',
+    id: 'warm-sunset',
     name: 'Sunset Quente',
-    description: 'Tons quentes de pôr do sol com energia calorosa',
+    description: 'Tons quentes com layout clássico. Ideal para lifestyle e bem-estar.',
     emoji: '🌅',
-    bgColor: '#1A0505',
-    accentColor: '#FF6B35',
-    textColor: '#FFF7ED',
-    fontIndex: 18, // Archivo Black
+    bgColor: '#1A0505', accentColor: '#FF6B35', textColor: '#FFF7ED',
+    fontIndex: 2, // Lora
     layoutPattern: ['dark', 'accent', 'dark', 'dark', 'accent'],
+    layoutType: 'classic', imagePosition: 'center', textAlignment: 'left',
+    coverStyle: 'overlay', contentDensity: 'balanced',
   },
 ];
 
@@ -249,13 +233,13 @@ const StepStyle: React.FC<Props> = ({
         ))}
       </div>
 
-      {/* Style Presets */}
+      {/* Style Presets - LAYOUT DESIGNS */}
       {activeSection === 'presets' && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-foreground">Escolha um estilo de post</p>
+          <p className="text-xs font-semibold text-foreground">Escolha o formato de layout do carrossel</p>
           <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
             {STYLE_PRESETS.map(preset => {
-              const isActive = bgColor === preset.bgColor && accentColor === preset.accentColor && textColor === preset.textColor;
+              const isActive = bgColor === preset.bgColor && accentColor === preset.accentColor;
               return (
                 <button
                   key={preset.id}
@@ -264,25 +248,65 @@ const StepStyle: React.FC<Props> = ({
                     isActive ? 'ring-2 ring-primary border-primary' : 'border-border hover:border-primary/40'
                   }`}
                 >
-                  {/* Mini preview */}
-                  <div className="p-3 h-24" style={{ backgroundColor: preset.bgColor }}>
-                    <div className="flex items-center gap-1 mb-1.5">
-                      <span className="text-base">{preset.emoji}</span>
+                  {/* Layout diagram preview */}
+                  <div className="p-3 h-28" style={{ backgroundColor: preset.bgColor }}>
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-sm">{preset.emoji}</span>
                       <span style={{ color: preset.textColor, fontFamily: FONT_OPTIONS[preset.fontIndex]?.value, fontSize: 11, fontWeight: 700 }}>
                         {preset.name}
                       </span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="h-1.5 rounded-full w-3/4" style={{ backgroundColor: preset.accentColor }} />
-                      <div className="h-1 rounded-full w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.4 }} />
-                      <div className="h-1 rounded-full w-2/3" style={{ backgroundColor: preset.textColor, opacity: 0.25 }} />
-                    </div>
-                    {/* Color dots */}
-                    <div className="absolute bottom-2 right-2 flex gap-1">
-                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.bgColor }} />
-                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.accentColor }} />
-                      <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: preset.textColor }} />
-                    </div>
+                    {/* Layout wireframe based on layoutType */}
+                    {preset.layoutType === 'classic' && (
+                      <div className="flex flex-col gap-1">
+                        <div className="h-1.5 rounded-sm w-3/4" style={{ backgroundColor: preset.textColor, opacity: 0.6 }} />
+                        <div className="h-1 rounded-sm w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.3 }} />
+                        <div className="h-8 rounded-md mt-1" style={{ backgroundColor: preset.accentColor, opacity: 0.35 }} />
+                      </div>
+                    )}
+                    {preset.layoutType === 'split' && (
+                      <div className="flex gap-1.5 h-12">
+                        <div className="flex-1 rounded-md" style={{ backgroundColor: preset.accentColor, opacity: 0.35 }} />
+                        <div className="flex-1 flex flex-col gap-0.5 justify-center">
+                          <div className="h-1.5 rounded-sm w-full" style={{ backgroundColor: preset.textColor, opacity: 0.6 }} />
+                          <div className="h-1 rounded-sm w-3/4" style={{ backgroundColor: preset.textColor, opacity: 0.3 }} />
+                          <div className="h-1 rounded-sm w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.2 }} />
+                        </div>
+                      </div>
+                    )}
+                    {preset.layoutType === 'full-image' && (
+                      <div className="relative h-12 rounded-md overflow-hidden" style={{ backgroundColor: preset.accentColor, opacity: 0.25 }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-1 left-1.5 right-1.5">
+                          <div className="h-2 rounded-sm w-3/4 mb-0.5" style={{ backgroundColor: '#fff', opacity: 0.9 }} />
+                          <div className="h-1 rounded-sm w-1/2" style={{ backgroundColor: '#fff', opacity: 0.5 }} />
+                        </div>
+                      </div>
+                    )}
+                    {preset.layoutType === 'minimal-text' && (
+                      <div className="flex flex-col items-center gap-1 h-12 justify-center">
+                        <div className="h-2.5 rounded-sm w-2/3" style={{ backgroundColor: preset.accentColor, opacity: 0.7 }} />
+                        <div className="h-1 rounded-sm w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.4 }} />
+                        <div className="h-1 rounded-sm w-3/5" style={{ backgroundColor: preset.textColor, opacity: 0.25 }} />
+                      </div>
+                    )}
+                    {preset.layoutType === 'bold-header' && (
+                      <div className="flex flex-col gap-1">
+                        <div className="h-4 rounded-sm w-full" style={{ backgroundColor: preset.accentColor, opacity: 0.5 }} />
+                        <div className="h-1 rounded-sm w-3/4" style={{ backgroundColor: preset.textColor, opacity: 0.3 }} />
+                        <div className="h-5 rounded-md mt-0.5" style={{ backgroundColor: preset.textColor, opacity: 0.12 }} />
+                      </div>
+                    )}
+                    {preset.layoutType === 'editorial-grid' && (
+                      <div className="grid grid-cols-3 gap-1 h-12">
+                        <div className="col-span-2 flex flex-col gap-0.5 justify-center">
+                          <div className="h-1.5 rounded-sm w-full" style={{ backgroundColor: preset.textColor, opacity: 0.6 }} />
+                          <div className="h-1 rounded-sm w-3/4" style={{ backgroundColor: preset.textColor, opacity: 0.3 }} />
+                          <div className="h-1 rounded-sm w-full" style={{ backgroundColor: preset.textColor, opacity: 0.2 }} />
+                        </div>
+                        <div className="rounded-md" style={{ backgroundColor: preset.accentColor, opacity: 0.35 }} />
+                      </div>
+                    )}
                   </div>
                   <div className="px-3 py-2 bg-background">
                     <p className="text-[10px] text-muted-foreground leading-tight">{preset.description}</p>

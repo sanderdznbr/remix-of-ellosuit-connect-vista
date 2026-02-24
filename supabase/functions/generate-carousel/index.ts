@@ -535,9 +535,12 @@ STYLE REQUIREMENTS:
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Determine primary model
-      const primaryModel = imageModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
-      const fallbackModel = imageModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
+      // Determine primary model - 'auto' selects based on whether face refs exist
+      const resolvedModel = imageModel === 'auto' 
+        ? (hasFaceRefs ? 'nano-banana' : 'gemini') 
+        : imageModel;
+      const primaryModel = resolvedModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
+      const fallbackModel = resolvedModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
       console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
 
       async function tryGenerateImage(model: string, content: any[], attempt: number): Promise<string | null> {

@@ -9,7 +9,7 @@ export interface ReferenceImage {
 }
 
 export interface ImageSettings {
-  model: 'gemini' | 'nano-banana';
+  model: 'gemini' | 'nano-banana' | 'auto';
   fidelity: 'high' | 'balanced' | 'creative'; // how closely to match references
   negativePrompt: string;
   bodyPosition: string;
@@ -49,7 +49,7 @@ export interface WizardData {
 }
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
-  model: 'nano-banana',
+  model: 'auto',
   fidelity: 'balanced',
   negativePrompt: '',
   bodyPosition: '',

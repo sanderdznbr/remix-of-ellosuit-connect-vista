@@ -75,7 +75,12 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
       {/* Model */}
       <div>
         <label className="text-xs font-semibold text-foreground mb-2 block">Modelo de IA</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => update({ model: 'auto' })}
+            className={`p-3 rounded-xl text-left transition-all border ${settings.model === 'auto' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+            <span className="text-sm font-bold">🤖 Automático</span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">Sistema escolhe o melhor</span>
+          </button>
           <button onClick={() => update({ model: 'gemini' })}
             className={`p-3 rounded-xl text-left transition-all border ${settings.model === 'gemini' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
             <span className="text-sm font-bold">⚡ Gemini Flash</span>

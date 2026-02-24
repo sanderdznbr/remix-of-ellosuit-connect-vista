@@ -43,6 +43,8 @@ interface CarouselCard {
   searchTerms?: string[];
   needsImage?: boolean;
   layout?: 'dark' | 'light' | 'accent';
+  fontScale?: number; // 0.5 to 2.0, default 1.0
+  paddingScale?: number; // 0.5 to 2.0, default 1.0
 }
 
 interface CarouselData {
@@ -459,6 +461,8 @@ const CarouselGenerator: React.FC = () => {
     const w = isExport ? CARD_W : PREVIEW_W;
     const h = isExport ? CARD_H : PREVIEW_H;
     const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const fs = card.fontScale ?? 1.0;
+    const ps = card.paddingScale ?? 1.0;
 
     const layout = card.layout || 'dark';
     const isLight = layout === 'light';
@@ -473,8 +477,8 @@ const CarouselGenerator: React.FC = () => {
     const renderHeader = () => (
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: `${28 * s}px ${48 * s}px`,
-        fontFamily: sans, fontSize: `${20 * s}px`, fontWeight: 500,
+        padding: `${28 * s * ps}px ${48 * s * ps}px`,
+        fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 500,
         color: headerTxt, letterSpacing: `${0.5 * s}px`,
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
       }}>
@@ -514,11 +518,11 @@ const CarouselGenerator: React.FC = () => {
           </div>
 
           <div style={{
-            position: 'absolute', bottom: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, zIndex: 10,
+            position: 'absolute', bottom: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10,
             textAlign: 'center',
           }}>
             <h1 style={{
-              fontFamily: serif, fontSize: `${96 * s}px`, fontWeight: 900,
+              fontFamily: serif, fontSize: `${96 * s * fs}px`, fontWeight: 900,
               lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase',
               letterSpacing: `-${1 * s}px`,
               textShadow: '0 4px 40px rgba(0,0,0,0.7)',
@@ -527,7 +531,7 @@ const CarouselGenerator: React.FC = () => {
             </h1>
             {card.subtitle && (
               <p style={{
-                fontFamily: sans, fontSize: `${22 * s}px`, fontWeight: 600,
+                fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 600,
                 color: '#FFFFFF', opacity: 0.85, marginTop: `${24 * s}px`,
                 lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px`,
               }}>
@@ -553,7 +557,7 @@ const CarouselGenerator: React.FC = () => {
           )}
           {renderHeader()}
           <div style={{
-            position: 'absolute', inset: `${100 * s}px ${48 * s}px ${60 * s}px`,
+            position: 'absolute', inset: `${100 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`,
             display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
             textAlign: 'center', zIndex: 10,
           }}>
@@ -565,14 +569,14 @@ const CarouselGenerator: React.FC = () => {
               marginBottom: `${40 * s}px`,
             }}>✦</div>
             <h2 style={{
-              fontFamily: serif, fontSize: `${68 * s}px`, fontWeight: 900,
+              fontFamily: serif, fontSize: `${68 * s * fs}px`, fontWeight: 900,
               lineHeight: 1.05, color: mainTxt, marginBottom: `${30 * s}px`,
             }}>
               {card.title}
             </h2>
             {card.body && (
               <p style={{
-                fontFamily: serif, fontSize: `${34 * s}px`, fontWeight: 400,
+                fontFamily: serif, fontSize: `${34 * s * fs}px`, fontWeight: 400,
                 lineHeight: 1.5, color: mainTxt, fontStyle: 'italic', opacity: 0.8,
                 maxWidth: `${900 * s}px`,
               }}>
@@ -586,7 +590,7 @@ const CarouselGenerator: React.FC = () => {
                 borderRadius: `${50 * s}px`,
               }}>
                 <p style={{
-                  fontFamily: sans, fontSize: `${22 * s}px`, fontWeight: 700,
+                  fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 700,
                   color: mainTxt, textTransform: 'uppercase', letterSpacing: `${2 * s}px`,
                 }}>
                   @{userName}
@@ -609,19 +613,19 @@ const CarouselGenerator: React.FC = () => {
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {renderHeader()}
           <div style={{
-            position: 'absolute', top: `${90 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, bottom: `${60 * s}px`,
+            position: 'absolute', top: `${90 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${60 * s * ps}px`,
             display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5,
-            paddingTop: `${30 * s}px`,
+            paddingTop: `${30 * s * ps}px`,
           }}>
             <p style={{
-              fontFamily: serif, fontSize: `${56 * s}px`, fontWeight: 700,
+              fontFamily: serif, fontSize: `${56 * s * fs}px`, fontWeight: 700,
               lineHeight: 1.15, color: mainTxt,
             }}>
               {renderAccentText(topText, accentTxt, mainTxt, 56, s)}
             </p>
             {bottomText && (
               <p style={{
-                fontFamily: serif, fontSize: `${32 * s}px`, fontWeight: 400,
+                fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400,
                 lineHeight: 1.5, color: secondaryTxt,
                 marginTop: 'auto',
                 textDecoration: 'underline',
@@ -642,15 +646,15 @@ const CarouselGenerator: React.FC = () => {
         {renderHeader()}
         
         <div style={{
-          position: 'absolute', top: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, bottom: `${40 * s}px`,
+          position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`,
           display: 'flex', flexDirection: 'column', zIndex: 5,
         }}>
           <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
             <p style={{
-              fontFamily: serif, fontSize: `${48 * s}px`, fontWeight: 700,
+              fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700,
               lineHeight: 1.18, color: mainTxt,
             }}>
-              {renderAccentText(topText, accentTxt, mainTxt, 48, s)}
+              {renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}
             </p>
           </div>
 
@@ -670,10 +674,10 @@ const CarouselGenerator: React.FC = () => {
           {bottomText && (
             <div style={{ paddingTop: `${24 * s}px` }}>
               <p style={{
-                fontFamily: serif, fontSize: `${36 * s}px`, fontWeight: 600,
+                fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600,
                 lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt,
               }}>
-                {renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36, s)}
+                {renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}
               </p>
             </div>
           )}
@@ -1117,6 +1121,29 @@ const CarouselGenerator: React.FC = () => {
                             {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
                           </button>
                         ))}
+                      </div>
+                    </div>
+                    {/* Font size & margin controls */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1"><SlidersHorizontal className="h-3 w-3" /> Tamanho da fonte</span>
+                          <span className="text-[10px] font-mono">{Math.round((ec.fontScale ?? 1) * 100)}%</span>
+                        </label>
+                        <input type="range" min="50" max="200" step="5"
+                          value={Math.round((ec.fontScale ?? 1) * 100)}
+                          onChange={(e) => updateCard(editingCard, { fontScale: parseInt(e.target.value) / 100 })}
+                          className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1"><SlidersHorizontal className="h-3 w-3" /> Margens</span>
+                          <span className="text-[10px] font-mono">{Math.round((ec.paddingScale ?? 1) * 100)}%</span>
+                        </label>
+                        <input type="range" min="30" max="200" step="5"
+                          value={Math.round((ec.paddingScale ?? 1) * 100)}
+                          onChange={(e) => updateCard(editingCard, { paddingScale: parseInt(e.target.value) / 100 })}
+                          className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
                       </div>
                     </div>
                     <div>

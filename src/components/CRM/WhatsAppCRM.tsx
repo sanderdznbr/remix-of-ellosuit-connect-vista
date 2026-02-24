@@ -1352,13 +1352,17 @@ const WhatsAppCRM: React.FC = () => {
     }
   };
 
+  // Ref guard to prevent duplicate sends from double-clicks or rapid Enter presses
+  const sendingRef = useRef(false);
+
   // Send message to WhatsApp conversation with Optimistic UI
   const sendMessage = async () => {
     if (selectedAgent) {
       return sendMessageToAgent();
     }
     
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || sendingRef.current) return;
+    sendingRef.current = true;
     
     // Check if connected before sending
     const connectedSession = sessions.find(s => 
@@ -1441,6 +1445,7 @@ const WhatsAppCRM: React.FC = () => {
       toast({ title: 'Erro', description: e.message || 'Erro ao enviar mensagem', variant: 'destructive' });
     } finally {
       setSendingMessage(false);
+      sendingRef.current = false;
     }
   };
 

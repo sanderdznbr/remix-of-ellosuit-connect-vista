@@ -90,12 +90,15 @@ const CarouselGenerator: React.FC = () => {
   const [generatingAllImages, setGeneratingAllImages] = useState(false);
   const [imageGenProgress, setImageGenProgress] = useState('');
 
-  // Reference images for AI composition
+  // Reference images for AI composition (face/people references)
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
   const [searchingReferences, setSearchingReferences] = useState(false);
   const [refSearchQuery, setRefSearchQuery] = useState('');
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
   const [showRefPanel, setShowRefPanel] = useState(false);
+
+  // Style/design reference images (for visual style, not face)
+  const [styleRefImages, setStyleRefImages] = useState<ReferenceImage[]>([]);
 
   // Famous people (Instagram)
   const [famousInput, setFamousInput] = useState('');
@@ -177,6 +180,25 @@ const CarouselGenerator: React.FC = () => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleStyleRefUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setStyleRefImages(prev => [...prev, {
+          url: e.target!.result as string,
+          thumb: e.target!.result as string,
+          label: file.name,
+          source: 'upload',
+        }]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeStyleRef = (index: number) => {
+    setStyleRefImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const removeReference = (index: number) => {
@@ -389,8 +411,8 @@ const CarouselGenerator: React.FC = () => {
     const card = cards[cardIndex];
     const imgPrompt = card?.imagePrompt || card?.title || card?.bodyTop || topic;
     
-    // Collect reference URLs for this card
-    const refUrls = referenceImages.map(r => r.url).filter(u => !u.startsWith('data:')); // Only web URLs for references
+    const faceRefUrls = referenceImages.map(r => r.url);
+    const styleRefUrls = styleRefImages.map(r => r.url);
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
@@ -399,7 +421,8 @@ const CarouselGenerator: React.FC = () => {
           prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
           imageSize: '3:4',
           topic: imgPrompt,
-          referenceImageUrls: refUrls.length > 0 ? refUrls : undefined,
+          faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+          styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
         },
       });
       if (error) throw error;
@@ -479,11 +502,9 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       const updatedCards = [...cards];
       
-      // Combine web refs with user-attached refs
-      const allRefUrls = [
-        ...referenceImages.map(r => r.url).filter(u => !u.startsWith('data:')),
-        ...webRefs.slice(0, 5),
-      ];
+      // Separate face refs (from Instagram/people) and style refs (from style uploads)
+      const faceRefUrls = referenceImages.map(r => r.url);
+      const styleRefUrls = styleRefImages.map(r => r.url);
 
       // Build parallel image generation promises
       const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
@@ -506,7 +527,8 @@ const CarouselGenerator: React.FC = () => {
                     prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
                     imageSize: '3:4',
                     topic: imgPrompt,
-                    referenceImageUrls: allRefUrls.length > 0 ? allRefUrls : undefined,
+                    faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+                    styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
                   },
                 });
                 if (!imgError && imgData?.success && imgData?.imageUrl) {
@@ -1275,7 +1297,41 @@ const CarouselGenerator: React.FC = () => {
                 )}
               </div>
 
-              {/* Font selection */}
+              {/* Style reference images section */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-muted-foreground/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+                    <span className="text-sm font-semibold text-foreground">Referência de Estilo/Design (opcional)</span>
+                  </div>
+                  {styleRefImages.length > 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{styleRefImages.length} anexadas</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Anexe imagens de posts/designs que você gosta para a IA usar como referência de estilo visual (layout, cores, composição). Não será usado para rostos.
+                </p>
+                <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border cursor-pointer hover:bg-muted/50 text-xs font-medium text-muted-foreground">
+                  <Upload className="h-3.5 w-3.5" /> Anexar imagens de referência de estilo
+                  <input type="file" accept="image/*" className="hidden" multiple
+                    onChange={(e) => { Array.from(e.target.files || []).forEach(handleStyleRefUpload); }} />
+                </label>
+                {styleRefImages.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    {styleRefImages.map((ref, i) => (
+                      <div key={i} className="relative group">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden ring-2 ring-accent/30">
+                          <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
+                        </div>
+                        <button onClick={() => removeStyleRef(i)}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                   <Type className="h-3.5 w-3.5" /> Fonte do Carrossel

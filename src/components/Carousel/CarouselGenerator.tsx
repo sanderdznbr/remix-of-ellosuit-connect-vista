@@ -1620,17 +1620,28 @@ const CarouselGenerator: React.FC = () => {
                         🎨 Nano Banana Pro
                       </button>
                     </div>
-                    {/* Style References Preview */}
-                    {styleRefImages.length > 0 && (
-                      <div className="flex gap-1.5 mb-3 flex-wrap">
-                        {styleRefImages.map((ref, idx) => (
-                          <div key={idx} className="relative group">
-                            <img src={ref.thumb} alt={ref.label} className="h-10 w-10 rounded-lg object-cover ring-1 ring-border" />
-                            <button onClick={() => setStyleRefImages(prev => prev.filter((_, i) => i !== idx))}
-                              className="absolute -top-1 -right-1 bg-destructive text-white rounded-full h-3.5 w-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                            <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-[7px] text-white text-center truncate rounded-b-lg">ref</span>
-                          </div>
-                        ))}
+                    {/* All References Preview (Instagram + Brand + Uploads) */}
+                    {(referenceImages.length + styleRefImages.length) > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 font-medium">Referências visuais anexadas:</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {referenceImages.map((ref, idx) => (
+                            <div key={`ref-${idx}`} className="relative group">
+                              <img src={ref.thumb} alt={ref.label} className="h-10 w-10 rounded-lg object-cover ring-1 ring-border" />
+                              <button onClick={() => setReferenceImages(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute -top-1 -right-1 bg-destructive text-white rounded-full h-3.5 w-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                              <span className="absolute bottom-0 left-0 right-0 bg-blue-600/80 text-[7px] text-white text-center truncate rounded-b-lg">pessoa</span>
+                            </div>
+                          ))}
+                          {styleRefImages.map((ref, idx) => (
+                            <div key={`style-${idx}`} className="relative group">
+                              <img src={ref.thumb} alt={ref.label} className="h-10 w-10 rounded-lg object-cover ring-1 ring-border" />
+                              <button onClick={() => setStyleRefImages(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute -top-1 -right-1 bg-destructive text-white rounded-full h-3.5 w-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                              <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-[7px] text-white text-center truncate rounded-b-lg">marca</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     <div className="flex gap-2">

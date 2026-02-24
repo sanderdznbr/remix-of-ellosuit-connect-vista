@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
             
             console.log('Connection updated:', updateData);
             
-            // Notify admin on connection/disconnection
+            // Notify admin on connection/disconnection (with dedup)
             if (updateData.status === 'connected' || updateData.status === 'disconnected') {
               // Get session owner info
               const { data: sessionInfo } = await supabase
@@ -251,23 +251,44 @@ Deno.serve(async (req) => {
                 .single();
               
               if (sessionInfo) {
-                const { data: companyInfo } = await supabase
-                  .from('companies')
-                  .select('name')
-                  .eq('id', sessionInfo.company_id)
-                  .single();
-                
-                const isConnected = updateData.status === 'connected';
-                notifyAdmin(supabase, {
-                  event_type: isConnected ? 'whatsapp_connected' : 'whatsapp_disconnected',
-                  event_title: isConnected
-                    ? `Parabéns ${companyInfo?.name || sessionInfo.push_name || 'Usuário'}! Seu WhatsApp foi conectado em nosso sistema.`
-                    : `O WhatsApp de ${companyInfo?.name || sessionInfo.push_name || 'Usuário'} foi desconectado.`,
-                  event_description: `Número: ${sessionInfo.phone_number || phoneNumber || 'Desconhecido'}`,
-                  company_id: sessionInfo.company_id,
-                  company_name: companyInfo?.name,
-                  metadata: { phone_number: sessionInfo.phone_number || phoneNumber, push_name: sessionInfo.push_name || pushName },
-                });
+                let shouldNotify = true;
+
+                // For disconnection: only notify if there's NO other connected session for this company
+                // This prevents spam when Baileys rotates sessions (old disconnects, new connects)
+                if (updateData.status === 'disconnected') {
+                  const { data: otherConnected } = await supabase
+                    .from('whatsapp_sessions')
+                    .select('id')
+                    .eq('company_id', sessionInfo.company_id)
+                    .eq('status', 'connected')
+                    .neq('id', sessionId)
+                    .limit(1);
+                  
+                  if (otherConnected && otherConnected.length > 0) {
+                    console.log(`[NOTIFY-SKIP] Skipping disconnect notification for ${sessionId} - another session is still connected`);
+                    shouldNotify = false;
+                  }
+                }
+
+                if (shouldNotify) {
+                  const { data: companyInfo } = await supabase
+                    .from('companies')
+                    .select('name')
+                    .eq('id', sessionInfo.company_id)
+                    .single();
+                  
+                  const isConnected = updateData.status === 'connected';
+                  notifyAdmin(supabase, {
+                    event_type: isConnected ? 'whatsapp_connected' : 'whatsapp_disconnected',
+                    event_title: isConnected
+                      ? `Parabéns ${companyInfo?.name || sessionInfo.push_name || 'Usuário'}! Seu WhatsApp foi conectado em nosso sistema.`
+                      : `O WhatsApp de ${companyInfo?.name || sessionInfo.push_name || 'Usuário'} foi desconectado.`,
+                    event_description: `Número: ${sessionInfo.phone_number || phoneNumber || 'Desconhecido'}`,
+                    company_id: sessionInfo.company_id,
+                    company_name: companyInfo?.name,
+                    metadata: { phone_number: sessionInfo.phone_number || phoneNumber, push_name: sessionInfo.push_name || pushName },
+                  });
+                }
               }
             }
           }

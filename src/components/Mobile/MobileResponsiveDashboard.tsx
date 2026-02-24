@@ -26,6 +26,7 @@ import ImprovedDashboardCustomizer from '@/components/Dashboard/ImprovedDashboar
 import MeetingRecordings from '@/components/Dashboard/MeetingRecordings';
 import BotIADashboard from '@/components/BotIA/BotIADashboard';
 import CreateAgentPage from '@/components/BotIA/CreateAgentPage';
+import AiCreditsPage from '@/components/Dashboard/AiCreditsPage';
 import EditAgentPage from '@/components/BotIA/EditAgentPage';
 import ChatBotBuilder from '@/components/ChatBot/ChatBotBuilder';
 import ChatbotManagement from '@/components/BotIA/ChatbotManagement';
@@ -137,6 +138,7 @@ const MobileResponsiveDashboard = () => {
             <Route path="/bot-ia" element={<ModuleGate module="omni"><BotIADashboard /></ModuleGate>} />
             <Route path="/bot-ia/novo" element={<ModuleGate module="omni"><CreateAgentPage /></ModuleGate>} />
             <Route path="/bot-ia/editar/:id" element={<ModuleGate module="omni"><EditAgentPage /></ModuleGate>} />
+            <Route path="/creditos-ia" element={<AiCreditsPage />} />
             <Route path="/chatbot" element={<ModuleGate module="omni"><ChatbotManagement /></ModuleGate>} />
             <Route path="/chatbot-builder" element={<ModuleGate module="omni"><ChatBotBuilder /></ModuleGate>} />
             <Route path="/automacoes" element={<AutomationManagement />} />

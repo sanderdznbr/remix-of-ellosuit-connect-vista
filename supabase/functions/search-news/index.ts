@@ -29,18 +29,7 @@ Deno.serve(async (req) => {
     console.log('Searching news for topic:', topic);
 
     // Search for real news using Perplexity
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a content researcher. Search for the latest real news and information about the given topic. Return a JSON object with the following structure:
+    const systemPrompt = `You are a content researcher. Search for the latest real news and information about the given topic. Return a JSON object with the following structure:
 {
   "title": "A compelling carousel title about the topic (max 80 chars)",
   "subtitle": "A subtitle that hooks the reader (max 100 chars)",
@@ -56,30 +45,97 @@ Deno.serve(async (req) => {
   "image_search_terms": ["term1", "term2", "term3"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
-Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.`
-          },
-          {
-            role: 'user',
-            content: `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`
-          }
-        ],
-        temperature: 0.3,
-        search_recency_filter: 'month',
-      }),
-    });
+Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.`;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Perplexity API error:', response.status, errorText);
-      return new Response(
-        JSON.stringify({ success: false, error: `Perplexity API error: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
+
+    let content = '';
+    let citations: string[] = [];
+
+    // Try Perplexity first, fallback to OpenAI
+    let perplexityOk = false;
+    try {
+      console.log('[AI] Trying Perplexity...');
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.3,
+          search_recency_filter: 'month',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        content = data.choices?.[0]?.message?.content || '';
+        citations = data.citations || [];
+        perplexityOk = true;
+        console.log('[AI] Perplexity OK, citations:', citations.length);
+      } else {
+        const errText = await response.text();
+        console.error('[AI] Perplexity failed:', response.status, errText.slice(0, 200));
+      }
+    } catch (perplexityErr) {
+      console.error('[AI] Perplexity exception:', perplexityErr);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    const citations = data.citations || [];
+    // Fallback to OpenAI if Perplexity failed
+    if (!perplexityOk) {
+      const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      if (openaiKey) {
+        console.log('[AI] Falling back to OpenAI...');
+        try {
+          const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.3,
+            }),
+          });
+
+          if (openaiRes.ok) {
+            const openaiData = await openaiRes.json();
+            content = openaiData.choices?.[0]?.message?.content || '';
+            console.log('[AI] OpenAI fallback OK');
+          } else {
+            const errText = await openaiRes.text();
+            console.error('[AI] OpenAI also failed:', openaiRes.status, errText.slice(0, 200));
+            return new Response(
+              JSON.stringify({ success: false, error: 'All AI providers unavailable. Please try again.' }),
+              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } catch (openaiErr) {
+          console.error('[AI] OpenAI exception:', openaiErr);
+          return new Response(
+            JSON.stringify({ success: false, error: 'All AI providers failed. Please try again.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        console.error('[AI] No fallback API key available');
+        return new Response(
+          JSON.stringify({ success: false, error: 'Perplexity unavailable and no fallback configured.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     console.log('Perplexity response received, citations:', citations.length);
 

@@ -9,6 +9,7 @@ import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import CRMSidebar from '@/components/CRM/CRMSidebar';
+import PageTransition from '@/components/shared/PageTransition';
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { isMobile } = useIsMobile();
@@ -59,7 +60,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       {isCrmWhatsAppMobile ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
 
       <main className={`flex-1 min-h-0 w-full ${isMobile && !isCrmWhatsAppMobile ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
-        {children}
+        <PageTransition>
+          {children}
+        </PageTransition>
       </main>
 
       {/* Mobile Bottom Nav (hidden on CRM WhatsApp) */}

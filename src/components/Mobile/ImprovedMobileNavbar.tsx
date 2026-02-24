@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Calendar, Mail, Users, Plus } from 'lucide-react';
 import QuickActionsModal from './QuickActionsModal';
+import { useHubColor } from '@/hooks/useHubColor';
 
 const ImprovedMobileNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const { color: hubColor } = useHubColor();
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/dashboard' },
@@ -35,7 +37,8 @@ const ImprovedMobileNavbar = () => {
                 <button
                   key="quick-actions"
                   onClick={() => setShowQuickActions(true)}
-                  className="relative -mt-6 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+                  className="relative -mt-6 flex items-center justify-center w-14 h-14 rounded-full shadow-lg active:scale-95 transition-transform"
+                  style={{ backgroundColor: hubColor, color: '#fff' }}
                 >
                   <Plus className="h-6 w-6" />
                 </button>
@@ -50,8 +53,9 @@ const ImprovedMobileNavbar = () => {
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-colors ${
-                  active ? 'text-primary' : 'text-muted-foreground'
+                  active ? '' : 'text-muted-foreground'
                 }`}
+                style={active ? { color: hubColor } : undefined}
               >
                 <Icon className={`h-5 w-5 ${active ? 'stroke-[2.5px]' : ''}`} />
                 <span className={`text-[10px] ${active ? 'font-medium' : ''}`}>

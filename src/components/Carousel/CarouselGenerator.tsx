@@ -851,33 +851,28 @@ const CarouselGenerator: React.FC = () => {
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-              {/* Card thumbnails strip (left) */}
-              <div className="w-24 flex-shrink-0 border-r border-border bg-muted/30 overflow-y-auto py-3 px-2 space-y-2">
-                {carouselData.cards.map((card, i) => (
-                  <div key={i} className="relative group">
-                    <button
-                      onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
-                      className={`w-full rounded-lg overflow-hidden transition-all border-2 ${validIndex === i ? 'border-primary shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                    >
-                      <div className="transform scale-[0.065] origin-top-left" style={{ width: CARD_W, height: CARD_H }}>
-                        {renderCardPreview(card, i)}
-                      </div>
-                      <div style={{ height: CARD_H * 0.065 }} />
-                    </button>
-                    <span className={`block text-center text-[10px] mt-1 font-medium ${validIndex === i ? 'text-primary' : 'text-muted-foreground'}`}>{i + 1}</span>
+              {/* Center: Large preview with card navigation */}
+              <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 overflow-auto p-4">
+                <div style={{ transform: `scale(${Math.min(0.7, (window.innerHeight * 0.82) / CARD_H)})`, transformOrigin: 'center center' }}>
+                  {renderCardPreview(ec, validIndex)}
+                </div>
+                {/* Card navigation dots */}
+                <div className="flex items-center gap-2 mt-4">
+                  <button onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
+                    disabled={validIndex === 0} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {carouselData.cards.map((_, i) => (
+                      <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
+                    ))}
                   </div>
-                ))}
-                <button onClick={addCard} className="w-full py-3 rounded-lg border border-dashed border-border text-muted-foreground hover:bg-muted/50 flex items-center justify-center">
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Center: Large preview */}
-              <div className="flex-1 flex items-center justify-center bg-muted/20 overflow-auto p-6">
-                <div className="transform" style={{ maxHeight: '80vh' }}>
-                  <div style={{ transform: `scale(${Math.min(0.55, (window.innerHeight * 0.75) / CARD_H)})`, transformOrigin: 'top center' }}>
-                    {renderCardPreview(ec, validIndex)}
-                  </div>
+                  <button onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
+                    disabled={validIndex === carouselData.cards.length - 1} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  <span className="text-xs text-muted-foreground font-medium ml-2">{validIndex + 1}/{carouselData.cards.length}</span>
                 </div>
               </div>
 

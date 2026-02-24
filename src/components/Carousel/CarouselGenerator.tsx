@@ -1569,9 +1569,6 @@ const CarouselGenerator: React.FC = () => {
                         <input type="file" accept="image/*" className="hidden"
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(editingCard, f); }} />
                       </label>
-                      <Button variant="outline" size="sm" onClick={() => setShowBrandAssets(prev => !prev)} className="rounded-xl gap-1 h-10">
-                        <ImageIcon className="h-4 w-4" /> Brand
-                      </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShowImagePicker(editingCard); }} className="rounded-xl gap-1 h-10">
                         <Search className="h-4 w-4" /> Pexels
                       </Button>
@@ -1581,39 +1578,6 @@ const CarouselGenerator: React.FC = () => {
                         <Wand2 className="h-4 w-4" /> Gerar IA
                       </Button>
                     </div>
-                    {/* Brand Assets Picker */}
-                    {showBrandAssets && (
-                      <div className="border rounded-xl p-3 space-y-2 bg-muted/30">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-foreground">Biblioteca de Marca</p>
-                          <button onClick={() => setShowBrandAssets(false)} className="p-0.5 rounded hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
-                        </div>
-                        {loadingBrandAssets ? (
-                          <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
-                        ) : brandAssets.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum asset encontrado. Adicione em Biblioteca de Marca.</p>
-                        ) : (
-                          <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
-                            {brandAssets.map(asset => (
-                              <button key={asset.id} onClick={() => {
-                                setStyleRefImages(prev => {
-                                  if (prev.some(r => r.url === asset.file_url)) return prev;
-                                  return [...prev, { url: asset.file_url, thumb: asset.file_url, label: asset.name, source: 'upload' as const }];
-                                });
-                                setShowBrandAssets(false);
-                                toast({ title: 'Referência de marca adicionada!', description: 'Será usada como referência visual na geração com IA.' });
-                              }}
-                                className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all relative group" title={asset.name}>
-                                <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-[9px] text-white font-medium">+ Referência</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               );
@@ -1678,6 +1642,46 @@ const CarouselGenerator: React.FC = () => {
                       </Button>
                     </div>
                     {generatingAiImage && <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">⏳ Gerando... até 60s</p>}
+                  </div>
+
+                  {/* Brand Assets - Referência Visual */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-medium text-foreground">Biblioteca de Marca (Referência)</p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setShowBrandAssets(prev => !prev)} className="text-xs h-7 px-2">
+                        {showBrandAssets ? 'Ocultar' : 'Mostrar'}
+                      </Button>
+                    </div>
+                    {showBrandAssets && (
+                      <div className="border rounded-xl p-3 space-y-2 bg-muted/30">
+                        {loadingBrandAssets ? (
+                          <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+                        ) : brandAssets.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">Nenhum asset encontrado. Adicione em Biblioteca de Marca.</p>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-1.5 max-h-[200px] overflow-y-auto">
+                            {brandAssets.map(asset => (
+                              <button key={asset.id} onClick={() => {
+                                setStyleRefImages(prev => {
+                                  if (prev.some(r => r.url === asset.file_url)) return prev;
+                                  return [...prev, { url: asset.file_url, thumb: asset.file_url, label: asset.name, source: 'upload' as const }];
+                                });
+                                toast({ title: 'Referência de marca adicionada!', description: 'Será usada como referência visual na geração com IA.' });
+                              }}
+                                className="rounded-lg overflow-hidden aspect-square ring-1 ring-border hover:ring-2 hover:ring-primary transition-all relative group" title={asset.name}>
+                                <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[9px] text-white font-medium">+ Referência</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Pexels */}

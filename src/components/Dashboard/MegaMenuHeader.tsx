@@ -4,7 +4,8 @@ import {
   MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap, Coins,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
-  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive, X, Sparkles
+  Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive, X, Sparkles,
+  LayoutGrid, ImageIcon, FlaskConical
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { ElloLogo } from "@/components/shared/ElloLogo";
@@ -174,6 +175,22 @@ const menuGroups: MenuGroup[] = [
   }
 ];
 
+const testMenuGroup: MenuGroup = {
+  id: "test",
+  label: "Test",
+  color: "#9333ea",
+  hubPath: "/dashboard/carrossel",
+  columns: [
+    {
+      title: "Laboratório",
+      items: [
+        { id: "carrossel", label: "Gerador de Carrossel", description: "Carrosséis automáticos com IA", icon: LayoutGrid, path: "/dashboard/carrossel" },
+        { id: "brand-assets", label: "Biblioteca de Marca", description: "Logos, prints e assets da marca", icon: ImageIcon, path: "/dashboard/brand-assets" },
+      ]
+    }
+  ]
+};
+
 const configMenu: MenuGroup = {
   id: "config",
   label: "Configurações",
@@ -241,8 +258,22 @@ export function MegaMenuHeader() {
     return bestMatch?.groupId || null;
   };
 
-  const activeGroupId = getActiveGroup();
+  const visibleMenuGroups = isAdminMaster ? [...menuGroups, testMenuGroup] : menuGroups;
 
+  const activeGroupId = (() => {
+    let bestMatch: { groupId: string; pathLen: number } | null = null;
+    for (const group of visibleMenuGroups) {
+      for (const col of group.columns) {
+        for (const item of col.items) {
+          const itemPath = item.path.includes('?') ? item.path.split('?')[0] : item.path;
+          if (location.pathname.startsWith(itemPath) && (!bestMatch || itemPath.length > bestMatch.pathLen)) {
+            bestMatch = { groupId: group.id, pathLen: itemPath.length };
+          }
+        }
+      }
+    }
+    return bestMatch?.groupId || null;
+  })();
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "US";
 
   return (
@@ -354,7 +385,7 @@ export function MegaMenuHeader() {
             </button>
           </div>
 
-          {menuGroups.map((group) => {
+          {visibleMenuGroups.map((group) => {
             const isOpen = activeMenu === group.id;
             const isCurrentHub = activeGroupId === group.id;
             return (
@@ -580,7 +611,7 @@ export function MegaMenuHeader() {
         >
           <div className="max-w-7xl mx-auto px-6 py-6">
             {(() => {
-              const currentGroup = activeMenu === 'config' ? configMenu : menuGroups.find(g => g.id === activeMenu);
+              const currentGroup = activeMenu === 'config' ? configMenu : visibleMenuGroups.find(g => g.id === activeMenu);
               if (!currentGroup) return null;
 
               return (

@@ -12,7 +12,94 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, username } = body;
+
+    // ===== INSTAGRAM PROFILE FETCH =====
+    if (action === 'instagram-profile') {
+      const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
+      if (!SERPAPI_API_KEY) {
+        return new Response(JSON.stringify({ error: 'SERPAPI_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const igUsername = (username || '').replace(/^@/, '').trim();
+      if (!igUsername) {
+        return new Response(JSON.stringify({ error: 'Username is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log('Fetching Instagram profile for:', igUsername);
+
+      const igUrl = `https://www.searchapi.io/api/v1/search?engine=instagram_profile&username=${encodeURIComponent(igUsername)}&api_key=${SERPAPI_API_KEY}`;
+      const igRes = await fetch(igUrl);
+
+      if (!igRes.ok) {
+        const errText = await igRes.text();
+        console.error('Instagram API error:', igRes.status, errText);
+        return new Response(JSON.stringify({ error: 'Erro ao buscar perfil do Instagram' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const igData = await igRes.json();
+      const profile = igData.profile || {};
+      const posts = (igData.posts || []).slice(0, 12);
+
+      // Collect images: avatar + post images
+      const images: any[] = [];
+
+      if (profile.avatar_hd || profile.avatar) {
+        images.push({
+          id: 'avatar',
+          url: profile.avatar_hd || profile.avatar,
+          thumb: profile.avatar || profile.avatar_hd,
+          label: `${profile.name || igUsername} - Foto de perfil`,
+          type: 'avatar',
+        });
+      }
+
+      for (const post of posts) {
+        if (post.link) {
+          images.push({
+            id: post.id || `post-${images.length}`,
+            url: post.link,
+            thumb: post.thumbnail || post.link,
+            label: (post.caption || '').slice(0, 60) || `Post de @${igUsername}`,
+            type: 'post',
+          });
+        }
+        // Also include carousel items if present
+        if (post.carousel_items) {
+          for (const item of post.carousel_items.slice(0, 3)) {
+            if (item.link && item.type === 'image') {
+              images.push({
+                id: item.id || `carousel-${images.length}`,
+                url: item.link,
+                thumb: item.link,
+                label: `Carrossel de @${igUsername}`,
+                type: 'post',
+              });
+            }
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        profile: {
+          username: profile.username || igUsername,
+          name: profile.name || igUsername,
+          bio: profile.bio || '',
+          avatar: profile.avatar_hd || profile.avatar || '',
+          followers: profile.followers || 0,
+          is_verified: profile.is_verified || false,
+        },
+        images,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // ===== WEB SEARCH for reference images (SerpAPI Google Images) =====
     if (action === 'web-search') {

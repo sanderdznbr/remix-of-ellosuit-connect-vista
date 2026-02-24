@@ -30,6 +30,77 @@ type MediaType = 'text' | 'image' | 'video' | 'audio' | 'document';
 
 const OMNI_COLOR = '#FF4500';
 
+const normalizeRecipientPhone = (input: string): string => {
+  const digits = (input || '').replace(/\D/g, '');
+  if (!digits) return '';
+
+  let normalized = digits;
+
+  if (!normalized.startsWith('55') && normalized.length <= 11) {
+    normalized = `55${normalized}`;
+  }
+
+  if (normalized.startsWith('55') && normalized.length === 12) {
+    normalized = `${normalized.slice(0, 4)}9${normalized.slice(4)}`;
+  }
+
+  return normalized;
+};
+
+const buildPhoneVariants = (normalizedPhone: string): string[] => {
+  if (!normalizedPhone) return [];
+
+  const variants = new Set<string>([normalizedPhone]);
+
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 13) {
+    variants.add(normalizedPhone.slice(0, 4) + normalizedPhone.slice(5));
+  }
+
+  if (normalizedPhone.startsWith('55') && normalizedPhone.length === 12) {
+    variants.add(normalizedPhone.slice(0, 4) + '9' + normalizedPhone.slice(4));
+  }
+
+  return Array.from(variants);
+};
+
+const isValidRecipientPhone = (normalizedPhone: string): boolean => {
+  if (!normalizedPhone.startsWith('55')) return false;
+  return normalizedPhone.length === 12 || normalizedPhone.length === 13;
+};
+
+const isSameRecipientPhone = (phoneA: string, phoneB: string): boolean => {
+  const variantsA = new Set(buildPhoneVariants(normalizeRecipientPhone(phoneA)));
+  const variantsB = buildPhoneVariants(normalizeRecipientPhone(phoneB));
+  return variantsB.some((variant) => variantsA.has(variant));
+};
+
+const formatRecipientPhone = (phone: string): string => {
+  const normalized = normalizeRecipientPhone(phone);
+
+  if (!normalized.startsWith('55')) return phone;
+
+  if (normalized.length === 13) {
+    const ddd = normalized.slice(2, 4);
+    const local = normalized.slice(4);
+    return `+55 (${ddd}) ${local.slice(0, 5)}-${local.slice(5)}`;
+  }
+
+  if (normalized.length === 12) {
+    const ddd = normalized.slice(2, 4);
+    const local = normalized.slice(4);
+    return `+55 (${ddd}) ${local.slice(0, 4)}-${local.slice(4)}`;
+  }
+
+  return normalized;
+};
+
+interface ResolveJidResult {
+  exists: boolean;
+  jid: string | null;
+  normalizedPhone: string;
+  reason?: string;
+}
+
 export default function DisparosPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -98,24 +169,31 @@ export default function DisparosPage() {
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
   const addRecipient = () => {
-    const clean = newPhone.replace(/\D/g, '');
-    if (!clean || clean.length < 10) {
-      toast({ title: 'Número inválido', description: 'Informe um número com DDD', variant: 'destructive' });
+    const normalizedPhone = normalizeRecipientPhone(newPhone);
+
+    if (!isValidRecipientPhone(normalizedPhone)) {
+      toast({ title: 'Número inválido', description: 'Use um número WhatsApp válido com DDI +55 e DDD', variant: 'destructive' });
       return;
     }
-    const existing = recipients.find(r => r.phone === clean);
+
+    const existing = recipients.find((recipient) => isSameRecipientPhone(recipient.phone, normalizedPhone));
+
     if (existing) {
       if (existing.status !== 'pending') {
-        // Reset to pending for re-send
-        setRecipients(prev => prev.map(r => r.phone === clean ? { ...r, status: 'pending' as const, error: undefined } : r));
+        setRecipients((prev) => prev.map((recipient) =>
+          recipient.id === existing.id
+            ? { ...recipient, phone: normalizedPhone, status: 'pending' as const, error: undefined }
+            : recipient
+        ));
         setNewPhone('');
         toast({ title: 'Número resetado para reenvio' });
       } else {
-        toast({ title: 'Duplicado', description: 'Esse número já está pendente', variant: 'destructive' });
+        toast({ title: 'Duplicado', description: 'Esse número já está na lista', variant: 'destructive' });
       }
       return;
     }
-    setRecipients(prev => [...prev, { id: crypto.randomUUID(), phone: clean, status: 'pending' }]);
+
+    setRecipients((prev) => [...prev, { id: crypto.randomUUID(), phone: normalizedPhone, status: 'pending' }]);
     setNewPhone('');
   };
 
@@ -128,16 +206,46 @@ export default function DisparosPage() {
       .from('contact_group_members')
       .select('phone, name')
       .eq('group_id', groupId);
+
     if (!data) return;
+
     const newRecipients: Recipient[] = [];
-    for (const m of data) {
-      if (!recipients.some(r => r.phone === m.phone) && !newRecipients.some(r => r.phone === m.phone)) {
-        newRecipients.push({ id: crypto.randomUUID(), phone: m.phone, name: m.name || undefined, status: 'pending' });
+    let skippedInvalid = 0;
+    let skippedDuplicates = 0;
+
+    for (const member of data) {
+      const normalizedPhone = normalizeRecipientPhone(member.phone || '');
+
+      if (!isValidRecipientPhone(normalizedPhone)) {
+        skippedInvalid += 1;
+        continue;
       }
+
+      const alreadyExists = recipients.some((recipient) => isSameRecipientPhone(recipient.phone, normalizedPhone));
+      const alreadyAdded = newRecipients.some((recipient) => isSameRecipientPhone(recipient.phone, normalizedPhone));
+
+      if (alreadyExists || alreadyAdded) {
+        skippedDuplicates += 1;
+        continue;
+      }
+
+      newRecipients.push({
+        id: crypto.randomUUID(),
+        phone: normalizedPhone,
+        name: member.name || undefined,
+        status: 'pending',
+      });
     }
-    setRecipients(prev => [...prev, ...newRecipients]);
+
+    setRecipients((prev) => [...prev, ...newRecipients]);
     setShowGroupPicker(false);
-    toast({ title: `${newRecipients.length} contatos carregados do grupo` });
+
+    toast({
+      title: `${newRecipients.length} contatos carregados do grupo`,
+      description: skippedInvalid + skippedDuplicates > 0
+        ? `${skippedDuplicates} duplicados e ${skippedInvalid} inválidos foram ignorados`
+        : undefined,
+    });
   };
 
   const saveAsGroup = async () => {
@@ -166,74 +274,111 @@ export default function DisparosPage() {
   const handleImportCSV = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
+
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
       const lines = text.split(/[\n\r]+/).filter(Boolean);
+
       const newRecipients: Recipient[] = [];
+      let skippedInvalid = 0;
+      let skippedDuplicates = 0;
+
       for (const line of lines) {
         const parts = line.split(/[,;\t]/);
-        const phone = (parts[0] || '').replace(/\D/g, '');
+        const normalizedPhone = normalizeRecipientPhone(parts[0] || '');
         const name = parts[1]?.trim() || undefined;
-        if (phone.length >= 10 && !recipients.some(r => r.phone === phone) && !newRecipients.some(r => r.phone === phone)) {
-          newRecipients.push({ id: crypto.randomUUID(), phone, name, status: 'pending' });
+
+        if (!isValidRecipientPhone(normalizedPhone)) {
+          skippedInvalid += 1;
+          continue;
         }
+
+        const existsInList = recipients.some((recipient) => isSameRecipientPhone(recipient.phone, normalizedPhone));
+        const existsInBatch = newRecipients.some((recipient) => isSameRecipientPhone(recipient.phone, normalizedPhone));
+
+        if (existsInList || existsInBatch) {
+          skippedDuplicates += 1;
+          continue;
+        }
+
+        newRecipients.push({ id: crypto.randomUUID(), phone: normalizedPhone, name, status: 'pending' });
       }
-      setRecipients(prev => [...prev, ...newRecipients]);
-      toast({ title: `${newRecipients.length} contatos importados` });
+
+      setRecipients((prev) => [...prev, ...newRecipients]);
+      toast({
+        title: `${newRecipients.length} contatos importados`,
+        description: skippedInvalid + skippedDuplicates > 0
+          ? `${skippedDuplicates} duplicados e ${skippedInvalid} inválidos foram ignorados`
+          : undefined,
+      });
     };
+
     reader.readAsText(file);
     e.target.value = '';
   }, [recipients, toast]);
 
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-  /**
-   * Resolve o JID correto usando /api/number/check do Baileys.
-   * Se não encontrar e for BR (55), tenta variação do 9º dígito.
-   * Fallback: usa o número original.
-   */
-  const resolveJid = async (baileysUrl: string, instanceName: string, phone: string): Promise<string> => {
-    const cleanPhone = phone.replace(/\D/g, '');
+  const resolveJid = async (baileysUrl: string, instanceName: string, phone: string): Promise<ResolveJidResult> => {
+    const normalizedPhone = normalizeRecipientPhone(phone);
 
-    const checkNumber = async (p: string): Promise<string | null> => {
-      try {
-        const res = await fetch(`${baileysUrl}/api/number/check`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instanceName, phone: p }),
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (data?.exists && data?.jid) return data.jid;
-        return null;
-      } catch {
-        return null;
-      }
-    };
-
-    // 1. Tentar número original
-    const jid = await checkNumber(cleanPhone);
-    if (jid) return jid;
-
-    // 2. Se BR, tentar variação do 9º dígito
-    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
-      const ddd = cleanPhone.substring(2, 4);
-      const rest = cleanPhone.substring(4);
-      let alt: string | null = null;
-      if (rest.length === 9 && rest.startsWith('9')) {
-        alt = `55${ddd}${rest.substring(1)}`;
-      } else if (rest.length === 8) {
-        alt = `55${ddd}9${rest}`;
-      }
-      if (alt) {
-        const altJid = await checkNumber(alt);
-        if (altJid) return altJid;
-      }
+    if (!isValidRecipientPhone(normalizedPhone)) {
+      return {
+        exists: false,
+        jid: null,
+        normalizedPhone,
+        reason: 'Número inválido para WhatsApp',
+      };
     }
 
-    // 3. Fallback
-    return `${cleanPhone}@s.whatsapp.net`;
+    const checkNumber = async (candidatePhone: string): Promise<ResolveJidResult | null> => {
+      const response = await fetch(`${baileysUrl}/api/number/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceName, phone: candidatePhone }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao validar número no WhatsApp');
+      }
+
+      const data = await response.json();
+      if (!data?.exists || !data?.jid) return null;
+
+      const jidPhone = String(data.jid).split('@')[0]?.replace(/\D/g, '') || candidatePhone;
+      const normalizedFromJid = normalizeRecipientPhone(jidPhone);
+
+      return {
+        exists: true,
+        jid: data.jid,
+        normalizedPhone: normalizedFromJid || normalizedPhone,
+      };
+    };
+
+    const candidates = Array.from(new Set(buildPhoneVariants(normalizedPhone)));
+
+    try {
+      for (const candidate of candidates) {
+        const resolved = await checkNumber(candidate);
+        if (resolved) return resolved;
+      }
+    } catch (error) {
+      return {
+        exists: false,
+        jid: null,
+        normalizedPhone,
+        reason: error instanceof Error ? error.message : 'Erro ao validar número',
+      };
+    }
+
+    return {
+      exists: false,
+      jid: null,
+      normalizedPhone,
+      reason: 'Número não encontrado no WhatsApp',
+    };
   };
 
   const startDisparo = async () => {
@@ -241,33 +386,91 @@ export default function DisparosPage() {
       toast({ title: 'Selecione uma sessão', variant: 'destructive' });
       return;
     }
-    if (recipients.filter(r => r.status === 'pending').length === 0) {
+
+    if (recipients.filter((recipient) => recipient.status === 'pending').length === 0) {
       toast({ title: 'Adicione destinatários', variant: 'destructive' });
       return;
     }
+
     if (mediaType === 'text' && !message.trim()) {
       toast({ title: 'Digite uma mensagem', variant: 'destructive' });
       return;
     }
+
     if (mediaType !== 'text' && !mediaUrl.trim()) {
       toast({ title: 'Informe a URL da mídia', variant: 'destructive' });
+      return;
+    }
+
+    const baileysUrl = (selectedSession.baileys_server_url || '').replace(/\/+$/, '');
+    const instanceName = selectedSession.instance_name;
+
+    if (!baileysUrl) {
+      toast({ title: 'Servidor Baileys não configurado', variant: 'destructive' });
       return;
     }
 
     setIsSending(true);
     setProgress(0);
 
-    const pending = recipients.filter(r => r.status === 'pending');
-    const baileysUrl = selectedSession.baileys_server_url;
-    const instanceName = selectedSession.instance_name;
+    const pendingRecipients = recipients.filter((recipient) => recipient.status === 'pending');
+    const preValidationUpdates = new Map<string, Partial<Recipient>>();
+    const uniquePending: Recipient[] = [];
+    const seenPhones = new Set<string>();
+
+    for (const recipient of pendingRecipients) {
+      const normalizedPhone = normalizeRecipientPhone(recipient.phone);
+
+      if (!isValidRecipientPhone(normalizedPhone)) {
+        preValidationUpdates.set(recipient.id, {
+          status: 'error',
+          error: 'Número inválido para WhatsApp',
+          phone: recipient.phone,
+        });
+        continue;
+      }
+
+      if (seenPhones.has(normalizedPhone)) {
+        preValidationUpdates.set(recipient.id, {
+          status: 'error',
+          error: 'Duplicado na lista',
+          phone: normalizedPhone,
+        });
+        continue;
+      }
+
+      seenPhones.add(normalizedPhone);
+      uniquePending.push({ ...recipient, phone: normalizedPhone });
+
+      if (recipient.phone !== normalizedPhone) {
+        preValidationUpdates.set(recipient.id, {
+          status: 'pending',
+          error: undefined,
+          phone: normalizedPhone,
+        });
+      }
+    }
+
+    if (preValidationUpdates.size > 0) {
+      setRecipients((prev) => prev.map((recipient) => {
+        const update = preValidationUpdates.get(recipient.id);
+        return update ? { ...recipient, ...update } : recipient;
+      }));
+    }
+
+    if (uniquePending.length === 0) {
+      setIsSending(false);
+      toast({ title: 'Nenhum número válido para envio', variant: 'destructive' });
+      return;
+    }
 
     // Notify admin: dispatch started
     supabase.functions.invoke('admin-notify', {
       body: {
         event_type: 'bulk_dispatch_started',
-        event_title: `Disparo de ${pending.length} mensagens iniciado`,
+        event_title: `Disparo de ${uniquePending.length} mensagens iniciado`,
         event_description: `Tipo: ${mediaType}`,
-        metadata: { total_messages: pending.length, media_type: mediaType },
+        metadata: { total_messages: uniquePending.length, media_type: mediaType },
       }
     }).catch(() => {});
 
@@ -277,34 +480,39 @@ export default function DisparosPage() {
         user_id: user?.id,
         company_id: companyId,
         title: '📤🚀 Disparo iniciado',
-        message: `Enviando ${pending.length} mensagens (${mediaType})`,
+        message: `Enviando ${uniquePending.length} mensagens (${mediaType})`,
         notification_type: 'dispatch_progress',
         category: 'crm',
         icon: 'Send',
         action_url: '/dashboard/disparos',
-        metadata: { total_messages: pending.length, media_type: mediaType },
+        metadata: { total_messages: uniquePending.length, media_type: mediaType },
       }
     }).catch(() => {});
 
-    for (let i = 0; i < pending.length; i++) {
-      const recipient = pending[i];
-      
-      // Update status to sending
-      setRecipients(prev => prev.map(r => r.id === recipient.id ? { ...r, status: 'sending' as const } : r));
+    let sentCounter = 0;
+    let errorCounter = 0;
+
+    for (let i = 0; i < uniquePending.length; i++) {
+      const recipient = uniquePending[i];
+
+      setRecipients((prev) => prev.map((item) =>
+        item.id === recipient.id
+          ? { ...item, status: 'sending' as const, error: undefined, phone: recipient.phone }
+          : item
+      ));
 
       try {
-        let phone = recipient.phone;
-        if (!phone.startsWith('55') && phone.length <= 11) {
-          phone = '55' + phone;
+        const resolved = await resolveJid(baileysUrl, instanceName, recipient.phone);
+
+        if (!resolved.exists || !resolved.jid) {
+          throw new Error(resolved.reason || 'Número não encontrado no WhatsApp');
         }
 
-        // Resolver JID correto antes de enviar (igual à API pública)
-        const jid = await resolveJid(baileysUrl, instanceName, phone);
-        console.log(`[Disparos] Número ${phone} → JID: ${jid}`);
+        const jid = resolved.jid;
+        const normalizedPhone = resolved.normalizedPhone || recipient.phone;
 
         if (mediaType === 'text') {
-          // Send text
-          const res = await fetch(`${baileysUrl}/api/message/send`, {
+          const response = await fetch(`${baileysUrl}/api/message/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -313,10 +521,10 @@ export default function DisparosPage() {
               message: { text: message },
             }),
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
         } else if (mediaType === 'audio') {
-          // Audio uses send-voice endpoint for PTT style
-          const res = await fetch(`${baileysUrl}/api/message/send-voice`, {
+          const response = await fetch(`${baileysUrl}/api/message/send-voice`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -325,47 +533,55 @@ export default function DisparosPage() {
               audioUrl: mediaUrl,
             }),
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
         } else {
-          // Send media (image, video, document)
-          const res = await fetch(`${baileysUrl}/api/message/send-media`, {
+          const response = await fetch(`${baileysUrl}/api/message/send-media`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               instanceName,
               jid,
               mediaUrl,
-              mediaType: mediaType,
+              mediaType,
               caption: mediaCaption || '',
             }),
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
         }
 
-        setRecipients(prev => prev.map(r => r.id === recipient.id ? { ...r, status: 'sent' as const } : r));
-      } catch (err: any) {
-        setRecipients(prev => prev.map(r => r.id === recipient.id ? { ...r, status: 'error' as const, error: err.message } : r));
+        sentCounter += 1;
+        setRecipients((prev) => prev.map((item) =>
+          item.id === recipient.id
+            ? { ...item, status: 'sent' as const, error: undefined, phone: normalizedPhone }
+            : item
+        ));
+      } catch (error: any) {
+        errorCounter += 1;
+        setRecipients((prev) => prev.map((item) =>
+          item.id === recipient.id
+            ? { ...item, status: 'error' as const, error: error?.message || 'Falha no envio' }
+            : item
+        ));
       }
 
-      setProgress(Math.round(((i + 1) / pending.length) * 100));
+      setProgress(Math.round(((i + 1) / uniquePending.length) * 100));
 
-      // Delay between messages
-      if (i < pending.length - 1) {
+      if (i < uniquePending.length - 1) {
         await sleep(delaySeconds * 1000);
       }
     }
 
     setIsSending(false);
-    
+
     // Notify admin: dispatch completed
-    const finalSent = recipients.filter(r => r.status === 'sent').length;
-    const finalErrors = recipients.filter(r => r.status === 'error').length;
     supabase.functions.invoke('admin-notify', {
       body: {
-        event_type: finalErrors > finalSent ? 'bulk_dispatch_failed' : 'bulk_dispatch_completed',
-        event_title: `Disparo concluído: ${finalSent} enviadas, ${finalErrors} falhas`,
-        event_description: `Total: ${pending.length} mensagens | Tipo: ${mediaType}`,
-        metadata: { total_messages: pending.length, sent: finalSent, errors: finalErrors, media_type: mediaType },
+        event_type: errorCounter > sentCounter ? 'bulk_dispatch_failed' : 'bulk_dispatch_completed',
+        event_title: `Disparo concluído: ${sentCounter} enviadas, ${errorCounter} falhas`,
+        event_description: `Total: ${uniquePending.length} mensagens | Tipo: ${mediaType}`,
+        metadata: { total_messages: uniquePending.length, sent: sentCounter, errors: errorCounter, media_type: mediaType },
       }
     }).catch(() => {});
 
@@ -374,17 +590,20 @@ export default function DisparosPage() {
       body: {
         user_id: user?.id,
         company_id: companyId,
-        title: finalErrors > finalSent ? '📤❌ Disparo com falhas' : '📤✅ Disparo concluído',
-        message: `${finalSent} enviadas, ${finalErrors} falhas de ${pending.length} mensagens`,
+        title: errorCounter > sentCounter ? '📤❌ Disparo com falhas' : '📤✅ Disparo concluído',
+        message: `${sentCounter} enviadas, ${errorCounter} falhas de ${uniquePending.length} mensagens`,
         notification_type: 'dispatch_progress',
         category: 'crm',
         icon: 'Send',
         action_url: '/dashboard/disparos',
-        metadata: { total_messages: pending.length, sent: finalSent, errors: finalErrors },
+        metadata: { total_messages: uniquePending.length, sent: sentCounter, errors: errorCounter },
       }
     }).catch(() => {});
-    
-    toast({ title: 'Disparo concluído!' });
+
+    toast({
+      title: 'Disparo concluído!',
+      description: `${sentCounter} enviados com sucesso e ${errorCounter} com falha.`,
+    });
   };
 
   const sentCount = recipients.filter(r => r.status === 'sent').length;
@@ -522,7 +741,7 @@ export default function DisparosPage() {
                         {r.status === 'error' && <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />}
                         {r.status === 'sending' && <Loader2 className="h-4 w-4 text-orange-500 animate-spin flex-shrink-0" />}
                         {r.status === 'pending' && <div className="h-4 w-4 rounded-full border-2 border-gray-300 flex-shrink-0" />}
-                        <span className="truncate font-mono text-gray-700">{r.phone}</span>
+                        <span className="truncate font-mono text-gray-700">{formatRecipientPhone(r.phone)}</span>
                         {r.name && <span className="text-gray-400 truncate">({r.name})</span>}
                       </div>
                       {!isSending && (

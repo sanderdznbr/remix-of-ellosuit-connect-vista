@@ -681,7 +681,7 @@ const CarouselGenerator: React.FC = () => {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
-          {card.imageUrl && <img src={card.imageUrl} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+          {card.imageUrl && <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)' : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)` }} />
           <div style={{ position: 'absolute', bottom: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: 'center' }}>
             <h1 style={{ fontFamily: serif, fontSize: `${96 * s * fs}px`, fontWeight: 900, lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `-${1 * s}px`, textShadow: '0 4px 40px rgba(0,0,0,0.7)' }}>
@@ -697,7 +697,7 @@ const CarouselGenerator: React.FC = () => {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
-          {card.imageUrl && (<><img src={card.imageUrl} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} /></>)}
+          {card.imageUrl && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} /></>)}
           {renderHeader()}
           <div style={{ position: 'absolute', inset: `${100 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
             <div style={{ width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%', backgroundColor: isAccent ? 'rgba(255,255,255,0.15)' : accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${36 * s}px`, color: '#FFF', fontFamily: sans, marginBottom: `${40 * s}px` }}>✦</div>
@@ -735,7 +735,7 @@ const CarouselGenerator: React.FC = () => {
           <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
             <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}</p>
           </div>
-          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: `${400 * s}px`, borderRadius: `${16 * s}px`, overflow: 'hidden' }}><img src={card.imageUrl} alt="" crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: `${400 * s}px`, borderRadius: `${16 * s}px`, overflow: 'hidden' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
           {bottomText && <div style={{ paddingTop: `${24 * s}px` }}><p style={{ fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}</p></div>}
         </div>
       </div>

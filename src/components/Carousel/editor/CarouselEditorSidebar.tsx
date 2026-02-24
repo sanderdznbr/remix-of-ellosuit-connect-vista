@@ -1,0 +1,292 @@
+import React, { useRef } from 'react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
+  Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { FLOW_COLOR } from '../wizard/types';
+
+interface CarouselCard {
+  type: 'cover' | 'content' | 'cta';
+  title?: string;
+  subtitle?: string;
+  body?: string;
+  bodyTop?: string;
+  bodyBottom?: string;
+  imageUrl?: string;
+  imagePrompt?: string;
+  searchTerms?: string[];
+  needsImage?: boolean;
+  layout?: 'dark' | 'light' | 'accent';
+  fontScale?: number;
+  paddingScale?: number;
+}
+
+interface Props {
+  card: CarouselCard;
+  cardIndex: number;
+  totalCards: number;
+  bgColor: string;
+  accentColor: string;
+  onUpdateCard: (index: number, updates: Partial<CarouselCard>) => void;
+  onUpdateAllCards: (updates: Partial<CarouselCard>) => void;
+  onClose: () => void;
+  onUploadImage: (index: number, file: File) => void;
+  onOpenImagePicker: (index: number) => void;
+  onGenerateAiImage: (index: number) => void;
+  generatingAiImage: boolean;
+  aiImagePrompt: string;
+  setAiImagePrompt: (v: string) => void;
+}
+
+const CarouselEditorSidebar: React.FC<Props> = ({
+  card, cardIndex, totalCards, bgColor, accentColor,
+  onUpdateCard, onUpdateAllCards, onClose,
+  onUploadImage, onOpenImagePicker, onGenerateAiImage,
+  generatingAiImage, aiImagePrompt, setAiImagePrompt,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showGlobal, setShowGlobal] = React.useState(false);
+  const [globalFontScale, setGlobalFontScale] = React.useState(100);
+  const [globalPaddingScale, setGlobalPaddingScale] = React.useState(100);
+
+  const applyGlobalFont = (val: number) => {
+    setGlobalFontScale(val);
+    onUpdateAllCards({ fontScale: val / 100 });
+  };
+
+  const applyGlobalPadding = (val: number) => {
+    setGlobalPaddingScale(val);
+    onUpdateAllCards({ paddingScale: val / 100 });
+  };
+
+  const applyGlobalLayout = (layout: 'dark' | 'light' | 'accent') => {
+    onUpdateAllCards({ layout });
+  };
+
+  return (
+    <div className="w-[340px] flex-shrink-0 border-l border-border bg-background flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Edit3 className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+          <h3 className="font-bold text-sm text-foreground">Card {cardIndex + 1}/{totalCards}</h3>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+          <X className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-5">
+          {/* ===== GLOBAL CONTROLS ===== */}
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <button
+              onClick={() => setShowGlobal(!showGlobal)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+                <span className="text-sm font-semibold text-foreground">Todos os Cards</span>
+              </div>
+              {showGlobal ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {showGlobal && (
+              <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Tamanho da Fonte (todos)</span>
+                    <span className="text-[10px] font-mono">{globalFontScale}%</span>
+                  </label>
+                  <input type="range" min="50" max="200" step="5" value={globalFontScale}
+                    onChange={(e) => applyGlobalFont(parseInt(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                    <span>50%</span><span>100%</span><span>200%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1"><Maximize className="h-3 w-3" /> Margens (todos)</span>
+                    <span className="text-[10px] font-mono">{globalPaddingScale}%</span>
+                  </label>
+                  <input type="range" min="30" max="200" step="5" value={globalPaddingScale}
+                    onChange={(e) => applyGlobalPadding(parseInt(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Layout (todos)</label>
+                  <div className="flex gap-2">
+                    {(['dark', 'light', 'accent'] as const).map(l => (
+                      <button key={l} onClick={() => applyGlobalLayout(l)}
+                        className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold border transition-all hover:scale-105"
+                        style={{
+                          backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF',
+                          color: l === 'light' ? '#1A1A1A' : '#FFF',
+                          borderColor: l === 'light' ? '#ddd' : 'transparent'
+                        }}>
+                        {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== CARD-SPECIFIC CONTENT ===== */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Type className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Conteúdo</span>
+            </div>
+
+            {card.type === 'cover' && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Título</label>
+                  <Textarea value={card.title || ''} onChange={(e) => onUpdateCard(cardIndex, { title: e.target.value })}
+                    placeholder="Título da capa" className="rounded-xl min-h-[80px] resize-none text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Subtítulo</label>
+                  <Input value={card.subtitle || ''} onChange={(e) => onUpdateCard(cardIndex, { subtitle: e.target.value })}
+                    placeholder="Subtítulo" className="rounded-xl text-sm" />
+                </div>
+              </>
+            )}
+
+            {card.type === 'content' && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Texto principal</label>
+                  <Textarea value={card.bodyTop || ''} onChange={(e) => onUpdateCard(cardIndex, { bodyTop: e.target.value })}
+                    placeholder="Texto superior" className="rounded-xl min-h-[100px] resize-none text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Texto complementar</label>
+                  <Textarea value={card.bodyBottom || ''} onChange={(e) => onUpdateCard(cardIndex, { bodyBottom: e.target.value })}
+                    placeholder="Texto inferior" className="rounded-xl min-h-[70px] resize-none text-sm" />
+                </div>
+              </>
+            )}
+
+            {card.type === 'cta' && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Título CTA</label>
+                  <Input value={card.title || ''} onChange={(e) => onUpdateCard(cardIndex, { title: e.target.value })}
+                    placeholder="Título" className="rounded-xl text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Mensagem</label>
+                  <Textarea value={card.body || ''} onChange={(e) => onUpdateCard(cardIndex, { body: e.target.value })}
+                    placeholder="Mensagem" className="rounded-xl min-h-[70px] resize-none text-sm" />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ===== LAYOUT ===== */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Palette className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Layout</span>
+            </div>
+            <div className="flex gap-2">
+              {(['dark', 'light', 'accent'] as const).map(l => (
+                <button key={l} onClick={() => onUpdateCard(cardIndex, { layout: l })}
+                  className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${card.layout === l ? 'ring-2 ring-primary scale-105' : 'hover:scale-[1.02]'}`}
+                  style={{
+                    backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF',
+                    color: l === 'light' ? '#1A1A1A' : '#FFF',
+                    borderColor: l === 'light' ? '#ddd' : 'transparent'
+                  }}>
+                  {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ===== FONT & PADDING ===== */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Ajustes</span>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                <span>Tamanho da Fonte</span>
+                <span className="text-[10px] font-mono">{Math.round((card.fontScale ?? 1) * 100)}%</span>
+              </label>
+              <input type="range" min="50" max="200" step="5"
+                value={Math.round((card.fontScale ?? 1) * 100)}
+                onChange={(e) => onUpdateCard(cardIndex, { fontScale: parseInt(e.target.value) / 100 })}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                <span>Margens</span>
+                <span className="text-[10px] font-mono">{Math.round((card.paddingScale ?? 1) * 100)}%</span>
+              </label>
+              <input type="range" min="30" max="200" step="5"
+                value={Math.round((card.paddingScale ?? 1) * 100)}
+                onChange={(e) => onUpdateCard(cardIndex, { paddingScale: parseInt(e.target.value) / 100 })}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+            </div>
+          </div>
+
+          {/* ===== IMAGE ===== */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Imagem</span>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Prompt da imagem</label>
+              <Textarea value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)}
+                placeholder="Descreva a imagem que deseja gerar..." className="rounded-xl min-h-[60px] resize-none text-sm" />
+            </div>
+
+            <Button onClick={() => onGenerateAiImage(cardIndex)} disabled={generatingAiImage}
+              className="w-full gap-2 rounded-xl" style={{ backgroundColor: accentColor }}>
+              {generatingAiImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              {generatingAiImage ? 'Gerando...' : 'Gerar com IA'}
+            </Button>
+
+            <div className="flex gap-2">
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(cardIndex, f); }} />
+              <button onClick={() => fileInputRef.current?.click()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                <Upload className="h-4 w-4" /> Upload
+              </button>
+              <button onClick={() => onOpenImagePicker(cardIndex)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                <Search className="h-4 w-4" /> Buscar
+              </button>
+            </div>
+
+            {card.imageUrl && (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={card.imageUrl} alt="Preview" className="w-full h-32 object-cover" />
+                <button onClick={() => onUpdateCard(cardIndex, { imageUrl: undefined })}
+                  className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+export default CarouselEditorSidebar;

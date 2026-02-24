@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw
+  Save, History, Clock, RotateCcw, Instagram, UserPlus, BadgeCheck
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -97,6 +97,13 @@ const CarouselGenerator: React.FC = () => {
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
   const [showRefPanel, setShowRefPanel] = useState(false);
 
+  // Famous people (Instagram)
+  const [famousInput, setFamousInput] = useState('');
+  const [famousList, setFamousList] = useState<{ username: string; name: string; avatar: string; is_verified: boolean; followers: number }[]>([]);
+  const [famousImages, setFamousImages] = useState<{ username: string; images: any[] }[]>([]);
+  const [fetchingProfile, setFetchingProfile] = useState(false);
+  const [showFamousPhotos, setShowFamousPhotos] = useState<string | null>(null);
+
   // Prompt enhancer
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
 
@@ -177,6 +184,61 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== ENHANCE PROMPT =====
+  const fetchInstagramProfile = async (usernameRaw: string) => {
+    const username = usernameRaw.replace(/^@/, '').replace(/https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '').trim();
+    if (!username) return;
+    if (famousList.some(f => f.username.toLowerCase() === username.toLowerCase())) {
+      toast({ title: 'Perfil já adicionado', variant: 'destructive' });
+      return;
+    }
+    setFetchingProfile(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'instagram-profile', username },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro');
+      
+      setFamousList(prev => [...prev, data.profile]);
+      setFamousImages(prev => [...prev, { username: data.profile.username, images: data.images || [] }]);
+      
+      // Auto-add avatar as reference
+      if (data.profile.avatar) {
+        setReferenceImages(prev => [...prev, {
+          url: data.profile.avatar,
+          thumb: data.profile.avatar,
+          label: `@${data.profile.username}`,
+          source: 'web',
+        }]);
+      }
+      
+      setFamousInput('');
+      toast({ title: `@${data.profile.username} adicionado!`, description: `${data.images?.length || 0} fotos encontradas` });
+    } catch (err: any) {
+      console.error('Instagram fetch error:', err);
+      toast({ title: 'Erro ao buscar perfil', description: err.message, variant: 'destructive' });
+    } finally {
+      setFetchingProfile(false);
+    }
+  };
+
+  const removeFamous = (username: string) => {
+    setFamousList(prev => prev.filter(f => f.username !== username));
+    setFamousImages(prev => prev.filter(f => f.username !== username));
+    setReferenceImages(prev => prev.filter(r => r.label !== `@${username}`));
+    if (showFamousPhotos === username) setShowFamousPhotos(null);
+  };
+
+  const addFamousImageAsReference = (img: any) => {
+    setReferenceImages(prev => [...prev, {
+      url: img.url,
+      thumb: img.thumb || img.url,
+      label: img.label || 'Instagram',
+      source: 'web',
+    }]);
+    toast({ title: 'Foto adicionada como referência!' });
+  };
+
   const enhancePrompt = async () => {
     if (!topic.trim()) {
       toast({ title: 'Insira um tópico primeiro', variant: 'destructive' });
@@ -1047,6 +1109,82 @@ const CarouselGenerator: React.FC = () => {
                 <label className="text-sm font-semibold text-foreground mb-1.5 block">Palavras-chave (opcional)</label>
                 <Input value={keywords} onChange={(e) => setKeywords(e.target.value)}
                   placeholder="proteína, saúde, marketing (separadas por vírgula)" className="rounded-2xl" />
+              </div>
+
+              {/* Famous People / Instagram */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-muted-foreground/20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Instagram className="h-4 w-4" style={{ color: '#E1306C' }} />
+                  <span className="text-sm font-semibold text-foreground">Famosos no Post (opcional)</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Insira o @ ou link do Instagram de celebridades/influenciadores. As fotos do perfil serão buscadas automaticamente para seleção.
+                </p>
+                <div className="flex gap-2">
+                  <Input value={famousInput} onChange={(e) => setFamousInput(e.target.value)}
+                    placeholder="@toglobo, @caboruan, https://instagram.com/cimed..."
+                    className="rounded-xl flex-1 text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && fetchInstagramProfile(famousInput)} />
+                  <Button onClick={() => fetchInstagramProfile(famousInput)} disabled={fetchingProfile || !famousInput.trim()}
+                    size="sm" className="gap-1.5 rounded-xl" style={{ backgroundColor: '#E1306C' }}>
+                    {fetchingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />} Adicionar
+                  </Button>
+                </div>
+
+                {/* Added profiles */}
+                {famousList.length > 0 && (
+                  <div className="space-y-2">
+                    {famousList.map((person) => (
+                      <div key={person.username} className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-muted/30">
+                        {person.avatar && (
+                          <img src={person.avatar} alt={person.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-border" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-foreground truncate">{person.name}</p>
+                            {person.is_verified && <BadgeCheck className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#3897f0' }} />}
+                          </div>
+                          <p className="text-xs text-muted-foreground">@{person.username} · {person.followers ? `${(person.followers / 1000000).toFixed(1)}M seguidores` : ''}</p>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs h-7 px-2.5 gap-1"
+                            onClick={() => setShowFamousPhotos(showFamousPhotos === person.username ? null : person.username)}>
+                            <ImageIcon className="h-3 w-3" /> Fotos
+                          </Button>
+                          <button onClick={() => removeFamous(person.username)}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Photo picker for selected famous person */}
+                {showFamousPhotos && (() => {
+                  const personImages = famousImages.find(f => f.username === showFamousPhotos);
+                  if (!personImages) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-foreground">Fotos de @{showFamousPhotos} — clique para usar como referência</p>
+                        <button onClick={() => setShowFamousPhotos(null)} className="p-0.5 rounded hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-[180px] overflow-y-auto">
+                        {personImages.images.map((img: any, i: number) => (
+                          <button key={i} onClick={() => addFamousImageAsReference(img)}
+                            className="rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-primary transition-all ring-1 ring-border relative">
+                            <img src={img.thumb || img.url} alt={img.label} className="w-full h-full object-cover" />
+                            {img.type === 'avatar' && (
+                              <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-black/60 text-white px-1 rounded">Perfil</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

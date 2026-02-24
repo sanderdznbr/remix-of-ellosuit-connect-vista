@@ -614,12 +614,20 @@ const WhatsAppCRM: React.FC = () => {
       return;
     }
     
-    // Filter out invalid conversations (LIDs without names) and deduplicate by contact_phone
+    // Filter out invalid conversations and deduplicate by normalized phone
+    // Normalize Brazilian phones: ensure 9th digit for dedup key
+    const normalizeBrPhone = (p: string) => {
+      const d = p.replace(/\D/g, '');
+      if (d.startsWith('55') && d.length === 12) {
+        return d.slice(0, 4) + '9' + d.slice(4);
+      }
+      return d;
+    };
+    
     const uniqueByPhone = new Map<string, typeof data[0]>();
     (data || []).forEach(conv => {
-      const phone = conv.contact_phone;
+      const phone = normalizeBrPhone(conv.contact_phone);
       
-      // Skip invalid conversations (LIDs or groups without proper names)
       if (!isValidConversation(conv)) {
         return;
       }

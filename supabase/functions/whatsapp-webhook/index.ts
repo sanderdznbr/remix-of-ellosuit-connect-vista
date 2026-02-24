@@ -69,6 +69,23 @@ function isLidJid(jid: string): boolean {
   return jid?.includes('@lid') || false;
 }
 
+// ============== HELPER: Normalize Brazilian phone (add 9th digit if missing) ==============
+function normalizeBrazilianPhone(phone: string): string {
+  // Brazilian numbers: country code 55 + 2-digit DDD + 8 or 9 digit number
+  // Mobile numbers should always have 9 digits (starting with 9)
+  // If we get 55 + DD + 8 digits (total 12), add the 9
+  if (phone.startsWith('55') && phone.length === 12) {
+    const ddd = phone.slice(2, 4);
+    const local = phone.slice(4);
+    if (local.length === 8) {
+      const normalized = `55${ddd}9${local}`;
+      console.log(`[NORMALIZE-BR] ${phone} -> ${normalized}`);
+      return normalized;
+    }
+  }
+  return phone;
+}
+
 // ============== HELPER: Clean phone/ID from JID ==============
 function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string | null {
   if (!jid) return null;
@@ -95,8 +112,11 @@ function extractPhoneFromJid(jid: string, allowGroups: boolean = false): string 
     return null;
   }
   
-  // NO longer prefix with 'lid_' - just return the digits
-  // The real phone resolution happens at a higher level using remoteJidAlt
+  // Normalize Brazilian phone numbers (add 9th digit if missing)
+  if (!isGroup && !isLid) {
+    identifier = normalizeBrazilianPhone(identifier);
+  }
+  
   return identifier;
 }
 
@@ -449,16 +469,23 @@ Deno.serve(async (req) => {
                                    '';
             }
             
-            // IMPROVED: First try to find existing conversation by company_id + contact_phone
-            // This consolidates conversations across multiple sessions
+            // IMPROVED: Find existing conversation by company_id + contact_phone
+            // Also check for the variant without 9th digit (Brazilian normalization)
+            const phoneVariants = [phoneNumber];
+            if (phoneNumber.startsWith('55') && phoneNumber.length === 13) {
+              // Also search without 9th digit: 55 + DD + 9XXXXXXXX -> 55 + DD + XXXXXXXX
+              const withoutNinth = phoneNumber.slice(0, 4) + phoneNumber.slice(5);
+              phoneVariants.push(withoutNinth);
+            }
+            
             const { data: existingConv } = await supabase
               .from('whatsapp_conversations')
-              .select('id, session_id, contact_name, profile_picture')
+              .select('id, session_id, contact_name, profile_picture, contact_phone')
               .eq('company_id', companyId)
-              .eq('contact_phone', phoneNumber)
+              .in('contact_phone', phoneVariants)
               .order('last_message_at', { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
             
             if (existingConv) {
               // Update existing conversation
@@ -471,12 +498,18 @@ Deno.serve(async (req) => {
               const shouldUpdateName = hasValidNewName && (isGroup || existingNameEmpty);
               
               const updatePayload: Record<string, unknown> = {
-                session_id: targetSessionId, // ALWAYS update to current active session
+                session_id: targetSessionId,
                 status: chat.archive ? 'archived' : 'open',
                 last_message: lastMessageContent || chat.lastMessage?.conversation || '',
                 last_message_at: lastMessageAt,
                 unread_count: chat.unreadCount || 0
               };
+              
+              // Normalize phone if it was stored without 9th digit
+              if (existingConv.contact_phone !== phoneNumber) {
+                updatePayload.contact_phone = phoneNumber;
+                console.log(`[NORMALIZE] Updating phone: ${existingConv.contact_phone} -> ${phoneNumber}`);
+              }
               
               // Only update contact_name if we have a valid new name
               if (shouldUpdateName) {
@@ -872,15 +905,20 @@ Deno.serve(async (req) => {
             }
           }
           
-          // IMPROVED: Find conversation by company_id + contact_phone first (consolidates across sessions)
+          // IMPROVED: Find conversation by company_id + contact_phone (with Brazilian 9th digit variant)
+          const msgPhoneVariants = [phoneNumber];
+          if (phoneNumber.startsWith('55') && phoneNumber.length === 13) {
+            msgPhoneVariants.push(phoneNumber.slice(0, 4) + phoneNumber.slice(5));
+          }
+          
           let { data: conversation } = await supabase
             .from('whatsapp_conversations')
             .select('*')
             .eq('company_id', companyId)
-            .eq('contact_phone', phoneNumber)
+            .in('contact_phone', msgPhoneVariants)
             .order('last_message_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
           
           if (!conversation) {
             // Build insert payload with v4.1.0 enhanced fields

@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
-  Search, Edit3, Loader2, X, Upload, Wand2
+  Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -17,6 +17,19 @@ const CARD_W = 1080;
 const CARD_H = 1350;
 const PREVIEW_W = 300;
 const PREVIEW_H = PREVIEW_W * (CARD_H / CARD_W);
+
+const FONT_OPTIONS = [
+  { label: 'Playfair Display', value: "'Playfair Display', 'Georgia', serif", google: 'Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700' },
+  { label: 'Merriweather', value: "'Merriweather', 'Georgia', serif", google: 'Merriweather:wght@400;700;900' },
+  { label: 'Lora', value: "'Lora', 'Georgia', serif", google: 'Lora:ital,wght@0,400;0,600;0,700;1,400;1,700' },
+  { label: 'DM Serif Display', value: "'DM Serif Display', 'Georgia', serif", google: 'DM+Serif+Display:ital@0;1' },
+  { label: 'Cormorant Garamond', value: "'Cormorant Garamond', 'Georgia', serif", google: 'Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700' },
+  { label: 'Montserrat', value: "'Montserrat', 'Helvetica Neue', sans-serif", google: 'Montserrat:wght@400;500;600;700;800;900' },
+  { label: 'Poppins', value: "'Poppins', 'Helvetica Neue', sans-serif", google: 'Poppins:wght@400;500;600;700;800;900' },
+  { label: 'Bebas Neue', value: "'Bebas Neue', 'Impact', sans-serif", google: 'Bebas+Neue' },
+  { label: 'Oswald', value: "'Oswald', 'Impact', sans-serif", google: 'Oswald:wght@400;500;600;700' },
+  { label: 'Raleway', value: "'Raleway', 'Helvetica Neue', sans-serif", google: 'Raleway:wght@400;500;600;700;800;900' },
+];
 
 interface CarouselCard {
   type: 'cover' | 'content' | 'cta';
@@ -50,7 +63,7 @@ const CarouselGenerator: React.FC = () => {
 
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [cardCount, setCardCount] = useState(10);
+  const [cardCount, setCardCount] = useState(7);
   const [generating, setGenerating] = useState(false);
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -76,6 +89,15 @@ const CarouselGenerator: React.FC = () => {
   const [bgColor, setBgColor] = useState('#0F0F1A');
   const [accentColor, setAccentColor] = useState('#E84D1A');
   const [textColor, setTextColor] = useState('#FFFFFF');
+  const [selectedFont, setSelectedFont] = useState(0); // index into FONT_OPTIONS
+  const [showStylePanel, setShowStylePanel] = useState(false);
+
+  const currentFont = FONT_OPTIONS[selectedFont];
+  const serif = currentFont.value;
+  const sans = "'Inter', 'Helvetica Neue', sans-serif";
+
+  // Build Google Fonts URL
+  const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${FONT_OPTIONS.map(f => f.google).join('&family=')}&family=Inter:wght@400;500;600;700;800&display=swap`;
 
   // Generate AI image for a specific card
   const generateAiImageForCard = async (cardIndex: number, cards: CarouselCard[]): Promise<string | null> => {
@@ -117,7 +139,6 @@ const CarouselGenerator: React.FC = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
 
-      // Assign layouts
       const cards: CarouselCard[] = data.data.cards.map((c: any, i: number) => {
         if (c.type === 'cover') return { ...c, layout: 'dark' as const };
         if (c.type === 'cta') return { ...c, layout: 'accent' as const };
@@ -129,13 +150,11 @@ const CarouselGenerator: React.FC = () => {
       setActiveCardIndex(0);
       toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados. Gerando imagens...` });
 
-      // Auto-generate images for ALL cards
       setGeneratingAllImages(true);
       const updatedCards = [...cards];
       
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
-        // Generate images for cover and content cards (not accent-only or cta without prompt)
         if (card.imagePrompt || card.type === 'cover') {
           setImageGenProgress(`Gerando imagem ${i + 1}/${updatedCards.length}...`);
           const url = await generateAiImageForCard(i, updatedCards);
@@ -268,7 +287,6 @@ const CarouselGenerator: React.FC = () => {
 
   // ==================== RENDER HELPERS ====================
 
-  // Parse **bold** markers into accent-colored spans
   const renderAccentText = (text: string, color: string, baseColor: string, fontSize: number, s: number) => {
     if (!text) return null;
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -288,8 +306,6 @@ const CarouselGenerator: React.FC = () => {
     const w = isExport ? CARD_W : PREVIEW_W;
     const h = isExport ? CARD_H : PREVIEW_H;
     const s = isExport ? 1 : PREVIEW_W / CARD_W;
-    const serif = "'Playfair Display', 'Georgia', serif";
-    const sans = "'Inter', 'Helvetica Neue', sans-serif";
 
     const layout = card.layout || 'dark';
     const isDark = layout === 'dark';
@@ -297,12 +313,11 @@ const CarouselGenerator: React.FC = () => {
     const isAccent = layout === 'accent';
 
     const bg = isAccent ? accentColor : isLight ? '#F8F4EF' : bgColor;
-    const mainTxt = isLight ? '#1A1A1A' : '#FFFFFF';
+    const mainTxt = isLight ? '#1A1A1A' : textColor;
     const secondaryTxt = isAccent ? 'rgba(255,255,255,0.75)' : isLight ? '#666' : 'rgba(255,255,255,0.75)';
     const accentTxt = isAccent ? '#FFD4A0' : isLight ? accentColor : accentColor;
     const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
 
-    // Header bar
     const renderHeader = () => (
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -334,7 +349,6 @@ const CarouselGenerator: React.FC = () => {
           }} />
           {renderHeader()}
           
-          {/* Badge */}
           <div style={{
             position: 'absolute', left: '50%', top: `${520 * s}px`,
             transform: 'translateX(-50%)',
@@ -353,7 +367,6 @@ const CarouselGenerator: React.FC = () => {
             <span style={{ fontSize: `${22 * s}px`, color: '#4A9EFF' }}>✓</span>
           </div>
 
-          {/* Title */}
           <div style={{
             position: 'absolute', bottom: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, zIndex: 10,
             textAlign: 'center',
@@ -440,12 +453,10 @@ const CarouselGenerator: React.FC = () => {
     }
 
     // ===== CONTENT CARDS =====
-    // Reference layout: bodyTop (large serif) → image (rounded) → bodyBottom (large serif)
     const hasImage = !!card.imageUrl;
     const topText = card.bodyTop || card.body || card.title || '';
     const bottomText = card.bodyBottom || '';
 
-    // Text-only card (accent style or no image)
     if (!hasImage && isAccent) {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
@@ -479,7 +490,6 @@ const CarouselGenerator: React.FC = () => {
       );
     }
 
-    // Standard content card: text-top → image → text-bottom
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
@@ -489,7 +499,6 @@ const CarouselGenerator: React.FC = () => {
           position: 'absolute', top: `${70 * s}px`, left: `${48 * s}px`, right: `${48 * s}px`, bottom: `${40 * s}px`,
           display: 'flex', flexDirection: 'column', zIndex: 5,
         }}>
-          {/* TOP TEXT */}
           <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
             <p style={{
               fontFamily: serif, fontSize: `${48 * s}px`, fontWeight: 700,
@@ -499,7 +508,6 @@ const CarouselGenerator: React.FC = () => {
             </p>
           </div>
 
-          {/* IMAGE */}
           {hasImage && (
             <div style={{
               marginTop: `${24 * s}px`,
@@ -513,7 +521,6 @@ const CarouselGenerator: React.FC = () => {
             </div>
           )}
 
-          {/* BOTTOM TEXT */}
           {bottomText && (
             <div style={{ paddingTop: `${24 * s}px` }}>
               <p style={{
@@ -529,11 +536,82 @@ const CarouselGenerator: React.FC = () => {
     );
   };
 
+  // ==================== STYLE PANEL (shown after generation) ====================
+  const renderStylePanel = () => (
+    <Card className="border-0 shadow-md rounded-3xl">
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palette className="h-5 w-5" style={{ color: FLOW_COLOR }} />
+            <h3 className="font-bold text-foreground">Estilo em Tempo Real</h3>
+          </div>
+          <button onClick={() => setShowStylePanel(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
+
+        {/* Font selector */}
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+            <Type className="h-3.5 w-3.5" /> Fonte
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {FONT_OPTIONS.map((font, i) => (
+              <button key={i} onClick={() => setSelectedFont(i)}
+                className={`px-3 py-2.5 rounded-xl text-sm border transition-all text-left ${selectedFont === i ? 'ring-2 ring-primary border-primary bg-primary/5 font-bold' : 'border-border hover:bg-muted/50'}`}>
+                <span style={{ fontFamily: font.value }}>{font.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Color controls */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1.5 block">Cor de fundo</label>
+            <div className="flex gap-2 items-center">
+              <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+              <Input value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1.5 block">Cor destaque</label>
+            <div className="flex gap-2 items-center">
+              <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1.5 block">Cor do texto</label>
+            <div className="flex gap-2 items-center">
+              <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 cursor-pointer" />
+              <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="rounded-xl flex-1 text-xs font-mono" />
+            </div>
+          </div>
+        </div>
+
+        {/* Brand settings */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">Marca</label>
+            <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="rounded-xl text-xs" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
+            <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="seuuser" className="rounded-xl text-xs" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
+            <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-xl text-xs" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   // ==================== UI ====================
 
   return (
     <div className="min-h-screen bg-background">
-      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* Header */}
       <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
@@ -546,10 +624,16 @@ const CarouselGenerator: React.FC = () => {
             <p className="text-xs text-muted-foreground">Carrosséis editoriais 1080×1350 para Instagram</p>
           </div>
           {carouselData && !generatingAllImages && (
-            <Button onClick={exportAllCards} disabled={exporting} className="gap-2" style={{ backgroundColor: FLOW_COLOR }}>
-              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Exportar PNGs
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)}
+                className="gap-1.5 rounded-xl">
+                <Palette className="h-4 w-4" /> Estilo
+              </Button>
+              <Button onClick={exportAllCards} disabled={exporting} className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Exportar PNGs
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -567,7 +651,7 @@ const CarouselGenerator: React.FC = () => {
               <div>
                 <label className="text-sm font-semibold text-foreground mb-1.5 block">Tópico do Carrossel</label>
                 <Textarea value={topic} onChange={(e) => setTopic(e.target.value)}
-                  placeholder="Ex: O boom da proteína: por que até o Doritos quer parecer fit?"
+                  placeholder="Ex: A colaboração entre Cimed e Toguro no mercado de suplementos"
                   className="rounded-2xl min-h-[80px] resize-none text-base" />
               </div>
               <div>
@@ -580,7 +664,7 @@ const CarouselGenerator: React.FC = () => {
                 <div>
                   <label className="text-xs font-medium text-foreground mb-1 block">Nº de Cards</label>
                   <Input type="number" min={3} max={15} value={cardCount}
-                    onChange={(e) => setCardCount(parseInt(e.target.value) || 10)} className="rounded-2xl" />
+                    onChange={(e) => setCardCount(parseInt(e.target.value) || 7)} className="rounded-2xl" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-foreground mb-1 block">@ Instagram</label>
@@ -594,6 +678,21 @@ const CarouselGenerator: React.FC = () => {
                 <div>
                   <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
                   <Input value={dateLabel} onChange={(e) => setDateLabel(e.target.value)} className="rounded-2xl" />
+                </div>
+              </div>
+
+              {/* Font selection */}
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Type className="h-3.5 w-3.5" /> Fonte do Carrossel
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {FONT_OPTIONS.map((font, i) => (
+                    <button key={i} onClick={() => setSelectedFont(i)}
+                      className={`px-3 py-2 rounded-xl text-sm border transition-all ${selectedFont === i ? 'ring-2 ring-primary border-primary bg-primary/5 font-bold' : 'border-border hover:bg-muted/50'}`}>
+                      <span style={{ fontFamily: font.value }}>{font.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -640,6 +739,9 @@ const CarouselGenerator: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Style Panel (shown when toggled after generation) */}
+        {carouselData && showStylePanel && renderStylePanel()}
 
         {/* Preview & Edit */}
         {carouselData && (

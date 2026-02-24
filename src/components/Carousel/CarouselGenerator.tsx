@@ -226,9 +226,8 @@ const CarouselGenerator: React.FC = () => {
         return { ...c, layout: layouts[(i - 1) % layouts.length] };
       });
 
-      setCarouselData({ ...data.data, cards });
       setActiveCardIndex(0);
-      toast({ title: 'Conteúdo gerado!', description: `${cards.length} cards criados. Buscando referências e gerando imagens...` });
+      setImageGenProgress('📝 Conteúdo gerado! Buscando referências e gerando imagens...');
 
       // Step 1: Web search for references based on searchTerms from each card
       setImageGenProgress('🔍 Buscando referências na web...');
@@ -239,20 +238,23 @@ const CarouselGenerator: React.FC = () => {
 
       // Search for each unique term and collect reference URLs
       const webRefs: string[] = [];
-      for (const term of Array.from(allSearchTerms).slice(0, 5)) {
+      const searchPromises = Array.from(allSearchTerms).slice(0, 5).map(async (term) => {
         try {
           const { data: searchData } = await supabase.functions.invoke('generate-carousel', {
             body: { action: 'web-search', query: term },
           });
           if (searchData?.images?.length > 0) {
-            webRefs.push(...searchData.images.slice(0, 3).map((img: any) => img.url));
+            return searchData.images.slice(0, 3).map((img: any) => img.url);
           }
         } catch {
           // ignore search errors
         }
-      }
+        return [];
+      });
+      const searchResults = await Promise.all(searchPromises);
+      searchResults.forEach(urls => webRefs.push(...urls));
 
-      // Step 2: Generate AI images for cards that need them
+      // Step 2: Generate AI images for cards that need them - ALL IN PARALLEL
       setGeneratingAllImages(true);
       const updatedCards = [...cards];
       
@@ -262,40 +264,60 @@ const CarouselGenerator: React.FC = () => {
         ...webRefs.slice(0, 5),
       ];
 
-      let imageCount = 0;
+      // Build parallel image generation promises
+      const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
+      let totalImages = 0;
+
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         const shouldHaveImage = card.needsImage || card.type === 'cover' || imageCardIndices.includes(i);
         
         if (shouldHaveImage) {
-          imageCount++;
-          setImageGenProgress(`🎨 Gerando imagem ${imageCount}/${imageCardCount} (card ${i + 1})...`);
-          
-          try {
-            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
-            const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
-              body: {
-                action: 'generate-ai-image',
-                prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
-                imageSize: '3:4',
-                topic: imgPrompt,
-                referenceImageUrls: allRefUrls.length > 0 ? allRefUrls : undefined,
-              },
-            });
-            
-            if (!imgError && imgData?.success && imgData?.imageUrl) {
-              updatedCards[i] = { ...updatedCards[i], imageUrl: imgData.imageUrl };
-              setCarouselData(prev => prev ? { ...prev, cards: [...updatedCards] } : null);
-            }
-          } catch (err) {
-            console.error('Image gen error for card', i, err);
-          }
+          totalImages++;
+          const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+          imagePromises.push({
+            index: i,
+            promise: (async () => {
+              try {
+                const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
+                  body: {
+                    action: 'generate-ai-image',
+                    prompt: `Professional editorial photo, magazine quality, cinematic lighting, 4:5 aspect ratio: ${imgPrompt}`,
+                    imageSize: '3:4',
+                    topic: imgPrompt,
+                    referenceImageUrls: allRefUrls.length > 0 ? allRefUrls : undefined,
+                  },
+                });
+                if (!imgError && imgData?.success && imgData?.imageUrl) {
+                  return imgData.imageUrl as string;
+                }
+              } catch (err) {
+                console.error('Image gen error for card', i, err);
+              }
+              return null;
+            })(),
+          });
         }
       }
 
+      setImageGenProgress(`🎨 Gerando ${totalImages} imagens em paralelo...`);
+
+      // Wait for ALL images to finish
+      const imageResults = await Promise.all(imagePromises.map(p => p.promise));
+      
+      // Apply all images at once
+      imagePromises.forEach((p, idx) => {
+        const url = imageResults[idx];
+        if (url) {
+          updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url };
+        }
+      });
+
+      // Show everything at once - only now set the carousel data
+      setCarouselData({ ...data.data, cards: updatedCards });
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      toast({ title: 'Carrossel completo!', description: 'Conteúdo, referências e imagens prontos' });
+      toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
     } catch (err: any) {
       console.error(err);
@@ -1006,7 +1028,7 @@ const CarouselGenerator: React.FC = () => {
             <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" style={{ color: accentColor }} />
             <div>
               <p className="text-sm font-semibold text-foreground">{imageGenProgress || 'Gerando imagens com IA...'}</p>
-              <p className="text-xs text-muted-foreground">Imagens são aplicadas automaticamente conforme ficam prontas</p>
+              <p className="text-xs text-muted-foreground">Todas as imagens serão geradas e aplicadas de uma vez</p>
             </div>
           </div>
         )}

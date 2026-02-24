@@ -386,6 +386,10 @@ Deno.serve(async (req) => {
               if (altJid && !isLidJid(altJid)) {
                 console.log(`[CHAT LID] Resolved ${jid} -> ${altJid}`);
                 resolvedJid = altJid;
+              } else {
+                // Skip LID chats entirely - they'll be resolved when actual messages arrive
+                console.log(`[CHAT LID-SKIP] Skipping unresolvable LID chat: ${jid}`);
+                continue;
               }
             }
             
@@ -663,7 +667,57 @@ Deno.serve(async (req) => {
               console.log(`[LID] Resolved LID ${remoteJid} to real JID ${altJid}`);
               remoteJid = altJid;
             } else {
-              console.log(`[LID-WARN] Could not resolve LID ${remoteJid}, no alternative JID available`);
+              // LAST RESORT: Try to resolve LID via Baileys /api/number/check
+              console.log(`[LID-WARN] No alt JID available for ${remoteJid}, trying Baileys server resolution...`);
+              try {
+                const { data: sessLid } = await supabase
+                  .from('whatsapp_sessions')
+                  .select('baileys_server_url, instance_name')
+                  .eq('id', targetSessionId)
+                  .single();
+                if (sessLid?.baileys_server_url) {
+                  const lidDigits = remoteJid.replace(/@.*$/, '').replace(/\D/g, '');
+                  const checkResp = await fetch(`${sessLid.baileys_server_url}/api/number/check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instanceName: sessLid.instance_name, phone: lidDigits }),
+                    signal: AbortSignal.timeout(8000),
+                  });
+                  if (checkResp.ok) {
+                    const checkData = await checkResp.json();
+                    if (checkData.exists && checkData.jid && !isLidJid(checkData.jid)) {
+                      console.log(`[LID-RESOLVED] Baileys resolved LID ${remoteJid} -> ${checkData.jid}`);
+                      remoteJid = checkData.jid;
+                    } else {
+                      console.log(`[LID-FAIL] Baileys could not resolve LID ${remoteJid}. exists=${checkData.exists}`);
+                      // Also try existing conversations: match by LID in remote_jid column
+                      const { data: lidConv } = await supabase
+                        .from('whatsapp_conversations')
+                        .select('contact_phone, remote_jid')
+                        .eq('company_id', companyId)
+                        .like('remote_jid', `%${lidDigits}%`)
+                        .not('contact_phone', 'like', `%${lidDigits}%`)
+                        .limit(1)
+                        .maybeSingle();
+                      if (lidConv && lidConv.contact_phone.startsWith('55')) {
+                        remoteJid = lidConv.contact_phone + '@s.whatsapp.net';
+                        console.log(`[LID-DB] Found existing mapping: LID ${lidDigits} -> ${remoteJid}`);
+                      }
+                    }
+                  } else {
+                    await checkResp.text();
+                    console.log(`[LID-FAIL] Baileys /api/number/check returned ${checkResp.status}`);
+                  }
+                }
+              } catch (lidErr: any) {
+                console.error(`[LID-ERR] Error resolving LID: ${lidErr.message}`);
+              }
+              
+              // If STILL a LID after all attempts, skip this message to avoid creating ghost conversations
+              if (isLidJid(remoteJid)) {
+                console.log(`[LID-SKIP] Skipping message - could not resolve LID to real phone: ${remoteJid}`);
+                continue;
+              }
             }
           }
 

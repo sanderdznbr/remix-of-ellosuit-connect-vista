@@ -163,6 +163,134 @@ export type Database = {
           },
         ]
       }
+      ai_credit_balances: {
+        Row: {
+          balance: number
+          company_id: string
+          created_at: string
+          id: string
+          total_consumed: number
+          total_purchased: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          total_consumed?: number
+          total_purchased?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          total_consumed?: number
+          total_purchased?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_credit_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_credit_packages: {
+        Row: {
+          created_at: string
+          credits: number
+          description: string | null
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price_brl: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price_brl: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price_brl?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      ai_credit_transactions: {
+        Row: {
+          agent_id: string | null
+          amount: number
+          balance_after: number
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          transaction_type: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          amount: number
+          balance_after: number
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          transaction_type: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          amount?: number
+          balance_after?: number
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          transaction_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_credit_transactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_credit_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_usage_logs: {
         Row: {
           action: string
@@ -5277,6 +5405,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_ai_credits: {
+        Args: { p_amount: number; p_company_id: string; p_description?: string }
+        Returns: Json
+      }
       associate_existing_users_with_companies: {
         Args: never
         Returns: undefined
@@ -5286,6 +5418,15 @@ export type Database = {
         Returns: undefined
       }
       cleanup_meeting_rooms: { Args: never; Returns: undefined }
+      consume_ai_credits: {
+        Args: {
+          p_agent_id: string
+          p_amount: number
+          p_company_id: string
+          p_description?: string
+        }
+        Returns: Json
+      }
       increment_email_count: {
         Args: { p_company_id: string; p_user_id: string }
         Returns: undefined

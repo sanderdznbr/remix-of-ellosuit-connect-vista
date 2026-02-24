@@ -2854,6 +2854,21 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                           content: m.content || ''
                         }));
                         
+                        // ============== CHECK AI CREDITS (PLATFORM AGENT) ==============
+                        const PLATFORM_CREDIT_COST = 0.10;
+                        const { data: platCreditResult } = await supabase.rpc('consume_ai_credits', {
+                          p_company_id: companyId,
+                          p_agent_id: agent.id,
+                          p_amount: PLATFORM_CREDIT_COST,
+                          p_description: `Agente "${agent.name}" (plataforma) respondeu no WhatsApp`
+                        });
+                        
+                        if (platCreditResult && !platCreditResult.success) {
+                          console.log(`🤖💳 Insufficient AI credits for platform agent. Balance: ${platCreditResult.balance}`);
+                          break;
+                        }
+                        console.log(`🤖💳 Platform agent credit consumed: ${PLATFORM_CREDIT_COST}. Remaining: ${platCreditResult?.balance}`);
+                        
                         // Call ellosuit-whatsapp-agent
                         const agentResp = await fetch(`${SUPABASE_URL}/functions/v1/ellosuit-whatsapp-agent`, {
                           method: 'POST',
@@ -3223,6 +3238,22 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                         ...historyMessages,
                         { role: 'user' as const, content: aiInputContent }
                       ];
+                      
+                      // ============== CHECK AI CREDITS BEFORE RESPONDING ==============
+                      const CREDIT_COST = 0.10;
+                      const { data: creditResult } = await supabase.rpc('consume_ai_credits', {
+                        p_company_id: companyId,
+                        p_agent_id: agent.id,
+                        p_amount: CREDIT_COST,
+                        p_description: `Agente "${agent.name}" respondeu no WhatsApp`
+                      });
+                      
+                      if (creditResult && !creditResult.success) {
+                        console.log(`🤖💳 Insufficient AI credits for company ${companyId}. Balance: ${creditResult.balance}`);
+                        // Don't respond - credits exhausted
+                        break;
+                      }
+                      console.log(`🤖💳 AI credit consumed: ${CREDIT_COST}. Remaining: ${creditResult?.balance}`);
                       
                       // Call the ai-chat edge function with full messages array
                       const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {

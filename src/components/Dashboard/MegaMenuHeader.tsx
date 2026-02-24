@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
-  MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap,
+  MessageSquare, Mail, Users, Bot, Calendar, CheckSquare, Video, Zap, Coins,
   FileText, Link2, PlayCircle, Eye, BarChart3, FolderOpen, Settings,
   Shield, HelpCircle, ChevronDown, User, LogOut, CreditCard, Bell, GitBranch,
   Briefcase, Key, Megaphone, Target, FileSignature, Workflow, Moon, Sun, CheckCheck, AlertCircle, CheckCircle, Trash2, Archive, X, Sparkles
@@ -546,6 +546,12 @@ export function MegaMenuHeader() {
                 <Link to="/dashboard/assinatura" className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   Assinatura
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/dashboard/creditos-ia" className="flex items-center gap-2">
+                  <Coins className="h-4 w-4" />
+                  Créditos de IA
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

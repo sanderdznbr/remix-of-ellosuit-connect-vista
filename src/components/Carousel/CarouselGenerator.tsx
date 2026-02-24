@@ -17,6 +17,7 @@ import StepTopic from './wizard/StepTopic';
 import StepReferences from './wizard/StepReferences';
 import StepImageSettings from './wizard/StepImageSettings';
 import StepStyle from './wizard/StepStyle';
+import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 
 const CARD_W = 1080;
@@ -469,6 +470,12 @@ const CarouselGenerator: React.FC = () => {
     setCarouselData({ ...carouselData, cards: newCards });
   };
 
+  const updateAllCards = (updates: Partial<CarouselCard>) => {
+    if (!carouselData) return;
+    const newCards = carouselData.cards.map(c => ({ ...c, ...updates }));
+    setCarouselData({ ...carouselData, cards: newCards });
+  };
+
   const addCard = () => {
     if (!carouselData) return;
     const newCard: CarouselCard = { type: 'content', bodyTop: 'Texto principal aqui...', bodyBottom: 'Texto complementar...', layout: 'dark' };
@@ -785,7 +792,7 @@ const CarouselGenerator: React.FC = () => {
         )}
 
         {/* Preview & Edit */}
-        {carouselData && (
+        {carouselData && editingCard === null && (
           <>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -799,13 +806,12 @@ const CarouselGenerator: React.FC = () => {
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group">
-                    <div className={`cursor-pointer transition-all rounded-2xl ${activeCardIndex === i ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-70 hover:opacity-100'}`}
-                      onClick={() => setActiveCardIndex(i)}>
+                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:ring-offset-background"
+                      onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
                       {renderCardPreview(card, i)}
                     </div>
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                      <button onClick={() => setEditingCard(i)} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => { setShowImagePicker(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><ImageIcon className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
                       {carouselData.cards.length > 2 && <button onClick={() => removeCard(i)} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
                     <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
@@ -813,103 +819,128 @@ const CarouselGenerator: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            {/* Edit Panel */}
-            {editingCard !== null && carouselData.cards[editingCard] && (() => {
-              const ec = carouselData.cards[editingCard];
-              return (
-                <Card className="border-0 shadow-md rounded-3xl">
-                  <CardContent className="p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold">Editar Card {editingCard + 1}</h3>
-                      <button onClick={() => setEditingCard(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-                    </div>
-                    {ec.type === 'cover' && (<><Input value={ec.title || ''} onChange={(e) => updateCard(editingCard, { title: e.target.value })} placeholder="Título" className="rounded-xl" /><Input value={ec.subtitle || ''} onChange={(e) => updateCard(editingCard, { subtitle: e.target.value })} placeholder="Subtítulo" className="rounded-xl" /></>)}
-                    {ec.type === 'content' && (<><Textarea value={ec.bodyTop || ''} onChange={(e) => updateCard(editingCard, { bodyTop: e.target.value })} placeholder="Texto superior" className="rounded-xl min-h-[80px] resize-none" /><Textarea value={ec.bodyBottom || ''} onChange={(e) => updateCard(editingCard, { bodyBottom: e.target.value })} placeholder="Texto inferior" className="rounded-xl min-h-[60px] resize-none" /></>)}
-                    {ec.type === 'cta' && (<><Input value={ec.title || ''} onChange={(e) => updateCard(editingCard, { title: e.target.value })} placeholder="Título CTA" className="rounded-xl" /><Textarea value={ec.body || ''} onChange={(e) => updateCard(editingCard, { body: e.target.value })} placeholder="Mensagem" className="rounded-xl min-h-[60px] resize-none" /></>)}
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Layout</label>
-                      <div className="flex gap-2">
-                        {(['dark', 'light', 'accent'] as const).map(l => (
-                          <button key={l} onClick={() => updateCard(editingCard, { layout: l })}
-                            className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${ec.layout === l ? 'ring-2 ring-primary scale-105' : ''}`}
-                            style={{ backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF', color: l === 'light' ? '#1A1A1A' : '#FFF', borderColor: l === 'light' ? '#ddd' : 'transparent' }}>
-                            {l === 'dark' ? 'Escuro' : l === 'light' ? 'Claro' : 'Destaque'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between"><span className="flex items-center gap-1"><SlidersHorizontal className="h-3 w-3" /> Fonte</span><span className="text-[10px] font-mono">{Math.round((ec.fontScale ?? 1) * 100)}%</span></label>
-                        <input type="range" min="50" max="200" step="5" value={Math.round((ec.fontScale ?? 1) * 100)} onChange={(e) => updateCard(editingCard, { fontScale: parseInt(e.target.value) / 100 })} className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between"><span className="flex items-center gap-1"><SlidersHorizontal className="h-3 w-3" /> Margens</span><span className="text-[10px] font-mono">{Math.round((ec.paddingScale ?? 1) * 100)}%</span></label>
-                        <input type="range" min="30" max="200" step="5" value={Math.round((ec.paddingScale ?? 1) * 100)} onChange={(e) => updateCard(editingCard, { paddingScale: parseInt(e.target.value) / 100 })} className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Prompt da imagem</label>
-                      <Input value={ec.imagePrompt || ''} onChange={(e) => updateCard(editingCard, { imagePrompt: e.target.value })} placeholder="Descrição para gerar imagem com IA" className="rounded-xl" />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <label className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground font-medium">
-                        <Upload className="h-4 w-4" /> Upload
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(editingCard, f); }} />
-                      </label>
-                      <Button variant="outline" size="sm" onClick={() => setShowImagePicker(editingCard)} className="rounded-xl gap-1 h-10"><Search className="h-4 w-4" /> Pexels</Button>
-                      <Button size="sm" onClick={() => { setShowImagePicker(editingCard); setAiImagePrompt(ec.imagePrompt || ec.title || ''); }} className="rounded-xl gap-1 h-10" style={{ backgroundColor: accentColor }}><Wand2 className="h-4 w-4" /> Gerar IA</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-
-            {/* Image Picker */}
-            {showImagePicker !== null && (
-              <Card className="border-0 shadow-lg rounded-3xl">
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold">Imagem — Card {showImagePicker + 1}</h3>
-                    <button onClick={() => setShowImagePicker(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border-2 border-dashed" style={{ borderColor: accentColor + '66' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Wand2 className="h-5 w-5" style={{ color: accentColor }} />
-                      <p className="text-sm font-bold text-foreground">Gerar com IA</p>
-                      {referenceImages.length > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{referenceImages.length} referências</span>}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)} placeholder="Descreva a imagem..." className="rounded-xl flex-1" />
-                      <Button onClick={() => generateAiImage(showImagePicker)} disabled={generatingAiImage} className="gap-2 rounded-xl px-5" style={{ backgroundColor: accentColor }}>
-                        {generatingAiImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Gerar
-                      </Button>
-                    </div>
-                    {generatingAiImage && <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">⏳ Gerando... até 60s</p>}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-2"><Search className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-medium text-foreground">Pexels</p></div>
-                    {!pexelsImages.length && !searchingImages && <Button variant="outline" onClick={() => searchImages()} className="w-full gap-2 rounded-xl"><Search className="h-4 w-4" /> Buscar</Button>}
-                    {searchingImages && <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Buscando...</div>}
-                    {pexelsImages.length > 0 && (
-                      <><div className="grid grid-cols-4 gap-2 max-h-[250px] overflow-y-auto rounded-xl">
-                        {pexelsImages.map((img) => (
-                          <button key={img.id} onClick={() => setCardImage(showImagePicker, img.url)} className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
-                            <img src={img.thumb} alt={img.alt} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div><p className="text-[10px] text-muted-foreground text-center mt-1">Fotos por Pexels</p></>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </>
         )}
       </div>
+
+      {/* ===== FULL-SCREEN EDITOR WITH SIDEBAR ===== */}
+      {carouselData && editingCard !== null && (() => {
+        const validIndex = editingCard ?? 0;
+        const ec = carouselData.cards[validIndex];
+        if (!ec) return null;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-background flex flex-col">
+            {/* Editor top bar */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setEditingCard(null)} className="p-2 rounded-xl hover:bg-muted transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h2 className="font-bold text-foreground">Editando Carrossel</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1.5 rounded-xl">
+                  {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {currentCarouselId ? 'Atualizar' : 'Salvar'}
+                </Button>
+                <Button onClick={exportAllCards} disabled={exporting} className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
+                  {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PNGs
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-1 overflow-hidden">
+              {/* Card thumbnails strip (left) */}
+              <div className="w-24 flex-shrink-0 border-r border-border bg-muted/30 overflow-y-auto py-3 px-2 space-y-2">
+                {carouselData.cards.map((card, i) => (
+                  <div key={i} className="relative group">
+                    <button
+                      onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
+                      className={`w-full rounded-lg overflow-hidden transition-all border-2 ${validIndex === i ? 'border-primary shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                    >
+                      <div className="transform scale-[0.065] origin-top-left" style={{ width: CARD_W, height: CARD_H }}>
+                        {renderCardPreview(card, i)}
+                      </div>
+                      <div style={{ height: CARD_H * 0.065 }} />
+                    </button>
+                    <span className={`block text-center text-[10px] mt-1 font-medium ${validIndex === i ? 'text-primary' : 'text-muted-foreground'}`}>{i + 1}</span>
+                  </div>
+                ))}
+                <button onClick={addCard} className="w-full py-3 rounded-lg border border-dashed border-border text-muted-foreground hover:bg-muted/50 flex items-center justify-center">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Center: Large preview */}
+              <div className="flex-1 flex items-center justify-center bg-muted/20 overflow-auto p-6">
+                <div className="transform" style={{ maxHeight: '80vh' }}>
+                  <div style={{ transform: `scale(${Math.min(0.55, (window.innerHeight * 0.75) / CARD_H)})`, transformOrigin: 'top center' }}>
+                    {renderCardPreview(ec, validIndex)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right sidebar */}
+              <CarouselEditorSidebar
+                card={ec}
+                cardIndex={validIndex}
+                totalCards={carouselData.cards.length}
+                bgColor={bgColor}
+                accentColor={accentColor}
+                onUpdateCard={updateCard}
+                onUpdateAllCards={updateAllCards}
+                onClose={() => setEditingCard(null)}
+                onUploadImage={handleFileUpload}
+                onOpenImagePicker={(i) => { setShowImagePicker(i); }}
+                onGenerateAiImage={generateAiImage}
+                generatingAiImage={generatingAiImage}
+                aiImagePrompt={aiImagePrompt}
+                setAiImagePrompt={setAiImagePrompt}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Image Picker Modal */}
+      {showImagePicker !== null && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowImagePicker(null)}>
+          <div className="bg-background rounded-3xl shadow-2xl max-w-lg w-full p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold">Imagem — Card {showImagePicker + 1}</h3>
+              <button onClick={() => setShowImagePicker(null)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-4 rounded-2xl border-2 border-dashed" style={{ borderColor: accentColor + '66' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Wand2 className="h-5 w-5" style={{ color: accentColor }} />
+                <p className="text-sm font-bold text-foreground">Gerar com IA</p>
+              </div>
+              <div className="flex gap-2">
+                <Input value={aiImagePrompt} onChange={(e) => setAiImagePrompt(e.target.value)} placeholder="Descreva a imagem..." className="rounded-xl flex-1" />
+                <Button onClick={() => generateAiImage(showImagePicker)} disabled={generatingAiImage} className="gap-2 rounded-xl px-5" style={{ backgroundColor: accentColor }}>
+                  {generatingAiImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Gerar
+                </Button>
+              </div>
+              {generatingAiImage && <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">⏳ Gerando... até 60s</p>}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2"><Search className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-medium text-foreground">Pexels</p></div>
+              {!pexelsImages.length && !searchingImages && <Button variant="outline" onClick={() => searchImages()} className="w-full gap-2 rounded-xl"><Search className="h-4 w-4" /> Buscar</Button>}
+              {searchingImages && <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Buscando...</div>}
+              {pexelsImages.length > 0 && (
+                <><div className="grid grid-cols-4 gap-2 max-h-[250px] overflow-y-auto rounded-xl">
+                  {pexelsImages.map((img) => (
+                    <button key={img.id} onClick={() => setCardImage(showImagePicker, img.url)} className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
+                      <img src={img.thumb} alt={img.alt} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div><p className="text-[10px] text-muted-foreground text-center mt-1">Fotos por Pexels</p></>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden export */}
       {carouselData && (

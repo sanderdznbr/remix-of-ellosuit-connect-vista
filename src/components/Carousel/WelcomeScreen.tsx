@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2 } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
@@ -10,6 +10,7 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [inputValue, setInputValue] = useState('');
+  const [enhancing, setEnhancing] = useState(false);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -24,16 +25,34 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     }
   };
 
+  const handleEnhance = async () => {
+    if (!inputValue.trim() || enhancing) return;
+    setEnhancing(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('carousel-enhance-prompt', {
+        body: { prompt: inputValue },
+      });
+      if (!error && data?.enhancedPrompt) {
+        setInputValue(data.enhancedPrompt);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   return (
     <motion.div
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden"
-      style={{ backgroundColor: '#050508' }}
+      style={{ backgroundColor: '#0a0a0f' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Giant orb — mostly hidden */}
+      {/* Orb */}
       <div className="absolute bottom-[-350px] md:bottom-[-550px] lg:bottom-[-700px] left-1/2 -translate-x-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 95vw, 1200px)', height: 'clamp(500px, 95vw, 1200px)' }}>
           <div className="carousel-loader-spinner" />
@@ -41,48 +60,50 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 -mt-10 md:-mt-16 w-full max-w-2xl">
-        {/* ElloContent Logo */}
+      <div className="relative z-10 flex flex-col items-center text-center px-4 md:px-6 -mt-8 md:-mt-12 w-full max-w-xl">
+        {/* Logo */}
         <motion.img
           src={ellocontentLogo}
           alt="elloContent"
-          className="h-8 md:h-10 lg:h-12 mb-5 md:mb-6"
-          initial={{ opacity: 0, y: 15 }}
+          className="h-6 md:h-8 mb-6"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
         />
 
+        {/* Title */}
         <motion.h1
-          className="text-white text-2xl md:text-4xl lg:text-5xl font-bold leading-tight mb-3"
-          initial={{ opacity: 0, y: 25 }}
+          className="text-white text-xl md:text-3xl font-semibold leading-snug mb-2"
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.7 }}
+          transition={{ delay: 0.45, duration: 0.6 }}
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
           Construa carrosséis com um prompt
         </motion.h1>
 
         <motion.p
-          className="text-white/40 text-sm md:text-base max-w-sm mb-8"
-          initial={{ opacity: 0, y: 15 }}
+          className="text-white/35 text-xs md:text-sm max-w-xs mb-7"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
+          transition={{ delay: 0.65, duration: 0.5 }}
         >
           Crie carrosséis profissionais com IA em poucos cliques.
         </motion.p>
 
-        {/* Input box — Lovable style */}
+        {/* Input card — dark, opaque like Lovable */}
         <motion.div
-          className="w-full relative"
-          initial={{ opacity: 0, y: 20 }}
+          className="w-full"
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.6 }}
+          transition={{ delay: 0.85, duration: 0.5 }}
         >
           <div
             className="relative w-full rounded-2xl overflow-hidden"
             style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: 'rgba(20, 20, 28, 0.95)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
             }}
           >
             <textarea
@@ -91,58 +112,57 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               onKeyDown={handleKeyDown}
               placeholder="Descreva o tema do seu carrossel..."
               rows={3}
-              className="w-full bg-transparent text-white/90 placeholder-white/25 text-base px-5 py-4 pr-14 resize-none outline-none"
+              className="w-full bg-transparent text-white/90 placeholder-white/20 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none"
               style={{ fontFamily: "'Inter', sans-serif" }}
             />
-            <button
-              onClick={handleSubmit}
-              disabled={!inputValue.trim()}
-              className="absolute right-3 bottom-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: inputValue.trim() ? '#7B50DC' : 'rgba(255,255,255,0.1)',
-              }}
-            >
-              <ArrowUp className="w-5 h-5 text-white" />
-            </button>
+
+            {/* Bottom bar */}
+            <div className="flex items-center justify-between px-3 pb-3">
+              {/* Enhance button */}
+              <button
+                onClick={handleEnhance}
+                disabled={!inputValue.trim() || enhancing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'rgba(123,80,220,0.12)',
+                  color: 'rgba(173,95,255,0.9)',
+                  border: '1px solid rgba(123,80,220,0.15)',
+                }}
+              >
+                {enhancing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                Melhorar com IA
+              </button>
+
+              {/* Send button */}
+              <button
+                onClick={handleSubmit}
+                disabled={!inputValue.trim()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: inputValue.trim() ? '#7B50DC' : 'rgba(255,255,255,0.08)',
+                }}
+              >
+                <ArrowUp className="w-4 h-4 text-white" />
+              </button>
+            </div>
           </div>
         </motion.div>
 
         {/* Skip link */}
         <motion.button
           onClick={() => onStart()}
-          className="mt-4 text-white/25 hover:text-white/50 text-xs transition-colors cursor-pointer"
+          className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.3, duration: 0.5 }}
+          transition={{ delay: 1.1, duration: 0.4 }}
         >
           ou pular e configurar manualmente
         </motion.button>
       </div>
-
-      {/* Subtle particles */}
-      {[...Array(4)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            width: 2 + Math.random() * 3,
-            height: 2 + Math.random() * 3,
-            backgroundColor: `rgba(123,80,220,${0.1 + Math.random() * 0.15})`,
-            bottom: `${10 + Math.random() * 20}%`,
-            left: `${20 + Math.random() * 60}%`,
-          }}
-          animate={{
-            y: [0, -15, 0],
-            opacity: [0.15, 0.4, 0.15],
-          }}
-          transition={{
-            duration: 5 + Math.random() * 3,
-            repeat: Infinity,
-            delay: Math.random() * 2,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
     </motion.div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '@/styles/carousel-loader.css';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -489,7 +490,9 @@ const CarouselGenerator: React.FC = () => {
             aiImagesQueued++;
             const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
             // ALWAYS prefix with clean topic so AI knows the subject (e.g. "CS2: ...")
-            const imgPrompt = `${cleanTopic}: ${cardDesc}`;
+      const imgPrompt = `${cleanTopic}: ${cardDesc}`;
+            const coverNegative = isCover ? 'no text, no words, no letters, no typography, no writing, no captions, no watermarks' : '';
+            const finalNegative = [coverNegative, imageSettings.negativePrompt].filter(Boolean).join(', ') || undefined;
             imagePromises.push({
               index: i,
               promise: (async () => {
@@ -497,13 +500,13 @@ const CarouselGenerator: React.FC = () => {
                   const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
                     body: {
                       action: 'generate-ai-image',
-                      prompt: buildImagePrompt(imgPrompt),
+                      prompt: buildImagePrompt(imgPrompt) + (isCover ? '. NO TEXT OR WORDS IN THE IMAGE.' : ''),
                       imageSize: '3:4',
                       topic: imgPrompt,
                       faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
                       styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
                       imageModel: imageSettings.model,
-                      negativePrompt: imageSettings.negativePrompt || undefined,
+                      negativePrompt: finalNegative,
                       fidelity: imageSettings.fidelity,
                     },
                   });
@@ -673,7 +676,6 @@ const CarouselGenerator: React.FC = () => {
   const regenerateCard = async (cardIndex: number) => {
     if (!carouselData) return;
     const card = carouselData.cards[cardIndex];
-    if (card.type === 'cover' || card.type === 'cta') return; // Only content cards
     setRegeneratingCard(cardIndex);
     try {
       // 1. Regenerate text content for this card
@@ -1093,7 +1095,7 @@ const CarouselGenerator: React.FC = () => {
                       transform: `scale(${369 / CARD_W})`,
                       transformOrigin: 'top left',
                     }}>
-                      {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, true)}
+                      {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                     </div>
                   </div>
                   {/* Swipe indicators */}
@@ -1192,7 +1194,7 @@ const CarouselGenerator: React.FC = () => {
             )}
 
             {/* Card strip - horizontal thumbnails */}
-            <div className="w-full max-w-2xl mt-8">
+            <div className="w-full max-w-2xl mt-8" style={{ backgroundColor: '#000' }}>
               <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 -mx-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: 80 }}
@@ -1200,27 +1202,25 @@ const CarouselGenerator: React.FC = () => {
                     <div className="rounded-lg overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
                       boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
-                      opacity: i === activeCardIndex ? 1 : 0.5,
+                      opacity: i === activeCardIndex ? 1 : 0.6,
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>
                       <div style={{ width: 76, height: 76 * (CARD_H / CARD_W), overflow: 'hidden', borderRadius: 6 }}>
                         <div style={{ transform: `scale(${76 / CARD_W})`, transformOrigin: 'top left', width: CARD_W, height: CARD_H }}>
-                          {renderCardPreview(card, i, true)}
+                          {renderCardPreview(card, i, false)}
                         </div>
                       </div>
                     </div>
-                    {/* Edit overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    {/* Action buttons always visible */}
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
                       <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
-                        className="p-1 rounded-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
                         <Edit3 className="h-3 w-3 text-white" />
                       </button>
-                      {card.type === 'content' && (
-                        <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i}
-                          className="p-1 rounded-md disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                          {regeneratingCard === i ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <RotateCcw className="h-3 w-3 text-white" />}
-                        </button>
-                      )}
+                      <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i}
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        {regeneratingCard === i ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <RotateCcw className="h-3 w-3 text-white" />}
+                      </button>
                     </div>
                     <p className="text-center text-[10px] mt-1 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
@@ -1232,41 +1232,61 @@ const CarouselGenerator: React.FC = () => {
       </div>
 
       {/* ===== FULL-SCREEN EDITOR WITH SIDEBAR ===== */}
+      <AnimatePresence>
       {carouselData && editingCard !== null && (() => {
         const validIndex = editingCard ?? 0;
         const ec = carouselData.cards[validIndex];
         if (!ec) return null;
 
         return (
-          <div className="fixed inset-0 z-50 bg-background flex flex-col">
-            {/* Editor top bar */}
-            <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border bg-background shrink-0">
+          <motion.div
+            key="editor-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex flex-col"
+            style={{ backgroundColor: '#0a0a0f' }}
+          >
+            {/* Editor top bar - dark */}
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(0,0,0,0.9)' }}>
               <div className="flex items-center gap-2">
-                <button onClick={() => setEditingCard(null)} className="p-2 rounded-xl hover:bg-muted transition-colors">
-                  <ArrowLeft className="h-5 w-5" />
+                <button onClick={() => setEditingCard(null)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                  <ArrowLeft className="h-5 w-5 text-white/70" />
                 </button>
-                <h2 className="font-bold text-foreground text-sm sm:text-base">Editando</h2>
+                <h2 className="font-bold text-white text-sm sm:text-base">Editando Card {validIndex + 1}</h2>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 rounded-xl text-xs px-2 sm:px-3">
+                <button onClick={saveCarousel} disabled={savingCarousel}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
                   {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
-                </Button>
-                <Button onClick={exportAllCards} disabled={exporting} size="sm" className="gap-1 rounded-xl text-xs px-2 sm:px-3" style={{ backgroundColor: FLOW_COLOR }}>
+                </button>
+                <button onClick={exportAllCards} disabled={exporting}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
                   {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                   <span className="hidden sm:inline">Exportar</span>
-                </Button>
+                </button>
               </div>
             </div>
 
             <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-              {/* Center: preview with card navigation */}
-              <div className="flex flex-col items-center bg-muted/20 p-2 shrink-0 md:flex-1 md:overflow-auto">
+              {/* Left: preview with card navigation */}
+              <motion.div
+                initial={{ x: 0 }}
+                animate={{ x: 0 }}
+                className="flex flex-col items-center p-4 shrink-0 md:flex-1 md:overflow-auto"
+                style={{ backgroundColor: '#0a0a0f' }}
+              >
+                {/* Glow effect */}
+                <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full opacity-15 blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
+                
                 {/* Card preview */}
                 <div className="flex items-center justify-center w-full flex-1" style={{ minHeight: 0 }}>
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
-                      transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.85 : 300) / PREVIEW_W, 1.6)})`,
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.45 : 300) / PREVIEW_W, 1.4)})`,
                       transformOrigin: 'top center',
                       width: PREVIEW_W,
                       height: PREVIEW_H,
@@ -1281,60 +1301,76 @@ const CarouselGenerator: React.FC = () => {
                   <button
                     onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
                     disabled={validIndex === 0}
-                    className="p-2.5 rounded-full bg-background border border-border shadow-md hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                    className="p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
+                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5 text-white/70" />
                   </button>
                   <div className="flex items-center gap-1.5">
                     {carouselData.cards.map((_, i) => (
                       <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
-                        className={`w-2.5 h-2.5 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
+                        className="rounded-full transition-all"
+                        style={{
+                          width: i === validIndex ? 10 : 7,
+                          height: i === validIndex ? 10 : 7,
+                          backgroundColor: i === validIndex ? '#8B5CF6' : 'rgba(255,255,255,0.2)',
+                          transform: i === validIndex ? 'scale(1.2)' : 'scale(1)',
+                        }} />
                     ))}
-                    <span className="text-xs text-muted-foreground font-medium ml-1.5">{validIndex + 1}/{carouselData.cards.length}</span>
+                    <span className="text-xs font-medium ml-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{validIndex + 1}/{carouselData.cards.length}</span>
                   </div>
                   <button
                     onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
                     disabled={validIndex === carouselData.cards.length - 1}
-                    className="p-2.5 rounded-full bg-background border border-border shadow-md hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                    className="p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
+                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5 text-white/70" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
 
-
-
-              {/* Right sidebar - scrollable on mobile */}
-              <CarouselEditorSidebar
-                card={ec}
-                cardIndex={validIndex}
-                totalCards={carouselData.cards.length}
-                bgColor={bgColor}
-                accentColor={accentColor}
-                textColor={textColor}
-                onUpdateCard={updateCard}
-                onUpdateAllCards={updateAllCards}
-                onClose={() => setEditingCard(null)}
-                onUploadImage={handleFileUpload}
-                onOpenImagePicker={(i) => { setShowImagePicker(i); }}
-                onGenerateAiImage={generateAiImage}
-                generatingAiImage={generatingAiImage}
-                aiImagePrompt={aiImagePrompt}
-                setAiImagePrompt={setAiImagePrompt}
-                onChangeBgColor={setBgColor}
-                onChangeAccentColor={setAccentColor}
-                onChangeTextColor={setTextColor}
-                fontOptions={FONT_OPTIONS}
-                selectedFont={selectedFont}
-                onChangeFont={setSelectedFont}
-                referenceImageUrl={editorRefImage}
-                onUploadReferenceImage={handleEditorRefImageUpload}
-                onRemoveReferenceImage={() => setEditorRefImage(null)}
-              />
+              {/* Right sidebar - dark themed, slides in */}
+              <motion.div
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 300, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="md:w-[380px] shrink-0"
+                style={{ backgroundColor: '#111118', borderLeft: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <CarouselEditorSidebar
+                  card={ec}
+                  cardIndex={validIndex}
+                  totalCards={carouselData.cards.length}
+                  bgColor={bgColor}
+                  accentColor={accentColor}
+                  textColor={textColor}
+                  onUpdateCard={updateCard}
+                  onUpdateAllCards={updateAllCards}
+                  onClose={() => setEditingCard(null)}
+                  onUploadImage={handleFileUpload}
+                  onOpenImagePicker={(i) => { setShowImagePicker(i); }}
+                  onGenerateAiImage={generateAiImage}
+                  generatingAiImage={generatingAiImage}
+                  aiImagePrompt={aiImagePrompt}
+                  setAiImagePrompt={setAiImagePrompt}
+                  onChangeBgColor={setBgColor}
+                  onChangeAccentColor={setAccentColor}
+                  onChangeTextColor={setTextColor}
+                  fontOptions={FONT_OPTIONS}
+                  selectedFont={selectedFont}
+                  onChangeFont={setSelectedFont}
+                  referenceImageUrl={editorRefImage}
+                  onUploadReferenceImage={handleEditorRefImageUpload}
+                  onRemoveReferenceImage={() => setEditorRefImage(null)}
+                />
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         );
       })()}
+      </AnimatePresence>
 
       {/* Image Picker Modal */}
       {showImagePicker !== null && (

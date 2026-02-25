@@ -409,10 +409,25 @@ Responda APENAS em JSON válido:
         }
       }
 
-      // Proxy ALL reference images to base64 in parallel (critical for Instagram URLs)
-      const allFaceRefs = hasFaceRefs ? await Promise.all(faceReferenceUrls.slice(0, 2).map(proxyToBase64)) : [];
-      const allStyleRefs = hasStyleRefs ? await Promise.all(styleReferenceUrls.slice(0, 2).map(proxyToBase64)) : [];
-      const allGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) ? await Promise.all(referenceImageUrls.slice(0, 2).map(proxyToBase64)) : [];
+      // Proxy reference images to base64 SEQUENTIALLY to avoid CPU spikes (WORKER_LIMIT)
+      const allFaceRefs: (string | null)[] = [];
+      if (hasFaceRefs) {
+        for (const url of faceReferenceUrls.slice(0, 1)) {
+          allFaceRefs.push(await proxyToBase64(url));
+        }
+      }
+      const allStyleRefs: (string | null)[] = [];
+      if (hasStyleRefs) {
+        for (const url of styleReferenceUrls.slice(0, 1)) {
+          allStyleRefs.push(await proxyToBase64(url));
+        }
+      }
+      const allGeneralRefs: (string | null)[] = [];
+      if (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) {
+        for (const url of referenceImageUrls.slice(0, 1)) {
+          allGeneralRefs.push(await proxyToBase64(url));
+        }
+      }
 
       const validFaceRefs = allFaceRefs.filter(Boolean) as string[];
       const validStyleRefs = allStyleRefs.filter(Boolean) as string[];

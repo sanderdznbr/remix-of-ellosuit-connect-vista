@@ -971,7 +971,7 @@ const CarouselGenerator: React.FC = () => {
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-hidden">
               {/* LEFT column: centered content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-10 py-8 overflow-y-auto">
+              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
                 <div className="w-full max-w-[520px] space-y-6">
                   {/* Step indicators */}
                   <div className="flex items-center gap-1">
@@ -980,12 +980,12 @@ const CarouselGenerator: React.FC = () => {
                         <button onClick={() => i <= wizardStep && setWizardStep(i)}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                             i === wizardStep
-                              ? 'bg-white text-black'
+                              ? 'text-white'
                               : i < wizardStep
                                 ? 'bg-white/[0.08] text-white/60'
                                 : 'bg-white/[0.03] text-white/20'
                           }`}
-                          style={{ cursor: i <= wizardStep ? 'pointer' : 'default' }}>
+                          style={{ cursor: i <= wizardStep ? 'pointer' : 'default', ...(i === wizardStep ? { background: 'linear-gradient(135deg, #7B50DC, #9B6BFF)' } : {}) }}>
                           {i < wizardStep ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>}
                           <span className="hidden sm:inline">{label}</span>
                         </button>
@@ -1039,12 +1039,14 @@ const CarouselGenerator: React.FC = () => {
                       </button>
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <button onClick={() => setWizardStep(wizardStep + 1)} disabled={!canProceed}
-                        className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
+                        className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
+                        style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                         Próximo <ChevronRight className="h-4 w-4" />
                       </button>
                     ) : (
                       <button onClick={generateContent} disabled={generating || !topic.trim()}
-                        className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
+                        className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
+                        style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                         <Sparkles className="h-4 w-4" /> Gerar Carrossel
                       </button>
                     )}

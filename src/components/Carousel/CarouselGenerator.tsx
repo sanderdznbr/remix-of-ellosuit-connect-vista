@@ -57,6 +57,7 @@ import StepBranding from './wizard/StepBranding';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
+import CarouselTour from './CarouselTour';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
@@ -150,7 +151,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Step 4: Style
   const [showHeader, setShowHeader] = useState(true);
-  const [brandName, setBrandName] = useState('Powered by ellosuit');
+  const [brandName, setBrandName] = useState('');
   const [userName, setUserName] = useState('');
   const [dateLabel, setDateLabel] = useState(() => {
     const d = new Date();
@@ -194,6 +195,7 @@ const CarouselGenerator: React.FC = () => {
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
+  const [showCarouselTour, setShowCarouselTour] = useState(false);
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
 
   const handleEditorRefImageUpload = (file: File) => {
@@ -647,6 +649,12 @@ const CarouselGenerator: React.FC = () => {
       setCarouselData(finalData);
       setGeneratingAllImages(false);
       setImageGenProgress('');
+      // Show guided tour on first generation
+      const tourKey = 'carousel-tour-seen';
+      if (!localStorage.getItem(tourKey)) {
+        setShowCarouselTour(true);
+        localStorage.setItem(tourKey, '1');
+      }
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
       // Auto-save
@@ -879,14 +887,13 @@ const CarouselGenerator: React.FC = () => {
       return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
     };
     const bgLuminance = computeLuminance(bg);
-    const isDarkBg = bgLuminance < 0.4;
+    const isDarkBg = bgLuminance < 0.35;
     
-    // For 'dark' layout, ALWAYS use light text (white). For 'light', always dark text.
-    // For 'accent', auto-detect based on luminance.
-    const mainTxt = isLight ? '#1A1A1A' : isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : '#FFFFFF';
-    const secondaryTxt = isLight ? '#666' : isAccent ? (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)') : 'rgba(255,255,255,0.75)';
+    // ALWAYS ensure readable text: auto-detect for ALL layouts based on actual bg luminance
+    const mainTxt = isLight ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : (isDarkBg ? '#FFFFFF' : '#1A1A1A');
+    const secondaryTxt = isLight ? (isDarkBg ? 'rgba(255,255,255,0.75)' : '#666') : isAccent ? (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)') : (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)');
     const accentTxt = isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : accentColor;
-    const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
+    const headerTxt = isDarkBg ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
 
     const renderHeader = () => {
       if (!showHeader) return null;
@@ -903,8 +910,8 @@ const CarouselGenerator: React.FC = () => {
 
     const renderLogo = () => {
       if (!logoUrl) return null;
-      const size = 80 * s;
-      const margin = 36 * s;
+      const size = 72 * s;
+      const margin = 18 * s;
       const posStyle: React.CSSProperties = {
         position: 'absolute',
         width: size,
@@ -1406,7 +1413,7 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                   {/* Likes */}
                   <div className="px-4 pb-4">
-                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'ellosuit'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
+                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'seuuser'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
                   </div>
                   {/* Bottom bar */}
                   <div className="flex justify-center pb-2">
@@ -1739,6 +1746,9 @@ const CarouselGenerator: React.FC = () => {
         imageUrls={carouselData?.cards.map(c => c.imageUrl).filter(Boolean) as string[] || []}
         topic={topic}
       />
+
+      {/* Guided tour */}
+      {showCarouselTour && <CarouselTour onComplete={() => setShowCarouselTour(false)} />}
     </div>
   );
 };

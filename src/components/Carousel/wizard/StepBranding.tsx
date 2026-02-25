@@ -58,7 +58,10 @@ const StepBranding: React.FC<Props> = ({
         )}
         <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) setLogoUrl(URL.createObjectURL(file));
+          if (file) {
+            setLogoUrl(URL.createObjectURL(file));
+            setShowHeader(false);
+          }
           e.target.value = '';
         }} />
         {logoUrl && (

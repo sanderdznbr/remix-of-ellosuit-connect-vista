@@ -947,53 +947,48 @@ const CarouselGenerator: React.FC = () => {
       <div className={carouselData && editingCard === null ? '' : 'max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && (
-          <div className="flex-1 flex flex-col w-full relative overflow-hidden">
-            {/* Background glow effects */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-15 blur-[150px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.2) 40%, transparent 70%)' }} />
-            <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full opacity-10 blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.4) 0%, transparent 70%)' }} />
-            
+          <div className="flex-1 flex flex-col w-full relative" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header */}
-            <div className="px-4 pt-6 pb-4 max-w-4xl mx-auto w-full">
-              <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                  <ArrowLeft className="h-5 w-5 text-white/60" />
+            <div className="px-6 pt-8 pb-6 max-w-3xl mx-auto w-full">
+              <div className="flex items-center gap-3 mb-8">
+                <button onClick={() => navigate('/dashboard')} className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors">
+                  <ArrowLeft className="h-5 w-5 text-white/40" />
                 </button>
                 <div>
-                  <h1 className="text-xl font-bold text-white">Criar Carrossel</h1>
-                  <p className="text-xs text-white/40">Gere posts editoriais com IA</p>
+                  <h1 className="text-lg font-semibold text-white tracking-tight">Criar Carrossel</h1>
+                  <p className="text-xs text-white/25 mt-0.5">Gere posts editoriais com IA</p>
                 </div>
               </div>
 
-              {/* Step indicator - glass style */}
-              <div className="flex items-center justify-center gap-2 mb-6">
+              {/* Step indicator - minimal */}
+              <div className="flex items-center justify-center gap-1">
                 {WIZARD_STEPS.map((label, i) => (
                   <React.Fragment key={i}>
                     <button onClick={() => i <= wizardStep && setWizardStep(i)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                      style={{
-                        backgroundColor: i === wizardStep ? '#8B5CF6' : i < wizardStep ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.06)',
-                        color: i === wizardStep ? '#fff' : i < wizardStep ? '#8B5CF6' : 'rgba(255,255,255,0.3)',
-                        cursor: i <= wizardStep ? 'pointer' : 'default',
-                        boxShadow: i === wizardStep ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
-                      }}>
-                      {i < wizardStep ? <Check className="h-3 w-3" /> : <span className="w-4 text-center">{i + 1}</span>}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                        i === wizardStep
+                          ? 'bg-white text-black'
+                          : i < wizardStep
+                            ? 'bg-white/[0.08] text-white/60'
+                            : 'bg-white/[0.03] text-white/20'
+                      }`}
+                      style={{ cursor: i <= wizardStep ? 'pointer' : 'default' }}>
+                      {i < wizardStep ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>}
                       <span className="hidden sm:inline">{label}</span>
                     </button>
-                    {i < WIZARD_STEPS.length - 1 && <div className="w-8 h-0.5 rounded-full" style={{ backgroundColor: i < wizardStep ? '#8B5CF6' : 'rgba(255,255,255,0.08)' }} />}
+                    {i < WIZARD_STEPS.length - 1 && (
+                      <div className={`w-6 h-px ${i < wizardStep ? 'bg-white/20' : 'bg-white/[0.06]'}`} />
+                    )}
                   </React.Fragment>
                 ))}
               </div>
             </div>
 
-            {/* Wizard content - glass card */}
-            <div className="max-w-4xl mx-auto w-full px-4 flex-1 flex flex-col pb-6">
-              <div className="rounded-3xl overflow-hidden flex-1 flex flex-col" style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 0 60px rgba(139,92,246,0.05)',
-              }}>
-                <div className="p-6 space-y-6 flex-1 [&_label]:text-white/70 [&_h3]:text-white [&_h2]:text-white [&_p]:text-white/60 [&_input]:bg-white/5 [&_input]:border-white/10 [&_input]:text-white [&_input]:placeholder-white/30 [&_textarea]:bg-white/5 [&_textarea]:border-white/10 [&_textarea]:text-white [&_textarea]:placeholder-white/30 [&_select]:bg-white/5 [&_select]:border-white/10 [&_select]:text-white [&_button[role='combobox']]:bg-white/5 [&_button[role='combobox']]:border-white/10 [&_button[role='combobox']]:text-white">
+            {/* Wizard content card */}
+            <div className="max-w-3xl mx-auto w-full px-6 flex-1 flex flex-col pb-8">
+              <div className="rounded-2xl overflow-hidden flex-1 flex flex-col"
+                style={{ backgroundColor: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="p-8 flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
                   {wizardStep === 0 && (
                     <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                       cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
@@ -1011,7 +1006,7 @@ const CarouselGenerator: React.FC = () => {
                     <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
                   )}
                   {wizardStep === 3 && (
-                  <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+                    <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                       textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                       brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
                       dateLabel={dateLabel} setDateLabel={setDateLabel}
@@ -1019,40 +1014,37 @@ const CarouselGenerator: React.FC = () => {
                   )}
                 </div>
 
-                {/* Navigation buttons */}
-                <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Navigation */}
+                <div className="flex items-center justify-between px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                   <button onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
                     disabled={wizardStep === 0}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white/80 border transition-all disabled:opacity-20"
-                    style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all disabled:opacity-0">
                     <ChevronLeft className="h-4 w-4" /> Voltar
                   </button>
 
                   {wizardStep < WIZARD_STEPS.length - 1 ? (
                     <button onClick={() => setWizardStep(wizardStep + 1)} disabled={!canProceed}
-                      className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 disabled:opacity-40"
-                      style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', boxShadow: '0 0 20px rgba(139,92,246,0.3)' }}>
+                      className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
                       Próximo <ChevronRight className="h-4 w-4" />
                     </button>
                   ) : (
                     <button onClick={generateContent} disabled={generating || !topic.trim()}
-                      className="flex items-center gap-2 px-8 py-3 rounded-xl text-base font-bold text-white transition-all hover:scale-105 disabled:opacity-40"
-                      style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', boxShadow: '0 0 30px rgba(139,92,246,0.4)' }}>
-                      <Sparkles className="h-5 w-5" /> Gerar Carrossel
+                      className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
+                      <Sparkles className="h-4 w-4" /> Gerar Carrossel
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Gallery of saved carousels */}
+              {/* Saved carousels */}
               {carouselHistory.length > 0 && (
-                <div className="mt-8">
+                <div className="mt-10">
                   <div className="flex items-center gap-2 mb-4">
-                    <History className="h-4 w-4 text-white/30" />
-                    <h2 className="text-sm font-semibold text-white/40 tracking-wide uppercase">Seus Carrosséis</h2>
+                    <History className="h-4 w-4 text-white/15" />
+                    <h2 className="text-xs font-medium text-white/25 tracking-wider uppercase">Seus Carrosséis</h2>
                   </div>
                   {loadingHistory ? (
-                    <div className="flex items-center justify-center py-8 gap-2 text-white/40"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+                    <div className="flex items-center justify-center py-8 gap-2 text-white/20"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {carouselHistory.map((item) => {
@@ -1061,25 +1053,25 @@ const CarouselGenerator: React.FC = () => {
                         const coverTitle = item.carousel_data?.cards?.[0]?.topText || item.title;
                         return (
                           <button key={item.id} onClick={() => loadCarousel(item)}
-                            className="group relative rounded-2xl overflow-hidden text-left transition-all hover:-translate-y-0.5"
-                            style={{ border: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                            className="group relative rounded-xl overflow-hidden text-left transition-all hover:-translate-y-0.5"
+                            style={{ border: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#141414' }}>
                             <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
                               {coverImage ? (
                                 <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center p-3">
-                                  <p className="text-white/60 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
+                                  <p className="text-white/30 text-xs font-medium text-center line-clamp-4">{coverTitle}</p>
                                 </div>
                               )}
                               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                               <button onClick={(e) => { e.stopPropagation(); deleteCarousel(item.id); }}
-                                className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 hover:bg-red-600 text-white/50 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
+                                className="absolute top-2 right-2 p-1.5 rounded-md bg-black/50 hover:bg-red-600 text-white/30 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
                                 <Trash2 className="h-3 w-3" />
                               </button>
                             </div>
-                            <div className="p-2.5">
-                              <p className="text-xs font-semibold text-white/80 truncate">{item.title}</p>
-                              <div className="flex items-center gap-1.5 text-[10px] text-white/30 mt-0.5">
+                            <div className="p-3">
+                              <p className="text-xs font-medium text-white/60 truncate">{item.title}</p>
+                              <div className="flex items-center gap-1.5 text-[10px] text-white/20 mt-1">
                                 <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
                                 <span>• {item.card_count} cards</span>
                               </div>

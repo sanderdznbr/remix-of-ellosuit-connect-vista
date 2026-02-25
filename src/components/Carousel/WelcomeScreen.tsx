@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowUp, Sparkles } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface WelcomeScreenProps {
-  onStart: (initialTopic?: string) => void;
+  onStart: (initialTopic?: string, shouldEnhance?: boolean) => void;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [inputValue, setInputValue] = useState('');
-  const [enhancing, setEnhancing] = useState(false);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -25,22 +24,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     }
   };
 
-  const handleEnhance = async () => {
-    if (!inputValue.trim() || enhancing) return;
-    setEnhancing(true);
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('carousel-enhance-prompt', {
-        body: { prompt: inputValue },
-      });
-      if (!error && data?.enhancedPrompt) {
-        setInputValue(data.enhancedPrompt);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setEnhancing(false);
-    }
+  const handleEnhanceAndGo = () => {
+    if (!inputValue.trim()) return;
+    onStart(inputValue.trim(), true);
   };
 
   return (
@@ -120,8 +106,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             <div className="flex items-center justify-between px-3 pb-3">
               {/* Enhance button */}
               <button
-                onClick={handleEnhance}
-                disabled={!inputValue.trim() || enhancing}
+                onClick={handleEnhanceAndGo}
+                disabled={!inputValue.trim()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: 'rgba(123,80,220,0.12)',
@@ -129,11 +115,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
                   border: '1px solid rgba(123,80,220,0.15)',
                 }}
               >
-                {enhancing ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
-                )}
+                <Sparkles className="w-3.5 h-3.5" />
                 Melhorar com IA
               </button>
 

@@ -76,6 +76,17 @@ export const STYLE_PRESETS: StylePreset[] = [
     layoutType: 'bold-header', imagePosition: 'top', textAlignment: 'center',
     coverStyle: 'bold-center', contentDensity: 'spacious',
   },
+  {
+    id: 'beta-test3',
+    name: 'Beta Test 3',
+    description: 'Magazine editorial com barra lateral, layout assimétrico e visual sofisticado.',
+    emoji: '📐',
+    bgColor: '#1C1C1E', accentColor: '#FF9F0A', textColor: '#F2F2F7',
+    fontIndex: 11,
+    layoutPattern: ['dark', 'light', 'dark', 'accent', 'dark'],
+    layoutType: 'editorial-grid', imagePosition: 'left', textAlignment: 'left',
+    coverStyle: 'split-horizontal', contentDensity: 'compact',
+  },
 ];
 
 export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';

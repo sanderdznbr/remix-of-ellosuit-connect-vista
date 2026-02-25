@@ -941,8 +941,12 @@ const CarouselGenerator: React.FC = () => {
           {/* Center content */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: `${60 * s * ps}px ${64 * s * ps}px`, textAlign: 'center', zIndex: 10 }}>
             {/* Number badge */}
-            <div style={{ width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%', backgroundColor: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: `${40 * s}px` }}>
-              <span style={{ fontFamily: sans, fontSize: `${36 * s * fs}px`, fontWeight: 900, color: computeLuminance(accentColor) > 0.35 ? '#000' : '#FFF' }}>★</span>
+            <div style={{ width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%', backgroundColor: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: `${40 * s}px`, overflow: 'hidden' }}>
+              {logoUrl ? (
+                <img src={logoUrl} alt="" style={{ width: `${52 * s}px`, height: `${52 * s}px`, objectFit: 'contain', ...(computeLuminance(accentColor) > 0.35 ? {} : { filter: 'brightness(0) invert(1)' }) }} />
+              ) : (
+                <span style={{ fontFamily: sans, fontSize: `${36 * s * fs}px`, fontWeight: 900, color: computeLuminance(accentColor) > 0.35 ? '#000' : '#FFF' }}>★</span>
+              )}
             </div>
             <h1 style={{ fontFamily: serif, fontSize: `${82 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: mainTxt, textTransform: 'uppercase', letterSpacing: `${2 * s}px`, marginBottom: `${20 * s}px` }}>
               {renderAccentText(card.title || '', accentColor, mainTxt, 82, s)}
@@ -1040,9 +1044,137 @@ const CarouselGenerator: React.FC = () => {
     );
   };
 
+  // ===== BETA TEST 3 — Magazine editorial with sidebar accent strip =====
+  const renderBetaTest3Card = (card: CarouselCard, index: number, isExport = false) => {
+    const w = isExport ? CARD_W : PREVIEW_W;
+    const h = isExport ? CARD_H : PREVIEW_H;
+    const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const fs = card.fontScale ?? 1.0;
+    const ps = card.paddingScale ?? 1.0;
+    const bg = bgColor;
+    const computeLuminance = (hex: string) => {
+      const c = hex.replace('#', '');
+      if (c.length < 6) return 0;
+      const r = parseInt(c.substring(0, 2), 16) / 255;
+      const g = parseInt(c.substring(2, 4), 16) / 255;
+      const b = parseInt(c.substring(4, 6), 16) / 255;
+      const toL = (v: number) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      return 0.2126 * toL(r) + 0.7152 * toL(g) + 0.0722 * toL(b);
+    };
+    const isDarkBg = computeLuminance(bg) < 0.35;
+    const mainTxt = isDarkBg ? '#FFFFFF' : textColor;
+    const subTxt = isDarkBg ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
+    const topText = card.bodyTop || card.body || card.title || '';
+    const bottomText = card.bodyBottom || '';
+    const hasImage = !!card.imageUrl;
+    const sideW = 64;
+
+    const renderB3Logo = () => {
+      if (!logoUrl) return null;
+      const size = 44 * s;
+      return <img src={logoUrl} alt="" style={{ width: size, height: size, objectFit: 'contain', ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}) }} />;
+    };
+
+    if (card.type === 'cover') {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: bg, display: 'flex' }}>
+          <div style={{ width: `${sideW * s}px`, minHeight: '100%', backgroundColor: accentColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: `${40 * s}px 0` }}>
+            {renderB3Logo() || <div style={{ width: `${36 * s}px`, height: `${36 * s}px`, borderRadius: '50%', border: `${3 * s}px solid ${computeLuminance(accentColor) > 0.35 ? '#000' : '#FFF'}` }} />}
+            <span style={{ fontFamily: sans, fontSize: `${14 * s}px`, fontWeight: 700, color: computeLuminance(accentColor) > 0.35 ? '#000' : '#FFF', writingMode: 'vertical-rl', textOrientation: 'mixed', letterSpacing: `${4 * s}px`, textTransform: 'uppercase' }}>EDITORIAL</span>
+            <span style={{ fontFamily: sans, fontSize: `${12 * s}px`, fontWeight: 600, color: computeLuminance(accentColor) > 0.35 ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)', writingMode: 'vertical-rl' }}>01</span>
+          </div>
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            {card.imageUrl && <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? `linear-gradient(135deg, ${bg}EE 0%, ${bg}88 50%, ${bg}CC 100%)` : 'none' }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `${60 * s * ps}px ${56 * s * ps}px` }}>
+              <div style={{ display: 'inline-flex', alignSelf: 'flex-start', padding: `${8 * s}px ${20 * s}px`, backgroundColor: accentColor, borderRadius: `${4 * s}px`, marginBottom: `${24 * s}px` }}>
+                <span style={{ fontFamily: sans, fontSize: `${14 * s * fs}px`, fontWeight: 800, color: computeLuminance(accentColor) > 0.35 ? '#000' : '#FFF', textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>DESTAQUE</span>
+              </div>
+              <h1 style={{ fontFamily: serif, fontSize: `${76 * s * fs}px`, fontWeight: 700, lineHeight: 1.05, color: mainTxt, marginBottom: `${16 * s}px` }}>
+                {renderAccentText(card.title || '', accentColor, mainTxt, 76, s)}
+              </h1>
+              {card.subtitle && <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 400, color: subTxt, lineHeight: 1.5, maxWidth: `${700 * s}px` }}>{card.subtitle}</p>}
+              <div style={{ width: `${80 * s}px`, height: `${3 * s}px`, backgroundColor: accentColor, marginTop: `${32 * s}px` }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (card.type === 'cta') {
+      const accentLum = computeLuminance(accentColor);
+      const btnTxt = accentLum > 0.35 ? '#1A1A1A' : '#FFFFFF';
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: bg, display: 'flex' }}>
+          <div style={{ width: `${sideW * s}px`, minHeight: '100%', backgroundColor: accentColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: `${40 * s}px 0` }}>
+            {renderB3Logo() || <div style={{ width: `${36 * s}px`, height: `${36 * s}px`, borderRadius: '50%', border: `${3 * s}px solid ${accentLum > 0.35 ? '#000' : '#FFF'}` }} />}
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', padding: `${80 * s * ps}px ${56 * s * ps}px` }}>
+            <h2 style={{ fontFamily: serif, fontSize: `${56 * s * fs}px`, fontWeight: 700, lineHeight: 1.1, color: mainTxt, marginBottom: `${16 * s}px` }}>{card.title}</h2>
+            {card.body && <p style={{ fontFamily: sans, fontSize: `${26 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: subTxt, marginBottom: `${40 * s}px`, maxWidth: `${700 * s}px` }}>{card.body}</p>}
+            <div style={{ padding: `${18 * s}px ${48 * s}px`, backgroundColor: accentColor, borderRadius: `${6 * s}px`, display: 'inline-flex', alignItems: 'center' }}>
+              <span style={{ fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 800, color: btnTxt, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>SAIBA MAIS →</span>
+            </div>
+            {userName && <p style={{ fontFamily: sans, fontSize: `${16 * s * fs}px`, fontWeight: 600, color: subTxt, marginTop: `${32 * s}px`, letterSpacing: `${2 * s}px`, textTransform: 'uppercase' }}>@{userName}</p>}
+          </div>
+        </div>
+      );
+    }
+
+    if (hasImage) {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: bg, display: 'flex' }}>
+          <div style={{ width: `${sideW * s}px`, minHeight: '100%', backgroundColor: accentColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: sans, fontSize: `${48 * s * fs}px`, fontWeight: 900, color: computeLuminance(accentColor) > 0.35 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }}>{String(index).padStart(2, '0')}</span>
+          </div>
+          <div style={{ width: '40%', position: 'relative', overflow: 'hidden' }}>
+            <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${48 * s * ps}px ${40 * s * ps}px`, gap: `${20 * s}px` }}>
+            <p style={{ fontFamily: serif, fontSize: `${38 * s * fs}px`, fontWeight: 700, lineHeight: 1.2, color: mainTxt }}>{renderAccentText(topText, accentColor, mainTxt, 38, s)}</p>
+            {bottomText && (
+              <>
+                <div style={{ width: `${40 * s}px`, height: `${2 * s}px`, backgroundColor: accentColor }} />
+                <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: subTxt }}>{bottomText}</p>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+        style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: bg, display: 'flex' }}>
+        <div style={{ width: `${sideW * s}px`, minHeight: '100%', backgroundColor: accentColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: sans, fontSize: `${48 * s * fs}px`, fontWeight: 900, color: computeLuminance(accentColor) > 0.35 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }}>{String(index).padStart(2, '0')}</span>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${64 * s * ps}px ${56 * s * ps}px`, gap: `${28 * s}px`, position: 'relative' }}>
+          <div style={{ position: 'absolute', top: `${20 * s}px`, right: `${20 * s}px`, fontFamily: serif, fontSize: `${240 * s}px`, fontWeight: 900, color: accentColor, opacity: 0.05, lineHeight: 1 }}>{index}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: `${12 * s}px` }}>
+            <div style={{ width: `${32 * s}px`, height: `${3 * s}px`, backgroundColor: accentColor }} />
+            <span style={{ fontFamily: sans, fontSize: `${14 * s * fs}px`, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>Ponto {index}</span>
+          </div>
+          <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.15, color: mainTxt }}>{renderAccentText(topText, accentColor, mainTxt, 48, s)}</p>
+          {bottomText && <p style={{ fontFamily: sans, fontSize: `${30 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: subTxt }}>{bottomText}</p>}
+          {showHeader && !logoUrl && brandName && (
+            <div style={{ position: 'absolute', bottom: `${24 * s}px`, left: `${56 * s}px` }}>
+              <span style={{ fontFamily: sans, fontSize: `${14 * s * fs}px`, fontWeight: 500, color: subTxt, letterSpacing: `${2 * s}px`, textTransform: 'uppercase' }}>{brandName}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
     const isBetaTest2 = activePresetId === 'beta-test2';
+    const isBetaTest3 = activePresetId === 'beta-test3';
     if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);
+    if (isBetaTest3) return renderBetaTest3Card(card, index, isExport);
 
     const w = isExport ? CARD_W : PREVIEW_W;
     const h = isExport ? CARD_H : PREVIEW_H;

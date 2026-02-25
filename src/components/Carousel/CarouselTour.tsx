@@ -1,37 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, Palette, Edit3, Download, Plus, RotateCcw, Sparkles } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TOUR_STEPS = [
   {
     title: '🎉 Carrossel gerado!',
     description: 'Seu carrossel está pronto. Vamos te mostrar como editar e personalizar cada detalhe.',
     icon: Sparkles,
+    targetSelector: null, // centered
   },
   {
     title: '✏️ Editar Cards',
     description: 'Clique no ícone de lápis em qualquer thumbnail para editar textos, imagens e layout do card individualmente.',
     icon: Edit3,
+    targetSelector: '[data-tour="card-strip"]',
   },
   {
     title: '🔄 Regenerar',
     description: 'Clique no ícone de regenerar em qualquer thumbnail para gerar novo conteúdo com IA, fazer upload ou buscar imagens.',
     icon: RotateCcw,
+    targetSelector: '[data-tour="card-strip"]',
   },
   {
     title: '🎨 Estilo',
-    description: 'Use o botão "Estilo" abaixo do carrossel para alterar cores, fontes, logomarca e cabeçalho de todos os cards.',
+    description: 'Use o botão "Estilo" para alterar cores, fontes, logomarca e cabeçalho de todos os cards.',
     icon: Palette,
+    targetSelector: '[data-tour="btn-style"]',
   },
   {
     title: '➕ Adicionar Card',
     description: 'Use "Adicionar Card" para inserir novos slides ao carrossel. Você pode ter quantos cards quiser!',
     icon: Plus,
+    targetSelector: '[data-tour="btn-add"]',
   },
   {
     title: '📥 Exportar',
-    description: 'Quando estiver satisfeito, clique em "Exportar" no topo para baixar todas as imagens em alta qualidade.',
+    description: 'Quando estiver satisfeito, clique em "Exportar" para baixar todas as imagens em alta qualidade.',
     icon: Download,
+    targetSelector: '[data-tour="btn-export"]',
   },
 ];
 
@@ -41,10 +48,45 @@ interface CarouselTourProps {
 
 const CarouselTour: React.FC<CarouselTourProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
+  const { isMobile } = useIsMobile();
   const isLast = step === TOUR_STEPS.length - 1;
   const isFirst = step === 0;
   const current = TOUR_STEPS[step];
   const Icon = current.icon;
+
+  // Delay appearance so carousel renders first
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Position tooltip near target element
+  useEffect(() => {
+    if (!ready) return;
+    const selector = current.targetSelector;
+    if (!selector) {
+      setTooltipPos(null);
+      return;
+    }
+    const el = document.querySelector(selector) as HTMLElement | null;
+    if (!el) {
+      setTooltipPos(null);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement = spaceAbove > spaceBelow ? 'above' : 'below';
+    const left = Math.max(16, Math.min(rect.left + rect.width / 2, window.innerWidth - 16));
+    const top = placement === 'above' ? rect.top - 12 : rect.bottom + 12;
+    setTooltipPos({ top, left, placement });
+  }, [step, ready, current.targetSelector]);
+
+  if (!ready) return null;
+
+  const isCentered = !tooltipPos;
 
   return (
     <>
@@ -55,9 +97,23 @@ const CarouselTour: React.FC<CarouselTourProps> = ({ onComplete }) => {
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          className="fixed inset-0 flex items-center justify-center z-[101] p-4 pointer-events-none"
+          className={`fixed z-[101] pointer-events-none ${isCentered ? 'inset-0 flex items-center justify-center p-4' : ''}`}
+          style={!isCentered ? {
+            top: tooltipPos!.placement === 'above' ? 'auto' : tooltipPos!.top,
+            bottom: tooltipPos!.placement === 'above' ? (window.innerHeight - tooltipPos!.top) : 'auto',
+            left: isMobile ? 16 : Math.max(16, tooltipPos!.left - 175),
+            right: isMobile ? 16 : 'auto',
+          } : undefined}
         >
-          <div className="w-full max-w-sm rounded-2xl overflow-hidden pointer-events-auto" style={{ backgroundColor: '#1A1A24', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div
+            className="w-full rounded-2xl overflow-hidden pointer-events-auto"
+            style={{
+              maxWidth: isMobile ? '100%' : 350,
+              backgroundColor: '#1A1A24',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.15)',
+            }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.1))' }}>
               <div className="flex items-center gap-2">
@@ -70,7 +126,7 @@ const CarouselTour: React.FC<CarouselTourProps> = ({ onComplete }) => {
             </div>
 
             {/* Content */}
-            <div className="px-5 py-5 space-y-3">
+            <div className="px-5 py-4 space-y-3">
               <h3 className="text-lg font-bold text-white">{current.title}</h3>
               <p className="text-sm text-white/60 leading-relaxed">{current.description}</p>
 
@@ -86,7 +142,7 @@ const CarouselTour: React.FC<CarouselTourProps> = ({ onComplete }) => {
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between pt-3">
+              <div className="flex justify-between pt-2">
                 <button
                   onClick={() => setStep(s => s - 1)}
                   disabled={isFirst}

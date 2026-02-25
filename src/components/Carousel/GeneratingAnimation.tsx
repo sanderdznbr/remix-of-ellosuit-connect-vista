@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import '@/styles/carousel-loader.css';
 
 interface Props {
   imageGenProgress: string;
@@ -116,22 +117,10 @@ const GeneratingAnimation: React.FC<Props> = ({ imageGenProgress }) => {
         <div className="absolute w-[500px] h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(123,80,220,0.6) 0%, transparent 70%)' }} />
 
-        {/* Animated orb */}
-        <motion.div
-          className="relative w-48 h-48 md:w-64 md:h-64"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        >
-          <div className="absolute inset-0 rounded-full"
-            style={{
-              background: 'conic-gradient(from 0deg, #7B50DC, #4C1D95, #0A0A1A, #1E1B4B, #7B50DC)',
-              boxShadow: '0 0 60px rgba(123,80,220,0.4), inset 0 0 60px rgba(0,0,0,0.5)',
-            }} />
-          <div className="absolute inset-2 rounded-full"
-            style={{
-              background: 'radial-gradient(circle at 30% 30%, rgba(123,80,220,0.4), #0A0A1A 70%)',
-            }} />
-        </motion.div>
+        {/* Animated orb — uses carousel-loader CSS */}
+        <div className="carousel-loader-wrapper">
+          <div className="carousel-loader-spinner" />
+        </div>
 
         {/* Step indicator */}
         <div className="mt-10 text-center relative z-10">

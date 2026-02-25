@@ -548,7 +548,7 @@ const CarouselGenerator: React.FC = () => {
       const selectedImages = referenceImages.filter(r => r.category === 'general').map(r => r.url);
       console.log('User-selected images:', selectedImages.length);
 
-      // Filter out placeholder/broken image URLs
+      // Filter out placeholder/broken image URLs AND images that likely contain text overlays
       const isValidImageUrl = (url: string) => {
         if (!url || typeof url !== 'string') return false;
         const lower = url.toLowerCase();
@@ -558,63 +558,46 @@ const CarouselGenerator: React.FC = () => {
         if (lower.includes('blank.') || lower.includes('empty.') || lower.includes('pixel.')) return false;
         if (lower.includes('logo') && (lower.includes('icon') || lower.includes('favicon'))) return false;
         if (!lower.startsWith('http') && !lower.startsWith('data:image')) return false;
+        // Filter out images that are likely infographics/slides with text
+        if (lower.includes('slide') || lower.includes('infographic') || lower.includes('screenshot')) return false;
         return true;
       };
 
-      const webImagePool = selectedImages.filter(isValidImageUrl);
-      console.log('Valid selected image pool:', webImagePool.length);
+      // Only use user-selected images (max 3 to avoid too many web photos with text)
+      const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
+      console.log('Valid selected image pool (capped at 3):', webImagePool.length);
 
       // Determine if we have face/brand references attached
       const updatedCards = [...cards];
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const hasFaceOrBrandRefs = faceRefUrls.length > 0 || styleRefUrls.length > 0;
 
       // Extract the clean topic from web search to always include in AI prompts
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
 
-      // STRATEGY: Use real web photos first, only use AI when face/brand refs are attached
+      // IMPROVED STRATEGY: Use AI for ALL image cards. Only use user-selected web photos 
+      // for a limited number of content cards. This ensures every card has a quality image.
       let webImageIndex = 0;
       const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
       let totalImages = 0;
       let realImagesUsed = 0;
       let aiImagesQueued = 0;
-      const usedImageUrls = new Set<string>(); // Track used URLs to prevent duplicates
+      const usedImageUrls = new Set<string>();
+
+      // Standard negative prompt for all AI images
+      const baseNegativePrompt = 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
-        if (card.needsImage || card.type === 'cover' || imageCardIndices.includes(i)) {
+        if (card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {
           totalImages++;
 
-          const isCover = card.type === 'cover';
+          const isCoverOrCta = card.type === 'cover' || card.type === 'cta';
 
-          // COVER cards ALWAYS use AI generation (never Pexels/web)
-          if (isCover || hasFaceOrBrandRefs) {
-            aiImagesQueued++;
-            const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-            // ALWAYS prefix with clean topic so AI knows the subject (e.g. "CS2: ...")
-      const imgPrompt = `${cleanTopic}: ${cardDesc}`;
-            const coverNegative = isCover ? 'no text, no words, no letters, no typography, no writing, no captions, no watermarks' : '';
-            const finalNegative = [coverNegative, imageSettings.negativePrompt].filter(Boolean).join(', ') || undefined;
-            imagePromises.push({
-              index: i,
-              promise: (async () => {
-                try {
-                  return await generateImage({
-                    prompt: buildImagePrompt(imgPrompt) + (isCover ? '. NO TEXT OR WORDS IN THE IMAGE.' : ''),
-                    faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                    styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-                    negativePrompt: finalNegative,
-                  });
-                } catch (err) { console.error('Image gen error for card', i, err); }
-                return null;
-              })(),
-            });
-          } else if (webImagePool.length > webImageIndex) {
-            // Content cards: use user-selected image, skip duplicates
+          // Try to use a user-selected web image (only for non-cover content cards, limited pool)
+          if (!isCoverOrCta && webImagePool.length > webImageIndex) {
             let selectedUrl = webImagePool[webImageIndex];
             webImageIndex++;
-            // Skip already-used URLs
             while (usedImageUrls.has(selectedUrl) && webImageIndex < webImagePool.length) {
               selectedUrl = webImagePool[webImageIndex];
               webImageIndex++;
@@ -623,43 +606,30 @@ const CarouselGenerator: React.FC = () => {
               usedImageUrls.add(selectedUrl);
               updatedCards[i] = { ...updatedCards[i], imageUrl: selectedUrl, isAiImage: false };
               realImagesUsed++;
+              continue; // skip AI generation for this card
             }
-          } else {
-            // No selected images left — search Brave for a unique image for this card
-            const searchQuery = cleanTopic; // Use only the clean topic, not AI-generated descriptions
-            const cardIndex = i; // Capture for closure
-            imagePromises.push({
-              index: i,
-              promise: (async () => {
-                try {
-                  // Search Brave for this specific card using clean topic only
-                  const { data: searchData } = await supabase.functions.invoke('generate-carousel', {
-                    body: { action: 'web-search', query: searchQuery },
-                  });
-                  const foundImages = (searchData?.images || [])
-                    .map((img: any) => img.url)
-                    .filter((url: string) => isValidImageUrl(url) && !usedImageUrls.has(url));
-                  if (foundImages.length > 0) {
-                    // Pick a random one from unused images
-                    const randomIdx = Math.floor(Math.random() * Math.min(foundImages.length, 10));
-                    const chosen = foundImages[randomIdx];
-                    usedImageUrls.add(chosen);
-                    return chosen;
-                  }
-                  // Brave found nothing — fall back to AI generation
-                  const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-                  return await generateImage({
-                    prompt: buildImagePrompt(`${cleanTopic}: ${cardDesc}`),
-                    negativePrompt: imageSettings.negativePrompt || undefined,
-                  });
-                } catch (err) {
-                  console.error('Image search/gen error for card', cardIndex, err);
-                  return null;
-                }
-              })(),
-            });
-            aiImagesQueued++;
           }
+
+          // ALL other cards: generate via AI (covers, ctas, and content cards without web images)
+          aiImagesQueued++;
+          const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
+          const imgPrompt = `${cleanTopic}: ${cardDesc}`;
+          const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
+          
+          imagePromises.push({
+            index: i,
+            promise: (async () => {
+              try {
+                return await generateImage({
+                  prompt: buildImagePrompt(imgPrompt) + '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.',
+                  faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+                  styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+                  negativePrompt: finalNegative,
+                });
+              } catch (err) { console.error('Image gen error for card', i, err); }
+              return null;
+            })(),
+          });
         }
       }
 
@@ -921,6 +891,8 @@ const CarouselGenerator: React.FC = () => {
 
     const renderHeader = () => {
       if (!showHeader) return null;
+      // When a logo is uploaded, hide the text header (brandName, date, etc.)
+      if (logoUrl) return null;
       return (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${28 * s * ps}px ${48 * s * ps}px`, fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 500, color: headerTxt, letterSpacing: `${0.5 * s}px`, position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
           <span>{brandName}</span>

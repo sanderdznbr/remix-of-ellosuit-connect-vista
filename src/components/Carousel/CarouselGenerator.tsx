@@ -1,8 +1,36 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '@/styles/carousel-loader.css';
 import '@/styles/cube-loader.css';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Animated percentage counter
+const AnimatedCounter = ({ target }: { target: number }) => {
+  const [current, setCurrent] = useState(0);
+  const rafRef = useRef<number>();
+
+  useEffect(() => {
+    const start = current;
+    const diff = target - start;
+    if (diff === 0) return;
+    const duration = 800;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      setCurrent(Math.round(start + diff * eased));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target]);
+
+  return <>{current}%</>;
+};
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -997,8 +1025,15 @@ const CarouselGenerator: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Step content */}
-                  <div>
+                   {/* Step content with entrance animation */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={wizardStep}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                    >
                     {wizardStep === 0 && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
@@ -1025,7 +1060,8 @@ const CarouselGenerator: React.FC = () => {
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
                         showHeader={showHeader} setShowHeader={setShowHeader} />
                     )}
-                  </div>
+                    </motion.div>
+                  </AnimatePresence>
 
                   {/* Navigation buttons */}
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
@@ -1063,7 +1099,14 @@ const CarouselGenerator: React.FC = () => {
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
                   <div className="carousel-loader-spinner" />
                   <span className="text-white/60 text-3xl font-light z-[1]">
-                    {wizardStep === 0 ? '0%' : wizardStep === 1 ? '25%' : wizardStep === 2 ? '50%' : wizardStep === 3 ? '75%' : '100%'}
+                    <AnimatedCounter target={
+                      wizardStep === 0
+                        ? (webSearchResult ? 15 : 0)
+                        : wizardStep === 1 ? 30
+                        : wizardStep === 2 ? 50
+                        : wizardStep === 3 ? 75
+                        : 100
+                    } />
                   </span>
                 </div>
               </div>

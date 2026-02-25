@@ -61,6 +61,7 @@ import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
 import CarouselTour from './CarouselTour';
 import GeneratingAnimation from './GeneratingAnimation';
+import WelcomeScreen from './WelcomeScreen';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
@@ -131,6 +132,9 @@ const CarouselGenerator: React.FC = () => {
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+
+  // Welcome screen state
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -1361,6 +1365,13 @@ const CarouselGenerator: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
+
+      {/* ===== WELCOME SCREEN ===== */}
+      <AnimatePresence>
+        {showWelcome && (
+          <WelcomeScreen onStart={() => setShowWelcome(false)} />
+        )}
+      </AnimatePresence>
 
       {/* ===== DARK HEADER when carousel is generated ===== */}
       {carouselData && !generatingAllImages && editingCard === null && (

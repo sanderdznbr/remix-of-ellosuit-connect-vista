@@ -947,9 +947,14 @@ const CarouselGenerator: React.FC = () => {
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && (
-          <div className="flex-1 flex flex-col w-full relative" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex-1 flex flex-col w-full relative overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+            {/* Subtle ambient glow accents */}
+            <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
+            <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
+            <div className="absolute top-[40%] left-[50%] -translate-x-1/2 w-[600px] h-[2px] pointer-events-none opacity-[0.03]" style={{ background: 'linear-gradient(90deg, transparent, rgba(140,90,240,0.5), transparent)' }} />
+
             {/* Header */}
-            <div className="px-8 pt-6 pb-4 w-full">
+            <div className="px-8 pt-6 pb-4 w-full relative z-10">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <button onClick={() => navigate('/dashboard')} className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors">
@@ -986,8 +991,8 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </div>
 
-            {/* Content directly on page — no card wrapper */}
-            <div className="w-full px-8 flex-1 overflow-y-auto pb-6" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            {/* Content — fixed min-height to prevent layout shifts */}
+            <div className="w-full px-8 flex-1 overflow-y-auto pb-6 relative z-10" style={{ minHeight: '500px', maxHeight: 'calc(100vh - 200px)' }}>
               {wizardStep === 0 && (
                 <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                   cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}

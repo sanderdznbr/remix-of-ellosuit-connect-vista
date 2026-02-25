@@ -27,7 +27,7 @@ const StepTopic: React.FC<Props> = ({
   searchingWeb, onSearchWeb, webSearchResult,
 }) => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" style={{ minHeight: '460px' }}>
       {/* Topic */}
       <div>
         <div className="flex items-center justify-between mb-3">

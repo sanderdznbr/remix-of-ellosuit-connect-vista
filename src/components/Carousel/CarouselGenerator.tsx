@@ -47,9 +47,8 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
+import StepCardCount from './wizard/StepCardCount';
 import StepReferences from './wizard/StepReferences';
-import StepImageSettings from './wizard/StepImageSettings';
-import StepImageAdvanced from './wizard/StepImageAdvanced';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -124,7 +123,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Referências', 'Imagem', 'Câmera', 'Estilo'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Referências', 'Estilo'];
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');
@@ -1019,7 +1018,7 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ==================== UI ====================
-  const canProceed = wizardStep === 0 ? (topic.trim().length > 0 && webSearchResult !== null) : true;
+  const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
@@ -1075,26 +1074,19 @@ const CarouselGenerator: React.FC = () => {
               {/* LEFT column: centered content */}
               <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
                 <div className="w-full max-w-[520px] space-y-6">
-                  {/* Step indicators */}
-                  <div className="flex items-center gap-1">
-                    {WIZARD_STEPS.map((label, i) => (
-                      <React.Fragment key={i}>
-                        <button onClick={() => i <= wizardStep && setWizardStep(i)}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-                            i === wizardStep
-                              ? 'text-white'
-                              : i < wizardStep
-                                ? 'bg-white/[0.08] text-white/60'
-                                : 'bg-white/[0.03] text-white/20'
-                          }`}
-                          style={{ cursor: i <= wizardStep ? 'pointer' : 'default', ...(i === wizardStep ? { background: 'linear-gradient(135deg, #7B50DC, #9B6BFF)' } : {}) }}>
-                          {i < wizardStep ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>}
-                          <span className="hidden sm:inline">{label}</span>
-                        </button>
-                        {i < WIZARD_STEPS.length - 1 && (
-                          <div className={`w-4 h-px ${i < wizardStep ? 'bg-white/20' : 'bg-white/[0.06]'}`} />
-                        )}
-                      </React.Fragment>
+                  {/* Progress dots - no labels, no numbers */}
+                  <div className="flex items-center justify-center gap-2">
+                    {WIZARD_STEPS.map((_, i) => (
+                      <button key={i} onClick={() => i <= wizardStep && setWizardStep(i)}
+                        className="transition-all"
+                        style={{
+                          width: i === wizardStep ? 32 : 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                          cursor: i <= wizardStep ? 'pointer' : 'default',
+                        }}
+                      />
                     ))}
                   </div>
 
@@ -1114,19 +1106,16 @@ const CarouselGenerator: React.FC = () => {
                         searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
                     )}
                     {wizardStep === 1 && (
+                      <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
+                    )}
+                    {wizardStep === 2 && (
                       <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         famousList={famousList} setFamousList={setFamousList}
                         famousImages={famousImages} setFamousImages={setFamousImages}
                         brandAssets={brandAssets}
                         webImages={webSearchResult?.images} />
                     )}
-                    {wizardStep === 2 && (
-                      <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
-                    )}
                     {wizardStep === 3 && (
-                      <StepImageAdvanced settings={imageSettings} onChange={setImageSettings} />
-                    )}
-                    {wizardStep === 4 && (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
@@ -1145,24 +1134,29 @@ const CarouselGenerator: React.FC = () => {
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 
-                    {wizardStep === 0 && !webSearchResult && topic.trim() ? (
-                      <button onClick={handleSearchWeb} disabled={searchingWeb}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-50">
-                        {searchingWeb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
-                        {searchingWeb ? 'Pesquisando...' : 'Pesquisar na Web'}
-                      </button>
-                    ) : wizardStep < WIZARD_STEPS.length - 1 ? (
-                      <button onClick={() => setWizardStep(wizardStep + 1)} disabled={!canProceed}
-                        className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
+                    {wizardStep < WIZARD_STEPS.length - 1 ? (
+                      <button onClick={async () => {
+                          // Step 0 → 1: auto web search if not done yet
+                          if (wizardStep === 0 && !webSearchResult && topic.trim()) {
+                            await handleSearchWeb();
+                          }
+                          // Step 1 → 2: auto set imageCardCount to ~70%
+                          if (wizardStep === 1) {
+                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                          }
+                          setWizardStep(wizardStep + 1);
+                        }} disabled={!canProceed || searchingWeb}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                        Próximo <ChevronRight className="h-4 w-4" />
+                        {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                       </button>
                     ) : (
                       <button onClick={() => {
+                          setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                           setTransitionToGenerate(true);
                           setTimeout(() => generateContent(), 1200);
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
-                        className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
+                        className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                         <Sparkles className="h-4 w-4" /> Gerar Carrossel
                       </button>
@@ -1178,10 +1172,9 @@ const CarouselGenerator: React.FC = () => {
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
                       wizardStep === 0
-                        ? (webSearchResult ? 15 : 0)
-                        : wizardStep === 1 ? 30
-                        : wizardStep === 2 ? 50
-                        : wizardStep === 3 ? 75
+                        ? (webSearchResult ? 20 : 0)
+                        : wizardStep === 1 ? 40
+                        : wizardStep === 2 ? 70
                         : 99
                     } />
                   </span>

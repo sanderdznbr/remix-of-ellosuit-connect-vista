@@ -1361,7 +1361,7 @@ const CarouselGenerator: React.FC = () => {
   }, [wizardStep, speakStep, showWelcome]);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A', height: '100dvh' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* ===== WELCOME SCREEN ===== */}

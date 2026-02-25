@@ -1109,7 +1109,13 @@ const CarouselGenerator: React.FC = () => {
                     {wizardStep === 4 && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         brandAssets={brandAssets}
-                        onSuggestColors={(palette) => { setBgColor(palette.bg); setAccentColor(palette.accent); setTextColor(palette.text); }} />
+                        onSuggestColors={(palette) => {
+                          setBgColor(palette.bg);
+                          setAccentColor(palette.accent);
+                          setTextColor(palette.text || '#FFFFFF');
+                          // Auto-skip colors step since user accepted brand colors
+                          setTimeout(() => setWizardStep(6), 400);
+                        }} />
                     )}
                     {wizardStep === 5 && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}

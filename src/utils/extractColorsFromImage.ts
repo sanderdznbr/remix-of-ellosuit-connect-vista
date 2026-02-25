@@ -130,6 +130,6 @@ export function buildPaletteFromColors(colors: string[]): { bg: string; accent: 
     return { bg: darkest.hex, accent: brightest.hex, text: '#FFFFFF' };
   }
 
-  // Light palette: light bg + dark accent
-  return { bg: brightest.hex, accent: darkest.hex, text: darkest.hex };
+  // Light palette: light bg + dark accent, always ensure readable text
+  return { bg: brightest.hex, accent: darkest.hex, text: darkest.brightness < 40 ? darkest.hex : '#1A1A1A' };
 }

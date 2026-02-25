@@ -179,12 +179,12 @@ const testMenuGroup: MenuGroup = {
   id: "test",
   label: "Test",
   color: "#9333ea",
-  hubPath: "/dashboard/carrossel",
+  hubPath: "/gerador-de-carrosseis",
   columns: [
     {
       title: "Laboratório",
       items: [
-        { id: "carrossel", label: "Gerador de Carrossel", description: "Carrosséis automáticos com IA", icon: LayoutGrid, path: "/dashboard/carrossel" },
+        { id: "carrossel", label: "Gerador de Carrossel", description: "Carrosséis automáticos com IA", icon: LayoutGrid, path: "/gerador-de-carrosseis" },
         { id: "brand-assets", label: "Biblioteca de Marca", description: "Logos, prints e assets da marca", icon: ImageIcon, path: "/dashboard/brand-assets" },
       ]
     }

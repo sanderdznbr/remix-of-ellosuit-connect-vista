@@ -63,7 +63,7 @@ export default function SocialPublishDialog({ open, onOpenChange, imageUrls, top
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const redirectUri = `${window.location.origin}/dashboard/carrossel?fb_callback=1`;
+      const redirectUri = `${window.location.origin}/gerador-de-carrosseis?fb_callback=1`;
       const { data } = await supabase.functions.invoke('facebook-auth', {
         body: { action: 'get_login_url', redirectUri },
       });

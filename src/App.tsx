@@ -34,6 +34,7 @@ import CheckoutActivate from './pages/CheckoutActivate';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Plans from './pages/Plans';
+import PublicCarouselGenerator from './pages/PublicCarouselGenerator';
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/team" element={<Team />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SubscriptionProvider>

@@ -597,7 +597,7 @@ const AIAssistantHome: React.FC = () => {
               className="mt-4"
             >
               <Link
-                to="/dashboard/carrossel"
+                to="/gerador-de-carrosseis"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/[0.08] hover:bg-white/[0.15] text-white/80 hover:text-white text-sm font-medium transition-all"
               >
                 <LayoutGrid className="h-4 w-4" />

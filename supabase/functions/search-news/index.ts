@@ -43,14 +43,14 @@ Deno.serve(async (req) => {
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3"],
-  "topic_keywords": ["keyword1", "keyword2", "keyword3"],
+  "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
   "summary": "A brief 2-sentence summary of the key findings"
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
-CRITICAL for image_search_terms: Each term MUST describe a visual scene directly from the topic "${topic}" itself. For games, use in-game screenshots descriptions. For brands, use product photos. For sports, use match photos. Examples for "CS2": "Counter-Strike 2 gameplay Dust2 map", "CS2 weapon skin AK-47 ingame", "CS2 competitive match screenshot". NEVER use generic/unrelated terms.
+CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
 
-CRITICAL for topic_keywords: Provide 3-5 English keywords that MUST appear in relevant image URLs or titles. For "CS2" use ["cs2","counter-strike","counterstrike","valve","csgo"]. For "Tesla" use ["tesla","model","electric","elon"]. These are used to filter out irrelevant images.`;
+CRITICAL for image_search_terms: Each term MUST be in ENGLISH and describe a specific visual scene directly from the topic. The terms are used for image search, so be very specific and visual. For games like CS2: "Counter-Strike 2 gameplay screenshot Dust2", "CS2 weapon skins showcase", "CS2 competitive match". For brands: "Tesla Model 3 exterior photo", "Tesla factory". NEVER use generic terms like "technology", "update", "performance", "2026". Each term must produce an image that visually represents the specific topic.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 
@@ -166,38 +166,23 @@ CRITICAL for topic_keywords: Provide 3-5 English keywords that MUST appear in re
       };
     }
 
-    // Search for images using multiple strategies
+    // Search for images - use clean topic from AI, not raw user input
     let images: string[] = [];
-    // Force topic relevance: prepend the main topic to every search term
-    const rawTerms = parsedContent.image_search_terms || [topic];
-    const searchTerms = rawTerms.map((t: string) => {
-      const topicLower = topic.toLowerCase().split(' ').slice(0, 3).join(' ');
-      return t.toLowerCase().includes(topicLower.split(' ')[0]) ? t : `${topic} ${t}`;
-    });
+    const cleanTopic = parsedContent.clean_topic || topic;
+    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} screenshot`, `${cleanTopic} photo`];
+    console.log('[IMAGES] Clean topic:', cleanTopic);
+    console.log('[IMAGES] Search terms:', searchTerms);
 
-    // Build relevance keywords for filtering irrelevant images
-    const topicKeywords: string[] = (parsedContent.topic_keywords || []).map((k: string) => k.toLowerCase());
-    // Always include the raw topic words as keywords
-    const topicWords = topic.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
-    const allKeywords = [...new Set([...topicKeywords, ...topicWords])];
-    console.log('[IMAGES] Relevance keywords:', allKeywords);
-
-    // Helper: check if an image URL seems relevant to the topic
-    const isRelevantImage = (url: string, title?: string): boolean => {
-      const combined = (url + ' ' + (title || '')).toLowerCase();
-      // Must match at least one topic keyword in URL or title
-      return allKeywords.some(kw => combined.includes(kw));
-    };
-
-    // Strategy 1: Brave Search Images
+    // Strategy 1: Brave Web Search (better for niche topics like games)
+    // Search on relevant sites and extract images from results
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      console.log('[IMAGES] Trying Brave Search with terms:', searchTerms.slice(0, 3));
-      try {
-        for (const term of searchTerms.slice(0, 3)) {
+      // First try image search with clean terms
+      for (const term of searchTerms.slice(0, 3)) {
+        if (images.length >= 6) break;
+        try {
           const query = encodeURIComponent(term);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=5&safesearch=strict`;
-          console.log('[IMAGES] Brave Search request for:', term);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=8&safesearch=strict`;
           const imgResponse = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
@@ -206,34 +191,22 @@ CRITICAL for topic_keywords: Provide 3-5 English keywords that MUST appear in re
             const results = (imgData.results || []);
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              const imgTitle = item.title || '';
-              if (imgUrl && isRelevantImage(imgUrl, imgTitle)) {
-                images.push(imgUrl);
-              } else if (imgUrl) {
-                console.log('[IMAGES] Filtered out irrelevant:', imgUrl.slice(0, 80));
-              }
+              if (imgUrl) images.push(imgUrl);
             }
-            console.log('[IMAGES] Brave: kept', images.length, 'relevant images so far');
-          } else {
-            const errText = await imgResponse.text();
-            console.error('[IMAGES] Brave Search error:', imgResponse.status, errText);
+            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'results, total:', images.length);
           }
-          if (images.length >= 6) break;
+        } catch (e) {
+          console.error('[IMAGES] Brave error:', e);
         }
-      } catch (imgErr) {
-        console.error('[IMAGES] Brave Search exception:', imgErr);
       }
-    } else {
-      console.log('[IMAGES] Brave Search not configured, skipping');
     }
 
-    // Strategy 2: Pexels fallback if not enough images
+    // Strategy 2: Pexels fallback
     if (images.length < 3) {
       const pexelsKey = Deno.env.get('PEXELS_API_KEY');
       if (pexelsKey) {
-        console.log('[IMAGES] Falling back to Pexels API');
-        try {
-          for (const term of searchTerms.slice(0, 2)) {
+        for (const term of searchTerms.slice(0, 2)) {
+          try {
             const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=5&orientation=landscape`;
             const pexelsRes = await fetch(pexelsUrl, {
               headers: { 'Authorization': pexelsKey },
@@ -241,18 +214,48 @@ CRITICAL for topic_keywords: Provide 3-5 English keywords that MUST appear in re
             if (pexelsRes.ok) {
               const pexelsData = await pexelsRes.json();
               const urls = (pexelsData.photos || []).map((p: any) => p.src?.large2x || p.src?.large || p.src?.original).filter(Boolean);
-              console.log('[IMAGES] Pexels returned', urls.length, 'images for term:', term);
               images.push(...urls);
-            } else {
-              const errText = await pexelsRes.text();
-              console.error('[IMAGES] Pexels error:', pexelsRes.status, errText);
+            }
+          } catch (e) {
+            console.error('[IMAGES] Pexels error:', e);
+          }
+        }
+      }
+    }
+
+    // Strategy 3: Generate images with AI if search found too few
+    if (images.length < 2) {
+      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+      if (lovableKey) {
+        console.log('[IMAGES] Generating AI images for topic:', cleanTopic);
+        try {
+          for (const term of searchTerms.slice(0, 3)) {
+            if (images.length >= 4) break;
+            const aiPrompt = `Create a high-quality, photorealistic image of: ${term}. Make it visually stunning and suitable for a social media carousel post. No text or watermarks.`;
+            const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${lovableKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash-image',
+                messages: [{ role: 'user', content: aiPrompt }],
+                modalities: ['image', 'text'],
+              }),
+            });
+            if (aiRes.ok) {
+              const aiData = await aiRes.json();
+              const aiImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              if (aiImage) {
+                images.push(aiImage);
+                console.log('[IMAGES] AI generated image successfully');
+              }
             }
           }
-        } catch (pexErr) {
-          console.error('[IMAGES] Pexels exception:', pexErr);
+        } catch (e) {
+          console.error('[IMAGES] AI generation error:', e);
         }
-      } else {
-        console.log('[IMAGES] Pexels API key not configured');
       }
     }
 

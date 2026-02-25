@@ -51,6 +51,7 @@ import StepTopic from './wizard/StepTopic';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
+import StepProduct, { ProductAnalysis } from './wizard/StepProduct';
 import StepBrandRef from './wizard/StepBrandRef';
 import StepColors from './wizard/StepColors';
 import StepFonts from './wizard/StepFonts';
@@ -133,7 +134,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Marca', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Fontes', 'Marca Final'];
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -148,6 +149,11 @@ const CarouselGenerator: React.FC = () => {
   const [famousList, setFamousList] = useState<FamousPerson[]>([]);
   const [famousImages, setFamousImages] = useState<{ username: string; images: any[] }[]>([]);
   const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
+  
+  // Product state
+  const [productImages, setProductImages] = useState<{ url: string; thumb: string; file: File }[]>([]);
+  const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
+  const [analyzingProduct, setAnalyzingProduct] = useState(false);
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
@@ -525,6 +531,12 @@ const CarouselGenerator: React.FC = () => {
       const shuffled = contentIndices.sort(() => Math.random() - 0.5);
       for (let i = 0; i < Math.min(imageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
 
+      const productContext = productAnalysis?.confirmed ? {
+        productType: productAnalysis.type,
+        productDescription: productAnalysis.description,
+        productImageUrls: productImages.map(p => p.url),
+      } : undefined;
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
@@ -533,6 +545,7 @@ const CarouselGenerator: React.FC = () => {
           cardCount,
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          ...(productContext ? { productContext } : {}),
         },
       });
       if (error) throw error;
@@ -618,8 +631,24 @@ const CarouselGenerator: React.FC = () => {
           // ALL other cards: generate via AI (covers, ctas, and content cards without web images)
           aiImagesQueued++;
           const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-          const imgPrompt = `${cleanTopic}: ${cardDesc}`;
+          let imgPrompt = `${cleanTopic}: ${cardDesc}`;
+          
+          // Enhance prompt with product context
+          if (productAnalysis?.confirmed) {
+            const productPromptMap: Record<string, string> = {
+              clothing: `Show the clothing/fashion item described as "${productAnalysis.description}" worn by a model in a professional setting. Recreate the garment faithfully.`,
+              object: `Show the product "${productAnalysis.description}" in a professional mockup, lifestyle context, or being held/used naturally.`,
+              food: `Show the food/beverage "${productAnalysis.description}" in professional food-styling, appetizing composition with beautiful plating.`,
+              unknown: `Feature the product "${productAnalysis.description}" prominently in the scene.`,
+            };
+            imgPrompt += '. ' + (productPromptMap[productAnalysis.type] || productPromptMap.unknown);
+          }
+          
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
+          
+          // Use product images as style references if available
+          const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+          const allStyleRefs = [...styleRefUrls, ...productRefUrls];
           
           imagePromises.push({
             index: i,
@@ -628,7 +657,7 @@ const CarouselGenerator: React.FC = () => {
                 return await generateImage({
                   prompt: buildImagePrompt(imgPrompt) + '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.',
                   faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                  styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+                  styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
                   negativePrompt: finalNegative,
                 });
               } catch (err) { console.error('Image gen error for card', i, err); }
@@ -1423,6 +1452,11 @@ const CarouselGenerator: React.FC = () => {
                         famousImages={famousImages} setFamousImages={setFamousImages} />
                     )}
                     {wizardStep === 4 && (
+                      <StepProduct productImages={productImages} setProductImages={setProductImages}
+                        productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
+                        analyzingProduct={analyzingProduct} setAnalyzingProduct={setAnalyzingProduct} />
+                    )}
+                    {wizardStep === 5 && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         brandAssets={brandAssets}
                         onSuggestColors={(palette) => {
@@ -1430,18 +1464,18 @@ const CarouselGenerator: React.FC = () => {
                           setAccentColor(palette.accent);
                           setTextColor(palette.text || '#FFFFFF');
                           // Auto-skip colors step since user accepted brand colors
-                          setTimeout(() => setWizardStep(6), 400);
+                          setTimeout(() => setWizardStep(7), 400);
                         }} />
                     )}
-                    {wizardStep === 5 && (
+                    {wizardStep === 6 && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} />
                     )}
-                    {wizardStep === 6 && (
+                    {wizardStep === 7 && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
                     )}
-                    {wizardStep === 7 && (
+                    {wizardStep === 8 && (
                       <StepBranding brandName={brandName} setBrandName={setBrandName}
                         userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
@@ -1462,8 +1496,8 @@ const CarouselGenerator: React.FC = () => {
 
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
-                        {/* Skip button for face and brand steps */}
-                        {(wizardStep === 3 || wizardStep === 4) && (
+                        {/* Skip button for face, product and brand steps */}
+                        {(wizardStep === 3 || wizardStep === 4 || wizardStep === 5) && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular
@@ -1506,12 +1540,13 @@ const CarouselGenerator: React.FC = () => {
                     <AnimatedCounter target={
                       wizardStep === 0
                         ? (webSearchResult ? 10 : 0)
-                        : wizardStep === 1 ? 20
-                        : wizardStep === 2 ? 35
-                        : wizardStep === 3 ? 50
-                        : wizardStep === 4 ? 60
-                        : wizardStep === 5 ? 75
-                        : wizardStep === 6 ? 88
+                        : wizardStep === 1 ? 18
+                        : wizardStep === 2 ? 30
+                        : wizardStep === 3 ? 42
+                        : wizardStep === 4 ? 52
+                        : wizardStep === 5 ? 62
+                        : wizardStep === 6 ? 75
+                        : wizardStep === 7 ? 88
                         : 99
                     } />
                   </span>

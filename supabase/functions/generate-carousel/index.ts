@@ -202,6 +202,79 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ===== ANALYZE PRODUCT =====
+    if (action === 'analyze-product') {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { imageUrl } = body;
+      if (!imageUrl) {
+        return new Response(JSON.stringify({ error: 'imageUrl is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const analyzeResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: `You are a product image analyzer. Analyze the image and identify the product type and describe it.
+
+Return a JSON object with:
+- "type": one of "clothing", "object", "food", or "unknown"
+- "description": a concise description in Portuguese of what the product is (e.g. "Camiseta polo azul marinho com logo bordado", "Smartphone preto com tela grande", "Hambúrguer artesanal com queijo cheddar")
+- "suggestions": array of 2-4 suggestions in Portuguese for how to showcase this product in carousel images
+
+Examples of suggestions per type:
+- clothing: ["Recriar em modelos diferentes", "Mostrar em cenários urbanos", "Close-up dos detalhes", "Flat lay com acessórios"]
+- object: ["Mockup em ambiente de escritório", "Pessoa segurando o produto", "Close-up detalhado", "Composição lifestyle"]
+- food: ["Food styling profissional", "Close-up apetitoso", "Composição com ingredientes", "Mesa posta elegante"]
+
+Respond ONLY with the JSON object, no markdown or explanation.` },
+            { role: 'user', content: [
+              { type: 'text', text: 'Analyze this product image:' },
+              { type: 'image_url', image_url: { url: imageUrl } },
+            ] },
+          ],
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        console.error('Product analysis error:', analyzeResponse.status);
+        return new Response(JSON.stringify({ success: false, error: 'Erro ao analisar produto' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const analyzeData = await analyzeResponse.json();
+      const content = analyzeData.choices?.[0]?.message?.content || '';
+      
+      try {
+        const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const analysis = JSON.parse(cleaned);
+        return new Response(JSON.stringify({ success: true, analysis }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (e) {
+        console.error('Failed to parse product analysis:', content);
+        return new Response(JSON.stringify({ 
+          success: true, 
+          analysis: { type: 'unknown', description: 'Produto identificado', suggestions: ['Usar como referência visual'] }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // ===== ENHANCE PROMPT =====
     if (action === 'enhance-prompt') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -330,6 +403,8 @@ Responda APENAS em JSON válido:
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Tópico: ${topic}\nPalavras-chave: ${(keywords || []).join(', ')}${
               body.webSearchContent ? `\n\nDADOS REAIS DA WEB (USE OBRIGATORIAMENTE estes dados verificados para criar o conteúdo):\nTítulo: ${body.webSearchContent.title}\nResumo: ${body.webSearchContent.summary}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body} (Fonte: ${f.source})`).join('\n')}\n\nFontes: ${(body.webSearchCitations || []).slice(0, 5).join(', ')}\n\nIMPORTANTE: Baseie TODO o conteúdo nesses dados reais e verificados. Cite estatísticas e fatos reais.` : ''
+            }${
+              body.productContext ? `\n\nPRODUTO IDENTIFICADO:\n- Tipo: ${body.productContext.productType}\n- Descrição: ${body.productContext.productDescription}\n\nIMPORTANTE: O carrossel deve destacar este produto. Cada card de conteúdo deve mencionar ou contextualizar o produto. Os imagePrompts devem descrever cenas com o produto em destaque. Para roupas, descreva modelos vestindo a peça. Para objetos, descreva mockups e contextos de uso. Para alimentos, descreva composições food-styling.` : ''
             }` },
           ],
         }),

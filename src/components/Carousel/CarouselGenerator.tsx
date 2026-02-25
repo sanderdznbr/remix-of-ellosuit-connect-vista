@@ -904,7 +904,7 @@ const CarouselGenerator: React.FC = () => {
   const canProceed = wizardStep === 0 ? (topic.trim().length > 0 && webSearchResult !== null) : true;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#000' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* ===== DARK HEADER when carousel is generated ===== */}
@@ -944,7 +944,7 @@ const CarouselGenerator: React.FC = () => {
       {/* Normal header for editor mode */}
       {carouselData && !generatingAllImages && editingCard !== null && null}
 
-      <div className={carouselData && editingCard === null ? '' : 'max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
+      <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && (
           <div className="flex-1 flex flex-col w-full relative" style={{ backgroundColor: '#0A0A0A' }}>

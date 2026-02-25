@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ===== WEB SEARCH for reference images (Brave Search → SerpAPI → Pexels) =====
+    // ===== WEB SEARCH for reference images (Brave Search only) =====
     if (action === 'web-search') {
       const searchQuery = query || topic || '';
       if (!searchQuery) {
@@ -186,32 +186,6 @@ Deno.serve(async (req) => {
         } catch (e) { console.error('[web-search] Brave exception:', e); }
       }
 
-      // Strategy 2: SerpAPI supplement (if Brave returned few)
-      if (images.length < 10) {
-        const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
-        if (SERPAPI_API_KEY) {
-          console.log('[web-search] Supplementing with SerpAPI');
-          try {
-            const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery + ' photo')}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large&num=30`;
-            const serpRes = await fetch(serpUrl);
-            if (serpRes.ok) {
-              const serpData = await serpRes.json();
-              const serpImages = (serpData.images || []).slice(0, 30).map((item: any, idx: number) => ({
-                id: `serp-${idx}`,
-                url: item.original?.link,
-                thumb: item.thumbnail,
-                alt: item.title || searchQuery,
-                photographer: item.source?.name || 'Google',
-                source: 'google',
-                width: item.original?.width,
-                height: item.original?.height,
-              })).filter(isGoodImage);
-              images = [...images, ...serpImages];
-              console.log('[web-search] SerpAPI added', serpImages.length, 'images');
-            }
-          } catch (e) { console.error('[web-search] SerpAPI exception:', e); }
-        }
-      }
 
       // If no images found at all, return error
       if (images.length === 0) {

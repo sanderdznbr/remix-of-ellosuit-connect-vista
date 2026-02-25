@@ -53,8 +53,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       transition={{ duration: 0.5 }}
     >
       {/* Orb */}
-      <div className="absolute bottom-[-350px] md:bottom-[-550px] lg:bottom-[-700px] left-1/2 -translate-x-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 95vw, 1200px)', height: 'clamp(500px, 95vw, 1200px)' }}>
+      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
           <div className="carousel-loader-spinner" />
         </div>
       </div>

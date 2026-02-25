@@ -91,6 +91,8 @@ interface Props {
   setLogoUrl?: (v: string | null) => void;
   logoPosition?: LogoPosition;
   setLogoPosition?: (v: LogoPosition) => void;
+  globalFontScale?: number;
+  onChangeGlobalFontScale?: (v: number) => void;
 }
 
 const StepStyle: React.FC<Props> = ({
@@ -99,6 +101,7 @@ const StepStyle: React.FC<Props> = ({
   showHeader = true, setShowHeader,
   onApplyPreset,
   logoUrl, setLogoUrl, logoPosition = 'top-left', setLogoPosition,
+  globalFontScale = 100, onChangeGlobalFontScale,
 }) => {
   const [showAllFonts, setShowAllFonts] = useState(false);
   const [activeSection, setActiveSection] = useState<'presets' | 'colors' | 'fonts' | 'branding'>('presets');
@@ -210,26 +213,39 @@ const StepStyle: React.FC<Props> = ({
 
       {/* Fonts */}
       {activeSection === 'fonts' && (
-        <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Escolha a fonte</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {visibleFonts.map((font, i) => (
-              <button key={i} onClick={() => setSelectedFont(i)}
-                className={`px-4 py-3 rounded-xl text-sm text-left transition-all border ${
-                  selectedFont === i
-                    ? 'bg-white/[0.08] border-white/20 text-white font-bold'
-                    : 'bg-white/[0.02] border-white/[0.06] text-white/40 hover:bg-white/[0.05]'
-                }`}>
-                <span style={{ fontFamily: font.value }}>{font.label}</span>
-              </button>
-            ))}
-          </div>
-          {FONT_OPTIONS.length > 12 && (
-            <button onClick={() => setShowAllFonts(!showAllFonts)}
-              className="flex items-center gap-1 mx-auto mt-4 text-xs text-white/30 hover:text-white/50 transition-colors">
-              {showAllFonts ? <><ChevronUp className="h-3 w-3" /> Menos</> : <><ChevronDown className="h-3 w-3" /> +{FONT_OPTIONS.length - 12} fontes</>}
-            </button>
+        <div className="space-y-5">
+          {onChangeGlobalFontScale && (
+            <div>
+              <label className="text-xs font-medium text-white/40 mb-2 flex items-center justify-between">
+                <span>Tamanho da fonte (todos)</span>
+                <span className="text-[10px] font-mono text-white/50">{globalFontScale}%</span>
+              </label>
+              <input type="range" min="50" max="200" step="5" value={globalFontScale}
+                onChange={(e) => onChangeGlobalFontScale(parseInt(e.target.value))}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-white/60" style={{ accentColor: '#8B5CF6' }} />
+            </div>
           )}
+          <div>
+            <p className="text-xs font-medium text-white/40 mb-3">Escolha a fonte</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {visibleFonts.map((font, i) => (
+                <button key={i} onClick={() => setSelectedFont(i)}
+                  className={`px-4 py-3 rounded-xl text-sm text-left transition-all border ${
+                    selectedFont === i
+                      ? 'bg-white/[0.08] border-white/20 text-white font-bold'
+                      : 'bg-white/[0.02] border-white/[0.06] text-white/40 hover:bg-white/[0.05]'
+                  }`}>
+                  <span style={{ fontFamily: font.value }}>{font.label}</span>
+                </button>
+              ))}
+            </div>
+            {FONT_OPTIONS.length > 12 && (
+              <button onClick={() => setShowAllFonts(!showAllFonts)}
+                className="flex items-center gap-1 mx-auto mt-4 text-xs text-white/30 hover:text-white/50 transition-colors">
+                {showAllFonts ? <><ChevronUp className="h-3 w-3" /> Menos</> : <><ChevronDown className="h-3 w-3" /> +{FONT_OPTIONS.length - 12} fontes</>}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

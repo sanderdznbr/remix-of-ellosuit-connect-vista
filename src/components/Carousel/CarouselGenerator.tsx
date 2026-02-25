@@ -484,46 +484,25 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🔍 Buscando referências na web...');
 
-      // PRIORITY 1: Use images already found from the initial web search (Step 1)
-      const webImageSet = new Set<string>();
-      const initialWebImages = webSearchResult?.images || [];
-      initialWebImages.forEach((url: string) => webImageSet.add(url));
-      console.log('Initial web search images available:', initialWebImages.length);
-
-      // PRIORITY 2: Also add any manually selected reference images (general category)
-      referenceImages.filter(r => r.category === 'general').forEach(r => webImageSet.add(r.url));
-
-      // PRIORITY 3: Only if we have very few images, do additional search with card terms
-      if (webImageSet.size < 4) {
-        const allSearchTerms = new Set<string>();
-        cards.forEach(c => (c.searchTerms || []).forEach((t: string) => allSearchTerms.add(t)));
-        const searchPromises = Array.from(allSearchTerms).slice(0, 5).map(async (term) => {
-          try {
-            const { data: sd } = await supabase.functions.invoke('generate-carousel', { body: { action: 'web-search', query: term } });
-            const urls = sd?.images?.slice(0, 4).map((i: any) => i.url).filter(Boolean) || [];
-            urls.forEach((u: string) => webImageSet.add(u));
-            return urls;
-          } catch { return []; }
-        });
-        await Promise.all(searchPromises);
-      }
+      // ONLY use images the user explicitly selected in the References step (category 'general')
+      const selectedImages = referenceImages.filter(r => r.category === 'general').map(r => r.url);
+      console.log('User-selected images:', selectedImages.length);
 
       // Filter out placeholder/broken image URLs
-      const filteredImages = Array.from(webImageSet).filter(url => {
+      const isValidImageUrl = (url: string) => {
         if (!url || typeof url !== 'string') return false;
         const lower = url.toLowerCase();
-        // Filter out common placeholder patterns
         if (lower.includes('placeholder') || lower.includes('1x1') || lower.includes('spacer')) return false;
         if (lower.includes('data:image/svg') || lower.includes('data:image/gif')) return false;
         if (lower.endsWith('.svg') || lower.endsWith('.gif')) return false;
         if (lower.includes('blank.') || lower.includes('empty.') || lower.includes('pixel.')) return false;
         if (lower.includes('logo') && (lower.includes('icon') || lower.includes('favicon'))) return false;
-        // Must be a proper image URL
-        if (!lower.startsWith('http')) return false;
+        if (!lower.startsWith('http') && !lower.startsWith('data:image')) return false;
         return true;
-      });
-      const webImagePool = filteredImages;
-      console.log('Web image pool:', webImagePool.length, 'unique images (initial:', initialWebImages.length, ')');
+      };
+
+      const webImagePool = selectedImages.filter(isValidImageUrl);
+      console.log('Valid selected image pool:', webImagePool.length);
 
       // Determine if we have face/brand references attached
       const updatedCards = [...cards];
@@ -571,27 +550,42 @@ const CarouselGenerator: React.FC = () => {
               })(),
             });
           } else if (webImagePool.length > webImageIndex) {
-            // Content cards: use real web photo
+            // Content cards: use user-selected image
             updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex], isAiImage: false };
             webImageIndex++;
             realImagesUsed++;
           } else {
-            // No web images left - fall back to AI
-            aiImagesQueued++;
+            // No selected images left — search Brave for a unique image for this card
             const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-            const imgPrompt = `${cleanTopic}: ${cardDesc}`;
+            const searchQuery = `${cleanTopic} ${cardDesc}`.slice(0, 80);
             imagePromises.push({
               index: i,
               promise: (async () => {
                 try {
+                  // Search Brave for this specific card
+                  const { data: searchData } = await supabase.functions.invoke('generate-carousel', {
+                    body: { action: 'web-search', query: searchQuery },
+                  });
+                  const foundImages = (searchData?.images || [])
+                    .map((img: any) => img.url)
+                    .filter((url: string) => isValidImageUrl(url));
+                  if (foundImages.length > 0) {
+                    // Pick a random one to avoid repetition
+                    const randomIdx = Math.floor(Math.random() * Math.min(foundImages.length, 5));
+                    return foundImages[randomIdx];
+                  }
+                  // Brave found nothing — fall back to AI generation
                   return await generateImage({
-                    prompt: buildImagePrompt(imgPrompt),
+                    prompt: buildImagePrompt(`${cleanTopic}: ${cardDesc}`),
                     negativePrompt: imageSettings.negativePrompt || undefined,
                   });
-                } catch (err) { console.error('Image gen error for card', i, err); }
-                return null;
+                } catch (err) {
+                  console.error('Image search/gen error for card', i, err);
+                  return null;
+                }
               })(),
             });
+            aiImagesQueued++;
           }
         }
       }

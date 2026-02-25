@@ -139,6 +139,7 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
 
@@ -1286,10 +1287,13 @@ const CarouselGenerator: React.FC = () => {
             </div>
 
             {/* Card strip - horizontal thumbnails */}
-            <div className="w-full max-w-4xl mt-6 relative z-10">
-              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 justify-center">
-                {carouselData.cards.map((card, i) => (
-                  <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: 100 }}
+            <div className="w-full max-w-5xl mt-6 relative z-10">
+              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory px-4 justify-center">
+                {carouselData.cards.map((card, i) => {
+                  const thumbW = 150;
+                  const thumbH = thumbW * (CARD_H / CARD_W);
+                  return (
+                  <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
                     onClick={() => setActiveCardIndex(i)}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
@@ -1297,25 +1301,48 @@ const CarouselGenerator: React.FC = () => {
                       opacity: i === activeCardIndex ? 1 : 0.6,
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>
-                      <div style={{ width: 96, height: 96 * (CARD_H / CARD_W), overflow: 'hidden', borderRadius: 10 }}>
-                        <div style={{ transform: `scale(${96 / CARD_W})`, transformOrigin: 'top left', width: CARD_W, height: CARD_H }}>
+                      <div style={{ width: thumbW, height: thumbH, overflow: 'hidden', borderRadius: 10 }}>
+                        <div style={{ transform: `scale(${thumbW / CARD_W})`, transformOrigin: 'top left', width: CARD_W, height: CARD_H }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                       </div>
                     </div>
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
+                    {/* Hover actions */}
+                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
                       <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                        <Edit3 className="h-3 w-3 text-white" />
+                        className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        <Edit3 className="h-3.5 w-3.5 text-white" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i}
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                        {regeneratingCard === i ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <RotateCcw className="h-3 w-3 text-white" />}
-                      </button>
+                      {/* Regenerate dropdown */}
+                      <div className="relative">
+                        <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(regenMenuOpen === i ? null : i); }}
+                          disabled={regeneratingCard === i}
+                          className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                          {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 text-white" />}
+                        </button>
+                        {regenMenuOpen === i && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 rounded-xl overflow-hidden shadow-2xl z-50"
+                            style={{ backgroundColor: '#1A1A24', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); regenerateCard(i); }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
+                              <Wand2 className="h-3.5 w-3.5 text-purple-400" /> Gerar com IA
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (ev) => { const file = (ev.target as HTMLInputElement).files?.[0]; if (file) handleFileUpload(i, file); }; input.click(); }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
+                              <Upload className="h-3.5 w-3.5 text-blue-400" /> Carregar imagem
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); setShowImagePicker(i); setActiveCardIndex(i); }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
+                              <Search className="h-3.5 w-3.5 text-green-400" /> Buscar no Google
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

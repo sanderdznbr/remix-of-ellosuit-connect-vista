@@ -459,6 +459,9 @@ const CarouselGenerator: React.FC = () => {
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const hasFaceOrBrandRefs = faceRefUrls.length > 0 || styleRefUrls.length > 0;
 
+      // Extract the clean topic from web search to always include in AI prompts
+      const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
+
       // STRATEGY: Use real web photos first, only use AI when face/brand refs are attached
       let webImageIndex = 0;
       const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
@@ -476,7 +479,9 @@ const CarouselGenerator: React.FC = () => {
           // COVER cards ALWAYS use AI generation (never Pexels/web)
           if (isCover || hasFaceOrBrandRefs) {
             aiImagesQueued++;
-            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+            const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
+            // ALWAYS prefix with clean topic so AI knows the subject (e.g. "CS2: ...")
+            const imgPrompt = `${cleanTopic}: ${cardDesc}`;
             imagePromises.push({
               index: i,
               promise: (async () => {
@@ -507,7 +512,8 @@ const CarouselGenerator: React.FC = () => {
           } else {
             // No web images left - fall back to AI
             aiImagesQueued++;
-            const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
+            const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
+            const imgPrompt = `${cleanTopic}: ${cardDesc}`;
             imagePromises.push({
               index: i,
               promise: (async () => {

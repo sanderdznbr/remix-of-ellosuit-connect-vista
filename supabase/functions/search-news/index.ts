@@ -43,11 +43,14 @@ Deno.serve(async (req) => {
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3"],
+  "topic_keywords": ["keyword1", "keyword2", "keyword3"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
-CRITICAL for image_search_terms: Each term MUST be highly specific and directly related to the main topic "${topic}". Always include the topic name/brand in each search term. For example, if the topic is "CS2", use terms like "Counter-Strike 2 gameplay screenshot", "CS2 map Dust2", "CS2 weapon skins". NEVER use generic terms like "technology", "2026", "Brazil", "business" etc. The terms must return images that visually represent the specific topic.`;
+CRITICAL for image_search_terms: Each term MUST describe a visual scene directly from the topic "${topic}" itself. For games, use in-game screenshots descriptions. For brands, use product photos. For sports, use match photos. Examples for "CS2": "Counter-Strike 2 gameplay Dust2 map", "CS2 weapon skin AK-47 ingame", "CS2 competitive match screenshot". NEVER use generic/unrelated terms.
+
+CRITICAL for topic_keywords: Provide 3-5 English keywords that MUST appear in relevant image URLs or titles. For "CS2" use ["cs2","counter-strike","counterstrike","valve","csgo"]. For "Tesla" use ["tesla","model","electric","elon"]. These are used to filter out irrelevant images.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 
@@ -168,32 +171,54 @@ CRITICAL for image_search_terms: Each term MUST be highly specific and directly 
     // Force topic relevance: prepend the main topic to every search term
     const rawTerms = parsedContent.image_search_terms || [topic];
     const searchTerms = rawTerms.map((t: string) => {
-      // If the term already contains the topic keyword, use as-is; otherwise prepend it
       const topicLower = topic.toLowerCase().split(' ').slice(0, 3).join(' ');
       return t.toLowerCase().includes(topicLower.split(' ')[0]) ? t : `${topic} ${t}`;
     });
 
+    // Build relevance keywords for filtering irrelevant images
+    const topicKeywords: string[] = (parsedContent.topic_keywords || []).map((k: string) => k.toLowerCase());
+    // Always include the raw topic words as keywords
+    const topicWords = topic.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+    const allKeywords = [...new Set([...topicKeywords, ...topicWords])];
+    console.log('[IMAGES] Relevance keywords:', allKeywords);
+
+    // Helper: check if an image URL seems relevant to the topic
+    const isRelevantImage = (url: string, title?: string): boolean => {
+      const combined = (url + ' ' + (title || '')).toLowerCase();
+      // Must match at least one topic keyword in URL or title
+      return allKeywords.some(kw => combined.includes(kw));
+    };
+
     // Strategy 1: Brave Search Images
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      console.log('[IMAGES] Trying Brave Search with terms:', searchTerms.slice(0, 2));
+      console.log('[IMAGES] Trying Brave Search with terms:', searchTerms.slice(0, 3));
       try {
-        for (const term of searchTerms.slice(0, 2)) {
-          const query = encodeURIComponent(term + ' ' + topic);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=3&safesearch=strict`;
+        for (const term of searchTerms.slice(0, 3)) {
+          const query = encodeURIComponent(term);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=5&safesearch=strict`;
           console.log('[IMAGES] Brave Search request for:', term);
           const imgResponse = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
           if (imgResponse.ok) {
             const imgData = await imgResponse.json();
-            const urls = (imgData.results || []).slice(0, 3).map((item: any) => item.properties?.url || item.thumbnail?.src).filter(Boolean);
-            console.log('[IMAGES] Brave Search returned', urls.length, 'images for term:', term);
-            images.push(...urls);
+            const results = (imgData.results || []);
+            for (const item of results) {
+              const imgUrl = item.properties?.url || item.thumbnail?.src;
+              const imgTitle = item.title || '';
+              if (imgUrl && isRelevantImage(imgUrl, imgTitle)) {
+                images.push(imgUrl);
+              } else if (imgUrl) {
+                console.log('[IMAGES] Filtered out irrelevant:', imgUrl.slice(0, 80));
+              }
+            }
+            console.log('[IMAGES] Brave: kept', images.length, 'relevant images so far');
           } else {
             const errText = await imgResponse.text();
             console.error('[IMAGES] Brave Search error:', imgResponse.status, errText);
           }
+          if (images.length >= 6) break;
         }
       } catch (imgErr) {
         console.error('[IMAGES] Brave Search exception:', imgErr);
@@ -202,14 +227,14 @@ CRITICAL for image_search_terms: Each term MUST be highly specific and directly 
       console.log('[IMAGES] Brave Search not configured, skipping');
     }
 
-    // Strategy 2: Pexels fallback if no images found
-    if (images.length === 0) {
+    // Strategy 2: Pexels fallback if not enough images
+    if (images.length < 3) {
       const pexelsKey = Deno.env.get('PEXELS_API_KEY');
       if (pexelsKey) {
         console.log('[IMAGES] Falling back to Pexels API');
         try {
           for (const term of searchTerms.slice(0, 2)) {
-            const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=3&orientation=landscape`;
+            const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=5&orientation=landscape`;
             const pexelsRes = await fetch(pexelsUrl, {
               headers: { 'Authorization': pexelsKey },
             });
@@ -231,6 +256,8 @@ CRITICAL for image_search_terms: Each term MUST be highly specific and directly 
       }
     }
 
+    // Deduplicate
+    images = [...new Set(images)];
     console.log('[IMAGES] Total images found:', images.length);
 
     return new Response(

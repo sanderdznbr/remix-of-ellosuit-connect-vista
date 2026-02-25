@@ -1003,55 +1003,62 @@ const CarouselGenerator: React.FC = () => {
         return (
           <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* Editor top bar */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border bg-background shrink-0">
+              <div className="flex items-center gap-2">
                 <button onClick={() => setEditingCard(null)} className="p-2 rounded-xl hover:bg-muted transition-colors">
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <h2 className="font-bold text-foreground">Editando Carrossel</h2>
+                <h2 className="font-bold text-foreground text-sm sm:text-base">Editando</h2>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1.5 rounded-xl">
-                  {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {currentCarouselId ? 'Atualizar' : 'Salvar'}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 rounded-xl text-xs px-2 sm:px-3">
+                  {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
                 </Button>
-                <Button onClick={exportAllCards} disabled={exporting} className="gap-2 rounded-xl" style={{ backgroundColor: FLOW_COLOR }}>
-                  {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PNGs
+                <Button onClick={exportAllCards} disabled={exporting} size="sm" className="gap-1 rounded-xl text-xs px-2 sm:px-3" style={{ backgroundColor: FLOW_COLOR }}>
+                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline">Exportar</span>
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-              {/* Center: Large preview with card navigation */}
-              <div className="flex-1 flex flex-col items-center bg-muted/20 overflow-auto p-2">
-                <div className="flex-1 flex items-center justify-center w-full min-h-0">
-                  <div className="relative" style={{ width: PREVIEW_W * 1.6, height: PREVIEW_H * 1.6, maxWidth: '90vw' }}>
-                    <div style={{ transform: 'scale(1.6)', transformOrigin: 'top left' }}>
+            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+              {/* Center: preview with card navigation */}
+              <div className="flex flex-col items-center bg-muted/20 p-2 shrink-0 md:flex-1 md:overflow-auto">
+                <div className="flex items-center justify-center w-full" style={{ minHeight: 0 }}>
+                  <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
+                    <div style={{
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.85 : 300) / PREVIEW_W, 1.6)})`,
+                      transformOrigin: 'top center',
+                      width: PREVIEW_W,
+                      height: PREVIEW_H,
+                      margin: '0 auto',
+                    }}>
                       {renderCardPreview(ec, validIndex)}
                     </div>
                   </div>
                 </div>
                 {/* Card navigation dots */}
-                <div className="flex items-center gap-2 py-3 flex-shrink-0">
+                <div className="flex items-center gap-2 py-2 shrink-0">
                   <button onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
                     disabled={validIndex === 0} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     {carouselData.cards.map((_, i) => (
                       <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
-                        className={`w-2.5 h-2.5 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
+                        className={`w-2 h-2 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
                     ))}
                   </div>
                   <button onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
                     disabled={validIndex === carouselData.cards.length - 1} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
-                  <span className="text-xs text-muted-foreground font-medium ml-2">{validIndex + 1}/{carouselData.cards.length}</span>
+                  <span className="text-xs text-muted-foreground font-medium ml-1">{validIndex + 1}/{carouselData.cards.length}</span>
                 </div>
               </div>
 
-              {/* Right sidebar */}
+              {/* Right sidebar - scrollable on mobile */}
               <CarouselEditorSidebar
                 card={ec}
                 cardIndex={validIndex}

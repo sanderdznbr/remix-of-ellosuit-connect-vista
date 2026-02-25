@@ -92,7 +92,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   const PRESET_COLORS = ['#0F0F1A', '#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560', '#E84D1A', '#F38181', '#FCE38A', '#95E1D3', '#EAFFD0', '#F8F4EF', '#FFFFFF'];
 
   return (
-    <div className="w-[340px] flex-shrink-0 border-l border-border bg-background flex flex-col h-full">
+    <div className="w-full md:w-[340px] flex-shrink-0 border-t md:border-t-0 md:border-l border-border bg-background flex flex-col min-h-0 flex-1 md:h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">

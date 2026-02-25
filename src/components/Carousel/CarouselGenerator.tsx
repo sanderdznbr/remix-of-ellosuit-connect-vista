@@ -1393,7 +1393,7 @@ const CarouselGenerator: React.FC = () => {
   }, [wizardStep, speakStep, showWelcome]);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
+    <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* ===== WELCOME SCREEN ===== */}
@@ -1719,7 +1719,7 @@ const CarouselGenerator: React.FC = () => {
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
-          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Subtle background glow effects */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />

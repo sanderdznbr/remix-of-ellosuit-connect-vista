@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "EXAVITQu4vr4xnSDxMaL"}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "RGymW84CSmfVugnA5tvA"}?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {

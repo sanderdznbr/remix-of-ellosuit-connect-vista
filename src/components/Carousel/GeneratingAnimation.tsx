@@ -215,40 +215,120 @@ const GeneratingAnimation: React.FC<Props> = ({ imageGenProgress }) => {
             style={{ background: 'linear-gradient(transparent, #050508)' }} />
         </div>
 
-        {/* Mini card previews */}
+        {/* Mini card previews — realistic */}
         <div className="p-6" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <p className="text-white/20 text-[10px] font-mono uppercase tracking-widest mb-3">Cards sendo criados</p>
           <div className="grid grid-cols-6 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={showMiniCards.includes(i) ? { opacity: 1, scale: 1 } : { opacity: 0.1, scale: 0.8 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="aspect-[4/5] rounded-lg overflow-hidden relative"
-                style={{
-                  background: showMiniCards.includes(i) ? miniCardColors[i] : 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                {showMiniCards.includes(i) && (
-                  <>
-                    <div className="absolute top-1.5 left-1.5 right-1.5">
-                      <div className="h-1 rounded-full mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '60%' }} />
-                      <div className="h-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.1)', width: '80%' }} />
-                    </div>
-                    <div className="absolute bottom-1.5 left-1.5 right-1.5 h-[40%] rounded"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
-                    <motion.div
-                      className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                      animate={{ scale: [1, 1.3, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      style={{ backgroundColor: '#28C840' }}
-                    />
-                  </>
-                )}
-              </motion.div>
-            ))}
+            {Array.from({ length: 6 }).map((_, i) => {
+              const isActive = showMiniCards.includes(i);
+              const cardTypes = ['cover', 'content', 'content', 'image', 'content', 'cta'];
+              const type = cardTypes[i];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={isActive ? { opacity: 1, scale: 1 } : { opacity: 0.1, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="aspect-[4/5] rounded-lg overflow-hidden relative"
+                  style={{
+                    background: isActive ? miniCardColors[i] : 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  {isActive && (
+                    <>
+                      <motion.div
+                        className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full z-10"
+                        animate={{ scale: [1, 1.3, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                        style={{ backgroundColor: '#28C840' }}
+                      />
+
+                      {type === 'cover' && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+                          <motion.div className="w-5 h-1.5 rounded-full mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                            initial={{ width: 0 }} animate={{ width: 20 }} transition={{ duration: 0.8, delay: 0.3 }} />
+                          <motion.div className="h-1.5 rounded-full mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.35)', width: '70%' }}
+                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.6 }} />
+                          <motion.div className="h-1 rounded-full mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '50%' }}
+                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.9 }} />
+                          <motion.div className="h-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.1)', width: '40%' }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} />
+                        </div>
+                      )}
+
+                      {type === 'content' && (
+                        <div className="absolute inset-0 p-1.5 flex flex-col">
+                          <motion.div className="w-3 h-3 rounded-full mb-1.5 flex items-center justify-center"
+                            style={{ backgroundColor: 'rgba(123,80,220,0.5)' }}
+                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
+                            <span className="text-white text-[5px] font-bold">{i}</span>
+                          </motion.div>
+                          <motion.div className="h-1 rounded-full mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.3)', width: '80%' }}
+                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.4 }} />
+                          {[65, 90, 75, 50].map((w, j) => (
+                            <motion.div key={j} className="h-0.5 rounded-full mb-0.5"
+                              style={{ backgroundColor: 'rgba(255,255,255,0.1)', width: `${w}%` }}
+                              initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.3, delay: 0.6 + j * 0.15 }} />
+                          ))}
+                          <motion.div className="mt-auto rounded h-[35%]"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+                            <motion.div className="w-full h-full rounded flex items-center justify-center"
+                              animate={{ opacity: [0.3, 0.6, 0.3] }}
+                              transition={{ duration: 2, repeat: Infinity }}>
+                              <span className="text-[6px] text-white/20">🖼️</span>
+                            </motion.div>
+                          </motion.div>
+                        </div>
+                      )}
+
+                      {type === 'image' && (
+                        <div className="absolute inset-0 flex flex-col">
+                          <motion.div className="flex-1 relative overflow-hidden"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                            <motion.div className="absolute inset-0"
+                              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)' }}
+                              animate={{ x: ['-100%', '100%'] }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} />
+                          </motion.div>
+                          <div className="p-1.5">
+                            <motion.div className="h-1 rounded-full mb-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.25)', width: '75%' }}
+                              initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.8 }} />
+                            <motion.div className="h-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.1)', width: '55%' }}
+                              initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.4, delay: 1 }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {type === 'cta' && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+                          <motion.div className="w-4 h-4 rounded-full mb-1.5 flex items-center justify-center"
+                            style={{ backgroundColor: 'rgba(123,80,220,0.4)' }}
+                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.3 }}>
+                            <span className="text-[6px]">🚀</span>
+                          </motion.div>
+                          <motion.div className="h-1 rounded-full mb-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.3)', width: '60%' }}
+                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.6 }} />
+                          <motion.div className="h-2.5 rounded-full px-2 flex items-center justify-center"
+                            style={{ backgroundColor: 'rgba(123,80,220,0.6)', width: '65%' }}
+                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.9 }}>
+                            <div className="h-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.5)', width: '70%' }} />
+                          </motion.div>
+                        </div>
+                      )}
+
+                      {i === showMiniCards.length - 1 && (
+                        <motion.div className="absolute bottom-1 left-1.5 w-0.5 h-2 rounded-full"
+                          style={{ backgroundColor: '#7B50DC' }}
+                          animate={{ opacity: [1, 0, 1] }}
+                          transition={{ duration: 0.8, repeat: Infinity }} />
+                      )}
+                    </>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

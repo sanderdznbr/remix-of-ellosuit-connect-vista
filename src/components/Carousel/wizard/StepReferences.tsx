@@ -293,29 +293,37 @@ const StepReferences: React.FC<Props> = ({
           {webImages && webImages.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-white/40">Imagens encontradas ({webImages.length})</p>
-              <div className="grid grid-cols-3 gap-2 max-h-[250px] overflow-y-auto">
+              <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
                 {webImages.map((imgUrl, i) => {
                   const alreadyAdded = referenceImages.some(r => r.url === imgUrl);
                   return (
-                    <button key={i} onClick={() => {
-                      if (alreadyAdded) return;
-                      setReferenceImages(prev => [...prev, {
-                        url: imgUrl, thumb: imgUrl, label: `Web image ${i + 1}`, source: 'web', category: 'general',
-                      }]);
-                      toast({ title: 'Imagem adicionada!' });
-                    }}
-                      className={`rounded-lg overflow-hidden aspect-video ring-1 ring-white/[0.06] relative group ${alreadyAdded ? 'opacity-40' : 'hover:opacity-80'} transition-opacity`}>
-                      <img src={imgUrl} alt={`Web ${i + 1}`} className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div key={i} className="relative group">
+                      <button onClick={() => {
+                        if (alreadyAdded) return;
+                        setReferenceImages(prev => [...prev, {
+                          url: imgUrl, thumb: imgUrl, label: `Web image ${i + 1}`, source: 'web', category: 'general',
+                        }]);
+                        toast({ title: 'Imagem adicionada!' });
+                      }}
+                        className={`w-full rounded-lg overflow-hidden aspect-video ring-1 ring-white/[0.06] relative ${alreadyAdded ? 'opacity-40' : 'hover:opacity-80'} transition-opacity`}>
+                        <img src={imgUrl} alt={`Web ${i + 1}`} className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        {alreadyAdded && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white/60 text-[10px] font-medium">✓</div>
+                        )}
+                        {!alreadyAdded && (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white/80 text-[10px] font-medium">+ Usar</span>
+                          </div>
+                        )}
+                      </button>
                       {alreadyAdded && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white/60 text-[10px] font-medium">✓</div>
+                        <button onClick={() => setReferenceImages(prev => prev.filter(r => r.url !== imgUrl))}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10">
+                          <X className="h-3 w-3" />
+                        </button>
                       )}
-                      {!alreadyAdded && (
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white/80 text-[10px] font-medium">+ Usar</span>
-                        </div>
-                      )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>

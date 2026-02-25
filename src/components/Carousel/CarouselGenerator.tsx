@@ -426,20 +426,22 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🔍 Buscando referências na web...');
 
-      // Web search - collect REAL images from Brave/SerpAPI/Pexels
+      // Web search - collect REAL images from Brave/SerpAPI/Pexels (deduplicated)
       const allSearchTerms = new Set<string>();
       cards.forEach(c => (c.searchTerms || []).forEach((t: string) => allSearchTerms.add(t)));
-      const webImagePool: string[] = [];
+      const webImageSet = new Set<string>();
       const searchPromises = Array.from(allSearchTerms).slice(0, 5).map(async (term) => {
         try {
           const { data: sd } = await supabase.functions.invoke('generate-carousel', { body: { action: 'web-search', query: term } });
           const urls = sd?.images?.slice(0, 4).map((i: any) => i.url).filter(Boolean) || [];
-          webImagePool.push(...urls);
+          urls.forEach((u: string) => webImageSet.add(u));
           return urls;
         } catch { return []; }
       });
       await Promise.all(searchPromises);
-      console.log('Web image pool:', webImagePool.length, 'images found');
+      // Shuffle to avoid same order every time
+      const webImagePool = Array.from(webImageSet).sort(() => Math.random() - 0.5);
+      console.log('Web image pool:', webImagePool.length, 'unique images found');
 
       // Determine if we have face/brand references attached
       const updatedCards = [...cards];

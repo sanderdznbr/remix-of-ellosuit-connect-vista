@@ -164,37 +164,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         )}
       </AnimatePresence>
 
-      {/* Brand assets library */}
-      {brandAssets.length > 0 && (
-        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-4">
-          <span className="text-sm font-medium text-white/60">Biblioteca de Marca</span>
-          <div className="grid grid-cols-5 gap-2 max-h-[200px] overflow-y-auto">
-            {brandAssets.map(asset => {
-              const added = referenceImages.some(r => r.url === asset.file_url);
-              return (
-                <button key={asset.id} onClick={() => {
-                  setDismissed(false);
-                  if (added) {
-                    setReferenceImages(prev => prev.filter(r => r.url !== asset.file_url));
-                  } else {
-                    setReferenceImages(prev => [...prev, { url: asset.file_url, thumb: asset.file_url, label: asset.name, source: 'upload', category: 'style' }]);
-                  }
-                }}
-                  className={`rounded-lg overflow-hidden aspect-square transition-all relative group ${
-                    added ? 'ring-2 ring-purple-500/60' : 'ring-1 ring-white/[0.06] hover:ring-white/20'
-                  }`}>
-                  <img src={asset.file_url} alt={asset.name} className="w-full h-full object-cover" />
-                  {added && (
-                    <div className="absolute inset-0 bg-purple-600/20 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✓</span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {styleRefs.length > 0 && (
         <div>

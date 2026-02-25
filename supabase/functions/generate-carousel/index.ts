@@ -675,6 +675,56 @@ STYLE REQUIREMENTS:
       });
     }
 
+    // ===== GENERATE CAPTION =====
+    if (action === 'generate-caption') {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const captionPrompt = `Gere uma legenda profissional para um post de carrossel no Instagram sobre o tema: "${topic || 'conteúdo profissional'}".
+${keywords?.length ? `Palavras-chave: ${keywords.join(', ')}` : ''}
+O carrossel tem ${cardCount || 7} cards.
+
+Regras:
+- Escreva em português brasileiro
+- Use emojis estrategicamente (não exagere)
+- Inclua uma chamada para ação (salve, compartilhe, comente)
+- Adicione 15-20 hashtags relevantes no final
+- Máximo 2200 caracteres
+- Tom profissional mas acessível
+- Não use markdown, apenas texto simples`;
+
+      const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: 'Você é um especialista em social media e copywriting para Instagram.' },
+            { role: 'user', content: captionPrompt },
+          ],
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        console.error('AI caption error:', aiRes.status, errText);
+        return new Response(JSON.stringify({ error: 'Erro ao gerar legenda' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const aiData = await aiRes.json();
+      const caption = aiData.choices?.[0]?.message?.content?.trim() || '';
+
+      return new Response(JSON.stringify({ success: true, caption }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Ação inválida' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

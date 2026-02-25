@@ -29,22 +29,14 @@ const FONT_OPTIONS = [
 
 // Color palette presets
 const COLOR_PRESETS = [
-  { name: 'Escuro Clássico', bg: '#0F0F1A', accent: '#E84D1A', text: '#FFFFFF' },
+  { name: 'Ellosuit Dark', bg: '#0A0A1A', accent: '#3000E3', text: '#FFFFFF' },
+  { name: 'Ellosuit Light', bg: '#FFFFFF', accent: '#3000E3', text: '#0A0A1A' },
+  { name: 'Ellosuit Blue', bg: '#3000E3', accent: '#FFFFFF', text: '#FFFFFF' },
+  { name: 'Preto & Branco', bg: '#000000', accent: '#FFFFFF', text: '#FFFFFF' },
+  { name: 'Branco & Preto', bg: '#FFFFFF', accent: '#000000', text: '#0A0A1A' },
   { name: 'Midnight Blue', bg: '#0A1628', accent: '#3B82F6', text: '#F1F5F9' },
-  { name: 'Elegant Green', bg: '#0D1F0D', accent: '#22C55E', text: '#F0FDF4' },
-  { name: 'Royal Purple', bg: '#1A0A2E', accent: '#A855F7', text: '#FAF5FF' },
-  { name: 'Rose Gold', bg: '#1C1017', accent: '#FB7185', text: '#FFF1F2' },
+  { name: 'Cool Gray', bg: '#F3F4F6', accent: '#3000E3', text: '#111827' },
   { name: 'Ocean Teal', bg: '#042F2E', accent: '#2DD4BF', text: '#F0FDFA' },
-  { name: 'Amber Fire', bg: '#1C1106', accent: '#F59E0B', text: '#FFFBEB' },
-  { name: 'Minimalista Claro', bg: '#FAFAF9', accent: '#18181B', text: '#18181B' },
-  { name: 'Paper Cream', bg: '#F8F4EF', accent: '#92400E', text: '#1C1917' },
-  { name: 'Cool Gray', bg: '#F3F4F6', accent: '#4F46E5', text: '#111827' },
-  { name: 'Soft Pink', bg: '#FDF2F8', accent: '#DB2777', text: '#1F2937' },
-  { name: 'Sage Green', bg: '#F0FDF4', accent: '#15803D', text: '#14532D' },
-  { name: 'Neon Night', bg: '#000000', accent: '#00FF88', text: '#FFFFFF' },
-  { name: 'Cyberpunk', bg: '#0D0221', accent: '#FF006E', text: '#F9FAFB' },
-  { name: 'Sunset Gradient', bg: '#1A0505', accent: '#FF6B35', text: '#FFF7ED' },
-  { name: 'Arctic Ice', bg: '#0C1222', accent: '#38BDF8', text: '#E0F2FE' },
 ];
 
 // Style presets - now define LAYOUT DESIGNS, not just colors
@@ -68,90 +60,13 @@ export interface StylePreset {
 
 export const STYLE_PRESETS: StylePreset[] = [
   {
-    id: 'editorial-classic',
-    name: 'Editorial Clássico',
-    description: 'Layout padrão: texto acima, imagem abaixo, fundo escuro. O formato mais usado.',
-    emoji: '📰',
-    bgColor: '#0F0F1A', accentColor: '#E84D1A', textColor: '#FFFFFF',
-    fontIndex: 0,
-    layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
-    layoutType: 'classic', imagePosition: 'center', textAlignment: 'left',
-    coverStyle: 'overlay', contentDensity: 'balanced',
-  },
-  {
-    id: 'split-layout',
-    name: 'Split Horizontal',
-    description: 'Imagem em metade do card, texto na outra metade. Moderno e limpo.',
-    emoji: '◧',
-    bgColor: '#FAFAF9', accentColor: '#18181B', textColor: '#18181B',
+    id: 'ellosuit-editorial',
+    name: 'Ellosuit Editorial',
+    description: 'Estilo oficial Ellosuit: fundo escuro com azul vibrante e texto branco. Moderno e profissional.',
+    emoji: '🔷',
+    bgColor: '#0A0A1A', accentColor: '#3000E3', textColor: '#FFFFFF',
     fontIndex: 10, // Inter
-    layoutPattern: ['light', 'light', 'dark', 'light', 'light'],
-    layoutType: 'split', imagePosition: 'left', textAlignment: 'left',
-    coverStyle: 'split-horizontal', contentDensity: 'balanced',
-  },
-  {
-    id: 'full-image-overlay',
-    name: 'Imagem Full + Texto',
-    description: 'Imagem ocupa todo o card com texto sobreposto. Impactante e visual.',
-    emoji: '🖼️',
-    bgColor: '#000000', accentColor: '#FFD60A', textColor: '#FFFFFF',
-    fontIndex: 7, // Bebas Neue
-    layoutPattern: ['dark', 'accent', 'dark', 'accent', 'dark'],
-    layoutType: 'full-image', imagePosition: 'full', textAlignment: 'center',
-    coverStyle: 'bold-center', contentDensity: 'spacious',
-  },
-  {
-    id: 'minimal-text',
-    name: 'Texto Minimalista',
-    description: 'Foco 100% no texto com tipografia grande. Sem imagens nos cards de conteúdo.',
-    emoji: '✏️',
-    bgColor: '#F8F4EF', accentColor: '#92400E', textColor: '#1C1917',
-    fontIndex: 4, // Cormorant Garamond
-    layoutPattern: ['dark', 'light', 'light', 'accent', 'light'],
-    layoutType: 'minimal-text', imagePosition: 'center', textAlignment: 'center',
-    coverStyle: 'minimal', contentDensity: 'spacious',
-  },
-  {
-    id: 'bold-header',
-    name: 'Título Gigante',
-    description: 'Cabeçalho dominante em cada card, texto menor abaixo. Alto impacto.',
-    emoji: '💥',
-    bgColor: '#1A0A2E', accentColor: '#C084FC', textColor: '#FAF5FF',
-    fontIndex: 18, // Archivo Black
-    layoutPattern: ['dark', 'dark', 'accent', 'dark', 'dark'],
-    layoutType: 'bold-header', imagePosition: 'bottom', textAlignment: 'left',
-    coverStyle: 'bold-center', contentDensity: 'compact',
-  },
-  {
-    id: 'editorial-grid',
-    name: 'Grid Editorial',
-    description: 'Layout estilo revista com blocos de texto e imagem em grid organizado.',
-    emoji: '📐',
-    bgColor: '#0A1628', accentColor: '#3B82F6', textColor: '#F1F5F9',
-    fontIndex: 11, // Space Grotesk
     layoutPattern: ['dark', 'dark', 'light', 'accent', 'dark'],
-    layoutType: 'editorial-grid', imagePosition: 'right', textAlignment: 'left',
-    coverStyle: 'overlay', contentDensity: 'compact',
-  },
-  {
-    id: 'neon-dark',
-    name: 'Neon Escuro',
-    description: 'Visual futurista com neon sobre fundo escuro. Ideal para tech e inovação.',
-    emoji: '🌃',
-    bgColor: '#0D0221', accentColor: '#00FF88', textColor: '#F9FAFB',
-    fontIndex: 12, // Sora
-    layoutPattern: ['dark', 'dark', 'dark', 'accent', 'dark'],
-    layoutType: 'classic', imagePosition: 'center', textAlignment: 'center',
-    coverStyle: 'overlay', contentDensity: 'balanced',
-  },
-  {
-    id: 'warm-sunset',
-    name: 'Sunset Quente',
-    description: 'Tons quentes com layout clássico. Ideal para lifestyle e bem-estar.',
-    emoji: '🌅',
-    bgColor: '#1A0505', accentColor: '#FF6B35', textColor: '#FFF7ED',
-    fontIndex: 2, // Lora
-    layoutPattern: ['dark', 'accent', 'dark', 'dark', 'accent'],
     layoutType: 'classic', imagePosition: 'center', textAlignment: 'left',
     coverStyle: 'overlay', contentDensity: 'balanced',
   },

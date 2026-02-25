@@ -155,57 +155,103 @@ Deno.serve(async (req) => {
         console.log(`[USER-NOTIFY] WhatsApp global=${whatsappGlobalEnabled}, specific=${specificEnabled}, quietHours=${inQuietHours}`);
 
         if (whatsappGlobalEnabled && specificEnabled && !inQuietHours) {
-          // Get user's WhatsApp number
+          // Get user's WhatsApp number from multiple sources
           let userPhone = prefs?.whatsapp_number;
 
+          // Fallback 1: auth.users metadata
           if (!userPhone) {
             const { data: userData } = await supabase.auth.admin.getUserById(user_id);
             userPhone = userData?.user?.phone || userData?.user?.user_metadata?.whatsapp || userData?.user?.user_metadata?.phone;
           }
 
+          // Fallback 2: clients table (match by user email)
+          if (!userPhone) {
+            const { data: userData } = await supabase.auth.admin.getUserById(user_id);
+            if (userData?.user?.email) {
+              const { data: clientMatch } = await supabase
+                .from("clients")
+                .select("whatsapp, phone")
+                .eq("email", userData.user.email)
+                .limit(1)
+                .maybeSingle();
+              userPhone = clientMatch?.whatsapp || clientMatch?.phone;
+            }
+          }
+
+          console.log(`[USER-NOTIFY] Phone lookup for user ${user_id}: ${userPhone ? userPhone.slice(0, 6) + '***' : 'NOT FOUND'}`);
+
           if (userPhone) {
-            // Find admin's connected WhatsApp session to send from
-            const { data: adminUser } = await supabase
+            // Try user's own company session first, then fallback to adminmaster
+            let session: any = null;
+
+            // 1. User's own company session
+            const { data: userCompany } = await supabase
               .from("company_users")
               .select("company_id")
-              .eq("role", "adminmaster")
+              .eq("user_id", user_id)
               .limit(1)
-              .single();
+              .maybeSingle();
 
-            if (adminUser) {
-              const { data: session } = await supabase
+            if (userCompany) {
+              const { data: companySession } = await supabase
                 .from("whatsapp_sessions")
                 .select("id, baileys_server_url, instance_name")
-                .eq("company_id", adminUser.company_id)
+                .eq("company_id", userCompany.company_id)
                 .eq("status", "connected")
                 .limit(1)
-                .single();
+                .maybeSingle();
+              if (companySession?.baileys_server_url) session = companySession;
+            }
 
-              if (session?.baileys_server_url) {
-                const cleanPhone = userPhone.replace(/\D/g, "");
-                const jid = `${cleanPhone}@s.whatsapp.net`;
-                const whatsappMessage = formatWhatsAppMessage(title, message, category, notification_type, action_url);
+            // 2. Fallback to adminmaster session
+            if (!session) {
+              const { data: adminUser } = await supabase
+                .from("company_users")
+                .select("company_id")
+                .eq("role", "adminmaster")
+                .limit(1)
+                .maybeSingle();
 
-                const sendRes = await fetch(`${session.baileys_server_url}/api/message/send`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    instanceName: session.instance_name,
-                    jid,
-                    message: { text: whatsappMessage },
-                  }),
-                });
-
-                if (sendRes.ok) {
-                  whatsappSent = true;
-                  console.log(`[USER-NOTIFY] WhatsApp sent to ${cleanPhone}`);
-                } else {
-                  console.error(`[USER-NOTIFY] WhatsApp send failed:`, await sendRes.text());
-                }
+              if (adminUser) {
+                const { data: adminSession } = await supabase
+                  .from("whatsapp_sessions")
+                  .select("id, baileys_server_url, instance_name")
+                  .eq("company_id", adminUser.company_id)
+                  .eq("status", "connected")
+                  .limit(1)
+                  .maybeSingle();
+                if (adminSession?.baileys_server_url) session = adminSession;
               }
             }
+
+            if (session?.baileys_server_url) {
+              const cleanPhone = userPhone.replace(/\D/g, "");
+              // Ensure BR country code
+              const normalizedPhone = (!cleanPhone.startsWith("55") && cleanPhone.length <= 11) ? "55" + cleanPhone : cleanPhone;
+              const jid = `${normalizedPhone}@s.whatsapp.net`;
+              const whatsappMessage = formatWhatsAppMessage(title, message, category, notification_type, action_url);
+
+              const sendRes = await fetch(`${session.baileys_server_url}/api/message/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  instanceName: session.instance_name,
+                  jid,
+                  message: { text: whatsappMessage },
+                }),
+              });
+
+              if (sendRes.ok) {
+                whatsappSent = true;
+                console.log(`[USER-NOTIFY] WhatsApp sent to ${normalizedPhone} via session ${session.instance_name}`);
+              } else {
+                console.error(`[USER-NOTIFY] WhatsApp send failed:`, await sendRes.text());
+              }
+            } else {
+              console.log(`[USER-NOTIFY] No connected WhatsApp session found for sending`);
+            }
           } else {
-            console.log(`[USER-NOTIFY] No WhatsApp number for user ${user_id}`);
+            console.log(`[USER-NOTIFY] No WhatsApp number found for user ${user_id}`);
           }
         } else {
           console.log(`[USER-NOTIFY] WhatsApp disabled or in quiet hours for user ${user_id}`);

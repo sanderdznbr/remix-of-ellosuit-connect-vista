@@ -59,7 +59,7 @@ import StepBranding from './wizard/StepBranding';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
-import CarouselTour from './CarouselTour';
+// CarouselTour removed
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
@@ -209,7 +209,7 @@ const CarouselGenerator: React.FC = () => {
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
-  const [showCarouselTour, setShowCarouselTour] = useState(false);
+  // CarouselTour removed
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
 
   const handleEditorRefImageUpload = (file: File) => {
@@ -687,12 +687,7 @@ const CarouselGenerator: React.FC = () => {
       setCarouselData(finalData);
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      // Show guided tour on first generation
-      const tourKey = 'carousel-tour-seen';
-      if (!localStorage.getItem(tourKey)) {
-        setShowCarouselTour(true);
-        localStorage.setItem(tourKey, '1');
-      }
+      // Tour removed
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
       // Auto-save
@@ -1669,7 +1664,18 @@ const CarouselGenerator: React.FC = () => {
 
         {/* Generating state - fullscreen split animation */}
         {(generating || generatingAllImages) && !transitionToGenerate && (
-          <GeneratingAnimation imageGenProgress={imageGenProgress} />
+          <GeneratingAnimation
+            imageGenProgress={imageGenProgress}
+            topic={topic}
+            cardCount={cardCount}
+            bgColor={bgColor}
+            accentColor={accentColor}
+            textColor={textColor}
+            selectedFont={['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display'}
+            brandName={brandName}
+            logoUrl={logoUrl}
+            skipWebSearch={skipWebSearch}
+          />
         )}
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
@@ -2158,8 +2164,7 @@ const CarouselGenerator: React.FC = () => {
         topic={topic}
       />
 
-      {/* Guided tour */}
-      {showCarouselTour && <CarouselTour onComplete={() => setShowCarouselTour(false)} />}
+      {/* Tour removed */}
     </div>
   );
 };

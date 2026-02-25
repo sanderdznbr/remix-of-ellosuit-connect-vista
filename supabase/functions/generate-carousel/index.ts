@@ -148,16 +148,29 @@ Deno.serve(async (req) => {
 
       let images: any[] = [];
 
+      // Helper: filter out small/bad images
+      const MIN_WIDTH = 600;
+      const MIN_HEIGHT = 400;
+      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i];
+      const isGoodImage = (img: any) => {
+        if (!img.url) return false;
+        if (BAD_URL_PATTERNS.some(p => p.test(img.url))) return false;
+        if (img.width && img.width < MIN_WIDTH) return false;
+        if (img.height && img.height < MIN_HEIGHT) return false;
+        return true;
+      };
+
       // Strategy 1: Brave Search Images (fastest, cheapest)
       const BRAVE_API_KEY = Deno.env.get('BRAVE_SEARCH_API_KEY');
       if (BRAVE_API_KEY && images.length === 0) {
         console.log('[web-search] Trying Brave Search for:', searchQuery);
         try {
-          const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(searchQuery)}&count=10&safesearch=strict`;
+          const photoQuery = `${searchQuery} editorial photo high quality`;
+          const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(photoQuery)}&count=20&safesearch=strict&size=Large`;
           const braveRes = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });
           if (braveRes.ok) {
             const braveData = await braveRes.json();
-            images = (braveData.results || []).slice(0, 15).map((item: any, idx: number) => ({
+            images = (braveData.results || []).slice(0, 20).map((item: any, idx: number) => ({
               id: `brave-${idx}`,
               url: item.properties?.url || item.thumbnail?.src,
               thumb: item.thumbnail?.src || item.properties?.url,
@@ -166,8 +179,8 @@ Deno.serve(async (req) => {
               source: 'brave',
               width: item.properties?.width,
               height: item.properties?.height,
-            })).filter((img: any) => img.url);
-            console.log('[web-search] Brave returned', images.length, 'images');
+            })).filter(isGoodImage);
+            console.log('[web-search] Brave returned', images.length, 'quality images');
           } else {
             console.error('[web-search] Brave error:', braveRes.status);
           }
@@ -175,16 +188,16 @@ Deno.serve(async (req) => {
       }
 
       // Strategy 2: SerpAPI Google Images fallback
-      if (images.length === 0) {
+      if (images.length < 3) {
         const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
         if (SERPAPI_API_KEY) {
           console.log('[web-search] Falling back to SerpAPI for:', searchQuery);
           try {
-            const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large`;
+            const serpUrl = `https://www.searchapi.io/api/v1/search?engine=google_images&q=${encodeURIComponent(searchQuery + ' photo')}&api_key=${SERPAPI_API_KEY}&time_period=last_year&safe=off&image_size=large`;
             const serpRes = await fetch(serpUrl);
             if (serpRes.ok) {
               const serpData = await serpRes.json();
-              images = (serpData.images || []).slice(0, 15).map((item: any, idx: number) => ({
+              const serpImages = (serpData.images || []).slice(0, 15).map((item: any, idx: number) => ({
                 id: `serp-${idx}`,
                 url: item.original?.link,
                 thumb: item.thumbnail,
@@ -193,14 +206,15 @@ Deno.serve(async (req) => {
                 source: 'google',
                 width: item.original?.width,
                 height: item.original?.height,
-              })).filter((img: any) => img.url);
+              })).filter(isGoodImage);
+              images = [...images, ...serpImages];
             }
           } catch (e) { console.error('[web-search] SerpAPI exception:', e); }
         }
       }
 
       // Strategy 3: Pexels fallback
-      if (images.length === 0) {
+      if (images.length < 5) {
         const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
         if (PEXELS_API_KEY) {
           console.log('[web-search] Falling back to Pexels');

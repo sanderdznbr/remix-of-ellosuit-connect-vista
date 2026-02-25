@@ -461,8 +461,10 @@ const CarouselGenerator: React.FC = () => {
         if (card.needsImage || card.type === 'cover' || imageCardIndices.includes(i)) {
           totalImages++;
 
-          // If we have face/brand refs → use AI to maintain consistency
-          if (hasFaceOrBrandRefs) {
+          const isCover = card.type === 'cover';
+
+          // COVER cards ALWAYS use AI generation (never Pexels/web)
+          if (isCover || hasFaceOrBrandRefs) {
             aiImagesQueued++;
             const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
             imagePromises.push({
@@ -488,12 +490,12 @@ const CarouselGenerator: React.FC = () => {
               })(),
             });
           } else if (webImagePool.length > webImageIndex) {
-            // Use real web photo - NO AI needed!
+            // Content cards: use real web photo
             updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex] };
             webImageIndex++;
             realImagesUsed++;
           } else {
-            // No web images left - fall back to AI as last resort
+            // No web images left - fall back to AI
             aiImagesQueued++;
             const imgPrompt = card.imagePrompt || card.title || card.bodyTop || topic;
             imagePromises.push({

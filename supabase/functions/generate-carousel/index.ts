@@ -1,4 +1,4 @@
-import "https://deno.land/std@0.168.0/http/server.ts";
+// Edge function for carousel generation
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

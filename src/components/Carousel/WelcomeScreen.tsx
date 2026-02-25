@@ -16,14 +16,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Giant orb — positioned toward the bottom */}
-      <div className="absolute bottom-[-180px] md:bottom-[-250px] left-1/2 -translate-x-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 500, height: 500 }}>
+      {/* Giant orb — much larger on desktop */}
+      <div className="absolute bottom-[-180px] md:bottom-[-300px] lg:bottom-[-400px] left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="carousel-loader-wrapper" style={{ width: 'clamp(400px, 80vw, 900px)', height: 'clamp(400px, 80vw, 900px)' }}>
           <div className="carousel-loader-spinner" />
         </div>
         {/* Extra ambient glow behind the orb */}
         <div
-          className="absolute inset-0 rounded-full blur-[120px] opacity-30"
+          className="absolute inset-0 rounded-full blur-[120px] md:blur-[180px] opacity-30"
           style={{ background: 'radial-gradient(circle, rgba(123,80,220,0.7) 0%, rgba(71,30,236,0.3) 40%, transparent 70%)' }}
         />
       </div>

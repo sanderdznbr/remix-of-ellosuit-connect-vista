@@ -6,30 +6,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Animated percentage counter
 const AnimatedCounter = ({ target }: { target: number }) => {
-  const [current, setCurrent] = useState(0);
-  const rafRef = useRef<number>();
+  const [display, setDisplay] = useState(target);
+  const prevTarget = useRef(target);
 
   useEffect(() => {
-    const start = current;
+    const start = prevTarget.current;
+    prevTarget.current = target;
     const diff = target - start;
     if (diff === 0) return;
     const duration = 800;
     const startTime = performance.now();
+    let raf: number;
 
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-      setCurrent(Math.round(start + diff * eased));
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + diff * eased));
       if (progress < 1) {
-        rafRef.current = requestAnimationFrame(animate);
+        raf = requestAnimationFrame(animate);
       }
     };
-    rafRef.current = requestAnimationFrame(animate);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
   }, [target]);
 
-  return <>{current}%</>;
+  return <>{display}%</>;
 };
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -37,7 +39,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+// toast disabled on carousel page
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
@@ -116,7 +118,7 @@ const CarouselGenerator: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
+  const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
 

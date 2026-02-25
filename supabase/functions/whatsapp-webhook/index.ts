@@ -1987,7 +1987,7 @@ Deno.serve(async (req) => {
                           console.log(`🤖🔄 [CHATBOT] serverUrl=${serverUrl}, nodeType=${currentNode.type}, phoneNumber=${phoneNumber}`);
                           if (serverUrl && currentNode.type === 'message') {
                             const vars = (activeExec.variables as Record<string, string>) || {};
-                            let greetMsg = currentNode.data?.config?.content || '';
+                            let greetMsg = currentNode.data?.config?.message || currentNode.data?.config?.content || currentNode.data?.label || '';
                             greetMsg = greetMsg.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
                             
                             const greetButtons: string[] = currentNode.data?.config?.buttons || [];
@@ -2107,7 +2107,7 @@ Deno.serve(async (req) => {
                                 if (!targetNode || targetNode.type !== 'message') continue;
                                 
                                 const vars = (activeExec.variables as Record<string, string>) || {};
-                                let msgContent = targetNode.data?.config?.content || '';
+                                let msgContent = targetNode.data?.config?.message || targetNode.data?.config?.content || targetNode.data?.label || '';
                                 msgContent = msgContent.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
                                 
                                 const targetButtons: string[] = targetNode.data?.config?.buttons || [];
@@ -2197,7 +2197,7 @@ Deno.serve(async (req) => {
                                   for (const oe of outEdges) {
                                     const tn = nodes.find((n: any) => n.id === oe.target);
                                     if (!tn) continue;
-                                    const nc = tn.data?.config?.content || tn.data?.label || '';
+                                    const nc = tn.data?.config?.message || tn.data?.config?.content || tn.data?.label || '';
                                     const nb: string[] = tn.data?.config?.buttons || [];
                                     const lbl = tn.data?.label || tn.id;
                                     const np = `${pathPrefix} > ${lbl}`;
@@ -2541,7 +2541,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                                     if (condEdge) {
                                       const responseNode = nodes.find((n: any) => n.id === condEdge.target);
                                       if (responseNode && responseNode.type === 'message' && serverUrl) {
-                                        let rMsg = responseNode.data?.config?.content || '';
+                                        let rMsg = responseNode.data?.config?.message || responseNode.data?.config?.content || '';
                                         rMsg = rMsg.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => updVars[key] || `{{${key}}}`);
                                         
                                         const rButtons: string[] = responseNode.data?.config?.buttons || [];
@@ -2632,7 +2632,7 @@ Responda SOMENTE o número da opção (1, 2, 3...). Se não conseguir determinar
                               }
                             } else if (serverUrl && nextNode.type === 'message') {
                               const vars = (activeExec.variables as Record<string, string>) || {};
-                              let msgContent = nextNode.data?.config?.content || '';
+                              let msgContent = nextNode.data?.config?.message || nextNode.data?.config?.content || '';
                               // Replace variables
                               msgContent = msgContent.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => vars[key] || `{{${key}}}`);
 

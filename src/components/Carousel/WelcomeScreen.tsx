@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Sparkles } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
@@ -13,7 +13,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
-      onStart(inputValue.trim());
+      onStart(inputValue.trim(), true);
     }
   };
 
@@ -24,10 +24,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     }
   };
 
-  const handleEnhanceAndGo = () => {
-    if (!inputValue.trim()) return;
-    onStart(inputValue.trim(), true);
-  };
+
+
 
   return (
     <motion.div
@@ -103,22 +101,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             />
 
             {/* Bottom bar */}
-            <div className="flex items-center justify-between px-3 pb-3">
-              {/* Enhance button */}
-              <button
-                onClick={handleEnhanceAndGo}
-                disabled={!inputValue.trim()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{
-                  backgroundColor: 'rgba(123,80,220,0.12)',
-                  color: 'rgba(173,95,255,0.9)',
-                  border: '1px solid rgba(123,80,220,0.15)',
-                }}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Melhorar com IA
-              </button>
-
+            <div className="flex items-center justify-end px-3 pb-3">
               {/* Send button */}
               <button
                 onClick={handleSubmit}

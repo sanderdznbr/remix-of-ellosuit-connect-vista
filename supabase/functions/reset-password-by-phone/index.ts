@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone, newPassword } = await req.json();
+    const { phone, email, newPassword } = await req.json();
 
     if (!phone || !newPassword) {
       return new Response(JSON.stringify({ error: 'Telefone e nova senha são obrigatórios' }), {
@@ -59,8 +59,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find user by phone in metadata
-    // We need to search auth.users for the phone number
+    // Find user - prefer email lookup if provided (more reliable)
     const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
 
     if (listError) {
@@ -71,19 +70,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find user whose metadata phone matches
-    const targetUser = usersData?.users?.find((u: any) => {
-      const userPhone = (u.user_metadata?.phone || '').replace(/\D/g, '');
-      // Match with or without country code
-      return userPhone === cleanPhone || 
-             userPhone === `55${cleanPhone}` || 
-             `55${userPhone}` === cleanPhone ||
-             // Also try without 9th digit
-             userPhone.replace(/^55(\d{2})9/, '55$1') === cleanPhone.replace(/^55(\d{2})9/, '55$1');
-    });
+    let targetUser = null;
+
+    // First try email match
+    if (email) {
+      targetUser = usersData?.users?.find(
+        (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+      );
+    }
+
+    // Fallback to phone match
+    if (!targetUser) {
+      targetUser = usersData?.users?.find((u: any) => {
+        const userPhone = (u.user_metadata?.phone || '').replace(/\D/g, '');
+        return userPhone === cleanPhone || 
+               userPhone === `55${cleanPhone}` || 
+               `55${userPhone}` === cleanPhone ||
+               userPhone.replace(/^55(\d{2})9/, '55$1') === cleanPhone.replace(/^55(\d{2})9/, '55$1');
+      });
+    }
 
     if (!targetUser) {
-      return new Response(JSON.stringify({ error: 'Nenhuma conta encontrada com este telefone.' }), {
+      return new Response(JSON.stringify({ error: 'Nenhuma conta encontrada com este email/telefone.' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

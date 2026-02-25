@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, MessageSquare, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,8 @@ import authHero from '@/assets/auth-hero.jpg';
 
 const TOTAL_STEPS = 3;
 const STEP_SUBTITLES = [
-  'Informe seu email cadastrado',
-  'Confirme o código enviado',
+  'Informe seu email e WhatsApp cadastrados',
+  'Confirme o código enviado no WhatsApp',
   'Crie sua nova senha',
 ];
 
@@ -26,31 +26,44 @@ export default function ForgotPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [email, setEmail] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').substring(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`;
+    return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7)}`;
+  };
+
   const handleSendCode = async () => {
-    if (!email.trim()) {
-      setError('Informe seu email.');
+    if (!email.trim() || !whatsapp.trim()) {
+      setError('Informe seu email e WhatsApp.');
+      return;
+    }
+    const cleanPhone = whatsapp.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setError('Número de WhatsApp inválido.');
       return;
     }
     setSendingCode(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('send-email-code', {
-        body: { email },
+      // Send verification code via WhatsApp using the master account
+      const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
+        body: { phone: cleanPhone },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
       setCodeSent(true);
     } catch (err: any) {
-      setError(err.message || 'Erro ao enviar código.');
+      setError(err.message || 'Erro ao enviar código via WhatsApp.');
     } finally {
       setSendingCode(false);
     }
@@ -64,13 +77,12 @@ export default function ForgotPassword() {
     setVerifyingCode(true);
     setError(null);
     try {
-      // verify-phone-code uses the "phone" field — we pass email as identifier
+      const cleanPhone = whatsapp.replace(/\D/g, '');
       const { data, error: fnError } = await supabase.functions.invoke('verify-phone-code', {
-        body: { phone: email, code: verificationCode },
+        body: { phone: cleanPhone, code: verificationCode },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
-      setEmailVerified(true);
       setStep(2);
     } catch (err: any) {
       setError(err.message || 'Código inválido ou expirado.');
@@ -91,9 +103,9 @@ export default function ForgotPassword() {
     setIsResetting(true);
     setError(null);
     try {
-      // Use reset-password-by-phone with email lookup
-      const { data, error: fnError } = await supabase.functions.invoke('reset-password-by-email', {
-        body: { email, newPassword: password },
+      const cleanPhone = whatsapp.replace(/\D/g, '');
+      const { data, error: fnError } = await supabase.functions.invoke('reset-password-by-phone', {
+        body: { phone: cleanPhone, email, newPassword: password },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
@@ -154,7 +166,7 @@ export default function ForgotPassword() {
               </Alert>
             )}
 
-            {/* Step 0 — Email */}
+            {/* Step 0 — Email + WhatsApp */}
             {step === 0 && (
               <div className="space-y-5">
                 <div>
@@ -168,10 +180,27 @@ export default function ForgotPassword() {
                     autoFocus
                   />
                 </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WhatsApp</Label>
+                  <div className="relative mt-1.5">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="tel"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
+                      placeholder="(11) 99999-9999"
+                      className="h-12 rounded-xl pl-10"
+                    />
+                  </div>
+                </div>
                 <Button
                   onClick={() => {
                     if (!email.trim()) {
                       setError('Informe seu email.');
+                      return;
+                    }
+                    if (whatsapp.replace(/\D/g, '').length < 10) {
+                      setError('Informe um número de WhatsApp válido.');
                       return;
                     }
                     setError(null);
@@ -179,12 +208,12 @@ export default function ForgotPassword() {
                     setStep(1);
                   }}
                   className="w-full h-12 rounded-xl text-sm font-medium"
-                  disabled={sendingCode || !email.trim()}
+                  disabled={sendingCode || !email.trim() || whatsapp.replace(/\D/g, '').length < 10}
                 >
                   {sendingCode ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
                   ) : (
-                    <>Enviar código <ArrowRight className="ml-2 h-4 w-4" /></>
+                    <>Enviar código via WhatsApp <ArrowRight className="ml-2 h-4 w-4" /></>
                   )}
                 </Button>
               </div>
@@ -195,11 +224,11 @@ export default function ForgotPassword() {
               <div className="space-y-5">
                 <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-primary" />
+                    <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                      <MessageSquare className="h-4 w-4 text-green-500" />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Código enviado para <span className="font-semibold text-foreground">{email}</span>. Verifique sua caixa de entrada e spam.
+                      Código enviado para o WhatsApp <span className="font-semibold text-foreground">{whatsapp}</span>. Verifique suas mensagens.
                     </p>
                   </div>
 
@@ -238,9 +267,9 @@ export default function ForgotPassword() {
             {/* Step 2 — New Password */}
             {step === 2 && (
               <div className="space-y-5">
-                <div className="flex items-center gap-2 text-sm text-primary font-medium rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-2">
+                <div className="flex items-center gap-2 text-sm text-green-600 font-medium rounded-2xl border border-green-500/20 bg-green-500/5 p-4 mb-2">
                   <Check className="h-4 w-4" />
-                  Email verificado com sucesso!
+                  WhatsApp verificado com sucesso!
                 </div>
 
                 <div>

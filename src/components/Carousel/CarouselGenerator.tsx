@@ -876,21 +876,25 @@ const CarouselGenerator: React.FC = () => {
     const isAccent = layout === 'accent';
     const bg = isAccent ? accentColor : bgColor;
     
-    // Ensure text contrast: if bg is dark, use light text; if bg is light, use dark text
-    const bgLuminance = (() => {
-      const hex = bg.replace('#', '');
+    // Ensure text contrast: compute luminance of the effective background
+    const computeLuminance = (hexColor: string) => {
+      const hex = hexColor.replace('#', '');
+      if (hex.length < 6) return 0; // fallback: treat as dark
       const r = parseInt(hex.substring(0, 2), 16) / 255;
       const g = parseInt(hex.substring(2, 4), 16) / 255;
       const b = parseInt(hex.substring(4, 6), 16) / 255;
       const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
       return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-    })();
+    };
+    const bgLuminance = computeLuminance(bg);
     const isDarkBg = bgLuminance < 0.4;
     
-    const mainTxt = isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : isLight ? '#1A1A1A' : (isDarkBg ? '#FFFFFF' : textColor);
-    const secondaryTxt = isAccent ? (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)') : isLight ? '#666' : (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)');
+    // For 'dark' layout, ALWAYS use light text (white). For 'light', always dark text.
+    // For 'accent', auto-detect based on luminance.
+    const mainTxt = isLight ? '#1A1A1A' : isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : '#FFFFFF';
+    const secondaryTxt = isLight ? '#666' : isAccent ? (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)') : 'rgba(255,255,255,0.75)';
     const accentTxt = isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : accentColor;
-    const headerTxt = isLight ? '#999' : (isDarkBg ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)');
+    const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
 
     const renderHeader = () => {
       if (!showHeader) return null;

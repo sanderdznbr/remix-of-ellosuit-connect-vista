@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import '@/styles/carousel-loader.css';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -899,16 +900,18 @@ const CarouselGenerator: React.FC = () => {
           </Card>
         )}
 
-        {/* Generating state */}
+        {/* Generating state - fullscreen black */}
         {(generating || generatingAllImages) && (
-          <div className="flex flex-col items-center gap-4 py-12">
-            <div className="relative">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <Sparkles className="h-5 w-5 absolute top-0 right-0 text-primary/60" />
+          <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center gap-6">
+            <div className="carousel-loader-wrapper">
+              {'Generating'.split('').map((letter, i) => (
+                <span key={i} className="carousel-loader-letter" style={{ animationDelay: `${i * 0.1}s` }}>{letter}</span>
+              ))}
+              <div className="carousel-loader-spinner" />
             </div>
-            <div className="text-center">
-              <p className="text-lg font-bold text-foreground">{imageGenProgress || 'Gerando carrossel com IA...'}</p>
-              <p className="text-sm text-muted-foreground mt-1">Isso pode levar até 2 minutos</p>
+            <div className="text-center mt-4">
+              <p className="text-sm text-white/60">{imageGenProgress || 'Criando seu carrossel com IA...'}</p>
+              <p className="text-xs text-white/30 mt-2">Isso pode levar até 2 minutos</p>
             </div>
           </div>
         )}

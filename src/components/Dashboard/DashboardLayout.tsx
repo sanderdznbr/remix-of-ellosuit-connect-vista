@@ -10,14 +10,12 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import CRMSidebar from '@/components/CRM/CRMSidebar';
 import PageTransition from '@/components/shared/PageTransition';
-import { useAdminMaster } from '@/hooks/useAdminMaster';
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const { isMobile } = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
   const { isFree, isLoading } = useSubscription();
-  const { isAdminMaster } = useAdminMaster();
   useRoutineExecutor();
 
   // CRM hub detection: CRM WhatsApp page OR any page accessed from CRM sidebar (?hub=crm)
@@ -60,16 +58,16 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
 
       {/* Desktop: Mega Menu Header | Mobile: App Header (hidden on CRM WhatsApp) */}
       {/* Admin master always sees MegaMenuHeader, even on mobile */}
-      {isCrmWhatsAppMobile ? null : (isMobile && !isAdminMaster) ? <MobileAppHeader /> : <MegaMenuHeader />}
+      {isCrmWhatsAppMobile ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
 
-      <main className={`flex-1 min-h-0 w-full ${isMobile && !isCrmWhatsAppMobile && !isAdminMaster ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
+      <main className={`flex-1 min-h-0 w-full ${isMobile && !isCrmWhatsAppMobile ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
         <PageTransition>
           {children}
         </PageTransition>
       </main>
 
-      {/* Mobile Bottom Nav (hidden on CRM WhatsApp and for admin master) */}
-      {isMobile && !isCrmWhatsAppMobile && !isAdminMaster && <MobileBottomNav />}
+      {/* Mobile Bottom Nav (hidden on CRM WhatsApp) */}
+      {isMobile && !isCrmWhatsAppMobile && <MobileBottomNav />}
 
       {/* Push Notification Permission Prompt */}
       <PushNotificationPrompt />

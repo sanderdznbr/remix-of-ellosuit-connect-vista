@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight, Volume2 } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, Loader2, FileText, Image, Video, Music, File, MessageSquare, FolderPlus, CalendarDays, Mail, UploadCloud, TableProperties, Mic, MicOff, Clock, ArrowRight, Volume2, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useHubColor, DEFAULT_COLOR } from '@/hooks/useHubColor';
@@ -587,6 +587,23 @@ const AIAssistantHome: React.FC = () => {
               className="w-full px-0 md:px-4"
             >
               {renderInput()}
+            </motion.div>
+
+            {/* Quick access shortcut */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.65 }}
+              className="mt-4"
+            >
+              <Link
+                to="/dashboard/carrossel"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/[0.08] hover:bg-white/[0.15] text-white/80 hover:text-white text-sm font-medium transition-all"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Gerador de Carrossel
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </motion.div>
           </div>
 

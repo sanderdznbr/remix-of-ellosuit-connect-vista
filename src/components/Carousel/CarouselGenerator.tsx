@@ -878,39 +878,50 @@ const CarouselGenerator: React.FC = () => {
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: carouselData && !generating && !generatingAllImages ? '#000' : undefined }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
-      {/* Header - only show action buttons when editing */}
-      {carouselData && !generatingAllImages && (
-        <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+      {/* ===== DARK HEADER when carousel is generated ===== */}
+      {carouselData && !generatingAllImages && editingCard === null && (
+        <div className="sticky top-0 z-30" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
-            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-muted text-muted-foreground"><ArrowLeft className="h-5 w-5" /></button>
+            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+              <ArrowLeft className="h-5 w-5 text-white/70" />
+            </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate text-foreground">{carouselData.title || topic || 'Carrossel'}</h1>
+              <h1 className="text-base sm:text-lg font-bold truncate text-white">{carouselData.title || topic || 'Carrossel'}</h1>
+              <p className="text-xs text-white/40">{carouselData.cards.length} cards</p>
             </div>
             <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
-                {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <button onClick={saveCarousel} disabled={savingCarousel}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
+                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
-                <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Estilo</span>
-              </Button>
-              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm">
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} <span className="hidden sm:inline">Exportar PNGs</span>
-              </Button>
-              <Button onClick={() => setShowPublishDialog(true)} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ background: 'linear-gradient(135deg, #833AB4, #E1306C, #F77737)' }}>
-                <ExternalLink className="h-4 w-4" /> <span className="hidden sm:inline">Publicar</span>
-              </Button>
+              </button>
+              <button onClick={exportAllCards} disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
+                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">Exportar</span>
+              </button>
+              <button onClick={() => setShowPublishDialog(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Publicar</span>
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col">
+      {/* Normal header for editor mode */}
+      {carouselData && !generatingAllImages && editingCard !== null && null}
+
+      <div className={carouselData && editingCard === null ? '' : 'max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD ========== */}
         {!carouselData && !generating && !generatingAllImages && (
+          <div className="max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col w-full">
           <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
             <CardContent className="p-6 space-y-6">
               {/* Step indicator */}
@@ -931,7 +942,6 @@ const CarouselGenerator: React.FC = () => {
                 ))}
               </div>
 
-              {/* Step content */}
               {wizardStep === 0 && (
                 <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                   cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
@@ -956,7 +966,6 @@ const CarouselGenerator: React.FC = () => {
                   showHeader={showHeader} setShowHeader={setShowHeader} />
               )}
 
-              {/* Navigation */}
               <div className="flex items-center justify-between pt-2">
                 <Button variant="outline" onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
                   disabled={wizardStep === 0} className="gap-1.5 rounded-xl">
@@ -977,6 +986,54 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gallery of saved carousels */}
+          {carouselHistory.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Seus Carrosséis</h2>
+              </div>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {carouselHistory.map((item) => {
+                    const coverImage = item.carousel_data?.cards?.[0]?.imageUrl;
+                    const coverBg = item.style_config?.bgColor || '#1a1a2e';
+                    const coverTitle = item.carousel_data?.cards?.[0]?.topText || item.title;
+                    return (
+                      <button key={item.id} onClick={() => loadCarousel(item)}
+                        className="group relative rounded-2xl overflow-hidden border border-border hover:border-primary/30 bg-muted/50 hover:bg-muted transition-all hover:-translate-y-0.5 hover:shadow-lg text-left">
+                        <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
+                          {coverImage ? (
+                            <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center p-3">
+                              <p className="text-foreground/80 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          <button onClick={(e) => { e.stopPropagation(); deleteCarousel(item.id); }}
+                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 hover:bg-destructive text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="p-2.5">
+                          <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                            <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
+                            <span>• {item.card_count} cards</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          </div>
         )}
 
         {/* Generating state - fullscreen black */}
@@ -991,109 +1048,177 @@ const CarouselGenerator: React.FC = () => {
           </div>
         )}
 
-        {/* Gallery of saved carousels - shown at bottom when in wizard mode */}
-        {!carouselData && !generating && !generatingAllImages && carouselHistory.length > 0 && (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-4">
-              <History className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Seus Carrosséis</h2>
-            </div>
-            {loadingHistory ? (
-              <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {carouselHistory.map((item) => {
-                  const coverImage = item.carousel_data?.cards?.[0]?.imageUrl;
-                  const coverBg = item.style_config?.bgColor || item.carousel_data?.cards?.[0]?.bgColor || '#1a1a2e';
-                  const coverTitle = item.carousel_data?.cards?.[0]?.topText || item.title;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => loadCarousel(item)}
-                      className="group relative rounded-2xl overflow-hidden border border-border hover:border-primary/30 bg-muted/50 hover:bg-muted transition-all hover:-translate-y-0.5 hover:shadow-lg text-left"
-                    >
-                      <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
-                        {coverImage ? (
-                          <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center p-3">
-                            <p className="text-foreground/80 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteCarousel(item.id); }}
-                          className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 hover:bg-red-500/80 text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <div className="p-2.5">
-                      <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
-                          <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
-                          <span>• {item.card_count} cards</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Style Panel (post-generation) */}
-        {carouselData && showStylePanel && (
-          <Card className="border-0 shadow-md rounded-3xl">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2"><Palette className="h-5 w-5" style={{ color: FLOW_COLOR }} /><h3 className="font-bold text-foreground">Estilo</h3></div>
-                <button onClick={() => setShowStylePanel(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-              </div>
-              <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
-                textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                dateLabel={dateLabel} setDateLabel={setDateLabel}
-                showHeader={showHeader} setShowHeader={setShowHeader} />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Preview & Edit */}
+        {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
-          <>
-            <div className="space-y-3">
-               <div className="flex items-center justify-between">
-                <h2 className="font-bold text-foreground text-lg">Preview ({carouselData.cards.length} cards)</h2>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl"><Plus className="h-3 w-3" /> Card</Button>
-                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }} className="rounded-xl">Novo</Button>
+          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-hidden">
+            {/* Background glow effects */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
+            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-10 blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
+
+            {/* Instagram Phone Mockup */}
+            <div className="relative" style={{ width: 375, maxWidth: '95vw' }}>
+              {/* Phone frame */}
+              <div className="rounded-[3rem] overflow-hidden" style={{
+                border: '3px solid rgba(255,255,255,0.1)',
+                background: 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                boxShadow: '0 0 80px rgba(139,92,246,0.15), 0 0 2px rgba(255,255,255,0.1) inset',
+              }}>
+                {/* Notch */}
+                <div className="flex justify-center pt-3 pb-1" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+                  <div className="w-28 h-6 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+
+                {/* Instagram header */}
+                <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.9)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="w-8 h-8 rounded-full" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="text-white text-xs font-bold">E</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white text-xs font-semibold">{userName || brandName || 'ellosuit'}</p>
+                    <p className="text-white/40 text-[10px]">Patrocinado</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <div className="w-1 h-1 rounded-full bg-white/40" />
+                    <div className="w-1 h-1 rounded-full bg-white/40" />
+                    <div className="w-1 h-1 rounded-full bg-white/40" />
+                  </div>
+                </div>
+
+                {/* Carousel viewport */}
+                <div className="relative" style={{ aspectRatio: '4/5', backgroundColor: '#000' }}>
+                  {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex)}
+                  {/* Swipe indicators */}
+                  {activeCardIndex > 0 && (
+                    <button onClick={() => setActiveCardIndex(activeCardIndex - 1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+                      <ChevronLeft className="h-4 w-4 text-white" />
+                    </button>
+                  )}
+                  {activeCardIndex < carouselData.cards.length - 1 && (
+                    <button onClick={() => setActiveCardIndex(activeCardIndex + 1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+                      <ChevronRight className="h-4 w-4 text-white" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Instagram dots + actions */}
+                <div style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+                  {/* Dots */}
+                  <div className="flex items-center justify-center gap-1 py-2.5">
+                    {carouselData.cards.map((_, i) => (
+                      <button key={i} onClick={() => setActiveCardIndex(i)}
+                        className="transition-all"
+                        style={{
+                          width: i === activeCardIndex ? 8 : 5,
+                          height: i === activeCardIndex ? 8 : 5,
+                          borderRadius: '50%',
+                          backgroundColor: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.2)',
+                        }} />
+                    ))}
+                  </div>
+                  {/* IG actions row */}
+                  <div className="flex items-center justify-between px-4 pb-3">
+                    <div className="flex items-center gap-4">
+                      <span className="text-white/60 text-lg">♡</span>
+                      <span className="text-white/60 text-lg">💬</span>
+                      <span className="text-white/60 text-lg">↗</span>
+                    </div>
+                    <span className="text-white/60 text-lg">☆</span>
+                  </div>
+                  {/* Likes */}
+                  <div className="px-4 pb-4">
+                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'ellosuit'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
+                  </div>
+                  {/* Bottom bar */}
+                  <div className="flex justify-center pb-2">
+                    <div className="w-32 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4">
-                {carouselData.cards.map((card, i) => (
-                  <div key={i} className="snap-center flex-shrink-0 relative group">
-                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-primary/50 hover:ring-offset-2"
-                      onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
-                      {renderCardPreview(card, i)}
+            {/* Action buttons below phone */}
+            <div className="flex items-center gap-3 mt-8">
+              <button onClick={addCard}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                <Plus className="h-3.5 w-3.5" /> Adicionar Card
+              </button>
+              <button onClick={() => setShowStylePanel(!showStylePanel)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
+                <Palette className="h-3.5 w-3.5" /> Estilo
+              </button>
+              <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
+                style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                Novo
+              </button>
+            </div>
+
+            {/* Style Panel overlay */}
+            {showStylePanel && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowStylePanel(false)}>
+                <div className="rounded-3xl overflow-hidden max-w-lg w-full max-h-[80vh] overflow-y-auto" style={{
+                  background: 'linear-gradient(145deg, rgba(30,30,40,0.98) 0%, rgba(15,15,20,0.98) 100%)',
+                  border: '1px solid rgba(139,92,246,0.2)',
+                  boxShadow: '0 0 60px rgba(139,92,246,0.1)',
+                }} onClick={(e) => e.stopPropagation()}>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2"><Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} /><h3 className="font-bold text-white">Estilo</h3></div>
+                      <button onClick={() => setShowStylePanel(false)} className="p-1 rounded-lg hover:bg-white/10"><X className="h-4 w-4 text-white/60" /></button>
                     </div>
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
+                    <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+                      textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                      brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
+                      dateLabel={dateLabel} setDateLabel={setDateLabel}
+                      showHeader={showHeader} setShowHeader={setShowHeader} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Card strip - horizontal thumbnails */}
+            <div className="w-full max-w-2xl mt-8">
+              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 -mx-4">
+                {carouselData.cards.map((card, i) => (
+                  <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: 80 }}
+                    onClick={() => setActiveCardIndex(i)}>
+                    <div className="rounded-lg overflow-hidden transition-all" style={{
+                      border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
+                      boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
+                      opacity: i === activeCardIndex ? 1 : 0.5,
+                      transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
+                    }}>
+                      <div style={{ width: 76, height: 76 * (CARD_H / CARD_W), overflow: 'hidden', borderRadius: 6 }}>
+                        <div style={{ transform: `scale(${76 / CARD_W})`, transformOrigin: 'top left', width: CARD_W, height: CARD_H }}>
+                          {renderCardPreview(card, i, true)}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Edit overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
+                        className="p-1 rounded-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        <Edit3 className="h-3 w-3 text-white" />
+                      </button>
                       {card.type === 'content' && (
-                        <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-primary/80 disabled:opacity-50">
-                          {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i}
+                          className="p-1 rounded-md disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                          {regeneratingCard === i ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <RotateCcw className="h-3 w-3 text-white" />}
                         </button>
                       )}
-                      {carouselData.cards.length > 2 && <button onClick={(e) => { e.stopPropagation(); removeCard(i); }} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
-                    <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
+                    <p className="text-center text-[10px] mt-1 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                 ))}
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 

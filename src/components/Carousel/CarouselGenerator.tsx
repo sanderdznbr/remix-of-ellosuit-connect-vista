@@ -1367,9 +1367,13 @@ const CarouselGenerator: React.FC = () => {
       {/* ===== WELCOME SCREEN ===== */}
       <AnimatePresence>
         {showWelcome && (
-          <WelcomeScreen onStart={(initialTopic?: string) => {
+          <WelcomeScreen onStart={(initialTopic?: string, shouldEnhance?: boolean) => {
             if (initialTopic) setTopic(initialTopic);
             setShowWelcome(false);
+            if (shouldEnhance && initialTopic) {
+              // Trigger enhance after a short delay to let state settle
+              setTimeout(() => enhancePrompt(), 300);
+            }
           }} />
         )}
       </AnimatePresence>

@@ -92,34 +92,34 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   const PRESET_COLORS = ['#0F0F1A', '#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560', '#E84D1A', '#F38181', '#FCE38A', '#95E1D3', '#EAFFD0', '#F8F4EF', '#FFFFFF'];
 
   return (
-    <div className="w-full md:w-[340px] flex-shrink-0 border-t md:border-t-0 md:border-l border-border bg-background flex flex-col min-h-0 flex-1 md:h-full">
+    <div className="w-full md:w-[340px] flex-shrink-0 border-t md:border-t-0 md:border-l flex flex-col min-h-0 flex-1 md:h-full" style={{ backgroundColor: '#111118', borderColor: 'rgba(255,255,255,0.06)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2">
           <Edit3 className="h-4 w-4" style={{ color: FLOW_COLOR }} />
-          <h3 className="font-bold text-sm text-foreground">Card {cardIndex + 1}/{totalCards}</h3>
+          <h3 className="font-bold text-sm text-white">Card {cardIndex + 1}/{totalCards}</h3>
         </div>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-          <X className="h-4 w-4 text-muted-foreground" />
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+          <X className="h-4 w-4 text-white/40" />
         </button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           {/* ===== GLOBAL CONTROLS ===== */}
-          <div className="rounded-2xl border border-border overflow-hidden">
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
             <button onClick={() => setShowGlobal(!showGlobal)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.04] transition-colors">
               <div className="flex items-center gap-2">
                 <LayoutGrid className="h-4 w-4" style={{ color: FLOW_COLOR }} />
-                <span className="text-sm font-semibold text-foreground">Todos os Cards</span>
+                <span className="text-sm font-semibold text-white">Todos os Cards</span>
               </div>
-              {showGlobal ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              {showGlobal ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />}
             </button>
             {showGlobal && (
-              <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
+              <div className="px-4 pb-4 space-y-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center justify-between">
+                  <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1"><Type className="h-3 w-3" /> Fonte (todos)</span>
                     <span className="text-[10px] font-mono">{globalFontScale}%</span>
                   </label>

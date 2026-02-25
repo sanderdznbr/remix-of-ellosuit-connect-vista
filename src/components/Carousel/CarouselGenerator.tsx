@@ -151,9 +151,21 @@ const CarouselGenerator: React.FC = () => {
     const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     return `${months[d.getMonth()]} ${d.getFullYear()} ®`;
   });
-  const [bgColor, setBgColor] = useState('#0F0F1A');
-  const [accentColor, setAccentColor] = useState('#E84D1A');
-  const [textColor, setTextColor] = useState('#FFFFFF');
+  // Ellosuit color palettes for random selection
+  const RANDOM_PALETTES = [
+    { bg: '#0A0A1A', accent: '#3000E3', text: '#FFFFFF' },
+    { bg: '#FFFFFF', accent: '#3000E3', text: '#0A0A1A' },
+    { bg: '#3000E3', accent: '#FFFFFF', text: '#FFFFFF' },
+    { bg: '#0A1628', accent: '#3B82F6', text: '#F1F5F9' },
+    { bg: '#042F2E', accent: '#2DD4BF', text: '#F0FDFA' },
+    { bg: '#000000', accent: '#FFFFFF', text: '#FFFFFF' },
+    { bg: '#F3F4F6', accent: '#3000E3', text: '#111827' },
+    { bg: '#0F0F1A', accent: '#E84D1A', text: '#FFFFFF' },
+  ];
+  const [initialPalette] = useState(() => RANDOM_PALETTES[Math.floor(Math.random() * RANDOM_PALETTES.length)]);
+  const [bgColor, setBgColor] = useState(initialPalette.bg);
+  const [accentColor, setAccentColor] = useState(initialPalette.accent);
+  const [textColor, setTextColor] = useState(initialPalette.text);
   const [selectedFont, setSelectedFont] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
@@ -392,7 +404,9 @@ const CarouselGenerator: React.FC = () => {
         topic: opts.prompt,
         faceReferenceUrls: opts.faceReferenceUrls,
         styleReferenceUrls: opts.styleReferenceUrls,
-        imageModel: imageSettings.model,
+        imageModel: imageSettings.model === 'auto'
+          ? ((opts.faceReferenceUrls?.length ?? 0) > 0 ? 'nano-banana' : 'gemini')
+          : imageSettings.model,
         negativePrompt: opts.negativePrompt,
         fidelity: imageSettings.fidelity,
       },
@@ -489,6 +503,9 @@ const CarouselGenerator: React.FC = () => {
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
     setGenerating(true);
+    // Clear previous carousel data to prevent reusing old images
+    setCarouselData(null);
+    setCurrentCarouselId(null);
     // Small delay to let the transition animation settle before showing generating overlay
     setTimeout(() => setTransitionToGenerate(false), 500);
     try {

@@ -31,7 +31,7 @@ const StepReferences: React.FC<Props> = ({
   const [searchingReferences, setSearchingReferences] = useState(false);
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
   const [showBrand, setShowBrand] = useState(false);
-  const [activeTab, setActiveTab] = useState<'face' | 'style' | 'web'>('face');
+  const [activeTab, setActiveTab] = useState<'face' | 'style' | 'web'>('web');
 
   const handleFaceUpload = (files: FileList | null) => {
     if (!files) return;
@@ -106,9 +106,9 @@ const StepReferences: React.FC<Props> = ({
       {/* Tab navigation */}
       <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03]">
         {([
+          { key: 'web' as const, label: 'Busca Web', count: (webImages?.length || 0) + referenceImages.filter(r => r.category === 'general').length },
           { key: 'face' as const, label: 'Rosto / Pessoa', count: faceRefs.length },
           { key: 'style' as const, label: 'Marca / Estilo', count: styleRefs.length },
-          { key: 'web' as const, label: 'Busca Web', count: (webImages?.length || 0) + referenceImages.filter(r => r.category === 'general').length },
         ]).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={`flex-1 py-3 px-4 rounded-lg text-xs font-medium transition-all ${

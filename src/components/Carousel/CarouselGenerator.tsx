@@ -48,7 +48,9 @@ import {
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
 import StepCardCount from './wizard/StepCardCount';
-import StepReferences from './wizard/StepReferences';
+import StepWebImages from './wizard/StepWebImages';
+import StepFaceRef from './wizard/StepFaceRef';
+import StepBrandRef from './wizard/StepBrandRef';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -123,7 +125,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Referências', 'Estilo'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Marca', 'Estilo'];
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');
@@ -1109,13 +1111,19 @@ const CarouselGenerator: React.FC = () => {
                       <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
                     )}
                     {wizardStep === 2 && (
-                      <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        famousList={famousList} setFamousList={setFamousList}
-                        famousImages={famousImages} setFamousImages={setFamousImages}
-                        brandAssets={brandAssets}
+                      <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         webImages={webSearchResult?.images} />
                     )}
                     {wizardStep === 3 && (
+                      <StepFaceRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                        famousList={famousList} setFamousList={setFamousList}
+                        famousImages={famousImages} setFamousImages={setFamousImages} />
+                    )}
+                    {wizardStep === 4 && (
+                      <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                        brandAssets={brandAssets} />
+                    )}
+                    {wizardStep === 5 && (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
@@ -1135,21 +1143,28 @@ const CarouselGenerator: React.FC = () => {
                     </button>
 
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
-                      <button onClick={async () => {
-                          // Step 0 → 1: auto web search if not done yet
-                          if (wizardStep === 0 && !webSearchResult && topic.trim()) {
-                            await handleSearchWeb();
-                          }
-                          // Step 1 → 2: auto set imageCardCount to ~70%
-                          if (wizardStep === 1) {
-                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
-                          }
-                          setWizardStep(wizardStep + 1);
-                        }} disabled={!canProceed || searchingWeb}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                        style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                        {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* Skip button for face and brand steps */}
+                        {(wizardStep === 3 || wizardStep === 4) && (
+                          <button onClick={() => setWizardStep(wizardStep + 1)}
+                            className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
+                            Pular
+                          </button>
+                        )}
+                        <button onClick={async () => {
+                            if (wizardStep === 0 && !webSearchResult && topic.trim()) {
+                              await handleSearchWeb();
+                            }
+                            if (wizardStep === 1) {
+                              setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                            }
+                            setWizardStep(wizardStep + 1);
+                          }} disabled={!canProceed || searchingWeb}
+                          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
+                          style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
+                        </button>
+                      </div>
                     ) : (
                       <button onClick={() => {
                           setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
@@ -1172,9 +1187,11 @@ const CarouselGenerator: React.FC = () => {
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
                       wizardStep === 0
-                        ? (webSearchResult ? 20 : 0)
-                        : wizardStep === 1 ? 40
-                        : wizardStep === 2 ? 70
+                        ? (webSearchResult ? 15 : 0)
+                        : wizardStep === 1 ? 30
+                        : wizardStep === 2 ? 50
+                        : wizardStep === 3 ? 65
+                        : wizardStep === 4 ? 80
                         : 99
                     } />
                   </span>

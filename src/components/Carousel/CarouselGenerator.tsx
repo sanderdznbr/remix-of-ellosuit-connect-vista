@@ -1136,7 +1136,8 @@ const CarouselGenerator: React.FC = () => {
                     )}
                     {wizardStep === 4 && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        brandAssets={brandAssets} />
+                        brandAssets={brandAssets}
+                        onSuggestColors={(palette) => { setBgColor(palette.bg); setAccentColor(palette.accent); setTextColor(palette.text); }} />
                     )}
                     {wizardStep === 5 && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}

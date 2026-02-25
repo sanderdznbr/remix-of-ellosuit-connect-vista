@@ -143,7 +143,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                       <button key={l} onClick={() => applyGlobalLayout(l)}
                         className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold border transition-all hover:scale-105"
                         style={{
-                          backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF',
+                          backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : bgColor,
                           color: l === 'light' ? '#1A1A1A' : '#FFF',
                           borderColor: l === 'light' ? '#ddd' : 'transparent'
                         }}>
@@ -309,7 +309,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                 <button key={l} onClick={() => onUpdateCard(cardIndex, { layout: l })}
                   className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${card.layout === l ? 'ring-2 ring-primary scale-105' : 'hover:scale-[1.02]'}`}
                   style={{
-                    backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : '#F8F4EF',
+                    backgroundColor: l === 'dark' ? bgColor : l === 'accent' ? accentColor : bgColor,
                     color: l === 'light' ? '#1A1A1A' : '#FFF',
                     borderColor: l === 'light' ? '#ddd' : 'transparent'
                   }}>

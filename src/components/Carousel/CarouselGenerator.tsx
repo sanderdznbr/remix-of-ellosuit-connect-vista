@@ -207,6 +207,11 @@ const CarouselGenerator: React.FC = () => {
     fetchBrandAssets();
   }, [user?.id]);
 
+  // Auto-load history on mount
+  useEffect(() => {
+    loadHistory();
+  }, [user?.id]);
+
   // Handle Facebook OAuth callback
   useEffect(() => {
     const code = searchParams.get('code');
@@ -793,41 +798,35 @@ const CarouselGenerator: React.FC = () => {
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: '#3000E3' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
-      {/* Header */}
-      <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted"><ArrowLeft className="h-5 w-5" /></button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base sm:text-lg font-bold truncate" style={{ color: FLOW_COLOR }}>Gerador de Carrossel</h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">Carrosséis editoriais 1080×1350 para Instagram</p>
-          </div>
-          {carouselData && !generatingAllImages && (
+      {/* Header - only show action buttons when editing */}
+      {carouselData && !generatingAllImages && (
+        <div className="sticky top-0 z-30 border-b border-white/10 bg-[#3000E3]/95 backdrop-blur-sm">
+          <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
+            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-white/10 text-white/80"><ArrowLeft className="h-5 w-5" /></button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base sm:text-lg font-bold truncate text-white">{carouselData.title || topic || 'Carrossel'}</h1>
+            </div>
             <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
+              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm border-white/20 text-white hover:bg-white/10">
                 {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
+              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm border-white/20 text-white hover:bg-white/10">
                 <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Estilo</span>
               </Button>
-              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ backgroundColor: FLOW_COLOR }}>
+              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm bg-white text-[#3000E3] hover:bg-white/90">
                 {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} <span className="hidden sm:inline">Exportar PNGs</span>
               </Button>
               <Button onClick={() => setShowPublishDialog(true)} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ background: 'linear-gradient(135deg, #833AB4, #E1306C, #F77737)' }}>
                 <ExternalLink className="h-4 w-4" /> <span className="hidden sm:inline">Publicar</span>
               </Button>
             </div>
-          )}
-          {!carouselData && (
-            <Button variant="outline" size="sm" onClick={() => { setShowHistory(true); loadHistory(); }} className="gap-1.5 rounded-xl">
-              <History className="h-4 w-4" /> <span className="hidden sm:inline">Histórico</span>
-            </Button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {/* ========== WIZARD ========== */}
@@ -904,45 +903,66 @@ const CarouselGenerator: React.FC = () => {
         {(generating || generatingAllImages) && (
           <div className="flex flex-col items-center gap-4 py-12">
             <div className="relative">
-              <Loader2 className="h-12 w-12 animate-spin" style={{ color: FLOW_COLOR }} />
-              <Sparkles className="h-5 w-5 absolute top-0 right-0" style={{ color: accentColor }} />
+              <Loader2 className="h-12 w-12 animate-spin text-white" />
+              <Sparkles className="h-5 w-5 absolute top-0 right-0 text-white/60" />
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-foreground">{imageGenProgress || 'Gerando carrossel com IA...'}</p>
-              <p className="text-sm text-muted-foreground mt-1">Isso pode levar até 2 minutos</p>
+              <p className="text-lg font-bold text-white">{imageGenProgress || 'Gerando carrossel com IA...'}</p>
+              <p className="text-sm text-white/50 mt-1">Isso pode levar até 2 minutos</p>
             </div>
           </div>
         )}
 
-        {/* History Panel */}
-        {showHistory && (
-          <Card className="border-0 shadow-lg rounded-3xl">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2"><History className="h-5 w-5" style={{ color: FLOW_COLOR }} /><h3 className="font-bold text-foreground">Histórico</h3></div>
-                <button onClick={() => setShowHistory(false)} className="p-1 rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-              </div>
-              {loadingHistory ? <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> :
-                carouselHistory.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum carrossel salvo.</p> :
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {carouselHistory.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-2xl border border-border hover:bg-muted/50 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <Clock className="h-3 w-3" />
+        {/* Gallery of saved carousels - shown at bottom when in wizard mode */}
+        {!carouselData && !generating && !generatingAllImages && carouselHistory.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <History className="h-4 w-4 text-white/50" />
+              <h2 className="text-sm font-semibold text-white/70 tracking-wide uppercase">Seus Carrosséis</h2>
+            </div>
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-white/50"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {carouselHistory.map((item) => {
+                  const coverImage = item.carousel_data?.cards?.[0]?.imageUrl;
+                  const coverBg = item.style_config?.bgColor || item.carousel_data?.cards?.[0]?.bgColor || '#1a1a2e';
+                  const coverTitle = item.carousel_data?.cards?.[0]?.topText || item.title;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => loadCarousel(item)}
+                      className="group relative rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 bg-white/[0.06] hover:bg-white/[0.1] transition-all hover:-translate-y-0.5 hover:shadow-lg text-left"
+                    >
+                      <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
+                        {coverImage ? (
+                          <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center p-3">
+                            <p className="text-white/80 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteCarousel(item.id); }}
+                          className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 hover:bg-red-500/80 text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="p-2.5">
+                        <p className="text-xs font-semibold text-white/90 truncate">{item.title}</p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/40 mt-0.5">
                           <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
                           <span>• {item.card_count} cards</span>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => loadCarousel(item)} className="gap-1 rounded-xl text-xs"><RotateCcw className="h-3 w-3" /> Abrir</Button>
-                      <button onClick={() => deleteCarousel(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ))}
-                </div>
-              }
-            </CardContent>
-          </Card>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Style Panel (post-generation) */}

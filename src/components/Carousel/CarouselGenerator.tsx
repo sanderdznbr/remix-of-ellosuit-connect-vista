@@ -58,6 +58,7 @@ import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/St
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
 import CarouselTour from './CarouselTour';
+import GeneratingAnimation from './GeneratingAnimation';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
@@ -1299,21 +1300,9 @@ const CarouselGenerator: React.FC = () => {
           </div>
         )}
 
-        {/* Generating state - fullscreen black */}
+        {/* Generating state - fullscreen split animation */}
         {(generating || generatingAllImages) && !transitionToGenerate && (
-          <motion.div
-            className="fixed inset-0 z-[60] bg-black flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="carousel-loader-wrapper">
-              {'Generating'.split('').map((letter, i) => (
-                <span key={i} className="carousel-loader-letter" style={{ animationDelay: `${i * 0.1}s` }}>{letter}</span>
-              ))}
-              <div className="carousel-loader-spinner" />
-            </div>
-          </motion.div>
+          <GeneratingAnimation imageGenProgress={imageGenProgress} />
         )}
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}

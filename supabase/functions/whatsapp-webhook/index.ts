@@ -1253,6 +1253,84 @@ Deno.serve(async (req) => {
               .eq('id', conversation.id);
           }
 
+          // ==================== RE-TRIGGER CHATBOT FOR EXISTING CONVERSATIONS ====================
+          // If incoming message, no AI agent active, no chatbot running, try to start chatbot
+          if (!fromMe && conversation && !isGroup) {
+            try {
+              const { data: convState } = await supabase
+                .from('whatsapp_conversations')
+                .select('assigned_agent_id, ai_auto_reply_enabled')
+                .eq('id', conversation.id)
+                .single();
+
+              const hasActiveAgent = convState?.assigned_agent_id && convState?.ai_auto_reply_enabled;
+
+              if (!hasActiveAgent) {
+                // Check if chatbot is already running
+                const { data: runningExecCheck } = await supabase
+                  .from('chatbot_executions')
+                  .select('id')
+                  .eq('conversation_id', conversation.id)
+                  .eq('status', 'running')
+                  .limit(1);
+
+                const chatbotRunning = runningExecCheck && runningExecCheck.length > 0;
+
+                if (!chatbotRunning) {
+                  // Find active chatbot flows for this company
+                  const { data: reactivateFlows } = await supabase
+                    .from('chatbot_flows')
+                    .select('id, name, trigger_config, execution_count')
+                    .eq('company_id', companyId)
+                    .eq('is_active', true);
+
+                  if (reactivateFlows && reactivateFlows.length > 0) {
+                    const reactivateFlow = reactivateFlows.find((f: any) => {
+                      const tc = f.trigger_config as Record<string, unknown> | null;
+                      if (!tc) return false;
+                      if (tc.type !== 'whatsapp_channel' && tc.type !== 'conversation_start') return false;
+                      if (tc.sessionId && tc.sessionId !== targetSessionId) return false;
+                      return true;
+                    }) || reactivateFlows.find((f: any) => {
+                      const tc = f.trigger_config as Record<string, unknown> | null;
+                      return tc && (tc.type === 'whatsapp_channel' || tc.type === 'conversation_start') && !tc.sessionId;
+                    });
+
+                    if (reactivateFlow) {
+                      console.log(`🤖🔄 [RE-TRIGGER] Restarting flow "${reactivateFlow.name}" for existing conversation ${conversation.id}`);
+                      const { data: newExec } = await supabase
+                        .from('chatbot_executions')
+                        .insert({
+                          flow_id: reactivateFlow.id,
+                          conversation_id: conversation.id,
+                          contact_phone: phoneNumber,
+                          status: 'running',
+                          variables: {
+                            nome: contactName || phoneNumber,
+                            telefone: phoneNumber,
+                          },
+                          execution_path: [],
+                          last_activity_at: new Date().toISOString(),
+                        })
+                        .select()
+                        .single();
+
+                      if (newExec) {
+                        await supabase
+                          .from('chatbot_flows')
+                          .update({ execution_count: (reactivateFlow.execution_count || 0) + 1 })
+                          .eq('id', reactivateFlow.id);
+                        console.log(`🤖🔄 [RE-TRIGGER] Execution created: ${newExec.id}`);
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (retriggerErr) {
+              console.error('🤖🔄 [RE-TRIGGER] Error:', retriggerErr);
+            }
+          }
+
           // ==================== CONTACT BACKFILL (from messages) ====================
           // Garante que a aba Contatos não fique zerada mesmo quando o Baileys não emite contacts.set
           if (!isGroup && remoteJid) {

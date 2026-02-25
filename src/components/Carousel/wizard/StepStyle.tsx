@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, X } from 'lucide-react';
 
 const FONT_OPTIONS = [
   { label: 'Playfair Display', value: "'Playfair Display', 'Georgia', serif" },
@@ -67,6 +67,8 @@ export const STYLE_PRESETS: StylePreset[] = [
   },
 ];
 
+export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 interface Props {
   bgColor: string;
   setBgColor: (v: string) => void;
@@ -85,6 +87,10 @@ interface Props {
   showHeader?: boolean;
   setShowHeader?: (v: boolean) => void;
   onApplyPreset?: (preset: StylePreset) => void;
+  logoUrl?: string | null;
+  setLogoUrl?: (v: string | null) => void;
+  logoPosition?: LogoPosition;
+  setLogoPosition?: (v: LogoPosition) => void;
 }
 
 const StepStyle: React.FC<Props> = ({
@@ -92,9 +98,11 @@ const StepStyle: React.FC<Props> = ({
   selectedFont, setSelectedFont, brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   showHeader = true, setShowHeader,
   onApplyPreset,
+  logoUrl, setLogoUrl, logoPosition = 'top-left', setLogoPosition,
 }) => {
   const [showAllFonts, setShowAllFonts] = useState(false);
   const [activeSection, setActiveSection] = useState<'presets' | 'colors' | 'fonts' | 'branding'>('presets');
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const applyPreset = (preset: StylePreset) => {
     setBgColor(preset.bgColor);
@@ -235,6 +243,58 @@ const StepStyle: React.FC<Props> = ({
               <span className="text-xs font-medium text-white/60">Exibir cabeçalho nos cards</span>
             </label>
           )}
+
+          {/* Logo upload */}
+          {setLogoUrl && setLogoPosition && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-white/40">Logomarca</p>
+              {logoUrl ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center overflow-hidden">
+                    <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <button onClick={() => setLogoUrl(null)}
+                    className="p-1.5 rounded-md bg-white/[0.06] hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => logoInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-3 rounded-lg border border-dashed border-white/[0.1] bg-white/[0.02] text-white/40 hover:bg-white/[0.05] hover:text-white/60 transition-all text-xs w-full">
+                  <Upload className="h-3.5 w-3.5" /> Enviar logomarca
+                </button>
+              )}
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setLogoUrl(URL.createObjectURL(file));
+                e.target.value = '';
+              }} />
+
+              {logoUrl && (
+                <div>
+                  <p className="text-[10px] font-medium text-white/30 mb-2">Posição</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { key: 'top-left' as LogoPosition, label: '↖ Superior Esq.' },
+                      { key: 'top-right' as LogoPosition, label: '↗ Superior Dir.' },
+                      { key: 'bottom-left' as LogoPosition, label: '↙ Inferior Esq.' },
+                      { key: 'bottom-right' as LogoPosition, label: '↘ Inferior Dir.' },
+                    ]).map(pos => (
+                      <button key={pos.key} onClick={() => setLogoPosition(pos.key)}
+                        className={`px-3 py-2 rounded-lg text-[10px] font-medium transition-all border ${
+                          logoPosition === pos.key
+                            ? 'bg-white/[0.1] border-white/20 text-white'
+                            : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:bg-white/[0.05]'
+                        }`}>
+                        {pos.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: 'Marca', value: brandName, onChange: setBrandName, ph: 'Nome da marca' },

@@ -50,7 +50,7 @@ import StepTopic from './wizard/StepTopic';
 import StepReferences from './wizard/StepReferences';
 import StepImageSettings from './wizard/StepImageSettings';
 import StepImageAdvanced from './wizard/StepImageAdvanced';
-import StepStyle, { STYLE_PRESETS, StylePreset } from './wizard/StepStyle';
+import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
@@ -155,6 +155,8 @@ const CarouselGenerator: React.FC = () => {
   const [accentColor, setAccentColor] = useState('#E84D1A');
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [selectedFont, setSelectedFont] = useState(0);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -554,6 +556,7 @@ const CarouselGenerator: React.FC = () => {
       let totalImages = 0;
       let realImagesUsed = 0;
       let aiImagesQueued = 0;
+      const usedImageUrls = new Set<string>(); // Track used URLs to prevent duplicates
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
@@ -585,13 +588,23 @@ const CarouselGenerator: React.FC = () => {
               })(),
             });
           } else if (webImagePool.length > webImageIndex) {
-            // Content cards: use user-selected image
-            updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex], isAiImage: false };
+            // Content cards: use user-selected image, skip duplicates
+            let selectedUrl = webImagePool[webImageIndex];
             webImageIndex++;
-            realImagesUsed++;
+            // Skip already-used URLs
+            while (usedImageUrls.has(selectedUrl) && webImageIndex < webImagePool.length) {
+              selectedUrl = webImagePool[webImageIndex];
+              webImageIndex++;
+            }
+            if (!usedImageUrls.has(selectedUrl)) {
+              usedImageUrls.add(selectedUrl);
+              updatedCards[i] = { ...updatedCards[i], imageUrl: selectedUrl, isAiImage: false };
+              realImagesUsed++;
+            }
           } else {
             // No selected images left — search Brave for a unique image for this card
             const searchQuery = cleanTopic; // Use only the clean topic, not AI-generated descriptions
+            const cardIndex = i; // Capture for closure
             imagePromises.push({
               index: i,
               promise: (async () => {
@@ -602,11 +615,13 @@ const CarouselGenerator: React.FC = () => {
                   });
                   const foundImages = (searchData?.images || [])
                     .map((img: any) => img.url)
-                    .filter((url: string) => isValidImageUrl(url));
+                    .filter((url: string) => isValidImageUrl(url) && !usedImageUrls.has(url));
                   if (foundImages.length > 0) {
-                    // Pick a random one to avoid repetition
-                    const randomIdx = Math.floor(Math.random() * Math.min(foundImages.length, 5));
-                    return foundImages[randomIdx];
+                    // Pick a random one from unused images
+                    const randomIdx = Math.floor(Math.random() * Math.min(foundImages.length, 10));
+                    const chosen = foundImages[randomIdx];
+                    usedImageUrls.add(chosen);
+                    return chosen;
                   }
                   // Brave found nothing — fall back to AI generation
                   const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
@@ -615,7 +630,7 @@ const CarouselGenerator: React.FC = () => {
                     negativePrompt: imageSettings.negativePrompt || undefined,
                   });
                 } catch (err) {
-                  console.error('Image search/gen error for card', i, err);
+                  console.error('Image search/gen error for card', cardIndex, err);
                   return null;
                 }
               })(),
@@ -860,10 +875,22 @@ const CarouselGenerator: React.FC = () => {
     const isLight = layout === 'light';
     const isAccent = layout === 'accent';
     const bg = isAccent ? accentColor : bgColor;
-    const mainTxt = isAccent ? '#FFFFFF' : isLight ? '#1A1A1A' : textColor;
-    const secondaryTxt = isAccent ? 'rgba(255,255,255,0.75)' : isLight ? '#666' : 'rgba(255,255,255,0.75)';
-    const accentTxt = isAccent ? '#FFFFFF' : accentColor;
-    const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
+    
+    // Ensure text contrast: if bg is dark, use light text; if bg is light, use dark text
+    const bgLuminance = (() => {
+      const hex = bg.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16) / 255;
+      const g = parseInt(hex.substring(2, 4), 16) / 255;
+      const b = parseInt(hex.substring(4, 6), 16) / 255;
+      const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    })();
+    const isDarkBg = bgLuminance < 0.4;
+    
+    const mainTxt = isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : isLight ? '#1A1A1A' : (isDarkBg ? '#FFFFFF' : textColor);
+    const secondaryTxt = isAccent ? (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)') : isLight ? '#666' : (isDarkBg ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.6)');
+    const accentTxt = isAccent ? (isDarkBg ? '#FFFFFF' : '#1A1A1A') : accentColor;
+    const headerTxt = isLight ? '#999' : (isDarkBg ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)');
 
     const renderHeader = () => {
       if (!showHeader) return null;
@@ -874,6 +901,22 @@ const CarouselGenerator: React.FC = () => {
           <span>{dateLabel}</span>
         </div>
       );
+    };
+
+    const renderLogo = () => {
+      if (!logoUrl) return null;
+      const size = 80 * s;
+      const margin = 36 * s;
+      const posStyle: React.CSSProperties = {
+        position: 'absolute',
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        zIndex: 15,
+        ...(logoPosition.includes('top') ? { top: margin } : { bottom: margin }),
+        ...(logoPosition.includes('left') ? { left: margin } : { right: margin }),
+      };
+      return <img src={logoUrl} alt="" style={posStyle} />;
     };
 
     if (card.type === 'cover') {
@@ -888,6 +931,7 @@ const CarouselGenerator: React.FC = () => {
             </h1>
             {card.subtitle && <p style={{ fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 600, color: '#FFFFFF', opacity: 0.85, marginTop: `${16 * s}px`, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>→ {card.subtitle}</p>}
           </div>
+          {renderLogo()}
         </div>
       );
     }
@@ -910,6 +954,7 @@ const CarouselGenerator: React.FC = () => {
             </div>
             {userName && <p style={{ fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 600, color: mainTxt, opacity: 0.5, marginTop: `${36 * s}px`, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>@{userName}</p>}
           </div>
+          {renderLogo()}
         </div>
       );
     }
@@ -928,6 +973,7 @@ const CarouselGenerator: React.FC = () => {
             <p style={{ fontFamily: serif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.2, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 58, s)}</p>
             {bottomText && <p style={{ fontFamily: serif, fontSize: `${38 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
           </div>
+          {renderLogo()}
         </div>
       );
     }
@@ -946,6 +992,7 @@ const CarouselGenerator: React.FC = () => {
           {/* Bottom text */}
           {bottomText && <div style={{ flex: '0 0 auto', overflow: 'hidden', maxHeight: hasImage ? '16%' : undefined }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 2 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
         </div>
+        {renderLogo()}
       </div>
     );
   };
@@ -1063,7 +1110,8 @@ const CarouselGenerator: React.FC = () => {
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
-                        showHeader={showHeader} setShowHeader={setShowHeader} />
+                        showHeader={showHeader} setShowHeader={setShowHeader}
+                        logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
                     )}
                     </motion.div>
                   </AnimatePresence>
@@ -1349,7 +1397,8 @@ const CarouselGenerator: React.FC = () => {
                       textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                       brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
                       dateLabel={dateLabel} setDateLabel={setDateLabel}
-                      showHeader={showHeader} setShowHeader={setShowHeader} />
+                      showHeader={showHeader} setShowHeader={setShowHeader}
+                      logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
                   </div>
                 </motion.div>
               )}

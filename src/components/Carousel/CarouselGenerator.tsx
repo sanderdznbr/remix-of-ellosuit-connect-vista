@@ -1104,26 +1104,10 @@ const CarouselGenerator: React.FC = () => {
 
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
-                <motion.div
-                  className="carousel-loader-wrapper"
-                  style={{ width: '240px', height: '240px' }}
-                  animate={transitionToGenerate ? {
-                    position: 'fixed' as any,
-                    top: '50%',
-                    left: '50%',
-                    x: '-50%',
-                    y: '-50%',
-                    width: '320px',
-                    height: '320px',
-                    scale: 1.3,
-                    zIndex: 100,
-                  } : {}}
-                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                >
+                <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
                   <div className="carousel-loader-spinner" />
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
-                      transitionToGenerate ? 100 :
                       wizardStep === 0
                         ? (webSearchResult ? 15 : 0)
                         : wizardStep === 1 ? 30
@@ -1132,18 +1116,31 @@ const CarouselGenerator: React.FC = () => {
                         : 99
                     } />
                   </span>
-                </motion.div>
+                </div>
               </div>
 
-              {/* Fullscreen overlay that fades in during transition */}
+              {/* Fullscreen transition overlay */}
               <AnimatePresence>
                 {transitionToGenerate && (
                   <motion.div
-                    className="fixed inset-0 z-[59] bg-black"
+                    className="fixed inset-0 z-[60] bg-black flex items-center justify-center"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.8, delay: 0.3 }}
-                  />
+                    transition={{ duration: 0.6 }}
+                  >
+                    <motion.div
+                      className="carousel-loader-wrapper"
+                      style={{ width: '280px', height: '280px' }}
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+                    >
+                      <div className="carousel-loader-spinner" />
+                      <span className="text-white/60 text-3xl font-light z-[1]">
+                        <AnimatedCounter target={100} />
+                      </span>
+                    </motion.div>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>

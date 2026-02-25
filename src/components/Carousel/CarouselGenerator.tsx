@@ -1052,13 +1052,13 @@ const CarouselGenerator: React.FC = () => {
                 </div>
               </div>
 
-              {/* RIGHT: 3D cube animation */}
+              {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
-                <div className="cube-loader">
-                  <div className="cube"></div>
-                  <div className="cube"></div>
-                  <div className="cube"></div>
-                  <div className="cube"></div>
+                <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
+                  <div className="carousel-loader-spinner" />
+                  <span className="text-white/60 text-3xl font-light z-[1]">
+                    {wizardStep === 0 ? '0%' : wizardStep === 1 ? '50%' : wizardStep === 2 ? '75%' : '100%'}
+                  </span>
                 </div>
               </div>
             </div>

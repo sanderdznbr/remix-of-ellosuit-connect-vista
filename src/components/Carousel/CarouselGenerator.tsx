@@ -848,9 +848,9 @@ const CarouselGenerator: React.FC = () => {
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {renderHeader()}
-           <div style={{ position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px` }}>
-            <p style={{ fontFamily: serif, fontSize: `${62 * s * fs}px`, fontWeight: 700, lineHeight: 1.15, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 62, s)}</p>
-            {bottomText && <p style={{ fontFamily: serif, fontSize: `${40 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
+           <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px`, gap: `${24 * s}px` }}>
+            <p style={{ fontFamily: serif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.2, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 58, s)}</p>
+            {bottomText && <p style={{ fontFamily: serif, fontSize: `${38 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
           </div>
         </div>
       );
@@ -860,15 +860,15 @@ const CarouselGenerator: React.FC = () => {
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
         {renderHeader()}
-        <div style={{ position: 'absolute', top: `${60 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${30 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden' }}>
-          {/* Top text area - limited when image present */}
-          <div style={{ paddingTop: `${10 * s}px`, flex: hasImage ? '0 0 auto' : '1', display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden', maxHeight: hasImage ? '40%' : undefined }}>
-            <p style={{ fontFamily: serif, fontSize: `${(hasImage ? 44 : 58) * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 4 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 44 : 58) * fs, s)}</p>
+        <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden', gap: `${24 * s}px` }}>
+          {/* Top text area */}
+          <div style={{ flex: hasImage ? '0 0 auto' : '1', display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden', maxHeight: hasImage ? '35%' : undefined }}>
+            <p style={{ fontFamily: serif, fontSize: `${(hasImage ? 42 : 56) * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 4 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 42 : 56) * fs, s)}</p>
           </div>
-          {/* Image area - takes remaining space */}
-          {hasImage && <div style={{ marginTop: `${16 * s}px`, flex: '1 1 auto', minHeight: 0, borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+          {/* Image area with margin/gap */}
+          {hasImage && <div style={{ flex: '1 1 auto', minHeight: 0, borderRadius: `${20 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
           {/* Bottom text */}
-          {bottomText && <div style={{ paddingTop: `${12 * s}px`, flex: '0 0 auto', overflow: 'hidden', maxHeight: hasImage ? '18%' : undefined }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 34 : 44) * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 2 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 34 : 44) * fs, s)}</p></div>}
+          {bottomText && <div style={{ flex: '0 0 auto', overflow: 'hidden', maxHeight: hasImage ? '16%' : undefined }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 2 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
         </div>
       </div>
     );

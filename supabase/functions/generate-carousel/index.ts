@@ -667,8 +667,10 @@ STYLE REQUIREMENTS:
       }
 
       const searchQuery = query || keywords?.join(' ') || topic;
+      const perPage = body.perPage || 12;
+      const page = body.page || 1;
       const response = await fetch(
-        `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=15&orientation=square`,
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`,
         { headers: { 'Authorization': PEXELS_API_KEY } }
       );
 
@@ -689,7 +691,7 @@ STYLE REQUIREMENTS:
         photographer: p.photographer,
       }));
 
-      return new Response(JSON.stringify({ success: true, images }), {
+      return new Response(JSON.stringify({ success: true, images, page, totalResults: data.total_results || 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

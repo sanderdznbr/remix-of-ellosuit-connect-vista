@@ -1068,9 +1068,15 @@ Deno.serve(async (req) => {
                   const triggerFlow = autoFlows.find((f: any) => {
                     const tc = f.trigger_config as Record<string, unknown> | null;
                     if (!tc) return false;
-                    if (tc.type !== 'whatsapp_channel' && tc.type !== 'conversation_start') return false;
-                    // If flow has a specific sessionId, only trigger for that session
-                    if (tc.sessionId && tc.sessionId !== targetSessionId) return false;
+                    const tcType = (tc.type || tc.triggerType) as string;
+                    if (tcType !== 'whatsapp_channel' && tcType !== 'conversation_start') return false;
+                    // Check sessionId from trigger_config or from trigger node inside nodes array
+                    let tcSessionId = tc.sessionId as string | undefined;
+                    if (!tcSessionId && Array.isArray(f.nodes)) {
+                      const triggerNode = (f.nodes as any[]).find((n: any) => n.type === 'trigger');
+                      tcSessionId = triggerNode?.data?.config?.sessionId;
+                    }
+                    if (tcSessionId && tcSessionId !== targetSessionId) return false;
                     return true;
                   });
 
@@ -1280,7 +1286,7 @@ Deno.serve(async (req) => {
                   // Find active chatbot flows for this company
                   const { data: reactivateFlows } = await supabase
                     .from('chatbot_flows')
-                    .select('id, name, trigger_config, execution_count')
+                    .select('id, name, nodes, trigger_config, execution_count')
                     .eq('company_id', companyId)
                     .eq('is_active', true);
 
@@ -1288,12 +1294,20 @@ Deno.serve(async (req) => {
                     const reactivateFlow = reactivateFlows.find((f: any) => {
                       const tc = f.trigger_config as Record<string, unknown> | null;
                       if (!tc) return false;
-                      if (tc.type !== 'whatsapp_channel' && tc.type !== 'conversation_start') return false;
-                      if (tc.sessionId && tc.sessionId !== targetSessionId) return false;
+                      const tcType = (tc.type || tc.triggerType) as string;
+                      if (tcType !== 'whatsapp_channel' && tcType !== 'conversation_start') return false;
+                      // Check sessionId from trigger_config or from trigger node inside nodes array
+                      let tcSessionId = tc.sessionId as string | undefined;
+                      if (!tcSessionId && Array.isArray(f.nodes)) {
+                        const triggerNode = (f.nodes as any[]).find((n: any) => n.type === 'trigger');
+                        tcSessionId = triggerNode?.data?.config?.sessionId;
+                      }
+                      if (tcSessionId && tcSessionId !== targetSessionId) return false;
                       return true;
                     }) || reactivateFlows.find((f: any) => {
                       const tc = f.trigger_config as Record<string, unknown> | null;
-                      return tc && (tc.type === 'whatsapp_channel' || tc.type === 'conversation_start') && !tc.sessionId;
+                      const tcType = (tc?.type || tc?.triggerType) as string;
+                      return tc && (tcType === 'whatsapp_channel' || tcType === 'conversation_start') && !tc.sessionId;
                     });
 
                     if (reactivateFlow) {

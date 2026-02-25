@@ -798,7 +798,7 @@ const CarouselGenerator: React.FC = () => {
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#3000E3' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#3000E3' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* Header - only show action buttons when editing */}
@@ -828,7 +828,7 @@ const CarouselGenerator: React.FC = () => {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="max-w-4xl mx-auto p-4 space-y-6 flex-1 flex flex-col">
         {/* ========== WIZARD ========== */}
         {!carouselData && !generating && !generatingAllImages && (
           <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
@@ -987,17 +987,17 @@ const CarouselGenerator: React.FC = () => {
           <>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-bold text-foreground text-lg">Preview ({carouselData.cards.length} cards)</h2>
+                <h2 className="font-bold text-white text-lg">Preview ({carouselData.cards.length} cards)</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl"><Plus className="h-3 w-3" /> Card</Button>
-                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }} className="rounded-xl">Novo</Button>
+                  <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl border-white/20 text-white hover:bg-white/10"><Plus className="h-3 w-3" /> Card</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }} className="rounded-xl border-white/20 text-white hover:bg-white/10">Novo</Button>
                 </div>
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group">
-                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:ring-offset-background"
+                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-[#3000E3]"
                       onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
                       {renderCardPreview(card, i)}
                     </div>
@@ -1005,7 +1005,7 @@ const CarouselGenerator: React.FC = () => {
                       <button onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
                       {carouselData.cards.length > 2 && <button onClick={() => removeCard(i)} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
-                    <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
+                    <p className="text-center text-xs text-white/50 mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
                   </div>
                 ))}
               </div>

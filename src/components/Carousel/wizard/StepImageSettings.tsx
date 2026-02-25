@@ -105,7 +105,12 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
           <ModelCard selected={settings.model === 'auto'} onClick={() => update({ model: 'auto' })} title="Automático" desc="Sistema escolhe o melhor" />
           <ModelCard selected={settings.model === 'gemini'} onClick={() => update({ model: 'gemini' })} title="Gemini Flash" desc="Rápido, boa qualidade" />
           <ModelCard selected={settings.model === 'nano-banana'} onClick={() => update({ model: 'nano-banana' })} title="Nano Banana Pro" desc="Alta qualidade Gemini" />
-          <ModelCard selected={settings.model === 'higgsfield'} onClick={() => update({ model: 'higgsfield' })} title="Higgsfield" desc="Multi-modelo externo" />
+          <button disabled
+            className="p-4 rounded-xl text-left border bg-white/[0.02] border-white/[0.06] opacity-40 cursor-not-allowed relative">
+            <span className="text-sm font-semibold text-white/90">Higgsfield</span>
+            <span className="block text-[11px] text-white/40 mt-1">Multi-modelo externo</span>
+            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-white/[0.06] text-[9px] font-bold text-white/30 uppercase tracking-wider">Em breve</span>
+          </button>
         </div>
       </div>
 

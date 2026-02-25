@@ -158,6 +158,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Generation state
   const [generating, setGenerating] = useState(false);
+  const [transitionToGenerate, setTransitionToGenerate] = useState(false);
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [exporting, setExporting] = useState(false);
@@ -486,6 +487,8 @@ const CarouselGenerator: React.FC = () => {
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
     setGenerating(true);
+    // Small delay to let the transition animation settle before showing generating overlay
+    setTimeout(() => setTransitionToGenerate(false), 500);
     try {
       const imageCardIndices: number[] = [0];
       const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
@@ -1086,7 +1089,10 @@ const CarouselGenerator: React.FC = () => {
                         Próximo <ChevronRight className="h-4 w-4" />
                       </button>
                     ) : (
-                      <button onClick={generateContent} disabled={generating || !topic.trim()}
+                      <button onClick={() => {
+                          setTransitionToGenerate(true);
+                          setTimeout(() => generateContent(), 1200);
+                        }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                         <Sparkles className="h-4 w-4" /> Gerar Carrossel
@@ -1098,20 +1104,48 @@ const CarouselGenerator: React.FC = () => {
 
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
-                <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
+                <motion.div
+                  className="carousel-loader-wrapper"
+                  style={{ width: '240px', height: '240px' }}
+                  animate={transitionToGenerate ? {
+                    position: 'fixed' as any,
+                    top: '50%',
+                    left: '50%',
+                    x: '-50%',
+                    y: '-50%',
+                    width: '320px',
+                    height: '320px',
+                    scale: 1.3,
+                    zIndex: 100,
+                  } : {}}
+                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                >
                   <div className="carousel-loader-spinner" />
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
+                      transitionToGenerate ? 100 :
                       wizardStep === 0
                         ? (webSearchResult ? 15 : 0)
                         : wizardStep === 1 ? 30
                         : wizardStep === 2 ? 50
                         : wizardStep === 3 ? 75
-                        : 100
+                        : 99
                     } />
                   </span>
-                </div>
+                </motion.div>
               </div>
+
+              {/* Fullscreen overlay that fades in during transition */}
+              <AnimatePresence>
+                {transitionToGenerate && (
+                  <motion.div
+                    className="fixed inset-0 z-[59] bg-black"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                  />
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Saved carousels */}
@@ -1165,15 +1199,20 @@ const CarouselGenerator: React.FC = () => {
         )}
 
         {/* Generating state - fullscreen black */}
-        {(generating || generatingAllImages) && (
-          <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center">
+        {(generating || generatingAllImages) && !transitionToGenerate && (
+          <motion.div
+            className="fixed inset-0 z-[60] bg-black flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="carousel-loader-wrapper">
               {'Generating'.split('').map((letter, i) => (
                 <span key={i} className="carousel-loader-letter" style={{ animationDelay: `${i * 0.1}s` }}>{letter}</span>
               ))}
               <div className="carousel-loader-spinner" />
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}

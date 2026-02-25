@@ -56,16 +56,16 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
                     }]);
                   }
                 }}
-                  className={`w-full rounded-lg overflow-hidden aspect-video ring-1 transition-all ${
-                    alreadyAdded ? 'ring-purple-500/60 ring-2' : 'ring-white/[0.06] hover:ring-white/20'
+                  className={`w-full rounded-lg overflow-hidden aspect-video transition-all ${
+                    alreadyAdded
+                      ? 'ring-2 ring-purple-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]'
+                      : 'ring-1 ring-white/[0.06] hover:ring-white/20'
                   }`}>
                   <img src={img.thumb} alt="" className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   {alreadyAdded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-purple-600/20">
-                      <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">✓</span>
-                      </div>
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                      <span className="text-white text-[10px] font-bold">✓</span>
                     </div>
                   )}
                 </button>

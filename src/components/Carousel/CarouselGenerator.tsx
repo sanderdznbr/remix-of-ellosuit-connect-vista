@@ -51,10 +51,14 @@ import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
 import StepBrandRef from './wizard/StepBrandRef';
+import StepColors from './wizard/StepColors';
+import StepFonts from './wizard/StepFonts';
+import StepBranding from './wizard/StepBranding';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
+import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -125,7 +129,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Marca', 'Estilo'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Marca', 'Cores', 'Fontes', 'Marca Final'];
+  const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');
@@ -1022,6 +1027,11 @@ const CarouselGenerator: React.FC = () => {
   // ==================== UI ====================
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
+  // Voice guide: speak on step change
+  useEffect(() => {
+    speakStep(wizardStep);
+  }, [wizardStep, speakStep]);
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
@@ -1076,20 +1086,25 @@ const CarouselGenerator: React.FC = () => {
               {/* LEFT column: centered content */}
               <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
                 <div className="w-full max-w-[520px] space-y-6">
-                  {/* Progress dots - no labels, no numbers */}
+                  {/* Progress dots + voice toggle */}
                   <div className="flex items-center justify-center gap-2">
                     {WIZARD_STEPS.map((_, i) => (
                       <button key={i} onClick={() => i <= wizardStep && setWizardStep(i)}
                         className="transition-all"
                         style={{
-                          width: i === wizardStep ? 32 : 8,
-                          height: 8,
-                          borderRadius: 4,
+                          width: i === wizardStep ? 24 : 6,
+                          height: 6,
+                          borderRadius: 3,
                           backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
                           cursor: i <= wizardStep ? 'pointer' : 'default',
                         }}
                       />
                     ))}
+                    <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
+                      className={`ml-3 p-1.5 rounded-lg transition-all ${voiceEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.04] text-white/20'}`}
+                      title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
+                      🔊
+                    </button>
                   </div>
 
                    {/* Step content with entrance animation */}
@@ -1124,12 +1139,20 @@ const CarouselGenerator: React.FC = () => {
                         brandAssets={brandAssets} />
                     )}
                     {wizardStep === 5 && (
-                      <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
-                        textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                        brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
+                      <StepColors bgColor={bgColor} setBgColor={setBgColor}
+                        accentColor={accentColor} setAccentColor={setAccentColor}
+                        textColor={textColor} setTextColor={setTextColor} />
+                    )}
+                    {wizardStep === 6 && (
+                      <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
+                    )}
+                    {wizardStep === 7 && (
+                      <StepBranding brandName={brandName} setBrandName={setBrandName}
+                        userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
                         showHeader={showHeader} setShowHeader={setShowHeader}
-                        logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
+                        logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                        logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
                     )}
                     </motion.div>
                   </AnimatePresence>
@@ -1187,11 +1210,13 @@ const CarouselGenerator: React.FC = () => {
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
                       wizardStep === 0
-                        ? (webSearchResult ? 15 : 0)
-                        : wizardStep === 1 ? 30
-                        : wizardStep === 2 ? 50
-                        : wizardStep === 3 ? 65
-                        : wizardStep === 4 ? 80
+                        ? (webSearchResult ? 10 : 0)
+                        : wizardStep === 1 ? 20
+                        : wizardStep === 2 ? 35
+                        : wizardStep === 3 ? 50
+                        : wizardStep === 4 ? 60
+                        : wizardStep === 5 ? 75
+                        : wizardStep === 6 ? 88
                         : 99
                     } />
                   </span>

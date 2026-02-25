@@ -45,7 +45,9 @@ Deno.serve(async (req) => {
   "image_search_terms": ["term1", "term2", "term3"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
-Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.`;
+Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
+
+CRITICAL for image_search_terms: Each term MUST be highly specific and directly related to the main topic "${topic}". Always include the topic name/brand in each search term. For example, if the topic is "CS2", use terms like "Counter-Strike 2 gameplay screenshot", "CS2 map Dust2", "CS2 weapon skins". NEVER use generic terms like "technology", "2026", "Brazil", "business" etc. The terms must return images that visually represent the specific topic.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 
@@ -163,7 +165,13 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
 
     // Search for images using multiple strategies
     let images: string[] = [];
-    const searchTerms = parsedContent.image_search_terms || [topic];
+    // Force topic relevance: prepend the main topic to every search term
+    const rawTerms = parsedContent.image_search_terms || [topic];
+    const searchTerms = rawTerms.map((t: string) => {
+      // If the term already contains the topic keyword, use as-is; otherwise prepend it
+      const topicLower = topic.toLowerCase().split(' ').slice(0, 3).join(' ');
+      return t.toLowerCase().includes(topicLower.split(' ')[0]) ? t : `${topic} ${t}`;
+    });
 
     // Strategy 1: Brave Search Images
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');

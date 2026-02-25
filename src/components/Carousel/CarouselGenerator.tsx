@@ -1100,11 +1100,7 @@ const CarouselGenerator: React.FC = () => {
                         }}
                       />
                     ))}
-                    <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
-                      className={`ml-3 p-1.5 rounded-lg transition-all ${voiceEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.04] text-white/20'}`}
-                      title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
-                      🔊
-                    </button>
+                    {/* Voice button moved to bottom-right corner */}
                   </div>
 
                    {/* Step content with entrance animation */}
@@ -1248,6 +1244,29 @@ const CarouselGenerator: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Voice toggle — bottom-right corner */}
+              <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
+                className={`fixed bottom-6 right-6 z-50 p-2.5 rounded-full transition-all shadow-lg backdrop-blur-sm ${
+                  voiceEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.06] text-white/15 hover:text-white/30'
+                }`}
+                title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {voiceEnabled ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </>
+                  ) : (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="23" y1="9" x2="17" y2="15" />
+                      <line x1="17" y1="9" x2="23" y2="15" />
+                    </>
+                  )}
+                </svg>
+              </button>
             </div>
 
             {/* Saved carousels */}

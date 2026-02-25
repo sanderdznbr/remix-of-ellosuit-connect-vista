@@ -834,18 +834,40 @@ const CarouselGenerator: React.FC = () => {
     if (!carouselData) return;
     setExporting(true);
     try {
+      // Wait for fonts and images to be fully loaded before capturing
+      await document.fonts.ready;
+      // Small delay to ensure hidden export divs are fully rendered
+      await new Promise(r => setTimeout(r, 500));
+
       for (let i = 0; i < carouselData.cards.length; i++) {
         const el = cardRefs.current[i];
         if (!el) continue;
-        const canvas = await html2canvas(el, { width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: true, backgroundColor: null });
+        const canvas = await html2canvas(el, {
+          width: CARD_W,
+          height: CARD_H,
+          scale: 1,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: bgColor || '#0A0A1A',
+          logging: false,
+          imageTimeout: 15000,
+          onclone: (clonedDoc) => {
+            // Ensure all images in cloned doc have crossOrigin set
+            const imgs = clonedDoc.querySelectorAll('img');
+            imgs.forEach(img => {
+              img.crossOrigin = 'anonymous';
+            });
+          },
+        });
         const link = document.createElement('a');
         link.download = `carousel-card-${i + 1}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 400));
       }
       toast({ title: 'Download completo!' });
     } catch (err) {
+      console.error('Export error:', err);
       toast({ title: 'Erro ao exportar', variant: 'destructive' });
     } finally {
       setExporting(false);

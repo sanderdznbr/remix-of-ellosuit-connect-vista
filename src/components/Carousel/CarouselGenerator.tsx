@@ -968,71 +968,88 @@ const CarouselGenerator: React.FC = () => {
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
-            {/* Header */}
-            <div className="px-6 lg:px-8 pt-6 pb-4 w-full relative z-10">
-              <div className="flex items-center justify-between mb-6 max-w-[1200px] mx-auto">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => navigate('/dashboard')} className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors">
-                    <ArrowLeft className="h-5 w-5 text-white/40" />
-                  </button>
+            {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
+            <div className="flex-1 flex flex-row relative z-10 w-full overflow-hidden">
+              {/* LEFT column: centered content */}
+              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-10 py-8 overflow-y-auto">
+                <div className="w-full max-w-[520px] space-y-6">
+                  {/* Step indicators */}
+                  <div className="flex items-center gap-1">
+                    {WIZARD_STEPS.map((label, i) => (
+                      <React.Fragment key={i}>
+                        <button onClick={() => i <= wizardStep && setWizardStep(i)}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                            i === wizardStep
+                              ? 'bg-white text-black'
+                              : i < wizardStep
+                                ? 'bg-white/[0.08] text-white/60'
+                                : 'bg-white/[0.03] text-white/20'
+                          }`}
+                          style={{ cursor: i <= wizardStep ? 'pointer' : 'default' }}>
+                          {i < wizardStep ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>}
+                          <span className="hidden sm:inline">{label}</span>
+                        </button>
+                        {i < WIZARD_STEPS.length - 1 && (
+                          <div className={`w-4 h-px ${i < wizardStep ? 'bg-white/20' : 'bg-white/[0.06]'}`} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {/* Step content */}
                   <div>
-                    <h1 className="text-lg font-semibold text-white tracking-tight">Criar Carrossel</h1>
-                    <p className="text-xs text-white/25 mt-0.5">Gere posts editoriais com IA</p>
+                    {wizardStep === 0 && (
+                      <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
+                        cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
+                        enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
+                        searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
+                    )}
+                    {wizardStep === 1 && (
+                      <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                        famousList={famousList} setFamousList={setFamousList}
+                        famousImages={famousImages} setFamousImages={setFamousImages}
+                        brandAssets={brandAssets}
+                        webImages={webSearchResult?.images} />
+                    )}
+                    {wizardStep === 2 && (
+                      <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
+                    )}
+                    {wizardStep === 3 && (
+                      <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+                        textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                        brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
+                        dateLabel={dateLabel} setDateLabel={setDateLabel}
+                        showHeader={showHeader} setShowHeader={setShowHeader} />
+                    )}
+                  </div>
+
+                  {/* Navigation buttons */}
+                  <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <button onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
+                      disabled={wizardStep === 0}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all disabled:opacity-0">
+                      <ChevronLeft className="h-4 w-4" /> Voltar
+                    </button>
+
+                    {wizardStep === 0 && !webSearchResult && topic.trim() ? (
+                      <button onClick={handleSearchWeb} disabled={searchingWeb}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-50">
+                        {searchingWeb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+                        {searchingWeb ? 'Pesquisando...' : 'Pesquisar na Web'}
+                      </button>
+                    ) : wizardStep < WIZARD_STEPS.length - 1 ? (
+                      <button onClick={() => setWizardStep(wizardStep + 1)} disabled={!canProceed}
+                        className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
+                        Próximo <ChevronRight className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button onClick={generateContent} disabled={generating || !topic.trim()}
+                        className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
+                        <Sparkles className="h-4 w-4" /> Gerar Carrossel
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                {/* Step indicator inline */}
-                <div className="flex items-center gap-1">
-                  {WIZARD_STEPS.map((label, i) => (
-                    <React.Fragment key={i}>
-                      <button onClick={() => i <= wizardStep && setWizardStep(i)}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-                          i === wizardStep
-                            ? 'bg-white text-black'
-                            : i < wizardStep
-                              ? 'bg-white/[0.08] text-white/60'
-                              : 'bg-white/[0.03] text-white/20'
-                        }`}
-                        style={{ cursor: i <= wizardStep ? 'pointer' : 'default' }}>
-                        {i < wizardStep ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>}
-                        <span className="hidden sm:inline">{label}</span>
-                      </button>
-                      {i < WIZARD_STEPS.length - 1 && (
-                        <div className={`w-4 h-px ${i < wizardStep ? 'bg-white/20' : 'bg-white/[0.06]'}`} />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Two-column layout: inputs left, cube animation right */}
-            <div className="flex-1 flex flex-row relative z-10 max-w-[1200px] mx-auto w-full px-6 lg:px-8 gap-0 overflow-hidden" style={{ minHeight: '500px', maxHeight: 'calc(100vh - 200px)' }}>
-              {/* LEFT: inputs (constrained width) */}
-              <div className="flex-1 max-w-[560px] overflow-y-auto pb-6 pr-4">
-                {wizardStep === 0 && (
-                  <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
-                    cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
-                    enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
-                    searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
-                )}
-                {wizardStep === 1 && (
-                  <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                    famousList={famousList} setFamousList={setFamousList}
-                    famousImages={famousImages} setFamousImages={setFamousImages}
-                    brandAssets={brandAssets}
-                    webImages={webSearchResult?.images} />
-                )}
-                {wizardStep === 2 && (
-                  <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
-                )}
-                {wizardStep === 3 && (
-                  <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
-                    textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                    brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                    dateLabel={dateLabel} setDateLabel={setDateLabel}
-                    showHeader={showHeader} setShowHeader={setShowHeader} />
-                )}
               </div>
 
               {/* RIGHT: 3D cube animation */}
@@ -1048,33 +1065,6 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Bottom nav bar — fixed */}
-            <div className="flex items-center justify-between px-6 lg:px-8 py-4 max-w-[1200px] mx-auto w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-              <button onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
-                disabled={wizardStep === 0}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all disabled:opacity-0">
-                <ChevronLeft className="h-4 w-4" /> Voltar
-              </button>
-
-              {wizardStep === 0 && !webSearchResult && topic.trim() ? (
-                <button onClick={handleSearchWeb} disabled={searchingWeb}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-50">
-                  {searchingWeb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
-                  {searchingWeb ? 'Pesquisando...' : 'Pesquisar na Web'}
-                </button>
-              ) : wizardStep < WIZARD_STEPS.length - 1 ? (
-                <button onClick={() => setWizardStep(wizardStep + 1)} disabled={!canProceed}
-                  className="flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
-                  Próximo <ChevronRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button onClick={generateContent} disabled={generating || !topic.trim()}
-                  className="flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold bg-white text-black transition-all hover:bg-white/90 disabled:opacity-30">
-                  <Sparkles className="h-4 w-4" /> Gerar Carrossel
-                </button>
-              )}
             </div>
 
             {/* Saved carousels */}

@@ -1004,14 +1004,16 @@ const CarouselGenerator: React.FC = () => {
 
             <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
               {/* Center: Large preview with card navigation */}
-              <div className="flex-1 flex flex-col items-center justify-center bg-muted/20 overflow-auto p-2">
-                <div className="relative" style={{ width: PREVIEW_W * 1.6, maxWidth: '90vw' }}>
-                  <div style={{ transform: 'scale(1.6)', transformOrigin: 'top left' }}>
-                    {renderCardPreview(ec, validIndex)}
+              <div className="flex-1 flex flex-col items-center bg-muted/20 overflow-auto p-2">
+                <div className="flex-1 flex items-center justify-center w-full min-h-0">
+                  <div className="relative" style={{ width: PREVIEW_W * 1.6, height: PREVIEW_H * 1.6, maxWidth: '90vw' }}>
+                    <div style={{ transform: 'scale(1.6)', transformOrigin: 'top left' }}>
+                      {renderCardPreview(ec, validIndex)}
+                    </div>
                   </div>
                 </div>
                 {/* Card navigation dots */}
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex items-center gap-2 py-3 flex-shrink-0">
                   <button onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
                     disabled={validIndex === 0} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
                     <ChevronLeft className="h-5 w-5" />

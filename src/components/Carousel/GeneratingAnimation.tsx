@@ -112,18 +112,29 @@ const GeneratingAnimation: React.FC<Props> = ({ imageGenProgress }) => {
       transition={{ duration: 0.5 }}
     >
       {/* LEFT SIDE — Orb + Status */}
-      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-4">
         {/* Ambient glow */}
-        <div className="absolute w-[500px] h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
+        <div className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(123,80,220,0.6) 0%, transparent 70%)' }} />
 
         {/* Animated orb — uses carousel-loader CSS */}
-        <div className="carousel-loader-wrapper">
+        <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
           <div className="carousel-loader-spinner" />
         </div>
 
+        {/* Percentage display on mobile */}
+        {imageGenProgress && (
+          <motion.div
+            className="md:hidden mt-6 flex flex-col items-center gap-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <p className="text-white text-lg font-bold">{imageGenProgress}</p>
+          </motion.div>
+        )}
+
         {/* Step indicator */}
-        <div className="mt-10 text-center relative z-10">
+        <div className="mt-6 md:mt-10 text-center relative z-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={imageGenProgress || activeStep}
@@ -134,12 +145,15 @@ const GeneratingAnimation: React.FC<Props> = ({ imageGenProgress }) => {
               className="flex flex-col items-center gap-2"
             >
               {imageGenProgress ? (
-                <p className="text-white/70 text-sm font-medium">{imageGenProgress}</p>
+                <p className="hidden md:block text-white/70 text-sm font-medium">{imageGenProgress}</p>
               ) : (
                 <>
                   <span className="text-2xl">{STEPS[activeStep].icon}</span>
                   <p className="text-white/70 text-sm font-medium">{STEPS[activeStep].label}</p>
                 </>
+              )}
+              {!imageGenProgress && (
+                <span className="text-2xl md:hidden">{STEPS[activeStep].icon}</span>
               )}
             </motion.div>
           </AnimatePresence>

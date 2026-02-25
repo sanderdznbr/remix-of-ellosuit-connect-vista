@@ -379,8 +379,9 @@ const CarouselGenerator: React.FC = () => {
     styleReferenceUrls?: string[];
     negativePrompt?: string;
   }): Promise<string | null> => {
+    // Default: always use nano-banana (best quality). Gemini is fallback only.
     const resolvedModel = imageSettings.model === 'auto'
-      ? ((opts.faceReferenceUrls?.length ?? 0) > 0 ? 'nano-banana' : 'gemini')
+      ? 'nano-banana'
       : imageSettings.model;
 
     // === HIGGSFIELD PATH ===
@@ -410,9 +411,7 @@ const CarouselGenerator: React.FC = () => {
         topic: opts.prompt,
         faceReferenceUrls: opts.faceReferenceUrls,
         styleReferenceUrls: opts.styleReferenceUrls,
-        imageModel: imageSettings.model === 'auto'
-          ? ((opts.faceReferenceUrls?.length ?? 0) > 0 ? 'nano-banana' : 'gemini')
-          : imageSettings.model,
+        imageModel: resolvedModel,
         negativePrompt: opts.negativePrompt,
         fidelity: imageSettings.fidelity,
       },

@@ -56,7 +56,7 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
       <div>
         <SectionLabel>Modelo de IA</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
-          <ModelCard selected={settings.model === 'auto'} onClick={() => update({ model: 'auto' })} title="Automático" desc="Sistema escolhe o melhor" />
+          <ModelCard selected={settings.model === 'auto'} onClick={() => update({ model: 'auto' })} title="Automático" desc="Nano Banana + Gemini fallback" />
           <ModelCard selected={settings.model === 'gemini'} onClick={() => update({ model: 'gemini' })} title="Gemini Flash" desc="Rápido, boa qualidade" />
           <ModelCard selected={settings.model === 'nano-banana'} onClick={() => update({ model: 'nano-banana' })} title="Nano Banana Pro" desc="Alta qualidade Gemini" />
           <button disabled

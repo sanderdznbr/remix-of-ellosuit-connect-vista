@@ -920,6 +920,8 @@ const CarouselGenerator: React.FC = () => {
         zIndex: 15,
         ...(logoPosition.includes('top') ? { top: margin } : { bottom: margin }),
         ...(logoPosition.includes('left') ? { left: margin } : { right: margin }),
+        // Auto-whiten colorful logos on dark backgrounds
+        ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}),
       };
       return <img src={logoUrl} alt="" style={posStyle} />;
     };

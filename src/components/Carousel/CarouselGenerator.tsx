@@ -1055,14 +1055,10 @@ const CarouselGenerator: React.FC = () => {
               {/* RIGHT: 3D cube animation */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
                 <div className="cube-loader">
-                  <div className="cube">
-                    <div className="face"></div>
-                    <div className="face"></div>
-                    <div className="face"></div>
-                    <div className="face"></div>
-                    <div className="face"></div>
-                    <div className="face"></div>
-                  </div>
+                  <div className="cube"></div>
+                  <div className="cube"></div>
+                  <div className="cube"></div>
+                  <div className="cube"></div>
                 </div>
               </div>
             </div>

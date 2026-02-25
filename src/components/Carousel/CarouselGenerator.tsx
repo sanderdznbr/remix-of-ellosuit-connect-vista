@@ -735,11 +735,11 @@ const CarouselGenerator: React.FC = () => {
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {card.imageUrl && <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)' : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)` }} />
-          <div style={{ position: 'absolute', bottom: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: 'center' }}>
+          <div style={{ position: 'absolute', bottom: `${40 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: 'center' }}>
             <h1 style={{ fontFamily: serif, fontSize: `${96 * s * fs}px`, fontWeight: 900, lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `-${1 * s}px`, textShadow: '0 4px 40px rgba(0,0,0,0.7)' }}>
               {renderAccentText(card.title || '', accentColor, '#FFFFFF', 76, s)}
             </h1>
-            {card.subtitle && <p style={{ fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 600, color: '#FFFFFF', opacity: 0.85, marginTop: `${24 * s}px`, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>→ {card.subtitle}</p>}
+            {card.subtitle && <p style={{ fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 600, color: '#FFFFFF', opacity: 0.85, marginTop: `${16 * s}px`, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>→ {card.subtitle}</p>}
           </div>
         </div>
       );
@@ -771,9 +771,9 @@ const CarouselGenerator: React.FC = () => {
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
           {renderHeader()}
-          <div style={{ position: 'absolute', top: `${90 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px` }}>
-            <p style={{ fontFamily: serif, fontSize: `${56 * s * fs}px`, fontWeight: 700, lineHeight: 1.15, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 56, s)}</p>
-            {bottomText && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
+           <div style={{ position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px` }}>
+            <p style={{ fontFamily: serif, fontSize: `${62 * s * fs}px`, fontWeight: 700, lineHeight: 1.15, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 62, s)}</p>
+            {bottomText && <p style={{ fontFamily: serif, fontSize: `${40 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
           </div>
         </div>
       );
@@ -783,12 +783,12 @@ const CarouselGenerator: React.FC = () => {
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
         {renderHeader()}
-        <div style={{ position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden' }}>
-          <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden' }}>
-            <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 5 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}</p>
+        <div style={{ position: 'absolute', top: `${60 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${30 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden' }}>
+          <div style={{ paddingTop: `${10 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden' }}>
+            <p style={{ fontFamily: serif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 5 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, 58 * fs, s)}</p>
           </div>
-          {hasImage && <div style={{ marginTop: `${24 * s}px`, ...(card.isAiImage !== false ? { flex: 1, minHeight: 0 } : {}), borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', ...(card.isAiImage !== false ? { height: '100%', objectFit: 'cover' as const } : { height: 'auto', objectFit: 'contain' as const, maxHeight: '100%' }) }} /></div>}
-          {bottomText && <div style={{ paddingTop: `${24 * s}px`, overflow: 'hidden' }}><p style={{ fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 3 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}</p></div>}
+          {hasImage && <div style={{ marginTop: `${20 * s}px`, ...(card.isAiImage !== false ? { flex: 1, minHeight: 0 } : {}), borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', ...(card.isAiImage !== false ? { height: '100%', objectFit: 'cover' as const } : { height: 'auto', objectFit: 'contain' as const, maxHeight: '100%' }) }} /></div>}
+          {bottomText && <div style={{ paddingTop: `${18 * s}px`, overflow: 'hidden' }}><p style={{ fontFamily: serif, fontSize: `${44 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 3 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 44 * fs, s)}</p></div>}
         </div>
       </div>
     );
@@ -798,26 +798,26 @@ const CarouselGenerator: React.FC = () => {
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#3000E3' }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <link href={googleFontsUrl} rel="stylesheet" />
 
       {/* Header - only show action buttons when editing */}
       {carouselData && !generatingAllImages && (
-        <div className="sticky top-0 z-30 border-b border-white/10 bg-[#3000E3]/95 backdrop-blur-sm">
+        <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
           <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
-            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-white/10 text-white/80"><ArrowLeft className="h-5 w-5" /></button>
+            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-muted text-muted-foreground"><ArrowLeft className="h-5 w-5" /></button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate text-white">{carouselData.title || topic || 'Carrossel'}</h1>
+              <h1 className="text-base sm:text-lg font-bold truncate text-foreground">{carouselData.title || topic || 'Carrossel'}</h1>
             </div>
             <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" size="sm" onClick={saveCarousel} disabled={savingCarousel} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
                 {savingCarousel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" size="sm" onClick={() => setShowStylePanel(!showStylePanel)} className="gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm">
                 <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Estilo</span>
               </Button>
-              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm bg-white text-[#3000E3] hover:bg-white/90">
+              <Button onClick={exportAllCards} disabled={exporting} className="gap-1.5 rounded-xl text-xs sm:text-sm">
                 {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} <span className="hidden sm:inline">Exportar PNGs</span>
               </Button>
               <Button onClick={() => setShowPublishDialog(true)} className="gap-1.5 rounded-xl text-xs sm:text-sm" style={{ background: 'linear-gradient(135deg, #833AB4, #E1306C, #F77737)' }}>
@@ -903,12 +903,12 @@ const CarouselGenerator: React.FC = () => {
         {(generating || generatingAllImages) && (
           <div className="flex flex-col items-center gap-4 py-12">
             <div className="relative">
-              <Loader2 className="h-12 w-12 animate-spin text-white" />
-              <Sparkles className="h-5 w-5 absolute top-0 right-0 text-white/60" />
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <Sparkles className="h-5 w-5 absolute top-0 right-0 text-primary/60" />
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-white">{imageGenProgress || 'Gerando carrossel com IA...'}</p>
-              <p className="text-sm text-white/50 mt-1">Isso pode levar até 2 minutos</p>
+              <p className="text-lg font-bold text-foreground">{imageGenProgress || 'Gerando carrossel com IA...'}</p>
+              <p className="text-sm text-muted-foreground mt-1">Isso pode levar até 2 minutos</p>
             </div>
           </div>
         )}
@@ -917,11 +917,11 @@ const CarouselGenerator: React.FC = () => {
         {!carouselData && !generating && !generatingAllImages && carouselHistory.length > 0 && (
           <div className="mt-8">
             <div className="flex items-center gap-2 mb-4">
-              <History className="h-4 w-4 text-white/50" />
-              <h2 className="text-sm font-semibold text-white/70 tracking-wide uppercase">Seus Carrosséis</h2>
+              <History className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Seus Carrosséis</h2>
             </div>
             {loadingHistory ? (
-              <div className="flex items-center justify-center py-8 gap-2 text-white/50"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+              <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {carouselHistory.map((item) => {
@@ -932,14 +932,14 @@ const CarouselGenerator: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => loadCarousel(item)}
-                      className="group relative rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 bg-white/[0.06] hover:bg-white/[0.1] transition-all hover:-translate-y-0.5 hover:shadow-lg text-left"
+                      className="group relative rounded-2xl overflow-hidden border border-border hover:border-primary/30 bg-muted/50 hover:bg-muted transition-all hover:-translate-y-0.5 hover:shadow-lg text-left"
                     >
                       <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
                         {coverImage ? (
                           <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center p-3">
-                            <p className="text-white/80 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
+                            <p className="text-foreground/80 text-xs font-bold text-center line-clamp-4">{coverTitle}</p>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -951,8 +951,8 @@ const CarouselGenerator: React.FC = () => {
                         </button>
                       </div>
                       <div className="p-2.5">
-                        <p className="text-xs font-semibold text-white/90 truncate">{item.title}</p>
-                        <div className="flex items-center gap-1.5 text-[10px] text-white/40 mt-0.5">
+                      <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
                           <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
                           <span>• {item.card_count} cards</span>
                         </div>
@@ -986,18 +986,18 @@ const CarouselGenerator: React.FC = () => {
         {carouselData && editingCard === null && (
           <>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold text-white text-lg">Preview ({carouselData.cards.length} cards)</h2>
+               <div className="flex items-center justify-between">
+                <h2 className="font-bold text-foreground text-lg">Preview ({carouselData.cards.length} cards)</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl border-white/20 text-white hover:bg-white/10"><Plus className="h-3 w-3" /> Card</Button>
-                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }} className="rounded-xl border-white/20 text-white hover:bg-white/10">Novo</Button>
+                  <Button variant="outline" size="sm" onClick={addCard} className="gap-1 rounded-xl"><Plus className="h-3 w-3" /> Card</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }} className="rounded-xl">Novo</Button>
                 </div>
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group">
-                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-[#3000E3]"
+                    <div className="cursor-pointer transition-all rounded-2xl hover:ring-2 hover:ring-primary/50 hover:ring-offset-2"
                       onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
                       {renderCardPreview(card, i)}
                     </div>
@@ -1005,7 +1005,7 @@ const CarouselGenerator: React.FC = () => {
                       <button onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
                       {carouselData.cards.length > 2 && <button onClick={() => removeCard(i)} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
-                    <p className="text-center text-xs text-white/50 mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
+                    <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
                   </div>
                 ))}
               </div>

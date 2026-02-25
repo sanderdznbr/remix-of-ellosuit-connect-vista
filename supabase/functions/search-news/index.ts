@@ -182,7 +182,7 @@ CRITICAL for image_search_terms: Each term MUST be in ENGLISH and describe a spe
         if (images.length >= 20) break;
         try {
           const query = encodeURIComponent(term);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=20&safesearch=strict`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict`;
           const imgResponse = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
@@ -268,7 +268,7 @@ CRITICAL for image_search_terms: Each term MUST be in ENGLISH and describe a spe
         success: true,
         content: parsedContent,
         citations,
-        images: images.slice(0, 20),
+        images: images.slice(0, 50),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

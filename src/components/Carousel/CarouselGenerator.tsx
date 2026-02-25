@@ -822,18 +822,21 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // 2. Regenerate image
+      // 2. Regenerate image using AI with face/style references (like user photos)
       let newImageUrl = card.imageUrl;
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
+      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       try {
-        const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
-          body: { action: 'web-search', query: imgPrompt.slice(0, 80) },
+        const generatedUrl = await generateImage({
+          prompt: buildImagePrompt(imgPrompt) + '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.',
+          faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+          styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+          negativePrompt: imageSettings.negativePrompt || undefined,
         });
-        if (!imgError && imgData?.images?.length > 0) {
-          // Pick a random image from results
-          const randomIdx = Math.floor(Math.random() * Math.min(imgData.images.length, 5));
-          newImageUrl = imgData.images[randomIdx]?.url || newImageUrl;
+        if (generatedUrl) {
+          newImageUrl = generatedUrl;
         }
       } catch { /* keep old image */ }
 
@@ -1911,7 +1914,7 @@ const CarouselGenerator: React.FC = () => {
                   const thumbH = thumbW * (CARD_H / CARD_W);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
-                    onClick={() => setActiveCardIndex(i)}>
+                    onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
                       boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',

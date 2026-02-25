@@ -1109,13 +1109,18 @@ const CarouselGenerator: React.FC = () => {
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
-          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-hidden">
-            {/* Background glow effects */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-20 blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
-            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-10 blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
+          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+            {/* Subtle background glow effects */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
+            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
 
-            {/* Instagram Phone Mockup */}
-            <div className="relative" style={{ width: 375, maxWidth: '95vw' }}>
+            {/* Instagram Phone Mockup — shifts left when style sidebar is open */}
+            <motion.div
+              className="relative"
+              animate={{ x: showStylePanel ? -160 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              style={{ width: 375, maxWidth: '95vw' }}
+            >
               {/* Phone frame */}
               <div className="rounded-[3rem] overflow-hidden" style={{
                 border: '3px solid rgba(255,255,255,0.1)',
@@ -1147,9 +1152,9 @@ const CarouselGenerator: React.FC = () => {
                 <div className="relative overflow-hidden" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000' }}>
                   <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
                     <div style={{
-                      width: CARD_W,
-                      height: CARD_H,
-                      transform: `scale(${369 / CARD_W})`,
+                      width: PREVIEW_W,
+                      height: PREVIEW_H,
+                      transform: `scale(${369 / PREVIEW_W})`,
                       transformOrigin: 'top left',
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
@@ -1206,7 +1211,7 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Action buttons below phone */}
             <div className="flex items-center gap-3 mt-8">
@@ -1227,18 +1232,32 @@ const CarouselGenerator: React.FC = () => {
               </button>
             </div>
 
-            {/* Style Panel overlay */}
-            {showStylePanel && (
-              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowStylePanel(false)}>
-                <div className="rounded-3xl overflow-hidden max-w-lg w-full max-h-[80vh] overflow-y-auto" style={{
-                  background: 'linear-gradient(145deg, rgba(30,30,40,0.98) 0%, rgba(15,15,20,0.98) 100%)',
-                  border: '1px solid rgba(139,92,246,0.2)',
-                  boxShadow: '0 0 60px rgba(139,92,246,0.1)',
-                }} onClick={(e) => e.stopPropagation()}>
+            {/* Style Sidebar */}
+            <AnimatePresence>
+              {showStylePanel && (
+                <motion.div
+                  key="style-sidebar"
+                  initial={{ x: '100%', opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: '100%', opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  className="fixed top-0 right-0 h-full z-40 w-[360px] max-w-[90vw] overflow-y-auto"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(18,18,24,0.99) 0%, rgba(10,10,14,0.99) 100%)',
+                    borderLeft: '1px solid rgba(139,92,246,0.15)',
+                    boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(20px)',
+                  }}
+                >
                   <div className="p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2"><Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} /><h3 className="font-bold text-white">Estilo</h3></div>
-                      <button onClick={() => setShowStylePanel(false)} className="p-1 rounded-lg hover:bg-white/10"><X className="h-4 w-4 text-white/60" /></button>
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-2">
+                        <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
+                        <h3 className="font-bold text-white text-base">Estilo</h3>
+                      </div>
+                      <button onClick={() => setShowStylePanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                        <X className="h-4 w-4 text-white/60" />
+                      </button>
                     </div>
                     <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                       textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
@@ -1246,12 +1265,12 @@ const CarouselGenerator: React.FC = () => {
                       dateLabel={dateLabel} setDateLabel={setDateLabel}
                       showHeader={showHeader} setShowHeader={setShowHeader} />
                   </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Card strip - horizontal thumbnails */}
-            <div className="w-full max-w-2xl mt-8" style={{ backgroundColor: '#000' }}>
+            <div className="w-full max-w-2xl mt-8" style={{ backgroundColor: '#0A0A0A' }}>
               <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 -mx-4">
                 {carouselData.cards.map((card, i) => (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: 80 }}

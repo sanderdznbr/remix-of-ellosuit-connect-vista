@@ -759,12 +759,12 @@ const CarouselGenerator: React.FC = () => {
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
         {renderHeader()}
-        <div style={{ position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5 }}>
-          <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
-            <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}</p>
+        <div style={{ position: 'absolute', top: `${70 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${40 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden' }}>
+          <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden' }}>
+            <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 5 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}</p>
           </div>
-          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: `${400 * s}px`, borderRadius: `${16 * s}px`, overflow: 'hidden' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
-          {bottomText && <div style={{ paddingTop: `${24 * s}px` }}><p style={{ fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}</p></div>}
+          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: `${350 * s}px`, maxHeight: `${500 * s}px`, borderRadius: `${16 * s}px`, overflow: 'hidden' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+          {bottomText && <div style={{ paddingTop: `${24 * s}px`, overflow: 'hidden' }}><p style={{ fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 3 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}</p></div>}
         </div>
       </div>
     );
